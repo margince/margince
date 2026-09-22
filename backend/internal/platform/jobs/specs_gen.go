@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "5ca1c5e079a56bc7891535d415790b02688bc525d16f8e7807ab22e523c6e0ae"
+const JobContractHash = "950b8b25cc584dad2839879fdbaf820e878f1d350d37ce926632c79c0a414c06"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -550,6 +550,26 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
+	},
+	"notification_digest": {
+		Kind:      "notification_digest",
+		GoType:    "NotificationDigestArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 1 * time.Hour},
+	},
+	"notification_email": {
+		Kind:      "notification_email",
+		GoType:    "SendNotificationEmailArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Fault:     FaultPolicy{NilAfterLogging: "ONE branch, and it is a mis-wired ROLE rather than a failed send: a worker composed with no operator relay says so at Warn, claims nothing, and returns nil. No durable retry stands behind that, and none is wanted — each role reads its own config, so returning a failure would have an installation that deliberately runs no operator mail discard a row per decision, and would leave a relay-less replica bouncing rows rather than sending them. What makes the green row honest is that the thing the product promises still happened: the notice is on the recipient's Worklist, which is where every notice is, and this message is only a nudge toward it. The log is how an operator tells one unconfigured worker from a quiet week.\nIt waives THAT branch and no other. The failures above the claim are returned and River retries them, and the ones below it are recorded rather than logged away — a refusal writes its cause into notice.email_error beside a claim that is never released. That is where the durability lives, and it is deliberate: SMTP returns no receipt, so a retried attempt could not tell a refused message from a delivered one and would risk telling a colleague twice that the same decision is waiting. The green River row means 'this notice's one attempt is concluded'; the row says how it went."},
+		Args:      []ArgField{{Name: "NoticeID"}, {Name: "Workspace"}},
 	},
 	"owed_verdict": {
 		Kind:         "owed_verdict",

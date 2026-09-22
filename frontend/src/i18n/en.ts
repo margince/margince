@@ -4819,6 +4819,44 @@ export const en = {
     "These duties name contacts and how we obtained them, so they are shown to the privacy inbox only.",
   "notice.dueAt": "Due {date}",
   "notice.overdue": "Overdue",
+  "notifications.bell": "Notifications",
+  "notifications.bellWaiting": "Notifications, {count} waiting",
+  "notifications.centre": "Notifications",
+  "notifications.markAllRead": "Mark all read",
+  "notifications.markRead": "Mark read",
+  "notifications.markAllFailed": "Nothing was marked read",
+  "notifications.markReadFailed": "That notice was not marked read",
+  "notifications.new": "New",
+  "notifications.byAgent": "By an agent",
+  "notifications.empty":
+    "Nothing has come in yet. What the product tells you about arrives here.",
+  "notifications.title": "How each kind reaches you",
+  "notifications.sub":
+    "Every notice is kept in your notification centre whatever you choose here. This decides what else happens when one lands.",
+  "notifications.saveFailed": "That choice was not saved",
+  "notifications.saveFailedFor": "“{setting}” was not saved",
+  "notifications.class.approval_pending.label": "Approvals waiting on you",
+  "notifications.class.approval_pending.help":
+    "Somebody needs your decision before their work can go on.",
+  "notifications.class.automation.label": "Automations that ran",
+  "notifications.class.automation.help":
+    "A rule this company set fired, or could not.",
+  "notifications.class.lead_sla.label": "Leads past their deadline",
+  "notifications.class.lead_sla.help":
+    "A lead nobody has answered inside the time your team agreed.",
+  "notifications.class.capture.label": "Mail capture",
+  "notifications.class.capture.help":
+    "Trouble reading a mailbox of yours, or a backlog that has stopped moving.",
+  "notifications.class.system.label": "System notices",
+  "notifications.class.system.help":
+    "Maintenance, a limit reached, and anything else the installation has to tell you.",
+  "notifications.class.coach.label": "A colleague's nudge",
+  "notifications.class.coach.help":
+    "Somebody on your team pointing at a deal, a reply or a backlog of yours. These always reach you somehow, so they cannot be switched off.",
+  "notifications.delivery.off": "Off",
+  "notifications.delivery.in_app": "In the app",
+  "notifications.delivery.email": "Email",
+  "notifications.delivery.digest": "Daily digest",
   "privacynotice.title": "What we hold about you",
   "privacynotice.intro":
     "We are telling you this because the law requires it. You do not need to reply or do anything.",
@@ -7060,6 +7098,8 @@ export const en = {
   "settings.page.voice.sub": "The words drafts use when they write as you.",
   "settings.page.agents.sub":
     "What an agent may do unattended, and which clients hold your credentials.",
+  "settings.page.notifications.sub":
+    "Which kinds of notice reach you, and how.",
   "settings.page.connections.sub":
     "The mailboxes and addresses this seat reads from.",
   "settings.page.capture-activity.sub":
@@ -7160,6 +7200,7 @@ export const en = {
   "settings.tab.account": "Account",
   "settings.tab.voice": "Writing voice",
   "settings.tab.agents": "Agents",
+  "settings.tab.notifications": "Notifications",
   "settings.tab.connections": "Connections",
   "settings.tab.general": "General",
   "settings.tab.users": "Users & teams",

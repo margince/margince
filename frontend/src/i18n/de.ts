@@ -4633,6 +4633,50 @@ export const de = {
     "Diese Pflichten nennen Kontakte und wie wir sie erhalten haben. Sie werden nur im Datenschutz-Eingang gezeigt.",
   "notice.dueAt": "Fällig am {date}",
   "notice.overdue": "Überfällig",
+  "notifications.bell": "Meldungen",
+  // "offen" rather than a verb: German agrees its verb with the count, so any
+  // wording built on "wartet"/"warten" is wrong at one of the two numbers, and
+  // a count interpolated into a sentence cannot pick. An adjective agrees with
+  // nothing and is right at every count.
+  "notifications.bellWaiting": "Meldungen, {count} offen",
+  "notifications.centre": "Meldungen",
+  "notifications.markAllRead": "Alle als gelesen markieren",
+  "notifications.markRead": "Als gelesen markieren",
+  "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
+  "notifications.markReadFailed":
+    "Diese Meldung wurde nicht als gelesen markiert",
+  "notifications.new": "Neu",
+  "notifications.byAgent": "Von einem Agenten",
+  "notifications.empty":
+    "Bisher ist nichts eingegangen. Was das Produkt Ihnen mitteilt, erscheint hier.",
+  "notifications.title": "Wie Sie von welcher Art erfahren",
+  "notifications.sub":
+    "Jede Meldung bleibt in Ihrem Meldungszentrum, was Sie hier auch wählen. Dies entscheidet, was außerdem geschieht, wenn eine eintrifft.",
+  "notifications.saveFailed": "Diese Wahl wurde nicht gespeichert",
+  "notifications.saveFailedFor": "„{setting}“ wurde nicht gespeichert",
+  "notifications.class.approval_pending.label": "Freigaben, die auf Sie warten",
+  "notifications.class.approval_pending.help":
+    "Jemand braucht Ihre Entscheidung, damit seine Arbeit weitergehen kann.",
+  "notifications.class.automation.label": "Ausgeführte Automatisierungen",
+  "notifications.class.automation.help":
+    "Eine Regel dieses Unternehmens hat ausgelöst oder konnte es nicht.",
+  "notifications.class.lead_sla.label": "Leads über ihrer Frist",
+  "notifications.class.lead_sla.help":
+    "Ein Lead, den niemand innerhalb der im Team vereinbarten Zeit beantwortet hat.",
+  "notifications.class.capture.label": "E-Mail-Erfassung",
+  "notifications.class.capture.help":
+    "Probleme beim Lesen eines Ihrer Postfächer oder ein Rückstand, der sich nicht mehr bewegt.",
+  "notifications.class.system.label": "Systemmeldungen",
+  "notifications.class.system.help":
+    "Wartung, ein erreichtes Limit und alles andere, was die Installation Ihnen mitteilen muss.",
+  "notifications.class.coach.label":
+    "Hinweis einer Kollegin oder eines Kollegen",
+  "notifications.class.coach.help":
+    "Jemand aus Ihrem Team weist auf einen Deal, eine Antwort oder einen Rückstand von Ihnen hin. Diese erreichen Sie immer auf irgendeinem Weg und lassen sich daher nicht abschalten.",
+  "notifications.delivery.off": "Aus",
+  "notifications.delivery.in_app": "In der App",
+  "notifications.delivery.email": "E-Mail",
+  "notifications.delivery.digest": "Tägliche Zusammenfassung",
   "privacynotice.title": "Was wir über Sie gespeichert haben",
   "privacynotice.intro":
     "Wir teilen Ihnen das mit, weil das Gesetz es verlangt. Sie müssen nicht antworten und nichts tun.",
@@ -6846,6 +6890,8 @@ export const de = {
     "Die Worte, die Entw\u00fcrfe verwenden, wenn sie in Ihrem Namen schreiben.",
   "settings.page.agents.sub":
     "Was ein Agent unbeaufsichtigt tun darf und welche Clients Ihre Zugangsdaten halten.",
+  "settings.page.notifications.sub":
+    "Welche Arten von Meldungen Sie erreichen, und auf welchem Weg.",
   "settings.page.connections.sub":
     "Die Postf\u00e4cher und Adressen, aus denen dieser Sitzplatz liest.",
   "settings.page.capture-activity.sub":
@@ -6949,6 +6995,7 @@ export const de = {
   "settings.tab.account": "Konto",
   "settings.tab.voice": "Schreibstimme",
   "settings.tab.agents": "Agenten",
+  "settings.tab.notifications": "Meldungen",
   "settings.tab.connections": "Verbindungen",
   "settings.tab.general": "Allgemein",
   "settings.tab.users": "Benutzer & Teams",

@@ -111,9 +111,10 @@ describe("the settings stories are filed where the product files them", () => {
   // `Governance/Privacy & retention/Notice duties`; 88 → 89 for
   // `Governance/Privacy & retention/Linked case notice`; 89 → 90 for
   // `AI/Automations/Date field picker`; 90 → 91 for `Governance/System
-  // health/Connector records refused`.
+  // health/Connector records refused`. 91 → 92 for
+  // `You/Notifications/How each kind reaches you`.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(91);
+    expect(settingsStories.length).toBe(92);
   });
 
   // The filter above drops a file whose title does not resolve. That is the

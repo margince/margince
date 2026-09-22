@@ -36,16 +36,22 @@ type countingMailer struct {
 	mu       sync.Mutex
 	sends    []string
 	subjects []string
-	fail     error
+	// bodies is what a suite asserting on the MESSAGE reads. The weekly's own
+	// cases care only that a message went out once and named the week, but the
+	// notification leg's claim is about what the body says — the notice's line,
+	// the link, and that neither carries a line the notice forged.
+	bodies []string
+	fail   error
 	// onSend runs inside the send, so a test can observe the world at the
 	// moment the relay is first dialled.
 	onSend func()
 }
 
-func (m *countingMailer) Send(_ context.Context, to, subject, _ string) error {
+func (m *countingMailer) Send(_ context.Context, to, subject, body string) error {
 	m.mu.Lock()
 	m.sends = append(m.sends, to)
 	m.subjects = append(m.subjects, subject)
+	m.bodies = append(m.bodies, body)
 	hook := m.onSend
 	m.mu.Unlock()
 	if hook != nil {
