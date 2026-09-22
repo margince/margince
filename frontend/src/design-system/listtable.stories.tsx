@@ -112,6 +112,8 @@ function Surface({
   hasMore?: boolean;
   caption?: string;
   note?: string;
+  /** The caller's sentence under the empty line, for the story that shows it. */
+  emptyNote?: string;
   /** Passed through, for the story that holds the page itself. */
   page?: number;
   onPage?: (next: number) => void;
@@ -297,6 +299,18 @@ export const Failed: Story = {
 // the Default story down to nothing to see the other empty state.
 export const Empty: Story = {
   render: () => <Surface rows={[]} />,
+};
+
+// The caller's own note under that line, for an emptiness only the screen can
+// explain. It sits a step below the generic sentence, close enough to read as
+// the same answer rather than an unrelated second fact.
+export const EmptyWithANote: Story = {
+  render: () => (
+    <Surface
+      rows={[]}
+      emptyNote="Companies arrive from the nightly import — the first run lands tomorrow."
+    />
+  ),
 };
 
 // A caption says what a list IS when it needs saying.

@@ -5,6 +5,7 @@ import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { Component, type ReactNode } from "react";
 import { useT } from "../i18n";
 import { Button, EmptyState } from "./atoms";
+import "./cardboundary.css";
 
 // CardBoundary contains ONE card's render failure inside that card.
 //
@@ -41,7 +42,7 @@ function CardFailure({
         <Button
           variant="primary"
           onClick={onRetry}
-          style={{ marginTop: "var(--space-3)" }}
+          className="card-failure-retry"
         >
           {retryLabel}
         </Button>
