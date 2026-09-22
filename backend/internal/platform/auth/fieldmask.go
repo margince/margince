@@ -280,23 +280,7 @@ func MaskExcludedClause(ctx context.Context, object, field, alias string, arg fu
 	clause, masked := "", false
 	for _, m := range masksWithholding(p, object, field) {
 		masked = true
-		if m.Condition != principal.MaskOutsideWriteAuthority {
-			// MaskAlways (and any future stricter condition this switch does
-			// not know) withholds the column on every row: fail closed.
-			return sqlNoRow, true, nil
-		}
-		// Write authority is a question only a shareable object's rows can
-		// answer: elsewhere there is no owner and no grant to resolve against,
-		// and a condition that cannot be answered withholds rather than
-		// erroring the read — the direction that cannot leak.
-		if !shareableObject(object) {
-			return sqlNoRow, true, nil
-		}
-		// Write authority is the object's update verb AND the row arm — a
-		// caller whose role lost the verb owns no write authority anywhere,
-		// however many rows the row arm alone would name (the same pair
-		// WritableSubset asks).
-		if !p.Permissions.Allows(object, principal.ActionUpdate) {
+		if narrowsToNoRow(p, m, object) {
 			return sqlNoRow, true, nil
 		}
 		if clause == "" {
@@ -304,6 +288,66 @@ func MaskExcludedClause(ctx context.Context, object, field, alias string, arg fu
 		}
 	}
 	return clause, masked, nil
+}
+
+// narrowsToNoRow reports whether this mask leaves the caller no row of the
+// object to aggregate, as against the rows they could write.
+//
+// Three ways in. MaskAlways — and any future stricter condition this does not
+// know — withholds the column on every row. Write authority is a question only
+// a shareable object's rows can answer, and a condition that cannot be answered
+// withholds rather than erroring the read, which is the direction that cannot
+// leak. And write authority is the object's update verb AND the row arm, so a
+// caller whose role lost the verb holds none anywhere, however many rows the
+// row arm alone would name.
+func narrowsToNoRow(p principal.Principal, m principal.FieldMask, object string) bool {
+	return m.Condition != principal.MaskOutsideWriteAuthority ||
+		!shareableObject(object) ||
+		!p.Permissions.Allows(object, principal.ActionUpdate)
+}
+
+// MaskExclusionClauses renders what an aggregate over the object must AND in to
+// leave out the rows whose columns this caller reads as withheld — every mask
+// REACHING the object, not only those configured on it, because a fact
+// republished on another record is disclosed by a total just as completely.
+//
+// At most one clause: the masks that reach one object narrow it the same two
+// ways, and the stricter of them decides. Nothing is bound until the answer is
+// known, so a caller's argument slice never carries a placeholder the rendered
+// statement does not name.
+func MaskExclusionClauses(ctx context.Context, object, alias string, arg func(any) int) ([]string, error) {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if Unbounded(p) {
+		return nil, nil
+	}
+	reaching := false
+	for _, m := range p.Permissions.FieldMasks {
+		if !maskReaches(m, object) {
+			continue
+		}
+		if narrowsToNoRow(p, m, object) {
+			return []string{sqlNoRow}, nil
+		}
+		reaching = true
+	}
+	if !reaching {
+		return nil, nil
+	}
+	return []string{writeAuthorityPredicateAs(p, object, alias, arg)}, nil
+}
+
+// maskReaches reports whether the mask withholds any field of the object — its
+// own, or one its group names on another record.
+func maskReaches(m principal.FieldMask, object string) bool {
+	for _, s := range withheldSubjects(m.Object, m.Field) {
+		if s.object == object {
+			return true
+		}
+	}
+	return false
 }
 
 // archivedAmong answers which of the rows the caller holds authority over are
