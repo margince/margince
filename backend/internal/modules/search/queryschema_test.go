@@ -106,11 +106,11 @@ func TestEveryPublishedFieldAndOperatorValidates(t *testing.T) {
 		// leads to the refusal the mask owes.
 		"a caller whose role withholds the money": readerMasking(maskedAmount, "deal", "company"),
 	} {
-		t.Run(name, func(t *testing.T) { assertPublishedNamesValidate(t, ctx) })
+		t.Run(name, func(t *testing.T) { assertPublishedNamesValidate(ctx, t) })
 	}
 }
 
-func assertPublishedNamesValidate(t *testing.T, ctx context.Context) {
+func assertPublishedNamesValidate(ctx context.Context, t *testing.T) {
 	t.Helper()
 	doc := readSchema(ctx, t, NewQuerySchemaResource(NewVocabularyResolver()))
 	validator := NewPlanValidator(NewVocabularyResolver())
