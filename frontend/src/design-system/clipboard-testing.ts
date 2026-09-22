@@ -38,22 +38,16 @@ export type ClipboardStub = Readonly<{
 // and the first report names the wrong test.
 const outstanding: (() => void)[] = [];
 
-export function stubClipboard(
-  behaviour: "accepts" | "refuses" | "absent",
-): ClipboardStub {
+/**
+ * Put `value` on the navigator and register the way back.
+ *
+ * EVERY stub here installs through this, so there is one answer to what undoing
+ * means and one list for the teardown to walk. A second installer is a second
+ * thing to remember to register, and forgetting is silent — which is how the
+ * leak this guards against arrives.
+ */
+function installClipboard(value: object | undefined): () => void {
   const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
-  const written: string[] = [];
-  const value =
-    behaviour === "absent"
-      ? undefined
-      : {
-          writeText: async (text: string) => {
-            if (behaviour === "refuses") {
-              throw new Error("the clipboard refused the write");
-            }
-            written.push(text);
-          },
-        };
   Object.defineProperty(navigator, "clipboard", { value, configurable: true });
   let installed = true;
   const restore = () => {
@@ -73,7 +67,25 @@ export function stubClipboard(
     Object.defineProperty(navigator, "clipboard", original);
   };
   outstanding.push(restore);
-  return { written, restore };
+  return restore;
+}
+
+export function stubClipboard(
+  behaviour: "accepts" | "refuses" | "absent",
+): ClipboardStub {
+  const written: string[] = [];
+  const value =
+    behaviour === "absent"
+      ? undefined
+      : {
+          writeText: async (text: string) => {
+            if (behaviour === "refuses") {
+              throw new Error("the clipboard refused the write");
+            }
+            written.push(text);
+          },
+        };
+  return { written, restore: installClipboard(value) };
 }
 
 /** Hand the navigator back whatever it had before the case started stubbing. */
@@ -105,28 +117,15 @@ export function stubDeferredClipboard(): Readonly<{
   restore: () => void;
 }> {
   const writes: DeferredWrite[] = [];
-  const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
-  Object.defineProperty(navigator, "clipboard", {
-    configurable: true,
-    value: {
-      writeText: (text: string) =>
-        new Promise<void>((resolve, reject) => {
-          writes.push({
-            text,
-            resolve,
-            reject: () => reject(new Error("refused")),
-          });
-        }),
-    },
+  const restore = installClipboard({
+    writeText: (text: string) =>
+      new Promise<void>((resolve, reject) => {
+        writes.push({
+          text,
+          resolve,
+          reject: () => reject(new Error("refused")),
+        });
+      }),
   });
-  return {
-    writes,
-    restore: () => {
-      if (original === undefined) {
-        Reflect.deleteProperty(navigator, "clipboard");
-        return;
-      }
-      Object.defineProperty(navigator, "clipboard", original);
-    },
-  };
+  return { writes, restore };
 }

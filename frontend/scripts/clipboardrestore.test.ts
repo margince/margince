@@ -17,7 +17,10 @@
 // next asks what it was left holding.
 
 import { expect, it } from "vitest";
-import { stubClipboard } from "../src/design-system/clipboard-testing";
+import {
+  stubClipboard,
+  stubDeferredClipboard,
+} from "../src/design-system/clipboard-testing";
 
 const pristine = navigator.clipboard;
 
@@ -28,5 +31,18 @@ it("installs a stub and deliberately never takes it back", () => {
 });
 
 it("starts on the clipboard the case before it did not hand back", () => {
+  expect(navigator.clipboard).toBe(pristine);
+});
+
+// Every stub installs through one path, and this is what fails if a new one is
+// ever written that forgets to: the deferred stub was added later and did not
+// register, so the leak came back the moment a second installer existed.
+it("installs a deferred stub and deliberately never takes it back", () => {
+  stubDeferredClipboard();
+
+  expect(navigator.clipboard).not.toBe(pristine);
+});
+
+it("starts on the clipboard the deferred case did not hand back", () => {
   expect(navigator.clipboard).toBe(pristine);
 });
