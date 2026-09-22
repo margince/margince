@@ -1,4 +1,6 @@
-/* Atom styles — the Margince-owned vocabulary (foundation v0 mirror).
+/* Atom styles — the Margince-owned control vocabulary. A COMPONENT sheet, which
+ * atoms.tsx imports as every <name>.tsx imports its own <name>.css; the document
+ * layer beneath it, loaded once by app.css, is base.css.
  * Colours read tokens only; the conformance gate enforces it. */
 
 .badge {
@@ -207,9 +209,6 @@
 }
 .table tbody tr:hover td {
   background: var(--bgHover);
-}
-.table tbody tr.rowlink {
-  cursor: pointer;
 }
 
 /* A cell with two facts that belong on two lines — a call's timestamp over the

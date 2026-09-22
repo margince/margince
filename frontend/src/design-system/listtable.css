@@ -699,6 +699,13 @@
   border-right: 0;
 }
 
+/* The caller's note under the generic empty line. One step apart: the two
+   sentences explain the same emptiness, so a full line between them would read
+   as an unrelated second fact. */
+.lt-empty-note {
+  margin-top: var(--space-2);
+}
+
 .lt-table tbody tr:hover td {
   background: var(--bgHover);
 }

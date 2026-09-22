@@ -4,8 +4,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { DataTable, EmptyState, Skeleton } from "../design-system/atoms";
+import { EmptyState, Skeleton } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";

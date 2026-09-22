@@ -1,0 +1,5 @@
+/* Far enough from the apology above to read as the answer to it rather than as
+   part of it — EmptyState's bare form is a sentence and spaces no verb. */
+.card-failure-retry {
+  margin-top: var(--space-3);
+}

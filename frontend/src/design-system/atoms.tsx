@@ -1340,48 +1340,6 @@ export function TableScroll({
   );
 }
 
-export function DataTable<Row>({
-  columns,
-  rows,
-  rowKey,
-  onRowClick,
-  label,
-}: Readonly<{
-  columns: { key: string; header: string; render: (row: Row) => ReactNode }[];
-  rows: Row[];
-  rowKey: (row: Row) => string;
-  onRowClick?: (row: Row) => void;
-  /** What the scroll region is called once the table is wider than its box. */
-  label: string;
-}>) {
-  return (
-    <TableScroll label={label}>
-      <table className="table">
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key}>{column.header}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={rowKey(row)}
-              className={onRowClick ? "rowlink" : undefined}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-            >
-              {columns.map((column) => (
-                <td key={column.key}>{column.render(row)}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </TableScroll>
-  );
-}
-
 /**
  * Disclosure is a section the reader opens when they want it.
  *

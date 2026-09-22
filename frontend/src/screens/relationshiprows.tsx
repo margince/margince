@@ -14,13 +14,8 @@ import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
-import {
-  Badge,
-  Button,
-  DataTable,
-  EmptyState,
-  Modal,
-} from "../design-system/atoms";
+import { Badge, Button, EmptyState, Modal } from "../design-system/atoms";
+import { DataTable } from "../design-system/datatable";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";

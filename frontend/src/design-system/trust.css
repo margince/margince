@@ -118,6 +118,13 @@ button.evidence-chip:hover {
   margin-top: var(--space-1);
 }
 
+/* The value line under the row's provenance, in the staged card and in the
+   settled one alike: one class, because the two make the same claim at the
+   same step away from the meta above them. */
+.proposal-value {
+  margin-top: var(--space-2);
+}
+
 /* The persisted counterpart a resolved proposal settles into: a pane with a
    hairline, no shadow, now that the proposal is as real as the rest. */
 .real-card {

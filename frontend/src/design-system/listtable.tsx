@@ -1253,9 +1253,7 @@ export function ListTable<Row>({
                         the reader's own dial did passes none. The generic line
                         stays above it either way: "clear filters" undoes every narrowing, and a
                         screen's own way back usually undoes one. */}
-                    {emptyNote && (
-                      <p style={{ marginTop: "var(--space-2)" }}>{emptyNote}</p>
-                    )}
+                    {emptyNote && <p className="lt-empty-note">{emptyNote}</p>}
                   </td>
                 </tr>
               )}
