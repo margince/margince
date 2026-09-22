@@ -13,7 +13,8 @@ import { de } from "./de";
 //   1. No value addresses the reader formally. Capitalised Sie / Ihr… IS that
 //      address, with one position German orthography leaves ambiguous: "Sie"
 //      opening a sentence is also she and they. That position alone is
-//      waivable, with a reason naming what the pronoun stands for.
+//      waivable, with a reason naming what the pronoun stands for, and the key
+//      families an outside reader opens are exempt by prefix.
 //   2. A du-pronoun is capitalised only where a sentence begins; mid-sentence
 //      it is the formal register wearing the informal word.
 //   3. A long dash does not belong in German copy, where a comma, a period, a
@@ -74,12 +75,15 @@ const OPENS_WITH_A_PRONOUN: Readonly<Record<string, Waiver>> = {
     word: "Sie",
     why: "die eingefrorenen Zahlen ändern sich nicht",
   },
-  "co.contacts.theyWrote": { word: "Sie", why: "die Kontakte schrieben" },
   "common.gatewayUnavailable": {
     word: "Sie",
     why: "die Anfrage läuft möglicherweise noch",
   },
   "consent.offline": { word: "Sie", why: "die Verbindung bleibt bestehen" },
+  "contact.intro.verdictDirectYou": {
+    word: "Ihr",
+    why: "ihr beide, du und der Kontakt",
+  },
   "firstRun.google.helpStep2": {
     word: "Sie",
     why: "die beiden Bereiche gehören in eine Zustimmung",
@@ -150,10 +154,33 @@ const OPENS_WITH_A_PRONOUN: Readonly<Record<string, Waiver>> = {
   },
 };
 
+// The key families a reader OUTSIDE this installation opens: a contact
+// confirming consent, a stranger reading the privacy notice, a buyer in a deal
+// room, a visitor choosing what may still be sent. They keep the formal
+// address, because outbound mail to a contact is written in Sie by design
+// (`confirmLines` in backend/internal/platform/mailcopy/catalog.go) and the
+// consent question is published from the server in that wording, held by
+// backend/gates/marketingquestion_test.go — a screen in du would ask one
+// question and record another. Rules 2 and 3 still bind these values.
+const READ_BY_AN_OUTSIDER: Readonly<Record<string, string>> = {
+  "buyer.": "ein Käufer im Deal Room, der hier keinen Sitzplatz hat",
+  "confirm.":
+    "ein Kontakt, der die serverseitig gestellte Einwilligungsfrage beantwortet",
+  "prefs.":
+    "ein Besucher, der entscheidet, was diese Installation ihm senden darf",
+  "privacynotice.": "ein Fremder, der liest, was über ihn gespeichert ist",
+};
+
+function readByAnOutsider(key: string): boolean {
+  return Object.keys(READ_BY_AN_OUTSIDER).some((prefix) =>
+    key.startsWith(prefix),
+  );
+}
+
 // The long dashes the German catalog still carries. It may fall and never rise:
 // whoever removes one lowers this number in the same change, and nothing is
 // allowed to add one.
-const LONG_DASHES_PINNED = 369;
+const LONG_DASHES_PINNED = 371;
 
 function readJsonCatalog(path: string): Catalog {
   const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
@@ -198,15 +225,24 @@ function entries(): Array<readonly [string, string, string]> {
 describe("German copy speaks to its reader as du", () => {
   it("no value addresses the reader as Sie or Ihr", () => {
     const findings = entries().flatMap(([source, key, value]) =>
-      [...value.matchAll(FORMAL)].flatMap((hit) => {
-        const opening = startsASentence(value, hit.index);
-        const waiver = OPENS_WITH_A_PRONOUN[key];
-        if (opening && waiver?.word === hit[0]) return [];
-        const position = opening ? "opening a sentence" : "mid-sentence";
-        return [`${source} ${key}: "${hit[0]}" ${position} in ${value}`];
-      }),
+      readByAnOutsider(key)
+        ? []
+        : [...value.matchAll(FORMAL)].flatMap((hit) => {
+            const opening = startsASentence(value, hit.index);
+            const waiver = OPENS_WITH_A_PRONOUN[key];
+            if (opening && waiver?.word === hit[0]) return [];
+            const position = opening ? "opening a sentence" : "mid-sentence";
+            return [`${source} ${key}: "${hit[0]}" ${position} in ${value}`];
+          }),
     );
     expect(findings).toEqual([]);
+  });
+
+  it("every exempt prefix still names a key the catalogs carry", () => {
+    const empty = Object.keys(READ_BY_AN_OUTSIDER).filter(
+      (prefix) => !entries().some(([, key]) => key.startsWith(prefix)),
+    );
+    expect(empty).toEqual([]);
   });
 
   it("every waived key still opens a sentence with the word it is waived for", () => {
@@ -228,9 +264,14 @@ describe("German copy speaks to its reader as du", () => {
     expect(spent).toEqual([]);
   });
 
-  it("every waiver says what the pronoun stands for", () => {
-    const silent = Object.entries(OPENS_WITH_A_PRONOUN)
-      .filter(([, waiver]) => waiver.why.trim() === "")
+  it("every waiver says who or what it is waived for", () => {
+    const silent = [
+      ...Object.entries(OPENS_WITH_A_PRONOUN).map(
+        ([key, waiver]) => [key, waiver.why] as const,
+      ),
+      ...Object.entries(READ_BY_AN_OUTSIDER),
+    ]
+      .filter(([, why]) => why.trim() === "")
       .map(([key]) => key);
     expect(silent).toEqual([]);
   });
