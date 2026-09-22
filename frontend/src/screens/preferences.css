@@ -15,7 +15,7 @@
 
 .pref-center {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--settingsColumn);
 }
 
 .pref-header p {
