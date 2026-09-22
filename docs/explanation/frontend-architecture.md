@@ -90,10 +90,16 @@ it, so a `?utm=…` never leaks into a screen name.
   file with co-located `*.test.tsx` and `*.stories.tsx`. A route with no screen
   behind it renders the honest pending state (`App.tsx`'s `PendingScreen`),
   never a blank page.
-- **`src/i18n/`** — DE + EN catalogs with key parity enforced twice: `MessageKey`
-  is `keyof typeof en` and the German catalog is `satisfies`-checked against it,
-  so a missing key fails `tsc`; `i18n.test.ts` re-checks at runtime so a build
-  that skipped typechecking still fails loudly.
+- **`src/i18n/`** — three catalogs (`en`, `de`, `vi`), `en` the default. Key
+  parity is enforced twice: `MessageKey` is `keyof typeof en` and the other
+  catalogs are `satisfies`-checked against it, so a missing key fails `tsc`;
+  `i18n.test.ts` re-checks at runtime and proves `LOCALES` is exactly the
+  registered catalogs, so a build that skipped typechecking still fails loudly.
+  A new string therefore lands in all three catalogs in one change: one catalog
+  alone is a red build, never a missing translation on a reader's screen. A
+  count takes its wording from the reader's own `Intl.PluralRules` category
+  (`format/plural.ts`), and `one-plural-rule.test.ts` refuses a `count === 1`
+  choosing a message key anywhere outside this directory.
   Resolution order is the explicit choice → the browser's languages → `en`
   (A100: unconfigured English is `en-GB`, not `en-US`). Locale is presentation
   only: it never participates in storage or math.
@@ -165,7 +171,7 @@ whose rendered text is free to differ, and today three of the ten do:
 `deals` routes to the pipeline surface; `inbox` is a governance surface, not a
 mailbox. The command palette leans on the split deliberately: every screen
 command carries its route id as a hidden `keyword`, so someone typing "deals" or
-"inbox" still finds the relabeled destination, in either locale, without a
+"inbox" still finds the relabeled destination, in any locale, without a
 hand-kept synonym list. **Never rename a `screen` to match a label** — that
 breaks every existing hash URL and every `SCREEN_ENTITY` / `OFF_RAIL_TITLE_KEYS`
 lookup keyed on it.
@@ -350,7 +356,7 @@ frontend lane is separate from the Go merge gate and needs node + pnpm. Run
 | light/dark behaviour | `src/app/theme.ts` + `tokens.css`, which carries all three states: the light palette on bare `:root`, the `prefers-color-scheme` arm for a surface whose host states nothing, and the `[data-theme]` arms an explicit choice stamps |
 | how a derived value shows its receipts | `src/design-system/evidencemark.tsx` |
 | a staging/approval surface | `src/design-system/trust.tsx` + `src/screens/worklist.tsx` |
-| copy | `src/i18n/en.ts` **and** `src/i18n/de.ts` — key parity is compile-time |
+| copy | `src/i18n/en.ts`, `de.ts` **and** `vi.ts` — key parity is compile-time |
 | money, dates, durations, zones | `src/format/format.ts` — except which calendar day an instant falls on, and the instant a picked day ends, which are `src/format/calendarday.ts` |
 | an API call | `src/api/client.ts` is the seam; regenerate types with `pnpm gen:api` |
 | the Core's appearance or states | `src/design-system/margince-core.tsx` + `margince-core-shader.ts` + `margince-core-motion.ts` |

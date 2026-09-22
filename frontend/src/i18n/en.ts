@@ -1,6 +1,6 @@
-// English catalog. Keys are the contract; de.ts must mirror them exactly
-// (compile-time via satisfies, runtime via i18n.test.ts). Placeholders use
-// {name} and are filled by t(key, params).
+// English catalog. Keys are the contract; every other catalog mirrors them
+// exactly (compile-time via satisfies, runtime via i18n.test.ts). Placeholders
+// use {name} and are filled by t(key, params).
 export const en = {
   "aiAdmin.allowance": "Monthly AI allowance",
   "aiAdmin.pool":
