@@ -106,6 +106,74 @@ func TestAnUnmaskedCallerStillFiltersOnTheAmount(t *testing.T) {
 	}
 }
 
+// A record embeds another object's block and the vocabulary flattens it to a
+// dotted name, so a company publishes sixteen of a partner's own fields. The
+// mask names the partner's tier; the filter names the company's copy of it,
+// and a stamp that asked only under the target would leave every one of them
+// filterable.
+func TestAMaskReachesAnEmbeddedBlockRepublishedOnAnotherRecord(t *testing.T) {
+	tier := principal.FieldMask{Object: "partner", Field: "margin_tier", Condition: principal.MaskAlways}
+	ctx := readerMasking(tier, "company")
+	fault := singleFault(t, mustRefuse(ctx, t,
+		`{"version":"v1","target":"company","where":[{"field":"partner.margin_tier","op":"eq","value":"gold"}]}`))
+	if fault.Code != auth.CodeFieldMasked {
+		t.Errorf("a partner's tier republished on the company filters as %q; want %q", fault.Code, auth.CodeFieldMasked)
+	}
+}
+
+// The census under the rule the test above spells: EVERY field a nested block
+// flattens is reachable by a mask on the block's own object. Derived from the
+// vocabulary rather than from a list of blocks, so the seventeenth member of
+// one cannot fall off it unnoticed — which is exactly how the company's copy
+// of a partner's tier stayed filterable in the first place.
+func TestEveryFlattenedBlockFieldIsReachableByAMaskOnItsOwnObject(t *testing.T) {
+	vocab, err := NewVocabularyResolver().Resolve(readerFor("company", "contact", "deal"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	nested := 0
+	for _, target := range vocab.Targets {
+		for _, field := range target.Fields {
+			block, leaf, dotted := strings.Cut(field.Name, ".")
+			if !dotted {
+				continue
+			}
+			nested++
+			mask := principal.FieldMask{Object: block, Field: leaf, Condition: principal.MaskAlways}
+			under, err := NewVocabularyResolver().Resolve(readerMasking(mask, target.Target), target.Target)
+			if err != nil {
+				t.Fatalf("%s under a mask on %s.%s: %v", target.Target, block, leaf, err)
+			}
+			masked, _ := under.Target(target.Target)
+			if got, ok := masked.Field(field.Name); !ok || !got.Masked {
+				t.Errorf("a mask on %s.%s does not reach %s's copy of it", block, leaf, target.Target)
+			}
+		}
+	}
+	// A census that walked an empty vocabulary reports PASS and asserts
+	// nothing, which is the one way this may not fail.
+	if nested == 0 {
+		t.Fatal("no record type published a flattened block; the census read a smaller tree than it should have")
+	}
+}
+
+// The dotted prefix is a wire member name, not a promise of a maskable object:
+// most of them — `address`, `author`, `strength` — name nothing a mask can be
+// configured under, and the lookup has to answer plainly false for those
+// rather than erroring or resolving somewhere else.
+func TestABlockThatNamesNoMaskableObjectStaysFilterable(t *testing.T) {
+	tier := principal.FieldMask{Object: "partner", Field: "margin_tier", Condition: principal.MaskAlways}
+	ctx := readerMasking(tier, "company")
+	for _, field := range []string{"address.city", "author.display_name", "strength.bucket"} {
+		t.Run(field, func(t *testing.T) {
+			doc := `{"version":"v1","target":"company","where":[{"field":"` + field + `","op":"eq","value":"x"}]}`
+			if _, err := validateJSON(ctx, t, doc); err != nil {
+				t.Errorf("filtering on %s was refused: %v", field, err)
+			}
+		})
+	}
+}
+
 // The guard on the reconciliation with SEARCH-AC-16. Identical wording protects
 // a field whose EXISTENCE is the secret, which is a field on a record type the
 // caller cannot read at all — and such a target is refused before any predicate
@@ -136,6 +204,7 @@ func TestThePublishedVocabularyMarksAMaskedField(t *testing.T) {
 			Target string
 			Fields []struct {
 				Name   string
+				Ops    []string
 				Masked bool
 			}
 		}
@@ -143,10 +212,11 @@ func TestThePublishedVocabularyMarksAMaskedField(t *testing.T) {
 	if err := json.Unmarshal(body, &doc); err != nil {
 		t.Fatalf("the published vocabulary is not readable JSON: %v", err)
 	}
-	marked := map[string]bool{}
+	marked, published := map[string]bool{}, map[string][]string{}
 	for _, target := range doc.Targets {
 		for _, field := range target.Fields {
 			marked[target.Target+"."+field.Name] = field.Masked
+			published[target.Target+"."+field.Name] = field.Ops
 		}
 	}
 	if _, published := marked["deal.amount_minor"]; !published {
@@ -157,5 +227,14 @@ func TestThePublishedVocabularyMarksAMaskedField(t *testing.T) {
 	}
 	if marked["deal.name"] {
 		t.Error("a field no mask names is published as withheld")
+	}
+	// The document exists so a client can say something true. Advertising an
+	// operator that is certain to be refused sends it to build the one plan it
+	// cannot have.
+	if len(published["deal.amount_minor"]) > 0 {
+		t.Errorf("the withheld field advertises %v; every one of them refuses", published["deal.amount_minor"])
+	}
+	if len(published["deal.name"]) == 0 {
+		t.Error("an unmasked field lost its operators along with the masked one")
 	}
 }

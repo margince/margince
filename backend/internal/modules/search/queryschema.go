@@ -215,7 +215,7 @@ func querySchemaTargetOf(target TargetVocabulary) querySchemaTarget {
 	}
 	for _, f := range target.Fields {
 		out.Fields = append(out.Fields, querySchemaField{
-			Name: f.Name, Kind: string(f.Kind), Ops: f.Ops, Masked: f.Masked,
+			Name: f.Name, Kind: string(f.Kind), Ops: publishedOps(f), Masked: f.Masked,
 		})
 	}
 	for _, r := range target.Relations {
@@ -226,6 +226,16 @@ func querySchemaTargetOf(target TargetVocabulary) querySchemaTarget {
 		out.Relations = append(out.Relations, querySchemaRelation{Name: r.Name, Target: r.Target, Via: r.Via})
 	}
 	return out
+}
+
+// publishedOps answers the operators a caller may actually use on the field: a
+// withheld one admits none, so the document never names a comparison the
+// validator is certain to refuse. Empty rather than absent, like Targets above.
+func publishedOps(f Field) []string {
+	if f.Masked {
+		return []string{}
+	}
+	return f.Ops
 }
 
 var _ mcp.ResourceProvider = (*QuerySchemaResource)(nil)

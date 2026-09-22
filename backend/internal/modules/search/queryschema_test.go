@@ -99,7 +99,19 @@ func TestThePublishedVocabularyIsComposedPerCaller(t *testing.T) {
 // them one: an advertised field the validator refuses is a refusal that reads
 // like a bug.
 func TestEveryPublishedFieldAndOperatorValidates(t *testing.T) {
-	ctx := readerFor("deal", "company")
+	for name, ctx := range map[string]context.Context{
+		"an unmasked caller": readerFor("deal", "company"),
+		// Under a mask the parity is the same promise and a sharper one: a
+		// withheld field publishes no operator, so nothing the document names
+		// leads to the refusal the mask owes.
+		"a caller whose role withholds the money": readerMasking(maskedAmount, "deal", "company"),
+	} {
+		t.Run(name, func(t *testing.T) { assertPublishedNamesValidate(t, ctx) })
+	}
+}
+
+func assertPublishedNamesValidate(t *testing.T, ctx context.Context) {
+	t.Helper()
 	doc := readSchema(ctx, t, NewQuerySchemaResource(NewVocabularyResolver()))
 	validator := NewPlanValidator(NewVocabularyResolver())
 

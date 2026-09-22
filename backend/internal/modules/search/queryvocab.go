@@ -332,13 +332,35 @@ func storedInverseRelations(ctx context.Context, schema *schemaReads, entity str
 // published document without either asking a second time.
 func stampMasks(ctx context.Context, entity string, fields []Field) error {
 	for i := range fields {
-		masked, err := auth.MasksAnyRowOf(ctx, entity, fields[i].Name)
+		masked, err := maskReaches(ctx, entity, fields[i].Name)
 		if err != nil {
 			return err
 		}
 		fields[i].Masked = masked
 	}
 	return nil
+}
+
+// maskReaches asks the mask under both names the field can have: the target's
+// own, and — for a field a nested block flattened to a dotted path — the
+// embedded object's. A company republishes a partner's every scalar as
+// `partner.<field>`, so a mask on the partner's tier has to reach the copy or
+// the count of a filtered page answers what the column withholds.
+//
+// Derived from the name rather than listed per field, because the list is what
+// fails short: a seventeenth member of the block would be an oracle nobody
+// edited anything to create. A prefix naming no maskable object matches
+// nothing and the field stays askable, which is what `address.city` rests on.
+func maskReaches(ctx context.Context, entity, field string) (bool, error) {
+	masked, err := auth.MasksAnyRowOf(ctx, entity, field)
+	if err != nil || masked {
+		return masked, err
+	}
+	block, leaf, nested := strings.Cut(field, ".")
+	if !nested {
+		return false, nil
+	}
+	return auth.MasksAnyRowOf(ctx, block, leaf)
 }
 
 // admittedRelations drops the hops that land on a record type this caller may
