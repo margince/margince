@@ -91,6 +91,10 @@ type Field struct {
 	// re-derived on every check so the published document and the validator
 	// read the same value, not two computations of it.
 	Ops []string
+	// Masked reports that this caller's role withholds the field on some row.
+	// A predicate on it is refused: the rows that come back answer the
+	// comparison, and comparisons answered repeatedly are the value itself.
+	Masked bool
 }
 
 // newField is the ONE way a Field comes into existence, so a field whose
@@ -267,6 +271,9 @@ func (r *VocabularyResolver) resolveTarget(ctx context.Context, schema *schemaRe
 	}
 	fields = slices.DeleteFunc(fields, func(f Field) bool { return !stored.answers(f) })
 	slices.SortFunc(fields, func(a, b Field) int { return strings.Compare(a.Name, b.Name) })
+	if err := stampMasks(ctx, entity, fields); err != nil {
+		return TargetVocabulary{}, err
+	}
 
 	inverse, err := storedInverseRelations(ctx, schema, entity, inverseRelations(entity))
 	if err != nil {
@@ -316,6 +323,22 @@ func storedInverseRelations(ctx context.Context, schema *schemaReads, entity str
 		}
 	}
 	return kept, nil
+}
+
+// stampMasks marks the fields this caller's role withholds on some row. It
+// belongs to the per-caller pass beside admittedRelations rather than to
+// newField, which knows the contract and not who is asking — and stamping it
+// on the vocabulary is what carries it to a hop's predicates and to the
+// published document without either asking a second time.
+func stampMasks(ctx context.Context, entity string, fields []Field) error {
+	for i := range fields {
+		masked, err := auth.MasksAnyRowOf(ctx, entity, fields[i].Name)
+		if err != nil {
+			return err
+		}
+		fields[i].Masked = masked
+	}
+	return nil
 }
 
 // admittedRelations drops the hops that land on a record type this caller may
