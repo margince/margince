@@ -316,6 +316,9 @@ func (s *Store) GetPartner(ctx context.Context, companyID ids.CompanyID) (crmcon
 	return out, err
 }
 
+// wirePartner maps the row and withholds nothing. The role's masks are applied
+// by wirePartners around it, which is what a read reaches for: a record mapped
+// here alone carries the margin tier a masked seat may not have.
 func wirePartner(p partnerRow) crmcontracts.Partner {
 	out := crmcontracts.Partner{
 		CompanyId:  openapi_types.UUID(p.CompanyID.UUID),
