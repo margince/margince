@@ -177,10 +177,10 @@ function readByAnOutsider(key: string): boolean {
   );
 }
 
-// The long dashes the German catalog still carries. It may fall and never rise:
-// whoever removes one lowers this number in the same change, and nothing is
-// allowed to add one.
-const LONG_DASHES_PINNED = 371;
+// Every long dash the German catalogs carry, counted as occurrences rather
+// than as values: a second dash inside an already-dashed value has to move this
+// number too. It may fall and never rise.
+const LONG_DASHES_PINNED = 376;
 
 function readJsonCatalog(path: string): Catalog {
   const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
@@ -286,7 +286,10 @@ describe("German copy speaks to its reader as du", () => {
   });
 
   it("carries no more long dashes than it was pinned at", () => {
-    const dashed = entries().filter(([, , value]) => /[–—]/.test(value));
-    expect(dashed.length).toBeLessThanOrEqual(LONG_DASHES_PINNED);
+    const dashes = entries().reduce(
+      (total, [, , value]) => total + (value.match(/[–—]/g)?.length ?? 0),
+      0,
+    );
+    expect(dashes).toBeLessThanOrEqual(LONG_DASHES_PINNED);
   });
 });
