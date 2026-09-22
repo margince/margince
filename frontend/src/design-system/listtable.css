@@ -173,44 +173,27 @@
   border-color: var(--borderSubtle);
 }
 
-/* The toolbar's buttons carry a pill silhouette so the row reads as one kind
- * of thing rather than several. The SILHOUETTE is the only thing the toolbar
- * chooses: the BOX is the control's own — --controlHeight, the control's inset,
- * the control's icon-to-label gap, and the medium a label takes beside a line
- * glyph — because a verb in a toolbar is the same object as a verb in a form,
- * and a 30px pill beside a 32px button was one control answering the question
- * of its own height twice. */
-.lt-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--controlGap);
-  min-block-size: var(--controlHeight);
-  padding: 0 var(--controlPaddingX);
-  font-weight: var(--fontWeightMedium);
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
+/* The toolbar's verbs carry a pill silhouette so the row reads as one kind of
+ * thing rather than several. The SILHOUETTE is the only thing the toolbar
+ * chooses: everything else is `Button`'s own — the height, the inset, the
+ * icon-to-label gap, the hover, the ring — because a verb in a toolbar is the
+ * same object as a verb in a form, and a 30px pill beside a 32px button was one
+ * control answering the question of its own height twice. */
+.lt-tools .btn {
   border-radius: var(--r-full);
   corner-shape: round;
-  cursor: pointer;
-  white-space: nowrap;
 }
-/* The one line this pill ADDS rather than inherits, and it is here because
- * `.lt-btn` is a bare <button> and not a `.btn`: nothing above it sizes a glyph.
- * Every call site passes a lucide icon with no `size=`, so the toolbar drew the
- * library's own 24px default beside a 16px icon on the button next to it. */
-.lt-btn svg {
-  inline-size: var(--controlIcon);
-  block-size: var(--controlIcon);
+
+/* EVERY CARET ON THIS SURFACE, at one size: the product's other carets are
+ * drawn at 12 (`.lt-arrow`, `.inline-editable-caret`), because a caret
+ * qualifies the text beside it rather than naming it and so sits under the
+ * control's own leading glyph. One rule and not a `size=` per call site,
+ * because inside a button `.btn svg` would override the attribute anyway —
+ * which is how the trigger carets and the menu's came to be sized two ways. */
+.lt-tools .lt-caret {
+  inline-size: 12px;
+  block-size: 12px;
   flex: none;
-}
-.lt-btn:hover {
-  border-color: var(--borderStrong);
-  color: var(--textPrimary);
-}
-.lt-btn.on {
-  border-color: var(--accentMed);
-  background: var(--accentLight);
-  color: var(--accentText);
 }
 
 /* An applied filter's compound row: attribute, condition, value and the "⋮"
@@ -381,6 +364,38 @@
   font-weight: var(--fontWeightMedium);
 }
 
+/* THE NAME OF A GROUP inside a menu, a rung under the head that names the menu
+   itself: the Display panel's own head and its two groups at one weight read as
+   three menus stacked in a box. The TYPE is `t-caption`, worn beside this class
+   rather than respelled here — the supporting line is already that role — so
+   what this rule owns is the box: the head's inline inset, and the air a second
+   group opens with, which the first one gets from the head above it. */
+.lt-mgroup {
+  padding: var(--controlGap) var(--space-2);
+}
+.lt-mgroup ~ .lt-mgroup {
+  margin-block-start: var(--space-2);
+}
+
+/* THE WAY BACK, where a menu has a level above the one being read. It is the
+   head, so it keeps the head's box and weight from the rule above and takes
+   back only what the <button> element's own defaults impose — the border, the
+   ground, the centred text and the hand. */
+.lt-mback {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.lt-mback:hover {
+  background: var(--bgHover);
+}
+
 /* The attribute search, at the top of the Filter button's first step. Full
  * width of the menu rather than the fixed 180px of the search box in the
  * toolbar itself — this one has no icon competing for the space. */
@@ -438,6 +453,13 @@
 .lt-mi-dir {
   display: inline-flex;
   align-items: center;
+}
+
+/* A row that opens a SUBSET rather than picking a value says so at the row's
+   far end: the glyph points out of the menu, which is where the next step
+   opens, and against the label it would read as part of the attribute's name. */
+.lt-mi-more {
+  margin-inline-start: auto;
 }
 
 /* A menu row that is a CHOICE is a `Checkbox` or a `Radio` — the product's one
@@ -1155,6 +1177,35 @@
     width: 100%;
   }
 
+  /* ON A PHONE A MENU BELONGS TO THE TOOLBAR, NOT TO ITS TRIGGER. The row wraps
+     here, so which end of a line a dial sits at is decided by how many dials
+     came before it — and a panel anchored to the trigger then opens off
+     whichever edge that lands near: Sort, wrapped to the leading edge, hung its
+     right-aligned menu off the left of the viewport.
+
+     Anchored to the row instead, every panel is one sheet: the full width of
+     the toolbar, below ALL of it, wherever the dial that opened it happens to
+     have wrapped to. It gives up pointing at its own trigger, which is the
+     trade — and the right way round on a phone, where a 250px panel under a
+     dial near either edge has nowhere to go, and where a sheet the width of
+     the screen is the shape a reader already knows. The `aria-expanded` on the
+     trigger is what still says which dial is open.
+
+     The applied filter row's own condition, value and delete popups take this
+     too: they are `.lt-menu` inside `.lt-menu-wrap` inside this row, and
+     `.lt-frow` is `inline-flex` with no position of its own. */
+  .lt-tools {
+    position: relative;
+  }
+  .lt-menu-wrap {
+    position: static;
+  }
+  .lt-menu,
+  .lt-menu.right {
+    inset-inline: var(--space-3);
+    min-inline-size: 0;
+  }
+
   /* `.lt > p` is carried here beside `.lt-caption` for specificity as much as
      for rhythm: it is the selector that sets the inset above, and left out, it
      would go on winning over this narrower one. */
@@ -1283,7 +1334,7 @@
  * is drawn half underneath the neighbour.
  */
 .lt-vtab:focus-visible,
-.lt-btn:focus-visible,
+.lt-mback:focus-visible,
 .lt-mi:focus-visible,
 .lt-sort:focus-visible,
 .lt-frow-seg:focus-visible,
@@ -1311,7 +1362,7 @@
  * cut rather than to nothing.
  */
 .lt-vtab,
-.lt-btn,
+.lt-mback,
 .lt-mi,
 .lt-sort,
 .lt-frow-seg,
@@ -1330,7 +1381,7 @@
    hover, which is the same step the pressed chip already uses for its selected
    state, so pressing looks like the beginning of being chosen. */
 .lt-vtab:active,
-.lt-btn:active,
+.lt-mback:active,
 .lt-mi:active,
 .lt-frow-seg:active,
 .lt-frow-more:active,

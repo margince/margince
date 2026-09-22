@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Bookmark } from "lucide-react";
 import { userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { NamePrompt } from "./nameprompt";
@@ -41,6 +42,12 @@ type Story = StoryObj<typeof NamePrompt>;
 export const Closed: Story = {
   // The trigger alone, which is all a reader sees until they ask.
   args: shared,
+};
+
+export const WithGlyph: Story = {
+  // The trigger naming its write with a glyph, which is how the list toolbar
+  // draws Save view among the pills beside it.
+  args: { ...shared, icon: <Bookmark strokeWidth={1.5} aria-hidden="true" /> },
 };
 
 export const EmptyNameRefused: Story = {

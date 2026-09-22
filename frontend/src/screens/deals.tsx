@@ -2195,55 +2195,6 @@ function savableDealQuery(query: ListQuery, pipelineId: string): ListQuery {
     : query;
 }
 
-// The dials that sit above whichever surface is showing.
-//
-// The board/table switch and the pipeline picker are shared, so the reader
-// sees the same dials either way. The SAVE action is not: a view holds a sort
-// as well as its filters, and the board offers no way to see or change a sort
-// — its order is the pipeline's stage order. Saving from there would pin an
-// ordering the reader never chose into a view they will restore on the table.
-function DealSurfaceTools({
-  view,
-  setView,
-  pipelines,
-  pipeline,
-  setPipelineId,
-  query,
-  setQuery,
-}: Readonly<{
-  view: "board" | "table";
-  setView: (next: "board" | "table") => void;
-  pipelines: Pipeline[];
-  pipeline?: Pipeline;
-  setPipelineId: (next: string) => void;
-  query: ListQuery;
-  setQuery: (update: SetStateAction<ListQuery>) => void;
-}>) {
-  const pipelineId = pipeline?.id ?? "";
-  const dials = (
-    <DealViewTools
-      view={view}
-      setView={setView}
-      pipelines={pipelines}
-      pipelineId={pipelineId}
-      setPipelineId={setPipelineId}
-      setQuery={setQuery}
-    />
-  );
-  if (view === "board") {
-    return dials;
-  }
-  return (
-    <>
-      {dials}
-      <SaveViewAction
-        resource="deals"
-        query={savableDealQuery(query, pipelineId)}
-      />
-    </>
-  );
-}
-
 export function DealsScreen({
   startCreating = false,
 }: Readonly<{ startCreating?: boolean }>) {
@@ -2355,15 +2306,27 @@ export function DealsScreen({
     />
   );
 
+  const pipelineId = effectivePipeline?.id ?? "";
+  // The board/table switch and the pipeline picker are shared, so the reader
+  // sees the same dials either way.
   const tools = (
-    <DealSurfaceTools
+    <DealViewTools
       view={view}
       setView={setView}
       pipelines={pipelinesQuery.data ?? []}
-      pipeline={effectivePipeline}
+      pipelineId={pipelineId}
       setPipelineId={setPipelineId}
-      query={dealsListState.query}
       setQuery={setQuery}
+    />
+  );
+  // Saving is NOT shared: a view holds a sort as well as its filters, and the
+  // board offers no way to see or change one — its order is the pipeline's
+  // stage order. Saving from there would pin an ordering the reader never
+  // chose into a view they will restore on the table.
+  const saveView = view === "table" && (
+    <SaveViewAction
+      resource="deals"
+      query={savableDealQuery(dealsListState.query, pipelineId)}
     />
   );
   const dealChips = dealFilterChips(stages, t);
@@ -2418,6 +2381,7 @@ export function DealsScreen({
         searchable={false}
         action={createAction}
         tools={tools}
+        saveView={saveView}
         body={boardBody}
         bodyOwnsPaging={view === "board"}
         bodyCount={

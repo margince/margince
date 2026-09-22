@@ -6,7 +6,7 @@
 // biome-ignore-all lint/a11y/noRedundantRoles: display:block drops implicit table roles
 // biome-ignore-all lint/a11y/useSemanticElements: the semantic element is already in use
 
-import { ChevronDown, Columns3, Rows3 } from "lucide-react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -21,7 +21,7 @@ import {
   ordinalNumber,
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { Checkbox, useScrollRegion } from "./atoms";
+import { Button, Checkbox, useScrollRegion } from "./atoms";
 import {
   CountLine,
   type ListChip,
@@ -32,8 +32,6 @@ import {
   type SortControl,
   type SortOption,
   sortDirection,
-  useCloseOnEscape,
-  useCloseOnOutsideClick,
 } from "./listsurface";
 import { Select } from "./select";
 import "./listtable.css";
@@ -72,8 +70,9 @@ export type ListColumn<Row> = {
   /** Right-aligns, and makes the first sort click descending. */
   numeric?: boolean;
   /**
-   * Exempt from the column picker, and the card heading on a phone. The
-   * identity column has to stay: it is what makes a row recognisable.
+   * Exempt from the Display menu's column list, and the card heading on a
+   * phone. The identity column has to stay: it is what makes a row
+   * recognisable.
    */
   fixed?: boolean;
   /**
@@ -461,6 +460,7 @@ export function ListTable<Row>({
   problem,
   widthsKey,
   tools,
+  saveView,
   body,
   bodyOwnsPaging = false,
   selection,
@@ -635,15 +635,15 @@ export function ListTable<Row>({
   problem?: ReactNode;
   /** Names this table for the column widths it remembers between visits. */
   widthsKey?: string;
-  /** Appended to the surface's tools slot ahead of the Columns/Compact
-   * buttons — a caller's own view-switch or picker, e.g. deals' board/table
-   * toggle and pipeline picker. */
+  /** After the Display menu: a caller's own view-switch or picker, e.g. deals'
+   * board/table toggle. A Save view goes in `saveView`, which stands after. */
   tools?: ReactNode;
+  /** Handed to the surface's own last slot; see `ListSurface`. */
+  saveView?: ReactNode;
 }>) {
   const t = useT();
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [dense, setDense] = useState(false);
-  const [columnsOpen, setColumnsOpen] = useState(false);
   const [widths, setWidths] = useState<Readonly<Record<string, number>>>(() =>
     readWidths(widthsKey),
   );
@@ -744,12 +744,6 @@ export function ListTable<Row>({
   // be reachable once it does. Named by the noun the count line already uses
   // ("products", "deals") — the one word this component knows the list is OF.
   const region = useScrollRegion(scroller, unit);
-  useCloseOnOutsideClick(() => setColumnsOpen(false));
-  // The column picker keeps its own open state rather than the surface's, so
-  // it needs the same Escape path explicitly — a popover a keyboard cannot
-  // dismiss is one a keyboard reader is stuck inside.
-  useCloseOnEscape(columnsOpen ? "columns" : null, () => setColumnsOpen(false));
-
   // One read carries several rendered pages, so the rows the caller holds are a
   // whole multiple of `perPage` and dividing them here lands on page boundaries
   // the reader can reach without waiting for a round trip each.
@@ -1043,37 +1037,41 @@ export function ListTable<Row>({
       archived={archived}
       tools={
         <>
-          {tools}
-          {/* Both of TableTools' dials — which columns show, and how tight the
-              rows are — describe the GRID. A body that owns its own
+          {/* Both of the Display menu's dials — which columns show, and how
+              tight the rows are — describe the GRID. A body that owns its own
               presentation is not drawing one, so offering them there hands the
-              reader two controls that visibly do nothing, which is worse than
-              their absence: it reads as a broken control rather than as a view
-              that has no columns to hide. Withheld on the same condition as the
-              count line and the pager, for the same reason. */}
-          {!bodyOwnsPaging && (
-            <TableTools
-              optional={optional}
-              hidden={hidden}
-              onToggleColumn={(key) =>
-                setHidden((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(key)) {
-                    next.delete(key);
-                  } else {
-                    next.add(key);
-                  }
-                  return next;
-                })
-              }
-              dense={dense}
-              onDense={() => setDense(!dense)}
-              open={columnsOpen}
-              setOpen={setColumnsOpen}
-            />
-          )}
+              reader controls that visibly do nothing, which is worse than their
+              absence: it reads as broken rather than as a view that has no
+              columns to hide. Withheld on the same condition as the count line
+              and the pager, for the same reason. */}
+          {tools}
         </>
       }
+      displayMenu={
+        bodyOwnsPaging
+          ? undefined
+          : (menu) => (
+              <DisplayMenu
+                optional={optional}
+                hidden={hidden}
+                onToggleColumn={(key) =>
+                  setHidden((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(key)) {
+                      next.delete(key);
+                    } else {
+                      next.add(key);
+                    }
+                    return next;
+                  })
+                }
+                dense={dense}
+                onDense={() => setDense(!dense)}
+                {...menu}
+              />
+            )
+      }
+      saveView={saveView}
       footer={
         <>
           {footer && <div className="lt-agg">{footer}</div>}
@@ -1374,7 +1372,7 @@ function HeaderCell<Row>({
  * `th` joins that header's accessible name, so every column would announce as
  * "Value, resize the Value column" — the price of a keyboard affordance here is
  * making every header read worse for the contacts who rely on the name most. The
- * column picker already gives keyboard users control over what a table shows,
+ * Display menu already gives keyboard users control over what a table shows,
  * and a width is presentation rather than content.
  */
 function ResizeGrip({
@@ -1450,19 +1448,23 @@ function ResizeGrip({
 }
 
 /**
- * The table-specific half of the toolbar: the column picker and the density
- * toggle. Passed into ListSurface's `tools` slot — the surface itself has no
- * notion of a column or a row density, only that callers may want a slot
- * there.
+ * Everything that decides how the grid is DRAWN rather than what is in it: how
+ * tight the rows are, and which optional columns stand. One menu, because the
+ * two are one question to a reader — density and a hidden column both answer
+ * "show me more of this at once" — and a toolbar that spends a trigger on each
+ * spends its right half on dials with nothing grouping them. It goes in the
+ * surface's `displayMenu` slot, which hands it the row's own open state: the
+ * surface knows nothing of a column or a density, only that one menu on a row
+ * is open at a time.
  */
-function TableTools<Row>({
+function DisplayMenu<Row>({
   optional,
   hidden,
   onToggleColumn,
   dense,
   onDense,
   open,
-  setOpen,
+  onToggle,
 }: Readonly<{
   optional: readonly ListColumn<Row>[];
   hidden: ReadonlySet<string>;
@@ -1470,25 +1472,31 @@ function TableTools<Row>({
   dense: boolean;
   onDense: () => void;
   open: boolean;
-  setOpen: (next: boolean) => void;
+  onToggle: () => void;
 }>) {
   const t = useT();
   return (
-    <>
-      {optional.length > 0 && (
-        <span className="lt-menu-wrap">
-          <button
-            type="button"
-            className="lt-btn"
-            aria-expanded={open}
-            onClick={() => setOpen(!open)}
-          >
-            <Columns3 strokeWidth={1.5} aria-hidden="true" />
-            {t("table.columns")}
-          </button>
-          <Menu open={open} head={t("table.shownColumns")} align="right">
-            {/* Which columns are shown is a set, so each row is a `Checkbox` and
-                the menu stays open while the reader builds it. */}
+    <span className="lt-menu-wrap">
+      <Button aria-expanded={open} onClick={onToggle}>
+        <SlidersHorizontal strokeWidth={1.5} aria-hidden="true" />
+        {t("table.display")}
+        <ChevronDown className="lt-caret" aria-hidden="true" />
+      </Button>
+      <Menu open={open} head={t("table.display")} align="right">
+        {/* A group is named a rung under the menu's own head: the head says
+            which menu this is, a group says which part of it. */}
+        <div className="lt-mgroup t-caption">{t("table.density")}</div>
+        {/* Density and the column set are both sets the reader builds in one
+            visit, so every row is a `Checkbox` and the menu stays open. */}
+        <Checkbox
+          className="lt-mi"
+          checked={dense}
+          label={t("table.compact")}
+          onChange={onDense}
+        />
+        {optional.length > 0 && (
+          <>
+            <div className="lt-mgroup t-caption">{t("table.shownColumns")}</div>
             {optional.map((column) => (
               <Checkbox
                 key={column.key}
@@ -1498,20 +1506,10 @@ function TableTools<Row>({
                 onChange={() => onToggleColumn(column.key)}
               />
             ))}
-          </Menu>
-        </span>
-      )}
-
-      <button
-        type="button"
-        className={`lt-btn${dense ? " on" : ""}`}
-        aria-pressed={dense}
-        onClick={onDense}
-      >
-        <Rows3 strokeWidth={1.5} aria-hidden="true" />
-        {t("table.compact")}
-      </button>
-    </>
+          </>
+        )}
+      </Menu>
+    </span>
   );
 }
 
