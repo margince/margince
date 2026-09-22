@@ -17518,7 +17518,10 @@ export interface components {
             user_id?: string | null;
             /** @description What to show. The member's current display name when `user_id` is set, else the name the source system carried. */
             display_name: string;
-            /** @description Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded. */
+            /**
+             * @description Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
+             *     An import writes its rows inside a reserved `mirror:` namespace, which is machinery for the replay key; the prefix is stripped here, so a row stored as `mirror:hubspot` reads `hubspot` and never reaches a reader.
+             */
             via?: string | null;
         };
         /**
@@ -19630,6 +19633,8 @@ export interface components {
             emails?: components["schemas"]["ContactEmailInput"][];
             phones?: components["schemas"]["ContactPhoneInput"][];
             source: string;
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            source_system?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -19963,6 +19968,8 @@ export interface components {
             parent_company_id?: string | null;
             domains?: components["schemas"]["CompanyDomainInput"][];
             source: string;
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            source_system?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -23667,6 +23674,8 @@ export interface components {
              */
             expected_close_date?: string | null;
             source: string;
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            source_system?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -24382,6 +24391,8 @@ export interface components {
             /** Format: date */
             target_end_date?: string | null;
             source: string;
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            source_system?: string | null;
         } & {
             [key: string]: unknown;
         };

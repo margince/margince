@@ -33,6 +33,38 @@ func TestDealCreateInputRefusesTheImporterNamespace(t *testing.T) {
 	}
 }
 
+// A deal gained a source_system wire of its own, guarded like `source`.
+func TestDealCreateInputRefusesTheImporterNamespaceOnSourceSystem(t *testing.T) {
+	reserved := "mirror:legacy_crm"
+	_, err := dealCreateInput(crmcontracts.CreateDealRequest{
+		Name: "Planted", Source: "webform", SourceSystem: &reserved,
+		PipelineId: openapi_types.UUID(ids.NewV7()),
+		StageId:    openapi_types.UUID(ids.NewV7()),
+	})
+	var refused *provenance.ReservedError
+	if !errors.As(err, &refused) {
+		t.Fatalf("err = %v, want provenance.ReservedError", err)
+	}
+	if refused.Field != "source_system" {
+		t.Errorf("refusal names field %q, want source_system", refused.Field)
+	}
+
+	// The positive control: an ordinary source system reaches the store, or
+	// the guard would refuse every real import rather than the forged one.
+	ordinary := "legacy_crm"
+	in, err := dealCreateInput(crmcontracts.CreateDealRequest{
+		Name: "Real", Source: "webform", SourceSystem: &ordinary,
+		PipelineId: openapi_types.UUID(ids.NewV7()),
+		StageId:    openapi_types.UUID(ids.NewV7()),
+	})
+	if err != nil {
+		t.Fatalf("an ordinary source system must stay writable: %v", err)
+	}
+	if in.SourceSystem == nil || *in.SourceSystem != ordinary {
+		t.Errorf("SourceSystem = %v, want it carried to the store", in.SourceSystem)
+	}
+}
+
 func TestDealCreateInputAcceptsAnOrdinarySource(t *testing.T) {
 	// pipeline_id and stage_id are supplied because the mapper now enforces them:
 	// a deal is born into a stage, and an absent id used to travel to the stage

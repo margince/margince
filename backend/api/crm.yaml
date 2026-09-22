@@ -25477,6 +25477,10 @@ components:
             where the attribution comes from rather than presenting it as
             something typed here. Null when the origin was not recorded.
 
+            An import writes its rows inside a reserved `mirror:` namespace, which
+            is machinery for the replay key; the prefix is stripped here, so a row
+            stored as `mirror:hubspot` reads `hubspot` and never reaches a reader.
+
     EmailSummary:
       type: object
       x-email-presentation: entry
@@ -27941,6 +27945,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ContactPhoneInput' }
         source: { type: string }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
       additionalProperties: true
       x-extension: true
 
@@ -28402,6 +28407,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/CompanyDomainInput' }
         source: { type: string }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
       additionalProperties: true
       x-extension: true
 
@@ -33142,6 +33148,7 @@ components:
         owner_id: { type: [string, 'null'], format: uuid }
         expected_close_date: { type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).' }
         source: { type: string }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
       additionalProperties: true
       x-extension: true
 
@@ -33938,6 +33945,7 @@ components:
         started_at: { type: [string, 'null'], format: date }
         target_end_date: { type: [string, 'null'], format: date }
         source: { type: string }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
       additionalProperties: true
       x-extension: true
 

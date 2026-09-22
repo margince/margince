@@ -56,16 +56,17 @@ func contactCreateInput(req crmcontracts.CreateContactRequest) (CreateContactInp
 	if req.FullName == "" {
 		return CreateContactInput{}, &RequiredFieldError{Field: "full_name"}
 	}
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.RefuseWire(req.Source, req.SourceSystem); err != nil {
 		return CreateContactInput{}, err
 	}
 	in := CreateContactInput{
-		FullName:  req.FullName,
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Title:     req.Title,
-		Source:    req.Source,
-		OwnerID:   idArg[ids.UserKind](req.OwnerId),
+		FullName:     req.FullName,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		Title:        req.Title,
+		Source:       req.Source,
+		SourceSystem: req.SourceSystem,
+		OwnerID:      idArg[ids.UserKind](req.OwnerId),
 		// The body's extra top-level keys (custom-field values); the
 		// store decides which land (active catalog columns only).
 		CustomFields: req.AdditionalProperties,
@@ -196,7 +197,7 @@ func companyCreateInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInp
 	if req.DisplayName == "" {
 		return CreateCompanyInput{}, &RequiredFieldError{Field: "display_name"}
 	}
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.RefuseWire(req.Source, req.SourceSystem); err != nil {
 		return CreateCompanyInput{}, err
 	}
 	in := CreateCompanyInput{
@@ -205,6 +206,7 @@ func companyCreateInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInp
 		Description:     req.Description,
 		Industry:        req.Industry,
 		Source:          req.Source,
+		SourceSystem:    req.SourceSystem,
 		OwnerID:         idArg[ids.UserKind](req.OwnerId),
 		ParentCompanyID: idArg[ids.CompanyKind](req.ParentCompanyId),
 		CustomFields:    req.AdditionalProperties,
