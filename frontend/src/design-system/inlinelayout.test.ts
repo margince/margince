@@ -27,11 +27,12 @@ import {
 // COMPUTED — a popover's resolved position, a bar filled to a percentage, a
 // column width read off the table's own config — and no stylesheet can hold it.
 //
-// A WRAPPER IS NOT AN EXEMPTION. The rule counts wherever the element can reach
-// it: through a ternary, a guard, a cast, a spread, a nullish default, or a
-// style object hoisted to a name of its own. A reader of the rendered page
-// cannot tell those apart, and a census that could is one an author steps
-// around by adding a `?:`.
+// A WRAPPER IS NOT AN EXEMPTION, AND NEITHER IS A ROAD. The rule counts
+// wherever the element can reach it: through a ternary, a guard, a cast, a
+// spread, a nullish default, a style hoisted to a name of its own, a props
+// object spread onto the element, or the `createElement` call JSX compiles to.
+// A reader of the rendered page cannot tell those apart, and a census that
+// could is one an author steps around by adding a `?:`.
 //
 // The width/height family IS in scope, measured on its own before it was let
 // in: a static dimension is a rule a class holds as readily as a margin. The
@@ -48,14 +49,15 @@ const extensionsRoot = join(repoRoot, "extensions");
  * A style property that lays something out, by family: the box's own space,
  * how it flows, and where it sits. Matched as a PREFIX, so `marginInlineStart`,
  * `gridTemplateColumns` and `overflowX` are covered without a list that goes
- * stale the day the platform ships another one.
+ * stale the day the platform ships another one. The logical sizes name
+ * themselves, because `inlineSize` shares no prefix with the `width` it is.
  *
  * `transform` and `translate` are here because a static one MOVES the box;
  * `rotate`, `scale` and `opacity` are not, because they change what a box
  * looks like without changing where anything sits.
  */
 const LAYOUT_PROPERTY =
-  /^(margin|padding|gap|rowGap|columnGap|display|flex|grid|justify|align|place|inset|top|right|bottom|left|width|minWidth|maxWidth|height|minHeight|maxHeight|position|overflow|float|order|boxSizing|aspectRatio|transform|translate|zIndex)/;
+  /^(margin|padding|gap|rowGap|columnGap|display|flex|grid|justify|align|place|inset|top|right|bottom|left|width|minWidth|maxWidth|height|minHeight|maxHeight|position|overflow|float|order|boxSizing|aspectRatio|transform|translate|zIndex|inlineSize|blockSize|minInlineSize|maxInlineSize|minBlockSize|maxBlockSize)/;
 
 /** A type annotation that says an object IS a style, wherever it is written. */
 const STYLE_ANNOTATION = /\bCSSProperties\b/;
@@ -290,13 +292,50 @@ function styleObjectsUnder(
   return found;
 }
 
-/** The expression a `style` attribute hands its element, if it has one. */
-function styleExpression(node: ts.Node): ts.Expression | undefined {
-  if (!ts.isJsxAttribute(node) || !ts.isIdentifier(node.name)) return undefined;
-  if (node.name.text !== "style") return undefined;
-  const value = node.initializer;
-  if (value === undefined || !ts.isJsxExpression(value)) return undefined;
-  return value.expression;
+/** The call JSX compiles to, and the one a file may write by hand. */
+const RENDER_CALL = /(^|\.)(createElement|jsx|jsxs|jsxDEV)$/;
+
+/** The `style` a props object carries, however that object is written. */
+function styleOfProps(
+  props: ts.Expression,
+  named: Map<string, ts.Expression[]>,
+): ts.Expression[] {
+  return styleObjectsUnder(props, named).flatMap((object) =>
+    object.properties.flatMap((property) =>
+      ts.isPropertyAssignment(property) &&
+      propertyName(property.name) === "style"
+        ? [property.initializer]
+        : [],
+    ),
+  );
+}
+
+/**
+ * Every expression handed to an element as its `style`, by each road the
+ * language offers: the attribute, a spread of a props object, and the call
+ * both of those compile to. An element cannot tell them apart and neither may
+ * the census — a spread is otherwise one keystroke around this gate.
+ */
+function styleValues(
+  node: ts.Node,
+  named: Map<string, ts.Expression[]>,
+): ts.Expression[] {
+  if (ts.isJsxAttribute(node)) {
+    if (!ts.isIdentifier(node.name) || node.name.text !== "style") return [];
+    const value = node.initializer;
+    if (value === undefined || !ts.isJsxExpression(value)) return [];
+    return value.expression === undefined ? [] : [value.expression];
+  }
+  if (ts.isJsxSpreadAttribute(node))
+    return styleOfProps(node.expression, named);
+  if (
+    ts.isCallExpression(node) &&
+    RENDER_CALL.test(node.expression.getText())
+  ) {
+    const props = node.arguments[1];
+    return props === undefined ? [] : styleOfProps(props, named);
+  }
+  return [];
 }
 
 /**
@@ -333,11 +372,8 @@ function inlineLayoutIn(where: string, source: ts.SourceFile): InlineLayout[] {
   // and from its own annotated declaration, and it is one rule either way.
   const objects = new Set<ts.ObjectLiteralExpression>();
   const visit = (node: ts.Node) => {
-    const expression = styleExpression(node);
-    if (expression !== undefined) {
-      for (const object of styleObjectsUnder(expression, named)) {
-        objects.add(object);
-      }
+    for (const style of styleValues(node, named)) {
+      for (const object of styleObjectsUnder(style, named)) objects.add(object);
     }
     ts.forEachChild(node, visit);
   };
@@ -477,6 +513,28 @@ describe("layout is a class, not a style attribute", () => {
       ).toEqual([]);
     });
 
+    it("reads every road a style reaches an element by", () => {
+      const roads = [
+        '<div {...{ style: { marginTop: "4px" } }} />',
+        'const props = { style: { gap: "8px" } };\n<div {...props} />',
+        'createElement("div", { style: { padding: 0 } })',
+        'const hoisted = { padding: 0 };\nReact.createElement("div", { style: hoisted })',
+        'jsx("div", { style: { gap: "8px" } })',
+      ];
+      expect(
+        roads.filter((road) => read(road).length !== 1),
+        "a style reached its element unread",
+      ).toEqual([]);
+    });
+
+    it("leaves a props object the render built alone", () => {
+      expect(
+        read("const frameProps = propsFor(frame);\n<div {...frameProps} />"),
+      ).toEqual([]);
+      expect(read("<div {...frameProps} />")).toEqual([]);
+      expect(read('createElement("div", propsFor(frame))')).toEqual([]);
+    });
+
     it("reads a style object hoisted to a name of its own", () => {
       expect(
         read('const row = { marginTop: "4px" };\n<div style={row} />'),
@@ -540,6 +598,15 @@ describe("layout is a class, not a style attribute", () => {
         '<div style={{ transform: "translateY(-2px)" }} />',
         '<div style={{ translate: "0 -2px" }} />',
         "<div style={{ zIndex: 2 }} />",
+        '<div style={{ inlineSize: "8rem" }} />',
+        '<div style={{ blockSize: "8rem" }} />',
+        '<div style={{ minInlineSize: "8rem" }} />',
+        '<div style={{ maxInlineSize: "8rem" }} />',
+        '<div style={{ minBlockSize: "8rem" }} />',
+        '<div style={{ maxBlockSize: "8rem" }} />',
+        '<div style={{ marginInline: "auto" }} />',
+        '<div style={{ paddingBlock: "4px" }} />',
+        "<div style={{ insetInlineStart: 0 }} />",
       ];
       expect(
         families.filter((one) => read(one).length !== 1),
