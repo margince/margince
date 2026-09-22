@@ -106,3 +106,39 @@ func masksWithholding(p principal.Principal, object, field string) []principal.F
 func shareableObject(object string) bool {
 	return shareableTables[object]
 }
+
+// String spells a subject the way the maskable-field catalog spells an offered
+// pair, so a reader comparing the two compares like against like.
+func (s maskSubject) String() string { return s.object + " " + s.field }
+
+// MaskGroupCrossings reports the group entries that reach ANOTHER object: each
+// configured pair, against what it withholds on a record that does not own the
+// fact.
+//
+// Exported for the gates holding this closure against the maskable-field
+// catalog, which cannot read an unexported table and must not keep a second
+// copy of one. Crossings alone, because only they raise the question — a
+// consequence inside one object is that object's own field to offer.
+func MaskGroupCrossings() map[string][]string {
+	crossings := make(map[string][]string, len(maskGroups))
+	for configured, members := range maskGroups {
+		for _, m := range members {
+			if m.object != configured.object {
+				crossings[configured.String()] = append(crossings[configured.String()], m.String())
+			}
+		}
+	}
+	for _, members := range crossings {
+		slices.Sort(members)
+	}
+	return crossings
+}
+
+// MaskConditionAnswerable reports whether a mask on the object may be
+// conditioned on write authority at all. The question needs an owner and a
+// grant, which only a shareable record's rows carry; configured anywhere else
+// the condition never lifts, so an operator who asked for "hidden on the rows
+// they cannot change" gets the field hidden on every row instead.
+//
+// Exported for the gate refusing an undeclared such pair in the catalog.
+func MaskConditionAnswerable(object string) bool { return shareableObject(object) }
