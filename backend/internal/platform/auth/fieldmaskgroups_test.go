@@ -28,7 +28,8 @@ func principalWithMasks(masks ...principal.FieldMask) principal.Principal {
 func TestAMaskOnTheAmountWithholdsTheCurrencyBesideIt(t *testing.T) {
 	t.Parallel()
 	p := principalWithMasks(principal.FieldMask{
-		Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways})
+		Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways,
+	})
 	for _, field := range []string{"amount_minor", "expected_arr_minor", "currency"} {
 		if len(masksWithholding(p, "deal", field)) == 0 {
 			t.Errorf("deal.%s is readable beside a withheld amount; a currency beside a "+
@@ -42,7 +43,8 @@ func TestAMaskOnTheAmountWithholdsTheCurrencyBesideIt(t *testing.T) {
 func TestAMaskOnTheCurrencyDoesNotWithholdTheAmount(t *testing.T) {
 	t.Parallel()
 	p := principalWithMasks(principal.FieldMask{
-		Object: "deal", Field: "currency", Condition: principal.MaskAlways})
+		Object: "deal", Field: "currency", Condition: principal.MaskAlways,
+	})
 	if len(masksWithholding(p, "deal", "amount_minor")) != 0 {
 		t.Error("a mask on the currency alone withheld the amount")
 	}
@@ -53,7 +55,8 @@ func TestAMaskOnTheCurrencyDoesNotWithholdTheAmount(t *testing.T) {
 func TestAPartnerMarginMaskReachesTheCommissionThatRepublishesIt(t *testing.T) {
 	t.Parallel()
 	p := principalWithMasks(principal.FieldMask{
-		Object: "partner", Field: "margin_tier", Condition: principal.MaskAlways})
+		Object: "partner", Field: "margin_tier", Condition: principal.MaskAlways,
+	})
 	if len(masksWithholding(p, "commission", "margin_tier_at_accrual")) == 0 {
 		t.Error("commission.margin_tier_at_accrual survived a partner margin mask")
 	}
@@ -66,10 +69,14 @@ func TestAPartnerMarginMaskReachesTheCommissionThatRepublishesIt(t *testing.T) {
 func TestMasksWithholdingReturnsEveryMaskReachingTheField(t *testing.T) {
 	t.Parallel()
 	p := principalWithMasks(
-		principal.FieldMask{Object: "deal", Field: "amount_minor",
-			Condition: principal.MaskOutsideWriteAuthority},
-		principal.FieldMask{Object: "deal", Field: "expected_arr_minor",
-			Condition: principal.MaskAlways})
+		principal.FieldMask{
+			Object: "deal", Field: "amount_minor",
+			Condition: principal.MaskOutsideWriteAuthority,
+		},
+		principal.FieldMask{
+			Object: "deal", Field: "expected_arr_minor",
+			Condition: principal.MaskAlways,
+		})
 	// expected_arr_minor is named by both: its own always-mask and the amount's
 	// conditioned group.
 	got := masksWithholding(p, "deal", "expected_arr_minor")
@@ -89,10 +96,14 @@ func TestMasksWithholdingReturnsEveryMaskReachingTheField(t *testing.T) {
 // order of stored rows deciding what a role reads.
 func TestTheStrictestMaskDecidesWhenTwoNameOneField(t *testing.T) {
 	t.Parallel()
-	conditioned := principal.FieldMask{Object: "deal", Field: "amount_minor",
-		Condition: principal.MaskOutsideWriteAuthority}
-	always := principal.FieldMask{Object: "deal", Field: "expected_arr_minor",
-		Condition: principal.MaskAlways}
+	conditioned := principal.FieldMask{
+		Object: "deal", Field: "amount_minor",
+		Condition: principal.MaskOutsideWriteAuthority,
+	}
+	always := principal.FieldMask{
+		Object: "deal", Field: "expected_arr_minor",
+		Condition: principal.MaskAlways,
+	}
 	for _, order := range [][]principal.FieldMask{{conditioned, always}, {always, conditioned}} {
 		p := principalWithMasks(order...)
 		// The update verb, so the conditioned mask ALONE would render a real
@@ -127,7 +138,8 @@ func TestTheStrictestMaskDecidesWhenTwoNameOneField(t *testing.T) {
 func TestAConditionedMaskWithholdsWhereWriteAuthorityCannotBeAnswered(t *testing.T) {
 	t.Parallel()
 	p := principalWithMasks(principal.FieldMask{
-		Object: "product", Field: "unit_price_minor", Condition: principal.MaskOutsideWriteAuthority})
+		Object: "product", Field: "unit_price_minor", Condition: principal.MaskOutsideWriteAuthority,
+	})
 	p.Permissions.Objects = map[string]principal.ObjectGrant{"product": {Read: true, Update: true}}
 	for _, writable := range []bool{false, true} {
 		if got := MaskedFields(p, "product", writable); !slices.Contains(got, "unit_price_minor") {
@@ -150,7 +162,8 @@ func TestAConditionedMaskWithholdsWhereWriteAuthorityCannotBeAnswered(t *testing
 func TestAReaderOfEveryRowIsWithheldNothing(t *testing.T) {
 	t.Parallel()
 	p := principalWithMasks(principal.FieldMask{
-		Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways})
+		Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways,
+	})
 	p.Permissions.RowScope = principal.RowScopeAll
 	if len(masksWithholding(p, "deal", "amount_minor")) != 0 {
 		t.Error("a mask withheld a column from a reader whose scope is every row")
@@ -163,7 +176,8 @@ func TestAReaderOfEveryRowIsWithheldNothing(t *testing.T) {
 func TestMaskedFieldsNamesEveryFieldTheGroupTakes(t *testing.T) {
 	t.Parallel()
 	p := principalWithMasks(principal.FieldMask{
-		Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways})
+		Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways,
+	})
 	got := MaskedFields(p, "deal", false)
 	for _, field := range []string{"amount_minor", "expected_arr_minor", "currency"} {
 		if !slices.Contains(got, field) {
@@ -177,7 +191,8 @@ func TestMaskedFieldsNamesEveryFieldTheGroupTakes(t *testing.T) {
 func TestMaskedFieldsCrossesToTheObjectTheGroupNames(t *testing.T) {
 	t.Parallel()
 	p := principalWithMasks(principal.FieldMask{
-		Object: "partner", Field: "margin_tier", Condition: principal.MaskAlways})
+		Object: "partner", Field: "margin_tier", Condition: principal.MaskAlways,
+	})
 	if got := MaskedFields(p, "commission", false); !slices.Contains(got, "margin_tier_at_accrual") {
 		t.Errorf("MaskedFields(commission) = %v, want the tier the partner mask reaches", got)
 	}

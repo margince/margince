@@ -21,6 +21,16 @@ import (
 // renamed by renaming the table or column they coincide with.
 type maskSubject struct{ object, field string }
 
+// The names the table below repeats. maskObjDeal is DERIVED from the table
+// constant rather than respelt: the two vocabularies coincide on that name, and
+// two constants for one string is the drift this package exists to refuse. An
+// offer has no table here, so it gets a name of its own.
+const (
+	maskObjDeal       = tableDeal
+	maskObjOffer      = "offer"
+	maskFieldCurrency = "currency"
+)
+
 // maskGroups says what a mask on the key also withholds.
 //
 // Directed, not symmetric. A currency beside a withheld amount reads as a
@@ -38,16 +48,22 @@ var maskGroups = map[maskSubject][]maskSubject{
 	// An ARR left standing beside a withheld one-off amount discloses the size
 	// of the deal the mask was meant to hide, so the two travel with the
 	// currency that would otherwise still read as a priced deal.
-	{"deal", "amount_minor"}:        {{"deal", "expected_arr_minor"}, {"deal", "currency"}},
-	{"deal", "expected_arr_minor"}:  {{"deal", "amount_minor"}, {"deal", "currency"}},
-	{"product", "unit_price_minor"}: {{"product", "currency"}},
+	{maskObjDeal, "amount_minor"}:       {{maskObjDeal, "expected_arr_minor"}, {maskObjDeal, maskFieldCurrency}},
+	{maskObjDeal, "expected_arr_minor"}: {{maskObjDeal, "amount_minor"}, {maskObjDeal, maskFieldCurrency}},
+	{"product", "unit_price_minor"}:     {{"product", maskFieldCurrency}},
 	// An offer's money surface is one thing or nothing. Quantity and discount
 	// stay readable, so a line net gives the unit price back by division, and a
 	// one-line offer's gross simply is that price plus its tax.
-	{"offer", "unit_price_minor"}: {
-		{"offer", "line_net_minor"}, {"offer", "line_tax_minor"}, {"offer", "line_total_minor"},
-		{"offer", "net_minor"}, {"offer", "tax_minor"}, {"offer", "gross_minor"},
-		{"offer", "net_tcv_minor"}, {"offer", "arr_minor"}, {"offer", "currency"},
+	{maskObjOffer, "unit_price_minor"}: {
+		{maskObjOffer, "line_net_minor"},
+		{maskObjOffer, "line_tax_minor"},
+		{maskObjOffer, "line_total_minor"},
+		{maskObjOffer, "net_minor"},
+		{maskObjOffer, "tax_minor"},
+		{maskObjOffer, "gross_minor"},
+		{maskObjOffer, "net_tcv_minor"},
+		{maskObjOffer, "arr_minor"},
+		{maskObjOffer, maskFieldCurrency},
 	},
 	{"partner", "margin_tier"}: {{"commission", "margin_tier_at_accrual"}},
 }
