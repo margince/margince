@@ -103,8 +103,11 @@ func (s *Store) GetCommissionEntry(ctx context.Context, id ids.CommissionEntryID
 	}
 	var out crmcontracts.CommissionEntry
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = readEntry(ctx, tx, id)
+		entry, err := readEntry(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		out, err = maskedEntry(ctx, tx, entry)
 		return err
 	})
 	return out, err

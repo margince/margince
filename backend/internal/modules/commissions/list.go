@@ -37,8 +37,10 @@ func (s *Store) List(ctx context.Context, in ListInput) (crmcontracts.Commission
 	var out crmcontracts.CommissionEntryListResponse
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = listTx(ctx, tx, in)
-		return err
+		if out, err = listTx(ctx, tx, in); err != nil {
+			return err
+		}
+		return maskEntries(ctx, tx, out.Data)
 	})
 	return out, err
 }

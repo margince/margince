@@ -78,8 +78,11 @@ func (s *Store) Accrue(ctx context.Context, in AccrueInput) (crmcontracts.Commis
 
 	var out crmcontracts.CommissionEntry
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = accrueTx(ctx, tx, in, by)
+		entry, err := accrueTx(ctx, tx, in, by)
+		if err != nil {
+			return err
+		}
+		out, err = maskedEntry(ctx, tx, entry)
 		return err
 	})
 	return out, err

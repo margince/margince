@@ -70,8 +70,13 @@ func (s *Store) Decide(ctx context.Context, id ids.CommissionEntryID, in DecideI
 
 	var out crmcontracts.CommissionEntry
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = decideTx(ctx, tx, id, in, by)
+		// After the decision, so the reversal a void writes is copied from the
+		// entry as it stands rather than from a masked rendering of it.
+		entry, err := decideTx(ctx, tx, id, in, by)
+		if err != nil {
+			return err
+		}
+		out, err = maskedEntry(ctx, tx, entry)
 		return err
 	})
 	return out, err
