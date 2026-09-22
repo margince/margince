@@ -166,6 +166,54 @@ elif [[ "${GATE_RESULT:-}" = "success" ]]; then
   resolve "SonarCloud quality gate is not green on main"
 fi
 
+# Two findings again, and the same reason as the perf arm: the job result alone
+# cannot tell "Renovate has stopped" from "the tracker read failed". Filing the
+# first for the second sends somebody to reinstall a GitHub App that was working
+# the whole time. RENOVATE_OUTCOME is set by the script only once it has an
+# answer in hand, so only a MEASURED silence is reported as one.
+if [[ "${RENOVATE_RESULT:-}" = "failure" ]] && [[ "${RENOVATE_OUTCOME:-}" != "quiet" ]]; then
+  report "the Renovate liveness check could not run" "priority: normal,area: ci-tests,bug" \
+"\`check-renovate-liveness.sh\` failed on the scheduled run WITHOUT reaching a
+verdict: $RUN_URL
+
+Renovate is not known to have stopped, and it is not known to be running — the
+check did not get far enough to say. The step separates the two outcomes
+precisely so this issue does not send somebody reinstalling an app that was
+working.
+
+Reproduce with \`GH_TOKEN=\$(gh auth token) REPO=$REPO ./scripts/check-renovate-liveness.sh\`."\
+    || unreported=1
+elif [[ "${RENOVATE_RESULT:-}" = "success" ]] || [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]]; then
+  # A MEASURED SILENCE IS PROOF THE CHECK RAN, which is all this title claims —
+  # so it retracts here as well as on a pass, and the arm below files the
+  # silence under its own title.
+  resolve "the Renovate liveness check could not run"
+fi
+
+if [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]]; then
+  report "Renovate has stopped running against main" "priority: high,area: ci-tests,bug" \
+"The liveness check read \`${RENOVATE_STATUS:-unknown}\` on the scheduled run:
+$RUN_URL
+
+Renovate is the **only** mechanism that adopts a fix for a lockfile-only
+transitive advisory. \`vulnerabilityAlerts\` cannot raise a package that has no
+manifest range, so \`lockFileMaintenance\` is what closes one — and renovate.json
+argues that at length. While the bot is quiet that mechanism is gone, and
+nothing else in this repository will say so: no lane reddens and no pull request
+is blocked.
+
+\`QUIET\` means it ran once and has not acted since. \`NO_DASHBOARD\` means it has
+never run here at all, which is what an installation bound to a previous owner or
+repository name looks like — check the GitHub App installation before looking
+at the config, because a bad \`renovate.json\` files a config-warning issue
+rather than going silent.
+
+The job log names the last act it could find and its date."\
+    || unreported=1
+elif [[ "${RENOVATE_RESULT:-}" = "success" ]]; then
+  resolve "Renovate has stopped running against main"
+fi
+
 if [[ "${LANE_RESULT:-}" = "failure" ]]; then
   report "the backend merge gate is red on main" "priority: critical,area: ci-tests,bug" \
 "\`make check-backend\` failed on the scheduled run of \`main\`: $RUN_URL
