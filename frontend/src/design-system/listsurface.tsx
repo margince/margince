@@ -636,7 +636,9 @@ function SortMenu({
         {/* The glyph is the sighted reader's half. Which WAY the list runs has
             to be said as well, or the dial names a column and not an order. */}
         {activeDirection && (
+          // The space is the separator: a name concatenates what is inside it.
           <span className="sr-only">
+            {" "}
             {activeDirection === "asc"
               ? t("table.sortAscending")
               : t("table.sortDescending")}
@@ -672,10 +674,7 @@ function SortMenu({
   );
 }
 
-/**
- * Which way the list runs, on the dial that changes it — or, unsorted, the pair
- * of arrows that says an order is what this control offers.
- */
+/** Which way the list runs, or the pair of arrows that offers an order. */
 function SortGlyph({
   direction,
 }: Readonly<{ direction: "asc" | "desc" | null }>) {
@@ -742,6 +741,7 @@ function SortItem({
                   has to be said as well, or the standing entry announces only
                   that it is the sort and not which way. */}
               <span className="sr-only">
+                {" "}
                 {direction === "asc"
                   ? t("table.sortAscending")
                   : t("table.sortDescending")}
