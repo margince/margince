@@ -7,7 +7,7 @@
 // fetched by scripts/craft-pin.sh, so nothing here builds it. The local dev
 // stack is a plain shell script (scripts/dev.sh, `make dev`) — no Go module of
 // its own.
-go 1.26.6
+go 1.27.0
 
 use (
 	./backend
