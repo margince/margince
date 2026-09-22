@@ -1,12 +1,13 @@
 import { expect, type Page, test } from "@playwright/test";
 import { RECORDS } from "./records";
 import { type MockApiOptions, mockApi } from "./seed";
+import { pageOverflow } from "./waits";
 
 /**
  * The record's own chrome, measured rather than described.
  *
- * Two invariants live here, and both were stated in prose beside the code that
- * was supposed to hold them while the product drew something else:
+ * Every invariant here was stated in prose beside the code that was supposed to
+ * hold it while the product drew something else:
  *
  * 1. An icon-only button is SQUARE. `.btn-icon` said so in a comment and set a
  *    width, and a width is half a square — a flex row stretched the button to
@@ -27,6 +28,11 @@ import { type MockApiOptions, mockApi } from "./seed";
  *    entirely, and a rule written for the tablet was still claiming a 252px
  *    rail track at 390px — which put the context in a second column beside a
  *    138px record.
+ * 4. A record does not PAN. The tab strip breaks out of the reading column to
+ *    the edges of the work column by `100cqi` (design-system/recordtabs.css),
+ *    so whichever box is named `work` decides whether the strip fits: named on
+ *    the column it counted the scrollbar's gutter as usable width, and every
+ *    record could be dragged six pixels sideways under the reader's hands.
  *
  * Geometry, therefore, and in a browser: both defects were invisible to every
  * unit test in the tree and obvious in a screenshot.
@@ -381,6 +387,31 @@ test.describe("the record's details pane", () => {
         // And away again, from the same switch.
         await detailsSwitch(page).click();
         await expect(pane, "the pane is still on screen").toBeHidden();
+      });
+    }
+  }
+});
+
+test.describe("the record's column holds still", () => {
+  // The four widths the record is drawn at: a phone, a tablet, the reading
+  // column's own measure, and a desktop wider than it.
+  const WIDTHS = [390, 768, 1280, 1440];
+
+  for (const record of RECORDS) {
+    for (const width of WIDTHS) {
+      test(`does not pan sideways on a ${record.name} at ${width}px`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 844 });
+        await openRecord(page, record.route);
+        // The strip is the block that breaks out, so a page measured before it
+        // is on screen is a page measured without the thing under test.
+        await expect(page.locator(".recordtabs")).toBeVisible();
+
+        expect(
+          await pageOverflow(page),
+          "the record pans sideways: the reader can drag the page off the column it is reading",
+        ).toEqual([]);
       });
     }
   }
