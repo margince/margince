@@ -58,9 +58,8 @@ func refuseMaskedPartnerSort(ctx context.Context, sort *string) error {
 	})
 }
 
-// wirePartners maps a page of rows onto the wire and masks it — the one place a
-// partner row becomes a partner record, so a read added later cannot be the one
-// that forgets.
+// wirePartners maps a page of rows onto the wire and masks it, so a read that
+// reaches for it cannot be the one that forgets the withhold.
 func wirePartners(ctx context.Context, tx pgx.Tx, rows []partnerRow) ([]crmcontracts.Partner, error) {
 	page := make([]crmcontracts.Partner, 0, len(rows))
 	for _, row := range rows {

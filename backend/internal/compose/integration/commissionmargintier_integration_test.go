@@ -20,8 +20,8 @@ import (
 
 // The cross-object half. The tier is frozen onto every entry accrued under it,
 // so a mask that stopped at the partner record would be a mask that does not
-// mask. Neither module knows the other: the reach is declared once in auth's
-// group closure and each withholds its own field.
+// mask. Neither module knows the other: the reach is declared in auth's group
+// closure and each withholds its own field.
 func TestAMaskedSeatReadsACommissionEntryWithoutTheTierItWasAccruedOn(t *testing.T) {
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
