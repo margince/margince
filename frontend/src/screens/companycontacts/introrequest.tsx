@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Field, Modal } from "../../design-system/atoms";
+import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { Heading } from "../../design-system/heading";
 import { ProvenanceTag } from "../../design-system/trust";
 import { useT } from "../../i18n";
@@ -52,8 +53,6 @@ export function IntroRequestModal({
     subject: string;
     body: string;
   } | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
 
   const draft = useMutation({
     mutationFn: async (ask: IntroTarget): Promise<Draft> => {
@@ -79,7 +78,6 @@ export function IntroRequestModal({
     },
     onSuccess: () => {
       setEdited(null);
-      setCopied(false);
     },
   });
 
@@ -94,6 +92,13 @@ export function IntroRequestModal({
     edited !== null &&
     (edited.subject !== written?.subject || edited.body !== written?.body);
   const rewritten = changed && editDistanceIsSubstantial(edited, written);
+  // Keyed on the message as it stands, so an edit — or a re-draft — stops the
+  // button claiming a clipboard that holds the text before it.
+  const copy = useClipboardCopy(`${subject}\n\n${body}`, {
+    copy: t("co.intro.copy"),
+    copied: t("co.intro.copied"),
+    remedy: t("co.intro.copyFailed"),
+  });
 
   return (
     <Modal open={target !== null} onClose={onClose} labelledBy={titleId}>
@@ -142,10 +147,9 @@ export function IntroRequestModal({
               <input
                 {...control}
                 value={subject}
-                onChange={(event) => {
-                  setEdited({ subject: event.target.value, body });
-                  setCopied(false);
-                }}
+                onChange={(event) =>
+                  setEdited({ subject: event.target.value, body })
+                }
               />
             )}
           </Field>
@@ -155,13 +159,9 @@ export function IntroRequestModal({
                 {...control}
                 rows={10}
                 value={body}
-                onChange={(event) => {
-                  setEdited({ subject, body: event.target.value });
-                  // The clipboard still holds the OLDER text, so a button that
-                  // went on saying "Copied" would be describing a message the
-                  // reader can no longer paste.
-                  setCopied(false);
-                }}
+                onChange={(event) =>
+                  setEdited({ subject, body: event.target.value })
+                }
               />
             )}
           </Field>
@@ -175,35 +175,13 @@ export function IntroRequestModal({
               </ul>
             </>
           )}
-          {copyFailed && (
-            <p className="cp-intro-error">{t("co.intro.copyFailed")}</p>
-          )}
+          {copy.notice}
           <div className="cp-intro-actions">
             {/* Copy first, because it is the one that always works. A mailto:
              * depends on the reader having a mail client bound to the
              * protocol, and a button that silently does nothing is worse than
              * one they did not press. */}
-            <Button
-              onClick={() => {
-                // A browser with no clipboard access, or a refused write, must
-                // SAY so. Silently doing nothing leaves a reader pressing a
-                // button and wondering why their paste is empty.
-                const writer = navigator.clipboard;
-                if (!writer) {
-                  setCopyFailed(true);
-                  return;
-                }
-                writer
-                  .writeText(`${subject}\n\n${body}`)
-                  .then(() => {
-                    setCopied(true);
-                    setCopyFailed(false);
-                  })
-                  .catch(() => setCopyFailed(true));
-              }}
-            >
-              {copied ? t("co.intro.copied") : t("co.intro.copy")}
-            </Button>
+            <Button onClick={copy.copy}>{copy.label}</Button>
             <Button
               variant="ghost"
               onClick={() => {

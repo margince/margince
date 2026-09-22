@@ -548,6 +548,10 @@ export const en = {
 
   "common.undo": "Undo",
   "common.close": "Close",
+  // The one sentence every copy failure opens with. It is a fact about the
+  // BROWSER rather than about the link, the secret or the agenda, so the
+  // screens differ only in the way out they offer after it.
+  "clipboard.copyFailedTitle": "This browser refused the clipboard",
 
   "explain.open": "Explain this number",
   "explain.mayHaveMoved":
@@ -1321,7 +1325,7 @@ export const en = {
   "access.issued.linkLabel": "Their link",
   "access.issued.copy": "Copy link",
   "access.issued.copied": "Copied",
-  "access.issued.copyFailed": "Could not copy; select the link and copy it.",
+  "access.issued.copyFailed": "Select the link and copy it by hand.",
   "access.issued.oneTime":
     "Personal, one-time link. It works once, on one device. Each person needs their own invitation.",
   "access.issueLinkTitle": "Issue a new link for {name}",
@@ -2040,8 +2044,7 @@ export const en = {
   "co.intro.body": "Message",
   "co.intro.basedOn": "Based on",
   "co.intro.copy": "Copy",
-  "co.intro.copyFailed":
-    "This browser would not let the page copy. Select the message and copy it yourself.",
+  "co.intro.copyFailed": "Select the message and copy it yourself.",
   "co.intro.copied": "Copied",
   "co.intro.openMail": "Open in your mail app",
   "co.map.askIntro": "Ask for an intro",
@@ -3082,7 +3085,6 @@ export const en = {
     "{count} to take to Monday, starting with {first}.",
   "teamweekly.agenda.copy": "Copy agenda",
   "teamweekly.agenda.copied": "Copied",
-  "teamweekly.agenda.copyFailedTitle": "This browser refused the clipboard",
   "teamweekly.agenda.copyFailed": "Select the list and copy it by hand.",
   "teamweekly.focus.help_requested": "Asked for help",
   "teamweekly.focus.leads_breached": "Response targets missed",
@@ -4096,7 +4098,6 @@ export const en = {
     "Leaving without copying discards the link. You would have to create another.",
   "analytics.share.copy": "Copy link",
   "analytics.share.copied": "Copied",
-  "analytics.share.copyFailedTitle": "The link could not be copied",
   "analytics.share.copyFailed": "Select it above and copy it by hand.",
   "analytics.share.done": "Done",
   "analytics.frame": "As of {asOf} · {zone}",
@@ -7787,7 +7788,6 @@ export const en = {
   "users.link.urlLabel": "Set-password link",
   "users.link.copy": "Copy link",
   "users.link.copied": "Copied",
-  "users.link.copyFailedTitle": "The link could not be copied",
   "users.link.copyFailed": "Select it in the field and copy it by hand.",
   "users.link.expires": "Expires {when}.",
   "users.link.failedTitle": "The link could not be created",
@@ -8010,7 +8010,6 @@ export const en = {
   "aiexport.copy": "Copy YAML",
   "aiexport.copied": "Copied",
   "aiexport.download": "Download .yaml",
-  "aiexport.copyFailedTitle": "Copy failed",
   "aiexport.copyFailed": "Use the preview or download instead.",
   "aiexport.close": "Close",
   "aiexport.previewLabel": "Scenario preview",
@@ -8136,6 +8135,7 @@ export const en = {
   "oauthApp.writeFailed": "That change was not saved",
   "oauthApp.remove": "Remove app",
   "oauthApp.redirectCopied": "Copied",
+  "oauthApp.redirectCopyFailed": "Select the address and copy it by hand.",
   "oauthApp.redirectCopy": "Copy {purpose} URI",
   "oauthApp.redirect.mailbox_connect": "Mailbox",
   "oauthApp.redirect.calendar_connect": "Calendar",
@@ -8422,7 +8422,6 @@ export const en = {
     "This secret is shown once and can't be retrieved again. Store it now — deliveries are signed with it.",
   "webhooks.secret.copy": "Copy",
   "webhooks.secret.copied": "Copied",
-  "webhooks.secret.copyFailedTitle": "The secret could not be copied",
   "webhooks.secret.copyFailed": "Select it above and copy it by hand.",
   "webhooks.secret.done": "Done",
   "webhooks.secret.leaveWarning":

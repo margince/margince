@@ -7,6 +7,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, test, vi } from "vitest";
+import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
 import { IntroRequestModal, type IntroTarget } from "./introrequest";
 
@@ -148,17 +149,13 @@ test("says so when the browser will not let the page copy", async () => {
   );
   // AFTER setup, which installs a clipboard of its own — taken away here to
   // model the browser that never offered one.
-  const original = navigator.clipboard;
-  Object.defineProperty(navigator, "clipboard", {
-    value: undefined,
-    configurable: true,
-  });
+  const clipboard = stubClipboard("absent");
   await user.click(await screen.findByRole("button", { name: /^Copy$/ }));
-  expect(await screen.findByText(/would not let the page copy/i)).toBeTruthy();
-  Object.defineProperty(navigator, "clipboard", {
-    value: original,
-    configurable: true,
-  });
+  expect(
+    await screen.findByText(/this browser refused the clipboard/i),
+  ).toBeTruthy();
+  expect(screen.getByText(/copy it yourself/i)).toBeTruthy();
+  clipboard.restore();
 });
 
 // With no model configured the endpoint answers from a template. Saying so is

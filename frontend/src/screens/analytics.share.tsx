@@ -2,8 +2,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
+import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { type AnalyticsScope, writableScope } from "./analytics.context";
@@ -151,34 +151,20 @@ function ShareLinkReveal({
 }: Readonly<{ share: IssuedShare; onClose: () => void }>) {
   const t = useT();
   const headingId = useId();
-  const [copied, setCopied] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
   const url = shareUrl(share.token);
-
-  async function copyLink() {
-    if (!navigator.clipboard) {
-      setCopyFailed(true);
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setCopyFailed(false);
-    } catch {
-      setCopied(false);
-      setCopyFailed(true);
-    }
-  }
+  const copy = useClipboardCopy(url, {
+    copy: t("analytics.share.copy"),
+    copied: t("analytics.share.copied"),
+    remedy: t("analytics.share.copyFailed"),
+  });
 
   return (
     <ConfirmModal
       open
       onClose={onClose}
       title={t("analytics.share.linkTitle")}
-      confirmLabel={
-        copied ? t("analytics.share.copied") : t("analytics.share.copy")
-      }
-      onConfirm={copyLink}
+      confirmLabel={copy.label}
+      onConfirm={copy.copy}
       actionsLead={
         <Button onClick={onClose}>{t("analytics.share.done")}</Button>
       }
@@ -187,16 +173,8 @@ function ShareLinkReveal({
       <pre className="code-block" data-testid="forecast-share-link">
         {url}
       </pre>
-      {copyFailed && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("analytics.share.copyFailedTitle")}
-        >
-          {t("analytics.share.copyFailed")}
-        </Callout>
-      )}
-      {!copied && <p>{t("analytics.share.leaveWarning")}</p>}
+      {copy.notice}
+      {!copy.copied && <p>{t("analytics.share.leaveWarning")}</p>}
     </ConfirmModal>
   );
 }

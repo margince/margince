@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { DealRoomAccess } from "./dealroomaccess";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -53,11 +55,16 @@ function participant(overrides: Partial<Participant> = {}): Participant {
   };
 }
 
-function access(rows: Participant[], mayManage = true) {
+function access(
+  rows: Participant[],
+  mayManage = true,
+  extraRoutes: Record<string, () => Response> = {},
+) {
   return () => {
     installFetchStub({
       "GET /deal-rooms/room-1/participants": () =>
         jsonResponse({ data: rows, page: { next_cursor: null } }),
+      ...extraRoutes,
     });
     return (
       <StoryProviders>
@@ -203,4 +210,53 @@ export const Phone: Story = {
   render: access([
     participant({ download_count: 1204, documents_downloaded: ["Terms v4"] }),
   ]),
+};
+
+/**
+ * The clipboard refused the one-time link.
+ *
+ * `navigator.clipboard` is UNDEFINED outside a secure context, so the play
+ * takes it away rather than making a write throw — that is the shape the real
+ * failure has. This surface is where it matters most: the link is shown ONCE
+ * and is not re-derivable, so a Copy that quietly did nothing costs the rep the
+ * credential. It is driven through the real invite rather than by rendering the
+ * issued panel directly, because the panel only exists after a successful POST
+ * and a story that hand-built it would prove nothing about the path.
+ */
+export const ClipboardRefusedOnTheIssuedLink: Story = {
+  render: access([], true, {
+    "POST /deal-rooms/room-1/participants": () =>
+      jsonResponse({
+        participant: participant({ delivery_state: "sent" }),
+        credential: "one-time-credential",
+        queued: true,
+      }),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Invite" }));
+    // The card's verb and the dialog's confirm are both "Invite", so the
+    // dialog is the scope rather than the page.
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.type(dialog.getByLabelText(/^Name/), "Dana Buyer");
+    await userEvent.type(
+      dialog.getByLabelText(/^Email/),
+      "dana.buyer@brandt-automotive.example",
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Invite" }));
+
+    // Put back whatever this browser had: the catalog renders many stories on
+    // one page, and a clipboard taken away for good would make the next surface
+    // that copies fail for a reason nobody could find here.
+    const clipboard = stubClipboard("absent");
+    try {
+      await userEvent.click(
+        await dialog.findByRole("button", { name: "Copy link" }),
+      );
+      await dialog.findByText("This browser refused the clipboard");
+      await dialog.findByText("Select the link and copy it by hand.");
+    } finally {
+      clipboard.restore();
+    }
+  },
 };

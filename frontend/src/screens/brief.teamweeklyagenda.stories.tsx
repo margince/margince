@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { teamWeek } from "./brief.fixtures";
 import { AgendaPanel } from "./brief.teamweeklyagenda";
 import { StoryProviders } from "./story-utils";
@@ -61,21 +62,14 @@ export const ClipboardRefused: Story = {
     // Put back afterwards whatever this browser had: the catalog renders many
     // stories in one page, and a clipboard taken away for good would make the
     // next surface that copies fail for a reason nobody could find here.
-    const had = Object.getOwnPropertyDescriptor(
-      Navigator.prototype,
-      "clipboard",
-    );
-    Object.defineProperty(navigator, "clipboard", {
-      value: undefined,
-      configurable: true,
-    });
+    const clipboard = stubClipboard("absent");
     try {
       await userEvent.click(
         within(canvasElement).getByRole("button", { name: "Copy agenda" }),
       );
       await screen.findByText("This browser refused the clipboard");
     } finally {
-      if (had) Object.defineProperty(navigator, "clipboard", had);
+      clipboard.restore();
     }
   },
 };

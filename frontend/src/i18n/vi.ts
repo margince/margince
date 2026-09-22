@@ -540,6 +540,8 @@ export const vi = {
 
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
+  "clipboard.copyFailedTitle":
+    "Trình duyệt này không cho phép truy cập bộ nhớ tạm",
 
   "explain.open": "Giải thích con số này",
   "explain.mayHaveMoved":
@@ -1237,8 +1239,7 @@ export const vi = {
   "access.issued.linkLabel": "Liên kết của họ",
   "access.issued.copy": "Sao chép liên kết",
   "access.issued.copied": "Đã sao chép",
-  "access.issued.copyFailed":
-    "Không sao chép được; hãy chọn liên kết và sao chép.",
+  "access.issued.copyFailed": "Hãy chọn liên kết và tự sao chép.",
   "access.issued.oneTime":
     "Liên kết cá nhân, dùng một lần, trên một thiết bị. Mỗi người cần lời mời riêng.",
   "access.issueLinkTitle": "Cấp liên kết mới cho {name}",
@@ -1950,8 +1951,7 @@ export const vi = {
   "co.intro.body": "Tin nhắn",
   "co.intro.basedOn": "Dựa trên",
   "co.intro.copy": "Sao chép",
-  "co.intro.copyFailed":
-    "Trình duyệt không cho phép trang sao chép. Hãy chọn tin nhắn và tự sao chép.",
+  "co.intro.copyFailed": "Hãy chọn tin nhắn và tự sao chép.",
   "co.intro.copied": "Đã sao chép",
   "co.intro.openMail": "Mở trong ứng dụng email",
   "co.map.askIntro": "Nhờ giới thiệu",
@@ -2972,8 +2972,6 @@ export const vi = {
   "teamweekly.agenda.summary": "{count} mục cho thứ Hai, bắt đầu với {first}.",
   "teamweekly.agenda.copy": "Sao chép chương trình",
   "teamweekly.agenda.copied": "Đã sao chép",
-  "teamweekly.agenda.copyFailedTitle":
-    "Trình duyệt này không cho phép truy cập bộ nhớ tạm",
   "teamweekly.agenda.copyFailed": "Hãy chọn danh sách và tự sao chép.",
   "teamweekly.focus.help_requested": "Đã nhờ giúp đỡ",
   "teamweekly.focus.leads_breached": "Quá hạn phản hồi",
@@ -3934,7 +3932,6 @@ export const vi = {
     "Rời đi mà không sao chép sẽ làm mất liên kết. Bạn sẽ phải tạo liên kết khác.",
   "analytics.share.copy": "Sao chép liên kết",
   "analytics.share.copied": "Đã sao chép",
-  "analytics.share.copyFailedTitle": "Không thể sao chép liên kết",
   "analytics.share.copyFailed": "Hãy chọn ở trên và sao chép thủ công.",
   "analytics.share.done": "Xong",
   "analytics.frame": "Tính đến {asOf} · {zone}",
@@ -7514,7 +7511,6 @@ export const vi = {
   "users.link.urlLabel": "Liên kết đặt mật khẩu",
   "users.link.copy": "Sao chép liên kết",
   "users.link.copied": "Đã sao chép",
-  "users.link.copyFailedTitle": "Không sao chép được liên kết",
   "users.link.copyFailed":
     "Hãy bôi đen liên kết trong trường rồi sao chép thủ công.",
   "users.link.expires": "Hết hạn {when}.",
@@ -7739,7 +7735,6 @@ export const vi = {
   "aiexport.copy": "Sao chép YAML",
   "aiexport.copied": "Đã sao chép",
   "aiexport.download": "Tải xuống .yaml",
-  "aiexport.copyFailedTitle": "Sao chép thất bại",
   "aiexport.copyFailed": "Hãy dùng phần xem trước hoặc tải xuống.",
   "aiexport.close": "Đóng",
   "aiexport.previewLabel": "Xem trước kịch bản",
@@ -7865,6 +7860,7 @@ export const vi = {
   "oauthApp.writeFailed": "Thay đổi chưa được lưu",
   "oauthApp.remove": "Xoá ứng dụng",
   "oauthApp.redirectCopied": "Đã sao chép",
+  "oauthApp.redirectCopyFailed": "Hãy chọn địa chỉ và tự sao chép.",
   "oauthApp.redirectCopy": "Sao chép URI {purpose}",
   "oauthApp.redirect.mailbox_connect": "Hộp thư",
   "oauthApp.redirect.calendar_connect": "Lịch",
@@ -8153,7 +8149,6 @@ export const vi = {
     "Khoá này chỉ hiện một lần và không lấy lại được. Hãy lưu ngay — mọi lượt gửi đều được ký bằng nó.",
   "webhooks.secret.copy": "Sao chép",
   "webhooks.secret.copied": "Đã sao chép",
-  "webhooks.secret.copyFailedTitle": "Không sao chép được khoá",
   "webhooks.secret.copyFailed":
     "Hãy bôi đen khoá ở trên rồi sao chép thủ công.",
   "webhooks.secret.done": "Xong",

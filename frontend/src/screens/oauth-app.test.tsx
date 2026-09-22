@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
 import { OAuthAppCard } from "./oauth-app";
@@ -149,6 +150,25 @@ describe("the Google app card", () => {
     mount(stored());
     expect(await screen.findByText(SIGN_IN_URI)).toBeTruthy();
     expect(screen.getByText(CONNECT_URI)).toBeTruthy();
+  });
+
+  // This row used to be the one copy control in the product that said nothing
+  // at all: it guarded the missing clipboard and then returned, so on a
+  // plain-http deployment the operator pressed a button that did nothing and
+  // pasted an empty address into a vendor console.
+  it("says the clipboard refused rather than leaving the operator a dead button", async () => {
+    const user = userEvent.setup();
+    mount(stored());
+    await screen.findByText(SIGN_IN_URI);
+    const clipboard = stubClipboard("absent");
+
+    await user.click(screen.getByRole("button", { name: /Copy Sign-in URI/i }));
+
+    expect(
+      await screen.findByText(/this browser refused the clipboard/i),
+    ).toBeTruthy();
+    expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
+    clipboard.restore();
   });
 
   it("does not advertise a redirect URI for a flow this deployment does not serve", async () => {

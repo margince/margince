@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
 import type { AiCallDetail } from "./aiexport";
 import { ExportScenarioDialog, scenarioYaml } from "./aiexport";
@@ -72,12 +73,7 @@ it("requires PII acknowledgment before copying or downloading", async () => {
 });
 
 it("surfaces clipboard rejection", async () => {
-  Object.defineProperty(navigator, "clipboard", {
-    configurable: true,
-    value: {
-      writeText: vi.fn(async () => Promise.reject(new Error("denied"))),
-    },
-  });
+  const clipboard = stubClipboard("refuses");
   render(
     <LocaleProvider initial="en">
       <ExportScenarioDialog call={call} onClose={() => undefined} />
@@ -85,6 +81,9 @@ it("surfaces clipboard rejection", async () => {
   );
   await userEvent.click(screen.getByRole("checkbox"));
   await userEvent.click(screen.getByRole("button", { name: "Copy YAML" }));
-  expect(await screen.findByText("Copy failed")).toBeTruthy();
+  expect(
+    await screen.findByText("This browser refused the clipboard"),
+  ).toBeTruthy();
   expect(screen.getByText("Use the preview or download instead.")).toBeTruthy();
+  clipboard.restore();
 });
