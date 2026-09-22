@@ -6,6 +6,7 @@
 package gates
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -13,29 +14,155 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// dealAmountColumn is a deal's money however a statement names it.
+// maskableCatalog is what this build can withhold, one "<object> <field>" per
+// line — the owner of this census's subject, and the only place it is named.
+const maskableCatalog = "migrations/testdata/maskable_fields.txt"
+
+// dealBaseAmount is the deal's money in its converted column, and no catalog
+// entry: an administrator configures the FIELD, and this is its second column.
+const dealBaseAmount = "amount_minor_base"
+
+// notMoneyFields names the maskable deal fields this census does NOT read, and
+// says which reads answer for each instead.
 //
-// Three spellings, and each was learned from a way the figure could have left
-// this census's sight:
+// A field the catalog gains is money until this register says otherwise, so the
+// default is over-recognition. That direction costs a declaration; the other one
+// is a census that reads a narrower tree and reports PASS with no assertion left
+// to notice, which is the one way it may not fail.
+var notMoneyFields = gatekit.Waive(map[string]string{
+	"company_id":         "which account a deal hangs off, a pointer rather than a figure. It reaches a reader through the company the deal is listed under, so the read that has to withhold it is the one serving that name — and the same foreign key sits on a dozen other tables, which this census's compound subject cannot tell apart from the deal's own",
+	"currency":           "the unit the money is quoted in. It never travels alone: auth's mask groups take the currency out with the amount, so a statement rendering the figure through the mask has already dropped it, and one that names the currency beside no figure discloses nothing about the size of the deal",
+	"partner_company_id": "which partner is credited on the deal. The margin that makes the credit worth withholding is the partner's own field on its own object, and the pointer is a join key here in the same way company_id is",
+	"project_id":         "which delivery the deal rolls up to, a pointer the filing and lock paths follow rather than a figure a surface prints. A reader who may not see the project does not reach it through this column: the project's own reads carry that gate",
+})
+
+// dealMaskedColumns is a deal's money however a statement names it.
 //
-//   - `amount_minor`, the column and the field a mask names.
-//   - `amount_minor_base`, the SAME money converted. A mask on the field has to
-//     withhold both or the base column is the way around it, so a census that
-//     saw only the first would read green over the total that discloses it.
+// DERIVED from the catalog rather than restated here, because a gate that
+// spells out part of its subject has become a second copy of it — and a money
+// pair added to the catalog widens this census with no second edit.
 //
-// Not a third for the report engine's late-bound token, and that is a decision
-// about the ENGINE rather than about this pattern: the project report binds a
-// mask CLAUSE beside the column rather than a rendering that replaces it,
-// precisely so the figure keeps spelling itself in the statement this census
-// reads. A token standing in for the whole expression would have taken the
-// project report out of sight on the day it was first guarded.
-var dealAmountColumn = regexp.MustCompile(`(?i)\b(amount_minor_base|amount_minor)\b`)
+// dealBaseAmount is the arm the catalog cannot give, and it is the SAME money
+// converted. A mask on the field has to withhold both or the base column is the
+// way around it, so a census reading the catalog spelling alone would read
+// green over the total that discloses it.
+//
+// No arm for the report engine's late-bound token, and that is a decision about
+// the ENGINE rather than about this pattern: the project report binds a mask
+// CLAUSE beside the column rather than a rendering that replaces it, precisely
+// so the figure keeps spelling itself in the statement this census reads. A
+// token standing in for the whole expression would have taken the project
+// report out of sight on the day it was first guarded.
+func dealMaskedColumns(t testing.TB) *regexp.Regexp {
+	t.Helper()
+	columns, err := maskedColumnsIn(maskableCatalog, maskGate.object,
+		func(field string) bool { return notMoneyFields.Waived(t, field) })
+	if err != nil {
+		t.Fatalf("deriving this census's subject: %v", err)
+	}
+	notMoneyFields.AssertAllMatched(t)
+	return columns
+}
+
+// maskedColumnsIn compiles the object's money columns out of the catalog, over
+// every field answeredElsewhere does not claim.
+//
+// It refuses rather than narrows. A catalog that is absent, unreadable or names
+// this object nowhere would otherwise leave a pattern matching the converted
+// column alone, and the census would sweep the same tree and report PASS over
+// every column the catalog does name.
+func maskedColumnsIn(catalog, object string, answeredElsewhere func(string) bool) (*regexp.Regexp, error) {
+	body, err := os.ReadFile(catalog)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", catalog, err)
+	}
+	columns := []string{dealBaseAmount}
+	for _, line := range strings.Split(string(body), "\n") {
+		named, field, isPair := strings.Cut(strings.TrimSpace(line), " ")
+		if isPair && named == object && !answeredElsewhere(field) {
+			columns = append(columns, field)
+		}
+	}
+	if len(columns) == 1 {
+		return nil, fmt.Errorf("%s offers no %s field this census reads, leaving %s the whole of the subject",
+			catalog, object, dealBaseAmount)
+	}
+	sort.Strings(columns)
+	return regexp.MustCompile(`(?i)\b(` + strings.Join(columns, "|") + `)\b`), nil
+}
+
+// TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead holds the one
+// direction this census may not fail in, and the widening that pays for it.
+//
+// A subject taken from a catalog that came back absent, empty or about some
+// other object would sweep exactly the same tree and report PASS over every
+// column nobody masked, leaving no assertion to notice — so the derivation
+// refuses instead. The admitting cases are here beside the refusals because a
+// derivation that refused everything would satisfy them on its own and take the
+// census with it, and because a field the catalog gains has to land in the
+// subject without a second edit.
+func TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	catalogHolding := func(name, body string) string {
+		written := filepath.Join(dir, name)
+		if err := os.WriteFile(written, []byte(body), 0o600); err != nil {
+			t.Fatalf("writing the catalog fixture: %v", err)
+		}
+		return written
+	}
+	const answeredElsewhere = "currency"
+	for _, c := range []struct {
+		name      string
+		catalog   string
+		subjects  []string
+		strangers []string
+	}{
+		{name: "a catalog that is not there", catalog: filepath.Join(dir, "absent.txt")},
+		{name: "a catalog of comments alone", catalog: catalogHolding("comments.txt", "# what this build can withhold\n\n")},
+		{name: "a catalog naming only another object", catalog: catalogHolding("other.txt", "partner margin_tier\n")},
+		{name: "a catalog whose only deal field is answered elsewhere", catalog: catalogHolding("elsewhere.txt", "deal "+answeredElsewhere+"\n")},
+		{
+			name:      "the object's money, the converted column, and a pair the catalog has just gained",
+			catalog:   catalogHolding("deal.txt", "# a comment\ndeal amount_minor\ndeal "+answeredElsewhere+"\ndeal retainer_minor\npartner margin_tier\n"),
+			subjects:  []string{"d.amount_minor", "sum(d.amount_minor_base)", "d.retainer_minor"},
+			strangers: []string{"d." + answeredElsewhere, "p.margin_tier", "d.stage_id"},
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			columns, err := maskedColumnsIn(c.catalog, "deal",
+				func(field string) bool { return field == answeredElsewhere })
+			if len(c.subjects) == 0 {
+				if err == nil {
+					t.Fatalf("this catalog compiled to %s rather than being refused — a census whose "+
+						"subject shrank to nothing reads the same as a tree with nothing to mask", columns)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("deriving the subject: %v", err)
+			}
+			for _, statement := range c.subjects {
+				if !columns.MatchString(statement) {
+					t.Errorf("%q is outside the derived subject, so this census would never read it", statement)
+				}
+			}
+			for _, statement := range c.strangers {
+				if columns.MatchString(statement) {
+					t.Errorf("%q is inside the derived subject, which costs a declaration saying it is not", statement)
+				}
+			}
+		})
+	}
+}
 
 // WHAT THIS CENSUS CANNOT SEE, and why the thing it cannot see is covered
 // anyway.
@@ -72,9 +199,10 @@ const maskOwner = "internal/modules/deals/"
 // A mask spelling is the WHOLE admission here, so objectGateSatisfies stays
 // off and auth.Require(ctx, "deal", …) vouches for nothing — the field's own
 // comment says why the object half cannot answer this question.
+// No literal: this census reads the gate for its admission alone, and its
+// subject is compiled per run from the catalog rather than pinned to a field.
 var maskGate = objectGate{
-	object:  "deal",
-	literal: dealAmountColumn,
+	object: "deal",
 	gateSeeds: []string{
 		"MaskedColumnSQL", "MaskedExpressionSQL", "MaskExcludedClause",
 		"MaskedFields", "MasksAnyRowOf", "maskedRowSelects",
@@ -135,11 +263,11 @@ const wantMinimumMaskedAmountSites = 10
 
 // maskedAmountScope is built around the derived builder set, so the sweep and
 // the site extraction ask one question rather than two that can drift.
-func maskedAmountScope(builders map[string]bool) gatekit.Scope {
+func maskedAmountScope(columns *regexp.Regexp, builders map[string]bool) gatekit.Scope {
 	return gatekit.Scope{
 		Roots: []string{"internal"},
 		Subject: func(filePath string, file *ast.File) bool {
-			return readsADealAmount(filePath, file, builders)
+			return readsADealAmount(filePath, file, columns, builders)
 		},
 		Exempt: gatekit.Waive(map[string]string{}),
 	}
@@ -159,12 +287,12 @@ func maskedAmountScope(builders map[string]bool) gatekit.Scope {
 // literal, because this tree routinely composes one statement from several
 // constants, and a literal-level test would stop seeing a read the moment
 // somebody moved its FROM clause into a fragment.
-func readsADealAmount(filePath string, file *ast.File, builders map[string]bool) bool {
+func readsADealAmount(filePath string, file *ast.File, columns *regexp.Regexp, builders map[string]bool) bool {
 	if strings.HasPrefix(filePath, maskOwner) || strings.HasSuffix(filePath, "_gen.go") {
 		return false
 	}
 	for _, decl := range file.Decls {
-		if len(dealAmountReadsIn(decl, builders)) > 0 {
+		if len(dealAmountReadsIn(decl, columns, builders)) > 0 {
 			return true
 		}
 	}
@@ -200,7 +328,7 @@ var sqlFragmentMarker = regexp.MustCompile(`(?i)\b(SELECT|CASE|WHEN|COALESCE|SUM
 // where it is declared and called where it is composed, and the two are
 // routinely different modules — that separation is the whole reason the census
 // cannot see the read.
-func dealAmountBuilderNames(t testing.TB) map[string]bool {
+func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]bool {
 	t.Helper()
 	names := map[string]bool{}
 	fset := token.NewFileSet()
@@ -214,7 +342,7 @@ func dealAmountBuilderNames(t testing.TB) map[string]bool {
 			return parseErr
 		}
 		for _, decl := range file.Decls {
-			if name, isBuilder := builderName(decl); isBuilder {
+			if name, isBuilder := builderName(decl, columns); isBuilder {
 				names[name] = true
 			}
 		}
@@ -233,7 +361,7 @@ func dealAmountBuilderNames(t testing.TB) map[string]bool {
 // builderName reports the declaration's name when it renders a deal amount as
 // SQL. The two halves of that question are asked here and nowhere else, so a
 // reader changing what counts as a builder changes it in one place.
-func builderName(decl ast.Decl) (string, bool) {
+func builderName(decl ast.Decl, columns *regexp.Regexp) (string, bool) {
 	fn, isFunc := decl.(*ast.FuncDecl)
 	if !isFunc || fn.Type.Results == nil || len(fn.Type.Results.List) != 1 {
 		return "", false
@@ -248,7 +376,7 @@ func builderName(decl ast.Decl) (string, bool) {
 	// ".amount_minor IS NULL"` names the column in one piece and the keyword in
 	// another, and a per-literal reading sees neither whole.
 	for _, statement := range gatekit.SQLStatementsOf(fn) {
-		if dealAmountColumn.MatchString(statement) && sqlFragmentMarker.MatchString(statement) {
+		if columns.MatchString(statement) && sqlFragmentMarker.MatchString(statement) {
 			return fn.Name.Name, true
 		}
 	}
@@ -256,8 +384,8 @@ func builderName(decl ast.Decl) (string, bool) {
 }
 
 // dealAmountReadsIn is the site extraction the subject predicate above states.
-func dealAmountReadsIn(decl ast.Decl, builders map[string]bool) []gatekit.TableRead {
-	amounts := gatekit.DeclReads(decl, dealAmountColumn)
+func dealAmountReadsIn(decl ast.Decl, columns *regexp.Regexp, builders map[string]bool) []gatekit.TableRead {
+	amounts := gatekit.DeclReads(decl, columns)
 	if len(amounts) == 0 {
 		amounts = builtAmountsIn(decl, builders)
 	}
@@ -299,6 +427,7 @@ func builtAmountsIn(decl ast.Decl, builders map[string]bool) []gatekit.TableRead
 // error's Error() a money read and bury the ones that are.
 func TestTheBuilderDerivationReadsFragmentsAndNotProse(t *testing.T) {
 	t.Parallel()
+	columns := dealMaskedColumns(t)
 	for _, c := range []struct {
 		name    string
 		source  string
@@ -343,7 +472,7 @@ func TestTheBuilderDerivationReadsFragmentsAndNotProse(t *testing.T) {
 			if len(file.Decls) != 1 {
 				t.Fatalf("the fixture must hold exactly one declaration, it holds %d", len(file.Decls))
 			}
-			name, isBuilder := builderName(file.Decls[0])
+			name, isBuilder := builderName(file.Decls[0], columns)
 			if isBuilder != c.builder {
 				t.Fatalf("builderName = (%q, %v), want a builder: %v", name, isBuilder, c.builder)
 			}
@@ -356,8 +485,9 @@ func TestTheBuilderDerivationReadsFragmentsAndNotProse(t *testing.T) {
 
 func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	t.Parallel()
-	builders := dealAmountBuilderNames(t)
-	files := maskedAmountScope(builders).Files(t)
+	columns := dealMaskedColumns(t)
+	builders := dealAmountBuilderNames(t, columns)
+	files := maskedAmountScope(columns, builders).Files(t)
 	gated := maskGate.gatedFunctionsByPackage(t, files)
 	consts := constantTable{}
 
@@ -365,7 +495,7 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
 		for _, decl := range parsed.File.Decls {
-			reads := dealAmountReadsIn(decl, builders)
+			reads := dealAmountReadsIn(decl, columns, builders)
 			if len(reads) == 0 {
 				continue
 			}
