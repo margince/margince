@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -28,6 +29,7 @@ type pricedRow struct {
 	currency  *string
 	companyID *ids.UUID
 	masked    []string
+	writable  bool
 }
 
 func rowID(r pricedRow) ids.UUID { return r.id }
@@ -69,7 +71,7 @@ func TestAConditionedMaskOnAnUnshareableObjectWithholdsEveryRow(t *testing.T) {
 	tx := &writableRowsTx{}
 
 	if err := auth.ApplyFieldMasks(ctx, tx, "product", page,
-		rowID, pricedWithholds, setMasked, nil); err != nil {
+		rowID, pricedWithholds, setMasked, nil, nil); err != nil {
 		t.Fatalf("ApplyFieldMasks refused a product page instead of withholding it: %v", err)
 	}
 	if tx.queries != 0 {
@@ -96,7 +98,7 @@ func TestAWithheldFieldIsNulledAndNamed(t *testing.T) {
 	page := pricedPage(ids.NewV7())
 	tx := &writableRowsTx{}
 
-	if err := auth.ApplyFieldMasks(ctx, tx, "deal", page, rowID, pricedWithholds, setMasked, nil); err != nil {
+	if err := auth.ApplyFieldMasks(ctx, tx, "deal", page, rowID, pricedWithholds, setMasked, nil, nil); err != nil {
 		t.Fatalf("ApplyFieldMasks: %v", err)
 	}
 	if tx.queries != 0 {
@@ -123,7 +125,7 @@ func TestAConditionedMaskLiftsOnARowTheCallerCouldChange(t *testing.T) {
 	page := pricedPage(mine, theirs)
 	tx := &writableRowsTx{writable: []ids.UUID{mine}}
 
-	if err := auth.ApplyFieldMasks(ctx, tx, "deal", page, rowID, pricedWithholds, setMasked, nil); err != nil {
+	if err := auth.ApplyFieldMasks(ctx, tx, "deal", page, rowID, pricedWithholds, setMasked, nil, nil); err != nil {
 		t.Fatalf("ApplyFieldMasks: %v", err)
 	}
 	if tx.queries != 1 {
@@ -140,6 +142,43 @@ func TestAConditionedMaskLiftsOnARowTheCallerCouldChange(t *testing.T) {
 	}
 }
 
+// Archiving a record ends the caller's edit, not their authority over it. The
+// flag and the authority map answer differently on exactly that row, and the
+// masks read the map: a rep who archives their own deal still reads its amount,
+// while nothing offers them the edit every mutation would refuse.
+func TestAnArchivedRowLosesItsEditAffordanceAndKeepsItsValue(t *testing.T) {
+	t.Parallel()
+	ctx := maskedActor(principal.FieldMask{
+		Object: "deal", Field: "amount_minor", Condition: principal.MaskOutsideWriteAuthority,
+	})
+	mine := ids.NewV7()
+	page := pricedPage(mine)
+	tx := &writableRowsTx{writable: []ids.UUID{mine}, archived: []ids.UUID{mine}}
+
+	writable, err := auth.StampWritable(ctx, tx, "deal", page, rowID,
+		func(r *pricedRow, may bool) { r.writable = may })
+	if err != nil {
+		t.Fatalf("StampWritable: %v", err)
+	}
+	if page[0].writable {
+		t.Error("an archived row was offered as editable; every mutation refuses it")
+	}
+	if !writable[mine] {
+		t.Error("archiving a row withdrew the authority the masks resolve against")
+	}
+
+	if err := auth.ApplyFieldMasks(ctx, tx, "deal", page, rowID,
+		pricedWithholds, setMasked, nil, writable); err != nil {
+		t.Fatalf("ApplyFieldMasks: %v", err)
+	}
+	if page[0].amount == nil || len(page[0].masked) != 0 {
+		t.Errorf("archiving a deal hid its amount from its own owner: masked=%v", page[0].masked)
+	}
+	if tx.queries != 2 {
+		t.Errorf("the page cost %d statements; authority and liveness are one each, and a supplied map asks neither again", tx.queries)
+	}
+}
+
 // A name nothing withholds is dropped rather than reported: naming a field in
 // masked_fields while still sending its value is a worse answer than either
 // half alone. The names a module collected itself arrive the same way.
@@ -152,7 +191,7 @@ func TestANameWithNoWithholdFuncIsDroppedRatherThanReported(t *testing.T) {
 	tx := &writableRowsTx{}
 
 	err := auth.ApplyFieldMasks(ctx, tx, "deal", page, rowID, pricedWithholds, setMasked,
-		func(int) []string { return []string{"company_id", "project_id"} })
+		func(int) []string { return []string{"company_id", "project_id"} }, nil)
 	if err != nil {
 		t.Fatalf("ApplyFieldMasks: %v", err)
 	}
@@ -169,16 +208,21 @@ func TestANameWithNoWithholdFuncIsDroppedRatherThanReported(t *testing.T) {
 	}
 }
 
-// writableRowsTx is the database boundary of this pass: it answers the one
-// write-authority statement with the ids the caller could change, and counts
-// the asking so a page that must pay nothing can prove it.
+// writableRowsTx is the database boundary of these passes: it answers the
+// write-authority statement with the ids the caller could change and the
+// liveness statement with the ids that are archived, and counts the asking so a
+// page that must pay nothing can prove it.
 type writableRowsTx struct {
 	writable []ids.UUID
+	archived []ids.UUID
 	queries  int
 }
 
-func (t *writableRowsTx) Query(context.Context, string, ...any) (pgx.Rows, error) {
+func (t *writableRowsTx) Query(_ context.Context, sql string, _ ...any) (pgx.Rows, error) {
 	t.queries++
+	if strings.Contains(sql, "archived_at IS NOT NULL") {
+		return &uuidRows{remaining: t.archived}, nil
+	}
 	return &uuidRows{remaining: t.writable}, nil
 }
 

@@ -149,7 +149,11 @@ func WritableSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.U
 // before.
 // It returns the subset it computed, so a caller that needs the same answer for
 // something else — the field masks conditioned on write authority are the case —
-// reads it rather than asking the database the same question twice.
+// reads it rather than asking the database the same question twice. The RETURN
+// is the authority answer and the FLAG is the edit affordance, and they differ
+// on an archived row: reading the return for an affordance offers an edit every
+// mutation refuses, reading the flag for a mask hides an owner's own figure the
+// moment they archive the record.
 func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 	rows []T, id func(T) ids.UUID, set func(*T, bool),
 ) (map[ids.UUID]bool, error) {
@@ -164,17 +168,17 @@ func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 	if err != nil {
 		return nil, err
 	}
-	// An ARCHIVED row is nobody's to change, whatever their authority over it.
-	// WritableSubset deliberately does not filter on archived_at — it answers
-	// the masks, which apply to a record a caller may still READ — but the
-	// mutations take the LIVE probe, so a flag that ignored the state would
-	// promise an edit every one of them refuses.
-	if err := excludeArchived(ctx, tx, table, writable); err != nil {
+	// An ARCHIVED row is nobody's to change, whatever their authority over it,
+	// so the flag says no. The answer this returns keeps it: a mask applies to
+	// a record the caller may still READ, and archiving is not a withdrawal of
+	// authority over the row.
+	archived, err := archivedAmong(ctx, tx, table, writable)
+	if err != nil {
 		return nil, err
 	}
 	for i := range rows {
-		may := writable[id(rows[i])]
-		set(&rows[i], may)
+		rowID := id(rows[i])
+		set(&rows[i], writable[rowID] && !archived[rowID])
 	}
 	return writable, nil
 }
@@ -302,31 +306,36 @@ func MaskExcludedClause(ctx context.Context, object, field, alias string, arg fu
 	return clause, masked, nil
 }
 
-// excludeArchived clears the write flag on every row that is not live. ONE
-// statement for the page, like everything else on this path: it asks which of
-// the rows already marked writable are archived, and only those come back.
-func excludeArchived(ctx context.Context, tx pgx.Tx, table string, writable map[ids.UUID]bool) error {
-	live := make([]ids.UUID, 0, len(writable))
+// archivedAmong answers which of the rows the caller holds authority over are
+// not live. ONE statement for the page, like everything else on this path, and
+// it reports rather than edits: the authority map its caller passes in is also
+// that caller's return value, and a helper that struck rows out of it would be
+// deciding the masks on its way past.
+func archivedAmong(ctx context.Context, tx pgx.Tx, table string,
+	writable map[ids.UUID]bool,
+) (map[ids.UUID]bool, error) {
+	authorized := make([]ids.UUID, 0, len(writable))
 	for id, may := range writable {
 		if may {
-			live = append(live, id)
+			authorized = append(authorized, id)
 		}
 	}
-	if len(live) == 0 {
-		return nil
+	archived := map[ids.UUID]bool{}
+	if len(authorized) == 0 {
+		return archived, nil
 	}
 	rows, err := tx.Query(ctx,
-		fmt.Sprintf(`SELECT id FROM %s WHERE id = ANY($1) AND archived_at IS NOT NULL`, table), live)
+		fmt.Sprintf(`SELECT id FROM %s WHERE id = ANY($1) AND archived_at IS NOT NULL`, table), authorized)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var id ids.UUID
 		if err := rows.Scan(&id); err != nil {
-			return err
+			return nil, err
 		}
-		writable[id] = false
+		archived[id] = true
 	}
-	return rows.Err()
+	return archived, rows.Err()
 }

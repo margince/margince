@@ -25,17 +25,22 @@ import (
 // the module's registry of what each field's absence means on its own record;
 // extra contributes names the module collected for itself — the references a
 // deal may not hand back are a question about ROWS that ends the same way.
+//
+// writable is StampWritable's return for this page where the caller already has
+// it, so one question costs one statement and cannot be answered twice over;
+// nil resolves it here, and only if some mask would lift on the answer.
 func ApplyFieldMasks[T any](ctx context.Context, tx pgx.Tx, object string,
 	rows []T,
 	id func(T) ids.UUID,
 	withhold map[string]func(*T),
 	setMasked func(*T, []string),
 	extra func(rowIndex int) []string,
+	writable map[ids.UUID]bool,
 ) error {
 	if len(rows) == 0 {
 		return nil
 	}
-	names, err := maskedNamesPerRow(ctx, tx, object, rows, id, extra)
+	names, err := maskedNamesPerRow(ctx, tx, object, rows, id, extra, writable)
 	if err != nil {
 		return err
 	}
@@ -61,8 +66,12 @@ func (w *withheldNames) add(fields ...string) {
 // maskedNamesPerRow collects what each row of the page withholds, before
 // anything is nulled: the role's masks, answered against this row's write
 // authority, and whatever the module's own pass adds.
+// A supplied map never widens what goes out: the lift lives in MaskedFields,
+// which refuses it on an object whose rows cannot answer write authority, so
+// the two lists are equal there and the map decides nothing.
 func maskedNamesPerRow[T any](ctx context.Context, tx pgx.Tx, object string,
 	rows []T, id func(T) ids.UUID, extra func(rowIndex int) []string,
+	writable map[ids.UUID]bool,
 ) ([]withheldNames, error) {
 	p, err := rbacActor(ctx)
 	if err != nil {
@@ -73,8 +82,7 @@ func maskedNamesPerRow[T any](ctx context.Context, tx pgx.Tx, object string,
 	// change what it withholds, so an unconditioned page pays nothing. A
 	// condition the object cannot answer lifts nothing in MaskedFields either,
 	// which is what keeps this off WritableSubset's non-shareable refusal.
-	var writable map[ids.UUID]bool
-	if !slices.Equal(outsideAuthority, insideAuthority) {
+	if writable == nil && !slices.Equal(outsideAuthority, insideAuthority) {
 		if writable, err = writeAuthorityOfPage(ctx, tx, object, rows, id); err != nil {
 			return nil, err
 		}
