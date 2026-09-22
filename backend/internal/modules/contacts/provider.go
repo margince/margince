@@ -96,11 +96,11 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 		// by. GetPartner gates on both the partner and company objects
 		// and checks the company is visible, so a caller who cannot open
 		// the company cannot read its partner terms either.
-		row, err := p.store.GetPartner(ctx, ids.From[ids.CompanyKind](r.ID))
+		partner, err := p.store.GetPartner(ctx, ids.From[ids.CompanyKind](r.ID))
 		if err != nil {
 			return datasource.Record{}, err
 		}
-		return datasource.NewRecord(r, wirePartner(row), &row.Version)
+		return datasource.NewRecord(r, partner, (*int64)(partner.Version))
 	default:
 		return datasource.Record{}, &datasource.UnsupportedEntityError{Type: string(r.Type)}
 	}
@@ -163,7 +163,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		if err != nil {
 			return nil, "", false, err
 		}
-		return pageOf(datasource.EntityPartner, mapRows(rows, wirePartner), page, nil,
+		return pageOf(datasource.EntityPartner, rows, page, nil,
 			func(v crmcontracts.Partner) (openapi_types.UUID, *int64) {
 				return v.CompanyId, (*int64)(v.Version)
 			})

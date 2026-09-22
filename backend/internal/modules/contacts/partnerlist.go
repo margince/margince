@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -69,19 +70,26 @@ var partnerSortFields = map[string]storekit.SortField{
 // ListPartners reads one page of the partner list, in the caller's order or the
 // house default. A partner row is a read of its company, so both grants are
 // asked for before anything is selected.
-func (s *Store) ListPartners(ctx context.Context, in ListPartnersInput) ([]partnerRow, storekit.Page, error) {
+func (s *Store) ListPartners(ctx context.Context, in ListPartnersInput) ([]crmcontracts.Partner, storekit.Page, error) {
 	if err := auth.Require(ctx, "partner", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if err := refuseMaskedPartnerSort(ctx, in.Sort); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	limit := storekit.ClampLimit(in.Limit)
-	var out []partnerRow
+	var out []crmcontracts.Partner
 	var page storekit.Page
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, page, err = listPartnersTx(ctx, tx, in, limit)
+		rows, p, err := listPartnersTx(ctx, tx, in, limit)
+		if err != nil {
+			return err
+		}
+		page = p
+		out, err = wirePartners(ctx, tx, rows)
 		return err
 	})
 	return out, page, err

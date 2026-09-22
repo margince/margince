@@ -10,7 +10,6 @@ package deals
 
 import (
 	"context"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -18,7 +17,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // maskObject is the RBAC object a deal's masks are configured under — a
@@ -165,26 +163,12 @@ func unreadableReferences(ctx context.Context, tx pgx.Tx, deals []crmcontracts.D
 	}, nil
 }
 
-// refuseMaskedSort refuses a sort over a column the caller's role masks on
-// any row: ordering by a value is reading it, and a page ordered by amounts
-// the caller may not see would disclose them through the order.
+// refuseMaskedSort refuses a sort over a column the caller's role masks on any
+// row, through the refusal every list offering a maskable order shares. The
+// deal's own contribution is which of its columns a mask can name.
 func refuseMaskedSort(ctx context.Context, sort *string) error {
-	if sort == nil || *sort == "" {
-		return nil
-	}
-	field := strings.TrimPrefix(strings.TrimSpace(*sort), "-")
-	if _, maskable := dealMaskableFields[field]; !maskable {
-		return nil
-	}
-	masked, err := auth.MasksAnyRowOf(ctx, "deal", field)
-	if err != nil {
-		return err
-	}
-	if masked {
-		return &values.ParseError{
-			Field: "sort", Code: auth.CodeFieldMasked,
-			Message: "sort by " + field + " is not available: your role does not read it on every deal",
-		}
-	}
-	return nil
+	return auth.RefuseMaskedSort(ctx, maskObject, sort, func(field string) bool {
+		_, maskable := dealMaskableFields[field]
+		return maskable
+	})
 }

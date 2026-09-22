@@ -150,21 +150,21 @@ func applyPartnerFitOverride(current partnerFitState, score *int16, reason *stri
 	return current, nil
 }
 
-func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (partnerRow, error) {
+func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmcontracts.Partner, error) {
 	if err := auth.Require(ctx, "partner", principal.ActionUpdate); err != nil {
-		return partnerRow{}, err
+		return crmcontracts.Partner{}, err
 	}
 	// Promotion adds `partner` to the company's relationship types — that is a
 	// company mutation, so the company's own write grant is required too; the
 	// partner grant alone must not become a side door onto companies.
 	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
-		return partnerRow{}, err
+		return crmcontracts.Partner{}, err
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return partnerRow{}, err
+		return crmcontracts.Partner{}, err
 	}
-	var out partnerRow
+	var out crmcontracts.Partner
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		// The company reference is a client-supplied FK argument (H1), probed for
 		// WRITE authority rather than sight: the object gate above says the
@@ -191,7 +191,8 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (partn
 		if err != nil {
 			return err
 		}
-		if out, err = upsertPartnerRow(ctx, tx, in, fit, capturedBy); err != nil {
+		row, err := upsertPartnerRow(ctx, tx, in, fit, capturedBy)
+		if err != nil {
 			return err
 		}
 		// Promotion is a company fact, and it is the invariant's other half: a company
@@ -209,16 +210,21 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (partn
 		// request would claim ownership of every field the caller left out.
 		// Narrowing to what moved is the same rule from the other side — it is
 		// what keeps a lifecycle edit from claiming the fit fields.
-		before, after := storekit.ChangedColumns(before, partnerAuditImage(out))
+		before, after := storekit.ChangedColumns(before, partnerAuditImage(row))
 		auditID, err := storekit.Audit(ctx, tx, "update", "company", in.CompanyID.UUID, before, after)
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEvent(ctx, tx, auditID, in.CompanyID.UUID, crmcontracts.PublicEventCompanyUpdated{
+		if err := storekit.EmitEvent(ctx, tx, auditID, in.CompanyID.UUID, crmcontracts.PublicEventCompanyUpdated{
 			ChangedFields: map[string]any{
-				eventKeyDelta: map[string]any{"partner": map[string]any{"role": in.PartnerRole, "cert_status": out.CertStatus}},
+				eventKeyDelta: map[string]any{"partner": map[string]any{"role": in.PartnerRole, "cert_status": row.CertStatus}},
 			},
-		})
+		}); err != nil {
+			return err
+		}
+		// The echo is a read: the writer's own role masks it like any other.
+		out, err = wirePartnerForCaller(ctx, tx, row)
+		return err
 	})
 	return out, err
 }
@@ -282,26 +288,29 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit
 }
 
 // GetPartner reads the partner row a company plays, if it plays one.
-func (s *Store) GetPartner(ctx context.Context, companyID ids.CompanyID) (partnerRow, error) {
+func (s *Store) GetPartner(ctx context.Context, companyID ids.CompanyID) (crmcontracts.Partner, error) {
 	if err := auth.Require(ctx, "partner", principal.ActionRead); err != nil {
-		return partnerRow{}, err
+		return crmcontracts.Partner{}, err
 	}
 	// Partner rows are company-derived data.
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
-		return partnerRow{}, err
+		return crmcontracts.Partner{}, err
 	}
-	var out partnerRow
+	var out crmcontracts.Partner
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
-		var err error
-		out, err = scanPartner(tx.QueryRow(ctx,
+		row, err := scanPartner(tx.QueryRow(ctx,
 			`SELECT `+partnerColumns+` FROM partner WHERE company_id = $1 AND archived_at IS NULL`,
 			companyID))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound // the company is not a partner
 		}
+		if err != nil {
+			return err
+		}
+		out, err = wirePartnerForCaller(ctx, tx, row)
 		return err
 	})
 	return out, err
@@ -371,6 +380,11 @@ func intPtr(v *int16) *int {
 // Answering nil rather than an error for "not a partner" is what lets the
 // accrual treat an unpriced win as an ordinary outcome instead of a failure to
 // retry forever.
+//
+// It is deliberately UNMASKED, and the one read of the tier that is. A mask
+// applies where a row meets the wire; this value is priced with, never printed,
+// and withholding it here would accrue the wrong money rather than disclose
+// none. The entry the accrual writes is masked on its own read.
 func (s *Store) MarginTierOf(ctx context.Context, companyID ids.CompanyID) (*string, error) {
 	if err := auth.Require(ctx, "partner", principal.ActionRead); err != nil {
 		return nil, err
