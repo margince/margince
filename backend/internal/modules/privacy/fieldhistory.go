@@ -179,7 +179,6 @@ func ListFieldHistory(ctx context.Context, db *database.DB, f FieldHistoryFilter
 		}
 		cursorTime, cursorID, useCursor = c.CreatedAt, c.ID, true
 	}
-	mask := defaultFieldMasks[f.EntityType]
 
 	var page FieldHistoryPage
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
@@ -196,6 +195,13 @@ func ListFieldHistory(ctx context.Context, db *database.DB, f FieldHistoryFilter
 		}
 		if visErr != nil {
 			return visErr
+		}
+		mask, err := maskForRecord(ctx, tx, f.EntityType, f.EntityID)
+		if err != nil {
+			return err
+		}
+		if err := refuseMaskedFieldFilter(f.Field, mask, f.EntityType); err != nil {
+			return err
 		}
 		boundary, err := latestScrubTombstone(ctx, tx, f.EntityType, f.EntityID)
 		if err != nil {
