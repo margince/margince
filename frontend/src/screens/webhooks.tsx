@@ -23,7 +23,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -933,14 +933,14 @@ export function WebhooksCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("webhooks.sub")}</p>
+        <PanelIntro>{t("webhooks.sub")}</PanelIntro>
         {/* Outside QueryGate for the same reason the create button is: its
             `empty` branch replaces `children` wholesale, and the posture is most
             needed precisely when the list is empty — a seat that can neither add
             the first subscription nor be told why would read the empty card as
             the whole story. */}
         {showReadOnlyPosture && (
-          <p className="settings-panel-sub">{t("webhooks.readOnly")}</p>
+          <PanelIntro>{t("webhooks.readOnly")}</PanelIntro>
         )}
         {/* No signing key: delivery is off, so mutating controls are withheld
             and a not-enabled note explains why. It sits outside the gate too —

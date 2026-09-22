@@ -14,7 +14,7 @@ import {
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -197,7 +197,7 @@ export function RestrictedRecordsCard() {
     return (
       <Panel title={t("restricted.title")}>
         <PanelBody>
-          <p className="settings-panel-sub">{t("restricted.sub")}</p>
+          <PanelIntro>{t("restricted.sub")}</PanelIntro>
           <QueryGate query={me} pendingLabel={t("restricted.title")}>
             {() => <EmptyState>{t("restricted.withheld")}</EmptyState>}
           </QueryGate>
@@ -295,7 +295,7 @@ export function RestrictedRecordsCard() {
   return (
     <Panel title={t("restricted.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("restricted.sub")}</p>
+        <PanelIntro>{t("restricted.sub")}</PanelIntro>
         <CardBoundary>
           <SettingList>
             {/* The table is the SUBJECT of this card rather than an answer to a

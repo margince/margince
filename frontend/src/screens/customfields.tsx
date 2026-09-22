@@ -26,7 +26,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { useToast } from "../design-system/toast";
@@ -739,13 +739,11 @@ export function CustomFieldsAdmin() {
         )
       }
     >
-      {/* No `form-stack` on the body: the description already pays for its own
-          interval to the rows (`.settings-panel-sub`), and a stack's gap on top
-          of that margin — margins do not collapse in a flex container — put 28px
-          under a line every other settings card sets 16px below. The posture
-          line below the rows takes its interval from `.cf-posture`. */}
+      {/* No `form-stack` on the body: `PanelIntro` owns the interval down to
+          the rows and `.cf-posture` owns the one up from the posture line, so
+          the stack's gap has nothing left here to space. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("cf.subtitle")}</p>
+        <PanelIntro>{t("cf.subtitle")}</PanelIntro>
         <SettingList>
           {/* Which object the rows below belong to. One closed set of four, all
               visible at once, so it answers its own row from the right column —

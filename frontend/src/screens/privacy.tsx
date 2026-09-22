@@ -23,7 +23,7 @@ import {
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -252,7 +252,7 @@ export function ConsentPurposesCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.purposesSub")}</p>
+        <PanelIntro>{t("settings.purposesSub")}</PanelIntro>
         <SettingList>
           {/* The registry is the card's subject rather than an answer beside a
               question, so it takes the full width under its naming.
@@ -1173,7 +1173,7 @@ export function PrivacyInboxCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.privacySub")}</p>
+        <PanelIntro>{t("settings.privacySub")}</PanelIntro>
         {/* One card's throw stays inside one card: this body renders a queue
             of subject requests straight off the wire, and without a boundary
             a single malformed row costs the reader the whole tab and the rail

@@ -10,7 +10,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
@@ -103,7 +103,7 @@ export function WorkingHoursCard() {
   return (
     <Panel title={t("workingHours.title")}>
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("workingHours.sub")}</p>
+        <PanelIntro>{t("workingHours.sub")}</PanelIntro>
         <QueryGate pendingLabel={t("workingHours.title")} query={query}>
           {(answer) =>
             // Checked, not asserted. The field is contract-required, but a body

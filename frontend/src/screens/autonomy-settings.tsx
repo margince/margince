@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
@@ -179,7 +179,7 @@ export function AutonomySettingsCard() {
   return (
     <Panel title={t("autonomy.title")}>
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("autonomy.sub")}</p>
+        <PanelIntro>{t("autonomy.sub")}</PanelIntro>
         {/* An empty list is its own answer, and it is not a blank card: this
             installation routes this seat nothing of any kind, so there is no
             switch to offer and no track record to be behind on. Saying so here

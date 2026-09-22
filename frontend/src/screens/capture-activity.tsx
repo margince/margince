@@ -14,7 +14,7 @@ import {
   StatCard,
 } from "../design-system/atoms";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -139,7 +139,7 @@ export function CaptureActivityTab() {
           {/* The description belongs in the body, which is where the other ten
               settings cards put theirs — Panel's header band holds the title
               alone, by design. */}
-          <p className="settings-panel-sub">{t("captureActivity.sub")}</p>
+          <PanelIntro>{t("captureActivity.sub")}</PanelIntro>
           <SettingList>
             {/* Whose activity is a one-of-two ANSWER, so it sits beside its
                 naming in the right column like every other answer on the page.

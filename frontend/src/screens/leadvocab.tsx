@@ -7,7 +7,7 @@ import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
@@ -402,13 +402,11 @@ export function LeadSourcesCard() {
         )
       }
     >
-      {/* No `form-stack` on the body: the description already pays for its own
-          interval to the rows (`.settings-panel-sub`), and a stack's gap on top
-          of that margin — margins do not collapse in a flex container — put 28px
-          under a line every other settings card sets 16px below. The blocks that
-          are NOT rows take their interval from `.lead-vocab-notices`. */}
+      {/* No `form-stack` on the body: `PanelIntro` owns the interval down to
+          the rows, and the blocks that are NOT rows take theirs from
+          `.lead-vocab-notices`. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("leadSources.sub")}</p>
+        <PanelIntro>{t("leadSources.sub")}</PanelIntro>
         <SettingList>
           {/* The sources are the SUBJECT of this card rather than an answer to
               a question beside them, so they take the row's full width. */}
@@ -602,7 +600,7 @@ export function LeadDisqualifyReasonsCard() {
     <Panel title={t("leadReasons.title")}>
       {/* Plain body, for the reason the sources card above carries in full. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("leadReasons.sub")}</p>
+        <PanelIntro>{t("leadReasons.sub")}</PanelIntro>
         <SettingList>
           {/* The reasons are the subject of this card, so they take the row's
               full width — the same shape the sources list above takes, which is
@@ -773,7 +771,7 @@ export function LeadHandlingCard() {
     <Panel title={t("leadHandling.title")}>
       {/* Plain body, for the reason the sources card carries in full. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("leadHandling.sub")}</p>
+        <PanelIntro>{t("leadHandling.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("leadHandling.title")}>
           {(settings) => {
             const shown =

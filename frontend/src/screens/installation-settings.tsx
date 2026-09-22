@@ -22,7 +22,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -328,9 +328,7 @@ function InstallationSettingsForm({
   return (
     <Panel title={t("installationSettings.companyTitle")}>
       <PanelBody>
-        <p className="settings-panel-sub">
-          {t("installationSettings.companySub")}
-        </p>
+        <PanelIntro>{t("installationSettings.companySub")}</PanelIntro>
         {!canManage && (
           <p id={denialId}>{t("installationSettings.readOnly")}</p>
         )}

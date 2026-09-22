@@ -14,7 +14,7 @@ import {
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
@@ -475,7 +475,7 @@ export function RetentionCard() {
     return (
       <Panel title={t("retention.title")}>
         <PanelBody>
-          <p className="settings-panel-sub">{t("retention.sub")}</p>
+          <PanelIntro>{t("retention.sub")}</PanelIntro>
           <QueryGate query={me} pendingLabel={t("retention.title")}>
             {() => <EmptyState>{t("retention.withheld")}</EmptyState>}
           </QueryGate>
@@ -507,7 +507,7 @@ export function RetentionCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("retention.sub")}</p>
+        <PanelIntro>{t("retention.sub")}</PanelIntro>
         <CardBoundary>
           {/* The posture FIRST, then the rules that read it — a reader auditing
               the ladder needs the override before the rows it overrides, or

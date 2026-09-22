@@ -14,7 +14,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
@@ -440,7 +440,7 @@ function TelegramConnectorsPanel() {
             every sibling's on the tab and the whole page lost its beat over one
             sentence. Read here it is also the first thing under the title
             rather than a second line competing with it. */}
-        <p className="settings-panel-sub">{t("connectors.telegramSub")}</p>
+        <PanelIntro>{t("connectors.telegramSub")}</PanelIntro>
         <TelegramNotice query={query} />
         {query.isSuccess && !query.data.notConfigured && (
           <SettingList>
@@ -1130,7 +1130,7 @@ function MailConnectorsPanel() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("connectors.sub")}</p>
+        <PanelIntro>{t("connectors.sub")}</PanelIntro>
         <OAuthOutcomeNote />
         {connectors.isPending && <p>{t("connectors.loading")}</p>}
         {connectors.isError && (

@@ -11,7 +11,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -177,10 +177,10 @@ function MembersCard({
             one explanation is the defect, withholding twelve controls
             individually is noise (design-system/README.md §Absent, disabled, or
             withheld). */}
-        <p className="settings-panel-sub">
+        <PanelIntro>
           {t("users.membersSub")}
           {probeSettled && !administers && ` ${t("users.adminOnly")}`}
-        </p>
+        </PanelIntro>
         <QueryGate query={members} pendingLabel={t("users.membersTitle")}>
           {(list) =>
             list.length === 0 ? (

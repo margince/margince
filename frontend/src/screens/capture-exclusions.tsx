@@ -13,7 +13,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
@@ -149,7 +149,7 @@ export function CaptureExclusionsCard() {
           the list are non-row children, and the list owns only the intervals
           BETWEEN its rows. */}
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("captureExclusions.sub")}</p>
+        <PanelIntro>{t("captureExclusions.sub")}</PanelIntro>
         <SettingList>
           {/* The rules are the subject of this card, not an answer beside a
               question, so they take the row's full width. The irreversibility

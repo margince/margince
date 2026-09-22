@@ -6,7 +6,7 @@ import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Badge, Button, Disclosure, Textarea } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
   type SettingControlProps,
   SettingList,
@@ -114,10 +114,8 @@ export function VoiceDnaCard() {
           // and a box saying there is nothing yet only pushes that job down.
           <Panel title={t("settings.voice.title")}>
             <PanelBody>
-              <p className="settings-panel-sub">{t("settings.voice.intro")}</p>
-              <p className="settings-panel-sub">
-                {t("settings.voice.emptyBody")}
-              </p>
+              <PanelIntro>{t("settings.voice.intro")}</PanelIntro>
+              <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
               {/* The first sample is what MINTS the profile, so the control
                   that adds it asks for the create grant rather than the update
                   one every later sample rides on. Withheld rather than absent:
@@ -190,7 +188,7 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
     <>
       <Panel title={t("settings.voice.title")}>
         <PanelBody>
-          <p className="settings-panel-sub">{t("settings.voice.intro")}</p>
+          <PanelIntro>{t("settings.voice.intro")}</PanelIntro>
           {/* Said ONCE, for the whole surface, rather than beside each of the
               controls a denial disables. The affordances below may then be
               absent without the page making a claim about the data — which is

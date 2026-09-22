@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
@@ -75,11 +75,11 @@ export function CaptureSettingsCard() {
     <Panel title={t("captureSettings.title")}>
       {/* `form-stack` still earns its place: the failure Callout below the list
           is a non-row child, and without the body's gap it would butt against
-          the last row's hairline. `.settings-panel-sub`'s own interval is
+          the last row's hairline. `.panel-intro`'s own interval is
           already corrected for a `.form-stack` body, so the description lands
           on the same 16px it does in a plain one. */}
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("captureSettings.sub")}</p>
+        <PanelIntro>{t("captureSettings.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("captureSettings.title")}>
           {(settings) => (
             <SettingList>

@@ -15,7 +15,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { stable } from "../format/collate";
@@ -234,12 +234,12 @@ export function TeamsCard() {
       titleAction={canCreateTeam ? <NewTeamAction /> : undefined}
     >
       <PanelBody>
-        <p className="settings-panel-sub">
+        <PanelIntro>
           {t("users.teamsSub")}
           {me.isSuccess &&
             !(canCreateTeam || canEditTeam) &&
             ` ${t("users.teamsAdminOnly")}`}
-        </p>
+        </PanelIntro>
         {/* A refused archive belongs to the card, not to the row: the roster
             below is refetched on success, so the only thing left to say is
             that the write did not land. */}
