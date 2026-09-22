@@ -51,9 +51,10 @@ const (
 //
 // The Go side answers to this list — the installation's base language and the
 // per-member display language both validate against it. The contract's enums
-// and the frontend's own LOCALES are separate declarations of the same set, and
-// nothing yet fails when the three disagree, so widening the product to a
-// fourth language means editing all three by hand.
+// and the frontend's catalogs declare the same set again, and both are held
+// against this one by backend/gates/languageset_test.go and
+// backend/gates/localedoc_test.go: a fourth language is still three edits, and
+// the build names the one that is missing.
 var Shipped = []Lang{English, German, Vietnamese}
 
 // Known reports whether a code names a language the product speaks.
