@@ -74,19 +74,22 @@ func dealMaskedColumns(t testing.TB) *regexp.Regexp {
 // maskedColumnsIn compiles the object's money columns out of the catalog, over
 // every field answeredElsewhere does not claim.
 //
-// It refuses rather than narrows. A catalog that is absent, unreadable or names
-// this object nowhere would otherwise leave a pattern matching the converted
-// column alone, and the census would sweep the same tree and report PASS over
-// every column the catalog does name.
+// It refuses rather than narrows. A catalog that is absent, unreadable, spelt
+// in a way catalogPair cannot read, or naming this object nowhere would
+// otherwise leave a pattern short of the columns it names, and the census would
+// sweep the same tree and report PASS over every one it dropped.
 func maskedColumnsIn(catalog, object string, answeredElsewhere func(string) bool) (*regexp.Regexp, error) {
 	body, err := os.ReadFile(catalog)
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", catalog, err)
 	}
 	columns := []string{dealBaseAmount}
-	for _, line := range strings.Split(string(body), "\n") {
-		named, field, isPair := strings.Cut(strings.TrimSpace(line), " ")
-		if isPair && named == object && !answeredElsewhere(field) {
+	for number, line := range strings.Split(string(body), "\n") {
+		named, field, lineErr := catalogPair(line)
+		if lineErr != nil {
+			return nil, fmt.Errorf("%s line %d: %w", catalog, number+1, lineErr)
+		}
+		if named == object && !answeredElsewhere(field) {
 			columns = append(columns, field)
 		}
 	}
@@ -98,16 +101,39 @@ func maskedColumnsIn(catalog, object string, answeredElsewhere func(string) bool
 	return regexp.MustCompile(`(?i)\b(` + strings.Join(columns, "|") + `)\b`), nil
 }
 
+// catalogName is a column or object as the catalog may spell one.
+var catalogName = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+
+// catalogPair reads one catalog line, empty names for a blank or a comment.
+//
+// A line it cannot read is an ERROR and never a line it skips, which is the
+// whole reason it is a function. A tab between the pair, or a note after it,
+// would otherwise leave an arm no statement can match — and the count above
+// cannot notice, because the converted column seeds the list and keeps it from
+// ever being short. The census would then sweep a narrower tree and report PASS
+// with nothing to say so. Refusing a name outright also keeps a regexp
+// metacharacter out of an alternation this compiles.
+func catalogPair(line string) (object, field string, err error) {
+	parts := strings.Fields(line)
+	if len(parts) == 0 || strings.HasPrefix(parts[0], "#") {
+		return "", "", nil
+	}
+	if len(parts) != 2 || !catalogName.MatchString(parts[0]) || !catalogName.MatchString(parts[1]) {
+		return "", "", fmt.Errorf("%q is not an \"<object> <field>\" pair of identifiers", strings.TrimSpace(line))
+	}
+	return parts[0], parts[1], nil
+}
+
 // TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead holds the one
 // direction this census may not fail in, and the widening that pays for it.
 //
-// A subject taken from a catalog that came back absent, empty or about some
-// other object would sweep exactly the same tree and report PASS over every
-// column nobody masked, leaving no assertion to notice — so the derivation
-// refuses instead. The admitting cases are here beside the refusals because a
-// derivation that refused everything would satisfy them on its own and take the
-// census with it, and because a field the catalog gains has to land in the
-// subject without a second edit.
+// A subject taken from a catalog that came back absent, empty, about some other
+// object, or spelt in a way the parse drops would sweep exactly the same tree
+// and report PASS over every column nobody masked, leaving no assertion to
+// notice — so the derivation refuses instead. The admitting cases are here
+// beside the refusals because a derivation that refused everything would
+// satisfy them on its own and take the census with it, and because a field the
+// catalog gains has to land in the subject without a second edit.
 func TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -129,11 +155,26 @@ func TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead(t *testing.T) {
 		{name: "a catalog of comments alone", catalog: catalogHolding("comments.txt", "# what this build can withhold\n\n")},
 		{name: "a catalog naming only another object", catalog: catalogHolding("other.txt", "partner margin_tier\n")},
 		{name: "a catalog whose only deal field is answered elsewhere", catalog: catalogHolding("elsewhere.txt", "deal "+answeredElsewhere+"\n")},
+		// A line carrying anything past the pair. A cut on the first space read
+		// these as a field with a passenger — an arm matching no statement,
+		// while the count stayed long enough for the refusal above to pass.
+		{name: "a pair carrying a note", catalog: catalogHolding("note.txt", "deal amount_minor # the headline figure\n")},
+		{name: "a field that is not an identifier", catalog: catalogHolding("punctuated.txt", "deal amount.minor\n")},
 		{
 			name:      "the object's money, the converted column, and a pair the catalog has just gained",
 			catalog:   catalogHolding("deal.txt", "# a comment\ndeal amount_minor\ndeal "+answeredElsewhere+"\ndeal retainer_minor\npartner margin_tier\n"),
 			subjects:  []string{"d.amount_minor", "sum(d.amount_minor_base)", "d.retainer_minor"},
 			strangers: []string{"d." + answeredElsewhere, "p.margin_tier", "d.stage_id"},
+		},
+		// Whitespace between the pair is read rather than refused, which is the
+		// safe half of the same rule: a tab dropped the pair where a cut on the
+		// first space was the parse, and dropping it is what the census cannot
+		// survive. Refusing here would be honest and reading it is better.
+		{
+			name:      "a pair the catalog separates with a tab or pads with spaces",
+			catalog:   catalogHolding("spaced.txt", "deal\tamount_minor\n   deal   expected_arr_minor   \n\n"),
+			subjects:  []string{"d.amount_minor", "sum(d.amount_minor_base)", "d.expected_arr_minor"},
+			strangers: []string{"d.stage_id"},
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -142,8 +183,8 @@ func TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead(t *testing.T) {
 				func(field string) bool { return field == answeredElsewhere })
 			if len(c.subjects) == 0 {
 				if err == nil {
-					t.Fatalf("this catalog compiled to %s rather than being refused — a census whose "+
-						"subject shrank to nothing reads the same as a tree with nothing to mask", columns)
+					t.Fatalf("this catalog compiled to %s rather than being refused — a subject that "+
+						"narrows without saying so reads the same as a tree with nothing to mask", columns)
 				}
 				return
 			}
