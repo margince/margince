@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -58,7 +59,15 @@ func (h Handlers) LogActivity(w http.ResponseWriter, r *http.Request, _ crmcontr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in, err := LogActivityInputFrom(req)
+	// A declared importer — a HUMAN holding import_run:create — may stamp the
+	// reserved mirror: namespace, so its rows replay idempotently and rank as
+	// captured history rather than as first-party testimony. Everyone else gets
+	// the client door, an agent carrying that human's own grants included.
+	mapInput := LogActivityInputFrom
+	if auth.DeclaredImporter(r.Context()) {
+		mapInput = LogActivityInputFromImporter
+	}
+	in, err := mapInput(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
