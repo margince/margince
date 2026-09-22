@@ -787,8 +787,8 @@ export function PageTitle({
 // The work column's own classes. `main-gridded` is the capped reading column and
 // there is one measure for every page that keeps it (--pageColumn);
 // `main-record` adds nothing to that width and never appears without it — it
-// NAMES the column as a container, which is what lets the record's tab strip
-// measure the column it spans (shell.css, `container-name: work`).
+// names the column's SCROLLER as a container, so the record's tab strip
+// measures the width content can use (shell.css, `container-name: work`).
 function mainClasses(gridded: boolean, griddedRecord: boolean): string {
   if (!gridded) {
     return "main";

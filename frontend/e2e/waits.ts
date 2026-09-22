@@ -63,3 +63,47 @@ export async function signIn(page: Page): Promise<void> {
   await page.locator('button[type="submit"]').first().click();
   await expect(rail).toBeVisible();
 }
+
+// Below the waits, and not one: the MEASURE two specs share. It lives here
+// rather than in either of them because a second copy of it would be a second
+// answer to whether the page pans sideways.
+
+/**
+ * How far the PAGE scrolls sideways, and which scroller does it.
+ *
+ * NOT `document.body.scrollWidth`, which is what this sweep used to read. The
+ * shell pins `.main` to `overflow: hidden` (shell.css) and gives `.scroll` an
+ * `overflow-y: auto` that computes `overflow-x` to `auto` with it, so wide
+ * content scrolls INSIDE the page's own scroller and the body never grows a
+ * pixel. Measured across all twelve settings tabs the body reported 0 while
+ * `.scroll` itself overflowed by up to 273px — the assertion was structurally
+ * incapable of failing, whatever the layout did.
+ *
+ * So this reads the two elements that actually scroll the page: the document,
+ * and the shell's content column. Anything a screen spills — a header row, a
+ * card, a table — spills into one of them, and it is the reader panning THOSE
+ * that §3.8 forbids.
+ *
+ * A component that declares a horizontal scroll region of its own is not this
+ * and is deliberately not measured: `.table-scroll` around a table too wide for
+ * a phone (atoms.css) is the sanctioned answer to wide content, and it is
+ * bounded by its card, so the page around it never moves.
+ */
+export async function pageOverflow(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const scrollers: { name: string; element: Element }[] = [
+      { name: "the document", element: document.documentElement },
+      ...Array.from(document.querySelectorAll(".scroll")).map((element) => ({
+        name: "the shell content scroller (.scroll)",
+        element,
+      })),
+    ];
+    return scrollers
+      .map(({ name, element }) => ({
+        name,
+        overflow: element.scrollWidth - element.clientWidth,
+      }))
+      .filter(({ overflow }) => overflow > 0)
+      .map(({ name, overflow }) => `${name}: ${overflow}px past the viewport`);
+  });
+}

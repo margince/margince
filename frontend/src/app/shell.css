@@ -1756,12 +1756,13 @@
    Nothing else about the layout changes — inline-size containment only lets a
    child ask how wide this is.
 
-   The column and NOT the scroller inside it, even though a classic scrollbar
-   makes the two different widths: `cqi` counts the scrollbar's gutter either
-   way, so moving the container down one level buys a child nothing. What that
-   difference does to the tab strip is corrected where it lands, in
-   design-system/recordtabs.css. */
-.main-record {
+   THE SCROLLER carries it, not the column around it: `cqi` has to answer with
+   the width content can actually USE, and a classic scrollbar takes its gutter
+   out of the scroller while the column keeps it. Measured against the column, a
+   strip that spans the container spans the gutter too, and the page it stands
+   on pans sideways by half of that on every record — six pixels at 1920, on the
+   one page where the reader is holding a place. */
+.main-record > .scroll {
   container-type: inline-size;
   container-name: work;
 }

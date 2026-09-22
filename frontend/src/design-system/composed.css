@@ -686,9 +686,27 @@
 
 /* `actionsInline`: the verbs sit on the SAME baseline as the identity block
    rather than in their own row underneath it — pushed to the header's far
-   end by the auto margin, the same row the mockup draws. */
+   end by the auto margin, the same row the mockup draws.
+
+   THE GROUP FOLDS. A company carries more verbs than a 1280px column holds, so
+   a group that refused to shrink would keep each verb at its own width by
+   taking the width out of the page: it stands past the column's right edge and
+   the whole record can be dragged sideways after it. Giving way lets the
+   group's own wrap take the verbs onto a second rung inside the header, which
+   is the rule the product reads by — what is too wide folds or scrolls inside
+   itself, and the page never moves. */
 .record-actions-inline {
   margin: 0 0 0 auto;
+  min-inline-size: 0;
+  /* And a folded line stays at the header's end, where the verbs are: the auto
+     margin only places the group, so once the group is as wide as the header
+     the second rung would start under the record's name instead. The same
+     spelling the controls column's row takes above. */
+  justify-content: flex-end;
+}
+/* A VERB does not fold. The group giving way is the answer to a narrow header;
+   a button giving way instead would set its own label two words to a line. */
+.record-actions-inline > :is(.btn, .btn-icon, .overflow-menu) {
   flex-shrink: 0;
 }
 
