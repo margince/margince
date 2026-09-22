@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
 import type { AiCallDetail } from "./aiexport";
 import { ExportScenarioDialog, scenarioYaml } from "./aiexport";
@@ -38,11 +39,7 @@ it("builds an explicitly unreviewed corpus scaffold with safe block scalars", ()
 });
 
 it("requires PII acknowledgment before copying or downloading", async () => {
-  const writeText = vi.fn(async () => undefined);
-  Object.defineProperty(navigator, "clipboard", {
-    configurable: true,
-    value: { writeText },
-  });
+  const clipboard = stubClipboard("accepts");
   const createObjectURL = vi.fn(() => "blob:test");
   const revokeObjectURL = vi.fn(() => undefined);
   Object.defineProperties(URL, {
@@ -65,19 +62,15 @@ it("requires PII acknowledgment before copying or downloading", async () => {
 
   await userEvent.click(screen.getByRole("checkbox"));
   await userEvent.click(copy);
-  await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+  await waitFor(() => expect(clipboard.written).toHaveLength(1));
+  expect(clipboard.written[0]).toContain("task: capture_classify");
   await userEvent.click(download);
   expect(createObjectURL).toHaveBeenCalledOnce();
   expect(revokeObjectURL).toHaveBeenCalledWith("blob:test");
 });
 
 it("surfaces clipboard rejection", async () => {
-  Object.defineProperty(navigator, "clipboard", {
-    configurable: true,
-    value: {
-      writeText: vi.fn(async () => Promise.reject(new Error("denied"))),
-    },
-  });
+  stubClipboard("refuses");
   render(
     <LocaleProvider initial="en">
       <ExportScenarioDialog call={call} onClose={() => undefined} />
@@ -85,6 +78,8 @@ it("surfaces clipboard rejection", async () => {
   );
   await userEvent.click(screen.getByRole("checkbox"));
   await userEvent.click(screen.getByRole("button", { name: "Copy YAML" }));
-  expect(await screen.findByText("Copy failed")).toBeTruthy();
+  expect(
+    await screen.findByText("This browser refused the clipboard"),
+  ).toBeTruthy();
   expect(screen.getByText("Use the preview or download instead.")).toBeTruthy();
 });

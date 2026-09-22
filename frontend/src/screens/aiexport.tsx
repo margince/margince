@@ -7,7 +7,7 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { downloadBytes } from "./download";
@@ -98,30 +98,20 @@ export function ExportScenarioDialog({
   const defaultName = `${call.task}_run_${call.occurred_at.slice(0, 10).replaceAll("-", "")}`;
   const headingId = useId();
   const [name, setName] = useState(defaultName);
-  const [copied, setCopied] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const yaml = scenarioYaml(call, name);
+  // Keyed on the YAML rather than on the click, so renaming the scenario after
+  // a copy stops the button claiming a clipboard that holds the older text.
+  const copy = useClipboardCopy(yaml, {
+    copy: t("aiexport.copy"),
+    copied: t("aiexport.copied"),
+    remedy: t("aiexport.copyFailed"),
+  });
   // A string response is shown verbatim (real newlines) rather than as an
   // escaped JSON string — the reviewer authors `expect:` from this text.
   const response = call.payload?.response;
   const responseText =
     typeof response === "string" ? response : JSON.stringify(response, null, 2);
-
-  async function copyYaml() {
-    if (!navigator.clipboard) {
-      setCopyFailed(true);
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(yaml);
-      setCopied(true);
-      setCopyFailed(false);
-    } catch {
-      setCopied(false);
-      setCopyFailed(true);
-    }
-  }
 
   function downloadYaml() {
     downloadBytes(yaml, `${scenarioSlug(name)}.yaml`, "application/yaml");
@@ -170,20 +160,12 @@ export function ExportScenarioDialog({
           </span>
           <pre className="code-block">{responseText}</pre>
         </div>
-        {copyFailed && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("aiexport.copyFailedTitle")}
-          >
-            {t("aiexport.copyFailed")}
-          </Callout>
-        )}
+        {copy.notice}
       </div>
       <div className="actions">
         <Button onClick={onClose}>{t("aiexport.close")}</Button>
-        <Button disabled={!acknowledged} onClick={() => void copyYaml()}>
-          {copied ? t("aiexport.copied") : t("aiexport.copy")}
+        <Button disabled={!acknowledged} onClick={copy.copy}>
+          {copy.label}
         </Button>
         <Button
           variant="primary"

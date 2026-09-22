@@ -20,7 +20,7 @@ import {
   OverflowMenu,
   SectionHeader,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -347,23 +347,11 @@ function SecretRevealModal({
 }: Readonly<{ secret: string; onClose: () => void }>) {
   const t = useT();
   const headingId = useId();
-  const [copied, setCopied] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
-
-  async function copySecret() {
-    if (!navigator.clipboard) {
-      setCopyFailed(true);
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(secret);
-      setCopied(true);
-      setCopyFailed(false);
-    } catch {
-      setCopied(false);
-      setCopyFailed(true);
-    }
-  }
+  const copy = useClipboardCopy(secret, {
+    copy: t("webhooks.secret.copy"),
+    copied: t("webhooks.secret.copied"),
+    remedy: t("webhooks.secret.copyFailed"),
+  });
 
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
@@ -377,30 +365,22 @@ function SecretRevealModal({
         <pre className="code-block" data-testid="webhook-signing-secret">
           {secret}
         </pre>
-        {copyFailed && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("webhooks.secret.copyFailedTitle")}
-          >
-            {t("webhooks.secret.copyFailed")}
-          </Callout>
-        )}
+        {copy.notice}
       </div>
       {/* Dismissing is what DESTROYS the only copy of the secret: it lives in
           this component's state and is never re-derivable from any read. So
           Copy is the primary act here and Done is the quiet one. Done stays
           available before a copy — abandoning a subscription must be possible —
           but the caution says in words what it costs. */}
-      {!copied && (
+      {!copy.copied && (
         <p className="webhook-secret-caution">
           {t("webhooks.secret.leaveWarning")}
         </p>
       )}
       <div className="actions">
         <Button onClick={onClose}>{t("webhooks.secret.done")}</Button>
-        <Button variant="primary" onClick={() => void copySecret()}>
-          {copied ? t("webhooks.secret.copied") : t("webhooks.secret.copy")}
+        <Button variant="primary" onClick={copy.copy}>
+          {copy.label}
         </Button>
       </div>
     </Modal>

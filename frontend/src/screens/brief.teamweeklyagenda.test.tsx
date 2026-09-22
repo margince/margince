@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { en } from "../i18n/en";
 import { TeamWeeklySection } from "./brief.teamweekly";
 import { agendaRows, agendaText } from "./brief.teamweeklyagenda";
@@ -147,15 +148,7 @@ describe("the agenda on the screen", () => {
   });
 
   it("copies exactly what is on screen", async () => {
-    const written: string[] = [];
-    vi.stubGlobal("navigator", {
-      clipboard: {
-        writeText: (text: string) => {
-          written.push(text);
-          return Promise.resolve();
-        },
-      },
-    });
+    const { written } = stubClipboard("accepts");
     stubApi({ "GET /weekly-reviews/team": () => jsonResponse(review()) });
     render(<TeamWeeklySection teamId="t1" />);
 
@@ -179,7 +172,7 @@ describe("the agenda on the screen", () => {
   // Copy and got nothing has no way to know the agenda is still on screen to
   // select by hand.
   it("says so when the browser will not hand over a clipboard", async () => {
-    vi.stubGlobal("navigator", {});
+    stubClipboard("absent");
     stubApi({ "GET /weekly-reviews/team": () => jsonResponse(review()) });
     render(<TeamWeeklySection teamId="t1" />);
 
