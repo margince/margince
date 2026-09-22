@@ -3,54 +3,37 @@
 
 package commissions
 
-// The ledger's field masks, applied where a row leaves the store for the wire.
+// The ledger meeting a field mask. An entry is the partner's margin tier
+// applied to money and it says so three ways: margin_tier_at_accrual, the
+// rate_bps the tier became, and amount_minor over basis_amount_minor, whose
+// quotient IS that rate. Withholding the first alone leaves the other two
+// standing, which is a mask that does not mask.
 //
-// The tier an entry was accrued on is the partner's margin tier, frozen: a seat
-// withheld the tier on the partner record reads it here unless this pass runs.
-// The reach is declared in auth's group closure, not between the two modules —
-// each withholds its own field and neither knows the other exists.
+// The rate and the amount are required, non-nullable integers on the wire, so
+// no rendering of them says "withheld". So the ROW leaves the read instead of a
+// column leaving the row — the same answer the report engine gives an aggregate
+// over a masked column, for the same reason: there is no per-row place to put
+// "withheld" and a figure that is a function of the withheld one is the
+// withheld one.
+//
+// The reach itself is declared in auth's group closure, not here and not
+// between the two modules: contacts withholds the tier on its own record and
+// the ledger asks which of its rows survive.
 
 import (
 	"context"
+	"strings"
 
-	"github.com/jackc/pgx/v5"
-
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// commissionEntryWithholds are the fields a mask reaches on a ledger entry, and
-// how each is withheld. margin_tier_at_accrual is deliberately not a pair an
-// administrator can configure: it is withheld as a consequence of the partner's
-// mask, and a second place to configure one fact is how an operator comes to
-// believe the tier is hidden while one of the two says otherwise.
-var commissionEntryWithholds = map[string]func(*crmcontracts.CommissionEntry){
-	"margin_tier_at_accrual": func(e *crmcontracts.CommissionEntry) { e.MarginTierAtAccrual = nil },
-}
-
-// maskEntries withholds, per row, what this reader's role does not read.
-// `commission` carries no owner of its own — its scope is inherited from the
-// deal — so no mask on it can be conditioned on write authority and the pass
-// costs no statement.
-//
-// It runs at the store's EXIT and never inside entryUnder, which is the read a
-// void copies its reversal from: a masked row read there would insert a
-// reversal with no tier, turning a withheld value into a wrong one.
-func maskEntries(ctx context.Context, tx pgx.Tx, page []crmcontracts.CommissionEntry) error {
-	return auth.ApplyFieldMasks(ctx, tx, commissionObject, page,
-		func(e crmcontracts.CommissionEntry) ids.UUID { return ids.UUID(e.Id) },
-		commissionEntryWithholds,
-		func(e *crmcontracts.CommissionEntry, names []string) { e.MaskedFields = &names },
-		nil, nil)
-}
-
-// maskedEntry is maskEntries over the ONE entry a single read answers with — or
-// the echo of a write, which is a read too.
-func maskedEntry(ctx context.Context, tx pgx.Tx, entry crmcontracts.CommissionEntry) (crmcontracts.CommissionEntry, error) {
-	page := []crmcontracts.CommissionEntry{entry}
-	if err := maskEntries(ctx, tx, page); err != nil {
-		return crmcontracts.CommissionEntry{}, err
+// maskExcludedClause renders what every ledger read ANDs in: the rows this
+// caller's masks leave them. Empty means no mask reaches a commission entry and
+// the read is unnarrowed.
+func maskExcludedClause(ctx context.Context, arg func(any) int) (string, error) {
+	clauses, err := auth.MaskExclusionClauses(ctx, commissionObject, "", arg)
+	if err != nil {
+		return "", err
 	}
-	return page[0], nil
+	return strings.Join(clauses, " AND "), nil
 }

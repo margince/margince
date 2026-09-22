@@ -22438,6 +22438,12 @@ type CommissionAttribution string
 // quarter, and the deal amount that can be corrected after the close, would
 // otherwise make the same entry answer a different question each time it is read.
 // Carries no owner — visibility is inherited from the deal.
+//
+// An entry carries no `masked_fields`, because no column of one can be withheld on
+// its own: the rate IS the partner's margin tier and the amount over the basis is
+// that rate again. A role whose field mask withholds `partner.margin_tier` therefore
+// reads no entry at all — the list omits it, the single read answers 404, and the
+// summary leaves it out of the totals.
 type CommissionEntry struct {
 	// AmountMinor What the rate produced.
 	AmountMinor int64 `json:"amount_minor"`
@@ -22462,9 +22468,6 @@ type CommissionEntry struct {
 
 	// MarginTierAtAccrual The partner's tier as it stood at accrual; the rate below was derived from it.
 	MarginTierAtAccrual *string `json:"margin_tier_at_accrual,omitempty"`
-
-	// MaskedFields The fields of THIS row the caller's role withholds (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. `margin_tier_at_accrual` is named here whenever the role masks the partner's `margin_tier`, which this row republishes.
-	MaskedFields *[]string `json:"masked_fields,omitempty"`
 
 	// PartnerCompanyId The partner who earned it.
 	PartnerCompanyId openapi_types.UUID `json:"partner_company_id"`

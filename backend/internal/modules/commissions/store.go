@@ -103,11 +103,8 @@ func (s *Store) GetCommissionEntry(ctx context.Context, id ids.CommissionEntryID
 	}
 	var out crmcontracts.CommissionEntry
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		entry, err := readEntry(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		out, err = maskedEntry(ctx, tx, entry)
+		var err error
+		out, err = readEntry(ctx, tx, id)
 		return err
 	})
 	return out, err
@@ -148,6 +145,17 @@ func entryUnder(ctx context.Context, tx pgx.Tx, idPos int, scope string, args []
 	where := storekit.SQLf("id = $%d", idPos)
 	if scope != "" {
 		where += " AND " + scope
+	}
+	// The mask narrows the row SCOPE rather than the rendering, so a caller who
+	// may not read what priced this entry is answered not-found by the same
+	// shape that hides another team's row. It binds onto the args slice the
+	// scope above shares, after it.
+	masked, err := maskExcludedClause(ctx, func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		return crmcontracts.CommissionEntry{}, err
+	}
+	if masked != "" {
+		where += " AND " + masked
 	}
 	e, err := scanEntry(tx.QueryRow(ctx,
 		`SELECT `+commissionColumns+` FROM commission_entry WHERE `+where, args...))
