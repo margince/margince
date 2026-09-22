@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Button, Field, TextInput } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 
@@ -22,6 +22,7 @@ import { ConfirmModal } from "./confirmmodal";
 
 export function NamePrompt({
   trigger,
+  icon,
   title,
   label,
   confirmLabel,
@@ -31,6 +32,12 @@ export function NamePrompt({
 }: Readonly<{
   /** The button that opens it, already translated. */
   trigger: string;
+  /**
+   * A lucide glyph naming the write, ahead of the trigger's words. The button
+   * sizes it, as it sizes every icon a caller hands it, so nothing about it is
+   * the call site's to spell beyond which glyph it is.
+   */
+  icon?: ReactNode;
   title: string;
   /** The field's label — "Name" is the usual one, but a caller may be specific. */
   label: string;
@@ -58,7 +65,10 @@ export function NamePrompt({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{trigger}</Button>
+      <Button onClick={() => setOpen(true)}>
+        {icon}
+        {trigger}
+      </Button>
       <ConfirmModal
         open={open}
         onClose={close}

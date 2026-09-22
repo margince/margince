@@ -90,6 +90,15 @@ const chips: readonly ListChip[] = [
   },
 ];
 
+/** The menu a story opens on mount, and the trigger text that opens it. */
+type StoryMenu = "sort" | "display" | "filter" | "filterAttribute";
+const MENU_TRIGGER: Record<StoryMenu, string> = {
+  sort: "Sort",
+  display: "Display",
+  filter: "Filter",
+  filterAttribute: "Filter",
+};
+
 /**
  * A screen's worth of state around the surface: the search term, the sort
  * string the server would receive, the chosen filters and the view. Filtering
@@ -99,7 +108,7 @@ const chips: readonly ListChip[] = [
 function Surface({
   rows,
   columns: shownColumns = columns,
-  openSortMenu = false,
+  openMenu,
   ...rest
 }: Readonly<{
   rows: Company[];
@@ -116,13 +125,13 @@ function Surface({
   page?: number;
   onPage?: (next: number) => void;
   /**
-   * Open the sort menu on mount, for the story that is ABOUT the menu.
+   * Open one menu on mount, for the stories that are ABOUT a menu.
    *
    * A press, not a prop on the surface: the menus are the surface's own state
    * by design, so a story that reached inside to set them open would be
    * documenting a shape the product does not have.
    */
-  openSortMenu?: boolean;
+  openMenu?: StoryMenu;
 }>) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("display_name");
@@ -134,17 +143,29 @@ function Surface({
   // that reached in to open one would be documenting a shape the product does
   // not have — and a screenshot of a menu nobody can open is worse than none.
   useEffect(() => {
-    if (!openSortMenu) {
+    if (!openMenu) {
       return;
     }
-    // Matched on the PREFIX: the dial names the order it is holding
-    // ("Sort: Company"), so an equality test against the bare word found
-    // nothing and left this story showing a closed menu.
+    // Matched on the PREFIX: a dial names the state it is holding ("Sort:
+    // Company"), so an equality test against the bare word found nothing and
+    // left this story showing a closed menu.
+    const wanted = MENU_TRIGGER[openMenu];
     const trigger = [...(frame.current?.querySelectorAll("button") ?? [])].find(
-      (button) => button.textContent?.trim().startsWith("Sort"),
+      (button) => button.textContent?.trim().startsWith(wanted),
     );
     trigger?.click();
-  }, [openSortMenu]);
+  }, [openMenu]);
+
+  // The filter menu's second step is a press on an attribute row, and that row
+  // only exists once the first press has rendered. No dependency list, so it
+  // runs when the row appears rather than at a moment a timer guessed; level 2
+  // draws no `button.lt-mi` at all, which is what stops it pressing again.
+  useEffect(() => {
+    if (openMenu !== "filterAttribute") {
+      return;
+    }
+    frame.current?.querySelector<HTMLButtonElement>("button.lt-mi")?.click();
+  });
 
   const needle = search.trim().toLowerCase();
   // Only the two attributes the chips offer, read by name rather than by
@@ -186,7 +207,8 @@ function Surface({
 }
 
 // Six columns over one page: sortable headers, filter chips behind the Filter
-// button, the column picker, the density toggle and the range count.
+// button, the Display menu holding the columns and the density, and the range
+// count.
 export const Default: Story = {
   render: () => <Surface rows={companies(12)} />,
 };
@@ -204,7 +226,22 @@ export const Paged: Story = {
 // cannot. Opened here with a sort already applied, so the tick and the
 // direction arrow are both on screen.
 export const SortedByAMenu: Story = {
-  render: () => <Surface rows={companies(12)} openSortMenu />,
+  render: () => <Surface rows={companies(12)} openMenu="sort" />,
+};
+
+// The Display menu: how the grid is DRAWN, under one trigger. Density and the
+// optional columns are one question to a reader — both answer "show me more of
+// this at once" — and each group is named a rung under the menu's own head, so
+// the panel reads as one question in two parts rather than as three headings.
+export const DisplayMenuOpen: Story = {
+  render: () => <Surface rows={companies(12)} openMenu="display" />,
+};
+
+// The filter menu's SECOND step, which is the half a list of attributes cannot
+// show: the attribute's own values, with the head standing as the way back to
+// the list they were chosen from.
+export const FilterAttributeStep: Story = {
+  render: () => <Surface rows={companies(12)} openMenu="filterAttribute" />,
 };
 
 // The same pager, with the PAGE held by the caller. A list screen keeps it in

@@ -173,44 +173,24 @@
   border-color: var(--borderSubtle);
 }
 
-/* The toolbar's buttons carry a pill silhouette so the row reads as one kind
- * of thing rather than several. The SILHOUETTE is the only thing the toolbar
- * chooses: the BOX is the control's own — --controlHeight, the control's inset,
- * the control's icon-to-label gap, and the medium a label takes beside a line
- * glyph — because a verb in a toolbar is the same object as a verb in a form,
- * and a 30px pill beside a 32px button was one control answering the question
- * of its own height twice. */
-.lt-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--controlGap);
-  min-block-size: var(--controlHeight);
-  padding: 0 var(--controlPaddingX);
-  font-weight: var(--fontWeightMedium);
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
+/* The toolbar's verbs carry a pill silhouette so the row reads as one kind of
+ * thing rather than several. The SILHOUETTE is the only thing the toolbar
+ * chooses: everything else is `Button`'s own — the height, the inset, the
+ * icon-to-label gap, the hover, the ring — because a verb in a toolbar is the
+ * same object as a verb in a form, and a 30px pill beside a 32px button was one
+ * control answering the question of its own height twice. */
+.lt-tools .btn {
   border-radius: var(--r-full);
   corner-shape: round;
-  cursor: pointer;
-  white-space: nowrap;
 }
-/* The one line this pill ADDS rather than inherits, and it is here because
- * `.lt-btn` is a bare <button> and not a `.btn`: nothing above it sizes a glyph.
- * Every call site passes a lucide icon with no `size=`, so the toolbar drew the
- * library's own 24px default beside a 16px icon on the button next to it. */
-.lt-btn svg {
-  inline-size: var(--controlIcon);
-  block-size: var(--controlIcon);
-  flex: none;
-}
-.lt-btn:hover {
-  border-color: var(--borderStrong);
-  color: var(--textPrimary);
-}
-.lt-btn.on {
-  border-color: var(--accentMed);
-  background: var(--accentLight);
-  color: var(--accentText);
+
+/* The caret that says a trigger OPENS A LIST, at the size the product's other
+ * carets are drawn (`.lt-arrow`, `.inline-editable-caret`): it qualifies the
+ * label rather than naming the verb, so it sits under the control's own leading
+ * glyph. Here and not a `size=`, because `.btn svg` sizes what a button holds. */
+.lt-tools .btn .lt-caret {
+  inline-size: 12px;
+  block-size: 12px;
 }
 
 /* An applied filter's compound row: attribute, condition, value and the "⋮"
@@ -381,6 +361,38 @@
   font-weight: var(--fontWeightMedium);
 }
 
+/* THE NAME OF A GROUP inside a menu, a rung under the head that names the menu
+   itself: the Display panel's own head and its two groups at one weight read as
+   three menus stacked in a box. The TYPE is `t-caption`, worn beside this class
+   rather than respelled here — the supporting line is already that role — so
+   what this rule owns is the box: the head's inline inset, and the air a second
+   group opens with, which the first one gets from the head above it. */
+.lt-mgroup {
+  padding: var(--controlGap) var(--space-2);
+}
+.lt-mgroup ~ .lt-mgroup {
+  margin-block-start: var(--space-2);
+}
+
+/* THE WAY BACK, where a menu has a level above the one being read. It is the
+   head, so it keeps the head's box and weight from the rule above and takes
+   back only what the <button> element's own defaults impose — the border, the
+   ground, the centred text and the hand. */
+.lt-mback {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.lt-mback:hover {
+  background: var(--bgHover);
+}
+
 /* The attribute search, at the top of the Filter button's first step. Full
  * width of the menu rather than the fixed 180px of the search box in the
  * toolbar itself — this one has no icon competing for the space. */
@@ -438,6 +450,13 @@
 .lt-mi-dir {
   display: inline-flex;
   align-items: center;
+}
+
+/* A row that opens a SUBSET rather than picking a value says so at the row's
+   far end: the glyph points out of the menu, which is where the next step
+   opens, and against the label it would read as part of the attribute's name. */
+.lt-mi-more {
+  margin-inline-start: auto;
 }
 
 /* A menu row that is a CHOICE is a `Checkbox` or a `Radio` — the product's one
@@ -1283,7 +1302,7 @@
  * is drawn half underneath the neighbour.
  */
 .lt-vtab:focus-visible,
-.lt-btn:focus-visible,
+.lt-mback:focus-visible,
 .lt-mi:focus-visible,
 .lt-sort:focus-visible,
 .lt-frow-seg:focus-visible,
@@ -1311,7 +1330,7 @@
  * cut rather than to nothing.
  */
 .lt-vtab,
-.lt-btn,
+.lt-mback,
 .lt-mi,
 .lt-sort,
 .lt-frow-seg,
@@ -1330,7 +1349,7 @@
    hover, which is the same step the pressed chip already uses for its selected
    state, so pressing looks like the beginning of being chosen. */
 .lt-vtab:active,
-.lt-btn:active,
+.lt-mback:active,
 .lt-mi:active,
 .lt-frow-seg:active,
 .lt-frow-more:active,

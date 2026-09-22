@@ -279,21 +279,19 @@ describe("a saved view over the deals board", () => {
     );
   });
 
-  // Both of the grid's own dials describe COLUMNS and ROW HEIGHT, and the board
+  // The Display menu's dials describe COLUMNS and ROW HEIGHT, and the board
   // draws neither. Offered there they are controls a reader can press twice and
   // see nothing happen, which reads as broken rather than as absent — and the
   // surface the board replaced never mounted them.
-  it("offers no column or density dial on the board, and both on the table", async () => {
+  it("offers no display dial on the board, and one on the table", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", stubBackend({ deals: [deal({})] }));
     render(<DealsScreen />);
     await screen.findByRole("button", { name: "Board" });
 
-    expect(screen.queryByRole("button", { name: "Columns" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Compact" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Display" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Table" }));
-    expect(await screen.findByRole("button", { name: "Columns" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Compact" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Display" })).toBeTruthy();
   });
 });

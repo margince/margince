@@ -861,8 +861,9 @@ export const vi = {
   "table.rowsPerPage": "Số dòng mỗi trang",
   "table.perPage": "{count} mỗi trang",
   "table.sortedBy": "sắp xếp theo {column}",
-  "table.columns": "Cột",
   "table.shownColumns": "Cột hiển thị",
+  "table.display": "Hiển thị",
+  "table.density": "Mật độ",
   "table.compact": "Thu gọn",
   "table.sort": "Sắp xếp",
   "table.sortNamed": "Sắp xếp: {column}",
@@ -895,6 +896,7 @@ export const vi = {
   "table.filterSearching": "Đang tìm…",
   "table.filterSearchFailed": "Tìm kiếm thất bại. Hãy thử lại.",
   "table.filterNoMatches": "Không có kết quả.",
+  "table.filterBack": "Quay lại tất cả bộ lọc",
 
   "contacts.name": "Tên",
   "contacts.email": "Email",

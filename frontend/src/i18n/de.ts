@@ -870,8 +870,9 @@ export const de = {
   "table.rowsPerPage": "Zeilen pro Seite",
   "table.perPage": "{count} pro Seite",
   "table.sortedBy": "sortiert nach {column}",
-  "table.columns": "Spalten",
   "table.shownColumns": "Sichtbare Spalten",
+  "table.display": "Darstellung",
+  "table.density": "Dichte",
   "table.compact": "Kompakt",
   "table.sort": "Sortieren",
   "table.sortNamed": "Sortierung: {column}",
@@ -905,6 +906,7 @@ export const de = {
   "table.filterSearchFailed":
     "Die Suche ist fehlgeschlagen. Bitte erneut versuchen.",
   "table.filterNoMatches": "Keine Treffer.",
+  "table.filterBack": "Zurück zu allen Filtern",
 
   "contacts.name": "Name",
   "contacts.email": "E-Mail",

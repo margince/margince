@@ -915,8 +915,9 @@ export const en = {
   "table.rowsPerPage": "Rows per page",
   "table.perPage": "{count} per page",
   "table.sortedBy": "sorted by {column}",
-  "table.columns": "Columns",
   "table.shownColumns": "Shown columns",
+  "table.display": "Display",
+  "table.density": "Density",
   "table.compact": "Compact",
   "table.sort": "Sort",
   "table.sortNamed": "Sort: {column}",
@@ -949,6 +950,7 @@ export const en = {
   "table.filterSearching": "Searching…",
   "table.filterSearchFailed": "The search failed. Try again.",
   "table.filterNoMatches": "No matches.",
+  "table.filterBack": "Back to all filters",
 
   "contacts.name": "Name",
   "contacts.email": "Email",

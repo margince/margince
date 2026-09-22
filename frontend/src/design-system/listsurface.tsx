@@ -2,6 +2,9 @@ import {
   ArrowDown,
   ArrowDownUp,
   ArrowUp,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Filter,
   MoreVertical,
   Plus,
@@ -12,8 +15,8 @@ import { useNarrowViewport } from "../app/viewport";
 import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { Checkbox, OverflowMenu, Radio } from "./atoms";
-import { useDebouncedSearch } from "./debouncedsearch";
+import { Button, Checkbox, OverflowMenu, Radio } from "./atoms";
+import { ChipValueList } from "./listfiltervalues";
 import "./listtable.css";
 import { Heading } from "./heading";
 
@@ -193,8 +196,8 @@ export function ListSurface({
   archived?: { checked: boolean; onChange: (next: boolean) => void };
   /**
    * Controls that change HOW the body is shown rather than what is in it, kept
-   * to the right: the table's Columns and Compact buttons, the board/table
-   * switch, the pipeline being looked at.
+   * to the right: the table's Display menu, the board/table switch, the
+   * pipeline being looked at, and the reader's own Save view last.
    */
   tools?: ReactNode;
   /** The body: a scrolling table, a Kanban board, whatever this surface holds. */
@@ -306,141 +309,6 @@ function HeadActions({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /**
- * The "all" entry plus every option, shared by the Filter button's value
- * step and an applied chip's own reopened menu — the same list either way,
- * since both end at picking one value for one attribute.
- */
-function FilterValueList({
-  chip,
-  value,
-  onPick,
-}: Readonly<{
-  chip: ListChip;
-  value: string;
-  onPick: (value: string, label: string) => void;
-}>) {
-  // One filter takes one value, so these are radios; the name groups them and
-  // the enclosing `Menu` fieldset is what names the question they answer.
-  const group = useId();
-  return (
-    <>
-      <Radio
-        className="lt-mi"
-        name={group}
-        checked={!value}
-        label={chip.allLabel}
-        onChange={() => onPick("", chip.allLabel)}
-      />
-      {chip.options.map((option) => (
-        <Radio
-          key={option.value}
-          className="lt-mi"
-          name={group}
-          value={option.value}
-          checked={option.value === value}
-          label={option.label}
-          onChange={() => onPick(option.value, option.label)}
-        />
-      ))}
-    </>
-  );
-}
-
-/**
- * A relation filter's value step when the attribute is too large to list
- * whole: a text box in place of the fixed options, searching on debounce.
- * The four honest states a search can be in — nothing typed, in flight, no
- * matches, failed — are each their own line, and a query in flight keeps the
- * previous results on screen rather than clearing the menu out from under
- * the reader while the next answer is still coming back.
- */
-function AsyncFilterValueList({
-  chip,
-  value,
-  onPick,
-}: Readonly<{
-  chip: ListChip;
-  value: string;
-  onPick: (value: string, label: string) => void;
-}>) {
-  const t = useT();
-  const [query, setQuery] = useState("");
-  const search = chip.search;
-  const group = useId();
-  const { results, pending, failed } = useDebouncedSearch(search, query);
-
-  if (!search) {
-    return null;
-  }
-
-  return (
-    <>
-      <Radio
-        className="lt-mi"
-        name={group}
-        checked={!value}
-        label={chip.allLabel}
-        onChange={() => onPick("", chip.allLabel)}
-      />
-      <label className="lt-fsearch">
-        <span className="sr-only">
-          {t("table.filterValueSearch", { filter: chip.label })}
-        </span>
-        <input
-          className="lt-fsearch-input"
-          value={query}
-          placeholder={t("table.filterValueSearch", { filter: chip.label })}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </label>
-      {!query && (
-        <p className="lt-fvalue-status">{t("table.filterTypeToSearch")}</p>
-      )}
-      {query && pending && (
-        <p className="lt-fvalue-status">{t("table.filterSearching")}</p>
-      )}
-      {query && failed && (
-        <p className="lt-fvalue-status error">
-          {t("table.filterSearchFailed")}
-        </p>
-      )}
-      {query && !pending && !failed && results.length === 0 && (
-        <p className="lt-fvalue-status">{t("table.filterNoMatches")}</p>
-      )}
-      {results.map((option) => (
-        <Radio
-          key={option.value}
-          className="lt-mi"
-          name={group}
-          value={option.value}
-          checked={option.value === value}
-          label={option.label}
-          onChange={() => onPick(option.value, option.label)}
-        />
-      ))}
-    </>
-  );
-}
-
-/** Either value step a filter row's value segment can open, keyed by whether
- * the chip declares a search source. */
-function ChipValueList({
-  chip,
-  value,
-  onPick,
-}: Readonly<{
-  chip: ListChip;
-  value: string;
-  onPick: (value: string, label: string) => void;
-}>) {
-  return chip.search ? (
-    <AsyncFilterValueList chip={chip} value={value} onPick={onPick} />
-  ) : (
-    <FilterValueList chip={chip} value={value} onPick={onPick} />
-  );
-}
-
-/**
  * The one Filter trigger: a searchable list of the attributes not yet
  * applied, then — once one is picked — that attribute's value list. Reads as
  * the "Filter" button (its icon and label) until a filter exists, and as a
@@ -471,6 +339,10 @@ function FilterMenu({
   const t = useT();
   const [attributeKey, setAttributeKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  // Only the back button sets this, so opening the menu with a pointer does not
+  // pull focus into a search box the reader has not asked for.
+  const steppingBack = useRef(false);
 
   // A closed menu always reopens at the attribute search, never wherever the
   // reader last left it — the button says "Filter", not "Filter: Status".
@@ -480,6 +352,16 @@ function FilterMenu({
       setQuery("");
     }
   }, [open]);
+
+  // Stepping back leaves the reader where they came FROM: the attribute row
+  // they pressed went with the level it belonged to, so focus would otherwise
+  // fall to the top of the document.
+  useEffect(() => {
+    if (attributeKey === null && steppingBack.current) {
+      steppingBack.current = false;
+      searchRef.current?.focus();
+    }
+  }, [attributeKey]);
 
   // Only the attributes with no filter row of their own yet: once a filter is
   // applied it stands as its own row (FilterRow below), so offering it again
@@ -493,23 +375,37 @@ function FilterMenu({
 
   return (
     <span className="lt-menu-wrap">
-      <button
-        type="button"
-        className="lt-btn"
-        aria-expanded={open}
-        aria-label={hasApplied ? t("table.addFilter") : undefined}
-        onClick={onToggle}
-      >
-        {hasApplied ? (
+      {/* The "+" carries no caret: the word it dropped is what the caret
+          qualifies, and a glyph-only trigger with one reads as two marks. */}
+      {hasApplied ? (
+        <Button
+          iconOnly
+          aria-expanded={open}
+          aria-label={t("table.addFilter")}
+          onClick={onToggle}
+        >
           <Plus strokeWidth={1.8} aria-hidden="true" />
-        ) : (
-          <>
-            <Filter strokeWidth={1.6} aria-hidden="true" />
-            {t("table.filter")}
-          </>
-        )}
-      </button>
-      <Menu open={open} head={attribute ? attribute.label : t("table.filter")}>
+        </Button>
+      ) : (
+        <Button aria-expanded={open} onClick={onToggle}>
+          <Filter strokeWidth={1.6} aria-hidden="true" />
+          {t("table.filter")}
+          <ChevronDown className="lt-caret" aria-hidden="true" />
+        </Button>
+      )}
+      <Menu
+        open={open}
+        head={attribute ? attribute.label : t("table.filter")}
+        back={
+          attribute && {
+            label: t("table.filterBack"),
+            onBack: () => {
+              steppingBack.current = true;
+              setAttributeKey(null);
+            },
+          }
+        }
+      >
         {attribute ? (
           <ChipValueList
             chip={attribute}
@@ -525,6 +421,7 @@ function FilterMenu({
             <label className="lt-fsearch">
               <span className="sr-only">{t("table.filterSearch")}</span>
               <input
+                ref={searchRef}
                 className="lt-fsearch-input"
                 value={query}
                 placeholder={t("table.filterSearch")}
@@ -539,6 +436,14 @@ function FilterMenu({
                 onClick={() => setAttributeKey(chip.key)}
               >
                 {chip.label}
+                {/* This row opens the attribute's own values rather than
+                    picking one, and the glyph is all that says so. */}
+                <ChevronRight
+                  size={12}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                  className="lt-mi-more"
+                />
               </button>
             ))}
           </>
@@ -717,20 +622,28 @@ function SortMenu({
   const active = options.find(
     (option) => sortDirection(option.field, sort.value) !== null,
   );
+  const activeDirection = active
+    ? sortDirection(active.field, sort.value)
+    : null;
   const group = useId();
   return (
     <span className="lt-menu-wrap">
-      <button
-        type="button"
-        className={`lt-btn${sort.value ? " on" : ""}`}
-        aria-expanded={open}
-        onClick={onToggle}
-      >
-        <ArrowDownUp strokeWidth={1.5} aria-hidden="true" />
+      <Button aria-expanded={open} onClick={onToggle}>
+        <SortGlyph direction={activeDirection} />
         {active
           ? t("table.sortNamed", { column: active.label })
           : t("table.sort")}
-      </button>
+        {/* The glyph is the sighted reader's half. Which WAY the list runs has
+            to be said as well, or the dial names a column and not an order. */}
+        {activeDirection && (
+          <span className="sr-only">
+            {activeDirection === "asc"
+              ? t("table.sortAscending")
+              : t("table.sortDescending")}
+          </span>
+        )}
+        <ChevronDown className="lt-caret" aria-hidden="true" />
+      </Button>
       <Menu open={open} head={t("table.sortMenu")} align="right">
         {options.map((option) => {
           const direction = sortDirection(option.field, sort.value);
@@ -757,6 +670,22 @@ function SortMenu({
       </Menu>
     </span>
   );
+}
+
+/**
+ * Which way the list runs, on the dial that changes it — or, unsorted, the pair
+ * of arrows that says an order is what this control offers.
+ */
+function SortGlyph({
+  direction,
+}: Readonly<{ direction: "asc" | "desc" | null }>) {
+  if (direction === "asc") {
+    return <ArrowUp strokeWidth={1.5} aria-hidden="true" />;
+  }
+  if (direction === "desc") {
+    return <ArrowDown strokeWidth={1.5} aria-hidden="true" />;
+  }
+  return <ArrowDownUp strokeWidth={1.5} aria-hidden="true" />;
 }
 
 /**
@@ -829,11 +758,19 @@ export function Menu({
   open,
   head,
   align = "left",
+  back,
   children,
 }: Readonly<{
   open: boolean;
   head: string;
   align?: "left" | "right";
+  /**
+   * The step this menu can return to, for a menu that has more than one. The
+   * label and the handler arrive together because a head drawn as a button
+   * still owes a reader the word "back": its face is the step's own name, which
+   * says where you are rather than what pressing it does.
+   */
+  back?: { label: string; onBack: () => void };
   children: ReactNode;
 }>) {
   return (
@@ -847,7 +784,19 @@ export function Menu({
       inert={!open}
       aria-label={head}
     >
-      <div className="lt-mhead">{head}</div>
+      {back ? (
+        <button
+          type="button"
+          className="lt-mhead lt-mback"
+          aria-label={back.label}
+          onClick={back.onBack}
+        >
+          <ChevronLeft size={12} strokeWidth={1.8} aria-hidden="true" />
+          {head}
+        </button>
+      ) : (
+        <div className="lt-mhead">{head}</div>
+      )}
       {children}
     </fieldset>
   );
@@ -1100,6 +1049,14 @@ function Toolbar({
         />
       )}
 
+      {archived && (
+        <Checkbox
+          checked={archived.checked}
+          label={t("list.showArchived")}
+          onChange={(event) => archived.onChange(event.target.checked)}
+        />
+      )}
+
       <span className="lt-spacer" />
 
       {sort && sortOptions.length > 0 && (
@@ -1108,14 +1065,6 @@ function Toolbar({
           options={sortOptions}
           open={openMenu === "sort"}
           onToggle={() => setOpenMenu(openMenu === "sort" ? null : "sort")}
-        />
-      )}
-
-      {archived && (
-        <Checkbox
-          checked={archived.checked}
-          label={t("list.showArchived")}
-          onChange={(event) => archived.onChange(event.target.checked)}
         />
       )}
 

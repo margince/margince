@@ -152,7 +152,7 @@ describe("sorting", () => {
 });
 
 describe("the sort menu", () => {
-  /** The menu's own entries, so a column picker's "Value" is never one of them. */
+  /** The menu's own entries, so the Display menu's "Value" is never one of them. */
   function sortMenu() {
     return within(screen.getByRole("group", { name: "Sort by" }));
   }
@@ -187,9 +187,9 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Columns" }));
+    await userEvent.click(screen.getByRole("button", { name: "Display" }));
     await userEvent.click(
-      within(screen.getByRole("group", { name: "Shown columns" })).getByRole(
+      within(screen.getByRole("group", { name: "Display" })).getByRole(
         "checkbox",
         { name: "Value" },
       ),
@@ -259,9 +259,9 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    expect(screen.getByRole("button", { name: SORT_DIAL }).textContent).toBe(
-      "Sort",
-    );
+    expect(
+      screen.getByRole("button", { name: SORT_DIAL }),
+    ).toHaveAccessibleName("Sort");
 
     rerender(
       <ListTable
@@ -272,9 +272,11 @@ describe("the sort menu", () => {
         sort={{ value: "-value", onChange: () => {} }}
       />,
     );
-    expect(screen.getByRole("button", { name: SORT_DIAL }).textContent).toBe(
-      "Sort: Value",
-    );
+    // Which WAY the list runs is the dial's other half, carried in text only a
+    // screen reader hears, so the name says the column and the order together.
+    expect(
+      screen.getByRole("button", { name: SORT_DIAL }),
+    ).toHaveAccessibleName("Sort: Value descending");
   });
 
   // ONE order at a time, so the entries are RADIOS: a box is the shape of a set
@@ -843,47 +845,6 @@ describe("a chip with an async search source", () => {
   });
 });
 
-describe("column picker", () => {
-  it("hides and re-shows a column, and does not offer a fixed column", async () => {
-    render(
-      <ListTable
-        rows={testRows(1)}
-        columns={columns}
-        rowKey={(row) => row.id}
-        unit="rows"
-      />,
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: "Columns" }));
-    // The identity column is not optional, so it is not on offer.
-    expect(screen.queryByRole("checkbox", { name: "Name" })).toBeNull();
-
-    await userEvent.click(screen.getByRole("checkbox", { name: "Value" }));
-    expect(screen.queryByRole("columnheader", { name: "Value" })).toBeNull();
-
-    // The menu is still standing: a set is built in one visit, not one per tick.
-    await userEvent.click(screen.getByRole("checkbox", { name: "Value" }));
-    expect(screen.getByRole("columnheader", { name: "Value" })).toBeTruthy();
-  });
-});
-
-describe("density", () => {
-  it("flips aria-pressed on the compact toggle", async () => {
-    render(
-      <ListTable
-        rows={testRows(1)}
-        columns={columns}
-        rowKey={(row) => row.id}
-        unit="rows"
-      />,
-    );
-    const compact = screen.getByRole("button", { name: "Compact" });
-    expect(compact.getAttribute("aria-pressed")).toBe("false");
-    await userEvent.click(compact);
-    expect(compact.getAttribute("aria-pressed")).toBe("true");
-  });
-});
-
 describe("views", () => {
   it("switching a view reports its index and applies its sort and filters", async () => {
     const chips: readonly ListChip[] = [
@@ -1309,7 +1270,7 @@ describe("dismissing a popup from the keyboard", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it("closes the column picker on Escape too, which keeps its own open state", async () => {
+  it("closes the Display menu on Escape too, which keeps its own open state", async () => {
     const user = userEvent.setup();
     render(
       <ListTable
@@ -1319,7 +1280,7 @@ describe("dismissing a popup from the keyboard", () => {
         unit="rows"
       />,
     );
-    const trigger = screen.getByRole("button", { name: "Columns" });
+    const trigger = screen.getByRole("button", { name: "Display" });
     await user.click(trigger);
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
 
