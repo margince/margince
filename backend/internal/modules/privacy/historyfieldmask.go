@@ -35,11 +35,14 @@ func maskForRecord(ctx context.Context, tx pgx.Tx, entityType string, entityID i
 	// one pays the statement that resolves the row's write arm.
 	withheld := auth.MaskedFields(actor, entityType, false)
 	if lifted := auth.MaskedFields(actor, entityType, true); len(lifted) < len(withheld) {
-		writable, err := recordIsWritable(ctx, tx, entityType, entityID)
+		// A narrower lifted answer is auth saying the condition CAN be answered
+		// here, which it says only for a record carrying an owner and a grant —
+		// so the record reaching this line is always one WritableSubset takes.
+		writable, err := auth.WritableSubset(ctx, tx, entityType, []ids.UUID{entityID})
 		if err != nil {
 			return nil, err
 		}
-		if writable {
+		if writable[entityID] {
 			withheld = lifted
 		}
 	}
@@ -48,20 +51,6 @@ func maskForRecord(ctx context.Context, tx pgx.Tx, entityType string, entityID i
 		mask[field] = struct{}{}
 	}
 	return mask, nil
-}
-
-// recordIsWritable answers the arm a mask conditioned on write authority lifts
-// on. An activity carries no owner and no grant, so the question has no answer
-// there and the mask stays on — a condition that cannot be resolved withholds.
-func recordIsWritable(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (bool, error) {
-	if entityType == entityTypeActivity {
-		return false, nil
-	}
-	writable, err := auth.WritableSubset(ctx, tx, entityType, []ids.UUID{entityID})
-	if err != nil {
-		return false, err
-	}
-	return writable[entityID], nil
 }
 
 // refuseMaskedFieldFilter refuses a field filter naming a field this reader's
