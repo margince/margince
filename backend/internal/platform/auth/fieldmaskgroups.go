@@ -49,7 +49,19 @@ var maskGroups = map[maskSubject][]maskSubject{
 	// currency that would otherwise still read as a priced deal.
 	{maskObjDeal, "amount_minor"}:       {{maskObjDeal, "expected_arr_minor"}, {maskObjDeal, maskFieldCurrency}},
 	{maskObjDeal, "expected_arr_minor"}: {{maskObjDeal, "amount_minor"}, {maskObjDeal, maskFieldCurrency}},
-	{"partner", "margin_tier"}:          {{"commission", "margin_tier_at_accrual"}},
+	// A commission entry says the tier three ways: frozen at accrual, as the
+	// rate it became (tier2_20 is 2000bps), and as the amount over the basis it
+	// produced that rate from. None of the three is a member an administrator
+	// configures — each is withheld because the partner's mask reaches it, and a
+	// second configuration for one fact is how the leak comes back.
+	//
+	// The ledger has no rendering for these: the rate and the amount are
+	// required integers on the wire, so it answers this group by leaving the ROW
+	// out of its reads rather than the column out of the row.
+	{"partner", "margin_tier"}: {
+		{"commission", "margin_tier_at_accrual"}, {"commission", "rate_bps"},
+		{"commission", "amount_minor"},
+	},
 }
 
 // withheldSubjects is the closure of ONE configured mask: the pair it names,
