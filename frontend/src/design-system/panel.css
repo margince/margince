@@ -82,6 +82,28 @@
   position: relative;
   padding: var(--padPanel);
 }
+
+/* The panel's own descriptive line, opening a body. Its interval to whatever it
+ * describes is declared HERE and nowhere else: as a screen's class it was
+ * spaced from one screen sheet and corrected in three others, so the same
+ * sentence stood at three distances from the rows under it. No type and no ink
+ * — the line reads at the body's, like the prose it is.
+ *
+ * Last in its body it owes nothing: what follows is a row or another body
+ * bringing its own top padding, and a trailing margin paid that gap twice.
+ *
+ * A margin inside a `.form-stack` ADDS to that stack's --space-3 gap rather
+ * than collapsing into it, so what is left there is the difference and both
+ * spellings land the rows --space-4 below the line. */
+.panel-intro {
+  margin: 0 0 var(--space-4);
+}
+.panel-intro:last-child {
+  margin-bottom: 0;
+}
+.form-stack > .panel-intro {
+  margin-bottom: calc(var(--space-4) - var(--space-3));
+}
 /* A group's head inside the pane: its name at the eyebrow's weight and its verb
    at the far end, on a shorter interval than a body — it labels the rows under
    it rather than standing as a block of its own. */

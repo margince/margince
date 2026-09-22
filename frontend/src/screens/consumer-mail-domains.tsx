@@ -14,7 +14,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -256,7 +256,7 @@ export function ConsumerMailDomainsCard() {
           the rows are non-row children, and the list owns only the intervals
           BETWEEN its rows. */}
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("consumerMail.sub")}</p>
+        <PanelIntro>{t("consumerMail.sub")}</PanelIntro>
         <SettingList>
           {/* The entries are the subject of this card rather than an answer to
               a question beside them, so they take the row's full width. */}

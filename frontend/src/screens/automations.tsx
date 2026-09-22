@@ -11,7 +11,7 @@ import {
   OverflowMenu,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { AutonomyDot } from "../design-system/trust";
@@ -553,7 +553,7 @@ export function AutomationsAdmin() {
     // rather than "the whole settings page".
     <Panel title={t("nav.automations")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("auto.sub")}</p>
+        <PanelIntro>{t("auto.sub")}</PanelIntro>
         {/* Bound to the grant the CONTROL asks for. It read "no create AND no
             edit AND no delete" while the row swaps its Switch for a Badge on
             `update` alone — so a seat holding create but not update lost the

@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import { EmptyState } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate, type QueryLike, useMe } from "./common";
 
 // The shell every Settings → System health card wears.
@@ -74,7 +74,7 @@ export function HealthCard<Data>({
   return (
     <Panel title={title} footer={report && footer(report)}>
       <PanelBody>
-        <p className="settings-panel-sub">{sub}</p>
+        <PanelIntro>{sub}</PanelIntro>
         {/* One card's throw stays inside one card. These bodies derive every
             line from a payload a background system writes, so they have more
             ways to give out than the panels beside them — and without a

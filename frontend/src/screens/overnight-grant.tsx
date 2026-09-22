@@ -7,7 +7,7 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { Checkbox } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
@@ -222,7 +222,7 @@ export function OvernightGrantCard() {
   return (
     <Panel title={t("overnightGrant.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("overnightGrant.sub")}</p>
+        <PanelIntro>{t("overnightGrant.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("overnightGrant.title")}>
           {(grants) => {
             const grant = morningBriefGrant(grants);

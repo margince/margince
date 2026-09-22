@@ -39,7 +39,12 @@ import {
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelPlate } from "../design-system/panel";
+import {
+  Panel,
+  PanelBody,
+  PanelIntro,
+  PanelPlate,
+} from "../design-system/panel";
 import {
   PassportSelect,
   ScopeChips,
@@ -1201,18 +1206,10 @@ function PassportCard() {
       }
     >
       <PanelBody>
-        {/* The card's prose, and BOTH sentences of it, above the rows: what a
-            passport is, and how it differs from a connection's own credential.
-            The second sentence used to be a `panel-foot` band under the list,
-            which gave one card three
-            different intervals — a body, a row list, and a ruled band — where
-            its neighbours have two. Every card on this page now reads the same
-            way: title, prose, rows. No `form-stack` either: the paragraph's own
-            margin is the interval to the list, and the flex gap on top of it
-            made this card's prose sit 28px off its rows against the 16px the
-            connected-agents card next to it keeps. */}
-        <p className="settings-panel-sub">{t("settings.passportsSub")}</p>
-        <p className="settings-panel-sub">{t("settings.passportsLendHint")}</p>
+        {/* Both sentences above the rows, neither as a `panel-foot` band: every
+            card on this page reads title, prose, rows. */}
+        <PanelIntro>{t("settings.passportsSub")}</PanelIntro>
+        <PanelIntro>{t("settings.passportsLendHint")}</PanelIntro>
         <SettingList>
           {/* Only what this human MINTED, each credential its own row: the name
               on the left, what it currently IS on the right — masked token,
@@ -1540,11 +1537,8 @@ function AgentToolsCard() {
 
   return (
     <Panel title={t("tools.title")}>
-      {/* No `form-stack`: the description's own margin is the interval to the
-          rows, and the flex gap on top of it gave this card 28px where the
-          card above it has 16. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("tools.sub")}</p>
+        <PanelIntro>{t("tools.sub")}</PanelIntro>
         <SettingList>
           {/* The dial FIRST, then the inventory it narrows — the posture before
               the judgements that read it. Absent, not disabled, while this human
@@ -1762,7 +1756,7 @@ function ResetDataCard() {
       className="settings-danger"
     >
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("settings.dangerZoneSub")}</p>
+        <PanelIntro>{t("settings.dangerZoneSub")}</PanelIntro>
         <SettingList>
           {/* One row, because there is one act: what it does on the left, the
               verb that does it on the right. This verb opens the question and
@@ -1850,11 +1844,8 @@ function AutonomyCard() {
   const t = useT();
   return (
     <Panel title={t("settings.autonomy")}>
-      {/* No `form-stack`: the description's own margin is the interval to the
-          rows. See PassportCard — the flex gap on top of that margin is what
-          gave the cards on this page two different intervals. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.autonomySub")}</p>
+        <PanelIntro>{t("settings.autonomySub")}</PanelIntro>
         {/* Four rows in the page's own language, even though none of them is
             settable: what the tier COVERS reads left as prose, and the tier it
             runs at — the dot, and on the locked row the badge saying the answer
@@ -2239,11 +2230,8 @@ export function AuditLogCard() {
   const asked = useSettledAuditLogFilters(filters);
   return (
     <Panel title={t("settings.auditEntries")}>
-      {/* No `form-stack`: the description's own margin is the interval to the
-          rows, and the flex gap on top of it is the second spelling that made
-          the settings cards disagree about that interval. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.auditSub")}</p>
+        <PanelIntro>{t("settings.auditSub")}</PanelIntro>
         <SettingList>
           {/* The dials are the card's SECONDARY half — a reader arrives to read
               what happened, and narrows it second — so they sit in a

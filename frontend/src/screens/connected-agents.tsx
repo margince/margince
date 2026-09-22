@@ -8,7 +8,7 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Disclosure, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../design-system/passportselect";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate } from "../format/format";
@@ -141,7 +141,7 @@ function ConnectGuide() {
       {(connector) =>
         connector.enabled ? (
           <>
-            <p className="settings-panel-sub">{t("agents.connectSteps")}</p>
+            <PanelIntro>{t("agents.connectSteps")}</PanelIntro>
             <SettingList>
               {CONNECT_GUIDES.map((guide) => (
                 <SettingRow
@@ -470,7 +470,7 @@ export function ConnectedAgentsCard() {
     // get.
     <Panel title={t("agents.connected")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("agents.connectedSub")}</p>
+        <PanelIntro>{t("agents.connectedSub")}</PanelIntro>
         {/* The wrapper is the disconnect confirm's focus anchor: it holds the
           card's row list — the connections that remain, the "no agent is
           connected" line when the ended one was the last, and the way to

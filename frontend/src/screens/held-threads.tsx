@@ -7,7 +7,7 @@ import { Callout } from "../design-system/callout";
 import { CellStack } from "../design-system/cellstack";
 import { EmailReference } from "../design-system/emailreference";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -60,7 +60,7 @@ export function HeldThreadsCard() {
   return (
     <Panel title={t("heldThreads.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("heldThreads.sub")}</p>
+        <PanelIntro>{t("heldThreads.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("heldThreads.title")}>
           {(list) =>
             list.data.length === 0 ? (

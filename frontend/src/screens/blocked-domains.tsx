@@ -8,7 +8,7 @@ import { useCanWrite } from "../app/capability";
 import { Badge, Button, DataTable, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CountLine } from "../design-system/listsurface";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -160,7 +160,7 @@ export function BlockedDomainsCard() {
           the list are non-row children, and the list owns only the intervals
           BETWEEN its rows. */}
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("blockedDomains.sub")}</p>
+        <PanelIntro>{t("blockedDomains.sub")}</PanelIntro>
         <SettingList>
           {/* The decisions are the subject of this card rather than an answer
               to a question beside them, so they take the row's full width. */}

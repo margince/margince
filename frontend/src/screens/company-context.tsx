@@ -25,7 +25,7 @@ import {
 } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { confidenceLevel, FieldDiff } from "../design-system/trust";
 import { formatNumber } from "../format/format";
@@ -657,7 +657,7 @@ function CompanyFactsCard({
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.companySub")}</p>
+        <PanelIntro>{t("settings.companySub")}</PanelIntro>
         {/* The surface keeps its place and states its posture ONCE. This is a
             PERMISSION, which is why it speaks at all — the rollout flag returns
             null instead, because a capability this installation does not have
@@ -756,7 +756,7 @@ function CompanySourceCard({
   return (
     <Panel title={t("settings.companySourceTitle")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.companyTrust")}</p>
+        <PanelIntro>{t("settings.companyTrust")}</PanelIntro>
         <SettingList>
           <SettingRow
             label={t("settings.companyWebsite")}

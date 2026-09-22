@@ -4,7 +4,7 @@ import { ifMatch } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import { Badge } from "../design-system/atoms";
 import type { ListColumn } from "../design-system/listtable";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ArchiveAction } from "./archive";
@@ -209,7 +209,7 @@ export function OfferTemplatesAdmin() {
   return (
     <Panel className="listsection" title={t("template.title")}>
       <PanelBody className="listsection-intro">
-        <p className="settings-panel-sub">{t("template.settingsSub")}</p>
+        <PanelIntro>{t("template.settingsSub")}</PanelIntro>
         {/* Stated once for the whole section (design-system README, "Absent,
             disabled, or withheld"): a readable list whose editors are all withheld
             has to say so, or their absence reads as a claim about the list rather
@@ -220,7 +220,7 @@ export function OfferTemplatesAdmin() {
             read-only notice at the admin who holds all three. Gate on the
             probe, not on its absence. */}
         {me.isSuccess && !canCreate && !canUpdate && !canArchive && (
-          <p className="settings-panel-sub">{t("template.readOnly")}</p>
+          <PanelIntro>{t("template.readOnly")}</PanelIntro>
         )}
       </PanelBody>
       <ListTable

@@ -12,7 +12,7 @@ import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Button, EmptyState, Textarea } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -118,7 +118,7 @@ export function ConfirmSubmissionsPanel() {
   return (
     <Panel title={t("privacy.corrections")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("privacy.correctionsSub")}</p>
+        <PanelIntro>{t("privacy.correctionsSub")}</PanelIntro>
         {failure ? (
           <p className="dsr-error" role="alert">
             {failure}

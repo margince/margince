@@ -4,7 +4,7 @@ import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { Badge, DataTable, EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -62,7 +62,7 @@ export function AiHealthCard() {
     return (
       <Panel title={t("aiHealth.title")}>
         <PanelBody>
-          <p className="settings-panel-sub">{t("aiHealth.sub")}</p>
+          <PanelIntro>{t("aiHealth.sub")}</PanelIntro>
           <QueryGate query={me} pendingLabel={t("aiHealth.title")}>
             {() => <EmptyState>{t("aiHealth.withheld")}</EmptyState>}
           </QueryGate>
@@ -74,7 +74,7 @@ export function AiHealthCard() {
   return (
     <Panel title={t("aiHealth.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("aiHealth.sub")}</p>
+        <PanelIntro>{t("aiHealth.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("aiHealth.title")}>
           {(health) =>
             health.rungs.length === 0 ? (

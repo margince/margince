@@ -10,7 +10,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
@@ -61,7 +61,7 @@ export function RecordRolesCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("recordRoles.sub")}</p>
+        <PanelIntro>{t("recordRoles.sub")}</PanelIntro>
         <SettingList>
           <SettingRow
             label={t("recordRoles.listLabel")}

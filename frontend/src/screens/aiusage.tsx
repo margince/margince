@@ -9,7 +9,7 @@ import {
   Disclosure,
   EmptyState,
 } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -336,7 +336,7 @@ export function AiUsageCard() {
     return (
       <Panel title={t("aiusage.title")}>
         <PanelBody>
-          <p className="settings-panel-sub">{t("aiusage.sub")}</p>
+          <PanelIntro>{t("aiusage.sub")}</PanelIntro>
           <QueryGate query={me} pendingLabel={t("aiusage.title")}>
             {() => <EmptyState>{t("aiusage.withheld")}</EmptyState>}
           </QueryGate>
@@ -349,7 +349,7 @@ export function AiUsageCard() {
   return (
     <Panel title={t("aiusage.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("aiusage.sub")}</p>
+        <PanelIntro>{t("aiusage.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("aiusage.title")}>
           {(data) => (
             <AiUsageBody data={data} month={month} onMonth={setMonth} />
