@@ -30,14 +30,13 @@ set -euo pipefail
 : "${REPO:?REPO must name the repository to check}"
 
 # Six days, and the number is measured rather than chosen. Over the 36-day
-# window this bot last ran healthy (2026-07-17 to 08-21) it opened a pull
-# request on 25 days, and the longest gap between two such days was FIVE — a
-# threshold of two, which is what reading "caught it on day two" literally would
-# give, would have cried wolf four times in those 36 days, and an alarm that
-# cries wolf is an alarm nobody reads. Six is one day of margin over the
-# observed worst case. It is measured against pull requests ALONE, so the
-# dashboard signal can only ever make the combined gap shorter than what
-# calibrated this.
+# window this bot last ran healthy (2026-07-17 to 08-21) the longest it went
+# between two pull requests was 5.08 days — a threshold of two, which is what
+# reading "caught it on day two" literally would give, would have cried wolf
+# four times in those 36 days, and an alarm that cries wolf is an alarm nobody
+# reads. Six leaves a day of margin over that worst case. It is measured
+# against pull requests ALONE, so the dashboard signal can only ever make the
+# real gap shorter than what calibrated this.
 #
 # Re-measure before moving it. A quieter dependency surface widens those gaps,
 # and the number is only honest while it describes this repository.
@@ -134,11 +133,17 @@ if [[ -z "$last_seen" ]]; then
   exit 1
 fi
 
-age_days=$(((now_epoch - $(to_epoch "$last_seen")) / 86400))
+# Compared in SECONDS, reported in days. Truncating first and comparing the
+# whole days would accept six days and twenty-three hours as inside a six-day
+# budget, which delays the alarm by most of a day and makes the constant above
+# describe something the code does not do. The measured worst case is 5.08 days,
+# so an exact bound at six costs no false alarm and buys back that day.
+quiet_seconds=$((now_epoch - $(to_epoch "$last_seen")))
+age_days=$((quiet_seconds / 86400))
 emit last_seen "$last_seen"
 emit age_days "$age_days"
 
-if ((age_days > MAX_QUIET_DAYS)); then
+if ((quiet_seconds > MAX_QUIET_DAYS * 86400)); then
   echo "Renovate has been quiet for $age_days days (budget $MAX_QUIET_DAYS)." >&2
   echo "Last act: $signal, $last_seen." >&2
   verdict QUIET

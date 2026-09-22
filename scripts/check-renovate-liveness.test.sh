@@ -41,11 +41,13 @@ chmod +x "$stub_dir/gh"
 export PATH="$stub_dir:$PATH"
 
 # BSD first, GNU second, matching the script under test.
-iso_days_ago() {
-  local e=$((NOW - $1 * 86400))
+iso_days_ago() { iso_seconds_ago $(($1 * 86400)); }
+iso_seconds_ago() {
+  local e=$((NOW - $1))
   date -u -r "$e" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d "@$e" +%Y-%m-%dT%H:%M:%SZ
 }
 
+dashboard_secs_at() { printf '[{"number":52,"title":"Dependency Dashboard","updated_at":"%s"}]' "$(iso_seconds_ago "$1")"; }
 dashboard_at() { printf '[{"number":52,"title":"Dependency Dashboard","updated_at":"%s"}]' "$(iso_days_ago "$1")"; }
 comment_at() { printf '[{"created_at":"%s"}]' "$(iso_days_ago "$1")"; }
 pr_at() { printf '{"items":[{"created_at":"%s"}]}' "$(iso_days_ago "$1")"; }
@@ -93,6 +95,13 @@ DASHBOARD_JSON="$(dashboard_at 6)" COMMENTS_JSON='[]' SEARCH_JSON='{"items":[]}'
   expect "six days is inside the budget" 0 LIVE
 DASHBOARD_JSON="$(dashboard_at 7)" COMMENTS_JSON='[]' SEARCH_JSON='{"items":[]}' \
   expect "seven days is past the budget" 1 QUIET
+
+# The hour that decides whether the budget is six days or nearly seven. Truncating
+# the elapsed time to whole days before comparing reads this as six and holds the
+# alarm for another hour; the cases on whole-day boundaries above cannot tell the
+# two spellings apart, which is why this one is written in seconds.
+DASHBOARD_JSON="$(dashboard_secs_at $((6 * 86400 + 23 * 3600)))" COMMENTS_JSON='[]' SEARCH_JSON='{"items":[]}' \
+  expect "six days and twenty-three hours is past the budget" 1 QUIET
 
 # The counterfeit. A human comments on the dashboard today, which moves the
 # issue's updated_at exactly as a rewrite does. If the check took updated_at at
