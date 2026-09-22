@@ -46,6 +46,21 @@ const maskedFieldScreens = "../frontend/src"
 // mode turns on what the payload said.
 var maskedGuardRender = regexp.MustCompile(`<FieldGuard\b[^>]*mode=[^>]*"masked"`)
 
+// withheldMessage is the same refusal where no element fits — a read-only
+// reason, a picker's option label, a group rendered as one string — and a
+// shared token either way, which is what keeps it from being a screen's own
+// words.
+var withheldMessage = regexp.MustCompile(`t\("record\.notShown"\)`)
+
+// maskDrawing is one DECLARATION's answer about one field: the screen it sits
+// in, and whether that same declaration states the refusal. Per declaration
+// and not per file, because a component drawing one withheld field says
+// nothing about the next field down the same screen.
+type maskDrawing struct {
+	file    string
+	refuses bool
+}
+
 // drawnWithoutOffer ratifies a field the screens test for and the catalog does
 // not offer. Empty, and the emptiness is the finding: no screen draws a refusal
 // for a fact this build cannot withhold.
@@ -71,44 +86,58 @@ func TestEveryMaskableFieldIsDrawnAsWithheld(t *testing.T) {
 			"value arrives null and is drawn as an empty cell, which says the record holds no such "+
 			"fact rather than that this reader may not have it", maskableCatalog, field, maskedFieldScreens)
 	}
-	for field, files := range drawn {
+	for field, drawings := range drawn {
 		if offered[field] || drawnWithoutOffer.Waived(t, field) {
 			continue
 		}
 		t.Errorf("%s draws a refusal for %q and %s offers no mask naming it, so the branch is a "+
 			"promise nothing keeps: either the catalog stopped offering the pair and the screen "+
 			"still claims it, or the field name is misspelt and the real refusal is drawn as a "+
-			"blank", strings.Join(files, ", "), field, maskableCatalog)
+			"blank", screensOf(drawings), field, maskableCatalog)
 	}
-	for field, files := range drawn {
-		if !offered[field] || slices.ContainsFunc(files, drawsTheMaskedGuard(t)) {
+	for field, drawings := range drawn {
+		if !offered[field] || anyRefuses(drawings) {
 			continue
 		}
-		t.Errorf("%q is tested for in %s and none of them renders FieldGuard in its masked mode: a "+
-			"screen that knows the field is withheld and draws its own words for it is a second "+
-			"spelling of the refusal", field, strings.Join(files, ", "))
+		t.Errorf("%q is tested for in %s and no declaration testing for it draws the refusal "+
+			"itself: a screen that knows the field is withheld and draws its own words for it is a "+
+			"second spelling of the refusal, and one that draws the shared one for a NEIGHBOURING "+
+			"field leaves this one blank", field, screensOf(drawings))
 	}
 	offeredWithoutCell.AssertAllMatched(t)
 	drawnWithoutOffer.AssertAllMatched(t)
 }
 
-// drawsTheMaskedGuard reports whether the screen renders the shared refusal.
-func drawsTheMaskedGuard(t *testing.T) func(string) bool {
-	t.Helper()
-	return func(file string) bool {
-		source, err := os.ReadFile(filepath.Join(maskedFieldScreens, file)) // #nosec G304 -- a path from walking the source tree
-		if err != nil {
-			t.Fatalf("re-reading %s: %v", file, err)
+// drawsWithheld reports whether this declaration states the refusal, in either
+// of the shared spellings the product has for it.
+func drawsWithheld(declaration string) bool {
+	return maskedGuardRender.MatchString(declaration) || withheldMessage.MatchString(declaration)
+}
+
+// anyRefuses reports whether one of the declarations testing for a field draws
+// the refusal, which is the association this mirror holds: the neighbours of a
+// declaration answer for their own fields and not for this one.
+func anyRefuses(drawings []maskDrawing) bool {
+	return slices.ContainsFunc(drawings, func(drawing maskDrawing) bool { return drawing.refuses })
+}
+
+// screensOf is the files these drawings sit in, for a report that says where to
+// look.
+func screensOf(drawings []maskDrawing) string {
+	var files []string
+	for _, drawing := range drawings {
+		if !slices.Contains(files, drawing.file) {
+			files = append(files, drawing.file)
 		}
-		return maskedGuardRender.Match(source)
 	}
+	return strings.Join(files, ", ")
 }
 
 // maskedFieldsDrawn maps each field the screens test a record's masked_fields
-// for to the files testing it, refusing a walk that reads nothing: a scan
-// finding no screen at all sweeps the same tree and agrees with every catalog
-// there could be.
-func maskedFieldsDrawn(t *testing.T) map[string][]string {
+// for to the declarations testing it, refusing a walk that reads nothing: a
+// scan finding no screen at all sweeps the same tree and agrees with every
+// catalog there could be.
+func maskedFieldsDrawn(t *testing.T) map[string][]maskDrawing {
 	t.Helper()
 	drawn, err := maskedFieldsDrawnUnder(maskedFieldScreens)
 	if err != nil {
@@ -117,8 +146,8 @@ func maskedFieldsDrawn(t *testing.T) map[string][]string {
 	return drawn
 }
 
-func maskedFieldsDrawnUnder(root string) (map[string][]string, error) {
-	drawn := make(map[string][]string)
+func maskedFieldsDrawnUnder(root string) (map[string][]maskDrawing, error) {
+	drawn := make(map[string][]maskDrawing)
 	walkErr := fs.WalkDir(os.DirFS(root), ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !isMaskDrawingSource(entry.Name()) {
 			return err
@@ -127,8 +156,11 @@ func maskedFieldsDrawnUnder(root string) (map[string][]string, error) {
 		if readErr != nil {
 			return readErr
 		}
-		for _, field := range maskedFieldTests(string(source)) {
-			drawn[field] = append(drawn[field], path)
+		for _, declaration := range declarationsIn(string(source)) {
+			drawing := maskDrawing{file: path, refuses: drawsWithheld(declaration)}
+			for _, field := range maskedFieldTests(declaration) {
+				drawn[field] = append(drawn[field], drawing)
+			}
 		}
 		return nil
 	})
@@ -139,10 +171,29 @@ func maskedFieldsDrawnUnder(root string) (map[string][]string, error) {
 		return nil, fmt.Errorf("no source under %s tests a record's masked_fields, so either the "+
 			"client stopped drawing refusals or this scan stopped reading them", root)
 	}
-	for _, files := range drawn {
-		slices.Sort(files)
+	for _, drawings := range drawn {
+		slices.SortStableFunc(drawings, func(a, b maskDrawing) int { return strings.Compare(a.file, b.file) })
 	}
 	return drawn, nil
+}
+
+// declarationsIn is the top-level declarations of one source, which is the unit
+// a field's test and its refusal have to share. The tree is formatted with
+// every declaration opening in the first column and its body indented, so a
+// line in the first column opens the next one — a source this splits too finely
+// reports a refusal it cannot see rather than one it invented.
+func declarationsIn(source string) []string {
+	var declarations []string
+	current := strings.Builder{}
+	for _, line := range strings.Split(tsComment.ReplaceAllString(source, " "), "\n") {
+		if current.Len() > 0 && line != "" && !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
+			declarations = append(declarations, current.String())
+			current.Reset()
+		}
+		current.WriteString(line)
+		current.WriteString("\n")
+	}
+	return append(declarations, current.String())
 }
 
 // isMaskDrawingSource keeps tests and stories out: both BUILD a masked payload
@@ -330,8 +381,42 @@ func TestTheMaskedCellMirrorRefusesAScreenTreeItReadsNothingFrom(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the fixture screen: %v", err)
 	}
-	if !slices.Equal(drawn["amount_minor"], []string{"deals.tsx"}) {
+	if screensOf(drawn["amount_minor"]) != "deals.tsx" {
 		t.Fatalf("the fixture screen read as %v — a screen dropped here is a field this mirror "+
 			"stops holding", drawn)
+	}
+}
+
+// TestTheRefusalIsReadPerDeclarationAndNotPerScreen plants the shape this
+// mirror could not see: one component drawing its own field through the shared
+// control vouched for every other field named anywhere in the same file, so a
+// screen could name a withheld field and draw its own words for it.
+func TestTheRefusalIsReadPerDeclarationAndNotPerScreen(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	screen := `function CompanyCell({ deal }) {
+  if (deal.masked_fields?.includes("company_id")) {
+    return <FieldGuard mode="masked" />;
+  }
+}
+
+function MarginTierRow({ partner }) {
+  if (partner.masked_fields?.includes("margin_tier")) {
+    return <span>no tier for you</span>;
+  }
+}
+`
+	if err := os.WriteFile(filepath.Join(root, "partners.tsx"), []byte(screen), 0o600); err != nil {
+		t.Fatalf("writing the fixture screen: %v", err)
+	}
+	drawn, err := maskedFieldsDrawnUnder(root)
+	if err != nil {
+		t.Fatalf("reading the fixture screen: %v", err)
+	}
+	if !anyRefuses(drawn["company_id"]) {
+		t.Fatal("the declaration rendering the shared control read as drawing no refusal")
+	}
+	if anyRefuses(drawn["margin_tier"]) {
+		t.Fatal("a field drawn in the screen's own words was vouched for by its neighbour's control")
 	}
 }
