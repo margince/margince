@@ -172,16 +172,6 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 	}
 }
 
-// mapRows converts a store page's rows to their wire shape, so pageOf keeps
-// identifying one type rather than growing a second row-shape parameter.
-func mapRows[A, B any](in []A, f func(A) B) []B {
-	out := make([]B, 0, len(in))
-	for _, v := range in {
-		out = append(out, f(v))
-	}
-	return out
-}
-
 // pageOf turns one store page into seam records. The three list calls differ
 // only in the row type and where its id and version sit, so the shared half is
 // written once: a per-type copy is how one of them comes to page differently

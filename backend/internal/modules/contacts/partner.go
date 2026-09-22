@@ -150,6 +150,9 @@ func applyPartnerFitOverride(current partnerFitState, score *int16, reason *stri
 	return current, nil
 }
 
+// UpsertPartner writes a company's partner terms, promoting the company to a
+// partner if it is not one yet. Promotion is a company mutation as much as a
+// partner one, so both write grants are required.
 func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmcontracts.Partner, error) {
 	if err := auth.Require(ctx, "partner", principal.ActionUpdate); err != nil {
 		return crmcontracts.Partner{}, err

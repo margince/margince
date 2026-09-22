@@ -23,6 +23,11 @@ import (
 // table would not rename.
 const partnerMaskObject = "partner"
 
+// partnerFieldMarginTier is the WIRE field a mask names. The sort catalog and
+// the audit before-image spell the same word for the column, and the three stay
+// separate constants: one name they happen to share is not one vocabulary.
+const partnerFieldMarginTier = "margin_tier"
+
 // partnerWithholds are the fields a mask may name on a partner, and how each is
 // withheld. One deliberate act per field, which is what keeps the set finite
 // enough to be offered as a catalog.
@@ -30,7 +35,7 @@ const partnerMaskObject = "partner"
 // The tier's reach onto the commission entry that republishes it lives in
 // auth's group closure, not here: each module withholds its own field.
 var partnerWithholds = map[string]func(*crmcontracts.Partner){
-	"margin_tier": func(p *crmcontracts.Partner) { p.MarginTier = nil },
+	partnerFieldMarginTier: func(p *crmcontracts.Partner) { p.MarginTier = nil },
 }
 
 // maskPartners withholds, per row, what this reader's role does not read.
