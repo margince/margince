@@ -165,3 +165,29 @@ func TestMaskedExpressionSQLIsTheBareExpressionWithoutAMask(t *testing.T) {
 		t.Errorf("MaskedExpressionSQL = %q, want the expression unchanged", got)
 	}
 }
+
+// Write authority is answerable only where rows carry an owner and can be
+// shared. A product has no owner, so "outside the rows you may write" names no
+// row at all on one — and an unanswerable condition withholds rather than
+// erroring the read, which is the direction that cannot leak.
+func TestMaskedColumnSQLWithholdsWhereWriteAuthorityCannotBeAnswered(t *testing.T) {
+	t.Parallel()
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"product": {Read: true, Update: true}},
+			RowScope: principal.RowScopeTeam,
+			FieldMasks: []principal.FieldMask{{
+				Object: "product", Field: "unit_price_minor", Condition: principal.MaskOutsideWriteAuthority,
+			}},
+		},
+	})
+	got, err := auth.MaskedColumnSQL(ctx, "product", "unit_price_minor", "p", "unit_price_minor",
+		func(any) int { return 1 })
+	if err != nil {
+		t.Fatalf("MaskedColumnSQL: %v", err)
+	}
+	if !strings.HasPrefix(got, "CASE WHEN FALSE THEN") {
+		t.Errorf("MaskedColumnSQL = %q, want the column withheld on every row", got)
+	}
+}

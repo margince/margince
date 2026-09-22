@@ -13,6 +13,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -20,29 +21,42 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// MaskedFields answers the columns of one object the principal reads as
-// withheld on a row it may or may not change. An unbounded principal and the
-// system principal read every column; a mask conditioned on write authority
-// lifts on a row the caller could write.
+// CodeFieldMasked is the refusal code for a masked field named as a sort or
+// filter key. It lives here because the read paths that owe the refusal are
+// sibling modules that may not import one another, and a second spelling of the
+// code is a client that handles the refusal on one surface and not the next.
+const CodeFieldMasked = "field_masked"
+
+// MaskedFields answers the fields of one object the principal reads as
+// withheld on a row it may or may not change, the group each configured mask
+// drags along included — so a caller nulling what it names cannot leave a
+// currency standing beside the amount it just withheld. An unbounded principal
+// and the system principal read every field; a mask conditioned on write
+// authority lifts on a row the caller could write.
+//
+// A group that crosses objects is answered under the object ASKED FOR, not the
+// one configured: a partner's margin mask reaches the commission entry that
+// republishes the tier, and the commissions read asks about its own object.
 func MaskedFields(p principal.Principal, object string, writable bool) []string {
 	if Unbounded(p) {
 		return nil
 	}
 	var out []string
 	for _, m := range p.Permissions.FieldMasks {
-		if m.Object != object {
-			continue
-		}
 		if m.Condition == principal.MaskOutsideWriteAuthority && writable {
 			continue
 		}
-		out = append(out, m.Field)
+		for _, s := range withheldSubjects(m.Object, m.Field) {
+			if s.object == object && !slices.Contains(out, s.field) {
+				out = append(out, s.field)
+			}
+		}
 	}
 	return out
 }
 
-// MasksAnyRowOf reports whether the principal carries a mask on the object at
-// all — the test a list applies before accepting a sort or filter over a
+// MasksAnyRowOf reports whether the principal carries a mask reaching the field
+// at all — the test a list applies before accepting a sort or filter over a
 // maskable column: ordering by a value the caller may not read on some rows
 // would disclose it through the order.
 func MasksAnyRowOf(ctx context.Context, object, field string) (bool, error) {
@@ -50,15 +64,7 @@ func MasksAnyRowOf(ctx context.Context, object, field string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if Unbounded(p) {
-		return false, nil
-	}
-	for _, m := range p.Permissions.FieldMasks {
-		if m.Object == object && m.Field == field {
-			return true, nil
-		}
-	}
-	return false, nil
+	return len(masksWithholding(p, object, field)) > 0, nil
 }
 
 // WritableSubset answers, in ONE statement, which of the given rows of a
@@ -252,7 +258,7 @@ func MaskedExpressionSQL(ctx context.Context, object, field, alias, expr string,
 // may READ one maskable column — the filter an AGGREGATE over that column
 // applies, so a sum never includes a value the row itself would withhold and
 // the drill-through that explains the sum shows exactly the rows inside it.
-// Returns ("", false) when no mask names the (object, field) pair for this
+// Returns ("", false) when no mask reaches the (object, field) pair for this
 // caller; "FALSE" when a mask withholds the column on every row. The alias
 // names the row like the caller's FROM clause does.
 func MaskExcludedClause(ctx context.Context, object, field, alias string, arg func(any) int) (string, bool, error) {
@@ -260,18 +266,19 @@ func MaskExcludedClause(ctx context.Context, object, field, alias string, arg fu
 	if err != nil {
 		return "", false, err
 	}
-	if Unbounded(p) {
-		return "", false, nil
-	}
 	clause, masked := "", false
-	for _, m := range p.Permissions.FieldMasks {
-		if m.Object != object || m.Field != field {
-			continue
-		}
+	for _, m := range masksWithholding(p, object, field) {
 		masked = true
 		if m.Condition != principal.MaskOutsideWriteAuthority {
 			// MaskAlways (and any future stricter condition this switch does
 			// not know) withholds the column on every row: fail closed.
+			return sqlNoRow, true, nil
+		}
+		// Write authority is a question only a shareable object's rows can
+		// answer: elsewhere there is no owner and no grant to resolve against,
+		// and a condition that cannot be answered withholds rather than
+		// erroring the read — the direction that cannot leak.
+		if !shareableObject(object) {
 			return sqlNoRow, true, nil
 		}
 		// Write authority is the object's update verb AND the row arm — a
