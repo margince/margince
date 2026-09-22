@@ -15,6 +15,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
+import { FieldGuard } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -104,28 +105,14 @@ const STAGE_LABELS: Record<RelationshipStage, MessageKey> = {
   no_fit: "partner.stage.noFit",
 };
 
-function asPartnerRole(value: string): PartnerRole | undefined {
-  return (PARTNER_ROLES as readonly string[]).includes(value)
-    ? (value as PartnerRole)
-    : undefined;
-}
-
-function asCertStatus(value: string): CertStatus | undefined {
-  return (CERT_STATUSES as readonly string[]).includes(value)
-    ? (value as CertStatus)
-    : undefined;
-}
-
-function asMarginTier(value: string): MarginTier | undefined {
-  return (MARGIN_TIERS as readonly string[]).includes(value)
-    ? (value as MarginTier)
-    : undefined;
-}
-
-function asRelationshipStage(value: string): RelationshipStage | undefined {
-  return (RELATIONSHIP_STAGES as readonly string[]).includes(value)
-    ? (value as RelationshipStage)
-    : undefined;
+// A Select and a filter chip both hand back a bare string; every field below
+// is a contract enum. One narrowing answers for all of them, and it answers by
+// searching the enum rather than asserting the string is already a member.
+function asMember<T extends string>(
+  members: readonly T[],
+  value: string,
+): T | undefined {
+  return members.find((member) => member === value);
 }
 
 async function fetchPartner(companyId: string): Promise<Partner | null> {
@@ -244,7 +231,8 @@ function PartnerForm({
             onChange={(value) =>
               setValues({
                 ...values,
-                partner_role: asPartnerRole(value) ?? values.partner_role,
+                partner_role:
+                  asMember(PARTNER_ROLES, value) ?? values.partner_role,
               })
             }
             options={PARTNER_ROLES.map((role) => ({
@@ -262,7 +250,8 @@ function PartnerForm({
             onChange={(value) =>
               setValues({
                 ...values,
-                cert_status: asCertStatus(value) ?? values.cert_status,
+                cert_status:
+                  asMember(CERT_STATUSES, value) ?? values.cert_status,
               })
             }
             options={CERT_STATUSES.map((status) => ({
@@ -281,7 +270,7 @@ function PartnerForm({
               setValues({
                 ...values,
                 margin_tier: value
-                  ? (asMarginTier(value) ?? values.margin_tier)
+                  ? (asMember(MARGIN_TIERS, value) ?? values.margin_tier)
                   : "",
               })
             }
@@ -308,7 +297,8 @@ function PartnerForm({
               setValues({
                 ...values,
                 relationship_stage:
-                  asRelationshipStage(value) ?? values.relationship_stage,
+                  asMember(RELATIONSHIP_STAGES, value) ??
+                  values.relationship_stage,
               })
             }
             options={RELATIONSHIP_STAGES.map((stage) => ({
@@ -383,6 +373,29 @@ function PartnerForm({
   );
 }
 
+// Withheld is not empty: a role that may not read the commercial terms gets
+// the tier as null with `masked_fields` naming it, and a row that vanished
+// would say this partner agreed no tier. No row is the truth only when none
+// was agreed.
+function MarginTierRow({ partner }: Readonly<{ partner: Partner }>) {
+  const t = useT();
+  const masked = partner.masked_fields?.includes("margin_tier") ?? false;
+  const tier = partner.margin_tier;
+  if (!masked && !tier) {
+    return null;
+  }
+  return (
+    <>
+      <dt>{t("partner.marginTier")}</dt>
+      <dd>
+        <FieldGuard mode={masked ? "masked" : "visible"}>
+          {tier ? t(MARGIN_TIER_LABELS[tier]) : null}
+        </FieldGuard>
+      </dd>
+    </>
+  );
+}
+
 function PartnerDetail({
   companyId,
   partner,
@@ -432,12 +445,7 @@ function PartnerDetail({
           )}
           <dt>{t("partner.certStatus")}</dt>
           <dd>{t(CERT_LABELS[partner.cert_status])}</dd>
-          {partner.margin_tier && (
-            <>
-              <dt>{t("partner.marginTier")}</dt>
-              <dd>{t(MARGIN_TIER_LABELS[partner.margin_tier])}</dd>
-            </>
-          )}
+          <MarginTierRow partner={partner} />
           <dt>{t("partner.stage")}</dt>
           <dd>{t(STAGE_LABELS[partner.relationship_stage])}</dd>
           {partner.next_step && (
@@ -540,8 +548,8 @@ async function fetchPartnersPage(
       query: {
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
-        partner_role: asPartnerRole(query.filters.partner_role ?? ""),
-        cert_status: asCertStatus(query.filters.cert_status ?? ""),
+        partner_role: asMember(PARTNER_ROLES, query.filters.partner_role ?? ""),
+        cert_status: asMember(CERT_STATUSES, query.filters.cert_status ?? ""),
       },
     },
   });

@@ -111,6 +111,31 @@ export const ExistingPartner: Story = {
   },
 };
 
+// A seat that reads partners but not their commercial terms. The tier arrives
+// null with `masked_fields` naming it, and the row must still be there saying
+// so — a detail grid missing the term reads as a partner who agreed no tier.
+export const WithheldMarginTier: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /companies/o-1/partner": () =>
+        jsonResponse({
+          ...partner,
+          margin_tier: null,
+          masked_fields: ["margin_tier"],
+        }),
+      "GET /deals": () => jsonResponse({ data: [], page: { has_more: false } }),
+      "GET /commissions": () =>
+        jsonResponse({ data: [], page: { has_more: false } }),
+    });
+    return (
+      <StoryProviders>
+        <PartnerTab companyId="o-1" />
+      </StoryProviders>
+    );
+  },
+};
+
 export const PartnersList: Story = {
   render: () => {
     installFetchStub({
