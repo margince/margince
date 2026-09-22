@@ -708,6 +708,7 @@ export function ListTable<Row>({
   searchable = true,
   showArchivedToggle = true,
   tools,
+  saveView,
   emptyNote,
   scopeKey,
   body,
@@ -765,10 +766,14 @@ export function ListTable<Row>({
   /** False for a list whose GET has no `q` param, e.g. /partners. */
   searchable?: boolean;
   showArchivedToggle?: boolean;
-  /** Passed straight through to the surface's own tools slot, alongside the
-   * Columns and Compact buttons — for the one screen (deals) whose board and
-   * table views share a pipeline picker that lives beside them. */
+  /** Passed straight through to the surface's own tools slot, after the
+   * Display menu — for a screen whose board and table views share a dial that
+   * lives beside them, e.g. deals' pipeline picker. */
   tools?: ReactNode;
+  /** The screen's Save view, in the surface's own last slot; see
+   * `ListSurface`. A slot rather than the tail of `tools`, so the row's order
+   * is the surface's to keep and not each screen's to remember. */
+  saveView?: ReactNode;
   /**
    * What the empty table says under its generic line when THIS screen knows
    * why it is empty — a "Mine" view for a reader who owns nothing, with the
@@ -1030,6 +1035,7 @@ export function ListTable<Row>({
       caption={caption ? t(caption) : undefined}
       footer={footer}
       tools={tools}
+      saveView={saveView}
       search={
         searchable
           ? { value: localSearch, onChange: setLocalSearch }

@@ -11,8 +11,12 @@ package compose
 // worth asserting, because sameness is what the bug looked like.
 
 import (
+	"reflect"
+	"regexp"
 	"strings"
 	"testing"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -85,6 +89,64 @@ func TestEveryLanguageKeepsItsFormattingHoles(t *testing.T) {
 				t.Errorf("%s's %s carries %d %s verbs, want exactly 1: %q",
 					lang, field.name, strings.Count(field.got, field.verb), field.verb, field.got)
 			}
+		}
+	}
+}
+
+// germanField is one hand-written German string and the field it came from.
+type germanField struct{ name, text string }
+
+// germanOnboarding reads the German entry off the struct rather than listing
+// its fields, so copy added to the conversation is addressed by the register
+// gate below without anyone remembering to extend it.
+func germanOnboarding(t *testing.T) []germanField {
+	t.Helper()
+	said := reflect.ValueOf(onboardingCopyByLang[textlang.German])
+	fields := make([]germanField, 0, said.NumField())
+	for i := range said.NumField() {
+		// A field this loop cannot read is a field it skips silently, and a
+		// census that reads a smaller subject than it has still says PASS.
+		if said.Field(i).Kind() != reflect.String {
+			t.Fatalf("onboardingCopy.%s holds no string, so this gate never reads it",
+				said.Type().Field(i).Name)
+		}
+		fields = append(fields, germanField{said.Type().Field(i).Name, said.Field(i).String()})
+	}
+	if len(fields) == 0 {
+		t.Fatal("the German onboarding copy carries no fields, so nothing below was checked")
+	}
+	return fields
+}
+
+// What a capital may follow while still being a capital only because a
+// sentence starts there.
+var sentenceOpens = regexp.MustCompile(`(?:[.!?:]\s|\n|[„"(])$`)
+
+func opensASentence(text string, at int) bool {
+	return at == 0 || sentenceOpens.MatchString(text[:at])
+}
+
+func isCapitalised(word string) bool {
+	first, _ := utf8.DecodeRuneInString(word)
+	return unicode.IsUpper(first)
+}
+
+// Every field here is spoken TO the reader, and this product's German speaks du.
+// So a capitalised Sie or Ihr is the formal address with no second reading —
+// unlike in prose, where one opening a sentence may still be she or they.
+func TestTheGermanOnboardingCopyAddressesItsReaderAsDu(t *testing.T) {
+	for _, field := range germanOnboarding(t) {
+		for _, at := range textlang.SieForms().FindAllStringIndex(field.text, -1) {
+			t.Errorf("%s addresses the reader formally as %q: %q",
+				field.name, field.text[at[0]:at[1]], field.text)
+		}
+		for _, at := range textlang.DuForms().FindAllStringIndex(field.text, -1) {
+			word := field.text[at[0]:at[1]]
+			if !isCapitalised(word) || opensASentence(field.text, at[0]) {
+				continue
+			}
+			t.Errorf("%s capitalises %q mid-sentence, which is the formal register wearing "+
+				"the informal word: %q", field.name, word, field.text)
 		}
 	}
 }

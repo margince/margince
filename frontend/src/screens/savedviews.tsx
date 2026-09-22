@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bookmark } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, OverflowMenu } from "../design-system/atoms";
@@ -278,6 +279,7 @@ function SaveViewButton({
   return (
     <NamePrompt
       trigger={t("views.save")}
+      icon={<Bookmark strokeWidth={1.5} aria-hidden="true" />}
       title={t("views.saveTitle")}
       label={t("views.name")}
       confirmLabel={t("views.saveConfirm")}

@@ -192,11 +192,11 @@ export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
 // drawn as a RecordView belongs here, and one missing from it is the one page
 // in the walk that jumps.
 //
-// A detail page that lays out its OWN surface is deliberately absent, not
-// forgotten: `#/offers/<id>` draws SectionHeader and Card itself, with no
-// RecordView, no tab strip and no details pane, so it shares no measure for
-// this set to keep. Settings is absent for the same kind of reason — it is
-// always capped, and it is a whole section rather than a record.
+// A detail page that lays out its OWN surface takes its measure from
+// `GRIDDED_SCREENS` below instead: `#/offers/<id>` draws SectionHeader and Card
+// itself, with no RecordView, no tab strip and no details pane, so this set has
+// no record column to keep on it. Settings is absent for the same kind of
+// reason — always capped, and a whole section rather than a record.
 //
 // A record reads DOWN rather than across: a rail of facts beside prose, where a
 // measured line length is the point and a fact a monitor away from its label is
@@ -232,31 +232,28 @@ export function opensCreateForm(route: Route): boolean {
   return route.screen === CREATE_SCREEN && route.id === CREATE_ID;
 }
 
-// Screens that keep the same reading column with NO id, because they are not
-// records and never carry one. Every one of them reads DOWN: Brief is a
-// briefing in sentences beside a rail of context, with decision cards carrying
-// drafted prose somebody has to read before they can decide; Today is a queue
-// worked top to bottom; Filters is a list of saved views; Analytics is a column
-// of report sections; AI is a settings-like page of stacked choices. Uncapped,
-// each of them ran a line of text the full width of a wide display with the
-// words hugging the left edge, which is the failure the cap exists to prevent.
+// Screens that keep the same reading column on every address they answer,
+// whatever segments follow, because none of them is drawn as a RecordView.
+// Every one of them reads DOWN: Brief is a briefing in sentences beside a rail
+// of context, with decision cards carrying drafted prose somebody has to read
+// before they can decide; Today is a queue worked top to bottom; Filters is a
+// list of saved views; Analytics is a column of report sections; AI is a
+// settings-like page of stacked choices; a share view is one record handed to a
+// reader, prose beside facts; an offer is a detail page drawing its own
+// surface. Uncapped, each of them ran a line of text the full width of a wide
+// display with the words hugging the left edge, which is the failure the cap
+// exists to prevent.
 //
 // The rest of the app is scanned ACROSS — a list, a board, a table — and the
 // cap only ever pushed columns off the right edge there.
-//
-// Projects is the one list in this set, and it is here because the product owner
-// asked for it by name: it is the shortest of the record lists (five columns,
-// and a phase dial rather than a board), and the page a reader most often meets
-// is its first-run plate — a paragraph and one verb, which at 4K stood alone in
-// the top-left corner of a metre of ground. The four wider lists stay out, so
-// the arrangement Projects keeps is deliberate rather than an oversight in them.
 export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
   "home",
   "worklist",
   "filters",
   "analytics",
   "ai",
-  "projects",
+  "share",
+  "offers",
 ]);
 
 // Documented rail-less exceptions (AC-shell layout exception): onboarding,

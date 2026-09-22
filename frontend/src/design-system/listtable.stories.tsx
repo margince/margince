@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
+import { userEvent, within } from "storybook/test";
 import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { Badge, Button } from "./atoms";
@@ -99,7 +100,6 @@ const chips: readonly ListChip[] = [
 function Surface({
   rows,
   columns: shownColumns = columns,
-  openSortMenu = false,
   ...rest
 }: Readonly<{
   rows: Company[];
@@ -115,36 +115,11 @@ function Surface({
   /** Passed through, for the story that holds the page itself. */
   page?: number;
   onPage?: (next: number) => void;
-  /**
-   * Open the sort menu on mount, for the story that is ABOUT the menu.
-   *
-   * A press, not a prop on the surface: the menus are the surface's own state
-   * by design, so a story that reached inside to set them open would be
-   * documenting a shape the product does not have.
-   */
-  openSortMenu?: boolean;
 }>) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("display_name");
   const [chosen, setChosen] = useState<Record<string, string>>({});
   const [view, setView] = useState(0);
-  const frame = useRef<HTMLDivElement>(null);
-
-  // Pressed, not set. The menus belong to the surface's own state, so a story
-  // that reached in to open one would be documenting a shape the product does
-  // not have — and a screenshot of a menu nobody can open is worse than none.
-  useEffect(() => {
-    if (!openSortMenu) {
-      return;
-    }
-    // Matched on the PREFIX: the dial names the order it is holding
-    // ("Sort: Company"), so an equality test against the bare word found
-    // nothing and left this story showing a closed menu.
-    const trigger = [...(frame.current?.querySelectorAll("button") ?? [])].find(
-      (button) => button.textContent?.trim().startsWith("Sort"),
-    );
-    trigger?.click();
-  }, [openSortMenu]);
 
   const needle = search.trim().toLowerCase();
   // Only the two attributes the chips offer, read by name rather than by
@@ -161,32 +136,50 @@ function Surface({
   );
 
   return (
-    <div ref={frame}>
-      <ListTable<Company>
-        rows={shown}
-        columns={shownColumns}
-        rowKey={(row) => row.id}
-        unit="companies"
-        action={<Button>New company</Button>}
-        search={{ value: search, onChange: setSearch }}
-        sort={{ value: sort, onChange: setSort }}
-        chips={chips}
-        chosen={chosen}
-        onChipChange={(key, value) =>
-          setChosen((prev) => ({ ...prev, [key]: value }))
-        }
-        archived={{ checked: false, onChange: () => undefined }}
-        views={[{ label: "All" }, { label: "DACH" }]}
-        activeView={view}
-        onViewChange={setView}
-        {...rest}
-      />
-    </div>
+    <ListTable<Company>
+      rows={shown}
+      columns={shownColumns}
+      rowKey={(row) => row.id}
+      unit="companies"
+      action={<Button>New company</Button>}
+      search={{ value: search, onChange: setSearch }}
+      sort={{ value: sort, onChange: setSort }}
+      chips={chips}
+      chosen={chosen}
+      onChipChange={(key, value) =>
+        setChosen((prev) => ({ ...prev, [key]: value }))
+      }
+      archived={{ checked: false, onChange: () => undefined }}
+      views={[{ label: "All" }, { label: "DACH" }]}
+      activeView={view}
+      onViewChange={setView}
+      {...rest}
+    />
   );
 }
 
+/**
+ * Opens one of the toolbar's menus the way a reader does — by pressing it.
+ *
+ * A press and not a prop: the menus are the surface's own state by design, so
+ * a story that reached in to set one open would document a shape the product
+ * does not have.
+ *
+ * The trigger arrives as a pattern rather than a word because two of them are
+ * only findable that way: the sort dial names the order it is holding
+ * ("Sort: Company"), and every sortable column header is a button called
+ * "Sort by <column>" that a bare prefix would match as well.
+ */
+function openMenu(trigger: RegExp) {
+  return async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const page = within(canvasElement);
+    await userEvent.click(await page.findByRole("button", { name: trigger }));
+  };
+}
+
 // Six columns over one page: sortable headers, filter chips behind the Filter
-// button, the column picker, the density toggle and the range count.
+// button, the Display menu holding the columns and the density, and the range
+// count.
 export const Default: Story = {
   render: () => <Surface rows={companies(12)} />,
 };
@@ -204,7 +197,34 @@ export const Paged: Story = {
 // cannot. Opened here with a sort already applied, so the tick and the
 // direction arrow are both on screen.
 export const SortedByAMenu: Story = {
-  render: () => <Surface rows={companies(12)} openSortMenu />,
+  render: () => <Surface rows={companies(12)} />,
+  play: openMenu(/^Sort(:|$)/),
+};
+
+// The Display menu: how the grid is DRAWN, under one trigger. Density and the
+// optional columns are one question to a reader — both answer "show me more of
+// this at once" — and each group is named a rung under the menu's own head, so
+// the panel reads as one question in two parts rather than as three headings.
+export const DisplayMenuOpen: Story = {
+  render: () => <Surface rows={companies(12)} />,
+  play: openMenu(/^Display$/),
+};
+
+// The filter menu's SECOND step, which is the half a list of attributes cannot
+// show: the attribute's own values, with the head standing as the way back to
+// the list they were chosen from.
+export const FilterAttributeStep: Story = {
+  render: () => <Surface rows={companies(12)} />,
+  play: async (context) => {
+    await openMenu(/^Filter$/)(context);
+    const page = within(context.canvasElement);
+    await userEvent.click(
+      await page.findByRole("button", { name: "Industry" }),
+    );
+    // The head is the way back once a level has been stepped into, and waiting
+    // on it is what makes the story's own subject the thing it settles for.
+    await page.findByRole("button", { name: /Industry Back to all filters/ });
+  },
 };
 
 // The same pager, with the PAGE held by the caller. A list screen keeps it in

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Ellipsis } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 import { Button, SegmentedControl } from "./atoms";
 import {
@@ -139,6 +140,53 @@ export const WithRowActions: Story = {
       },
       noteEntry,
     ],
+  },
+};
+
+/**
+ * A head whose verbs are wider than the header holding them.
+ *
+ * A company carries five verbs and, where the record refuses an edit, the
+ * sentence that says why — together wider than the reading column the record is
+ * drawn in. The group FOLDS: the verbs take a second rung at the header's end
+ * (`composed.css`, `.record-actions-inline`), and a verb keeps its own width
+ * inside it. A group that refused to fold would stand past the column's right
+ * edge, and the whole record could be dragged sideways after it.
+ *
+ * Framed at the width where the fold IS the layout, because the catalog's own
+ * canvas is wider than any record column and would picture the case this story
+ * exists to show as the one that never happens.
+ */
+export const InlineVerbsWiderThanTheHeader: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: 520 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    name: "Brandt Automotive GmbH",
+    subtitle: "Automotive · München",
+    zone: "Europe/Berlin",
+    markShape: "company",
+    actionsInline: true,
+    actions: (
+      <>
+        <Button onClick={() => {}}>E-Mail schreiben</Button>
+        <Button onClick={() => {}}>Aktivität erfassen</Button>
+        <Button onClick={() => {}}>Aufgabe anlegen</Button>
+        <Button onClick={() => {}}>Deal anlegen</Button>
+        <Button iconOnly aria-label="Weitere Aktionen" onClick={() => {}}>
+          <Ellipsis aria-hidden="true" />
+        </Button>
+        <p className="t-caption">
+          Du kannst diese Firma nicht ändern. Bitte den Inhaber, sie mit dir zu
+          teilen.
+        </p>
+      </>
+    ),
+    timeline: baseTimeline,
   },
 };
 

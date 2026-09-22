@@ -399,7 +399,7 @@ export function CompaniesScreen() {
           lastActivityColumn<Company>(t, locale, recordZone),
           createdColumn<Company>(t, locale, recordZone),
         ]}
-        tools={<SaveViewAction resource="companies" query={state.query} />}
+        saveView={<SaveViewAction resource="companies" query={state.query} />}
         rowKey={(company) => company.id}
         rowRoute={(company) => ({ screen: "companies", id: company.id })}
         dataChips={[...ownerChips, ...sizeChip, ...tagChips]}

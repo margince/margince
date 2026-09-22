@@ -277,7 +277,7 @@ export function ContactsScreen() {
           lastActivityColumn<Contact>(t, locale, recordZone),
           createdColumn<Contact>(t, locale, recordZone),
         ]}
-        tools={<SaveViewAction resource="contacts" query={state.query} />}
+        saveView={<SaveViewAction resource="contacts" query={state.query} />}
         rowKey={(contact) => contact.id}
         rowRoute={(contact) => ({ screen: "contacts", id: contact.id })}
         dataChips={[...ownerChips, ...tagChips]}

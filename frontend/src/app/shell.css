@@ -188,6 +188,11 @@
 .scroll {
   flex: 1;
   overflow-y: auto;
+  /* The gutter is reserved whether or not the page overflows, so walking from a
+     long page to a short one does not shift the column sideways under classic
+     (non-overlay) scrollbars. Overlay scrollbars reserve nothing, so the
+     default macOS look is unchanged. */
+  scrollbar-gutter: stable;
   padding-top: var(--pageGapTop);
   /* No bottom padding: `.wrap` carries the page's own end rhythm, and a second
      band under it — reserved for the agent dock's lane — read as a screenful of
@@ -280,11 +285,14 @@
   max-width: var(--pageMeasure);
   margin-inline: auto;
 }
-/* The rail-less surfaces — sign-in, onboarding, a public booking page. These
-   render no page head to align with, and they are a single centred column on
-   purpose, so they carry their own centring rather than inheriting it. */
+/* A single centred column for the surfaces that draw no page head — the public
+   booking page, the OAuth consent screen, the auth splash, the error boundary.
+   They have nothing to align with, so they carry their own centring rather than
+   inheriting it, and they take the measure the settings stack reads
+   (--settingsColumn): the product has three widths — full, the page, and this
+   one — and a number spelled here would be a fourth nobody chose. */
 .wrap.narrow {
-  max-width: 780px;
+  max-width: var(--settingsColumn);
   margin: 0 auto;
 }
 /* Screens drop content blocks straight into .wrap, which has no row gap, so two
@@ -1748,12 +1756,13 @@
    Nothing else about the layout changes — inline-size containment only lets a
    child ask how wide this is.
 
-   The column and NOT the scroller inside it, even though a classic scrollbar
-   makes the two different widths: `cqi` counts the scrollbar's gutter either
-   way, so moving the container down one level buys a child nothing. What that
-   difference does to the tab strip is corrected where it lands, in
-   design-system/recordtabs.css. */
-.main-record {
+   THE SCROLLER carries it, not the column around it: `cqi` has to answer with
+   the width content can actually USE, and a classic scrollbar takes its gutter
+   out of the scroller while the column keeps it. Measured against the column, a
+   strip that spans the container spans the gutter too, and the page it stands
+   on pans sideways by half of that on every record — six pixels at 1920, on the
+   one page where the reader is holding a place. */
+.main-record > .scroll {
   container-type: inline-size;
   container-name: work;
 }

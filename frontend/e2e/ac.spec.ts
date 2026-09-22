@@ -4,7 +4,7 @@ import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
 import { mockApi } from "./seed";
-import { textsOf } from "./waits";
+import { pageOverflow, textsOf } from "./waits";
 
 /**
  * Settle the page's motion before measuring the colours it paints.
@@ -215,46 +215,6 @@ async function expectSettingsViewLanded(page: Page, view: string) {
  */
 async function expectShellRendered(page: Page) {
   await expect(page.locator("nav.rail")).toBeVisible();
-}
-
-/**
- * How far the PAGE scrolls sideways, and which scroller does it.
- *
- * NOT `document.body.scrollWidth`, which is what this sweep used to read. The
- * shell pins `.main` to `overflow: hidden` (shell.css) and gives `.scroll` an
- * `overflow-y: auto` that computes `overflow-x` to `auto` with it, so wide
- * content scrolls INSIDE the page's own scroller and the body never grows a
- * pixel. Measured across all twelve settings tabs the body reported 0 while
- * `.scroll` itself overflowed by up to 273px — the assertion was structurally
- * incapable of failing, whatever the layout did.
- *
- * So this reads the two elements that actually scroll the page: the document,
- * and the shell's content column. Anything a screen spills — a header row, a
- * card, a table — spills into one of them, and it is the reader panning THOSE
- * that §3.8 forbids.
- *
- * A component that declares a horizontal scroll region of its own is not this
- * and is deliberately not measured: `.table-scroll` around a table too wide for
- * a phone (atoms.css) is the sanctioned answer to wide content, and it is
- * bounded by its card, so the page around it never moves.
- */
-async function pageOverflow(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const scrollers: { name: string; element: Element }[] = [
-      { name: "the document", element: document.documentElement },
-      ...Array.from(document.querySelectorAll(".scroll")).map((element) => ({
-        name: "the shell content scroller (.scroll)",
-        element,
-      })),
-    ];
-    return scrollers
-      .map(({ name, element }) => ({
-        name,
-        overflow: element.scrollWidth - element.clientWidth,
-      }))
-      .filter(({ overflow }) => overflow > 0)
-      .map(({ name, overflow }) => `${name}: ${overflow}px past the viewport`);
-  });
 }
 
 /**
@@ -485,7 +445,7 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   await page.goto("/#/settings/account");
   // The card the language row sits in: password, sign-off and language are one
   // account card now rather than a Preferences card of their own.
-  await expect(page.getByRole("heading", { name: "Ihr Konto" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dein Konto" })).toBeVisible();
   await page.getByRole("combobox", { name: "Sprache" }).click();
   await page.getByRole("option", { name: "English" }).click();
   // The surface around the control follows the choice, not just the control's
@@ -506,7 +466,7 @@ test("features/10 §7: Settings → Account offers language and appearance", asy
   page,
 }) => {
   await page.goto("/#/settings/account");
-  await expect(page.getByRole("heading", { name: "Ihr Konto" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dein Konto" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Sprache" })).toBeVisible();
   await expect(
     page.getByRole("combobox", { name: "Darstellung" }),
@@ -1101,7 +1061,11 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   // never the label — attribution exists so somebody can be asked about a
   // change, and an identifier cannot be asked anything.
   await page.goto("/#/settings/audit");
-  await expect(page.getByText("Du", { exact: true })).toBeVisible();
+  // The settings sidebar's own group heading also reads "Du", so the actor
+  // label is read inside the trail's panel — the count-0 below proves the
+  // filter dropped the ROW rather than that the sidebar went missing.
+  const trail = page.getByRole("region", { name: "Audit-Log" });
+  await expect(trail.getByText("Du", { exact: true })).toBeVisible();
   await expect(page.getByText("Marcus Brandt", { exact: true })).toBeVisible();
   await expect(page.getByText("über einen Agenten")).toBeVisible();
   // The agent's own identifier is not shown at all when a human stands behind it.
@@ -1127,7 +1091,7 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   // the agent row is still visible would pass on a filter that did nothing —
   // it was already on screen before the filter was typed.
   await expect(page.getByText("Marcus Brandt", { exact: true })).toBeVisible();
-  await expect(page.getByText("Du", { exact: true })).toHaveCount(0);
+  await expect(trail.getByText("Du", { exact: true })).toHaveCount(0);
   await expect(page.getByText("connector:gmail", { exact: true })).toHaveCount(
     0,
   );

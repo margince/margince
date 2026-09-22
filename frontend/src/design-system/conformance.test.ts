@@ -430,7 +430,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   // The rule is deliberately narrow so it states its own exception. It matches
   // the `btn` BASE token only — a `.btn-*` modifier in a STYLESHEET is how the
   // variants are declared, and a component class that merely ends in `btn`
-  // (`iconbtn`, `lt-btn`) is a different control. And it matches every element
+  // (`iconbtn`) is a different control. And it matches every element
   // EXCEPT an anchor: `Button` renders a `<button>`, so a link that looks like
   // a button (screens/client.tsx's "create a lead" href) has no component to
   // reach for and is legitimately styled by hand.
