@@ -32,7 +32,7 @@ export const de = {
   "aiAdmin.overrideHint":
     "Leer lassen für die Berechnung pro Nutzer. Der Wert pro Nutzer bleibt gespeichert.",
   "aiAdmin.routingStale":
-    "Die Modellzuordnungen wurden während Ihrer Bearbeitung geändert",
+    "Die Modellzuordnungen wurden während der Bearbeitung geändert",
   "aiAdmin.stale": "Das Kontingent wurde während der Bearbeitung geändert",
   "aiAdmin.staleHelp":
     "Abbrechen und den Editor erneut öffnen, um die aktuellen Einstellungen zu verwenden.",
@@ -108,13 +108,13 @@ export const de = {
     "{count} weitere dringende Aufgaben in der Liste",
   "brief.focus.remaining": "{count} weitere Prioritäten in der Liste",
   "brief.team.planUnavailable":
-    "Für {name} ist kein aktueller Plan für Sie verfügbar.",
+    "Zu {name} ist für dich kein aktueller Plan verfügbar.",
   "brief.team.noCommitments": "{name} hat in diesem Plan keine Zusagen.",
   "brief.team.outcomes":
     "{won} gewonnen · {lost} verloren · {moved} Deals bewegt · {leads} Leads zugewiesen",
-  "brief.schedule.unavailable": "Ihr Kalender konnte nicht geprüft werden.",
+  "brief.schedule.unavailable": "Dein Kalender konnte nicht geprüft werden.",
   "brief.schedule.more":
-    "Laden Sie weitere Einträge, um die übrigen Termine zu sehen.",
+    "Lade weitere Einträge, um die übrigen Termine zu sehen.",
   "brief.readings.riskPartial": "Nur bekannter Wert · nicht alles geprüft",
   "brief.readings.unpricedCount_one": "1 Deal nicht bepreist · nicht enthalten",
   "brief.readings.unpricedCount_other":
@@ -172,17 +172,17 @@ export const de = {
     "Keine Teams verfügbar. Ein Team in den Einstellungen anlegen, um seine Arbeit zu prüfen.",
   "brief.week.supporting": "Kennzahlen, Prognose und Beobachtungen",
   "brief.coverage.retry": "Brief aktualisieren",
-  "brief.reply.owed": "Kunde wartet auf Ihre Antwort",
+  "brief.reply.owed": "Kunde wartet auf deine Antwort",
   "brief.createdAt": "Brief erstellt {when}",
   "brief.updatedAt": "Agenda aktualisiert {when}",
   "brief.changes.superseded":
-    "Dieser Deal wurde erneut geändert. Öffnen Sie ihn, um den aktuellen Stand zu prüfen.",
-  "brief.changes.title": "Änderungen für Sie",
+    "Dieser Deal wurde erneut geändert. Öffne den Deal, um seinen aktuellen Stand zu prüfen.",
+  "brief.changes.title": "Änderungen für dich",
   "brief.changes.accept": "Akzeptieren",
   "brief.changes.accepted": "Akzeptiert",
   "brief.changes.undone": "Rückgängig gemacht",
   "brief.changes.empty":
-    "In den letzten 24 Stunden wurden keine Änderungen für Sie vorgenommen.",
+    "In den letzten 24 Stunden wurden keine Änderungen für dich vorgenommen.",
   "brief.updates.title": "Neuigkeiten",
   "brief.task.undated": "Kein Fälligkeitsdatum",
   "brief.readings.summary": "Arbeitsübersicht",
@@ -276,7 +276,7 @@ export const de = {
   "history.undo.confirmBody":
     "{count} Felder kehren auf den Stand vor dieser Änderung zurück:",
   "history.undo.versionSkew":
-    "Der Datensatz hat sich beim Lesen verändert. Der Verlauf wurde neu geladen — prüfen Sie die Änderung erneut, bevor Sie sie zurücksetzen.",
+    "Der Datensatz hat sich verändert, während du ihn gelesen hast. Der Verlauf wurde neu gelesen. Prüfe die Änderung erneut, bevor du sie zurücksetzt.",
   "history.undo.noBeforeImage":
     "Diese Änderung hat nicht festgehalten, was der Datensatz vorher enthielt — es gibt nichts zurückzusetzen.",
   "history.undo.notReplayable":
@@ -291,13 +291,13 @@ export const de = {
   "history.undo.notRestorableByThisPath":
     "Diese Felder werden nicht über den Weg geschrieben, den ein Zurücksetzen nimmt.",
   "history.undo.recordArchived":
-    "Der Datensatz ist archiviert. Holen Sie ihn zuerst zurück, bevor Sie eine Änderung zurücksetzen.",
+    "Der Datensatz ist archiviert. Hole zuerst den Datensatz selbst zurück, bevor du eine Änderung zurücksetzt.",
   "history.undo.nullUnwritable":
     "Ein Zurücksetzen müsste ein Feld leeren, das dieser Datensatz nicht leeren kann, und ist daher nicht möglich.",
   "history.undo.notWritableByCaller":
-    "Sie haben keine Berechtigung, diese Felder zu schreiben.",
+    "Du hast keine Berechtigung, diese Felder zu schreiben.",
   "history.undo.edgeRelinkUnsupported":
-    "Eine entfernte Verknüpfung wiederherzustellen ist noch nicht möglich — legen Sie sie auf diesem Datensatz erneut an.",
+    "Eine entfernte Verknüpfung wiederherzustellen ist noch nicht möglich. Lege sie auf diesem Datensatz erneut an.",
   "history.reversal.collapsed":
     "Änderung von {actor}, zurückgesetzt von {undoer}",
   "history.reversal.collapsedSelf":
@@ -574,10 +574,9 @@ export const de = {
   "record.registration": "Registrierung",
   "record.leadProfileReadOnly":
     "LinkedIn kann bei einem Lead nicht geändert werden.",
-  "record.leadStatusAction":
-    "Ändern Sie den Status mit den Lead-Statusaktionen.",
+  "record.leadStatusAction": "Ändere den Status über die Lead-Statusaktionen.",
   "record.leadScoreAction":
-    "Ändern Sie den Score über die begründete Score-Korrektur.",
+    "Ändere den Score über die begründete Score-Korrektur.",
   "record.openProfile": "Profil öffnen",
   "record.fieldsFailed":
     "Benutzerdefinierte Felder konnten nicht geladen werden.",
@@ -586,7 +585,7 @@ export const de = {
 
   "record.companyRoutingKey": "Zuordnungsschlüssel des Unternehmens",
   "record.finishFieldEdit":
-    "Speichern oder verwerfen Sie die aktuelle Änderung, bevor Sie Details schließen.",
+    "Speichere oder verwirf die aktuelle Änderung, bevor du Details schließt.",
   "record.save": "Speichern",
   "record.saveDone": "„{name}“ gespeichert",
   "record.archiveDone": "„{name}“ archiviert",
@@ -596,11 +595,11 @@ export const de = {
     "Bist du sicher? Das archiviert den Datensatz — es gibt keine Rückgängig-Funktion.",
   "record.archived": "Archiviert",
   "record.archivedReadOnly":
-    "Diese Firma ist archiviert. Stellen Sie sie wieder her, um etwas zu ändern.",
+    "Diese Firma ist archiviert. Stelle sie wieder her, um etwas daran zu ändern.",
   "record.notYoursToChange":
     "Du kannst diese Firma nicht ändern. Bitte den Inhaber, sie mit dir zu teilen, oder eine Admin-Person um das Recht, sie zu bearbeiten.",
   "record.logActivityRefused":
-    "Sie haben keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
+    "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
   "record.moreActions": "Weitere Aktionen",
   "record.fullHistory": "Vollständiger Verlauf",
@@ -632,11 +631,11 @@ export const de = {
   "share.expiry.week": "Läuft in 7 Tagen ab",
   "share.expiry.month": "Läuft in 30 Tagen ab",
   "share.expiryConsequence_one":
-    "Der Zugriff endet automatisch in {days} Tag. Sie können ihn jederzeit früher widerrufen.",
+    "Der Zugriff endet automatisch in {days} Tag. Du kannst ihn jederzeit früher widerrufen.",
   "share.expiryConsequence_other":
-    "Der Zugriff endet automatisch in {days} Tagen. Sie können ihn jederzeit früher widerrufen.",
+    "Der Zugriff endet automatisch in {days} Tagen. Du kannst ihn jederzeit früher widerrufen.",
   "share.expiryConsequenceNone":
-    "Der Zugriff bleibt bestehen, bis Sie ihn widerrufen — er endet nicht von selbst.",
+    "Der Zugriff bleibt bestehen, bis du ihn widerrufst. Von selbst endet er nicht.",
   "share.reason": "Grund",
   "share.grant": "Zugriff gewähren",
   "share.update": "Zugriff ändern",
@@ -644,10 +643,10 @@ export const de = {
     "Nichts geändert. {name} hatte bereits {access}-Zugriff auf diesen Datensatz.",
   "share.downgradeTitle": "Zugriff reduzieren?",
   "share.downgradeBody":
-    "{name} hat {from}-Zugriff auf diesen Datensatz. Wenn Sie fortfahren, bleibt nur noch {to}-Zugriff. Beide Richtungen werden im Audit-Protokoll festgehalten.",
+    "{name} hat {from}-Zugriff auf diesen Datensatz. Wenn du fortfährst, bleibt nur noch {to}-Zugriff. Beide Richtungen werden im Audit-Log festgehalten.",
   "share.downgradeConfirm": "Auf {to} reduzieren",
   "share.seatCeiling":
-    "Dieser Sitzplatz ist nur lesend und kann daher keinen Schreibzugriff auf einen Datensatz erhalten. Erhöhen Sie zuerst die Sitzplatzstufe, oder gewähren Sie Lesezugriff.",
+    "Dieser Sitzplatz ist nur lesend und kann daher keinen Schreibzugriff auf einen Datensatz halten. Stufe zuerst den Sitzplatz höher, oder gewähre Lesezugriff.",
   "share.whoHasAccess": "Ausdrücklich geteilt",
   "share.grantedBy": "gewährt von",
   "share.revoke": "Widerrufen",
@@ -724,14 +723,14 @@ export const de = {
   "commission.outstandingDetail_other":
     "{count} Einträge · aufgelaufen oder freigegeben",
   "commission.column.actions": "Entscheidung",
-  "commission.decide.withheld": "Nicht Ihre Entscheidung",
+  "commission.decide.withheld": "Nicht deine Entscheidung",
   "commission.decide.approve": "Freigeben",
   "commission.decide.pay": "Als ausgezahlt markieren",
   "commission.decide.void": "Stornieren",
   "commission.decide.approveConfirm":
-    "Mit der Freigabe halten Sie fest, dass diese Provision vereinbart ist. Ausgezahlt wird dadurch nichts — zahlen Sie in Ihrem Finanzsystem und markieren Sie es danach hier.",
+    "Mit der Freigabe hältst du fest, dass diese Provision vereinbart ist. Ausgezahlt wird dadurch nichts. Zahle in deinem Finanzsystem und markiere sie danach hier als ausgezahlt.",
   "commission.decide.payConfirm":
-    "Markieren Sie erst als ausgezahlt, wenn Ihr Finanzsystem tatsächlich gezahlt hat. Margince hält die Tatsache fest und bewegt kein Geld.",
+    "Markiere sie erst als ausgezahlt, wenn dein Finanzsystem tatsächlich gezahlt hat. Margince hält die Tatsache fest und bewegt kein Geld.",
   "commission.decide.voidConfirm":
     "Eine Stornierung schreibt eine Gegenbuchung daneben. Nichts wird gelöscht, der ursprüngliche Eintrag bleibt lesbar.",
   "commission.decide.reasonLabel": "Warum wird storniert?",
@@ -854,7 +853,7 @@ export const de = {
   "filePreview.loading": "Datei wird geöffnet…",
   "filePreview.failedTitle": "Diese Datei kann hier nicht angezeigt werden",
   "filePreview.failed":
-    "Laden Sie sie herunter, um sie in einer anderen Anwendung zu öffnen.",
+    "Lade sie herunter, um sie in einer anderen Anwendung zu öffnen.",
 
   "list.headActions": "Weitere Aktionen",
   "list.search": "Suchen",
@@ -939,7 +938,7 @@ export const de = {
     "Von einem Mitarbeiter im CRM erfasst, der bestätigt hat, dass dieser Kontakt seine Einwilligung für {label} außerhalb des Produkts erteilt hat. Ihm wurde hier kein Text angezeigt.",
   "consent.withdraw": "Widerrufen",
   "consent.doiBySubject":
-    "Nur der Kontakt selbst kann diesen Zweck über einen Link an seine gespeicherte Adresse bestätigen. Nutzen Sie die Bestätigungsanfrage unter Kommunikationsberechtigungen.",
+    "Nur der Kontakt selbst kann diesen Zweck über einen Link an seine gespeicherte Adresse bestätigen. Nutze dafür die Bestätigungsanfrage unter Kommunikationsberechtigungen.",
   "consent.askToConfirm": "Um Bestätigung der Daten bitten",
   "consent.askToConfirmWhat":
     "Schickt diesem Kontakt einen persönlichen Link: Er sieht, was ihr über ihn gespeichert habt, kann es korrigieren und sagen, ob er von euch hören möchte. Der Link geht an seine hinterlegte Adresse — woandershin könnt ihr ihn nicht schicken.",
@@ -1077,7 +1076,7 @@ export const de = {
   "timeline.group.earlier_one": "{count} frühere Nachricht anzeigen",
   "timeline.group.hideEarlier": "Frühere Nachrichten ausblenden",
   "timeline.thread.wrote": "schrieb",
-  "timeline.thread.you": "Sie",
+  "timeline.thread.you": "Du",
   "timeline.thread.we": "Wir",
   "timeline.thread.them": "Gegenseite",
   "timeline.thread.sentTo": "haben an {who} gesendet",
@@ -1094,7 +1093,7 @@ export const de = {
   "timeline.filters.from": "Von",
   "timeline.filters.to": "Bis",
   "timeline.filters.searchOmitsLimited":
-    "Unterhaltungen, deren Inhalt Sie nicht öffnen dürfen, bleiben bei einer Suche außen vor.",
+    "Unterhaltungen, deren Inhalt du nicht öffnen darfst, bleiben bei einer Suche außen vor.",
   "tab.contacts": "Kontakte",
   "tab.deals": "Deals",
   "tab.dealRoom": "Deal Room",
@@ -1160,15 +1159,15 @@ export const de = {
   "record.panel.showDetails": "Details einblenden",
   "record.panel.hideDetails": "Details ausblenden",
   "room.editorial":
-    "Ein Dokument, das Sie hinzufügen, ist sofort geteilt; Kommentare ebenso.",
-  "room.readOnly": "Sie können diesen Raum lesen, aber nicht ändern.",
+    "Ein Dokument, das du hinzufügst, ist sofort geteilt; Kommentare ebenso.",
+  "room.readOnly": "Du kannst diesen Raum lesen, aber nicht ändern.",
   "room.finished":
     "Dieser Raum ist abgeschlossen, das Geteilte ist jetzt ein Protokoll.",
   "room.card.title": "Deal Room",
   "room.card.contacts": "{invited} eingeladen · {active} angemeldet",
   "room.card.lastSeen": "Zuletzt von einem Käufer gesehen: {when}",
   "room.create.sub":
-    "Ein Raum, den der Käufer per Link betritt, um zu lesen, was Sie teilen, und darüber zu sprechen.",
+    "Ein Raum, den der Käufer per Link betritt, um zu lesen, was du teilst, und darüber zu sprechen.",
   "room.create.open": "Deal Room eröffnen",
   "room.create.confirm": "Eröffnen",
   "room.create.titleLabel": "Titel des Raums",
@@ -1176,12 +1175,12 @@ export const de = {
     "Was der Käufer als Überschrift sieht. Später änderbar.",
   "room.create.defaultTitle": "{deal}",
   "roompage.none":
-    "Dieser Deal hat noch keinen Deal Room. Eröffnen Sie einen auf der Deal-Seite.",
+    "Dieser Deal hat noch keinen Deal Room. Eröffne einen auf der Deal-Seite.",
   "roompage.backToDeal": "← Zurück zum Deal",
   "roompage.accessMenu": "Zugang zum Raum",
   "roompage.pause": "Pausieren",
   "roompage.pauseHint":
-    "Käufer behalten ihre Links, sehen aber eine Pausenseite, bis Sie fortsetzen.",
+    "Käufer behalten ihre Links, sehen aber eine Pausenseite, bis du fortsetzt.",
   "roompage.resume": "Fortsetzen",
   "roompage.close": "Raum schließen",
   "roompage.closeHint":
@@ -1190,11 +1189,11 @@ export const de = {
   "roompage.setExpiryHint": "Der Zugang endet an diesem Tag.",
   "roompage.closeTitle": "Diesen Deal Room schließen?",
   "roompage.closeBody":
-    "Käufer lesen den Raum weiter. Danach wird kein Dokument, Kommentar oder Beschluss mehr angenommen. Sie können weiterhin Zugänge entziehen und Links ausstellen.",
+    "Käufer lesen den Raum weiter. Danach wird kein Dokument, Kommentar oder Beschluss mehr angenommen. Du kannst weiterhin Zugänge entziehen und Links ausstellen.",
   "roompage.expiryLabel": "Zugang endet am",
   "roompage.expiryHint": "Leer lassen für kein Enddatum.",
   "roompage.banner.paused":
-    "Pausiert. Käufer sehen eine Pausenseite, bis Sie fortsetzen.",
+    "Pausiert. Käufer sehen eine Pausenseite, bis du fortsetzt.",
   "roompage.banner.closed":
     "Geschlossen. Käufer können den Raum weiter lesen; mehr wird nicht angenommen.",
   "roompage.banner.expired":
@@ -1207,7 +1206,7 @@ export const de = {
   "roompage.viewAsBuyer": "Als Käufer ansehen",
   "roompage.previewArchived": "Ein archivierter Raum hat keine Vorschau.",
   "roompage.previewNotYours":
-    "Ihr Zugriff auf diesen Deal umfasst die Käufer-Vorschau nicht.",
+    "Dein Zugriff auf diesen Deal umfasst die Käufer-Vorschau nicht.",
   "access.title": "Zugang",
   "access.invite": "Einladen",
   "access.empty": "Noch niemand eingeladen.",
@@ -1222,7 +1221,7 @@ export const de = {
   "access.lastSeen": "zuletzt gesehen {when}",
   "access.downloads": "{count} Dokument(e) heruntergeladen",
   "access.linkRequested":
-    "Hat {when} um einen neuen Link gebeten. Stellen Sie einen aus und senden Sie ihn selbst.",
+    "Hat {when} um einen neuen Link gebeten. Stelle einen aus und sende ihn selbst.",
   "access.rowActions": "Aktionen für {name}",
   "access.issueLink": "Neuen Link ausstellen",
   "access.changeCapability": "Rechte ändern",
@@ -1235,24 +1234,24 @@ export const de = {
   "access.emailLabel": "E-Mail",
   "access.capabilityLegend": "Was darf die Person tun?",
   "access.inviteNote":
-    "Sie erhalten den Link zum Kopieren. Ist ein Mail-Relay konfiguriert, versuchen wir zusätzlich, ihn zu versenden.",
+    "Du erhältst den Link zum Kopieren. Ist ein Mail-Relay konfiguriert, versuchen wir zusätzlich, ihn zu versenden.",
   "access.issued.title": "Link für {name}",
   "access.issued.mailed":
-    "An {email} gesendet. Sie können ihn unten auch kopieren.",
+    "An {email} gesendet. Du kannst ihn unten auch kopieren.",
   "access.issued.notMailed":
-    "Der Link wurde nicht per Mail versendet. Kopieren Sie ihn und senden Sie ihn selbst.",
+    "Der Link wurde nicht per Mail versendet. Kopiere ihn und sende ihn selbst.",
   "access.issued.mailedTitle": "Die Einladung ist unterwegs",
   "access.issued.notMailedTitle": "Es wurde nichts versandt",
   "access.issued.linkLabel": "Der Link",
   "access.issued.copy": "Link kopieren",
   "access.issued.copied": "Kopiert",
   "access.issued.copyFailed":
-    "Kopieren fehlgeschlagen; markieren und kopieren Sie den Link.",
+    "Kopieren fehlgeschlagen; markiere den Link und kopiere ihn.",
   "access.issued.oneTime":
     "Persönlicher Einmal-Link. Er funktioniert einmal, auf einem Gerät. Jede Person braucht ihre eigene Einladung.",
   "access.issueLinkTitle": "Neuen Link für {name} ausstellen",
   "access.issueLinkBody":
-    "Der bisherige Link funktioniert dann nicht mehr. Sie erhalten den neuen zum Kopieren.",
+    "Der bisherige Link funktioniert dann nicht mehr. Du erhältst den neuen zum Kopieren.",
   "access.revokeTitle": "Zugang für {name} entziehen?",
   "access.neverSignedIn": "nie angemeldet",
   "access.revokeBody":
@@ -1290,7 +1289,7 @@ export const de = {
   "billing.title": "Rechnungskontakte",
   "billing.contactTitle": "Bearbeitet Rechnungen für",
   "billing.none":
-    "Noch niemand benannt — tragen Sie ein, an wen die Rechnung gehen soll",
+    "Noch niemand benannt: Trage ein, an wen die Rechnung gehen soll",
   "billing.noEmail": "Keine E-Mail hinterlegt",
   "billing.role.recipient": "Rechnungsempfänger",
   "billing.role.approver": "Genehmigt",
@@ -1310,7 +1309,7 @@ export const de = {
   "billing.saveAdd": "Benennen",
   "billing.saveChange": "Änderung speichern",
   "billing.versionUnresolved":
-    "Dieser Rechnungskontakt konnte nicht erneut gelesen werden, die Änderung wurde nicht gesendet. Laden Sie neu und versuchen Sie es erneut.",
+    "Dieser Rechnungskontakt konnte nicht erneut gelesen werden, die Änderung wurde nicht gesendet. Lade neu und versuche es erneut.",
   "finance.title": "Finanzen",
   "finance.titleHistorical": "Finanzen · historisch",
   "finance.none": "Nichts erfasst.",
@@ -1690,8 +1689,8 @@ export const de = {
   "co.rail.deals.emptyClosedOnly": "Nichts offen, nur abgeschlossene Historie.",
   "co.rail.deals.noCloseDate": "kein Abschlussdatum",
   "co.rail.deals.attentionOverdue": "Überfällig",
-  "co.rail.deals.attentionCommitment": "Sie schulden uns",
-  "co.rail.contacts.title": "Ihre wichtigsten Kontakte",
+  "co.rail.deals.attentionCommitment": "Zusage offen",
+  "co.rail.contacts.title": "Wichtigste Kontakte dort",
   "co.rail.contacts.empty":
     "Noch keine Kontakte. Niemand, dem man schreiben kann.",
   "co.rail.contacts.add": "Kontakt hinzufügen",
@@ -1703,7 +1702,7 @@ export const de = {
   "co.commercial.lostFigure": "Verlorene Deals",
   "co.commercial.allDeals": "Alle Deals",
   "co.commercial.truncated":
-    "Dieser Account hat mehr offene Deals, als hier Platz haben. Öffnen Sie Alle Deals, um den Rest zu sehen.",
+    "Dieser Account hat mehr offene Deals, als hier Platz haben. Öffne Alle Deals, um den Rest zu sehen.",
   "linkedinImport.title": "LinkedIn-Kontakte",
   "linkedinImport.sub":
     "Eigenen Export importieren und sehen, wen das Team bereits kennt",
@@ -1715,7 +1714,7 @@ export const de = {
     "Die Profil-URL konnte nicht gelesen werden",
   "linkedinImport.importFailed": "Der Export wurde nicht importiert",
   "linkedinImport.editProfile": "\u00c4ndern",
-  "linkedinImport.editProfileTitle": "Ihr LinkedIn-Profil",
+  "linkedinImport.editProfileTitle": "Dein LinkedIn-Profil",
   "linkedinImport.profileNotSet": "Noch nicht erfasst",
   "linkedinImport.connectedNote":
     "Verbunden. Importierte Kontakte werden diesem Profil zugeordnet, damit das CRM sagen kann, welche Kollegin jemanden kennt \u2014 und nicht nur, dass \u201edas Unternehmen\u201c ihn kennt.",
@@ -1792,7 +1791,7 @@ export const de = {
   "compose.threadScope": "Gilt für den ganzen Verlauf.",
   "compose.threadStillHeld":
     "Weiterhin zurückgehalten: {count} weitere Person(en) in diesem Verlauf haben ihn nicht freigegeben.",
-  "compose.reason.posture": "Durch Ihre Einstellung zurückgehalten",
+  "compose.reason.posture": "Durch deine Einstellung zurückgehalten",
   "compose.reason.workspaceFloor": "Durch die Firma zurückgehalten",
   "compose.reason.noRecord": "Zurückgehalten, kein Datensatz",
   "compose.reason.pendingVerdict": "Bis zur Einstufung zurückgehalten",
@@ -1806,7 +1805,7 @@ export const de = {
   "compose.audienceLegend": "Sichtbarkeit dieser einen Nachricht",
   "email.aMessage": "Eine Nachricht",
   "email.noSubject": "Kein Betreff",
-  "email.withheldSubject": "Nicht für Sie freigegeben",
+  "email.withheldSubject": "Nicht für dich freigegeben",
   "email.receivedFrom": "Erhalten von {who}",
   "email.received": "Erhalten",
   "email.sentTo": "Gesendet an {who}",
@@ -1830,7 +1829,7 @@ export const de = {
   "visibility.workspace": "Geteilt",
   "visibility.participants": "Beteiligte",
   "visibility.selected": "Ausgewählte",
-  "visibility.private": "Nur Sie",
+  "visibility.private": "Nur du",
   "visibility.withheld": "Zurückgehalten",
   "email.access.unnamedMember": "Jemand, der nicht mehr hier ist",
   "email.move.needsReply": "Antwort offen",
@@ -1841,14 +1840,14 @@ export const de = {
   "email.detail.attachments_other": "{count} Anhänge",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
   "email.detail.withheldReason":
-    "Diese Nachricht ist nicht für Sie freigegeben",
+    "Diese Nachricht ist nicht für dich freigegeben",
   "email.detail.from": "Von",
   "email.detail.to": "An",
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Abgelegt bei",
   "email.detail.when": "Gesendet",
   "email.detail.bccWithheld":
-    "Einige Empfänger stehen im Blindkopie-Feld und werden Ihnen nicht angezeigt",
+    "Einige Empfänger stehen im Blindkopie-Feld und werden dir nicht angezeigt",
   "compose.audienceWorkspace": "Alle in der Firma",
   "compose.audienceWorkspaceHint":
     "Jeder, der den Kontakt sehen darf, liest auch diese Nachricht.",
@@ -1857,7 +1856,7 @@ export const de = {
     "Nur die Personen auf dieser Nachricht lesen Betreff und Inhalt. Andere sehen nur, dass an diesem Tag eine Nachricht gewechselt wurde.",
   "compose.audienceSelected": "Benannte Personen",
   "compose.audienceSelectedHint":
-    "nur die Personen und Teams, die Sie benennen, sowie alle, die bereits auf der Nachricht stehen.",
+    "nur die Personen und Teams, die du benennst, sowie alle, die bereits auf der Nachricht stehen.",
   "compose.audienceMembersLegend": "Wer sie lesen darf",
   "compose.audienceMembersLoading": "Personenliste wird gelesen…",
   "compose.audienceConfirm": "Sichtbarkeit speichern",
@@ -1892,7 +1891,7 @@ export const de = {
   "co.contacts.lastInteraction": "Letzter Austausch",
   "co.contacts.strength": "Beziehung",
   "co.contacts.neverInTouch": "Noch kein Austausch",
-  "co.contacts.theyWrote": "Sie schrieben",
+  "co.contacts.theyWrote": "Der Kontakt schrieb",
   "co.contacts.weWrote": "Wir schrieben",
   "co.contacts.filter.status": "Kontaktstand",
   "co.contacts.filter.statusAll": "Beliebiger Kontaktstand",
@@ -1947,7 +1946,7 @@ export const de = {
     "{count} im Buying-Team · {hidden} weitere für dich nicht sichtbar.",
   "co.contacts.board.readFromMessages": "Aus ihren Nachrichten gelesen",
   "co.intro.title": "Um eine Vorstellung bitten",
-  "co.intro.who": "{colleague} wird gebeten, Sie {contact} vorzustellen.",
+  "co.intro.who": "{colleague} wird gebeten, dich {contact} vorzustellen.",
   "co.intro.write": "Nachricht schreiben",
   "co.intro.writing": "Wird geschrieben",
   "co.intro.fromTemplate":
@@ -1957,7 +1956,7 @@ export const de = {
   "co.intro.basedOn": "Grundlage",
   "co.intro.copy": "Kopieren",
   "co.intro.copyFailed":
-    "Der Browser hat das Kopieren nicht zugelassen. Markieren Sie die Nachricht und kopieren Sie sie selbst.",
+    "Der Browser hat das Kopieren nicht zugelassen. Markiere die Nachricht und kopiere sie selbst.",
   "co.intro.copied": "Kopiert",
   "co.intro.openMail": "Im E-Mail-Programm öffnen",
   "co.map.askIntro": "Um Vorstellung bitten",
@@ -2025,7 +2024,7 @@ export const de = {
   "co.vat.markUnreadable":
     "USt-IdNr.: Die Prüfung konnte gerade nicht geladen werden — zum Wiederholen drücken",
   "co.vat.numberMoved":
-    "Die Nummer auf diesem Datensatz hat sich seit dieser Abfrage geändert. Fragen Sie erneut ab, um die neue zu prüfen.",
+    "Die Nummer auf diesem Datensatz hat sich seit dieser Abfrage geändert. Frage das Register erneut, um die neue zu prüfen.",
   "co.vat.verdict": "Antwort des Registers",
   "co.vat.number": "Abgefragte Nummer",
   "co.vat.registeredName": "Eingetragen auf",
@@ -2037,7 +2036,7 @@ export const de = {
   "co.vat.noReceipt":
     "Keine vergeben. Das Register vergibt eine Abfrage-Nummer nur für eine Abfrage unter eurer eigenen USt-IdNr. — trag sie in den Einstellungen ein, dann trägt die nächste Abfrage einen Nachweis, den ein Finanzamt akzeptiert.",
   "co.vat.never":
-    "Die USt-IdNr. dieser Firma wurde noch nicht abgefragt. Das passiert von selbst, sobald die Nummer aus dem Impressum gelesen wird — oder Sie fragen jetzt beim Register nach.",
+    "Die USt-IdNr. dieser Firma wurde noch nicht abgefragt. Das passiert von selbst, sobald die Nummer aus dem Impressum gelesen wird, und du kannst jetzt beim Register nachfragen.",
   "co.vat.askNow": "Beim Register abfragen",
   "co.vat.askAgain": "Erneut abfragen",
   "co.vat.askingBusy": "Register wird gefragt",
@@ -2062,14 +2061,14 @@ export const de = {
   "co.factField.quantified_outcome": "Ergebnis",
   "co.facts.title": "Fakten über diese Firma",
   "co.facts.empty":
-    "Noch nichts erfasst. Lesen Sie die Website, oder tragen Sie ein, was Sie bereits wissen.",
+    "Noch nichts erfasst. Lies die Website, oder trage ein, was du bereits weißt.",
   "co.facts.add": "Fakt hinzufügen",
   "co.facts.addField": "Art des Fakts",
   "co.facts.addValue": "Was er besagt",
   "co.facts.addSave": "Fakt speichern",
   "co.facts.addCancel": "Abbrechen",
   "co.facts.addIncomplete":
-    "Wählen Sie die Art des Fakts und tragen Sie ein, was er besagt.",
+    "Wähle die Art des Fakts und trage ein, was er besagt.",
   "co.facts.remove": "{value} entfernen",
   "co.facts.removeTitle": "Diesen Fakt entfernen?",
   "co.facts.removeConfirm": "Entfernen",
@@ -2081,7 +2080,7 @@ export const de = {
   "co.deal.new": "Neuer Deal",
   "co.recent.title": "Was zuletzt passiert ist",
   "co.recent.emptyDetail":
-    "Sobald Sie eine E-Mail senden, einen Anruf festhalten oder sich treffen, steht der Austausch hier, mit dem, was jede Seite getan hat.",
+    "Sobald du eine E-Mail sendest, einen Anruf festhältst oder ein Treffen hast, steht der Austausch hier, mit dem, was jede Seite getan hat.",
   "co.recent.empty": "Noch nichts mit ihnen erfasst.",
   "co.recent.kind.email": "E-Mail",
   "co.recent.kind.call": "Anruf",
@@ -2101,7 +2100,8 @@ export const de = {
   "tagAdmin.sub":
     "Die Wörter, unter denen diese Firma Datensätze ablegt. Anwenden darf jeder; anlegen, umbenennen und stilllegen nur Admin- und Ops-Plätze.",
   "tagAdmin.listLabel": "Vokabular",
-  "tagAdmin.empty": "Noch keine Tags. Legen Sie das erste Wort an.",
+  "tagAdmin.empty":
+    "Noch keine Tags. Lege das erste Wort an, unter dem diese Firma ihre Datensätze ablegt.",
   "import.contextTag": "Diesen Stapel unter einem Tag ablegen",
   "import.contextTagChosen":
     "Neu angelegte Datensätze werden unter {name} abgelegt.",
@@ -2134,7 +2134,7 @@ export const de = {
   "tagAdmin.usagePending": "Wird gezählt…",
   "tagAdmin.nearMatchTitle": "Ähnlich einem Wort, das es schon gibt",
   "tagAdmin.nearMatch":
-    "{names} — verwenden Sie dieses, sofern nicht wirklich etwas anderes gemeint ist.",
+    "{names}: Verwende dieses, sofern nicht wirklich etwas anderes gemeint ist.",
   "tagAdmin.mergeTitle": "{name} in ein anderes Tag zusammenführen",
   "tagAdmin.mergeIntoLabel": "Dieses Tag behalten",
   "tagAdmin.mergeIntoNone": "Tag wählen",
@@ -2149,7 +2149,7 @@ export const de = {
   "tagAdmin.noVersion":
     "Dieses Tag wurde ohne Version gelesen und kann nicht gespeichert werden. Seite neu laden und erneut versuchen.",
   "tagAdmin.withheld":
-    "Sie haben keinen Zugriff auf das Tag-Vokabular dieser Firma.",
+    "Du hast keinen Zugriff auf das Tag-Vokabular dieser Firma.",
   "tagAdmin.truncatedTitle": "Diese Liste ist gekürzt",
   "tagAdmin.truncated":
     "Wörter jenseits der Grenze erscheinen hier nicht und lassen sich nicht bearbeiten.",
@@ -2174,15 +2174,15 @@ export const de = {
   "tags.addedOn": "Hinzugefügt {when}",
   "tags.visibleWorkspaceWide": "Tag-Namen sind in der gesamten Firma sichtbar.",
   "tags.removeFromRecord": "Von diesem Datensatz entfernen",
-  "tags.withheld": "Verborgen — Ihre Rolle kann das Tag-Vokabular nicht lesen",
+  "tags.withheld": "Verborgen: Deine Rolle kann das Tag-Vokabular nicht lesen",
   "tags.emptyTitle": "Noch keine Tags",
   "tags.emptyBody":
-    "Fügen Sie dauerhaften Kontext hinzu, etwa eine Veranstaltung, eine Beziehung oder eine Kohorte.",
+    "Füge dauerhaften Kontext hinzu, etwa eine Veranstaltung, eine Beziehung oder eine Kohorte.",
   "tags.pickerLabel": "Tag suchen",
   "tags.alreadyAdded": "Bereits hinzugefügt",
   "tags.catalogTruncatedTitle": "Diese Liste ist gekürzt",
   "tags.catalogTruncated":
-    "Ein Wort kann also fehlen. Suchen Sie danach, bevor Sie ein neues anfragen.",
+    "Ein Wort kann also fehlen. Suche es über seinen Namen, bevor du ein neues anfragst.",
   "tags.noMatch":
     "Kein Tag mit diesem Namen. Ein Admin- oder Ops-Platz kann eines zum Vokabular hinzufügen.",
   "tagResult.gone":
@@ -2194,7 +2194,7 @@ export const de = {
   "tagResult.viewAll": "Alle {count} {kind} anzeigen",
   "tagResult.resultsTitle": "Datensätze mit diesem Tag",
   "tagResult.nothingCarries":
-    "Noch kein Datensatz trägt dieses Tag. Vergeben Sie es auf einem Kontakt, einem Unternehmen oder einem Deal.",
+    "Noch kein Datensatz trägt dieses Tag. Vergib es auf einem Kontakt, einem Unternehmen oder einem Deal.",
   "tagResult.loadingRows": "{kind} werden geladen…",
   "tagResult.noneLeft": "Trägt niemand mehr",
   "tagResult.unnamed": "Ohne Namen",
@@ -2307,9 +2307,10 @@ export const de = {
     "Geschlossen mit dem Grund \u201e{reason}\u201c. Jeder Lead beh\u00e4lt seinen eigenen Datensatz, und es gibt keinen einzelnen Schritt zur\u00fcck.",
   "lead.bulkFailed": "{count} nicht übernommen –",
   "lead.bulkFailedRow": "konnte nicht gespeichert werden",
-  "lead.bulkOutcomeConflict": "wurde geändert, während Sie ausgewählt haben",
-  "lead.bulkOutcomeForbidden": "nicht Ihrer zu übergeben",
-  "lead.bulkOutcomeNotFound": "nicht mehr in Ihrer Liste",
+  "lead.bulkOutcomeConflict":
+    "jemand hat ihn geändert, während du ausgewählt hast",
+  "lead.bulkOutcomeForbidden": "darfst du nicht übergeben",
+  "lead.bulkOutcomeNotFound": "nicht mehr in deiner Liste",
   "lead.bulkSelectRow": "{name} auswählen",
   "lead.unnamed": "Lead ohne Namen",
   "lead.timeline.empty": "Zu diesem Lead ist noch nichts erfasst.",
@@ -2359,7 +2360,7 @@ export const de = {
   "lead.previewMerge":
     "Die Übernahme führt mit dem bestehenden Kontakt zusammen:",
   "lead.previewMergeWithheld":
-    "Die Übernahme führt mit einem bestehenden Kontakt zusammen, den Sie nicht sehen können.",
+    "Die Übernahme führt mit einem bestehenden Kontakt zusammen, den du nicht sehen kannst.",
   "lead.demote": "Übernahme rückgängig machen",
   "lead.demoteDialog": "Übernahme rückgängig machen?",
   "lead.demoteExplain":
@@ -2414,7 +2415,7 @@ export const de = {
   "lead.scoreFactorsFailed":
     "Was auf diesen Score einzahlt, konnte nicht gelesen werden.",
   "lead.scoreFactorsExplainMachine":
-    "Sie haben diesen Score selbst gesetzt. Die Faktoren unten erklären den Wert des Modells: {score}.",
+    "Du hast diesen Score selbst gesetzt. Die Faktoren unten erklären, was das Modell sagt: {score}.",
   "lead.scoreDecayed": "{base}, halbiert sich alle 14 Tage",
   "lead.scoreSources": "{count} Aktivitäten",
   "lead.scoreReconciles": "{raw} in Summe, gerundet {rounded}, Score {score}",
@@ -2424,7 +2425,7 @@ export const de = {
   "lead.factor.reply": "Hat geantwortet",
   "lead.factor.meeting_held": "Termin stattgefunden",
   "lead.factor.meeting_booked": "Termin vereinbart",
-  "lead.signalsTitle": "Was Sie über diesen Lead wissen",
+  "lead.signalsTitle": "Was du über diesen Lead weißt",
   "lead.signalUnset": "Nicht erfasst",
   "lead.signalClear": "Zurückziehen",
   "lead.signalBandPick": "Wert wählen",
@@ -2438,9 +2439,9 @@ export const de = {
   "lead.signalRecordedAt": "Erfasst am {at}",
   "lead.signalSuperseded": "Zuvor {value}; ersetzt durch {source}",
   "lead.signalAutomaticSource": "eine automatische Quelle",
-  "lead.signalReason": "Woher wissen Sie das?",
+  "lead.signalReason": "Woher weißt du das?",
   "lead.signalReasonHint":
-    "Optional. Was Sie hier schreiben, wird mit dem Score festgehalten.",
+    "Optional. Was du hier schreibst, wird mit dem Score festgehalten.",
   "lead.signalReasonUnstated": "Keine Quelle angegeben. Manuell erfasst.",
   "lead.signalSave": "In den Score aufnehmen",
   "lead.signal.web_traffic": "Web-Traffic",
@@ -2466,11 +2467,11 @@ export const de = {
   "lead.signal.budget_hint.unknown": "Unbekannt",
   "lead.signal.budget_hint.some": "Etwas Budget",
   "lead.signal.budget_hint.confirmed": "Budget bestätigt",
-  "lead.factor.manual:web_traffic": "Web-Traffic (Ihre Angabe)",
-  "lead.factor.manual:employees": "Mitarbeiter (Ihre Angabe)",
-  "lead.factor.manual:budget_hint": "Budget (Ihre Angabe)",
+  "lead.factor.manual:web_traffic": "Web-Traffic (deine Angabe)",
+  "lead.factor.manual:employees": "Mitarbeiter (deine Angabe)",
+  "lead.factor.manual:budget_hint": "Budget (deine Angabe)",
   "lead.ownerLabel": "Verantwortlich",
-  "lead.ownerYou": "Sie",
+  "lead.ownerYou": "Du",
   "lead.overriddenBadge": "überschrieben",
   "lead.unassigned": "Nicht zugewiesen",
   "lead.terminalDisqualified":
@@ -2556,7 +2557,7 @@ export const de = {
     "Damit wird der Deal als {status} geschlossen. Erst bestätigen — bis dahin passiert nichts.",
   "deals.lostReason": "Verlustgrund",
   "deals.winNoEvidence":
-    "Für diesen Deal ist kein unterschriebener Vertrag hinterlegt. Bitte geben Sie an, wie er gewonnen wurde. Die Angabe bleibt am Deal und wird in Berichten gezählt.",
+    "Für diesen Deal ist kein unterschriebener Vertrag hinterlegt, sage uns deshalb, wie er gewonnen wurde. Die Antwort bleibt am Deal und wird in Auswertungen gezählt.",
   "deals.winReason": "Wie wurde er gewonnen?",
   "deals.winReasonPick": "Bitte auswählen",
   "deals.winReasonImported": "Aus einem anderen System importiert",
@@ -2598,13 +2599,13 @@ export const de = {
   "deal.forecast.bestCase": "bester Fall",
   "deal.forecast.pipeline": "Pipeline",
   "deal.forecast.omitted": "nicht in der Prognose",
-  "deal.pulse.yourMove": "Sie sind am Zug.",
+  "deal.pulse.yourMove": "Du bist am Zug.",
   "deal.pulse.nothingFlagged": "Es wartet keine Antwort auf dich.",
   "deal.pulse.nothingFlaggedWhy":
     "Zu diesem Deal ist keine eingehende Nachricht als offen markiert.",
   "deal.pulse.wroteOn": "Zuletzt geschrieben am {date} — vor {days} Tagen.",
   "deal.pulse.wroteUnknown":
-    "Sie haben geschrieben und niemand hat geantwortet.",
+    "Die Gegenseite hat geschrieben, und niemand hat geantwortet.",
   "deal.timeline.empty": "Zu diesem Deal ist noch nichts erfasst.",
   "acqSources.title": "Akquisequellen",
   "acqSources.sub":
@@ -2618,7 +2619,7 @@ export const de = {
     "Der Schlüssel wird aus der Bezeichnung abgeleitet und ändert sich danach nicht mehr.",
   "acqSources.addConfirm": "Quelle hinzufügen",
   "acqSources.builtIn": "Standard",
-  "acqSources.readOnly": "Sie können diese Quellen lesen, aber nicht ändern.",
+  "acqSources.readOnly": "Du kannst diese Quellen lesen, aber nicht ändern.",
   "acqSources.labelFor": "Bezeichnung für {key}",
   "acqSources.activeFor": "{label} kann an einem Deal gewählt werden",
   "settings.page.reviewtemplates.sub":
@@ -2643,7 +2644,7 @@ export const de = {
   "outcomeReview.save": "Review speichern",
   "outcomeReview.empty": "Noch kein Review verfasst",
   "outcomeReview.emptyDetail":
-    "Halten Sie fest, warum dieser Deal so ausgegangen ist, solange die Gründe frisch sind.",
+    "Halte fest, warum dieser Deal so ausgegangen ist, solange die Gründe frisch sind.",
   "outcomeReview.earlier": "Zu einem früheren Abschluss",
   "outcomeReview.earlierMark": "früherer Abschluss",
   "outcomeReview.outcomeWon": "Gewonnen",
@@ -2663,7 +2664,7 @@ export const de = {
 
   "deal.briefEmpty": "Noch kein Briefing geschrieben",
   "deal.briefEmptyDetail":
-    "Halten Sie fest, was die Kundschaft braucht und wie ein Gewinn aussieht, damit der Nächste es nicht rekonstruieren muss.",
+    "Halte fest, was die Kundschaft braucht und wie ein Gewinn aussieht, damit niemand es später rekonstruieren muss.",
 
   "deal.motion": "Geschäftsart",
   "deal.motionUnset": "Nicht gesetzt",
@@ -2687,7 +2688,7 @@ export const de = {
     "Hält fest, wer zuständig ist. Es gewährt keinen Zugriff auf diesen Datensatz.",
   "assignments.empty": "Noch niemand zugewiesen",
   "assignments.emptyDetail":
-    "Weisen Sie eine Kollegin oder ein Team zu, um festzuhalten, wer für diese Arbeit zuständig ist.",
+    "Weise eine Kollegin oder ein Team zu, um festzuhalten, wer für diese Arbeit zuständig ist.",
   "assignments.roleRetired": "(stillgelegte Rolle)",
   "assignments.teamSuffix": "(Team)",
   "assignments.subjectInactive": "(inaktiv)",
@@ -2784,14 +2785,14 @@ export const de = {
   "deals.bulkArchiveConfirmTitle_one": "Diesen Deal archivieren?",
   "deals.bulkArchiveConfirmTitle_other": "{count} Deals archivieren?",
   "deals.bulkArchiveConfirmBody":
-    "Sie verschwinden aus allen Listen und Auswertungen, und zurückholen lässt sich hier noch keiner.",
+    "Die Deals verschwinden aus allen Listen und Auswertungen, und zurückholen lässt sich hier noch keiner.",
   "deals.bulkFailed": "{count} nicht übernommen –",
   "deals.bulkFailedRow": "konnte nicht gespeichert werden",
 
   "deal.offers": "Angebote",
   "deal.newOffer": "Neues Angebot",
   "deal.offerNeedsCurrency":
-    "Bepreisen Sie zuerst diesen Deal — ein Angebot wird in der Währung des Deals erstellt.",
+    "Bepreise zuerst diesen Deal: Ein Angebot wird in der Währung des Deals erstellt.",
   "deal.offerNumber": "Angebots-Nr.",
   "deal.offerRevision": "Rev.",
   "deal.offersEmpty": "Noch keine Angebote",
@@ -2928,9 +2929,9 @@ export const de = {
   "brief.sentence.rest": "{count} weitere",
 
   // Der Einstiegssatz des Wochen-Briefs, aus den eingefrorenen Zahlen gebaut.
-  "brief.week.won": "Sie haben {count} Abschlüsse gemacht.",
-  "brief.week.moved": "Sie haben {count} Deals vorangebracht.",
-  "brief.week.met": "Sie hatten {count} Termine.",
+  "brief.week.won": "Du hast {count} Abschlüsse gemacht.",
+  "brief.week.moved": "Du hast {count} Deals vorangebracht.",
+  "brief.week.met": "Du hattest {count} Termine.",
   "brief.week.carryPromises": "{count} Zusagen sind offen geblieben.",
   "brief.week.carryTasks": "{count} Aufgaben sind offen geblieben.",
   "brief.week.andCarry": "{result} {carry}",
@@ -3018,7 +3019,7 @@ export const de = {
   "plan.contract.title": "Wogegen diese Woche antritt",
   "plan.contract.risks": "Was dazwischenkommen könnte",
   "plan.contract.risksHint":
-    "Was Sie erwarten, das schiefgeht — in eigenen Worten",
+    "Was aus deiner Sicht schiefgehen wird, in eigenen Worten",
   "plan.contract.capacityNote": "Verfügbare Kapazität",
   "plan.contract.capacityNoteHint":
     "Was der Kalender nicht weiß — Urlaub, Reisen, ein Launch",
@@ -3029,7 +3030,7 @@ export const de = {
   "plan.contract.cancel": "Abbrechen",
   "plan.contract.crowded": "Diese Woche ist schon voll",
   "plan.contract.crowdedBody":
-    "{committed} Dinge sind bereits gebucht und Sie haben {commitments} Vorhaben notiert. Etwas wird weichen müssen.",
+    "{committed} Dinge sind bereits gebucht, und du hast {commitments} Vorhaben notiert. Etwas wird weichen müssen.",
   "plan.help.ask": "Um Hilfe bitten",
   "plan.help.edit": "Anfrage bearbeiten",
   "plan.help.send": "Senden",
@@ -3063,7 +3064,7 @@ export const de = {
   "brief.weekly.bridge.noOpening":
     "Für diese Woche gibt es keinen Montags-Stand, also fehlt der Ausgangswert, von dem aus sich etwas bewegt hätte.",
   "brief.weekly.bridge.reconcile":
-    "Diese Balken ergeben zusammen nicht den Endwert. Lesen Sie die beiden Summen, nicht die Schritte.",
+    "Diese Balken ergeben zusammen nicht den Endwert. Lies die beiden Summen, nicht die Schritte.",
   "brief.weekly.bar.created": "Neu entstanden",
   "brief.weekly.bar.advanced": "Vorangekommen",
   "brief.weekly.bar.slipped": "Zurückgefallen",
@@ -3186,7 +3187,7 @@ export const de = {
   "deepread.title": "Margince kann das ausfüllen",
   "deepread.titleRead": "Website-Recherche",
   "deepread.sub":
-    "Margince liest die Website des Unternehmens nach Domain, Branche, Größe, Standorten und wahrscheinlichen Entscheidern und schlägt dann einen ersten Schritt vor. Die Funde werden zur Prüfung vorgemerkt — nichts wird geschrieben, bevor Sie zustimmen.",
+    "Margince liest die Website des Unternehmens nach Domain, Branche, Größe, Standorten und wahrscheinlichen Entscheidern und schlägt dann einen ersten Schritt vor. Die Funde werden zur Prüfung vorgemerkt: Nichts wird geschrieben, bevor du zustimmst.",
   "deepread.cta": "Unternehmensrecherche starten",
   "deepread.ctaAgain": "Website erneut lesen",
   "deepread.starting": "Startet…",
@@ -3364,7 +3365,7 @@ export const de = {
   "co.spine.days_one": "{count} Tag",
   "co.spine.days_other": "{count} Tage",
   "co.spine.quietSince": "Seitdem Funkstille",
-  "co.spine.neverReplied": "Sie haben nie geantwortet",
+  "co.spine.neverReplied": "Die Gegenseite hat nie geantwortet.",
   "co.spine.singleThreaded": "Ein Kontakt, und keine Antwort von ihm",
   "co.spine.overdue": "\u00dcberf\u00e4llig",
   "co.spine.expectedClose": "Erwarteter Abschluss",
@@ -3460,16 +3461,16 @@ export const de = {
   "docs.add.cancel": "Abbrechen",
   "docs.add.submit": "Hochladen",
   "docs.add.uploading": "Wird hochgeladen…",
-  "docs.add.errNoFile": "Wählen Sie eine Datei zum Hochladen.",
+  "docs.add.errNoFile": "Wähle eine Datei zum Hochladen.",
   "docs.add.errNoDeal":
-    "Wählen Sie den Deal, dem das Dokument zugeordnet werden soll.",
+    "Wähle den Deal, dem das Dokument zugeordnet werden soll.",
   "docs.add.errRefused":
-    "Sie dürfen zu diesem Datensatz keine Dokumente hinzufügen.",
+    "Du darfst zu diesem Datensatz keine Dokumente hinzufügen.",
   "docs.add.errTooLarge":
     "Diese Datei ist größer als {size} — mehr nimmt diese Installation nicht an. Bitte eine kleinere wählen.",
   "docs.add.failedTitle": "Der Upload ist fehlgeschlagen",
   "docs.add.failed":
-    "Es wurde nichts gespeichert. Versuchen Sie es erneut oder wählen Sie eine andere Datei.",
+    "Es wurde nichts gespeichert. Versuche es erneut, oder wähle eine andere Datei.",
   "docs.add.partialTitle": "Hochgeladen, aber nicht eingeordnet",
   "docs.add.partial":
     "Die Datei liegt am Datensatz und steht unten in der Liste. Nur Kategorie und Titel wurden nicht gespeichert, sie ist daher unter Sonstiges abgelegt.",
@@ -3492,9 +3493,9 @@ export const de = {
   "extraction.groundedNothing":
     "Die KI hat diese Datei gelesen — sie nennt keines der Deal-Felder.",
   "extraction.heading_one":
-    "Die KI hat diese Datei gelesen — {count} belegbares Feld, für Ihren Datensatz vorbereitet (zum Übernehmen bestätigen)",
+    "Die KI hat diese Datei gelesen: {count} belegbares Feld, für deinen Datensatz vorbereitet (zum Übernehmen bestätigen)",
   "extraction.heading_other":
-    "Die KI hat diese Datei gelesen — {count} belegbare Felder, für Ihren Datensatz vorbereitet (zum Übernehmen bestätigen)",
+    "Die KI hat diese Datei gelesen: {count} belegbare Felder, für deinen Datensatz vorbereitet (zum Übernehmen bestätigen)",
   "extraction.accept_one": "{count} Feld übernehmen",
   "extraction.accept_other": "{count} Felder übernehmen",
   "extraction.dismiss": "Verwerfen",
@@ -3526,7 +3527,7 @@ export const de = {
   "docs.category.other": "Sonstiges",
   "files.title": "Dateien",
   "files.empty":
-    "Noch keine Dateien an diesem Deal. Laden Sie eine hoch oder verknüpfen Sie eine E-Mail mit Anhang.",
+    "Noch keine Dateien an diesem Deal. Lade eine hoch, oder verknüpfe eine E-Mail mit Anhang.",
   "files.origin": "Anhang einer Nachricht von {who}, {when}",
   "files.originUnknown": "unbekanntem Absender",
   "files.uploaded": "Hochgeladen {when}",
@@ -3556,12 +3557,12 @@ export const de = {
   "log.kindCall": "Anruf",
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
-    "Aus Ihrem Meeting-Tool einfügen (Teams, Zoom, Meet …) — Sprecherkennzeichnungen bleiben, sofern vorhanden, erhalten.",
+    "Aus deinem Meeting-Tool einfügen (Teams, Zoom, Meet …). Sprecherkennzeichnungen bleiben, sofern vorhanden, erhalten.",
   "log.asTranscript": "Dieser Text ist ein Transkript",
   "log.transcriptUpload": "Oder eine Datei hochladen",
   "log.transcriptUploadRejected": "Nur eine .txt-Datei wird akzeptiert.",
   "log.transcriptUploadFailed":
-    "Die Datei konnte nicht gelesen werden — versuchen Sie stattdessen, den Text einzufügen.",
+    "Die Datei konnte nicht gelesen werden. Füge stattdessen den Text ein.",
   "log.attendee": "Wer war dabei",
   "log.subject": "Betreff",
   "log.body": "Details",
@@ -3574,10 +3575,10 @@ export const de = {
 
   "recordAccess.contact.title": "Wer diesen Kontakt sieht",
   "recordAccess.contact.privateToYou":
-    "Nur für Sie. Ihr Postfach hat diesen Kontakt angelegt, und niemand sonst im Unternehmen sieht ihn — auch nicht Ihr Team und keine Administration.",
+    "Nur für den Inhaber sichtbar. Niemand sonst im Unternehmen sieht diesen Kontakt, auch nicht das Team und keine Administration.",
   "recordAccess.contact.shared": "Alle im Unternehmen sehen diesen Kontakt.",
   "recordAccess.contact.privateTip":
-    "Nur Sie können diesen Kontakt sehen. Teilen Sie ihn mit dem Unternehmen, damit andere ihn ebenfalls sehen.",
+    "Nur du kannst diesen Kontakt sehen. Teile ihn mit dem Unternehmen, damit andere ihn ebenfalls sehen.",
   "recordAccess.contact.share": "Mit dem Unternehmen teilen",
   "recordAccess.contact.published":
     "Das Unternehmen sieht diesen Kontakt jetzt.",
@@ -3586,11 +3587,11 @@ export const de = {
     "Dieser Kontakt gehört wieder seinem Besitzer. Wer den Datensatz ausdrücklich freigegeben bekommen hat, behält den Zugriff.",
   "recordAccess.company.title": "Wer dieses Unternehmen sieht",
   "recordAccess.company.privateToYou":
-    "Nur für Sie. Ihr Postfach hat dieses Unternehmen angelegt, und niemand sonst im Unternehmen sieht es — auch nicht Ihr Team und keine Administration.",
+    "Nur für den Inhaber sichtbar. Niemand sonst im Unternehmen sieht diesen Account, auch nicht das Team und keine Administration.",
   "recordAccess.company.shared":
     "Alle im Unternehmen sehen dieses Unternehmen.",
   "recordAccess.company.privateTip":
-    "Nur Sie können diesen Datensatz sehen. Teilen Sie ihn mit dem Unternehmen, damit andere ihn ebenfalls sehen.",
+    "Nur du kannst diesen Account sehen. Teile ihn mit dem Unternehmen, damit andere ihn ebenfalls sehen.",
   "recordAccess.company.share": "Mit dem Unternehmen teilen",
   "recordAccess.company.published":
     "Das Unternehmen sieht diesen Datensatz jetzt.",
@@ -3607,24 +3608,24 @@ export const de = {
   "compose.draftReply": "Antwort mit KI entwerfen",
   "compose.newEmail": "Neue E-Mail",
   "compose.replyingTo": "Antwort auf „{subject}“ · {when}",
-  "compose.followingUp": "Nachfrage zu Ihrer E-Mail „{subject}“ · {when}",
+  "compose.followingUp": "Nachfrage zu deiner E-Mail „{subject}“ · {when}",
   "compose.draftContextHint":
-    "Beschreiben Sie das Ziel. Margince nutzt den verfügbaren Kontext des Datensatzes.",
+    "Beschreibe das Ziel. Margince nutzt den verfügbaren Kontext des Datensatzes.",
   "compose.draftWithAi": "Mit KI entwerfen",
   "compose.drafting": "Wird entworfen…",
   "compose.discardDraft": "Entwurf verwerfen",
   "compose.discardDraftHint":
-    "Meldet Ihrer Voice DNA, dass dieser Entwurf danebenlag. Der erzeugte Text wird nie gespeichert.",
+    "Meldet deiner Voice DNA, dass dieser Entwurf danebenlag. Der erzeugte Text wird nie gespeichert.",
   "compose.aiDisclosureTitle": "KI-gestützter Entwurf",
   "compose.aiDisclosureFallback":
-    "Dieser Entwurf stammt von einer KI. Lesen und überarbeiten Sie ihn, bevor Sie senden.",
-  "compose.voiceVersion": "Aus Ihrem Korpus gebaut · v{n}",
+    "Dieser Entwurf stammt von einer KI. Lies ihn und überarbeite ihn, bevor du sendest.",
+  "compose.voiceVersion": "Aus deinem Korpus gebaut · v{n}",
   "compose.voiceDegraded":
-    "Ihr Stimmprofil konnte nicht geladen werden – dieser Entwurf ist nicht in Ihrer Stimme geschrieben. Erstellen Sie den Entwurf neu oder überarbeiten Sie ihn vor dem Senden.",
+    "Dein Stimmprofil konnte nicht geladen werden, deshalb ist dieser Entwurf nicht in deiner Stimme geschrieben. Erstelle den Entwurf neu, oder überarbeite ihn vor dem Senden.",
   "compose.voiceDegradedTitle": "Dieser Entwurf ist nicht in deiner Stimme",
   "compose.provisional": "Vorläufige Stimme",
   "compose.provisionalHint":
-    "Ihre Voice DNA wird noch aufgebaut. Sie prägt diesen Entwurf schon genauso wie eine fertige — es wird nichts zurückgehalten.",
+    "Deine Voice DNA wird noch aufgebaut und prägt diesen Entwurf schon genauso wie eine fertige; zurückgehalten wird nichts.",
   "compose.to": "An",
   "compose.cc": "Cc",
   "compose.subject": "Betreff",
@@ -3654,11 +3655,11 @@ export const de = {
   "compose.bccHint":
     "Die genannten Empfänger sehen diese Adressen nicht — und sehen auch nicht, dass überhaupt jemand in Kopie ist.",
   "compose.threadGone":
-    "Diese Unterhaltung lässt sich nicht mehr beantworten, deshalb ist der übliche Weg geöffnet. Prüfen Sie den Empfänger vor dem Senden.",
+    "Diese Unterhaltung lässt sich nicht mehr beantworten, deshalb ist der übliche Weg geöffnet. Prüfe den Empfänger vor dem Senden.",
   "compose.colleagueMailbox_one":
-    "Diese Nachricht ging im Postfach von {names} ein. Ihre Antwort geht aus Ihrem eigenen Postfach und unter Ihrem Namen raus.",
+    "Diese Nachricht ging im Postfach von {names} ein. Deine Antwort geht aus deinem eigenen Postfach und unter deinem Namen raus.",
   "compose.colleagueMailbox_other":
-    "Diese Nachricht ging in den Postfächern von {names} ein. Ihre Antwort geht aus Ihrem eigenen Postfach und unter Ihrem Namen raus.",
+    "Diese Nachricht ging in den Postfächern von {names} ein. Deine Antwort geht aus deinem eigenen Postfach und unter deinem Namen raus.",
   "compose.colleagueUnnamed": "eine Kollegin oder ein Kollege",
   "compose.threadGoneTitle": "Dieser Thread lässt sich nicht beantworten",
   "compose.colleagueMailboxTitle":
@@ -3669,27 +3670,27 @@ export const de = {
   "compose.filesLoading": "Dateien des Datensatzes werden gelesen…",
   "compose.filesNone": "Auf diesem Datensatz liegen noch keine Dateien.",
   "compose.filesFull":
-    "Mehr als {most} Dateien kann eine Nachricht nicht tragen. Senden Sie den Rest als zweite Nachricht.",
+    "Mehr als {most} Dateien kann eine Nachricht nicht tragen. Sende den Rest als zweite Nachricht.",
   "compose.fileRemove": "{filename} nicht mitsenden",
   "compose.fileUpload": "Neue Datei mitsenden",
   "compose.fileUploadHint":
-    "Sie wird zuerst am Datensatz abgelegt, damit der Verlauf festhält, was die Nachricht getragen hat.",
+    "Die Datei wird zuerst am Datensatz abgelegt, damit der Verlauf festhält, was die Nachricht getragen hat.",
   "compose.fileUploadEmpty": "Datei hierher ziehen oder auswählen",
   "compose.fileUploading": "Datei wird abgelegt…",
   "compose.fileStoredUnnamed":
-    "Die Datei liegt am Datensatz, aber wir konnten nicht zurücklesen, welche es ist. Hängen Sie sie über die Liste oben an.",
+    "Die Datei liegt am Datensatz, aber wir konnten nicht zurücklesen, welche es ist. Hänge sie über die Liste oben an.",
   "compose.carriageTitle":
     "Diese Nachricht kann nicht über {channel} gesendet werden",
   "compose.carriageCarries":
-    "{channel} kann keine Dateien übertragen, daher können diese Nachricht und ihre {count} Anhänge dort nicht gesendet werden. Senden Sie den Text über {channel} oder die Dateien auf anderem Weg.",
+    "{channel} kann keine Dateien übertragen, daher können diese Nachricht und ihre {count} Anhänge dort nicht gesendet werden. Sende den Text über {channel}, oder die Dateien auf anderem Weg.",
   "compose.carriageCount":
-    "{channel} überträgt höchstens {limit} Dateien in einer Nachricht, und diese hat {named}. Senden Sie den Rest als zweite Nachricht.",
+    "{channel} überträgt höchstens {limit} Dateien in einer Nachricht, und diese hat {named}. Sende den Rest als zweite Nachricht.",
   "compose.carriagePerFile":
-    "{filename} ist größer als die {limit}, die {channel} für eine einzelne Datei zulässt. Senden Sie eine kleinere Fassung oder teilen Sie sie auf anderem Weg.",
+    "{filename} ist größer als die {limit}, die {channel} für eine einzelne Datei zulässt. Sende eine kleinere Fassung, oder teile sie auf anderem Weg.",
   "compose.carriageAggregate":
-    "Diese {count} Dateien ergeben zusammen {total}, und {channel} überträgt höchstens {limit} in einer Nachricht. Verteilen Sie sie auf mehrere Nachrichten.",
+    "Diese {count} Dateien ergeben zusammen {total}, und {channel} überträgt höchstens {limit} in einer Nachricht. Verteile sie auf mehrere Nachrichten.",
   "compose.carriageCaption":
-    "{channel} überträgt den Text einer Nachricht mit Dateien als Bildunterschrift, höchstens {limit} Zeichen, und diese hat {length}. Kürzen Sie ihn oder senden Sie die Dateien separat.",
+    "{channel} überträgt den Text einer Nachricht mit Dateien als Bildunterschrift, höchstens {limit} Zeichen, und diese hat {length}. Kürze ihn, oder sende die Dateien separat.",
   "calendar.previousMonth": "Voriger Monat",
   "calendar.nextMonth": "Nächster Monat",
   "compose.schedulePick": "Datum und Uhrzeit wählen",
@@ -3716,7 +3717,8 @@ export const de = {
   "compose.why": "Warum schreibst du?",
   "compose.whyHint":
     "Was erlaubt ist, entscheidet der Datensatz; das hier sagt, was du tust — damit sich beides abgleichen lässt.",
-  "compose.why.requestedFollowup": "Sie haben mich um Kontakt gebeten",
+  "compose.why.requestedFollowup":
+    "Der Kontakt hat mich gebeten, mich zu melden",
   "compose.why.activeDeal": "Zu einem laufenden Deal",
   "compose.why.quote": "Ein angefragtes Angebot",
   "compose.why.service": "Support zu etwas Gekauftem",
@@ -3724,12 +3726,12 @@ export const de = {
   "compose.why.contract": "Zu ihrem Vertrag",
   "compose.why.account": "Zu ihrem Konto",
   "compose.why.marketing": "Werbung",
-  "sendPermission.refused": "Sie können diese Nachricht nicht senden",
+  "sendPermission.refused": "Du kannst diese Nachricht nicht senden",
   "sendPermission.sayWhy": "Begründung angeben",
   "sendPermission.unproven":
-    "Margince hat keinen Nachweis, warum Sie schreiben dürfen",
+    "Margince hat keinen Nachweis, warum du ihnen schreiben darfst",
   "sendPermission.unprovenHint":
-    "Wenn Sie den Grund kennen — man hat Sie darum gebeten, Sie hatten ein Treffen, es ist ein Kunde —, halten Sie ihn fest. Er wird unter Ihrem Namen gespeichert.",
+    "Wenn du den Grund kennst (man hat dich darum gebeten, ihr hattet ein Treffen, es ist ein Kunde), halte ihn fest. Er wird unter deinem Namen gespeichert.",
   "sendPermission.unprovenRefuses":
     "Der Versand wird abgelehnt, bis Margince einen Nachweis hat.",
   "sendPermission.ready": "Bereit zum Senden",
@@ -3773,38 +3775,39 @@ export const de = {
     "Diese Nachricht gibt es nicht mehr, es ist also nichts da, worauf du antworten k\u00f6nntest. Schreib stattdessen eine neue Nachricht.",
   "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
-    "Prüfen und bearbeiten Sie Ihren Entwurf. Ein Klick auf Senden verschickt die E-Mail und kann nicht rückgängig gemacht werden.",
+    "Prüfe und bearbeite deinen Entwurf. Ein Klick auf Senden verschickt die E-Mail und kann nicht rückgängig gemacht werden.",
   "compose.schedule": "Einplanen",
   "compose.scheduleConfirmTitle": "Diese E-Mail einplanen?",
   // The composer computed that it had scheduled a send and said nothing —
   // it closed the way a SENT message closes it. The confirm dialog above
   // promises a place to move or withdraw the message from; these two are how a
   // rep gets there.
-  "compose.scheduledQueued": "Geplant. Sie ist noch nicht rausgegangen.",
+  "compose.scheduledQueued":
+    "Geplant. Die Nachricht ist noch nicht rausgegangen.",
   "compose.scheduledOpenQueue": "Geplante Nachrichten",
   "compose.scheduleBody":
-    "Sie geht nicht jetzt hinaus. Sie wartet auf den gewählten Zeitpunkt, und die Einwilligungs- und Postfachprüfungen laufen dann erneut. Bis sie hinausgeht, können Sie sie unter „Geplante Nachrichten“ verschieben oder zurückziehen.",
+    "Die Nachricht geht jetzt nicht hinaus, sondern wartet auf den gewählten Zeitpunkt; die Einwilligungs- und Postfachprüfungen laufen dann erneut. Bis sie hinausgeht, kannst du sie unter „Geplante Nachrichten“ verschieben oder zurückziehen.",
   "compose.sendMessageConfirmTitle": "Diese Nachricht senden?",
   "compose.sendMessageBody":
-    "Sie senden diese Nachricht jetzt. Dies ist eine ausgehende, unwiderrufliche Aktion.",
+    "Du sendest diese Nachricht jetzt. Das ist eine ausgehende, unwiderrufliche Aktion.",
   "compose.consentBlockedTitle": "Versand blockiert — keine Einwilligung",
   "compose.consentBlocked":
     "Ein Empfänger hat für diesen Zweck nicht eingewilligt, daher wurde der Versand unterdrückt (Standard-Ablehnung).",
   "directSend.open": "Mit erfasster Ausnahme senden",
   "directSend.opening": "Wird geöffnet…",
   "directSend.alreadySettled":
-    "Darüber wurde bereits entschieden. Öffnen Sie die Prüfung, um zu sehen, was geschah.",
+    "Darüber wurde bereits entschieden. Öffne die Prüfung, um zu sehen, was geschehen ist.",
   "directSend.couldNotOpen":
-    "Die Prüfung konnte nicht geöffnet werden. Versuchen Sie es erneut.",
+    "Die Prüfung konnte nicht geöffnet werden. Versuche es erneut.",
   "directSend.title": "Trotzdem senden, auf eigene Verantwortung",
   "directSend.confirm": "Ausnahme erfassen und senden",
   "directSend.failed":
-    "Die Nachricht wurde nicht gesendet. Ihre Entscheidung ist möglicherweise bereits erfasst — öffnen Sie die Prüfung, bevor Sie erneut entscheiden.",
+    "Die Nachricht wurde nicht gesendet. Deine Entscheidung ist möglicherweise bereits erfasst. Öffne die Prüfung, bevor du erneut entscheidest.",
   "directSend.noWarningServed":
-    "Diese Installation hat den Wortlaut, den Sie bestätigen würden, nicht veröffentlicht; daher ist hier keine Erfassung möglich.",
+    "Diese Installation hat den Wortlaut, den du bestätigen würdest, nicht veröffentlicht; daher ist hier keine Erfassung möglich.",
   "directSend.needsAcknowledgement":
-    "Bestätigen Sie die Kenntnisnahme, um fortzufahren.",
-  "directSend.needsReason": "Begründen Sie, warum diese Nachricht gehen soll.",
+    "Bestätige die Kenntnisnahme, um fortzufahren.",
+  "directSend.needsReason": "Begründe, warum diese Nachricht gehen soll.",
   "directSend.reasonCodeLabel": "Auf welcher Grundlage",
   "directSend.explanationLabel": "Warum, in eigenen Worten",
   "directSend.acknowledge":
@@ -3820,21 +3823,21 @@ export const de = {
   "compose.reviewRequested":
     "Angefragt. Jemand mit der Berechtigung entscheidet; die Nachricht bleibt bis dahin hier.",
   "compose.reviewRequestFailed":
-    "Die Anfrage war nicht möglich. Versuchen Sie es erneut oder öffnen Sie die Prüfung oben.",
+    "Die Anfrage war nicht möglich. Versuche es erneut, oder öffne die Prüfung oben.",
   "compose.consentGoto": "Einwilligung prüfen",
   "compose.draftUnavailable":
-    "KI-Entwurf ist nicht verfügbar (das Modell ist nicht konfiguriert). Sie können die E-Mail weiterhin selbst schreiben.",
+    "KI-Entwurf ist nicht verfügbar (das Modell ist nicht konfiguriert). Du kannst die E-Mail weiterhin selbst schreiben.",
   "compose.draftUnsupportedHere":
-    "KI-Entwurf wird auf dieser Seite nicht angeboten. Sie können die E-Mail weiterhin selbst schreiben.",
+    "KI-Entwurf wird auf dieser Seite nicht angeboten. Du kannst die E-Mail weiterhin selbst schreiben.",
   "compose.sendUnavailable":
     "Versand ist nicht verfügbar (kein Mailer konfiguriert).",
   "compose.mailboxNotSendCapable":
     "Dein Postfach ist zum Erfassen verbunden, hat aber nie die Erlaubnis zum Senden erhalten. Verbinde es neu und stimme dem Versand zu — ein Postfach, das vor der Versandfunktion verbunden wurde, lässt sich nicht nachträglich erweitern.",
   "compose.mailboxNotSendCapableGoto": "Postfach neu verbinden",
   "compose.sharedUnsubscribeToken":
-    "Eine Nachricht mit Abmeldelink erreicht immer nur eine Adresse, denn dieser Link ist der Einwilligungsnachweis genau dieses Empfängers. Senden Sie sie einzeln, ohne Cc.",
+    "Eine Nachricht mit Abmeldelink erreicht immer nur eine Adresse, denn dieser Link ist der Einwilligungsnachweis genau dieses Empfängers. Sende sie einzeln, ohne Cc.",
   "compose.multiRecipientWarning":
-    "Dieser Zweck führt einen Abmeldelink mit sich; ein Versand an mehr als eine Adresse wird deshalb abgelehnt. Senden Sie einzeln, ohne Cc.",
+    "Dieser Zweck führt einen Abmeldelink mit sich; ein Versand an mehr als eine Adresse wird deshalb abgelehnt. Sende einzeln, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.relinkTarget": "Kontakt, Firma, Deal, Lead oder Projekt suchen",
   "compose.relinkNoVersion":
@@ -3845,8 +3848,8 @@ export const de = {
   "compose.relinkConfirm": "Neu verknüpfen",
   "compose.relinkThread": "Auch den Rest dieser Konversation verschieben",
   "compose.relinkThreadHint":
-    "Jede Nachricht dieses Threads, die Sie bearbeiten dürfen, wird in einem Schritt mit verschoben.",
-  "compose.emptyRecipients": "Fügen Sie mindestens einen Empfänger hinzu.",
+    "Jede Nachricht dieses Threads, die du bearbeiten darfst, wird in einem Schritt mit verschoben.",
+  "compose.emptyRecipients": "Füge mindestens einen Empfänger hinzu.",
   "compose.missingSubject": "Gib dieser E-Mail einen Betreff.",
   "compose.missingBody": "Schreibe die Nachricht, bevor du sie sendest.",
   "compose.missingWhy": "Sag, warum du ihnen schreibst.",
@@ -3957,18 +3960,17 @@ export const de = {
   "analytics.share.snapshotUnavailable":
     "Für diesen Zeitraum wurde noch kein Stand eingefroren.",
   "analytics.share.expiryNote":
-    "Der Link läuft nach 30 Tagen ab. Sie können ihn früher schließen.",
+    "Der Link läuft nach 30 Tagen ab. Du kannst ihn früher schließen.",
   "analytics.share.create": "Link erstellen",
-  "analytics.share.linkTitle": "Ihr Link",
+  "analytics.share.linkTitle": "Dein Link",
   "analytics.share.linkWarning":
-    "Der Link wird nur dieses eine Mal angezeigt. Kopieren Sie ihn jetzt — er lässt sich nicht erneut auslesen.",
+    "Der Link wird nur dieses eine Mal angezeigt. Kopiere ihn jetzt, denn er lässt sich nicht erneut auslesen.",
   "analytics.share.leaveWarning":
-    "Wenn Sie ohne Kopieren schließen, ist der Link verloren. Sie müssten einen neuen erstellen.",
+    "Wenn du ohne Kopieren schließt, ist der Link verloren. Du müsstest einen neuen erstellen.",
   "analytics.share.copy": "Link kopieren",
   "analytics.share.copied": "Kopiert",
   "analytics.share.copyFailedTitle": "Der Link konnte nicht kopiert werden",
-  "analytics.share.copyFailed":
-    "Markieren Sie ihn oben und kopieren Sie ihn von Hand.",
+  "analytics.share.copyFailed": "Markiere ihn oben und kopiere ihn von Hand.",
   "analytics.share.done": "Fertig",
   "analytics.frame": "Stand {asOf} · {zone}",
   "review.title": "Was sollte vor dem Call geprüft werden?",
@@ -4039,7 +4041,7 @@ export const de = {
   "forecast.alreadyWonDetail": "In dieser Periode abgeschlossen",
   "forecast.updateCall": "Aktuellen Call aktualisieren",
   "forecast.callExplains":
-    "Ein Call ist das, was Sie erwarten. Er hält Ihre Zahl fest und ändert keinen Deal.",
+    "Ein Call ist das, wovon du glaubst, dass es abschließt. Er hält deine Zahl fest und ändert keinen Deal.",
   "forecast.expectedTotal": "Erwartete Summe für diesen Zeitraum",
   "forecast.supportingNote": "Begründung",
   "forecast.cancel": "Abbrechen",
@@ -4084,7 +4086,7 @@ export const de = {
     "Verbinde einen MCP-fähigen Agenten mit deiner Firma und bestätige den Zugriff, um den er bittet. Es gibt nichts vorab einzurichten.",
   "ai.paletteHint": "Frag von überall mit",
 
-  "settings.accountCard": "Ihr Konto",
+  "settings.accountCard": "Dein Konto",
   "unsaved.title": "Du hast ungespeicherte Änderungen",
   "unsaved.body":
     "Wenn du die Seite jetzt verlässt, gehen deine Eingaben verloren. Geh zurück, um sie zuerst zu speichern.",
@@ -4095,8 +4097,8 @@ export const de = {
   "settings.saved": "Gespeichert.",
   "settings.signature": "E-Mail-Signatur",
   "settings.signatureSub":
-    "Steht unter jeder Nachricht, die Sie senden — über dem Abmelde-Hinweis.",
-  "settings.signatureLabel": "Ihre Grußformel",
+    "Steht unter jeder Nachricht, die du sendest, über dem Abmelde-Hinweis.",
+  "settings.signatureLabel": "Deine Grußformel",
   "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
   "settings.signatureHint":
     "Nur Text. Leer lassen heißt: ohne Signatur senden. Die KI schreibt nie eine Grußformel — diese hier geht raus.",
@@ -4107,7 +4109,7 @@ export const de = {
   "delivery.morningLabel": "Dein Tagesbriefing",
   "delivery.morningHelp":
     "Ob das Briefing des Tages zusätzlich per E-Mail kommt. Auf deiner Startseite steht es ohnehin.",
-  "delivery.weeklyLabel": "Ihr Wochenrückblick",
+  "delivery.weeklyLabel": "Dein Wochenrückblick",
   "delivery.weeklyHelp":
     "Ob der Rückblick am Montag zusätzlich per E-Mail kommt.",
   "delivery.byEmail": "Per E-Mail",
@@ -4115,9 +4117,9 @@ export const de = {
   "settings.appearance": "Darstellung",
   "settings.appearanceHelp":
     "Hell, dunkel oder was dieses Ger\u00e4t eingestellt hat. Das Kontomen\u00fc \u00e4ndert es ebenfalls.",
-  "settings.displayName": "Ihr Name",
+  "settings.displayName": "Dein Name",
   "settings.displayNameHelp":
-    "Wie Kolleginnen und Kollegen Sie sehen \u2014 an Datens\u00e4tzen, in Auswahllisten und im Protokoll.",
+    "Wie Kolleginnen und Kollegen dich sehen: an Datensätzen, die du bearbeitest, in Auswahllisten und im Protokoll.",
   "settings.displayNameSave": "Speichern",
   "settings.languageHelp": "Gilt für diese Sitzung.",
   "role.admin": "Admin",
@@ -4148,9 +4150,9 @@ export const de = {
   "settings.mintOpen": "Neuer Passport",
   "settings.passportScopes": "Was dieser Agent darf",
   "settings.passportScopesHint":
-    "Mindestens eins auswählen. Ein Agent darf nie mehr als Sie selbst.",
+    "Mindestens eins auswählen. Ein Agent darf nie mehr als du selbst.",
   "settings.passportScopesRequired":
-    "Wählen Sie mindestens eine Sache aus, die dieser Agent tun darf.",
+    "Wähle mindestens eine Sache aus, die dieser Agent tun darf.",
   // Was der geplante Agent gerade für diese Leserin tut. "Morgenbriefing" ist
   // dasselbe Wort wie auf der Startseite; ein abgebrochener Lauf darf nie
   // klingen, als wäre er fertig.
@@ -4406,7 +4408,7 @@ export const de = {
     "Eine Datei zu importieren ist eine Admin- oder Ops-Aktion — es gibt sie in dieser Installation, du darfst sie nur nicht ausführen.",
   "import.title": "Datei importieren",
   "import.sub":
-    "Eine CSV mit Interessenten oder Firmen einlesen. Es wird nichts geschrieben, bevor Sie gelesen haben, was passieren wird.",
+    "Eine CSV mit Interessenten oder Firmen einlesen. Es wird nichts geschrieben, bevor du gelesen hast, was passieren wird.",
   "import.startLabel": "CSV-Datei importieren",
   "import.start": "Import starten",
   "import.objectLabel": "Was die Zeilen sind",
@@ -4418,7 +4420,7 @@ export const de = {
   "import.objectHint.company":
     "Firmen werden über den zugeordneten Namen erkannt, ein erneuter Upload korrigiert also statt zu duplizieren.",
   "import.objectHint.contact":
-    "Für Kontakte, mit denen Sie bereits zu tun haben. Erkennung über die E-Mail-Adresse: Ein erneuter Upload korrigiert statt zu duplizieren, und eine bereits vergebene Adresse bleibt unangetastet.",
+    "Für Kontakte, mit denen du bereits zu tun hast. Erkennung über die E-Mail-Adresse: Ein erneuter Upload korrigiert statt zu duplizieren, und eine bereits vergebene Adresse bleibt unangetastet.",
   "import.fileLabel": "Die zu importierende CSV",
   "import.choose": "Datei wählen",
   "import.chooseAnother": "Andere Datei wählen",
@@ -4434,13 +4436,13 @@ export const de = {
   "import.identifiedBy":
     "Zeilen werden über {column} erkannt — ein erneuter Import dieser Datei aktualisiert statt zu duplizieren.",
   "import.needsIdentifier":
-    "Ordnen Sie eine Spalte {field} zu. Ohne sie ist keine Zeile beim zweiten Upload wiedererkennbar oder rückgängig zu machen.",
+    "Ordne eine Spalte {field} zu. Ohne sie ist keine Zeile beim zweiten Upload wiedererkennbar oder rückgängig zu machen.",
   "import.validate": "Prüfen, was passieren würde",
   "import.validating": "Wird geprüft…",
   "import.previewTitle": "Was dieser Import tun wird",
   "import.outcomeTitle": "Was dieser Import getan hat",
   "import.resumedRun":
-    "Von vorhin übernommen: Dieser Import lief am {when}. Alles darunter steht Ihnen weiterhin offen.",
+    "Von vorhin übernommen: Dieser Import lief am {when}. Alles darunter steht dir weiterhin offen.",
   "import.count.created": "Anlegen",
   "import.count.updated": "Aktualisieren",
   "import.count.unchanged": "Unverändert",
@@ -4451,7 +4453,7 @@ export const de = {
   "import.linksApplied":
     "{applied} von {offered} Arbeitgeber-Verknüpfungen geschrieben.",
   "import.issuesLead":
-    "Einige Zeilen können nicht importiert werden. Sie sind mit der Zeilennummer in Ihrer Datei aufgeführt.",
+    "Einige Zeilen können nicht importiert werden. Jede ist mit der Zeile aufgeführt, die du in deiner Datei öffnen kannst.",
   "import.issueLine": "Zeile {line}:",
   "import.commit_one": "1 Zeile importieren",
   "import.commit_other": "{rows} Zeilen importieren",
@@ -4504,7 +4506,7 @@ export const de = {
   "settings.jobsSub":
     "Was in der Warteschlange hängt und wessen Arbeit gescheitert ist.",
   "jobs.adminOnly":
-    "Für den Zustand der Hintergrund-Jobs fehlt Ihrem Sitzplatz die Berechtigung. Der Bericht umfasst die Arbeit der ganzen Installation und steht deshalb nicht allen offen.",
+    "Für den Zustand der Hintergrund-Jobs fehlt deinem Sitzplatz die Berechtigung. Der Bericht umfasst die Arbeit der ganzen Installation und steht deshalb nicht allen offen.",
   "jobs.empty":
     "Nichts in der Hintergrund-Warteschlange — nichts wartet, läuft, wiederholt sich oder ist tot.",
   "jobs.workspaceKinds": "Diese Firma",
@@ -4553,7 +4555,7 @@ export const de = {
   "settings.extIngestSub":
     "Datensätze, die ein installierter Konnektor gesendet hat und die dieses CRM nicht abbilden konnte.",
   "extIngest.adminOnly":
-    "Zu sehen, was Konnektoren gesendet haben, erfordert eine Berechtigung, die Ihr Sitz nicht hat. Der Bericht gilt für die gesamte Installation und ist daher nicht für alle offen.",
+    "Zu sehen, was Konnektoren gesendet haben, erfordert eine Berechtigung, die dein Sitzplatz nicht hat. Der Bericht gilt für die gesamte Installation und ist daher nicht für alle offen.",
   "extIngest.empty":
     "In den letzten {days} Tagen wurde nichts abgewiesen. Jeder Datensatz der installierten Konnektoren ließ sich abbilden.",
   "extIngest.refusedTotal_one": "{count} Datensatz abgewiesen",
@@ -4581,7 +4583,7 @@ export const de = {
   "audit.noHumanAuthority": "Keine menschliche Autorisierung erfasst",
   "settings.auditSub": "jede Aktion, zugeordnet — Mensch, Agent oder Connector",
   "settings.auditAdminOnly":
-    "Zum Lesen des vollständigen Verlaufs fehlt Ihrem Sitzplatz die Berechtigung. Er hält jede handelnde Person und jeden berührten Datensatz fest — deshalb steht er nicht allen offen.",
+    "Zum Lesen des vollständigen Verlaufs fehlt deinem Sitzplatz die Berechtigung. Er hält jede handelnde Person und jeden berührten Datensatz fest und steht deshalb nicht allen offen.",
   "settings.auditFilters": "Filter",
   "settings.auditEntries": "Audit-Log",
   "settings.auditTrailLabel": "Aufgezeichnete Aktionen",
@@ -4599,7 +4601,7 @@ export const de = {
   "settings.due": "fällig {date}",
 
   "privacy.purposesReadOnly":
-    "Nur-Lese-Ansicht — zum Anlegen eines Zwecks fehlt Ihrem Sitzplatz die Berechtigung.",
+    "Nur-Lese-Ansicht: Zum Anlegen eines Zwecks fehlt deinem Sitzplatz die Berechtigung.",
   "privacy.addPurpose": "Zweck hinzufügen",
   "privacy.corrections": "Was Kontakte korrigiert haben wollen",
   "privacy.correctionsSub":
@@ -4630,7 +4632,7 @@ export const de = {
   "notice.emptyOwed":
     "Nichts ist offen. Jeder erhaltene Kontakt wurde informiert, oder die Pflicht wurde begründet beendet.",
   "notice.readOnlyForPrivacy":
-    "Diese Pflichten nennen Kontakte und wie wir sie erhalten haben. Sie werden nur im Datenschutz-Eingang gezeigt.",
+    "Diese Pflichten nennen Kontakte und wie wir sie erhalten haben; sie werden deshalb nur im Datenschutz-Eingang gezeigt.",
   "notice.dueAt": "Fällig am {date}",
   "notice.overdue": "Überfällig",
   "privacynotice.title": "Was wir über Sie gespeichert haben",
@@ -4671,18 +4673,18 @@ export const de = {
   "notice.unclaimed": "Nicht übernommen",
   "notice.excuse": "Ohne Versand beenden",
   "notice.excuseTitle": "Diese Pflicht ohne Information beenden",
-  "notice.excuseWhich": "Was halten Sie fest?",
-  "notice.excuseProvided": "Sie wurden anderweitig informiert",
+  "notice.excuseWhich": "Was hältst du fest?",
+  "notice.excuseProvided": "Anderweitig informiert",
   "notice.excuseExempt": "Die Pflicht gilt nicht",
-  "notice.excuseGround": "Warum, in Ihren eigenen Worten",
+  "notice.excuseGround": "Warum, in deinen eigenen Worten",
   "notice.excuseConfirm": "Festhalten",
   "privacy.caseNotHere":
     "Die Anfrage, die dieser Link nennt, ist noch nicht auf dieser Seite.",
   "privacy.caseNotHereBody":
-    "Sie steht möglicherweise unter einem anderen Statusfilter oder weiter unten in einer Liste, die zwanzig auf einmal lädt. Wählen Sie den passenden Status oder laden Sie mehr.",
+    "Der Fall steht möglicherweise unter einem anderen Statusfilter oder weiter unten in einer Liste, die zwanzig auf einmal lädt. Wähle den passenden Status, oder lade mehr.",
   "privacy.facetAll": "Alle",
   "privacy.inboxAdminOnly":
-    "Für Betroffenenanfragen fehlt Ihrem Sitzplatz die Berechtigung. Sie nennen die Personen, die angefragt haben — deshalb steht die Liste nicht allen offen.",
+    "Für Betroffenenanfragen fehlt deinem Sitzplatz die Berechtigung. Die Anfragen nennen die Personen, die angefragt haben, und die Liste steht deshalb nicht allen offen.",
   "privacy.overdue": "Überfällig",
   "privacy.closed":
     "Abgeschlossen — eine abgeschlossene Anfrage wird nie wieder geöffnet. Ein neues Anliegen ist eine neue Anfrage.",
@@ -4743,7 +4745,7 @@ export const de = {
   "restricted.decide": "Entscheidung",
   "restricted.reasonLabel": "Begründung",
   "restricted.reasonHint":
-    "Wird mit Ihrem Namen im Audit-Protokoll festgehalten. Das macht die Entscheidung nachvollziehbar — schreiben Sie, was Sie entschieden haben und auf welcher Grundlage.",
+    "Wird mit deinem Namen im Audit-Log festgehalten. Das macht die Entscheidung nachvollziehbar, also schreibe, was du entschieden hast und auf welcher Grundlage.",
   "restricted.release.action": "Freigeben",
   "restricted.release.title":
     "Diesen Datensatz aus der Aufbewahrungspflicht entlassen?",
@@ -4853,10 +4855,10 @@ export const de = {
     "Was zutreffen muss, bevor ein Deal diese Phase verlässt.",
   "stage.criteria.buyerCalloutTitle": "Belege müssen vom Käufer kommen",
   "stage.criteria.buyerCallout":
-    "Eine Nachricht Ihres Teams erfüllt nie ein Kriterium darüber, was der Käufer getan hat.",
+    "Eine Nachricht deines Teams erfüllt nie ein Kriterium darüber, was der Käufer getan hat.",
   "stage.criteria.unreadableTitle": "Ich konnte diese Kriterien nicht lesen",
   "stage.criteria.unreadable":
-    "Laden Sie neu, bevor Sie sie ändern — die Anzeige ist möglicherweise unvollständig.",
+    "Lade neu, bevor du sie änderst: Die Anzeige ist möglicherweise unvollständig.",
   "stage.criteria.none": "Diese Phase verlangt noch nichts.",
   "stage.criteria.terminal":
     "In einer gewonnenen oder verlorenen Phase endet ein Deal, sie verlangt also nichts für den Austritt.",
@@ -5293,7 +5295,7 @@ export const de = {
     "Es liest deine Deals und E-Mails, um zu ordnen, was heute wichtig ist, und schreibt Notizen zurück. Senden kann es nicht: die Erlaubnis hier deckt Lesen und Schreiben ab, niemals Senden.",
   "overnightGrant.dangerTitle": "Der Nacht-Agent läuft nicht",
   "overnightGrant.danger":
-    "Er kann Ihren Brief über Nacht weder lesen noch kommentieren. Ihre Datensätze, Arbeitsliste und der geplante Wochenrückblick bleiben verfügbar.",
+    "Er kann deinen Morgen-Überblick weder lesen noch kommentieren. Deine Datensätze, deine Arbeitsliste und der geplante Wochenrückblick bleiben verfügbar.",
   "overnightGrant.saveFailedTitle": "Deine Antwort wurde nicht gespeichert",
   "overnightGrant.saveFailed":
     "Alles andere ist verbunden — stelle es unter Einstellungen → Verbindungen ein, sobald du drin bist.",
@@ -5321,8 +5323,8 @@ export const de = {
   "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Vom Team zurückgehalten",
   "heldThreads.sub":
-    "Konversationen, die Ihr Postfach zurückhält. Wenn Sie eine freigeben, können alle Kolleginnen und Kollegen sie lesen; niemand sonst kann Ihre freigeben.",
-  "heldThreads.empty": "Ihr Postfach hält derzeit nichts zurück",
+    "Verläufe, die dein Postfach zurückhält. Gibst du einen frei, können alle Kolleginnen und Kollegen ihn lesen; niemand sonst kann deine freigeben.",
+  "heldThreads.empty": "dein Postfach hält derzeit nichts zurück",
   "heldThreads.colThread": "Konversation",
   "heldThreads.colWhy": "Warum zurückgehalten",
   "heldThreads.colWhen": "Eingegangen",
@@ -5349,24 +5351,24 @@ export const de = {
   "heldThreads.kind.explicitlyConfidential": "Als vertraulich markiert",
   "senders.title": "Absender",
   "senders.sub":
-    "Was über jede Adresse entschieden wurde, die Ihr Postfach eingebracht hat — und Ihre eigene Antwort, wo Sie eine gegeben haben. Nur Ihre Absender; Kolleginnen und Kollegen sehen diese Liste nie.",
+    "Was über jede Adresse entschieden wurde, die dein Postfach eingebracht hat, und deine eigene Antwort, wo du eine gegeben hast. Nur deine Absender; Kolleginnen und Kollegen sehen diese Liste nie.",
   "senders.emptyTitle": "Noch nichts entschieden",
   "senders.emptyBody":
-    "Sobald Ihr Postfach E-Mails eingebracht hat, steht hier jeder Absender mit dem, was aus ihm wurde.",
+    "Sobald dein Postfach E-Mails eingebracht hat, steht hier jeder Absender mit dem, was aus ihm wurde.",
   "senders.colSender": "Absender",
   "senders.colDecision": "Entschieden",
   "senders.colRecord": "Kontakt",
   "senders.colActions": "Aktionen",
   "senders.recordYes": "Ja",
   "senders.recordNo": "Nein",
-  "senders.byYou": "— von Ihnen entschieden",
+  "senders.byYou": "(von dir entschieden)",
   "senders.deletesOn": "Älteste Nachricht wird am {date} gelöscht",
   "senders.markBusiness": "Geschäftlich",
   "senders.keepOut": "Aussperren",
   "senders.withdraw": "Zurücknehmen",
   "senders.keepOutTitle": "Diesen Absender dauerhaft aussperren?",
   "senders.keepOutBody":
-    "Es wird kein Kontakt angelegt, und die E-Mails, die dieser Absender bereits in Ihr Postfach eingebracht hat, werden vernichtet. E-Mails, die auch eine Kollegin importiert hat, bleiben ihr erhalten.",
+    "Es wird kein Kontakt angelegt, und die E-Mails, die dieser Absender bereits in dein Postfach eingebracht hat, werden vernichtet. E-Mails, die auch eine Kollegin importiert hat, bleiben ihr erhalten.",
   "senders.keepOutConfirm": "Aussperren und vernichten",
   "senders.kind.contact": "Eine Person",
   "senders.kind.roleMailbox": "Ein Funktionspostfach",
@@ -5396,10 +5398,10 @@ export const de = {
   "mailSharing.sharedPosture.help":
     "Erlaubt Kolleginnen und Kollegen, das eigene Postfach auf „geteilt“ zu stellen — eine erfasste Nachricht ist dann für das Team lesbar, sobald sie ankommt, bevor sie eingestuft wurde. Standardmäßig aus.",
   "mailSharing.sharedPosture.warning":
-    "Das Postfach von Beschäftigten in ein gemeinsames CRM einzulesen, ist in Deutschland und Österreich Gegenstand einer Betriebsvereinbarung. Wer dies einschaltet, erklärt, dass Ihre Firma eine solche hat. Margince prüft das nicht.",
+    "Das Postfach von Beschäftigten in ein gemeinsames CRM einzulesen, ist in Deutschland und Österreich Gegenstand einer Betriebsvereinbarung. Wer dies einschaltet, erklärt, dass deine Firma eine solche hat. Margince prüft das nicht.",
   "mailSharing.dangerTitle": "Die E-Mail-Freigabe ist aus",
   "mailSharing.sharedPosture.warningTitle":
-    "Damit erklären Sie eine Rechtsgrundlage",
+    "Damit erklärst du eine Rechtsgrundlage",
   "mailSharing.saveFailed": "Die Einstellung wurde nicht gespeichert",
   "mailSharing.save": "Speichern",
   "connectors.originLabel": "Adresse in versendeten Links",
@@ -5443,15 +5445,15 @@ export const de = {
   "connectors.contextTag.archived":
     "{name} ist archiviert, also wird nichts mehr darunter abgelegt. Wähl ein anderes Tag oder keins.",
   "connectors.signatureEnrich.followingDefault":
-    "Folgt der Einstellung Ihrer Firma. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
+    "Folgt der Einstellung deiner Firma. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
   "connectors.signatureEnrich.ownAnswer":
-    "Eigene Antwort dieses Postfachs — bleibt bestehen, was auch immer Ihre Firma einstellt.",
+    "Eigene Antwort dieses Postfachs, unabhängig davon, was deine Firma einstellt.",
   "hold.sectionTitle": "Private Korrespondenz",
   "hold.notHeld":
-    "E-Mails mit diesem Kontakt folgen der Einstellung Ihres Postfachs.",
+    "E-Mails mit diesem Kontakt folgen der Einstellung deines Postfachs.",
   "hold.heldByAddress":
-    "Sie behalten E-Mails mit dieser Adresse bei den Beteiligten.",
-  "hold.heldByDomain": "Sie behalten E-Mails mit {domain} bei den Beteiligten.",
+    "Du behältst E-Mails mit dieser Adresse bei den Beteiligten.",
+  "hold.heldByDomain": "Du behältst E-Mails mit {domain} bei den Beteiligten.",
   "hold.holdAddress": "Privat halten",
   "hold.holdDomain": "Ganz {domain} privat halten",
   "hold.lift": "Aufheben",
@@ -5460,18 +5462,18 @@ export const de = {
   "hold.confirmVerb": "Privat halten",
   "hold.confirmTitle": "Diese Korrespondenz privat halten?",
   "hold.confirmAddressBody":
-    "E-Mails mit {address} bleiben bei den Beteiligten. Sie werden weiterhin erfasst und sind für Sie lesbar — Kolleginnen und Kollegen sehen sie nicht.",
+    "E-Mails mit {address} bleiben bei den Beteiligten, werden weiterhin erfasst und sind für dich lesbar; Kolleginnen und Kollegen sehen sie nicht.",
   "hold.confirmDomainBody":
-    "E-Mails mit allen bei {domain}, einschließlich Subdomains, bleiben bei den Beteiligten. Sie werden weiterhin erfasst und sind für Sie lesbar — Kolleginnen und Kollegen sehen sie nicht.",
+    "E-Mails mit allen bei {domain}, einschließlich Subdomains, bleiben bei den Beteiligten, werden weiterhin erfasst und sind für dich lesbar; Kolleginnen und Kollegen sehen sie nicht.",
   "hold.confirmHistoryNote":
     "Das gilt ab jetzt. Bereits erfasste E-Mails behalten ihre bisherige Sichtbarkeit.",
   "captureNotice.title": "Was das Verbinden eines Postfachs bedeutet",
   "captureNotice.whatHappens":
     "Margince liest dieses Postfach und legt ab, was es findet: die Nachrichten, wer daran beteiligt war, sowie die Kontakte und Firmen hinter den Adressen. Anhänge werden mit ihrer Nachricht gespeichert.",
   "captureNotice.whoReads":
-    "Ein neues Postfach ist standardmäßig zurückgehalten. Eine Nachricht bleibt bei den Beteiligten, bis eine Einstufung den Verlauf als gewöhnliche geschäftliche Korrespondenz beurteilt — erst dann können Kolleginnen und Kollegen sie lesen. Sie können das Postfach jederzeit so einstellen, dass alles zurückgehalten bleibt.",
+    "Ein neues Postfach ist standardmäßig zurückgehalten. Eine Nachricht bleibt bei den Beteiligten, bis eine Einstufung den Verlauf als gewöhnliche geschäftliche Korrespondenz beurteilt; erst dann können Kolleginnen und Kollegen sie lesen. Du kannst das Postfach jederzeit so einstellen, dass alles zurückgehalten bleibt.",
   "captureNotice.yourControl":
-    "Sie entscheiden pro Absender und pro Verlauf unter Einstellungen → Verbindungen: eine Korrespondenz ganz heraushalten, einen Verlauf mit dem Team teilen oder löschen, was ein Absender eingebracht hat. Hier wird um nichts gebeten — so läuft es ab, damit Sie es vor dem Verbinden wissen.",
+    "Du entscheidest pro Absender und pro Verlauf unter Einstellungen → Verbindungen: eine Korrespondenz ganz heraushalten, einen Verlauf mit dem Team teilen oder löschen, was ein Absender eingebracht hat. Hier wird um nichts gebeten. So läuft es ab, damit du es vor dem Verbinden weißt.",
   "connectors.mailPosture.label": "Wer E-Mails aus diesem Postfach lesen darf",
   "connectors.mailPosture.classified": "Zurückgehalten bis eingestuft",
   "connectors.mailPosture.held": "Immer zurückgehalten",
@@ -5481,12 +5483,12 @@ export const de = {
   "connectors.mailPosture.help.classified":
     "Eine neue Nachricht bleibt auf die Beteiligten beschränkt, bis eine Einstufung den Verlauf als gewöhnlich beurteilt. Kolleginnen und Kollegen sehen vorher nichts.",
   "connectors.mailPosture.help.held":
-    "Eine neue Nachricht bleibt auf die Beteiligten beschränkt, unabhängig von jeder Einstufung. Sie geben einen Verlauf selbst frei, einzeln.",
+    "Eine neue Nachricht bleibt auf die Beteiligten beschränkt, unabhängig von jeder Einstufung. Du gibst einen Verlauf selbst frei, einzeln.",
   "connectors.mailPosture.help.shared":
     "Eine neue Nachricht ist für Kolleginnen und Kollegen lesbar, sobald sie ankommt.",
   "connectors.mailPosture.historyTitle": "Und die bereits erfassten E-Mails?",
   "connectors.mailPosture.historyBody":
-    "Diese Antwort gilt für E-Mails, die ab jetzt erfasst werden. Bereits erfasste E-Mails behalten ihre Sichtbarkeit, sofern Sie sie nicht entsprechend einschränken.",
+    "Diese Antwort gilt für E-Mails, die ab jetzt erfasst werden. Bereits erfasste E-Mails behalten ihre Sichtbarkeit, sofern du sie nicht entsprechend einschränkst.",
   "connectors.mailPosture.historyConfirm": "Sichtbarkeit ändern",
   "connectors.mailPosture.historyApply":
     "Auch bereits erfasste E-Mails einschränken",
@@ -6186,7 +6188,7 @@ export const de = {
     "Aus dem Postfach geschätzt, noch nicht gezählt.",
   "ob.backread.estimateCost": "Ungefähr {cost} an Modellaufrufen.",
   "ob.backread.estimateFailed":
-    "Ich konnte diesen Zeitraum nicht schätzen: {detail} Du kannst trotzdem starten oder einen anderen wählen.",
+    "Ich konnte diesen Zeitraum nicht schätzen: {detail} Starten kannst du trotzdem, oder einen anderen wählen.",
   "ob.backread.note":
     "Dein Postfach bleibt unverändert. Importierte E-Mails und Kontakte erscheinen während des Imports in Margince.",
   "ob.backread.start": "Verbinden und lesen",
@@ -6207,7 +6209,7 @@ export const de = {
   "ob.backread.doneNote":
     "Noch ist nichts geschrieben. Alles, was ich gefunden habe, wartet im Eingang auf deine Prüfung.",
   "ob.backread.failed":
-    "Das Zurücklesen wurde gestoppt: {detail} Deine Verbindung ist in Ordnung — du kannst es in den Einstellungen erneut starten.",
+    "Das Zurücklesen wurde gestoppt: {detail} An der Verbindung liegt es nicht, du kannst es in den Einstellungen erneut starten.",
   "ob.backread.cancelled":
     "Ich habe das Lesen gestoppt. Es wurde nichts geschrieben.",
   "ob.backread.cancelledPartial":
@@ -6251,7 +6253,7 @@ export const de = {
   "auth.continueWith": "Weiter mit {brand}",
   "auth.orDivider": "oder",
   "auth.noMethodOffered":
-    "Diese Firma meldet sich über ihren Identitätsanbieter an, der zurzeit nicht verfügbar ist. Bitten Sie eine Administratorin oder einen Administrator, die Einrichtung abzuschließen.",
+    "Diese Firma meldet sich über ihren Identitätsanbieter an, der zurzeit nicht verfügbar ist. Bitte eine Administratorin oder einen Administrator, die Einrichtung abzuschließen.",
   "auth.legalProtected": "Der Zugang zu dieser Firma ist beschränkt.",
   "auth.legalTerms": "Nutzungsbedingungen",
   "auth.legalPrivacy": "Datenschutz",
@@ -6433,7 +6435,7 @@ export const de = {
     "Diese E-Mails waren bereits abgeschaltet. Es wurde nichts ge\u00e4ndert.",
   "prefs.unsub.lockedTitle": "Diese Nachrichten lassen sich nicht abschalten",
   "prefs.unsub.lockedBody":
-    "Sie geh\u00f6ren zu einem von dir angeforderten Vorgang \u2014 etwa ein neues Passwort oder eine Best\u00e4tigung, um die du gebeten hast.",
+    "Sie gehören zu einem von dir angeforderten Vorgang — etwa ein neues Passwort oder eine Bestätigung, um die du gebeten hast.",
   "prefs.unsub.retry": "Erneut versuchen",
   "prefs.unsub.unknownPurposeTitle": "Dieser Link nennt nichts, was wir senden",
   "prefs.unsub.unknownPurpose":
@@ -6531,7 +6533,7 @@ export const de = {
   "threads.newLabel": "Neuer Thread",
   "threads.requireChangeLabel": "Dieses Dokument muss geändert werden",
   "threads.open": "Absenden",
-  "threads.readOnly": "Ihr Zugang ist schreibgeschützt.",
+  "threads.readOnly": "Dein Zugang ist schreibgeschützt.",
   "deal360.blocker": "Was den Deal aufhält",
   "deal360.buyer": "Was der Käufer will",
   "deal360.verdict.live": "Aktiv",
@@ -6604,14 +6606,14 @@ export const de = {
   "prefs.save": "Einstellungen speichern",
   "prefs.discard": "Verwerfen",
   "prefs.cannotGrant":
-    "F\u00fcr diesen Datensatz k\u00f6nnen wir {purposes} nicht starten. Wenn das nicht stimmt, antworten Sie auf eine unserer E-Mails \u2014 ein Mensch sieht nach.",
+    "Für diesen Datensatz können wir {purposes} nicht starten. Wenn das nicht stimmt, antworten Sie auf eine unserer E-Mails — ein Mensch sieht nach.",
   "prefs.cannotGrantWhy": "F\u00fcr diesen Datensatz nicht aktivierbar.",
   "prefs.choiceNotApplied":
-    "Eine Ihrer Auswahlen wurde nicht \u00fcbernommen. Oben sehen Sie Ihre aktuellen Einstellungen.",
+    "Eine Ihrer Auswahlen wurde nicht übernommen. Oben sehen Sie Ihre aktuellen Einstellungen.",
   "prefs.confirmationSent":
-    "Fast geschafft: Bitte pr\u00fcfen Sie Ihre E-Mails und best\u00e4tigen Sie {purposes} \u00fcber den Link. Bis dahin startet dieses Abo nicht.",
+    "Fast geschafft: Bitte prüfen Sie Ihre E-Mails und bestätigen Sie {purposes} über den Link. Bis dahin startet dieses Abo nicht.",
   "prefs.confirmationUnavailable":
-    "Wir konnten die Best\u00e4tigungs-E-Mail f\u00fcr {purposes} nicht senden, daher wurde nichts gestartet. Bitte versuchen Sie es sp\u00e4ter erneut.",
+    "Wir konnten die Bestätigungs-E-Mail für {purposes} nicht senden, daher wurde nichts gestartet. Bitte versuchen Sie es später erneut.",
   "prefs.partialSave":
     "Beim Speichern ist etwas schiefgelaufen. Einige deiner Entscheidungen wurden möglicherweise schon übernommen — wir haben deinen aktuellen Stand neu geladen, damit du genau siehst, wo du stehst.",
   "prefs.wording.business_correspondence":
@@ -6726,7 +6728,7 @@ export const de = {
   "network.bucket.strong": "Stark",
   "coverage.engaged": "Im Austausch",
   "coverage.quiet": "Kein beidseitiger Kontakt",
-  "coverage.seatWithheld": "Ein Kontakt, den Sie nicht lesen dürfen",
+  "coverage.seatWithheld": "Ein Kontakt, den du nicht lesen darfst",
   "coverage.daysSinceTouch": "{days} Tage",
   "coverage.risk.single_threaded_theirs": "Nur ein Kontakt",
   "coverage.risk.single_threaded_ours": "Von einer Person getragen",
@@ -6819,37 +6821,36 @@ export const de = {
   // überschrift darüber sagt das Wort schon, und eine Zeile, die ihre eigene
   // Überschrift wiederholt, benennt nichts.
   "settings.home": "\u00dcbersicht",
-  "settings.home.yours": "Ihre Einstellungen",
-  "settings.home.manage": "Was Sie \u00e4ndern k\u00f6nnen",
-  "settings.home.lookUp": "Was Sie nachschlagen k\u00f6nnen",
-  "settings.home.rolesLabel": "Ihre Rolle",
-  "settings.home.seatLabel": "Ihr Sitzplatz",
-  "settings.home.seat.full":
-    "Voller Sitzplatz \u2014 Sie k\u00f6nnen \u00c4nderungen vornehmen",
+  "settings.home.yours": "Deine Einstellungen",
+  "settings.home.manage": "Was du ändern kannst",
+  "settings.home.lookUp": "Was du nachschlagen kannst",
+  "settings.home.rolesLabel": "Deine Rolle",
+  "settings.home.seatLabel": "Dein Sitzplatz",
+  "settings.home.seat.full": "Voller Sitzplatz: Du kannst Änderungen vornehmen",
   "settings.home.seat.read":
-    "Nur-Lese-Sitzplatz \u2014 Sie k\u00f6nnen sehen, nicht \u00e4ndern",
-  "settings.home.reachLabel": "Datens\u00e4tze, die Sie erreichen",
-  "settings.home.reach.own": "Ihre eigenen Datens\u00e4tze",
-  "settings.home.reach.team": "Die Datens\u00e4tze Ihres Teams",
+    "Nur-Lese-Sitzplatz: Du kannst sehen, nicht ändern",
+  "settings.home.reachLabel": "Datensätze, die du erreichst",
+  "settings.home.reach.own": "Deine eigenen Datensätze",
+  "settings.home.reach.team": "Die Datensätze deines Teams",
   "settings.home.reach.all": "Jeden Datensatz in der Firma",
-  "settings.home.access": "Ihr Zugriff",
+  "settings.home.access": "Dein Zugriff",
   "settings.boundary.deniedTitle":
-    "Diese Einstellungsseite steht Ihnen nicht offen",
+    "Diese Einstellungsseite steht dir nicht offen",
   "settings.boundary.deniedBody":
-    "Die Adresse in der Leiste ist eine echte Seite \u2014 Ihr Sitzplatz erreicht sie nicht. Sie bleibt stehen, damit Sie sie kopieren und jemanden fragen k\u00f6nnen, der sie erreicht.",
+    "Die Adresse in der Leiste ist eine echte Seite, die dein Sitzplatz nicht erreicht. Die Adresse bleibt stehen, damit du sie kopieren und jemanden fragen kannst, der sie erreicht.",
   "settings.boundary.unknownTitle": "Keine Einstellungsseite hat diese Adresse",
   "settings.boundary.unknownBody":
-    "Der Link stammt vielleicht aus einer \u00e4lteren Version oder ist vertippt. Die Einstellungs\u00fcbersicht listet jede Seite auf, die Ihr Sitzplatz \u00f6ffnen kann.",
+    "Der Link stammt vielleicht aus einer älteren Version oder ist vertippt. Die Einstellungsübersicht listet jede Seite auf, die dein Sitzplatz öffnen kann.",
   "settings.page.account.sub":
-    "Wie Sie erscheinen und sich anmelden \u2014 nur f\u00fcr Sie.",
+    "Wie du erscheinst und dich anmeldest, nur für dich.",
   "settings.page.voice.sub":
-    "Die Worte, die Entw\u00fcrfe verwenden, wenn sie in Ihrem Namen schreiben.",
+    "Die Worte, die Entwürfe verwenden, wenn sie in deinem Namen schreiben.",
   "settings.page.agents.sub":
-    "Was ein Agent unbeaufsichtigt tun darf und welche Clients Ihre Zugangsdaten halten.",
+    "Was ein Agent unbeaufsichtigt tun darf und welche Clients deine Zugangsdaten halten.",
   "settings.page.connections.sub":
     "Die Postf\u00e4cher und Adressen, aus denen dieser Sitzplatz liest.",
   "settings.page.capture-activity.sub":
-    "Was die Erfassung mit Ihrer Post getan hat, und warum.",
+    "Was die Erfassung mit deiner Post getan hat, und warum.",
   "settings.page.company.sub":
     "Name, W\u00e4hrung und Kontext, vor deren Hintergrund jeder Datensatz gelesen wird.",
   "settings.page.authentication.sub":
@@ -6902,16 +6903,15 @@ export const de = {
     "Die Einheiten, die dieser Build zusammengesetzt hat, und welche Rollen sie erreichen.",
   "settings.page.reset.sub":
     "Diese Installation leeren. Es gibt kein Zur\u00fcck.",
-  "settings.scope.self": "Nur Sie",
+  "settings.scope.self": "Nur du",
   "settings.scope.mixed": "Gemischt",
   "settings.scope.workspace": "Unternehmen",
   "settings.scope.installation": "Installation",
   "settings.scopeAria": "Wen diese Seite betrifft: {scope}",
   "settings.scopeAriaMixed":
     "Diese Seite enth\u00e4lt Einstellungen, die unterschiedliche Personen betreffen \u2014 jede sagt es selbst.",
-  "settings.readOnlyPageTitle":
-    "Diese Einstellungen k\u00f6nnen Sie nicht \u00e4ndern",
-  "settings.readOnlyPage": "Das \u00c4ndern geh\u00f6rt nicht zu Ihrer Rolle.",
+  "settings.readOnlyPageTitle": "Diese Einstellungen kannst du nicht ändern",
+  "settings.readOnlyPage": "Das Ändern gehört nicht zu deiner Rolle.",
   "settings.saveFailed": "Das wurde nicht gespeichert",
   "settings.mintFailed": "Dieser Passport wurde nicht erstellt",
   "settings.search.label": "Einstellungen durchsuchen",
@@ -6939,7 +6939,7 @@ export const de = {
   "settings.tab.audit": "Audit-Log",
   "settings.tab.system-health": "Systemzustand",
   "settings.tab.reset": "Daten zurücksetzen",
-  "settings.group.me": "Sie",
+  "settings.group.me": "Du",
   "settings.group.company": "Unternehmen",
   "settings.group.people": "Personen",
   "settings.group.sales": "Vertrieb",
@@ -6958,22 +6958,22 @@ export const de = {
   "settings.tab.data-model": "Datenmodell",
   "settings.tab.ai": "KI",
   "settings.tab.knowledge": "Wissen",
-  "corpusAsk.title": "Ihre Dokumente fragen",
+  "corpusAsk.title": "Deine Dokumente fragen",
   "corpusAsk.sub":
     "Eine Frage in eigenen Worten, beantwortet ausschließlich aus einer Dokumentensammlung dieser Firma. Was die Sammlung nicht abdeckt, wird abgelehnt statt geraten, und jeder Satz nennt die Textstelle, auf der er beruht.",
   "corpusAsk.whichSet": "Welche Sammlung",
-  "corpusAsk.question": "Ihre Frage",
+  "corpusAsk.question": "Deine Frage",
   "corpusAsk.submit": "Fragen",
   "corpusAsk.byModel": "Aus den Textstellen unten geschrieben",
   "corpusAsk.atLine": "Zeile {line}, Spalte {column}",
   "corpusAsk.byPassages":
     "Die Textstellen selbst — niemand hat eine Zusammenfassung geschrieben",
   "corpusAsk.notReady":
-    "Diese Sammlung ist noch nicht fertig eingelesen — {embedded} von {total} Abschnitten sind durchsuchbar. An Ihrer Frage liegt es nicht; versuchen Sie es gleich noch einmal.",
+    "Diese Sammlung ist noch nicht fertig eingelesen: {embedded} von {total} Abschnitten sind durchsuchbar. An deiner Frage liegt es nicht; versuche es gleich noch einmal.",
   "corpusAsk.retrievalUnavailable":
-    "Es wurde nichts durchsucht: in dieser Installation ist kein Suchindex eingerichtet, die Dokumente konnten also nicht angesehen werden. Das ist eine Frage der Einrichtung und liegt nicht an Ihrer Frage.",
+    "Es wurde nichts durchsucht: In dieser Installation ist kein Suchindex eingerichtet, die Dokumente konnten also nicht angesehen werden. Das ist eine Frage der Einrichtung und liegt nicht an deiner Frage.",
   "corpusAsk.unreviewed":
-    "Die Suche hat diese Textstellen als die zu Ihrer Frage passendsten gefunden. Gelesen hat sie niemand, also hat auch niemand beurteilt, ob sie die Frage beantworten.",
+    "Die Suche hat diese Textstellen als die zu deiner Frage passendsten gefunden. Gelesen hat sie niemand, also hat auch niemand beurteilt, ob sie die Frage beantworten.",
   "corpusAsk.failed": "Diese Frage wurde nicht beantwortet",
   "corpusAsk.unreviewedTitle": "Niemand hat diese Passagen gelesen",
   "corpusAsk.notReadyTitle": "Diese Sammlung wird noch gelesen",
@@ -6985,7 +6985,7 @@ export const de = {
   "knowledge.sub":
     "Textbestände, zu denen diese Firma befragt werden kann. Eine Antwort stammt ausschließlich aus dem, was hier abgelegt ist; eine Frage, die sie nicht abdecken, wird abgelehnt statt geraten.",
   "knowledge.withheld":
-    "Welche Dokumentensammlungen es gibt, dürfen Sie nicht sehen.",
+    "Welche Dokumentensammlungen es gibt, darfst du nicht sehen.",
   "knowledge.coverage":
     "{documents} Dokumente · {embedded} von {total} Abschnitten durchsuchbar",
   "knowledge.reindexingTitle": "Diese Sammlung wird neu gelesen",
@@ -7025,7 +7025,7 @@ export const de = {
   "knowledge.new.name": "Name",
   "knowledge.new.topic": "Was diese Sammlung abdeckt",
   "knowledge.new.topicHint":
-    "Schreiben Sie einen Satz, kein Schlagwort. Er wird demjenigen zitiert, dessen Frage diese Sammlung nicht abdeckt — also im ungeduldigsten Moment gelesen.",
+    "Schreibe einen Satz, kein Schlagwort. Er wird jedem gezeigt, dessen Frage diese Sammlung nicht abdeckt, also im ungeduldigsten Moment gelesen.",
   "knowledge.new.submit": "Sammlung anlegen",
   "knowledge.new.failed": "Die Sammlung wurde nicht angelegt",
   "settings.tab.privacy": "Datenschutz & Aufbewahrung",
@@ -7040,7 +7040,7 @@ export const de = {
   "verdictPass.running": "Ein Durchlauf läuft gerade.",
   "captureActivity.title": "Erfassungsaktivität",
   "captureActivity.sub":
-    "Was aus Ihrer Post der letzten 24 Stunden geworden ist. Die Absender, die Sie ausschließen, stehen darüber.",
+    "Was aus deiner Post der letzten 24 Stunden geworden ist. Die Absender, die du ausschließt, stehen darüber.",
   "captureActivity.scope.label": "Wessen Aktivität",
   "captureActivity.outcomes": "Ergebnisse",
   "captureActivity.messages": "Nachrichten",
@@ -7052,7 +7052,7 @@ export const de = {
     "{shown} von {total} {outcome} in diesem Zeitraum.",
   "captureActivity.openTrace": "Jeden Schritt dieser Nachricht ansehen",
   "captureActivity.emptyFiltered":
-    "keine der geladenen Zeilen passt — laden Sie mehr, um den Rest des Zeitraums zu erreichen",
+    "keine der geladenen Zeilen passt; lade mehr, um den Rest des Zeitraums zu erreichen",
   "captureActivity.loadMore": "Mehr laden",
   "captureActivity.empty":
     "keine Erfassungsaktivität in den letzten 24 Stunden",
@@ -7070,7 +7070,7 @@ export const de = {
   "captureActivity.funnel.deferred": "Wartet auf Entscheidung",
   "captureActivity.funnel.fault": "Fehlgeschlagen",
   "captureActivity.reason.internal_only":
-    "alle Beteiligten waren auf Ihren eigenen Domains",
+    "alle Beteiligten waren auf deinen eigenen Domains",
   "captureActivity.reason.deferral_capped":
     "das Limit offener Fragen war erreicht, es kommt keine Beurteilung",
   "captureActivity.reason.noise_prior":
@@ -7080,7 +7080,7 @@ export const de = {
   "captureActivity.reason.no_granting_human":
     "die Verbindung nannte kein Mitglied, für das gehandelt werden kann",
   "captureActivity.reason.invisible_incumbent":
-    "sie traf auf einen Datensatz außerhalb Ihrer Sicht",
+    "sie traf auf einen Datensatz außerhalb deiner Sicht",
   "captureActivity.reason.derivation_failed":
     "der Schritt zum Kontakt schlug fehl; die Nachricht selbst ist unberührt",
   "captureActivity.reason.no_counterparty":
@@ -7088,9 +7088,9 @@ export const de = {
   "captureActivity.reason.role_mailbox":
     "ein Sammelpostfach, keine Person — gespeichert, aber kein Kontakt angelegt",
   "captureActivity.reason.private_thread":
-    "ein privater Austausch — für Sie gespeichert, aber kein Kontakt angelegt",
+    "ein privater Austausch, für dich gespeichert, aber kein Kontakt angelegt",
   "captureActivity.reason.transactional_infra":
-    "der Absender ist Mail-Infrastruktur, kein Unternehmen, mit dem Sie arbeiten",
+    "der Absender ist Mail-Infrastruktur, kein Unternehmen, mit dem du arbeitest",
   "captureActivity.reason.transactional_prefix":
     "der Absender wirkt wie ein automatischer Versender, keine Person",
   "captureActivity.outcome.deferred_capped": "Nicht eingereiht",
@@ -7116,7 +7116,7 @@ export const de = {
   "pipeline.status.not_applicable": "Nicht zutreffend",
   "pipeline.status.unknown": "Nicht feststellbar",
   "pipeline.reason.record_not_available":
-    "der Eintrag zu diesem Schritt wird nicht mehr aufbewahrt, oder er ist nicht für Sie lesbar — ist der Eintrag fort, lässt sich beides nicht mehr unterscheiden",
+    "der Eintrag zu diesem Schritt wird nicht mehr aufbewahrt, oder er ist nicht für dich lesbar; ist der Eintrag fort, lässt sich beides nicht mehr unterscheiden",
   "pipeline.status.not_reported": "Hier nicht ausgewiesen",
   "pipeline.subject.message": "zu dieser Nachricht",
   "pipeline.subject.sender": "zum Absender, nicht nur zu dieser Nachricht",
@@ -7135,11 +7135,11 @@ export const de = {
   "pipeline.stage.material_events": "Gesprächsauswertung",
   "pipeline.stage.claim_extraction": "Zusagen und offene Punkte",
   "pipeline.reason.internal_only":
-    "alle Beteiligten lagen auf Ihren eigenen Domains",
+    "alle Beteiligten lagen auf deinen eigenen Domains",
   "pipeline.reason.invisible_incumbent":
-    "sie passte zu einem Datensatz außerhalb Ihrer Sicht",
+    "sie passte zu einem Datensatz außerhalb deiner Sicht",
   "pipeline.reason.transactional_infra":
-    "der Absender ist Mail-Infrastruktur, kein Unternehmen, mit dem Sie arbeiten",
+    "der Absender ist Mail-Infrastruktur, kein Unternehmen, mit dem du arbeitest",
   "pipeline.reason.transactional_prefix":
     "der Absender wirkt wie ein automatischer Versender, nicht wie eine Person",
   "pipeline.reason.deferral_capped":
@@ -7153,7 +7153,7 @@ export const de = {
   "pipeline.reason.role_mailbox":
     "ein Sammelpostfach, keine Person — gespeichert, aber kein Kontakt angelegt",
   "pipeline.reason.private_thread":
-    "ein privater Austausch — für Sie gespeichert, aber kein Kontakt angelegt",
+    "ein privater Austausch, für dich gespeichert, aber kein Kontakt angelegt",
   "pipeline.reason.no_granting_human":
     "die Verbindung nennt kein Mitglied, in dessen Namen gehandelt wird",
   "pipeline.reason.derivation_failed":
@@ -7262,7 +7262,7 @@ export const de = {
   "license.holder.id": "Lizenz-ID",
   "license.grace.title": "Diese Lizenz ist abgelaufen",
   "license.grace.body":
-    "Die Lizenz ist am {expiry} abgelaufen. Sie funktioniert noch, für einen begrenzten Zeitraum. Erneuern Sie die Lizenz, damit die Installation in Betrieb bleibt.",
+    "Die Lizenz ist am {expiry} abgelaufen, funktioniert aber noch für einen begrenzten Zeitraum. Erneuere sie, damit die Installation in Betrieb bleibt.",
   "license.renewal.title": "Diese Lizenz braucht eine Erneuerung",
   "license.renewal.body":
     "Die Lizenz läuft am {expiry} ab. Vor diesem Datum ändert sich nichts.",
@@ -7305,7 +7305,7 @@ export const de = {
   "settings.rates.colCacheWrite": "Cache-Schreiben $/M",
   "settings.voice.title": "Voice DNA",
   "settings.voice.intro":
-    "Deine persönliche Schreibstimme. Sie prägt Entwürfe, die für dich gemacht werden, bleibt privat und lernt nur aus Quellen, die du hinzufügst.",
+    "Deine persönliche Schreibstimme prägt Entwürfe, die für dich gemacht werden, bleibt nur für dich sichtbar und lernt nur aus Quellen, die du hinzufügst.",
   "settings.voice.readOnly":
     "Nur-Lese-Ansicht — du hast keine Berechtigung, deine Voice DNA zu ändern.",
   "settings.voice.emptyBody":
@@ -7373,7 +7373,7 @@ export const de = {
   "voice.candidate.title":
     "Eine neue Voice-Version (v{n}) ist fertig — lies sie, bevor du sie verwendest.",
   "voice.candidate.whatItIs":
-    "Das hat der Build aus deinen Proben gelernt. Sie ist noch nicht im Einsatz: Es wird nichts in dieser Stimme entworfen, bevor du sie auswählst.",
+    "Das hat der Build aus deinen Proben gelernt. Diese Stimme ist noch nicht im Einsatz: Es wird nichts darin entworfen, bevor du sie auswählst.",
   "voice.candidate.reviewLabel":
     "Was diese Version über deinen Schreibstil sagt",
   "voice.candidate.concernsLabel":
@@ -7478,9 +7478,9 @@ export const de = {
   "extAccess.sub":
     "Was jede zusammengesetzte Erweiterungseinheit in diese Installation eingebracht hat und welche Rolle sie nutzen darf. Nur für Admins.",
   "extAccess.adminOnly":
-    "Diese Seite braucht die Berechtigung, die Erweiterungen der Installation und ihre Rollen zu lesen. Ihr Sitzplatz hat nur eine davon oder keine.",
+    "Diese Seite braucht die Berechtigung, die Erweiterungen der Installation und ihre Rollen zu lesen. Dein Sitzplatz hat nur eine davon oder keine.",
   "extAccess.readOnly":
-    "Ihr Sitzplatz liest diese Seite. Eine Berechtigung zu ändern erfordert einen vollen Sitzplatz.",
+    "Dein Sitzplatz liest diese Seite. Eine Berechtigung zu ändern erfordert einen vollen Sitzplatz.",
   "extAccess.empty":
     "In diese Installation ist keine Erweiterungseinheit eingebunden.",
   "extAccess.version": "Version {version}",
@@ -7502,26 +7502,26 @@ export const de = {
   "extAccess.matrixCaption": "Wer darf was mit {object}",
   "extAccess.cell": "{role} darf {object} {action}",
   "extAccess.versionSkew":
-    "Jemand anderes hat diese Rolle geändert, während Sie sie ansahen — Ihre Änderung wurde nicht übernommen. Oben stehen jetzt die aktuellen Berechtigungen; nehmen Sie die Änderung erneut vor, wenn Sie sie weiterhin wollen.",
+    "Jemand anderes hat diese Rolle geändert, während du sie angesehen hast, deshalb wurde deine Änderung nicht übernommen. Oben stehen jetzt die aktuellen Berechtigungen; nimm die Änderung erneut vor, wenn du sie weiterhin willst.",
   "extAccess.systemRole": "Eingebaute Rolle",
   "extAccess.readOnlyTitle": "Nur Lesezugriff für diesen Sitzplatz",
   "extAccess.nobodyReadsTitle": "Niemand kann diese Erweiterung lesen",
   "extAccess.grantFailed": "Die Berechtigung wurde nicht geändert",
   "extAccess.nobodyReads":
-    "Keine Rolle darf {object} lesen — jedes Mitglied sieht dort eine leere Seite, wo diese Erweiterung stehen sollte. Vergeben Sie unten mindestens einer Rolle das Leserecht.",
+    "Keine Rolle darf {object} lesen, deshalb sieht jedes Mitglied dort eine leere Seite, wo diese Erweiterung stehen sollte. Vergib unten mindestens einer Rolle das Leserecht.",
   "users.empty": "Noch keine Benutzer.",
-  "users.adminOnly": "Sie haben keine Berechtigung, Benutzer zu verwalten.",
+  "users.adminOnly": "Du hast keine Berechtigung, Benutzer zu verwalten.",
   "users.inviteTitle": "Benutzer einladen",
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "Noch keine Teams.",
   "users.teamMembersLabel": "Wer in diesem Team ist",
   "users.teamMembersAdminOnly":
-    "Sie haben keine Berechtigung zu sehen, wer in diesem Team ist.",
+    "Du hast keine Berechtigung zu sehen, wer in diesem Team ist.",
   "users.teamNobodyToAdd": "Noch keine Benutzer zum Hinzufügen.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
-    "Benannte Gruppen, mit denen Sie Datensätze teilen können. Die Mitgliedschaft allein gewährt den meisten Rollen weiterhin keinen Zugriff — Ausnahme ist die Teamleitung: wird sie einem Team hinzugefügt, kann sie dessen Datensätze lesen und bearbeiten, ohne dass eine Freigabe eingerichtet wird.",
-  "users.teamsAdminOnly": "Sie haben keine Berechtigung, Teams zu verwalten.",
+    "Benannte Gruppen, mit denen du Datensätze teilen kannst. Die Mitgliedschaft allein gewährt den meisten Rollen weiterhin keinen Zugriff. Ausnahme ist die Teamleitung: Wird sie einem Team hinzugefügt, kann sie dessen Datensätze lesen und bearbeiten, ohne dass eine Freigabe eingerichtet wird.",
+  "users.teamsAdminOnly": "Du hast keine Berechtigung, Teams zu verwalten.",
   "users.deactivated": "{name} deaktiviert",
   "users.reactivated": "{name} reaktiviert",
   "users.roleSaved": "Rolle für {name} geändert",
@@ -7620,12 +7620,12 @@ export const de = {
   "settings.companyConfirmed": "bestätigte Aussagen",
   "settings.companyMark": "Firmenlogo",
   "settings.companyMarkIntro":
-    "Zwei Marken, denn die Seitenleiste zeigt Ihr Unternehmen in zwei Breiten. Füllen Sie die breite, nutzt die eingeklappte Seitenleiste sie ebenfalls — bis Sie ein quadratisches Symbol hinzufügen.",
+    "Zwei Marken, denn die Seitenleiste zeigt dein Unternehmen in zwei Breiten. Füllst du die breite, nutzt die eingeklappte Seitenleiste sie ebenfalls, bis du ein quadratisches Symbol hinzufügst.",
   "settings.companyMarkWide": "Breites Logo",
   "settings.companyMarkWidePresent":
     "Wird hier und als Hauptmarke oben in der geöffneten Seitenleiste gezeigt.",
   "settings.companyMarkWideNone":
-    "Noch kein Logo, deshalb stehen die Initialen dafür. Ein Website-Auslesen kann es ergänzen, oder Sie laden hier eines hoch.",
+    "Noch kein Logo, deshalb stehen die Initialen dafür. Ein Website-Auslesen kann es ergänzen, oder du lädst hier eines hoch.",
   "settings.companyMarkIcon": "Quadratisches Symbol",
   "settings.companyMarkIconPresent":
     "Wird in der eingeklappten Seitenleiste gezeigt, wo das breite Logo zu klein zum Lesen wäre.",
@@ -7790,7 +7790,7 @@ export const de = {
   "aicalls.withheld":
     "Nur ein Betreiber liest die Aufrufspur. Sie verzeichnet jeden Modellaufruf dieser Installation und wird deshalb nicht breiter gezeigt.",
   "aiHealth.withheld":
-    "Nur ein Betreiber sieht, ob die Modellstufen antworten. Das ist die Verkabelung der Installation, keine Aussage über Ihre Arbeit.",
+    "Nur ein Betreiber sieht, ob die Modellstufen antworten. Das ist die Verkabelung der Installation, keine Aussage über deine Arbeit.",
   "aicalls.sub":
     "Jeder Modellaufruf — Routing, Tokens, Wiederholungen und erfasste Nutzdaten.",
   "aicalls.col.detail": "Detail",
@@ -7824,7 +7824,7 @@ export const de = {
   "aiexport.title": "Lauf als Zertifizierungsszenario exportieren",
   "aiexport.nameLabel": "Szenarioname",
   "aiexport.checklist":
-    "Geheimnisse wurden bei der Erfassung entfernt. Personenbezogene Daten NICHT — prüfen und entfernen Sie PII und ersetzen Sie anschließend sanitized_by, bevor Sie die Datei in den Korpus übernehmen.",
+    "Geheimnisse wurden bei der Erfassung entfernt. Personenbezogene Daten NICHT: Prüfe und entferne PII und ersetze anschließend sanitized_by, bevor du die Datei in den Korpus übernimmst.",
   "aiexport.copy": "YAML kopieren",
   "aiexport.copied": "Kopiert",
   "aiexport.download": ".yaml herunterladen",
@@ -7856,13 +7856,13 @@ export const de = {
   "installationSettings.timeFormat.12h": "12 Stunden · 05:30 PM",
   "installationSettings.name": "Name der Firma",
   "installationSettings.nameHint":
-    "Wird überall dort angezeigt, wo das Produkt Ihre Firma benennt.",
+    "Wird überall dort angezeigt, wo das Produkt deine Firma benennt.",
   "installationSettings.timezone": "Zeitzone für Auswertungen",
   "installationSettings.timezoneHint":
-    "IANA-Zonenname (zum Beispiel Europe/Berlin). Die Uhr Ihrer Firma: Periodengrenzen aller Auswertungen werden darin berechnet, und jedes Datum eines Datensatzes — Abschlusstermine, Rechnungstage, Verlaufsüberschriften — wird darin angezeigt, damit ein Datum für das ganze Team gleich lautet. Unabhängig von Ihrer eigenen Anzeigezeitzone.",
+    "IANA-Zonenname (zum Beispiel Europe/Berlin). Die Uhr deiner Firma: Periodengrenzen aller Auswertungen werden darin berechnet, und jedes Datum eines Datensatzes (Abschlusstermine, Rechnungstage, Verlaufsüberschriften) wird darin angezeigt, damit ein Datum für das ganze Team gleich lautet. Unabhängig von deiner eigenen Anzeigezeitzone.",
   "installationSettings.fiscalYearStart": "Geschäftsjahr beginnt",
   "installationSettings.fiscalYearStartHint":
-    "Der Monat, in dem Ihr Geschäftsjahr beginnt. Auswertungen gruppieren nach diesem Jahr und Quartal — ein Jahr, das nicht im Januar beginnt, wird mit beiden Kalenderjahren benannt, die es umfasst, etwa FY2026/27. Eine Änderung benennt alle Auswertungen sofort neu, und eine gespeicherte Ansicht mit Periodenfilter fragt danach andere Monate ab.",
+    "Der Monat, in dem dein Geschäftsjahr beginnt. Auswertungen gruppieren nach diesem Jahr und Quartal: Ein Jahr, das nicht im Januar beginnt, wird mit beiden Kalenderjahren benannt, die es umfasst, etwa FY2026/27. Eine Änderung benennt alle Auswertungen sofort neu, und eine gespeicherte Ansicht mit Periodenfilter fragt danach andere Monate ab.",
   "installationSettings.forwardMeasure":
     "Prognostizierter Abschluss beruht auf",
   "installationSettings.forwardMeasureHint":
@@ -7900,7 +7900,7 @@ export const de = {
     "Gesperrt: Es wurden bereits Beträge gegen diese Währung umgerechnet — eine Änderung würde jede darauf aufbauende Auswertung neu bedeuten.",
   "installationSettings.baseLanguage": "Basissprache",
   "installationSettings.baseLanguageHint":
-    "Die Sprache, in der die KI schreibt, wenn das ganze Team mitliest. Ihre eigene Anzeigesprache ist davon getrennt, und Antworten an Kunden folgen weiterhin der Sprache des Gesprächs.",
+    "Die Sprache, in der die KI schreibt, wenn das ganze Team mitliest. Deine eigene Anzeigesprache ist davon getrennt, und Antworten an Kunden folgen weiterhin der Sprache des Gesprächs.",
   "installationSettings.saveFailed": "Es wurde nichts gespeichert",
   "installationSettings.readOnly":
     "Nur ein Admin oder Ops kann diese Einstellungen ändern.",
@@ -7922,11 +7922,11 @@ export const de = {
     "Für diese Installation ist kein externer Anbieter konfiguriert, daher steht außer dem Passwort nichts zur Auswahl.",
   "oauthApp.google.title": "Google-App",
   "oauthApp.google.sub":
-    "Postfächer werden über eine eigene Google-OAuth-App verbunden, und die Anmeldung mit Google läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Firma verwendet und nicht unsere.",
+    "Postfächer werden über eine eigene Google-OAuth-App verbunden, und die Anmeldung mit Google läuft ebenfalls darüber. Dabei werden die Zugangsdaten deiner Firma verwendet und nicht unsere.",
   "oauthApp.google.absent":
     "Aus keiner Quelle ist eine App verfügbar. Gmail und Kalender lassen sich nicht verbinden, und die Anmeldung mit Google kann nicht angeboten werden.",
   "oauthApp.google.redirectSub":
-    "Tragen Sie jede der folgenden URIs beim OAuth-Client in der Google Console ein. Fehlt eine, scheitert die Zustimmung mit redirect_uri_mismatch, ohne zu nennen, welche URI falsch war.",
+    "Trage jede der folgenden URIs beim OAuth-Client in der Google Console ein. Fehlt eine, scheitert die Zustimmung mit redirect_uri_mismatch, ohne zu nennen, welche URI falsch war.",
   "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "oauthApp.google.removeConfirmTitle": "Google-App entfernen?",
@@ -7934,11 +7934,11 @@ export const de = {
     "Das Client-Secret lässt sich nicht wieder auslesen. Nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Gmail- und Kalender-Verbindungen laufen über diese App. Microsoft- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt wieder danach.",
   "oauthApp.microsoft.title": "Microsoft-App",
   "oauthApp.microsoft.sub":
-    "Outlook-Postfächer und -Kalender werden über eine eigene Entra-App-Registrierung verbunden, und die Anmeldung mit Microsoft läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Firma verwendet und nicht unsere.",
+    "Outlook-Postfächer und -Kalender werden über eine eigene Entra-App-Registrierung verbunden, und die Anmeldung mit Microsoft läuft ebenfalls darüber. Dabei werden die Zugangsdaten deiner Firma verwendet und nicht unsere.",
   "oauthApp.microsoft.absent":
     "Aus keiner Quelle ist eine App verfügbar. Outlook-Mail und -Kalender lassen sich nicht verbinden, und die Anmeldung mit Microsoft kann nicht angeboten werden.",
   "oauthApp.microsoft.redirectSub":
-    "Tragen Sie jede der folgenden URIs in der Entra-App-Registrierung unter Authentifizierung als Web-Plattform ein. Fehlt eine, scheitert die Zustimmung mit AADSTS50011, ohne zu nennen, welche URI falsch war.",
+    "Trage jede der folgenden URIs in der Entra-App-Registrierung unter Authentifizierung als Web-Plattform ein. Fehlt eine, scheitert die Zustimmung mit AADSTS50011, ohne zu nennen, welche URI falsch war.",
   "oauthApp.microsoft.clientIdPlaceholder":
     "00000000-0000-0000-0000-000000000000",
   "oauthApp.microsoft.removeConfirmTitle": "Microsoft-App entfernen?",
@@ -7964,20 +7964,20 @@ export const de = {
   "oauthApp.clientSecret": "Client-Secret",
   "oauthApp.tenant": "Verzeichnis-ID (Mandant)",
   "oauthApp.tenantHint":
-    "Optional. Bindet die App an ein einzelnes Entra-Verzeichnis: Nur dessen Mitglieder können ein Postfach verbinden, und die Microsoft-Anmeldung läuft darüber. Leer lassen, damit jede Firma verbinden kann; die Anmeldung wartet dann darauf, dass der Server Ihre Verzeichnisse benennt.",
+    "Optional. Bindet die App an ein einzelnes Entra-Verzeichnis: Nur dessen Mitglieder können ein Postfach verbinden, und die Microsoft-Anmeldung läuft darüber. Leer lassen, damit jede Firma verbinden kann; die Anmeldung wartet dann darauf, dass der Server deine Verzeichnisse benennt.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "oauthApp.saveFailed": "Die App wurde nicht gespeichert",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
   "firstRun.ai.sub":
-    "Margince hat keine eigene KI. Das Denken läuft über Ihr Anbieterkonto, und alles davon lässt sich später unter Einstellungen → KI ändern.",
+    "Margince hat keine eigene KI. Das Denken läuft über dein Anbieterkonto, und alles davon lässt sich später unter Einstellungen → KI ändern.",
   "firstRun.ai.provider": "Anbieter",
   "firstRun.ai.key": "API-Schlüssel",
   "firstRun.ai.keyHint":
     "Im Schlüsseltresor versiegelt, danach nie wieder sichtbar.",
   "firstRun.ai.chatModel": "Modell",
   "firstRun.ai.modelHint":
-    "Ein Ausgangspunkt. Jedes Modell, das Ihr Anbieter bedient, ist möglich.",
+    "Ein Ausgangspunkt. Jedes Modell, das dein Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
   "firstRun.ai.keyFailed": "Der Schlüssel wurde nicht verwahrt",
   "firstRun.ai.bindFailed": "Der Anbieter wurde nicht gebunden",
@@ -8046,14 +8046,14 @@ export const de = {
     "Nur wer die Modellbindung ändern darf, sieht, welche Modelle diese Installation verwendet.",
   "aiRouting.title": "Modell-Routing",
   "aiRouting.sheetAsOf":
-    "Die Modelllisten sind die Preisliste mit Stand {date}. Jede neuere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",
+    "Die Modelllisten sind die Preisliste mit Stand {date}. Jede neuere ID, die dein Anbieter bedient, funktioniert ebenfalls: einfach eintippen.",
   "aiRouting.sheetUnknown":
-    "Die Modelllisten stammen aus der Preisliste, die Sie nicht einsehen dürfen. Jede ID, die Ihr Anbieter bedient, funktioniert — einfach eintippen.",
+    "Die Modelllisten stammen aus der Preisliste, die du nicht einsehen darfst. Jede ID, die dein Anbieter bedient, funktioniert: einfach eintippen.",
   "aiRouting.unboundTitle": "Noch sind keine Modelle gebunden",
   "aiRouting.unboundUnkeyed":
-    "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Hinterlegen Sie unten einen Modellanbieter-Schlüssel und binden Sie die Stufen anschließend hier. Eine Bereitstellung kann die erste Bindung auch unter seeds.ai_routing in margince.yaml deklarieren; diese wird einmalig beim Anlegen der Firma gelesen.",
+    "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Hinterlege unten einen Modellanbieter-Schlüssel und binde die Stufen anschließend hier. Eine Bereitstellung kann die erste Bindung auch unter seeds.ai_routing in margince.yaml deklarieren; diese wird einmalig beim Anlegen der Firma gelesen.",
   "aiRouting.unboundKeyed":
-    "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Beginnen Sie mit den Vorgaben eines hinterlegten Anbieters, passen Sie sie an und speichern Sie.",
+    "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Beginne mit den Vorgaben eines hinterlegten Anbieters, passe sie an und speichere.",
   "aiRouting.unboundStart": "Mit {provider} beginnen",
   "aiRouting.profile.card": "Bereitstellungsprofil",
   "aiRouting.profile.label": "Standort",
@@ -8072,7 +8072,7 @@ export const de = {
   "aiRouting.models.noKey":
     "Nur die Preisliste — dieser Anbieter hat keinen Schlüssel und kann nicht gefragt werden, was er bedient. Jede ID, die er bedient, funktioniert trotzdem: eintippen.",
   "aiRouting.models.noEndpoint":
-    "Nur die Preisliste — tragen Sie oben den Host ein, dann kann dieser Anbieter gefragt werden. Jede ID, die er bedient, funktioniert trotzdem: eintippen.",
+    "Nur die Preisliste: Trage oben den Host ein, dann kann dieser Anbieter gefragt werden. Jede ID, die er bedient, funktioniert trotzdem, einfach eintippen.",
   "aiRouting.models.profileForbids":
     "Nur die Preisliste — dieses Bereitstellungsprofil erlaubt es nicht, diesen Anbieter zu erreichen.",
   "aiRouting.models.notPublished":
@@ -8081,7 +8081,7 @@ export const de = {
     "Nur die Preisliste — dieser Anbieter hat nicht geantwortet. Jede ID, die er bedient, funktioniert trotzdem: eintippen.",
   "aiRouting.model.label": "Modell",
   "aiRouting.model.help":
-    "Aufgeführt sind die Modelle, für die diese Installation Preise kennt — je Million Token, Eingabe → Ausgabe. Jede andere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",
+    "Aufgeführt sind die Modelle, für die diese Installation Preise kennt, je Million Token, Eingabe → Ausgabe. Jede andere ID, die dein Anbieter bedient, funktioniert ebenfalls: einfach eintippen.",
   "aiRouting.save": "Routing speichern",
   "aiRouting.saving": "Bindung wird gespeichert…",
   "aiRouting.savedTitle": "Routing gespeichert",
@@ -8141,7 +8141,7 @@ export const de = {
     "Wenn aktiviert, erhält jedes aus erfassten E-Mails erstellte Unternehmen automatisch ein Web-Dossier — seine Website wird gelesen und sein Profil ausgefüllt. Läuft unter einem Tageslimit.",
   "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails auswerten",
   "captureSettings.signatureEnrich.help":
-    "Wenn aktiv, übernimmt Margince, was eine Person in E-Mails an Sie unter ihrem eigenen Namen angibt — in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Firma; ein Postfach mit eigener Einstellung behält sie.",
+    "Wenn aktiv, übernimmt Margince, was eine Person in E-Mails an dich unter ihrem eigenen Namen angibt: in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Firma; ein Postfach mit eigener Einstellung behält sie.",
   "captureSettings.removeFailed":
     "Dieser Ausschluss konnte nicht entfernt werden",
   "captureSettings.addFailed":
@@ -8153,26 +8153,26 @@ export const de = {
   "ownDomains.companyTitle": "Unternehmens-Domains",
   "captureExclusions.title": "Nicht erfassen",
   "captureExclusions.sub":
-    "Adressen und Domains, deren Nachrichten gar nicht erst ins CRM gelangen. Eigene Regeln gelten nur für die Postfächer, die Sie selbst verbunden haben; Regeln der Firma gelten für alle.",
+    "Adressen und Domains, deren Nachrichten gar nicht erst ins CRM gelangen. Eigene Regeln gelten nur für die Postfächer, die du selbst verbunden hast; Regeln der Firma gelten für alle.",
   "captureExclusions.notRetroactive":
     "Wirkt ab der nächsten Nachricht. Bereits erfasste Nachrichten bleiben.",
   "captureExclusions.current": "Geltende Regeln",
   "captureExclusions.empty": "Keine Ausschlüsse.",
-  "ownerIdentities.title": "Ihre weiteren Adressen",
+  "ownerIdentities.title": "Deine weiteren Adressen",
   "ownerIdentities.sub":
-    "Adressen, die auch Sie sind: ein Alias zum Senden, eine private Domain, die Sie lesen, eine Adresse, von der Sie weiterleiten. Post zwischen Ihren eigenen Adressen ist keine Korrespondenz mit jemandem — sie wird nicht erfasst und wird nie ein Kontakt.",
+    "Adressen, die auch du bist: ein Alias zum Senden, eine private Domain, die du liest, eine Adresse, von der du weiterleitest. Post zwischen deinen eigenen Adressen ist keine Korrespondenz mit jemandem, wird also nicht erfasst und wird nie ein Kontakt.",
   "ownerIdentities.add": "Adresse hinzufügen",
-  "ownerIdentities.addLabel": "Eine weitere Adresse als Ihre eigene angeben",
+  "ownerIdentities.addLabel": "Eine weitere Adresse als deine eigene angeben",
   "ownerIdentities.addDescription":
-    "Nur Ihre. Kolleginnen und Kollegen sehen nie, was Sie hier eintragen.",
+    "Nur deine. Kolleginnen und Kollegen sehen nie, was du hier einträgst.",
   "ownerIdentities.current": "Angegeben",
   "ownerIdentities.notRetroactive":
-    "Gilt ab der nächsten Nachricht. Bereits erfasste Post bleibt, und ein aus einem Alias entstandener Kontakt bleibt, bis Sie ihn zusammenführen oder entfernen.",
-  "ownerIdentities.empty": "Sie haben keine weiteren Adressen angegeben.",
+    "Gilt ab der nächsten Nachricht. Bereits erfasste Post bleibt, und ein aus einem Alias entstandener Kontakt bleibt, bis du ihn zusammenführst oder entfernst.",
+  "ownerIdentities.empty": "Du hast keine weiteren Adressen angegeben.",
   "ownerIdentities.remove": "Diese Adresse zurückziehen",
   "ownerIdentities.added": "Adresse hinzugefügt.",
   "ownerIdentities.confirm": "Hinzufügen",
-  "ownerIdentities.kindLabel": "Was geben Sie an?",
+  "ownerIdentities.kindLabel": "Was gibst du an?",
   "ownerIdentities.kind.address": "Eine Adresse",
   "ownerIdentities.learned.deliveredTo":
     "Automatisch gefunden — Mail an diese Adresse landet in deinem verbundenen Postfach. Entfern sie, wenn das nicht du bist.",
@@ -8252,7 +8252,7 @@ export const de = {
   "webhooks.secret.copyFailed": "Wähle ihn oben aus und kopiere ihn von Hand.",
   "webhooks.secret.done": "Fertig",
   "webhooks.secret.leaveWarning":
-    "Beim Verlassen wird die einzige Kopie dieses Secrets vernichtet. Kopieren Sie es zuerst.",
+    "Beim Verlassen wird die einzige Kopie dieses Secrets vernichtet. Kopiere es zuerst.",
 
   "webhooks.deliveries.show": "Zustellungen anzeigen",
   "webhooks.deliveries.hide": "Zustellungen ausblenden",
@@ -8351,9 +8351,9 @@ export const de = {
   "contact.thin.known":
     "Wir haben {what} zu {name}, aber niemand hier hat bisher einen erfassten Austausch mit ihnen.",
   "contact.thin.remediation.capture":
-    "Verbinden Sie das Postfach, das mit ihnen schreibt - dann fuellt sich diese Seite von selbst, jedes Feld mit seiner Quelle.",
+    "Verbinde das Postfach, das mit ihnen schreibt, dann füllt sich diese Seite von selbst, jedes Feld mit seiner Quelle.",
   "contact.thin.remediation.employer":
-    "Hinterlegen Sie den Arbeitgeber, dann liest Margince dessen Website nach ihrer Rolle.",
+    "Hinterlege den Arbeitgeber, dann liest Margince dessen Website nach ihrer Rolle.",
   "contact.thin.logFirst": "Ersten Kontakt erfassen",
   "contact.enriched.title": "Was Margince gelesen hat",
   "contact.confirm.title_one": "{count} Angabe zu bestätigen",
@@ -8373,7 +8373,7 @@ export const de = {
   "contact.enriched.readFrom": "Gelesen aus {source} am {when}",
   "contact.enriched.undo": "Rückgängig",
   "contact.enriched.replaced": "Ersetzt „{was}“ — der ältere Stand.",
-  "contact.enriched.correctedByYou": "Von Ihnen korrigiert",
+  "contact.enriched.correctedByYou": "Von dir korrigiert",
   "contact.enriched.confirmed": "Best\u00e4tigt",
   "contact.enriched.confirm": "Das stimmt",
   "contact.enriched.save": "Korrektur speichern",
@@ -8382,9 +8382,9 @@ export const de = {
   "contact.graph.routeDirect": "{name} steht bereits im Austausch mit ihnen.",
   "contact.graph.routeVia":
     "{name} steht im Austausch mit {through} im selben Unternehmen.",
-  "contact.graph.routeDirectYou": "Sie stehen bereits im Austausch mit ihnen.",
+  "contact.graph.routeDirectYou": "Du stehst bereits im Austausch mit ihnen.",
   "contact.graph.routeViaYou":
-    "Sie stehen im Austausch mit {through} im selben Unternehmen.",
+    "Du stehst im Austausch mit {through} im selben Unternehmen.",
   "contact.graph.noRoute":
     "Bisher steht hier niemand im Austausch mit ihnen oder mit jemandem in ihrem Unternehmen.",
   "contact.graph.noDirect": "Hier hat niemand mit ihnen korrespondiert.",
@@ -8408,7 +8408,7 @@ export const de = {
   "contact.intro.leadRouteBadge": "Starker Weg",
   "contact.intro.heroDirect": "kennt den Kontakt direkt",
   "contact.intro.heroIndirect": "erreicht sie über {through}",
-  "contact.intro.heroYou": "Sie",
+  "contact.intro.heroYou": "Du",
   "contact.intro.heroDirectYou": "kennen den Kontakt direkt",
   "contact.intro.heroIndirectYou": "erreichen sie über {through}",
   "contact.intro.factReciprocal": "Wechselseitig",
@@ -8422,16 +8422,16 @@ export const de = {
     "{name} fragen — hat geschrieben, bisher ohne Antwort.",
   "contact.intro.verdictVia":
     "{name} fragen — erreicht den Kontakt über {through}.",
-  "contact.intro.verdictDirectYou": "Sie schreiben sich bereits.",
+  "contact.intro.verdictDirectYou": "Ihr schreibt euch bereits.",
   "contact.intro.verdictOneSidedYou":
-    "Sie haben geschrieben, bisher ohne Antwort.",
-  "contact.intro.verdictViaYou": "Sie erreichen den Kontakt über {through}.",
-  "contact.intro.ownRouteNoAsk": "Niemanden zu fragen — schreiben Sie selbst.",
+    "Du hast geschrieben, bisher ohne Antwort.",
+  "contact.intro.verdictViaYou": "Du erreichst den Kontakt über {through}.",
+  "contact.intro.ownRouteNoAsk": "Niemanden zu fragen: Schreibe ihnen selbst.",
   "contact.intro.evidenceEyebrow": "Die Belege dahinter",
   "contact.intro.evidenceExchanges": "Austausche",
   "contact.intro.evidenceWindow": "in 90 Tagen",
   "contact.intro.evidenceFrom": "{count} von {name}",
-  "contact.intro.evidenceFromYou": "{count} von Ihnen",
+  "contact.intro.evidenceFromYou": "{count} von dir",
   "contact.intro.evidenceLastContact": "Letzter Kontakt",
   "contact.intro.lastToday": "Heute",
   "contact.intro.lastYesterday": "Gestern",
@@ -8464,10 +8464,10 @@ export const de = {
   "contact.intro.ownerNobody": "niemand",
   "contact.intro.relayTitle": "Stand der Vorstellung",
   "contact.intro.stepRoute": "Weg wählen",
-  "contact.intro.stepRoutePick": "wen Sie fragen",
+  "contact.intro.stepRoutePick": "wen du fragst",
   "contact.intro.stepRequest": "Anfrage",
   "contact.intro.stepNotSent": "nicht gesendet",
-  "contact.intro.stepAwaitingAnswer": "wartet auf Ihre Kollegin",
+  "contact.intro.stepAwaitingAnswer": "wartet auf deine Kollegin",
   "contact.intro.stepIntroduction": "Vorstellung",
   "contact.intro.stepNameDrop": "Name genannt",
   "contact.intro.stepWaiting": "wartet",
@@ -8478,9 +8478,9 @@ export const de = {
   "contact.intro.stepCurrent": "Jetzt",
   "contact.intro.stepPending": "Später",
   "contact.intro.laneOurs": "Unser Team",
-  "contact.intro.laneTheirs": "Ihr Unternehmen",
+  "contact.intro.laneTheirs": "Firma des Kontakts",
   "contact.intro.lanePeers": "Mit wem sie sprechen",
-  "contact.intro.laneTarget": "Zielcontact",
+  "contact.intro.laneTarget": "Zielkontakt",
   "contact.intro.useThisRoute": "Diesen Weg nutzen",
   "contact.intro.mapRegion": "Wer diesen Kontakt erreicht, und über wen",
   "contact.intro.edgeDirect": "{name} korrespondiert direkt mit ihr",
@@ -8504,47 +8504,47 @@ export const de = {
   "contact.intro.cancel": "Abbrechen",
   "contact.intro.askAction": "Vorstellung erbitten",
   "contact.intro.askFailed": "Die Anfrage konnte nicht gespeichert werden.",
-  "contact.intro.reasonLabel": "Warum Sie fragen",
+  "contact.intro.reasonLabel": "Warum du fragst",
   "contact.intro.reasonHint":
-    "Das liest Ihre Kollegin, nicht der Kontakt. Sagen Sie, warum sich die Vorstellung lohnt.",
+    "Das liest deine Kollegin, nicht der Kontakt. Sage, warum sich die Vorstellung lohnt.",
   "contact.intro.valueLabel": "Was der Kontakt davon hat",
   "contact.intro.valueHint":
     "Der Grund, warum der Kontakt dieses Gespräch wollen würde.",
   "contact.intro.noteLabel": "Notiz zum Weiterleiten",
   "contact.intro.noteHint":
-    "Nur dieser Teil erreicht den Kontakt. Schreiben Sie ihn so, dass er unverändert weitergegeben werden kann.",
+    "Nur dieser Teil erreicht den Kontakt. Schreibe ihn so, dass er unverändert weitergegeben werden kann.",
   "contact.intro.nameDropAsk": "Um Erlaubnis bitten, den Namen zu nennen",
   "contact.intro.fallbackLegend": "Falls abgelehnt wird",
   "contact.intro.fallbackNone": "Nichts weiter",
   "contact.intro.fallbackNoneHelp":
-    "Die Anfrage wird geschlossen und Sie entscheiden selbst, wie es weitergeht.",
+    "Die Anfrage wird geschlossen, und du entscheidest selbst, wie es weitergeht.",
   "contact.intro.fallbackNameDrop": "Stattdessen um Namensnennung bitten",
   "contact.intro.fallbackNameDropHelp":
-    "Sie würden sich selbst melden und die Kollegin erwähnen.",
+    "Du würdest dich selbst melden und die Kollegin erwähnen.",
   "contact.intro.fallbackNextRoute": "Den nächsten Weg versuchen",
   "contact.intro.fallbackNextRouteHelp":
     "Weiter zur nächsten Kollegin auf der Liste.",
   "contact.intro.decideTitle": "Eine Vorstellung bei {name}",
-  "contact.intro.decideLegend": "Ihre Antwort",
+  "contact.intro.decideLegend": "Deine Antwort",
   "contact.intro.decideAction": "Antwort speichern",
   "contact.intro.decideFailed": "Die Antwort konnte nicht gespeichert werden.",
-  "contact.intro.decideReasonLabel": "Möchten Sie etwas ergänzen",
+  "contact.intro.decideReasonLabel": "Möchtest du etwas ergänzen",
   "contact.intro.decideReasonHint":
-    "Ihre Kollegin sieht das genau so, wie Sie es schreiben.",
+    "Deine Kollegin sieht das genau so, wie du es schreibst.",
   "contact.intro.noteByModel": "Von Margince verfasst",
   "contact.intro.nameDropRequested":
-    "Es wurde außerdem gefragt, ob Ihr Name genannt werden darf.",
-  "contact.intro.answerAccept": "Ich stelle Sie vor",
-  "contact.intro.answerAcceptHelp": "Sie übernehmen die Vorstellung selbst.",
-  "contact.intro.answerNameDrop": "Sie dürfen meinen Namen nennen",
+    "Es wurde außerdem gefragt, ob dein Name genannt werden darf.",
+  "contact.intro.answerAccept": "Ich stelle dich vor",
+  "contact.intro.answerAcceptHelp": "Du übernimmst die Vorstellung selbst.",
+  "contact.intro.answerNameDrop": "Du darfst meinen Namen nennen",
   "contact.intro.answerNameDropHelp":
-    "Die Kollegin meldet sich selbst und erwähnt Sie. Das ist keine Vorstellung und wird auch nirgends als eine erfasst.",
+    "Die Kollegin meldet sich selbst und erwähnt dich. Das ist keine Vorstellung und wird auch nirgends als eine erfasst.",
   "contact.intro.answerSuggest": "Jemand anderen fragen",
   "contact.intro.answerSuggestHelp":
-    "Nennen Sie die Person, die besser helfen kann.",
+    "Nenne die Person im Team, die besser helfen kann.",
   "contact.intro.answerDecline": "Diesmal nicht",
   "contact.intro.answerDeclineHelp":
-    "Die Anfrage wird geschlossen. Sagen Sie gern, warum.",
+    "Die Anfrage wird geschlossen. Sage gern, warum.",
   "contact.intro.asksTitle": "Vorstellungen",
   "contact.intro.answerAction": "Antworten",
   "contact.intro.completeIntroducedAction": "Als vorgestellt markieren",
@@ -8649,7 +8649,7 @@ export const de = {
   "contact.rail.removeEmploymentBody":
     "Die Verbindung zu {company} und die daran hängende Historie verschwinden, und das lässt sich nicht rückgängig machen. {company} selbst bleibt. Wenn der Kontakt einfach gegangen ist, markiere die Beschäftigung stattdessen als beendet.",
   "contact.timeline.empty": "Mit ihnen wurde noch nichts erfasst.",
-  "contact.deals.empty": "Sie sind auf keinem Deal erfasst.",
+  "contact.deals.empty": "Dieser Kontakt ist auf keinem Deal erfasst.",
   "contact.deals.untitled": "Deal ohne Titel",
   "contact.deals.noStage": "Noch keine Phase",
   "contact.meetings.upcoming": "Bevorstehend",
@@ -8681,7 +8681,7 @@ export const de = {
   "contact.consent.unknownWord": "Unbekannt",
 
   "contact.moment.rule.meeting_prep": "Termin steht an",
-  "contact.moment.rule.re_engaged": "Sie haben sich gemeldet",
+  "contact.moment.rule.re_engaged": "Der Kontakt hat sich wieder gemeldet",
   "contact.moment.rule.job_change": "Stelle gewechselt",
   "contact.moment.rule.overdue_promise": "Zusage überfällig",
   "contact.moment.rule.gone_quiet": "Still geworden",
@@ -8695,12 +8695,12 @@ export const de = {
   "contact.overview.detailsShow": "Details & Berechtigungen einblenden",
   "contact.overview.detailsHide": "Details & Berechtigungen ausblenden",
   "contact.overview.partial":
-    "Einige Bereiche sind für Ihre Rolle nicht verfügbar. Diese Zusammenfassung umfasst die für Sie sichtbaren Einträge.",
+    "Einige Bereiche sind für deine Rolle nicht verfügbar. Diese Zusammenfassung umfasst die für dich sichtbaren Einträge.",
   "contact.overview.coverage":
     "Gelesen aus den Einträgen, die du sehen darfst.",
   "contact.overview.about": "Über diesen Kontakt",
   "contact.overview.profileOnly":
-    "Aus den gespeicherten Kontaktdaten. Ergänzen Sie Kontext, sobald Sie mehr wissen.",
+    "Aus den gespeicherten Kontaktdaten. Ergänze Kontext, sobald du mehr weißt.",
   "contact.overview.briefFailed":
     "Der Beziehungsüberblick konnte nicht geladen werden.",
 
@@ -8719,7 +8719,7 @@ export const de = {
 
   "contact.commercial.title": "Offener Deal & Rolle im Kauf",
   "contact.commercial.withheld":
-    "Sie haben keinen Zugriff auf die Deals dieses Kontakts.",
+    "Du hast keinen Zugriff auf die Deals dieses Kontakts.",
   "contact.commercial.noDeal": "Kein offener Deal.",
   "contact.commercial.closes": "Abschluss {date}",
   "contact.commercial.committee": "Entscheidergremium",
@@ -8728,7 +8728,7 @@ export const de = {
   "contact.loops.title": "Zusagen & offene Punkte",
   "contact.loops.empty":
     "In den erfassten Gesprächen wurde nichts zugesagt und nichts gefragt.",
-  "contact.loops.ours": "Sie",
+  "contact.loops.ours": "Du",
   "contact.loops.question": "Offene Frage",
   "contact.loops.overdue_one": "{count} Tag überfällig",
   "contact.loops.overdue_other": "{count} Tage überfällig",
@@ -8778,11 +8778,11 @@ export const de = {
   "contact.rail.atRisk": "Gefährdet",
   "contact.rail.strong": "Stark",
   "contact.standing.why.strong":
-    "Sie haben in den letzten {days} Tagen geschrieben, die Beziehung gilt als stark.",
+    "Der Kontakt hat in den letzten {days} Tagen geschrieben, die Beziehung gilt also als stark.",
   "contact.standing.why.atRisk":
     "Seit mehr als {days} Tagen nichts von ihnen, die Beziehung gilt als gefährdet.",
   "contact.standing.why.thin":
-    "Sie haben noch nie geschrieben, daher noch kein Urteil.",
+    "Der Kontakt hat noch nie geschrieben, daher noch kein Urteil.",
   "contact.standing.trend.warming":
     "Wird wärmer: ihre letzte Nachricht ist neuer als unsere.",
   "contact.standing.trend.cooling":
@@ -8822,7 +8822,7 @@ export const de = {
   "contact.research.notConnected":
     "Es ist kein Recherche-Anbieter verbunden, also wurden keine öffentlichen Quellen zu diesem Kontakt gelesen. Das ist unabhängig von zugekauften Kontaktdaten darüber — Margince recherchiert nie aus eigener Befugnis zu einem Kontakt, und eine Tiefenrecherche braucht einen lizenzierten Anbieter mit eigener Rechtsgrundlage.",
   "contact.research.staged":
-    "Die Recherche ist vorgemerkt. Am Datensatz von {name} ändert sich nichts, bis Sie prüfen und speichern.",
+    "Die Recherche ist vorgemerkt. Am Datensatz von {name} ändert sich nichts, bis du prüfst und speicherst.",
   "contact.research.stats":
     "{sources} Quellen gelesen · {claims} belegte Aussagen",
   "contact.research.dismiss": "Verwerfen",
@@ -8962,7 +8962,7 @@ export const de = {
   "provider.buyableHint_other":
     "Dieser Schalter kauft nichts. Er stellt bei jedem Kontakt eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für einen einzelnen Kontakt kaufen kann.",
   "provider.buyableNeeds":
-    "Der Anbieter sucht danach nur zusammen mit {prerequisite}. Einzeln lässt es sich nicht kaufen — erlauben Sie zuerst diese Angabe.",
+    "Der Anbieter sucht danach nur zusammen mit {prerequisite}. Einzeln lässt es sich nicht kaufen: Erlaube zuerst diese Angabe.",
   "provider.backlog": "Noch nachzuschlagen",
   "provider.backlogRemaining_one": "{count} Kontakt",
   "provider.backlogRemaining_other": "{count} Kontakte",
@@ -8995,7 +8995,7 @@ export const de = {
   "provider.profile.notEligible":
     "Für diesen Kontakt nicht zulässig — er hat widersprochen, oder der Datensatz ist archiviert.",
   "provider.profile.nothingToLookUp":
-    "Es gibt nichts, womit sich dieser Kontakt nachschlagen ließe. Tragen Sie die LinkedIn-URL oder das Unternehmen ein, dann kann die Suche laufen.",
+    "Es gibt nichts, womit sich dieser Kontakt nachschlagen ließe. Trage die LinkedIn-URL oder das Unternehmen ein, dann kann die Suche laufen.",
   "provider.profile.neverRun":
     "Diesen Kontakt hat noch niemand nachgeschlagen.",
   "provider.profile.queued": "In der Warteschlange",
@@ -9003,7 +9003,7 @@ export const de = {
   "provider.profile.workingTitle": "{provider} wird gefragt",
   "provider.profile.working": "Das dauert bis zu einer Minute.",
   "provider.profile.landingTitle": "Antwort da",
-  "provider.profile.landing": "Sie wird in den Datensatz übernommen.",
+  "provider.profile.landing": "Wird in den Datensatz übernommen.",
   "provider.profile.lookupRefused": "Die Abfrage wurde nicht ausgeführt",
   "provider.profile.completed": "Gefunden",
   "provider.profile.noMatch": "Der Anbieter hatte nichts zu diesem Kontakt.",
@@ -9016,7 +9016,7 @@ export const de = {
   "provider.profile.rateLimited":
     "Nicht gekauft: der Anbieter hat uns gebremst.",
   "provider.profile.providerError":
-    "Die letzte Abfrage kam nicht durch. Versuchen Sie es erneut, oder sehen Sie in den Einstellungen auf der Karte des Anbieters nach, wenn es wieder passiert.",
+    "Die letzte Abfrage kam nicht durch. Versuche es erneut, oder sieh in den Einstellungen auf der Karte des Anbieters nach, wenn es wieder passiert.",
   "provider.profile.submissionUnknown":
     "Wie diese Abfrage ausgegangen ist, haben wir nie erfahren. Sie kann berechnet worden sein.",
   "provider.profile.claimsUnwritten":
@@ -9067,7 +9067,7 @@ export const de = {
   "filters.addGroup": "Gruppe hinzuf\u00fcgen",
   "filters.addClause": "Bedingung hinzuf\u00fcgen",
   "filters.emptyGroup":
-    "Noch keine Bedingungen \u2014 eine leere Gruppe trifft auf nichts zu, also f\u00fcgen Sie eine hinzu.",
+    "Noch keine Bedingungen: Eine leere Gruppe trifft auf nichts zu, also füge eine hinzu.",
   "filters.field": "Feld",
   "filters.choosePlaceholder": "Feld ausw\u00e4hlen",
   "filters.customBadge": "Eigenes Feld",
@@ -9134,7 +9134,7 @@ export const de = {
   // reparieren muss.
   "release.skewTitle": "Diese Installation wird gerade aktualisiert",
   "release.skewBody":
-    "Die App in Ihrem Browser und der Server dahinter stammen aus unterschiedlichen Releases, deshalb funktioniert hier nichts verlässlich. Laden Sie neu, um die aktuelle Version zu holen. Bleibt diese Meldung, sagen Sie es der Person, die diese Installation betreibt: Jeder Teil davon muss dasselbe Release ausführen.",
+    "Die App in deinem Browser und der Server dahinter stammen aus unterschiedlichen Releases, deshalb funktioniert hier nichts verlässlich. Lade neu, um die aktuelle Version zu holen. Bleibt diese Meldung, sage es der Person, die diese Installation betreibt: Jeder Teil davon muss dasselbe Release ausführen.",
   "release.skewVersions": "App {app} · Server {server}",
   "release.skewReload": "Neu laden",
 
@@ -9144,9 +9144,9 @@ export const de = {
   // löschen — die Nachricht wird zurückgenommen, bevor sie geht.
   "nav.scheduled": "Geplante Nachrichten",
   "sched.sub":
-    "Nachrichten, die Sie geschrieben haben und die noch nicht hinausgegangen sind. Nur Sie sehen sie.",
-  "sched.empty": "Sie haben noch keine Nachricht geplant.",
-  "sched.group.held": "Angehalten, wartet auf Sie",
+    "Nachrichten, die du geschrieben hast und die noch nicht hinausgegangen sind. Nur du siehst sie.",
+  "sched.empty": "Du hast noch keine Nachricht geplant.",
+  "sched.group.held": "Angehalten, wartet auf dich",
   "sched.group.heldEmpty": "Nichts wurde angehalten.",
   "sched.group.waiting": "Wartet auf den Versand",
   "sched.group.waitingEmpty": "Nichts wartet auf den Versand.",
@@ -9159,13 +9159,13 @@ export const de = {
   "sched.status.cancelled": "Zurückgezogen",
   "sched.status.held": "Angehalten",
   "sched.held.consentWithdrawn":
-    "Ein Empfänger hat seine Einwilligung zurückgezogen, nachdem Sie diese Nachricht geplant haben. Sie geht erst hinaus, wenn Sie ihm unter einem Zweck schreiben, dem er zugestimmt hat.",
+    "Ein Empfänger hat seine Einwilligung zurückgezogen, nachdem du diese Nachricht geplant hast. Die Nachricht geht erst hinaus, wenn du ihm unter einem Zweck schreibst, dem er zugestimmt hat.",
   "sched.held.senderInactive":
-    "Ihr Sitz oder Ihr Postfach hat sich nach der Planung geändert, deshalb kann die Nachricht nicht in Ihrem Namen gesendet werden.",
+    "Dein Sitzplatz oder dein Postfach hat sich nach der Planung geändert, deshalb kann die Nachricht nicht in deinem Namen gesendet werden.",
   "sched.held.missedWindow":
-    "Der Zeitpunkt verstrich, während nichts lief, und ist jetzt zu spät für die Nachricht, die Sie geschrieben haben. Verschieben Sie sie oder ziehen Sie sie zurück.",
+    "Der Zeitpunkt verstrich, während nichts lief, und ist jetzt zu spät für die Nachricht, die du geschrieben hast. Verschiebe sie, oder ziehe sie zurück.",
   "sched.held.timerExhausted":
-    "Dem Auftrag, der diese Nachricht weckt, sind die Versuche ausgegangen. Verschieben Sie sie auf einen neuen Zeitpunkt, um es erneut zu versuchen.",
+    "Dem Auftrag, der diese Nachricht weckt, sind die Versuche ausgegangen. Verschiebe sie auf einen neuen Zeitpunkt, um es erneut zu versuchen.",
   "sched.held.sendRefused":
     "Eine Prüfung hat diese Nachricht bei Fälligkeit abgelehnt. Es wurde nichts gesendet.",
   "sched.inZone": "in der Zone {zone}",
@@ -9182,7 +9182,7 @@ export const de = {
   "sched.withdrawConfirm": "Zurückziehen",
   "sched.skewTitle": "Diese Liste ist nicht mehr aktuell",
   "sched.skew":
-    "Die Nachricht, auf die Sie eingewirkt haben, war schon hinausgegangen, zurückgezogen oder auf einen anderen Zeitpunkt verschoben. Lesen Sie die Liste erneut.",
+    "Die Nachricht, auf die du eingewirkt hast, war schon hinausgegangen, zurückgezogen oder auf einen anderen Zeitpunkt verschoben. Lies die Liste erneut.",
   "sched.writeFailed": "Die Änderung ist nicht durchgegangen",
   "sched.reload": "Erneut lesen",
   "nav.projects": "Projekte",
@@ -9223,7 +9223,7 @@ export const de = {
   "projectHealth.title": "Lieferstatus",
   "projectHealth.empty": "Noch niemand hat das beurteilt",
   "projectHealth.emptyDetail":
-    "Halten Sie fest, wie die Lieferung l\u00e4uft, damit beim n\u00e4chsten Blick niemand raten muss.",
+    "Halte fest, wie die Lieferung läuft, damit beim nächsten Blick niemand raten muss.",
   "projectHealth.assessedOn": "Stand {date}",
   "projectHealth.corrected": "(korrigiert)",
   "projectHealth.state.onTrack": "Im Plan",
@@ -9239,7 +9239,7 @@ export const de = {
   "projectHealth.noteOptionalHint":
     "Optional, solange das Projekt im Plan ist.",
   "projectHealth.noteRequiredHint":
-    "Sagen Sie, was nicht stimmt, damit der Nächste nicht raten muss.",
+    "Sage, was nicht stimmt, damit beim nächsten Blick niemand raten muss.",
   "projectHealth.correctionNote":
     "Eine Korrektur berichtigt, was gesagt wurde, nie wann es gesagt wurde. Das Datum der Einschätzung bleibt.",
   "projectHealth.saveReading": "Festhalten",
@@ -9369,7 +9369,7 @@ export const de = {
     "{urgent} dringend · {due} fällig · {lower} nachrangig — {total} insgesamt",
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.review.partial":
-    "{loaded} von {total} angezeigt — blättern Sie den Tag weiter, um den Rest zu erreichen",
+    "{loaded} von {total} angezeigt; blättere den Tag weiter, um den Rest zu erreichen",
   "worklist.completeness.bounded_one":
     "{shown} angezeigt · {sources} Quelle hat mehr",
   "worklist.completeness.bounded_other":
@@ -9479,17 +9479,17 @@ export const de = {
   "worklist.manager.kind.general": "Etwas anderes",
   "worklist.board.title": "Teamarbeit mit Handlungsbedarf",
   "worklist.exceptions.title": "Was mich braucht",
-  "worklist.handled.title": "Für Sie erledigt",
+  "worklist.handled.title": "Für dich erledigt",
   "worklist.walk.arrived":
-    "{arrived} weitere seit Ihrem Start. Sie warten auf eine Aktualisierung, damit diese Liste ruhig bleibt.",
-  "worklist.walk.gone": "{gone} davon wurden seit Ihrem Start erledigt.",
+    "{arrived} weitere seit deinem Start, die auf eine Aktualisierung warten, damit diese Liste ruhig bleibt.",
+  "worklist.walk.gone": "{gone} davon wurden seit deinem Start erledigt.",
   "worklist.walk.both":
-    "{arrived} weitere seit Ihrem Start, und {gone} bereits erledigt.",
+    "{arrived} weitere seit deinem Start, und {gone} bereits erledigt.",
   "worklist.walk.title": "Diese Liste hat sich verändert",
   "worklist.walk.refresh": "Aktualisieren",
-  "worklist.handled.empty": "Heute wurde nichts für Sie erledigt.",
+  "worklist.handled.empty": "Heute wurde nichts für dich erledigt.",
   "worklist.handled.loading": "Erledigtes wird gelesen",
-  "worklist.handled.count": "{count} für Sie erledigt",
+  "worklist.handled.count": "{count} für dich erledigt",
   "worklist.handled.what": "Was geschehen ist",
   "worklist.handled.about": "Wozu",
   "worklist.handled.when": "Wann",
@@ -9498,16 +9498,16 @@ export const de = {
   "worklist.handled.putBackDone": "Bereits zurückgenommen",
   "worklist.handled.truncated":
     "Mehr als das. Die Liste endet bei dem, was eine Sitzung fasst.",
-  "worklist.exceptions.empty": "Im Team braucht Sie gerade nichts.",
+  "worklist.exceptions.empty": "Im Team braucht dich gerade nichts.",
   "worklist.exceptions.loading": "Team wird gelesen",
-  "worklist.exceptions.count": "{count} brauchen Sie",
+  "worklist.exceptions.count": "{count} brauchen dich",
   "worklist.exceptions.condition": "Was",
   "worklist.exceptions.subject": "Wozu",
   "worklist.exceptions.owner": "Wer antwortet",
   "worklist.exceptions.basis": "Gemessen an",
   "worklist.exceptions.intervene": "Eingriff",
   "worklist.exceptions.nobody": "Noch niemand",
-  "worklist.exceptions.ownerWithheld": "Für Sie nicht sichtbar",
+  "worklist.exceptions.ownerWithheld": "Für dich nicht sichtbar",
   "worklist.exceptions.truncated":
     "Mehr als das. Die Liste endet bei dem, was eine Sitzung fasst.",
   "worklist.exceptions.kind.response_breached":
@@ -9555,7 +9555,7 @@ export const de = {
   "worklist.hidden.count": "{count} warten",
   "worklist.hidden.pastHorizon": "Zu alt für die Liste",
   "worklist.hidden.pastHorizon.detail":
-    "Das hat niemand entschieden. Sie schrieben vor Monaten und bekamen nie eine Antwort.",
+    "Das hat niemand entschieden. Die Gegenseite schrieb vor Monaten und bekam nie eine Antwort.",
   "worklist.hidden.unlinked": "Keinem Datensatz zugeordnet",
   "worklist.hidden.unlinked.detail":
     "Meist kein Vertrieb. Manchmal ein Kunde, den niemand zuordnen konnte.",
@@ -9581,7 +9581,7 @@ export const de = {
   "worklist.filter.linked.urgent":
     "Nur Dringendes: jemand wartet, oder eine Zusage bricht.",
   "worklist.filter.linked.except_decisions":
-    "Alles außer den Entscheidungen, nach denen Ihr Briefing bereits gefragt hat.",
+    "Alles außer den Entscheidungen, nach denen dein Briefing bereits gefragt hat.",
   "worklist.filter.linked.changed_since_brief":
     "Nur das, was sich seit dem Lauf der letzten Nacht geändert hat.",
   "worklist.filter.linked.clear": "Ganze Liste anzeigen",
@@ -9597,7 +9597,7 @@ export const de = {
   "worklist.category.decisions": "Entscheidung",
   "worklist.category.system": "System",
   "worklist.because.pinned": "Von dir angeheftet",
-  "worklist.because.buyer_wrote_last": "Sie haben zuletzt geschrieben",
+  "worklist.because.buyer_wrote_last": "Der Käufer hat zuletzt geschrieben",
   "worklist.because.waiting_days": "wartet",
   "worklist.because.more_one": "+{count} weitere",
   "worklist.because.more_other": "+{count} weitere",
@@ -9745,7 +9745,7 @@ export const de = {
   "worklist.verb.domainKept": "Firma aus dieser Domain angelegt.",
   "worklist.verb.domainKeepFailed": "Diese Firma konnte nicht angelegt werden.",
   "worklist.verb.domainDiscarded":
-    "Ihre Nachrichten von dieser Domain werden nicht mehr erfasst.",
+    "Deine Nachrichten von dieser Domain werden nicht mehr erfasst.",
   "worklist.verb.domainDiscardFailed":
     "Diese Domain konnte nicht ausgeschlossen werden.",
   "worklist.verb.retryRefusedNotFailed":
@@ -9872,8 +9872,8 @@ export const de = {
   "ob.deck.stillNeeded": "Fehlt noch: {fields}",
   "ob.deck.openLeft":
     "Unbeantwortete Fragen: {count}. Der Eintrag wird ohne sie gespeichert.",
-  "ob.conv.invite.pickOne": "Wählen Sie eine der beiden, um weiterzugehen.",
-  "ob.conv.voice.speakerPick": "Wählen Sie einen Sprecher, um weiterzugehen.",
+  "ob.conv.invite.pickOne": "Wähle eine der beiden, um weiterzugehen.",
+  "ob.conv.voice.speakerPick": "Wähle einen Sprecher, um weiterzugehen.",
   "ob.deck.clear": "Nichts mehr zu klären. {count} Fakten stehen im Profil.",
   "ob.deck.eyebrow": "Alles andere kam belegt herein",
   "ob.deck.title": "Hier rät es nicht.",
@@ -9882,7 +9882,7 @@ export const de = {
   "firstRun.ai.rankedHint":
     "Dazu die zehn am höchsten bewerteten Modelle, die OpenRouter gerade bedient, sortiert nach {rankedBy}, mit den Preisen des Anbieters.",
   "firstRun.ai.rankedUnavailable":
-    "Die aktuelle Modell-Liste von OpenRouter war gerade nicht lesbar, deshalb steht hier, was Ihre Preisliste hergibt.",
+    "Die aktuelle Modell-Liste von OpenRouter war gerade nicht lesbar, deshalb steht hier, was deine Preisliste hergibt.",
   "firstRun.ignite.title": "Es hat einen Puls.",
   "firstRun.ignite.sub":
     "Der Schlüssel ist versiegelt und das Modell hat geantwortet. Was sich damit ändert:",
@@ -9890,16 +9890,16 @@ export const de = {
   "firstRun.ignite.reaching": "erreiche das Modell zum ersten Mal…",
   "firstRun.ignite.canNow": "kann jetzt",
   "firstRun.ignite.cannot": "kann nicht",
-  "firstRun.ignite.read": "Ihre Website lesen und sagen, was sie gefunden hat",
+  "firstRun.ignite.read": "deine Website lesen und sagen, was sie gefunden hat",
   "firstRun.ignite.draft":
-    "in einer Stimme schreiben, die Sie ihr beigebracht haben",
+    "in einer Stimme schreiben, die du ihr beigebracht hast",
   "firstRun.ignite.act":
-    "etwas senden oder einen Datensatz ändern, solange Sie es nicht sagen",
+    "etwas senden oder einen Datensatz ändern, solange du es nicht sagst",
   "firstRun.ignite.carryOn": "Weiter",
   "firstRun.step.model": "Das Modell",
-  "firstRun.step.platform": "Ihre Plattform",
+  "firstRun.step.platform": "Deine Plattform",
   "firstRun.google.eyebrow": "Es denkt. Erreichen kann es noch niemanden",
-  "firstRun.platform.title": "Womit arbeitet Ihre Firma?",
+  "firstRun.platform.title": "Womit arbeitet deine Firma?",
   "firstRun.platform.sub":
     "Eine Antwort entscheidet, wie Mail zu Margince kommt und wie sich Leute anmelden. Später unter Einstellungen änderbar.",
   "firstRun.platform.legend": "Die Plattform dieser Firma",
@@ -9913,9 +9913,9 @@ export const de = {
   "firstRun.platform.imapWhat":
     "Jedes Postfach verbindet sich mit einem eigenen IMAP-App-Passwort. Anmeldung per E-Mail und Passwort.",
   "firstRun.platform.redirectTitle":
-    "Registrieren Sie diese Weiterleitungs-URIs in der App",
+    "Registriere diese Weiterleitungs-URIs in der App",
   "firstRun.platform.redirectHint":
-    "Kopieren Sie jede in die App, bevor Sie hier speichern. Anmeldung bringt den Anmelde-Button für alle Eingeladenen auf die Anmeldeseite; Postfach und Kalender lassen die Leute ihre verbinden. Fehlt eine, scheitert es auf der Zustimmungsseite des Anbieters, nicht hier.",
+    "Kopiere jede in die App, bevor du hier speicherst. Anmeldung bringt den Anmelde-Button für alle Eingeladenen auf die Anmeldeseite; Postfach und Kalender lassen die Leute ihre verbinden. Fehlt eine, scheitert es auf der Zustimmungsseite des Anbieters, nicht hier.",
   "firstRun.google.helpToggle": "Woher bekomme ich das?",
   "firstRun.google.helpStep1":
     "In der Google Cloud Console ein Projekt öffnen und zu APIs und Dienste → Anmeldedaten → Anmeldedaten erstellen → OAuth-Client-ID gehen, dann Webanwendung wählen.",
@@ -9929,14 +9929,14 @@ export const de = {
   "firstRun.google.helpDocs":
     "Alle Voraussetzungen, Microsoft und IMAP eingeschlossen: docs/how-to/connect-a-mailbox.md",
   "firstRun.platform.imapNote":
-    "Für die ganze Installation wird nichts eingerichtet. Verbinden Sie Ihr eigenes Postfach jetzt oder später; jedes weitere Postfach wird unter Einstellungen → Integrationen mit eigenem App-Passwort verbunden.",
+    "Für die ganze Installation wird nichts eingerichtet. Verbinde dein eigenes Postfach jetzt oder später; jedes weitere Postfach wird unter Einstellungen → Integrationen mit eigenem App-Passwort verbunden.",
   "firstRun.platform.skip": "Jetzt nicht",
   "firstRun.needed": "Nötig, um weiterzugehen",
   "firstRun.stillNeeded": "Fehlt noch: {fields}",
   "firstRun.platform.foot":
-    "Was Sie hier antworten, lässt sich später unter Einstellungen → Admin ändern.",
+    "Was du hier antwortest, lässt sich später unter Einstellungen → Admin ändern.",
   "firstRun.microsoft.note":
-    "Registrieren Sie in Microsoft Entra eine App mit den Weiterleitungs-URIs oben und fügen Sie hier Client-ID und Secret ein. Binden Sie sie an Ihr Verzeichnis: Dessen Postfächer verbinden sich darüber, und dessen Mitglieder melden sich damit an.",
+    "Registriere in Microsoft Entra eine App mit den Weiterleitungs-URIs oben und füge hier Client-ID und Secret ein. Binde sie an dein Verzeichnis: Dessen Postfächer verbinden sich darüber, und dessen Mitglieder melden sich damit an.",
   "firstRun.microsoft.helpSignIn":
     "Das Verzeichnis ist es, was Microsoft auf die Anmeldeseite bringt — deshalb wird hier danach gefragt, statt es dem Zufall zu überlassen. Eine App ohne Verzeichnis — jede Firma darf ein Postfach verbinden, und niemand meldet sich mit Microsoft an — richtest du stattdessen in den Einstellungen ein.",
   "firstRun.microsoft.tenantHint":
@@ -9956,7 +9956,8 @@ export const de = {
   "aiRates.proposedDetail": "Anbieterpreis · noch nicht freigegeben",
   "aiRates.proposedBasis":
     "Beim Binden geht der Preis in den Freigabe-Eingang; danach können Verbrauch und Kosten damit rechnen.",
-  "firstRun.ai.foot": "Vor dem Klick auf Weiter geht nichts an Ihren Anbieter.",
+  "firstRun.ai.foot":
+    "Vor dem Klick auf Weiter geht nichts an deinen Anbieter.",
   "contact.readings.title": "Wo dieser Kontakt steht",
   "deal360.brief": "Was dieser Deal ist",
   "lead.brief.title": "Lead-Briefing",
@@ -10036,19 +10037,19 @@ export const de = {
     "Es gibt noch keine Pipeline, \u00fcber die berichtet werden k\u00f6nnte.",
   "stageAutomation.unreadable": "Dieser Bericht wurde nicht geladen",
   "stageAutomation.readOnly":
-    "Sie sehen, was jeder Übergang verdient hat. Um zu ändern, was einer darf, brauchen Sie das Recht, Pipelines zu bearbeiten.",
+    "Du siehst, was jeder Übergang verdient hat. Um zu ändern, was einer darf, brauchst du das Recht, Pipelines zu bearbeiten.",
   "stageAutomation.rules": "Was jeder Übergang darf",
   "stageAutomation.rulesIntro":
-    "Einen Übergang einzuschalten setzt noch nichts in Bewegung. Margince fragt weiter nach, bis die Bilanz oben die Schwelle erreicht, und wendet ihn dann von selbst an — Sie müssen nicht noch einmal herkommen.",
+    "Einen Übergang einzuschalten setzt noch nichts in Bewegung. Margince fragt weiter nach, bis die Bilanz oben die Schwelle erreicht, und wendet ihn dann von selbst an. Du musst nicht noch einmal herkommen.",
   "stageAutomation.modeHint":
-    "Ist das an und hat die Bilanz es verdient, verschiebt Margince den Deal und sagt es Ihnen danach.",
+    "Ist das an und hat die Bilanz es verdient, verschiebt Margince den Deal und sagt es dir danach.",
   "stageAutomation.notEarnedYet": "Noch nicht verdient: {why}",
   "stageAutomation.suspended": "Margince hat das gestoppt",
   "stageAutomation.suspendedSince": "Gestoppt am {date}",
   "stageAutomation.resume": "Wieder starten",
   "stageAutomation.resumeTitle": "Diesen Übergang wieder Deals bewegen lassen?",
   "stageAutomation.resumeBody":
-    "Margince hat ihn gestoppt, weil: {reason}\n\nEin Neustart überspringt die Schwelle nicht. Der Übergang kehrt zu dem zurück, was Sie eingestellt haben, und muss die Bilanz oben weiterhin erreichen, bevor er von selbst etwas bewegt.",
+    "Margince hat ihn gestoppt, weil: {reason}\n\nEin Neustart überspringt die Schwelle nicht. Der Übergang kehrt zu dem zurück, was du eingestellt hast, und muss die Bilanz oben weiterhin erreichen, bevor er von selbst etwas bewegt.",
   "stageAutomation.noRules":
     "Über keinen Übergang dieser Pipeline wurde bisher entschieden, also wird jede Bewegung einer Person vorgeschlagen.",
   "stageAutomation.undoWindow": "Rückgängig für {hours} h",

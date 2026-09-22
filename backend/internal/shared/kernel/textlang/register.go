@@ -48,6 +48,15 @@ var (
 	sieForms = regexp.MustCompile(`\b(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres)\b`)
 )
 
+// SieForms is the formal-address pattern, case-sensitive for the reason above.
+// A gate over hand-written German copy asks the same words from here, because
+// two lists of them drift until they disagree about the same sentence.
+func SieForms() *regexp.Regexp { return sieForms }
+
+// DuForms is the informal pattern. It is case-INsensitive, so a caller that
+// cares whether a pronoun is capitalised reads that off the match it returns.
+func DuForms() *regexp.Regexp { return duForms }
+
 // RegisterMargin is how far ahead one register must be before the
 // correspondence is read as settled on it.
 //

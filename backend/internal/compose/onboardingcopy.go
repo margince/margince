@@ -82,9 +82,9 @@ var onboardingCopyByLang = map[textlang.Lang]onboardingCopy{
 		selectionReason:   "You chose this.",
 	},
 	textlang.German: {
-		entityQuestion:    "Die rechtlichen Angaben der Website nennen mehrere juristische Personen. Welche ist Ihr Unternehmen?",
-		addressQuestion:   "Die Website nennt mehrere Geschäftsanschriften. Welche gehört zu Ihrem Unternehmen?",
-		conflictQuestion:  "Ihr gespeicherter Wert für %s unterscheidet sich von der Website. Welchen Wert soll ich verwenden?",
+		entityQuestion:    "Die rechtlichen Angaben der Website nennen mehrere juristische Personen. Welche ist dein Unternehmen?",
+		addressQuestion:   "Die Website nennt mehrere Geschäftsanschriften. Welche gehört zu deinem Unternehmen?",
+		conflictQuestion:  "Dein gespeicherter Wert für %s unterscheidet sich von der Website. Welchen Wert soll ich verwenden?",
 		keepLabel:         "Meinen Wert behalten",
 		keepDetail:        "Von einem Menschen eingetragen; bleibt bei der Bestätigung unverändert (keep_current).",
 		takeLabel:         "Wert der Website übernehmen",
@@ -93,8 +93,8 @@ var onboardingCopyByLang = map[textlang.Lang]onboardingCopy{
 		statusFailed:      "Meine Web-Recherche ist beendet, konnte aber nicht abgeschlossen werden. Wir können die %d fehlenden Pflichtangaben hier gemeinsam manuell ergänzen; gespeichert ist noch nichts.",
 		statusResearching: "Ja. Ich recherchiere noch und zeige neue belegte Funde im Unternehmensentwurf. Gespeichert ist noch nichts.",
 		statusMissing:     "Ja. Meine Recherche funktioniert. Es fehlen noch %d Pflichtangaben; gespeichert ist noch nichts.",
-		selectionRecorded: "Übernommen — Ihre Auswahl steht im Entwurf. Der Assistent hat in dieser Runde nicht geantwortet, deshalb gibt es hier nicht mehr zu lesen.",
-		selectionReason:   "Von Ihnen ausgewählt.",
+		selectionRecorded: "Übernommen. Deine Auswahl steht im Entwurf. Der Assistent hat in dieser Runde nicht geantwortet, deshalb gibt es hier nicht mehr zu lesen.",
+		selectionReason:   "Von dir ausgewählt.",
 	},
 	// Addressed as "bạn", the neutral second contact this product's Vietnamese
 	// UI already uses. The parenthesised keep_current / accept_proposal stay in

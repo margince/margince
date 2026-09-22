@@ -301,7 +301,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // The choice reaches the chrome around the control, not just the control's
     // own face — which is the whole point of changing a language here.
     expect(screen.getByRole("combobox", { name: "Sprache" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Ihr Konto" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Dein Konto" })).toBeTruthy();
   });
 
   // WCAG 2.2 AA 3.1.2. This is the one picker in the product where every option

@@ -485,7 +485,7 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   await page.goto("/#/settings/account");
   // The card the language row sits in: password, sign-off and language are one
   // account card now rather than a Preferences card of their own.
-  await expect(page.getByRole("heading", { name: "Ihr Konto" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dein Konto" })).toBeVisible();
   await page.getByRole("combobox", { name: "Sprache" }).click();
   await page.getByRole("option", { name: "English" }).click();
   // The surface around the control follows the choice, not just the control's
@@ -506,7 +506,7 @@ test("features/10 §7: Settings → Account offers language and appearance", asy
   page,
 }) => {
   await page.goto("/#/settings/account");
-  await expect(page.getByRole("heading", { name: "Ihr Konto" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dein Konto" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Sprache" })).toBeVisible();
   await expect(
     page.getByRole("combobox", { name: "Darstellung" }),
@@ -1101,7 +1101,11 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   // never the label — attribution exists so somebody can be asked about a
   // change, and an identifier cannot be asked anything.
   await page.goto("/#/settings/audit");
-  await expect(page.getByText("Du", { exact: true })).toBeVisible();
+  // The settings sidebar's own group heading also reads "Du", so the actor
+  // label is read inside the trail's panel — the count-0 below proves the
+  // filter dropped the ROW rather than that the sidebar went missing.
+  const trail = page.getByRole("region", { name: "Audit-Log" });
+  await expect(trail.getByText("Du", { exact: true })).toBeVisible();
   await expect(page.getByText("Marcus Brandt", { exact: true })).toBeVisible();
   await expect(page.getByText("über einen Agenten")).toBeVisible();
   // The agent's own identifier is not shown at all when a human stands behind it.
@@ -1127,7 +1131,7 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   // the agent row is still visible would pass on a filter that did nothing —
   // it was already on screen before the filter was typed.
   await expect(page.getByText("Marcus Brandt", { exact: true })).toBeVisible();
-  await expect(page.getByText("Du", { exact: true })).toHaveCount(0);
+  await expect(trail.getByText("Du", { exact: true })).toHaveCount(0);
   await expect(page.getByText("connector:gmail", { exact: true })).toHaveCount(
     0,
   );
