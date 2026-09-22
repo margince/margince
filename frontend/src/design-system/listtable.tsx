@@ -32,8 +32,6 @@ import {
   type SortControl,
   type SortOption,
   sortDirection,
-  useCloseOnEscape,
-  useCloseOnOutsideClick,
 } from "./listsurface";
 import { Select } from "./select";
 import "./listtable.css";
@@ -646,7 +644,6 @@ export function ListTable<Row>({
   const t = useT();
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [dense, setDense] = useState(false);
-  const [displayOpen, setDisplayOpen] = useState(false);
   const [widths, setWidths] = useState<Readonly<Record<string, number>>>(() =>
     readWidths(widthsKey),
   );
@@ -747,12 +744,6 @@ export function ListTable<Row>({
   // be reachable once it does. Named by the noun the count line already uses
   // ("products", "deals") — the one word this component knows the list is OF.
   const region = useScrollRegion(scroller, unit);
-  useCloseOnOutsideClick(() => setDisplayOpen(false));
-  // The Display menu keeps its own open state rather than the surface's, so it
-  // needs the same Escape path explicitly — a popover a keyboard cannot dismiss
-  // is one a keyboard reader is stuck inside.
-  useCloseOnEscape(displayOpen ? "display" : null, () => setDisplayOpen(false));
-
   // One read carries several rendered pages, so the rows the caller holds are a
   // whole multiple of `perPage` and dividing them here lands on page boundaries
   // the reader can reach without waiting for a round trip each.
@@ -1053,29 +1044,32 @@ export function ListTable<Row>({
               absence: it reads as broken rather than as a view that has no
               columns to hide. Withheld on the same condition as the count line
               and the pager, for the same reason. */}
-          {!bodyOwnsPaging && (
-            <DisplayMenu
-              optional={optional}
-              hidden={hidden}
-              onToggleColumn={(key) =>
-                setHidden((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(key)) {
-                    next.delete(key);
-                  } else {
-                    next.add(key);
-                  }
-                  return next;
-                })
-              }
-              dense={dense}
-              onDense={() => setDense(!dense)}
-              open={displayOpen}
-              setOpen={setDisplayOpen}
-            />
-          )}
           {tools}
         </>
+      }
+      displayMenu={
+        bodyOwnsPaging
+          ? undefined
+          : (menu) => (
+              <DisplayMenu
+                optional={optional}
+                hidden={hidden}
+                onToggleColumn={(key) =>
+                  setHidden((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(key)) {
+                      next.delete(key);
+                    } else {
+                      next.add(key);
+                    }
+                    return next;
+                  })
+                }
+                dense={dense}
+                onDense={() => setDense(!dense)}
+                {...menu}
+              />
+            )
       }
       saveView={saveView}
       footer={
@@ -1459,8 +1453,9 @@ function ResizeGrip({
  * two are one question to a reader — density and a hidden column both answer
  * "show me more of this at once" — and a toolbar that spends a trigger on each
  * spends its right half on dials with nothing grouping them. It goes in the
- * surface's `tools` slot: the surface has no notion of a column or a density,
- * only that a body may want dials there.
+ * surface's `displayMenu` slot, which hands it the row's own open state: the
+ * surface knows nothing of a column or a density, only that one menu on a row
+ * is open at a time.
  */
 function DisplayMenu<Row>({
   optional,
@@ -1469,7 +1464,7 @@ function DisplayMenu<Row>({
   dense,
   onDense,
   open,
-  setOpen,
+  onToggle,
 }: Readonly<{
   optional: readonly ListColumn<Row>[];
   hidden: ReadonlySet<string>;
@@ -1477,12 +1472,12 @@ function DisplayMenu<Row>({
   dense: boolean;
   onDense: () => void;
   open: boolean;
-  setOpen: (next: boolean) => void;
+  onToggle: () => void;
 }>) {
   const t = useT();
   return (
     <span className="lt-menu-wrap">
-      <Button aria-expanded={open} onClick={() => setOpen(!open)}>
+      <Button aria-expanded={open} onClick={onToggle}>
         <SlidersHorizontal strokeWidth={1.5} aria-hidden="true" />
         {t("table.display")}
         <ChevronDown className="lt-caret" aria-hidden="true" />

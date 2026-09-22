@@ -71,6 +71,7 @@ export function ListSurface({
   onChipChange,
   archived,
   tools,
+  displayMenu,
   saveView,
   children,
   footer,
@@ -125,6 +126,19 @@ export function ListSurface({
    * pipeline being looked at.
    */
   tools?: ReactNode;
+  /**
+   * A popover the BODY brings to the row — the table's Display menu — drawn
+   * between the sort dial and `tools`.
+   *
+   * A render prop, and that is the whole of why it exists: ONE MENU OPEN AT A
+   * TIME IS A PROPERTY OF THE ROW, not of any dial standing on it, so the state
+   * belongs where the row does. The body held its own `open` beside this one
+   * and the two agreed about nothing — Sort and Display stood open side by
+   * side, and Escape reached only whichever had spelled its own handler.
+   */
+  displayMenu?: (
+    menu: Readonly<{ open: boolean; onToggle: () => void }>,
+  ) => ReactNode;
   /**
    * Saving what the dials currently say, and it is a slot of its own so that
    * "last on the row" is a fact about this component rather than a habit each
@@ -186,6 +200,7 @@ export function ListSurface({
         onChipChange={onChipChange}
         archived={archived}
         tools={tools}
+        displayMenu={displayMenu}
         saveView={saveView}
         openMenu={openMenu}
         setOpenMenu={setOpenMenu}
@@ -939,6 +954,7 @@ function Toolbar({
   onChipChange,
   archived,
   tools,
+  displayMenu,
   saveView,
   openMenu,
   setOpenMenu,
@@ -951,6 +967,9 @@ function Toolbar({
   onChipChange?: (key: string, value: string) => void;
   archived?: { checked: boolean; onChange: (next: boolean) => void };
   tools?: ReactNode;
+  displayMenu?: (
+    menu: Readonly<{ open: boolean; onToggle: () => void }>,
+  ) => ReactNode;
   saveView?: ReactNode;
   openMenu: string | null;
   setOpenMenu: (next: string | null) => void;
@@ -968,6 +987,13 @@ function Toolbar({
   };
   const remember = (key: string, value: string, label: string) =>
     setPicked((prev) => ({ ...prev, [key]: [value, label] }));
+  // Every dial on the row asks the same state which one is open, so opening one
+  // is what closes the last. Spelled once: three copies of this arithmetic is
+  // how the Display menu came to keep an `open` of its own.
+  const menu = (key: string) => ({
+    open: openMenu === key,
+    onToggle: () => setOpenMenu(openMenu === key ? null : key),
+  });
   return (
     <div className="lt-tools">
       {search && (
@@ -1015,8 +1041,7 @@ function Toolbar({
           chosen={chosen}
           onChipChange={onChipChange}
           onRemember={remember}
-          open={openMenu === "filter"}
-          onToggle={() => setOpenMenu(openMenu === "filter" ? null : "filter")}
+          {...menu("filter")}
           hasApplied={applied.length > 0}
         />
       )}
@@ -1032,13 +1057,10 @@ function Toolbar({
       <span className="lt-spacer" />
 
       {sort && sortOptions.length > 0 && (
-        <SortMenu
-          sort={sort}
-          options={sortOptions}
-          open={openMenu === "sort"}
-          onToggle={() => setOpenMenu(openMenu === "sort" ? null : "sort")}
-        />
+        <SortMenu sort={sort} options={sortOptions} {...menu("sort")} />
       )}
+
+      {displayMenu?.(menu("display"))}
 
       {tools}
 

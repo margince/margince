@@ -185,3 +185,85 @@ describe("the Display menu", () => {
     expect(screen.queryByRole("button", { name: "Display" })).toBeNull();
   });
 });
+
+// ONE MENU OPEN AT A TIME IS A PROPERTY OF THE ROW, so every dial standing on
+// it reads the same state. The Display menu used to keep an `open` of its own,
+// and the two answers did not agree: Sort and Display stood open side by side.
+describe("the toolbar's menus, against each other", () => {
+  const sortable: readonly ListColumn<Row>[] = [
+    { key: "name", header: "Name", cell: (row) => row.name, fixed: true },
+    {
+      key: "value",
+      header: "Value",
+      cell: (row) => String(row.value),
+      sort: "value",
+    },
+  ];
+
+  const chips = [
+    {
+      key: "owner",
+      label: "Owner",
+      allLabel: "Any owner",
+      options: [{ value: "u1", label: "Ada" }],
+    },
+  ];
+
+  function row() {
+    return rtlRender(
+      <LocaleProvider initial="en">
+        <ListTable
+          rows={rows}
+          columns={sortable}
+          rowKey={(one: Row) => one.id}
+          unit="rows"
+          sort={{ value: "", onChange: () => undefined }}
+          chips={chips}
+          chosen={{}}
+          onChipChange={() => undefined}
+        />
+      </LocaleProvider>,
+    );
+  }
+
+  const dial = (name: string | RegExp) => screen.getByRole("button", { name });
+
+  it("closes an open Sort when Display is opened, and the other way about", async () => {
+    const user = userEvent.setup();
+    row();
+
+    await user.click(dial(/^Sort(:|$)/));
+    expect(dial(/^Sort(:|$)/)).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(dial("Display"));
+    expect(dial("Display")).toHaveAttribute("aria-expanded", "true");
+    expect(dial(/^Sort(:|$)/)).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(dial(/^Sort(:|$)/));
+    expect(dial(/^Sort(:|$)/)).toHaveAttribute("aria-expanded", "true");
+    expect(dial("Display")).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes an open Display when Filter is opened", async () => {
+    const user = userEvent.setup();
+    row();
+
+    await user.click(dial("Display"));
+    await user.click(dial("Filter"));
+
+    expect(dial("Filter")).toHaveAttribute("aria-expanded", "true");
+    expect(dial("Display")).toHaveAttribute("aria-expanded", "false");
+  });
+
+  // The surface owns the state, so its one Escape path reaches this menu too —
+  // it used to need a handler of its own beside it.
+  it("closes the Display menu on Escape", async () => {
+    const user = userEvent.setup();
+    row();
+
+    await user.click(dial("Display"));
+    await user.keyboard("{Escape}");
+
+    expect(dial("Display")).toHaveAttribute("aria-expanded", "false");
+  });
+});
