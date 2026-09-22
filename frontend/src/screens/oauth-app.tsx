@@ -165,20 +165,40 @@ type RedirectUri = Readonly<{ purpose: string; url: string }>;
 // It used to say nothing at all — the guard returned in silence, so on a
 // plain-http deployment this button was simply dead, which is the one outcome
 // the rest of the product already agreed not to ship.
-function RedirectUriRow({ uri }: Readonly<{ uri: RedirectUri }>) {
+//
+// Which row reads Copied is the CARD's to decide, not the row's, so the label
+// comes from `copied` rather than from the hook: the clipboard holds one
+// address, and a row still claiming an earlier copy would send an operator to
+// paste the other row's URI into a vendor console, where a wrong callback
+// fails later and somewhere else.
+function RedirectUriRow({
+  uri,
+  copied,
+  onCopied,
+}: Readonly<{ uri: RedirectUri; copied: boolean; onCopied: () => void }>) {
   const t = useT();
   const purpose = purposeLabel(uri.purpose, t);
-  const copy = useClipboardCopy(uri.url, {
-    copy: t("oauthApp.redirectCopy", { purpose }),
-    copied: t("oauthApp.redirectCopied"),
-    remedy: t("oauthApp.redirectCopyFailed"),
-  });
+  const copy = useClipboardCopy(
+    uri.url,
+    {
+      copy: t("oauthApp.redirectCopy", { purpose }),
+      copied: t("oauthApp.redirectCopied"),
+      remedy: t("oauthApp.redirectCopyFailed"),
+    },
+    onCopied,
+  );
   return (
     <>
       <SettingRow
         label={purpose}
         value={<code>{uri.url}</code>}
-        control={<Button onClick={copy.copy}>{copy.label}</Button>}
+        control={
+          <Button onClick={copy.copy}>
+            {copied
+              ? t("oauthApp.redirectCopied")
+              : t("oauthApp.redirectCopy", { purpose })}
+          </Button>
+        }
       />
       {copy.notice}
     </>
@@ -204,6 +224,8 @@ export function RedirectUris({
   sub: string;
 }>) {
   const t = useT();
+  // The address the clipboard actually holds, not a flag per row.
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   // Absent and empty are the same answer here — nothing to register — and the
   // field is contract-required, but a body that lost one hands over `undefined`
   // anyway. This card shares a screen with the installation's own settings, so
@@ -218,7 +240,12 @@ export function RedirectUris({
       <p className="t-caption">{sub}</p>
       <SettingList>
         {uris.map((uri) => (
-          <RedirectUriRow key={uri.purpose} uri={uri} />
+          <RedirectUriRow
+            key={uri.purpose}
+            uri={uri}
+            copied={copiedUrl === uri.url}
+            onCopied={() => setCopiedUrl(uri.url)}
+          />
         ))}
       </SettingList>
     </div>

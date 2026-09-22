@@ -285,7 +285,7 @@ describe("admin-issued set-password link", () => {
     vi.stubGlobal("fetch", backend({ adminPasswordLink: true }));
     // An email-less installation served over plain http is the deployment this
     // whole feature serves, and it is exactly the one with no clipboard.
-    const clipboard = stubClipboard("absent");
+    stubClipboard("absent");
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
@@ -298,7 +298,6 @@ describe("admin-issued set-password link", () => {
       await screen.findByText(/this browser refused the clipboard/i),
     ).toBeTruthy();
     expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
-    clipboard.restore();
   });
 
   it("recovers from a transport failure instead of hanging on pending", async () => {

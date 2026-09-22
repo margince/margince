@@ -9,10 +9,10 @@ import { Callout } from "./callout";
  * Putting one string on the reader's clipboard, and saying so when the browser
  * will not take it.
  *
- * Eight screens wrote this out by hand and no two agreed. Three of them guarded
- * the API object, one did not, one guarded it and then returned in silence, and
- * the notice was a `Callout` on five, a tinted `span` on one, a bare paragraph
- * on another and nothing at all on the last — so what a reader on a plain-http
+ * Eight screens wrote this out by hand and no two agreed. Seven guarded the API
+ * object and one did not; of the seven, one guarded it and then returned in
+ * silence. The notice was a `Callout` on five, a tinted `span` on one, a bare
+ * paragraph on another and nothing at all on the last — so what a reader on a plain-http
  * installation learned depended on which screen they happened to be standing on.
  *
  * A hook rather than a `CopyButton`, for the reason `usePasswordReveal` is one:
@@ -26,6 +26,12 @@ import { Callout } from "./callout";
  * copied, so a draft edited after copying, or a YAML re-rendered under a new
  * filename, stops saying Copied without its screen having to remember to say so.
  *
+ * `copied` is a claim about THIS control, and the clipboard is one slot: a
+ * surface drawing several copy controls over it owns which of them is current,
+ * because two buttons both reading Copied tell a reader the clipboard holds
+ * both. `onCopied` is the hand-off for that — it fires when the write actually
+ * lands, never on the press.
+ *
  * Copy is the caller's, translated, as everywhere in this directory — except
  * the failure's first line, which is one shared key. That sentence is about the
  * BROWSER rather than about the link, the secret or the agenda, so it is the
@@ -36,6 +42,7 @@ import { Callout } from "./callout";
 export function useClipboardCopy(
   text: string,
   labels: Readonly<{ copy: string; copied: string; remedy: string }>,
+  onCopied?: () => void,
 ): Readonly<{
   label: string;
   copied: boolean;
@@ -54,6 +61,10 @@ export function useClipboardCopy(
     // installation served over plain http is that deployment, not an edge case.
     const writer = navigator.clipboard;
     if (!writer) {
+      // Dropping the claim as the rejection branch does: a control that had
+      // copied and then met a browser with no clipboard would otherwise draw
+      // Copied and the danger notice at the same time.
+      setWritten(null);
       setFailed(true);
       return;
     }
@@ -61,6 +72,7 @@ export function useClipboardCopy(
       () => {
         setWritten(text);
         setFailed(false);
+        onCopied?.();
       },
       () => {
         setWritten(null);

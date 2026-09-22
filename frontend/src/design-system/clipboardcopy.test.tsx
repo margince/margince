@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { type ClipboardStub, stubClipboard } from "./clipboard-testing";
+import { stubClipboard } from "./clipboard-testing";
 import { useClipboardCopy } from "./clipboardcopy";
 
 const LABELS = {
@@ -16,13 +16,7 @@ const LABELS = {
   remedy: "Select it in the field and copy it by hand.",
 } as const;
 
-let clipboard: ClipboardStub | null = null;
-
-afterEach(() => {
-  cleanup();
-  clipboard?.restore();
-  clipboard = null;
-});
+afterEach(cleanup);
 
 /**
  * A caller, wired the way the real ones are: the label on the button, the
@@ -59,7 +53,7 @@ function renderProbe(initial: string) {
 describe("useClipboardCopy", () => {
   it("hands the text over and then says it has been copied", async () => {
     const user = userEvent.setup();
-    clipboard = stubClipboard("accepts");
+    const clipboard = stubClipboard("accepts");
     renderProbe("the-link");
 
     await user.click(screen.getByRole("button", { name: "Copy link" }));
@@ -73,7 +67,7 @@ describe("useClipboardCopy", () => {
     // `navigator.clipboard` is undefined and asking it for `writeText` throws
     // before any rejection handler could run.
     const user = userEvent.setup();
-    clipboard = stubClipboard("absent");
+    stubClipboard("absent");
     renderProbe("the-link");
 
     await user.click(screen.getByRole("button", { name: "Copy link" }));
@@ -89,7 +83,7 @@ describe("useClipboardCopy", () => {
 
   it("says so where the clipboard is there and refuses the write", async () => {
     const user = userEvent.setup();
-    clipboard = stubClipboard("refuses");
+    stubClipboard("refuses");
     renderProbe("the-link");
 
     await user.click(screen.getByRole("button", { name: "Copy link" }));
@@ -104,7 +98,7 @@ describe("useClipboardCopy", () => {
     // The clipboard still holds the OLD text. A button that went on saying
     // Copied would be describing something the reader can no longer paste.
     const user = userEvent.setup();
-    clipboard = stubClipboard("accepts");
+    stubClipboard("accepts");
     renderProbe("the-link");
 
     await user.click(screen.getByRole("button", { name: "Copy link" }));
@@ -116,13 +110,13 @@ describe("useClipboardCopy", () => {
 
   it("takes the notice away once a later attempt lands", async () => {
     const user = userEvent.setup();
-    clipboard = stubClipboard("refuses");
+    stubClipboard("refuses");
     renderProbe("the-link");
     await user.click(screen.getByRole("button", { name: "Copy link" }));
     await screen.findByText(/this browser refused the clipboard/i);
 
-    clipboard.restore();
-    clipboard = stubClipboard("accepts");
+    // The browser changes its mind mid-case; teardown unwinds both stubs.
+    stubClipboard("accepts");
     await user.click(screen.getByRole("button", { name: "Copy link" }));
 
     expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();

@@ -149,13 +149,12 @@ test("says so when the browser will not let the page copy", async () => {
   );
   // AFTER setup, which installs a clipboard of its own — taken away here to
   // model the browser that never offered one.
-  const clipboard = stubClipboard("absent");
+  stubClipboard("absent");
   await user.click(await screen.findByRole("button", { name: /^Copy$/ }));
   expect(
     await screen.findByText(/this browser refused the clipboard/i),
   ).toBeTruthy();
   expect(screen.getByText(/copy it yourself/i)).toBeTruthy();
-  clipboard.restore();
 });
 
 // With no model configured the endpoint answers from a template. Saying so is

@@ -113,7 +113,7 @@ describe("sharing a forecast view", () => {
     vi.stubGlobal("fetch", shareStub());
     // No clipboard at all — an http origin, which is where this actually
     // happens. Silently doing nothing would leave the reader pressing Copy.
-    const clipboard = stubClipboard("absent");
+    stubClipboard("absent");
     render(
       <ShareViewButton
         target="forecast"
@@ -131,6 +131,5 @@ describe("sharing a forecast view", () => {
       await screen.findByText(/this browser refused the clipboard/i),
     ).toBeTruthy();
     expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
-    clipboard.restore();
   });
 });
