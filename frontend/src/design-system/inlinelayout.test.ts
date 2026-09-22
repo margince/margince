@@ -7,12 +7,13 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
   extensionLayers,
-  filesMatching,
+  filesUnder,
+  MODULE_FILE,
   parseSource,
   sourceFileAt,
 } from "../../scripts/lib/source-tree";
 
-// LAYOUT IS A CLASS, NOT A STYLE ATTRIBUTE, AND THE COUNT ONLY FALLS.
+// LAYOUT IS A CLASS, NOT A STYLE ATTRIBUTE, AND THE COUNT IS PINNED.
 //
 // The values are already tokens — `check-ds-spacing.sh` and `type-source.test.ts`
 // see to that — so what is left is a rule nobody can restyle: a margin written
@@ -25,6 +26,12 @@ import {
 // substitution, a conditional or a member access is a number the render
 // COMPUTED — a popover's resolved position, a bar filled to a percentage, a
 // column width read off the table's own config — and no stylesheet can hold it.
+//
+// A WRAPPER IS NOT AN EXEMPTION. The rule counts wherever the element can reach
+// it: through a ternary, a guard, a cast, a spread, a nullish default, or a
+// style object hoisted to a name of its own. A reader of the rendered page
+// cannot tell those apart, and a census that could is one an author steps
+// around by adding a `?:`.
 //
 // The width/height family IS in scope, measured on its own before it was let
 // in: a static dimension is a rule a class holds as readily as a margin. The
@@ -39,21 +46,29 @@ const extensionsRoot = join(repoRoot, "extensions");
 
 /**
  * A style property that lays something out, by family: the box's own space,
- * how it flows, and where it sits. Matched as a PREFIX, so `marginInlineStart`
- * and `gridTemplateColumns` are covered without a list that goes stale the
- * day the platform ships another one.
+ * how it flows, and where it sits. Matched as a PREFIX, so `marginInlineStart`,
+ * `gridTemplateColumns` and `overflowX` are covered without a list that goes
+ * stale the day the platform ships another one.
+ *
+ * `transform` and `translate` are here because a static one MOVES the box;
+ * `rotate`, `scale` and `opacity` are not, because they change what a box
+ * looks like without changing where anything sits.
  */
 const LAYOUT_PROPERTY =
-  /^(margin|padding|gap|rowGap|columnGap|display|flex|grid|justify|align|place|inset|top|right|bottom|left|width|minWidth|maxWidth|height|minHeight|maxHeight)/;
+  /^(margin|padding|gap|rowGap|columnGap|display|flex|grid|justify|align|place|inset|top|right|bottom|left|width|minWidth|maxWidth|height|minHeight|maxHeight|position|overflow|float|order|boxSizing|aspectRatio|transform|translate|zIndex)/;
+
+/** A type annotation that says an object IS a style, wherever it is written. */
+const STYLE_ANNOTATION = /\bCSSProperties\b/;
 
 /** What the fix is, said the same way at every finding. */
 const FIX =
   "a class in the screen's sheet, or `Stack`/`Row` from design-system/stack.tsx";
 
 /**
- * How many inline layout rules each file still carries. The number may FALL and
- * never rise: a file over its entry fails, and so does one under it, because a
- * baseline left high is a budget the next author spends without deciding to.
+ * How many inline layout rules each file carries. The entry is EXACT in both
+ * directions: a file over it fails naming the property, and a file under it
+ * fails until the entry is lowered in the same change, because a baseline left
+ * high is a budget the next author spends without deciding to.
  *
  * A file, not a line: a line number moves whenever anything above it is edited,
  * and a baseline that churns on unrelated changes is one contacts regenerate
@@ -86,6 +101,7 @@ const BASELINE = new Map<string, number>([
   ["frontend/src/screens/create.tsx", 2],
   ["frontend/src/screens/deal360/confirmadvance.tsx", 1],
   ["frontend/src/screens/deal360/dealactions.tsx", 4],
+  ["frontend/src/screens/deal360/dealbrief.tsx", 2],
   ["frontend/src/screens/deal360/outcomereviewmodal.tsx", 1],
   ["frontend/src/screens/deals.tsx", 5],
   ["frontend/src/screens/edit.tsx", 1],
@@ -120,21 +136,39 @@ const BASELINE = new Map<string, number>([
 ]);
 
 /**
- * The two trees that are held at ZERO rather than baselined. This directory
- * publishes the alternative, so a primitive writing layout inline is the gate's
- * own author ignoring it; a unit has no stylesheet at all, so `Stack` and `Row`
- * are its only spelling and an inline rule there is a step nobody can restyle.
+ * What the whole tree carries, so a rise is ONE reviewable number rather than
+ * fifty-odd entries a reader has to diff against each other.
+ */
+const TOTAL = 274;
+
+/**
+ * The two trees held at ZERO rather than baselined, by taking no entry at all:
+ * an entry of nothing is what the census arm above already compares against, so
+ * refusing the ENTRY is the whole rule. This directory publishes the
+ * alternative, so a primitive laying itself out inline is the gate's own author
+ * ignoring it; a unit ships no stylesheet, so `Stack` and `Row` are its only
+ * spelling.
  */
 const HELD_AT_ZERO = [/^frontend\/src\/design-system\//, /^extensions\//];
 
-/** Every rendered module: the whole frontend tree and every unit's layer. */
+/** Files that are not the rendered product: their own suite and their own docs. */
+const NOT_THE_PRODUCT = new RegExp(`\\.(test|stories)${MODULE_FILE.source}`);
+
+/**
+ * Every module the product renders: everything under `frontend/src`, plus each
+ * unit's own frontend layer. Every dialect, not just `.tsx` — a unit may ship
+ * `screen.jsx`, and a `.ts` module can hold a `CSSProperties` object.
+ *
+ * `.storybook/` stays out: it configures the catalog rather than shipping in the
+ * app, and a decorator's frame is not a screen anybody reads.
+ */
 function modules(): string[] {
   const units = extensionLayers(extensionsRoot).flatMap((layer) =>
-    filesMatching(layer, /\.tsx$/),
+    filesUnder(layer),
   );
-  return filesMatching(sourceRoot, /\.tsx$/)
+  return filesUnder(sourceRoot)
     .concat(units)
-    .filter((path) => !/\.(test|stories)\.tsx$/.test(path));
+    .filter((path) => !NOT_THE_PRODUCT.test(path));
 }
 
 /** A path as the baseline spells it: relative to the repository, forward slashes. */
@@ -142,59 +176,191 @@ function pathOf(file: string): string {
   return relative(repoRoot, file).replaceAll("\\", "/");
 }
 
+/** `x as const`, `x satisfies T`, `(x)`, `x!` — wrappers that change no value. */
+function unwrap(node: ts.Expression): ts.Expression {
+  let current = node;
+  while (
+    ts.isAsExpression(current) ||
+    ts.isSatisfiesExpression(current) ||
+    ts.isParenthesizedExpression(current) ||
+    ts.isTypeAssertionExpression(current) ||
+    ts.isNonNullExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return current;
+}
+
 /**
  * Whether this value is a rule rather than a reading. A no-substitution
- * template is the same literal the quotes would have made, so it counts; one
- * with a `${}` in it is arithmetic the render did.
+ * template is the same literal the quotes would have made, and `-4` is a
+ * literal the parser happens to hand over as an operator and a number.
  */
 function isStatic(value: ts.Expression): boolean {
+  const bare = unwrap(value);
+  if (
+    ts.isPrefixUnaryExpression(bare) &&
+    (bare.operator === ts.SyntaxKind.MinusToken ||
+      bare.operator === ts.SyntaxKind.PlusToken)
+  ) {
+    return ts.isNumericLiteral(bare.operand);
+  }
   return (
-    ts.isStringLiteral(value) ||
-    ts.isNumericLiteral(value) ||
-    ts.isNoSubstitutionTemplateLiteral(value)
+    ts.isStringLiteral(bare) ||
+    ts.isNumericLiteral(bare) ||
+    ts.isNoSubstitutionTemplateLiteral(bare)
   );
 }
 
-/** The object literal a `style` attribute holds, if it holds one at all. */
-function styleObject(node: ts.Node): ts.ObjectLiteralExpression | undefined {
+/** The property this assignment names, including the computed constant form. */
+function propertyName(name: ts.PropertyName): string | undefined {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name)) return name.text;
+  if (!ts.isComputedPropertyName(name)) return undefined;
+  const key = unwrap(name.expression);
+  return ts.isStringLiteral(key) || ts.isNoSubstitutionTemplateLiteral(key)
+    ? key.text
+    : undefined;
+}
+
+/**
+ * Every value each name is given in one module. EVERY value, not the last: this
+ * reader has no scope information, and dropping an ambiguous name would be the
+ * census choosing the one direction it must not fail in.
+ */
+function initializers(source: ts.SourceFile): Map<string, ts.Expression[]> {
+  const byName = new Map<string, ts.Expression[]>();
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer !== undefined
+    ) {
+      const known = byName.get(node.name.text);
+      if (known) known.push(node.initializer);
+      else byName.set(node.name.text, [node.initializer]);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return byName;
+}
+
+/**
+ * Every object literal an expression can hand to an element, however it is
+ * wrapped: a ternary's two arms, a guard's right-hand side, a nullish default,
+ * an `Object.assign`, a spread, a cast, and a name declared elsewhere in the
+ * same module.
+ *
+ * It reaches THROUGH a call rather than stopping at one, so
+ * `style={merge({ marginTop: "4px" })}` is read: the literal is a layout rule a
+ * class could hold whatever the function does with it, and a walk that stopped
+ * would hand every author a one-word way around this gate.
+ */
+function styleObjectsUnder(
+  root: ts.Expression,
+  named: Map<string, ts.Expression[]>,
+): ts.ObjectLiteralExpression[] {
+  const found: ts.ObjectLiteralExpression[] = [];
+  const resolved = new Set<string>();
+  const visit = (node: ts.Node): void => {
+    // A property's NAME is an identifier too, so an object is walked by hand:
+    // handing the whole node on would resolve `{ marginTop: x }` against a
+    // module constant that happens to be called `marginTop`.
+    if (ts.isObjectLiteralExpression(node)) {
+      found.push(node);
+      for (const property of node.properties) {
+        if (ts.isPropertyAssignment(property)) visit(property.initializer);
+        else if (ts.isSpreadAssignment(property)) visit(property.expression);
+      }
+      return;
+    }
+    if (ts.isPropertyAccessExpression(node)) {
+      visit(node.expression);
+      return;
+    }
+    if (ts.isIdentifier(node)) {
+      if (resolved.has(node.text)) return;
+      resolved.add(node.text);
+      for (const initializer of named.get(node.text) ?? []) visit(initializer);
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(root);
+  return found;
+}
+
+/** The expression a `style` attribute hands its element, if it has one. */
+function styleExpression(node: ts.Node): ts.Expression | undefined {
   if (!ts.isJsxAttribute(node) || !ts.isIdentifier(node.name)) return undefined;
   if (node.name.text !== "style") return undefined;
   const value = node.initializer;
   if (value === undefined || !ts.isJsxExpression(value)) return undefined;
-  const expression = value.expression;
-  return expression !== undefined && ts.isObjectLiteralExpression(expression)
-    ? expression
-    : undefined;
+  return value.expression;
 }
 
-type InlineLayout = { where: string; line: number; property: string };
-
-/** Every static layout rule written inline in one parsed module, in source order. */
-function inlineLayoutIn(where: string, source: ts.SourceFile): InlineLayout[] {
-  const found: InlineLayout[] = [];
+/**
+ * A style object written apart from any element: `const row: CSSProperties = …`.
+ * Declared to BE a style, so it is one wherever it is used — including in a
+ * `.ts` module with no JSX in it at all.
+ */
+function annotatedStyles(
+  source: ts.SourceFile,
+  named: Map<string, ts.Expression[]>,
+): ts.ObjectLiteralExpression[] {
+  const found: ts.ObjectLiteralExpression[] = [];
   const visit = (node: ts.Node) => {
-    const object = styleObject(node);
-    for (const property of object?.properties ?? []) {
-      // A spread and a shorthand both carry a name the render computed, so
-      // neither is a rule this gate can ask to move.
-      if (!ts.isPropertyAssignment(property)) continue;
-      const name =
-        ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
-          ? property.name.text
-          : undefined;
-      if (name === undefined || !LAYOUT_PROPERTY.test(name)) continue;
-      if (!isStatic(property.initializer)) continue;
-      found.push({
-        where,
-        line:
-          source.getLineAndCharacterOfPosition(property.getStart()).line + 1,
-        property: name,
-      });
+    if (
+      ts.isVariableDeclaration(node) &&
+      node.type !== undefined &&
+      node.initializer !== undefined &&
+      STYLE_ANNOTATION.test(node.type.getText())
+    ) {
+      found.push(...styleObjectsUnder(node.initializer, named));
     }
     ts.forEachChild(node, visit);
   };
   visit(source);
   return found;
+}
+
+type InlineLayout = { where: string; line: number; property: string };
+
+/** Every static layout rule written inline in one parsed module, by line. */
+function inlineLayoutIn(where: string, source: ts.SourceFile): InlineLayout[] {
+  const named = initializers(source);
+  // A set, because one literal is reachable both from the element that wears it
+  // and from its own annotated declaration, and it is one rule either way.
+  const objects = new Set<ts.ObjectLiteralExpression>();
+  const visit = (node: ts.Node) => {
+    const expression = styleExpression(node);
+    if (expression !== undefined) {
+      for (const object of styleObjectsUnder(expression, named)) {
+        objects.add(object);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  for (const object of annotatedStyles(source, named)) objects.add(object);
+
+  const found: InlineLayout[] = [];
+  for (const object of objects) {
+    for (const property of object.properties) {
+      if (!ts.isPropertyAssignment(property)) continue;
+      const property_name = propertyName(property.name);
+      if (property_name === undefined) continue;
+      if (!LAYOUT_PROPERTY.test(property_name)) continue;
+      if (!isStatic(property.initializer)) continue;
+      found.push({
+        where,
+        line:
+          source.getLineAndCharacterOfPosition(property.getStart()).line + 1,
+        property: property_name,
+      });
+    }
+  }
+  return found.sort((a, b) => a.line - b.line);
 }
 
 function countsByFile(found: readonly InlineLayout[]): Map<string, number> {
@@ -214,14 +380,20 @@ describe("layout is a class, not a style attribute", () => {
 
   it("reads a corpus that is every rendered module in the tree", () => {
     // A census that read a smaller tree would report the same word, PASS. So
-    // the floor is named, and so is one file from each shape of the corpus:
-    // flat, nested, outside `screens/`, and in a unit's own layer.
+    // the floor sits just under the real count, and one file of each shape is
+    // named: flat, nested, outside `screens/`, a `.ts` module with no JSX, and
+    // a unit's own layer.
     const paths = files.map(pathOf);
-    expect(files.length).toBeGreaterThan(500);
+    expect(files.length).toBeGreaterThan(900);
     expect(paths).toContain("frontend/src/screens/contact360.tsx");
     expect(paths).toContain("frontend/src/screens/deal360/dealactions.tsx");
     expect(paths).toContain("frontend/src/design-system/trust.tsx");
+    expect(paths).toContain("frontend/src/design-system/anchoredpopup.ts");
     expect(paths).toContain("extensions/openchannel/frontend/screen.tsx");
+  });
+
+  it("carries the total it is pinned at", () => {
+    expect(found.length).toBe(TOTAL);
   });
 
   it("carries no file over its baseline", () => {
@@ -250,19 +422,10 @@ describe("layout is a class, not a style attribute", () => {
     expect(behind, behind.join("\n")).toEqual([]);
   });
 
-  it("holds this directory and the unit tier at zero", () => {
-    const heldAtZero = (where: string) =>
-      HELD_AT_ZERO.some((tier) => tier.test(where));
-    const findings = found
-      .filter((one) => heldAtZero(one.where))
-      .map(
-        (one) =>
-          `${one.where}:${one.line}: \`${one.property}\` — this tier is not baselined: ${FIX}`,
-      );
-    const baselined = [...BASELINE.keys()]
-      .filter(heldAtZero)
-      .map((where) => `${where}: this tier takes no baseline entry`);
-    const refused = [...findings, ...baselined];
+  it("baselines nothing in this directory or the unit tier", () => {
+    const refused = [...BASELINE.keys()]
+      .filter((where) => HELD_AT_ZERO.some((tier) => tier.test(where)))
+      .map((where) => `${where}: this tier takes no baseline entry — ${FIX}`);
     expect(refused, refused.join("\n")).toEqual([]);
   });
 
@@ -283,9 +446,63 @@ describe("layout is a class, not a style attribute", () => {
       ).toEqual(["3:display", "4:gap", "5:alignItems"]);
     });
 
-    it("reads a number and a template with nothing in it", () => {
+    it("reads a literal however the parser hands it over", () => {
       expect(read("<input style={{ width: 180 }} />")).toHaveLength(1);
       expect(read("<div style={{ padding: `0` }} />")).toHaveLength(1);
+      expect(read("<div style={{ marginLeft: -4 }} />")).toHaveLength(1);
+      expect(read('<div style={{ marginTop: ("4px") }} />')).toHaveLength(1);
+      expect(
+        read('<div style={{ marginTop: "4px" as const }} />'),
+      ).toHaveLength(1);
+      expect(read('<div style={{ ["marginTop"]: "4px" }} />')).toHaveLength(1);
+      expect(read('<div style={{ "margin-top": "4px" }} />')).toHaveLength(1);
+    });
+
+    it("reads through every wrapper an element can hand its style", () => {
+      const shapes = [
+        '<div style={open ? { gap: "4px" } : undefined} />',
+        '<div style={open && { gap: "4px" }} />',
+        '<div style={given ?? { gap: "4px" }} />',
+        '<div style={Object.assign({}, { gap: "4px" })} />',
+        '<div style={{ gap: "4px" } as CSSProperties} />',
+        '<div style={{ gap: "4px" } satisfies CSSProperties} />',
+        '<div style={({ gap: "4px" })} />',
+        '<div style={{ ...{ gap: "4px" } }} />',
+        '<div style={{ ...(tight && { gap: "4px" }) }} />',
+        '<div style={merge(base, { gap: "4px" })} />',
+      ];
+      expect(
+        shapes.filter((shape) => read(shape).length !== 1),
+        "a wrapper hid the rule",
+      ).toEqual([]);
+    });
+
+    it("reads a style object hoisted to a name of its own", () => {
+      expect(
+        read('const row = { marginTop: "4px" };\n<div style={row} />'),
+      ).toEqual([{ where: "fixture.tsx", line: 1, property: "marginTop" }]);
+      expect(
+        read(
+          'const sheet = { row: { gap: "4px" } };\n<div style={sheet.row} />',
+        ),
+      ).toHaveLength(1);
+    });
+
+    it("reads a declared style with no element in sight", () => {
+      expect(
+        read('const row: CSSProperties = { marginTop: "4px" };'),
+      ).toHaveLength(1);
+      expect(
+        read('const row: React.CSSProperties = { marginTop: "4px" };'),
+      ).toHaveLength(1);
+    });
+
+    it("counts one rule once, however many ways it is reachable", () => {
+      expect(
+        read(
+          'const row: CSSProperties = { marginTop: "4px" };\n<div style={row} />',
+        ),
+      ).toHaveLength(1);
     });
 
     it("leaves a value the render computed alone", () => {
@@ -298,6 +515,7 @@ describe("layout is a class, not a style attribute", () => {
       expect(read("<div style={{ marginTop: tight ? 0 : 8 }} />")).toEqual([]);
       expect(read("<div style={{ width }} />")).toEqual([]);
       expect(read("<div style={{ ...frame }} />")).toEqual([]);
+      expect(read("<div style={frameStyle} />")).toEqual([]);
     });
 
     it("leaves a property that lays nothing out alone", () => {
@@ -306,16 +524,35 @@ describe("layout is a class, not a style attribute", () => {
       expect(
         read('<text style={{ fontWeight: "var(--fontWeightBold)" }} />'),
       ).toEqual([]);
+      expect(read('<div style={{ opacity: "0" }} />')).toEqual([]);
     });
 
     it("reads the whole family, not the properties somebody listed", () => {
+      const families = [
+        '<div style={{ marginInlineStart: "0" }} />',
+        '<div style={{ gridColumn: "1" }} />',
+        '<div style={{ position: "relative" }} />',
+        '<div style={{ overflowX: "hidden" }} />',
+        '<div style={{ float: "left" }} />',
+        "<div style={{ order: 2 }} />",
+        '<div style={{ boxSizing: "border-box" }} />',
+        '<div style={{ aspectRatio: "16 / 9" }} />',
+        '<div style={{ transform: "translateY(-2px)" }} />',
+        '<div style={{ translate: "0 -2px" }} />',
+        "<div style={{ zIndex: 2 }} />",
+      ];
       expect(
-        read('<div style={{ marginInlineStart: "0", gridColumn: "1" }} />'),
-      ).toHaveLength(2);
+        families.filter((one) => read(one).length !== 1),
+        "a layout family went unread",
+      ).toEqual([]);
     });
 
-    it("leaves a style that is not an object literal alone", () => {
-      expect(read("<div style={frameStyle} />")).toEqual([]);
+    it("reads a unit's own dialect", () => {
+      const jsx = inlineLayoutIn(
+        "screen.jsx",
+        parseSource("screen.jsx", '<div style={{ gap: "4px" }} />'),
+      );
+      expect(jsx).toHaveLength(1);
     });
   });
 });
