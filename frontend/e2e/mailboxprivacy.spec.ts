@@ -99,7 +99,7 @@ test("AC-mailbox-4: the Senders page shows every decision and takes an overrule"
   await row.getByRole("button", { name: "Geschäftlich" }).click();
   // An overruled row says whose answer stands, because the reader auditing this
   // list needs to tell their own decisions from the classifier's.
-  await expect(row).toContainText("von Ihnen entschieden");
+  await expect(row).toContainText("von dir entschieden");
   await expect(row.getByRole("button", { name: "Zurücknehmen" })).toBeVisible();
 });
 

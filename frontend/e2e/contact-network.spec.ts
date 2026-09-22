@@ -98,7 +98,7 @@ test.describe("Network tab — page shape", () => {
     // passed against the broken layout.
     const lanes = await textsOf(page.locator(".rmap text.rmap-lane"));
     expect(lanes).toContain("Unser Team");
-    expect(lanes).toContain("Ihr Unternehmen");
+    expect(lanes).toContain("Deren Unternehmen");
 
     // Every node the model carries is inside the drawing's own viewBox. A node
     // painted past it is in the DOM, passes every count, and is invisible.
