@@ -3,8 +3,8 @@ name: scheduled
 # The checks whose answer changes when nothing is being merged.
 #
 # Everything in ci.yml answers "is this diff sound?" and runs because a diff
-# exists. These four answer "is main still sound?", which a PR gate structurally
-# cannot: two of them go stale on their own, one goes quiet, and one was too
+# exists. These answer "is main still sound?", which a PR gate structurally
+# cannot: two of them go stale on their own, two go quiet, and one was too
 # expensive to ask on every merge.
 #
 #   govulncheck        — the vulnerability database changes daily. A per-PR scan
@@ -15,6 +15,13 @@ name: scheduled
 #                        development, to be re-required once releases exist). A
 #                        gate nobody is blocked by is a gate nobody reads, so
 #                        this reads it and files an issue when it goes red.
+#   renovate liveness  — Renovate is the ONLY mechanism that adopts a fix for a
+#                        lockfile-only transitive advisory; renovate.json argues
+#                        that at length. When it stops, nothing here notices: no
+#                        lane reddens, no PR is blocked, and the tracker reads
+#                        like a healthy day. It stopped for nineteen days after
+#                        this repository changed owner, and what found it was
+#                        somebody chasing a Dependabot alert.
 #   backend lane       — main has gone red twice with the breakage MASKED: a
 #                        docs-only commit landing after a breaking one matches no
 #                        classifier scope, so every gate skips and the run reports
@@ -38,7 +45,7 @@ name: scheduled
 #                        bench-perf-check), and an alarm that cannot finish files
 #                        a breach it never measured.
 #
-# A fifth job earns its place here for the same reason rather than the same
+# One more job earns its place here for the same reason rather than the same
 # question. reap-caches is maintenance, not a verdict on main — but the state it
 # maintains only ever drifts BETWEEN merges, and its failure mode is silence:
 # caches evict each other and lanes get slower with nothing to point at. A thing
@@ -178,6 +185,44 @@ jobs:
               exit 1
               ;;
           esac
+
+  renovate-liveness:
+    # The DAILY cadence. Spelled per job because a job with no `if` runs on
+    # every trigger the workflow has, so the weekly perf cron would otherwise
+    # run this a second time on Mondays — a second 45-minute gate, and a
+    # second "still failing" comment on every issue the 01:00 run just filed.
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
+    name: renovate liveness (main)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      status: ${{ steps.liveness.outputs.status }}
+      outcome: ${{ steps.liveness.outputs.outcome }}
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      # The script lives in the tree, so this job needs the tree.
+      # persist-credentials: false because the reads below authenticate with
+      # GH_TOKEN explicitly rather than through the git credential.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Read-only against the tracker, and cheap: two REST reads and one search.
+      # It asks whether the bot has ACTED lately, which is the only question
+      # that distinguishes a healthy quiet week from an installation that
+      # stopped resolving — the repository's own files look identical either way,
+      # so nothing a gate could read from the tree can answer this.
+      - name: Has Renovate run lately?
+        id: liveness
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: ./scripts/check-renovate-liveness.sh
 
   backend-lane:
     # The DAILY cadence. Spelled per job because a job with no `if` runs on
@@ -633,7 +678,7 @@ jobs:
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, backend-lane, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches]
+    needs: [vuln, quality-gate, renovate-liveness, backend-lane, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -672,6 +717,9 @@ jobs:
           VULN_RESULT: ${{ needs.vuln.result }}
           GATE_RESULT: ${{ needs.quality-gate.result }}
           GATE_STATUS: ${{ needs.quality-gate.outputs.status }}
+          RENOVATE_RESULT: ${{ needs['renovate-liveness'].result }}
+          RENOVATE_STATUS: ${{ needs['renovate-liveness'].outputs.status }}
+          RENOVATE_OUTCOME: ${{ needs['renovate-liveness'].outputs.outcome }}
           LANE_RESULT: ${{ needs.backend-lane.result }}
           CLOCK_RESULT: ${{ needs['fe-clock-drift'].result }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
