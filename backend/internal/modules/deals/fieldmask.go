@@ -10,7 +10,6 @@ package deals
 
 import (
 	"context"
-	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -18,7 +17,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -46,17 +44,11 @@ const maskObject = "deal"
 //
 //nolint:goconst // wire field names against column names, each its own vocabulary
 var dealMaskableFields = map[string]func(*crmcontracts.Deal){
-	// The money fields go together: a currency beside a withheld amount
-	// would read as a priced deal with its figure missing, and an ARR left
-	// standing beside a withheld one-off amount discloses the size of the
-	// deal the mask was meant to hide.
-	"amount_minor": func(d *crmcontracts.Deal) {
-		d.AmountMinor, d.ExpectedArrMinor, d.Currency = nil, nil, nil
-	},
-	"expected_arr_minor": func(d *crmcontracts.Deal) {
-		d.AmountMinor, d.ExpectedArrMinor, d.Currency = nil, nil, nil
-	},
-	"currency": func(d *crmcontracts.Deal) { d.Currency = nil },
+	// The money group — which mask pulls in which other field — lives in
+	// auth.maskGroups now; each func here withholds only its own column.
+	"amount_minor":       func(d *crmcontracts.Deal) { d.AmountMinor = nil },
+	"expected_arr_minor": func(d *crmcontracts.Deal) { d.ExpectedArrMinor = nil },
+	"currency":           func(d *crmcontracts.Deal) { d.Currency = nil },
 	// The three references. They are withheld by the same mechanism as a role
 	// mask because the reader needs the same thing from them: a null they can
 	// tell from an empty field. Which rows they are withheld ON is a different
@@ -67,36 +59,6 @@ var dealMaskableFields = map[string]func(*crmcontracts.Deal){
 	// partner takes it along: "sourced" beside a null partner would disclose
 	// that SOME partner brought the deal to a reader who may not know which.
 	filterPartnerCompanyID: func(d *crmcontracts.Deal) { d.PartnerCompanyId, d.PartnerAttribution = nil, nil },
-}
-
-// withheldFields is the ordered set of columns withheld from ONE row. Ordered
-// because masked_fields goes on the wire, and a client diffing two reads of
-// the same deal should not see the list reshuffle under it.
-type withheldFields []string
-
-func (w *withheldFields) add(field string) {
-	if !slices.Contains(*w, field) {
-		*w = append(*w, field)
-	}
-}
-
-// applyTo withholds every named field from the row and records the names on
-// it. A name with no withhold func in dealMaskableFields is dropped rather
-// than reported: naming a field in masked_fields while still sending its value
-// is a worse answer than either half alone.
-func (w withheldFields) applyTo(d *crmcontracts.Deal) {
-	named := make([]string, 0, len(w))
-	for _, field := range w {
-		withhold, known := dealMaskableFields[field]
-		if !known {
-			continue
-		}
-		withhold(d)
-		named = append(named, field)
-	}
-	if len(named) > 0 {
-		d.MaskedFields = &named
-	}
 }
 
 // finishDealPage is what every page of deals goes through before it leaves the
@@ -124,61 +86,37 @@ func finishDealForCaller(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal) (c
 
 // maskDeals withholds, per row, what this reader may not have: the columns
 // their ROLE masks, and the references naming a record they could not open.
-// Both end the same way — the field goes out null and masked_fields names it —
-// so both are collected per row and applied once.
+// auth.ApplyFieldMasks is the shared pass every masked record type goes
+// through; this spends its own round trips only on what is deal-specific —
+// write authority, and which references the page's rows point at.
 func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error {
-	withheld := make([]withheldFields, len(deals))
+	dealID := func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) }
 	// ONE statement answers which rows of the page the caller could change, and
 	// both consumers read it: the wire flag a client draws its edit affordances
 	// from, and the masks conditioned on write authority. Asking twice would be
 	// two round trips for one question, and two answers that can disagree.
-	writable, err := auth.StampWritable(ctx, tx, dealTable, deals,
-		func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) },
+	writable, err := auth.StampWritable(ctx, tx, dealTable, deals, dealID,
 		func(d *crmcontracts.Deal, may bool) { d.Writable = &may })
 	if err != nil {
 		return err
 	}
-	if err := roleMaskedFields(ctx, deals, withheld, writable); err != nil {
-		return err
-	}
-	if err := unreadableReferences(ctx, tx, deals, withheld); err != nil {
-		return err
-	}
-	for i := range deals {
-		withheld[i].applyTo(&deals[i])
-	}
-	return nil
-}
-
-// roleMaskedFields collects the columns the caller's role withholds on each
-// row. One statement answers which rows of the page the caller could change;
-// the masks conditioned on write authority lift on those.
-func roleMaskedFields(ctx context.Context, deals []crmcontracts.Deal, withheld []withheldFields,
-	writable map[ids.UUID]bool,
-) error {
-	p, err := storekit.Actor(ctx)
+	extra, err := unreadableReferences(ctx, tx, deals)
 	if err != nil {
 		return err
 	}
-	// Cheap exit for the common case — no mask on deals at all.
-	if len(auth.MaskedFields(p, maskObject, false)) == 0 {
-		return nil
-	}
-	for i := range deals {
-		for _, field := range auth.MaskedFields(p, maskObject, writable[ids.UUID(deals[i].Id)]) {
-			withheld[i].add(field)
-		}
-	}
-	return nil
+	return auth.ApplyFieldMasks(ctx, tx, maskObject, deals, dealID, dealMaskableFields,
+		func(d *crmcontracts.Deal, names []string) { d.MaskedFields = &names },
+		extra, writable)
 }
 
-// unreadableReferences withholds a deal's links to records the caller could
-// not open. Every seat of the workspace reads every deal — a deal is customer
-// identity — but the records it POINTS AT are not: a company can be
-// capture-private to the colleague who captured it, and a project keeps its own
-// own/team row scope. Handing the id back regardless would make the deal an
-// existence oracle over rows the reader's own company and project reads
-// would refuse.
+// unreadableReferences answers, for each row of the page, which of a deal's
+// links to another record this caller could not open — the extra names
+// auth.ApplyFieldMasks withholds alongside the role's own masks. Every seat of
+// the workspace reads every deal — a deal is customer identity — but the
+// records it POINTS AT are not: a company can be capture-private to the
+// colleague who captured it, and a project keeps its own own/team row scope.
+// Handing the id back regardless would make the deal an existence oracle over
+// rows the reader's own company and project reads would refuse.
 //
 // The write path has enforced exactly this rule all along: applyDealLinkPatches
 // gates all three references with auth.EnsureLinkTarget before setting them.
@@ -186,7 +124,7 @@ func roleMaskedFields(ctx context.Context, deals []crmcontracts.Deal, withheld [
 // this is the half that never asked when handing one back.
 //
 // ONE statement per referenced table for the whole page, never a probe per row.
-func unreadableReferences(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal, withheld []withheldFields) error {
+func unreadableReferences(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) (func(int) []string, error) {
 	companyIDs := make([]ids.UUID, 0, 2*len(deals))
 	projectIDs := make([]ids.UUID, 0, len(deals))
 	for _, d := range deals {
@@ -205,25 +143,26 @@ func unreadableReferences(ctx context.Context, tx pgx.Tx, deals []crmcontracts.D
 	// names no company or no project pays for neither.
 	visibleCompanies, err := auth.VisibleSubset(ctx, tx, "company", companyIDs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	visibleProjects, err := auth.VisibleSubset(ctx, tx, "project", projectIDs)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for i := range deals {
+	return func(i int) []string {
 		d := deals[i]
+		var extra []string
 		if d.CompanyId != nil && !visibleCompanies[ids.UUID(*d.CompanyId)] {
-			withheld[i].add(filterCompanyID)
+			extra = append(extra, filterCompanyID)
 		}
 		if d.PartnerCompanyId != nil && !visibleCompanies[ids.UUID(*d.PartnerCompanyId)] {
-			withheld[i].add(filterPartnerCompanyID)
+			extra = append(extra, filterPartnerCompanyID)
 		}
 		if d.ProjectId != nil && !visibleProjects[ids.UUID(*d.ProjectId)] {
-			withheld[i].add(filterProjectID)
+			extra = append(extra, filterProjectID)
 		}
-	}
-	return nil
+		return extra
+	}, nil
 }
 
 // refuseMaskedSort refuses a sort over a column the caller's role masks on

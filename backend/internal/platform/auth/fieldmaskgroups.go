@@ -35,6 +35,9 @@ type maskSubject struct{ object, field string }
 // per-row conditioning is write authority over the mask's OWN record, and "the
 // partners you may write" cannot say which commission entries to withhold.
 var maskGroups = map[maskSubject][]maskSubject{
+	// An ARR left standing beside a withheld one-off amount discloses the size
+	// of the deal the mask was meant to hide, so the two travel with the
+	// currency that would otherwise still read as a priced deal.
 	{"deal", "amount_minor"}:        {{"deal", "expected_arr_minor"}, {"deal", "currency"}},
 	{"deal", "expected_arr_minor"}:  {{"deal", "amount_minor"}, {"deal", "currency"}},
 	{"product", "unit_price_minor"}: {{"product", "currency"}},

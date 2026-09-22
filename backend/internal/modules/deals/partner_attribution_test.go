@@ -292,7 +292,7 @@ func TestACreateBodyCarriesItsPartnerThroughToTheStore(t *testing.T) {
 func TestAWithheldPartnerTakesItsAttributionWithIt(t *testing.T) {
 	d := dealNamingPartner(attributionSourced)
 
-	withheldFields{filterPartnerCompanyID}.applyTo(&d)
+	dealMaskableFields[filterPartnerCompanyID](&d)
 
 	if d.PartnerAttribution != nil {
 		t.Errorf("attribution = %q survived a withheld partner — it discloses that SOME partner sourced the deal", *d.PartnerAttribution)
