@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { precedes } from "../testing/domorder";
 import { type ListColumn, ListTable } from "./listtable";
 
 // The toolbar's Display menu: the dials that decide how the grid is DRAWN —
@@ -166,9 +167,7 @@ describe("the Display menu", () => {
     );
     const display = screen.getByRole("button", { name: "Display" });
     const save = screen.getByRole("button", { name: "Save view" });
-    expect(
-      display.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeGreaterThan(0);
+    expect(precedes(display, save)).toBe(true);
   });
 
   it("is withheld from a body that draws no grid", () => {

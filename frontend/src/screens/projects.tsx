@@ -285,7 +285,7 @@ export function ProjectsScreen() {
           ownerColumn<Project>(t),
           lastActivityColumn<Project>(t, locale, recordZone),
         ]}
-        tools={<SaveViewAction resource="projects" query={state.query} />}
+        saveView={<SaveViewAction resource="projects" query={state.query} />}
         rowKey={(project) => project.id}
         rowRoute={(project) => ({ screen: "projects", id: project.id })}
         dataViews={savedViews}

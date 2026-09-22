@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { afterEach, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { precedes } from "../testing/domorder";
 import { type ListChip, ListSurface, type SortOption } from "./listsurface";
 
 // The toolbar as a reader meets it: what the sort dial SAYS without being
@@ -84,12 +85,6 @@ function sortDial(): HTMLElement {
 
 function filterTrigger(): HTMLElement {
   return screen.getByRole("button", { name: "Filter" });
-}
-
-/** True when `first` stands before `second` in the rendered document. */
-function precedes(first: Element, second: Element): boolean {
-  const where = first.compareDocumentPosition(second);
-  return (where & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 }
 
 // A sort arrives from three places a reader did not press — a saved view, a
@@ -177,7 +172,10 @@ it("steps into an attribute and back out to the search it came from", async () =
   expect(row.querySelector(".lucide-chevron-right")).toBeTruthy();
 
   await user.click(row);
-  const back = screen.getByRole("button", { name: "Back to all filters" });
+  // The visible word first: a reader speaking what they see says "Status".
+  const back = screen.getByRole("button", {
+    name: /^Status Back to all filters$/,
+  });
   expect(back.querySelector(".lucide-chevron-left")).toBeTruthy();
   expect(back).toHaveTextContent("Status");
   expect(screen.queryByPlaceholderText("Search attributes")).toBeNull();
@@ -186,6 +184,55 @@ it("steps into an attribute and back out to the search it came from", async () =
   const search = screen.getByPlaceholderText("Search attributes");
   expect(search).toHaveFocus();
   expect(screen.getByRole("button", { name: "Owner" })).toBeTruthy();
+});
+
+// A step takes the control the reader is standing on with it. Each of the
+// three hands focus on rather than dropping it to the top of the document.
+it("hands focus to the way back when it steps into an attribute", async () => {
+  const user = userEvent.setup();
+  render(<Surface />);
+
+  await user.click(filterTrigger());
+  await user.click(screen.getByRole("button", { name: "Status" }));
+
+  expect(
+    screen.getByRole("button", { name: /^Status Back to all filters$/ }),
+  ).toHaveFocus();
+});
+
+it("hands focus back to the trigger when a value is picked", async () => {
+  const user = userEvent.setup();
+  render(<Surface />);
+
+  await user.click(filterTrigger());
+  await user.click(screen.getByRole("button", { name: "Status" }));
+  await user.click(screen.getByRole("radio", { name: "Open" }));
+
+  // The trigger the press LEFT behind: applying the first filter turns the
+  // labelled button into the bare "+".
+  expect(screen.getByRole("button", { name: "Add a filter" })).toHaveFocus();
+});
+
+// Last on the row is the surface's own promise now, not something each screen
+// remembers to put at the end of its `tools` fragment.
+it("stands a saved view after the body's own dials", () => {
+  render(
+    <ListSurface
+      sort={{ value: "", onChange: () => undefined }}
+      sortOptions={SORT_OPTIONS}
+      tools={<button type="button">Pipeline</button>}
+      saveView={<button type="button">Save view</button>}
+    >
+      <p>rows</p>
+    </ListSurface>,
+  );
+
+  expect(
+    precedes(
+      screen.getByRole("button", { name: "Pipeline" }),
+      screen.getByRole("button", { name: "Save view" }),
+    ),
+  ).toBe(true);
 });
 
 it("closes the whole menu on Escape, from either step", async () => {

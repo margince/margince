@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import { useT } from "../i18n";
 import { Radio } from "./atoms";
 import { useDebouncedSearch } from "./debouncedsearch";
-import type { ListChip } from "./listsurface";
+import type { ListChip } from "./listsurface.dials";
 
 // THE VALUE STEP of a filter, in the two shapes an attribute can take: a fixed
 // list of options, or a search over a set too large to draw whole. Both end at

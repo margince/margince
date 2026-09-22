@@ -462,6 +462,7 @@ export function ListTable<Row>({
   problem,
   widthsKey,
   tools,
+  saveView,
   body,
   bodyOwnsPaging = false,
   selection,
@@ -636,10 +637,11 @@ export function ListTable<Row>({
   problem?: ReactNode;
   /** Names this table for the column widths it remembers between visits. */
   widthsKey?: string;
-  /** Appended to the surface's tools slot after the Display menu, at the end of
-   * the toolbar — a caller's own view-switch, picker or Save view, e.g. deals'
-   * board/table toggle and pipeline picker. */
+  /** After the Display menu: a caller's own view-switch or picker, e.g. deals'
+   * board/table toggle. A Save view goes in `saveView`, which stands after. */
   tools?: ReactNode;
+  /** Handed to the surface's own last slot; see `ListSurface`. */
+  saveView?: ReactNode;
 }>) {
   const t = useT();
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
@@ -1072,11 +1074,10 @@ export function ListTable<Row>({
               setOpen={setDisplayOpen}
             />
           )}
-          {/* A screen's own tools stand last, so a Save view sits at the end of
-              the row wherever a screen offers one. */}
           {tools}
         </>
       }
+      saveView={saveView}
       footer={
         <>
           {footer && <div className="lt-agg">{footer}</div>}
@@ -1457,10 +1458,9 @@ function ResizeGrip({
  * tight the rows are, and which optional columns stand. One menu, because the
  * two are one question to a reader — density and a hidden column both answer
  * "show me more of this at once" — and a toolbar that spends a trigger on each
- * spends its right half on dials with nothing grouping them.
- *
- * Passed into ListSurface's `tools` slot: the surface itself has no notion of a
- * column or a row density, only that callers may want a slot there.
+ * spends its right half on dials with nothing grouping them. It goes in the
+ * surface's `tools` slot: the surface has no notion of a column or a density,
+ * only that a body may want dials there.
  */
 function DisplayMenu<Row>({
   optional,

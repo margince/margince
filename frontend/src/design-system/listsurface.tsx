@@ -17,6 +17,14 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { Button, Checkbox, OverflowMenu, Radio } from "./atoms";
 import { ChipValueList } from "./listfiltervalues";
+import {
+  type ListChip,
+  type ListView,
+  nextSortValue,
+  type SortControl,
+  type SortOption,
+  sortDirection,
+} from "./listsurface.dials";
 import "./listtable.css";
 import { Heading } from "./heading";
 
@@ -34,100 +42,16 @@ import { Heading } from "./heading";
 // not an identity, which is why a tab carries its own `id` for the caller that
 // has to remember which view is lit across a rename or an insertion.
 
-/**
- * One filter chip. Single-select by design: the list endpoints take one value
- * per filter param, so a multi-select chip would compose a query the API
- * cannot answer.
- */
-export type ListChip = {
-  key: string;
-  label: string;
-  /** The "no filter" entry, which is also how a chosen value is cleared. */
-  allLabel: string;
-  options: readonly { value: string; label: string }[];
-  /**
-   * A relation filter too large to list whole (a workspace's companies): when
-   * present, the value step searches this instead of walking `options`. The
-   * "all" entry still clears the filter, and `options` stays required so a
-   * chip declared without `search` needs no separate shape.
-   */
-  search?: (
-    query: string,
-  ) => Promise<readonly { value: string; label: string }[]>;
+// The dials' vocabulary is declared in the leaf beside this file; a caller that
+// has always imported it from here goes on doing so.
+export {
+  type ListChip,
+  type ListView,
+  nextSortValue,
+  type SortControl,
+  type SortOption,
+  sortDirection,
 };
-
-/** A saved view: a named tab whose meaning is entirely the caller's. */
-export type ListView = {
-  /**
-   * What identifies this tab, when the caller has something steadier than its
-   * name. Two saved views may share a name, so a rail keyed on the label
-   * collides on the pair and React renders one of them; the label stays the
-   * fallback for a rail whose tabs are a fixed set the caller wrote, where the
-   * name IS the identity.
-   */
-  id?: string;
-  label: string;
-  sort?: string;
-  filters?: Readonly<Record<string, string>>;
-};
-
-/**
- * One attribute the sort pill can order by. ListSurface never learns what a
- * column is — the table hands it this plain list, keyed by the same server
- * sort field a column header already uses.
- */
-export type SortControl = {
-  /** The server sort string, e.g. `-created_at`. */
-  value: string;
-  onChange: (next: string) => void;
-};
-
-/**
- * One attribute a list can be ordered by, named as the reader sees it.
- *
- * `field` is the same server sort string the matching column header sends, so
- * the menu and the header are two routes to ONE state rather than two states
- * that can disagree about what the list is ordered by.
- */
-export type SortOption = {
-  field: string;
-  label: string;
-  /** Biggest first on the opening press, as the numeric column header does. */
-  numeric?: boolean;
-};
-
-/** Which way `value` orders `field`, or null when it orders something else. */
-export function sortDirection(
-  field: string,
-  value: string,
-): "asc" | "desc" | null {
-  if (value === field) {
-    return "asc";
-  }
-  return value === `-${field}` ? "desc" : null;
-}
-
-/**
- * The sort a press on `option` produces, given where it stands now.
- *
- * One function for the header and the menu both: a reader who flips a column
- * from its header and then reopens the sort menu must find the direction they
- * just chose, and two copies of this arithmetic are how the two ends up
- * disagreeing about which press descends.
- */
-export function nextSortValue(
-  option: Readonly<{ field: string; numeric?: boolean }>,
-  direction: "asc" | "desc" | null,
-): string {
-  if (direction === "asc") {
-    return `-${option.field}`;
-  }
-  if (direction === "desc") {
-    return option.field;
-  }
-  // Unsorted, a number almost always wants its biggest value first.
-  return option.numeric ? `-${option.field}` : option.field;
-}
 
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
@@ -147,6 +71,7 @@ export function ListSurface({
   onChipChange,
   archived,
   tools,
+  saveView,
   children,
   footer,
 }: Readonly<{
@@ -197,9 +122,16 @@ export function ListSurface({
   /**
    * Controls that change HOW the body is shown rather than what is in it, kept
    * to the right: the table's Display menu, the board/table switch, the
-   * pipeline being looked at, and the reader's own Save view last.
+   * pipeline being looked at.
    */
   tools?: ReactNode;
+  /**
+   * Saving what the dials currently say, and it is a slot of its own so that
+   * "last on the row" is a fact about this component rather than a habit each
+   * screen keeps. It was the final node of every caller's `tools` fragment,
+   * which held only while every one of them remembered to put it there.
+   */
+  saveView?: ReactNode;
   /** The body: a scrolling table, a Kanban board, whatever this surface holds. */
   children: ReactNode;
   /** Under the body — the table's pager, or nothing at all. */
@@ -254,6 +186,7 @@ export function ListSurface({
         onChipChange={onChipChange}
         archived={archived}
         tools={tools}
+        saveView={saveView}
         openMenu={openMenu}
         setOpenMenu={setOpenMenu}
       />
@@ -339,10 +272,13 @@ function FilterMenu({
   const t = useT();
   const [attributeKey, setAttributeKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const wrap = useRef<HTMLSpanElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  // Only the back button sets this, so opening the menu with a pointer does not
-  // pull focus into a search box the reader has not asked for.
-  const steppingBack = useRef(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  // Set only by a step or a pick, so merely opening the menu with a pointer
+  // does not pull focus anywhere the reader did not ask for it.
+  const stepped = useRef(false);
+  const picked = useRef(false);
 
   // A closed menu always reopens at the attribute search, never wherever the
   // reader last left it — the button says "Filter", not "Filter: Status".
@@ -353,15 +289,36 @@ function FilterMenu({
     }
   }, [open]);
 
-  // Stepping back leaves the reader where they came FROM: the attribute row
-  // they pressed went with the level it belonged to, so focus would otherwise
-  // fall to the top of the document.
+  // A STEP BETWEEN LEVELS TAKES THE CONTROL THE READER IS ON WITH IT, and focus
+  // then falls to the top of the document. It is handed to whatever replaced
+  // that control: going in, the head that leads back out; coming back, the
+  // search the attribute was chosen from. The back head belongs to `Menu`, so
+  // it is reached through the wrap rather than through a ref this component
+  // would have to thread into a component that does not otherwise need one.
   useEffect(() => {
-    if (attributeKey === null && steppingBack.current) {
-      steppingBack.current = false;
-      searchRef.current?.focus();
+    if (!stepped.current) {
+      return;
     }
+    stepped.current = false;
+    if (attributeKey === null) {
+      searchRef.current?.focus();
+      return;
+    }
+    wrap.current?.querySelector<HTMLButtonElement>(".lt-mback")?.focus();
   }, [attributeKey]);
+
+  // The same invariant on the way OUT: a pick closes the menu, which inerts the
+  // fieldset the reader is standing in. Focus goes back to the trigger, as it
+  // does on Escape. After the close, not during it — applying the first filter
+  // swaps the labelled trigger for the bare "+", so the node to land on is the
+  // one that exists once the press has been rendered.
+  useEffect(() => {
+    if (open || !picked.current) {
+      return;
+    }
+    picked.current = false;
+    triggerRef.current?.focus();
+  }, [open]);
 
   // Only the attributes with no filter row of their own yet: once a filter is
   // applied it stands as its own row (FilterRow below), so offering it again
@@ -374,11 +331,12 @@ function FilterMenu({
   );
 
   return (
-    <span className="lt-menu-wrap">
+    <span className="lt-menu-wrap" ref={wrap}>
       {/* The "+" carries no caret: the word it dropped is what the caret
           qualifies, and a glyph-only trigger with one reads as two marks. */}
       {hasApplied ? (
         <Button
+          ref={triggerRef}
           iconOnly
           aria-expanded={open}
           aria-label={t("table.addFilter")}
@@ -387,7 +345,7 @@ function FilterMenu({
           <Plus strokeWidth={1.8} aria-hidden="true" />
         </Button>
       ) : (
-        <Button aria-expanded={open} onClick={onToggle}>
+        <Button ref={triggerRef} aria-expanded={open} onClick={onToggle}>
           <Filter strokeWidth={1.6} aria-hidden="true" />
           {t("table.filter")}
           <ChevronDown className="lt-caret" aria-hidden="true" />
@@ -400,7 +358,7 @@ function FilterMenu({
           attribute && {
             label: t("table.filterBack"),
             onBack: () => {
-              steppingBack.current = true;
+              stepped.current = true;
               setAttributeKey(null);
             },
           }
@@ -411,6 +369,7 @@ function FilterMenu({
             chip={attribute}
             value={chosen[attribute.key] ?? ""}
             onPick={(value, label) => {
+              picked.current = true;
               onRemember(attribute.key, value, label);
               onChipChange?.(attribute.key, value);
               onToggle();
@@ -433,16 +392,18 @@ function FilterMenu({
                 type="button"
                 key={chip.key}
                 className="lt-mi"
-                onClick={() => setAttributeKey(chip.key)}
+                onClick={() => {
+                  stepped.current = true;
+                  setAttributeKey(chip.key);
+                }}
               >
                 {chip.label}
                 {/* This row opens the attribute's own values rather than
                     picking one, and the glyph is all that says so. */}
                 <ChevronRight
-                  size={12}
                   strokeWidth={1.8}
                   aria-hidden="true"
-                  className="lt-mi-more"
+                  className="lt-caret lt-mi-more"
                 />
               </button>
             ))}
@@ -788,11 +749,20 @@ export function Menu({
         <button
           type="button"
           className="lt-mhead lt-mback"
-          aria-label={back.label}
           onClick={back.onBack}
         >
-          <ChevronLeft size={12} strokeWidth={1.8} aria-hidden="true" />
+          <ChevronLeft
+            className="lt-caret"
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
           {head}
+          {/* Beside the step's own name, never instead of it: an `aria-label`
+              here replaced "Status" with words nothing on screen says, so a
+              reader speaking what they see asked for a control by a name it
+              did not answer to (WCAG 2.5.3). Visible text first, for the same
+              reader. */}
+          <span className="sr-only"> {back.label}</span>
         </button>
       ) : (
         <div className="lt-mhead">{head}</div>
@@ -969,6 +939,7 @@ function Toolbar({
   onChipChange,
   archived,
   tools,
+  saveView,
   openMenu,
   setOpenMenu,
 }: Readonly<{
@@ -980,6 +951,7 @@ function Toolbar({
   onChipChange?: (key: string, value: string) => void;
   archived?: { checked: boolean; onChange: (next: boolean) => void };
   tools?: ReactNode;
+  saveView?: ReactNode;
   openMenu: string | null;
   setOpenMenu: (next: string | null) => void;
 }>) {
@@ -1069,6 +1041,8 @@ function Toolbar({
       )}
 
       {tools}
+
+      {saveView}
     </div>
   );
 }
