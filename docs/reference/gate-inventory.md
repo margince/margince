@@ -72,6 +72,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendlaneparity_test.go` | H3 | The frontend gate is spelled once as `make check-fe` and run by CI as three parallel jobs. |
 | `frontendlinkedinhosts_test.go` | H3 | Which hosts count as LinkedIn is decided on both sides of the wire, and the two answers are deliberately different sizes. |
 | `frontendmailproviders_test.go` | H3 | Which capture providers are a MAILBOX is answered on both sides of the wire, and the two answers must be the same three names. |
+| `frontendmaskedfields_test.go` | H3 | A field the server can withhold is drawn as WITHHELD, or the screen states something false. |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the SAME table, or the integer they exchange means two different amounts. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
 | `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails SILENTLY when it falls short. |
