@@ -243,7 +243,7 @@ func refuseMaskedSort(ctx context.Context, sort *string) error {
 	}
 	if masked {
 		return &values.ParseError{
-			Field: "sort", Code: "field_masked",
+			Field: "sort", Code: auth.CodeFieldMasked,
 			Message: "sort by " + field + " is not available: your role does not read it on every deal",
 		}
 	}

@@ -41,9 +41,16 @@ func MaskedFields(p principal.Principal, object string, writable bool) []string 
 	if Unbounded(p) {
 		return nil
 	}
+	// A condition lifts only where it can be ANSWERED. Write authority is a
+	// question about an owner and a grant, which a non-shareable object's rows
+	// do not carry, so a mask conditioned on it there names no row it could
+	// lift on and withholds whatever the caller passes. MaskExcludedClause
+	// resolves the same way: the wire rendering and the statement rendering of
+	// one mask that disagreed would ship the value the SQL withheld.
+	conditionLifts := writable && shareableObject(object)
 	var out []string
 	for _, m := range p.Permissions.FieldMasks {
-		if m.Condition == principal.MaskOutsideWriteAuthority && writable {
+		if m.Condition == principal.MaskOutsideWriteAuthority && conditionLifts {
 			continue
 		}
 		for _, s := range withheldSubjects(m.Object, m.Field) {
