@@ -33048,6 +33048,15 @@ components:
                  created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
+        masked_fields:
+          type: array
+          readOnly: true
+          items: { type: string }
+          description: >-
+            The fields of THIS row the caller's role withholds (a field mask). A named field is
+            null because it is withheld, not because it is empty; absent or empty means nothing is
+            withheld. `margin_tier_at_accrual` is named here whenever the role masks the partner's
+            `margin_tier`, which this row republishes.
         deal_id: { type: string, format: uuid, description: The won deal this was accrued on. }
         partner_company_id: { type: string, format: uuid, description: The partner who earned it. }
         status: { $ref: '#/components/schemas/CommissionStatus' }
@@ -42082,6 +42091,15 @@ components:
       required: [company_id, cert_status, created_at, updated_at]   # partner_role is nullable (data-model §4.3)
       properties:
         company_id: { type: string, format: uuid, description: The company this partner record extends (PK = FK). }
+        masked_fields:
+          type: array
+          readOnly: true
+          items: { type: string }
+          description: >-
+            The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier`
+            for a seat that reads partners but not their commercial terms). A named field is null
+            because it is withheld, not because it is empty; absent or empty means nothing is
+            withheld.
         partner_role: { type: string, enum: [hosting, consulting, strategic], description: Functional role (ADR-0034); implementation + dev are Margince's turf. }
         cert_status: { type: string, enum: [applied, certified, suspended] }   # data-model §4.3 CHECK
         margin_tier: { type: [string, 'null'], enum: [null, tier1_15, tier2_20, tier3_25], description: Scenario-C margin tier (business/14-partner-program.md; data-model §4.3 CHECK). }

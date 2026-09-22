@@ -23638,6 +23638,8 @@ export interface components {
         CommissionEntry: {
             /** Format: uuid */
             id: string;
+            /** @description The fields of THIS row the caller's role withholds (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. `margin_tier_at_accrual` is named here whenever the role masks the partner's `margin_tier`, which this row republishes. */
+            readonly masked_fields?: string[];
             /**
              * Format: uuid
              * @description The won deal this was accrued on.
@@ -31001,6 +31003,8 @@ export interface components {
              * @description The company this partner record extends (PK = FK).
              */
             company_id: string;
+            /** @description The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. */
+            readonly masked_fields?: string[];
             /**
              * @description Functional role (ADR-0034); implementation + dev are Margince's turf.
              * @enum {string}

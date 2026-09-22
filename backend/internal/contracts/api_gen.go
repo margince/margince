@@ -22463,6 +22463,9 @@ type CommissionEntry struct {
 	// MarginTierAtAccrual The partner's tier as it stood at accrual; the rate below was derived from it.
 	MarginTierAtAccrual *string `json:"margin_tier_at_accrual,omitempty"`
 
+	// MaskedFields The fields of THIS row the caller's role withholds (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. `margin_tier_at_accrual` is named here whenever the role masks the partner's `margin_tier`, which this row republishes.
+	MaskedFields *[]string `json:"masked_fields,omitempty"`
+
 	// PartnerCompanyId The partner who earned it.
 	PartnerCompanyId openapi_types.UUID `json:"partner_company_id"`
 
@@ -33047,7 +33050,10 @@ type Partner struct {
 	LastContactAt *time.Time              `json:"last_contact_at,omitempty"`
 
 	// MarginTier Scenario-C margin tier (business/14-partner-program.md; data-model §4.3 CHECK).
-	MarginTier    *PartnerMarginTier  `json:"margin_tier,omitempty"`
+	MarginTier *PartnerMarginTier `json:"margin_tier,omitempty"`
+
+	// MaskedFields The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
+	MaskedFields  *[]string           `json:"masked_fields,omitempty"`
 	NextStep      *string             `json:"next_step,omitempty"`
 	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
 
