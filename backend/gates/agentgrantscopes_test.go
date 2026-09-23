@@ -206,9 +206,9 @@ func between(src, from, to string) string {
 // when only the map did.
 //
 // Generic in the VALUE because the callers disagree about it and agree about
-// this: a set of names, a name→route mapping, a name→version pin. One helper,
-// because three spellings of "sort a map's keys" is how the third one came to
-// be written without anybody noticing the first two.
+// this: a set of names, a name→route mapping, a name→version pin. One helper
+// rather than one per value type, so a caller with a new one reaches for this
+// instead of adding a fourth spelling of "sort a map's keys".
 func sortedKeys[V any](set map[string]V) []string {
 	out := make([]string, 0, len(set))
 	for k := range set {

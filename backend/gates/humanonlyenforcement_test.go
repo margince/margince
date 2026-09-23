@@ -66,14 +66,21 @@ func TestEveryHumanOnlyOperationReachesTheGate(t *testing.T) {
 
 	prefixes := map[string]bool{}
 	for _, op := range sortedKeys(declared) {
-		route, held := enforced[op]
-		if !held {
+		claimed := enforced[op]
+		if len(claimed) > 1 {
+			t.Errorf("the generated table refuses %s as %s under %d routes: %v.\n\tOne operation is one route "+
+				"here; two means the generator emitted an id twice and this comparison can only speak for one "+
+				"of them.", op, humanOnlyAccess, len(claimed), claimed)
+			continue
+		}
+		if len(claimed) == 0 {
 			t.Errorf("%s declares x-agent-access: %s in api/crm.yaml and the generated agentPolicies table "+
 				"does not carry it.\n\tagentGate refuses an agent from that table, so the route is open to any "+
 				"passport-bearing agent while the contract says it is not. Regenerate (make gen); if it is still "+
 				"missing, tools/gen-agentpolicy stopped carrying the annotation.", op, humanOnlyAccess)
 			continue
 		}
+		route := claimed[0]
 		prefix, matched := basePathBetween(route, declared[op])
 		if !matched {
 			t.Errorf("%s is human-only at %q in api/crm.yaml and the generated table refuses it under %q.\n\t"+
@@ -155,7 +162,14 @@ func humanOnlyOperationsInContract(t *testing.T) map[string]string {
 					"table that enforces the annotation", method, path)
 				continue
 			}
-			declared[name] = strings.ToUpper(method) + " " + path
+			at := strings.ToUpper(method) + " " + path
+			if first, repeated := declared[name]; repeated {
+				t.Errorf("operationId %q names two operations, %s and %s.\n\tThe generated table and this "+
+					"census both look an operation up by that id, so a repeat collapses two routes into one "+
+					"and clears the other by never comparing it.", name, first, at)
+				continue
+			}
+			declared[name] = at
 		}
 	}
 	return declared

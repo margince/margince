@@ -207,19 +207,27 @@ func AgentToolTiers() map[string][]string {
 // and the human-only route is admitted under a tool policy. The caller binds
 // the pair rather than trusting either half.
 //
+// EVERY route an operation is refused under, not the last one read. The table
+// is keyed by route and an operationId is what both sides look each other up
+// by, so collapsing to one would let a contract carrying the same id twice
+// compare fewer pairs than exist and report PASS over the ones it dropped.
+//
 // The key's `/v1` is the generator's, not the contract's, and this does not
 // strip it: a reader that reconstructed the prefix to compare would hold a
 // second copy of that decision and agree with itself whatever the generator
 // did. The caller matches on the contract path as a SUFFIX and checks the one
 // prefix is the same for every row, which asks the question without owning the
 // answer.
-func AgentHumanOnlyRoutes() map[string]string {
-	routes := make(map[string]string, len(agentPolicies))
+func AgentHumanOnlyRoutes() map[string][]string {
+	routes := make(map[string][]string, len(agentPolicies))
 	for route, policy := range agentPolicies {
 		if policy.Access != accessHumanOnly {
 			continue
 		}
-		routes[policy.Op] = route
+		routes[policy.Op] = append(routes[policy.Op], route)
+	}
+	for _, claimed := range routes {
+		sort.Strings(claimed)
 	}
 	return routes
 }
