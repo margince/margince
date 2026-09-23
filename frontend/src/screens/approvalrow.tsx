@@ -83,10 +83,15 @@ export function useDecisionSink(): {
   const onAlreadyDecided = useCallback(() => setAlreadyDecided(true), []);
   const decidedNote = alreadyDecided ? (
     <Card as="div" inset className="approval-decided">
-      <ErrorLine>{t("decision.alreadyDecided")}</ErrorLine>
-      <Button onClick={() => setAlreadyDecided(false)}>
-        {t("decision.dismiss")}
-      </Button>
+      <ErrorLine
+        actions={
+          <Button onClick={() => setAlreadyDecided(false)}>
+            {t("decision.dismiss")}
+          </Button>
+        }
+      >
+        {t("decision.alreadyDecided")}
+      </ErrorLine>
     </Card>
   ) : null;
   return { onAlreadyDecided, decidedNote };

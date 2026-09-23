@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import { RelationshipRows } from "./relationshiprows";
 import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
@@ -68,6 +68,8 @@ export const RemoveRefused: Story = {
     await userEvent.click(
       await screen.findByTestId("remove-relationship-confirm"),
     );
-    await screen.findByRole("alert");
+    await expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This edge is the contact's current primary employment.",
+    );
   },
 };

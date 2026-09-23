@@ -12,18 +12,28 @@ type ErrorLineProps = Readonly<
   ) & {
     id?: string;
     actions?: ReactNode;
+    inline?: true;
+    standing?: true;
   }
 >;
 
 /**
  * The one line that says a write or a read under a control failed, in the
- * danger ink and announced the moment it arrives. It replaces four spellings
- * of the same `<p>`, half of which lacked either the ink or the announcement.
- * `error` takes a thrown value and draws nothing while it is null, so a caller
- * hands it a query's `error` straight; `children` takes a sentence the caller
- * already translated. The parent spaces it: the line owns no margin.
+ * danger ink and announced the moment it arrives. `error` takes a thrown value
+ * and draws nothing while it is null, so a caller hands it a query's `error`
+ * straight; `children` takes a sentence the caller already translated.
+ * `inline` draws a `<span>`, for a refusal that sits in its control's row.
+ * `standing` drops the alert: a state true when the surface drew is not news.
+ * The parent spaces it: the line owns no margin.
  */
-export function ErrorLine({ error, children, id, actions }: ErrorLineProps) {
+export function ErrorLine({
+  error,
+  children,
+  id,
+  actions,
+  inline,
+  standing,
+}: ErrorLineProps) {
   const t = useT();
   const message =
     error === undefined || error === null
@@ -32,14 +42,15 @@ export function ErrorLine({ error, children, id, actions }: ErrorLineProps) {
   if (message === undefined || message === null || message === false) {
     return null;
   }
+  const Line = inline ? "span" : "p";
   return (
-    <p
-      role="alert"
+    <Line
+      role={standing ? undefined : "alert"}
       id={id}
       className={actions ? "t-danger error-line" : "t-danger"}
     >
       {message}
       {actions}
-    </p>
+    </Line>
   );
 }

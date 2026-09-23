@@ -309,7 +309,7 @@ function AddFactForm({
         icon={<X aria-hidden />}
         onClick={onDone}
       />
-      <ErrorLine error={add.error} />
+      <ErrorLine inline error={add.error} />
     </div>
   );
 }

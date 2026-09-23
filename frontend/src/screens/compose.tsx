@@ -1024,7 +1024,7 @@ function MailSendNotices({
   return (
     <>
       {sharedUnsubscribeAhead(to, cc, context) && (
-        <ErrorLine>{t("compose.multiRecipientWarning")}</ErrorLine>
+        <ErrorLine standing>{t("compose.multiRecipientWarning")}</ErrorLine>
       )}
     </>
   );

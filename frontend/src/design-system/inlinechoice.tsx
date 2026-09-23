@@ -222,7 +222,11 @@ export function InlineChoice({
         }}
       />
       {saving && <BusyMark />}
-      {failure && <ErrorLine id={errorId}>{failure}</ErrorLine>}
+      {failure && (
+        <ErrorLine inline id={errorId}>
+          {failure}
+        </ErrorLine>
+      )}
     </span>
   );
 }

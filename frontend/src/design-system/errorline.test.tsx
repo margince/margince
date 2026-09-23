@@ -63,4 +63,23 @@ describe("ErrorLine", () => {
     inEnglish(<ErrorLine id="vat-refusal">Too short.</ErrorLine>);
     expect(screen.getByRole("alert").id).toBe("vat-refusal");
   });
+
+  it("draws a span when it sits inline in its control's row", () => {
+    inEnglish(
+      <ErrorLine inline id="x">
+        Too long.
+      </ErrorLine>,
+    );
+    const line = screen.getByRole("alert");
+    expect(line.tagName).toBe("SPAN");
+    expect(line.className).toBe("t-danger");
+  });
+
+  it("does not announce a standing state, and still wears the ink", () => {
+    inEnglish(<ErrorLine standing>Only the owner can post here.</ErrorLine>);
+    expect(screen.queryByRole("alert")).toBeNull();
+    const line = screen.getByText("Only the owner can post here.");
+    expect(line.tagName).toBe("P");
+    expect(line.className).toBe("t-danger");
+  });
 });

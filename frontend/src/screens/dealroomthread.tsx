@@ -219,7 +219,9 @@ export function ThreadComposer({
     return (
       <>
         {collapsible ? null : (
-          <ErrorLine id={REFUSAL_ID}>{verbs.refusal}</ErrorLine>
+          <ErrorLine standing id={REFUSAL_ID}>
+            {verbs.refusal}
+          </ErrorLine>
         )}
         <div className="card-actions">
           {/* `reasonId`, not `reason`: every control on the board is refused

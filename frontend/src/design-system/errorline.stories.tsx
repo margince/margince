@@ -6,7 +6,7 @@ import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../screens/common";
 import { Button, TextInput } from "./atoms";
 import { ErrorLine } from "./errorline";
-import { Stack } from "./stack";
+import { Row, Stack } from "./stack";
 
 // The one refusal line, in each of the shapes a caller hands it. Flip the
 // Theme control: the ink is `--dangerText`, which is lifted in dark.
@@ -69,6 +69,32 @@ export const DescribesAControl: Story = {
         A VAT number has nine digits after the country code.
       </ErrorLine>
     </Stack>
+  ),
+};
+
+export const Inline: Story = {
+  name: "Inline, in its control's row",
+  render: () => (
+    <Row gap="2">
+      <TextInput
+        aria-label="Discount"
+        aria-describedby="discount-refusal"
+        aria-invalid
+        defaultValue="140"
+      />
+      <ErrorLine inline id="discount-refusal">
+        A discount cannot exceed 100%.
+      </ErrorLine>
+    </Row>
+  ),
+};
+
+export const Standing: Story = {
+  name: "Standing: true when the surface drew, not announced",
+  render: () => (
+    <ErrorLine standing>
+      You can read this room, but only its owner can post in it.
+    </ErrorLine>
   ),
 };
 

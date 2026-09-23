@@ -30,11 +30,11 @@ export function SendRefusal({
   const t = useT();
   if (refusal === "consent") {
     return (
-      <div className="compose-refusal">
+      <div className="compose-refusal" role="alert">
         <p className="t-body">
           <strong>{t("compose.consentBlockedTitle")}</strong>
         </p>
-        <ErrorLine>{t("compose.consentBlocked")}</ErrorLine>
+        <ErrorLine standing>{t("compose.consentBlocked")}</ErrorLine>
         {/* WHAT THE SERVER SAYS THIS REP MAY DO, before the link to the
             contact page. That link is the older answer and a weaker one: the
             engine refused on a judgement about this message, and there is

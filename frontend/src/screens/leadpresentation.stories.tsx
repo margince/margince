@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { within } from "storybook/test";
+import { expect, within } from "storybook/test";
 import { LeadBoard } from "./leadpresentation";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -78,6 +78,10 @@ export const CountsUnavailable: Story = {
     return <Board />;
   },
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByRole("alert");
+    await expect(
+      await within(canvasElement).findByRole("alert"),
+    ).toHaveTextContent(
+      "The Qualified and Disqualified counts could not be read.",
+    );
   },
 };

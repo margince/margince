@@ -325,9 +325,9 @@ export function LeadBulkBar({
           reads `outcomes`, which only fills on success — so a destination the
           server refused before touching any lead left the reader pressing
           Assign and watching nothing happen. */}
-      <ErrorLine error={run.error} />
+      <ErrorLine inline error={run.error} />
       {failed.length > 0 && (
-        <ErrorLine>
+        <ErrorLine inline>
           {t("lead.bulkFailed", {
             count: formatNumber(failed.length, locale),
           })}{" "}

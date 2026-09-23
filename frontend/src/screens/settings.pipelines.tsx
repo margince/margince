@@ -115,7 +115,7 @@ function PipelineRetirement({
         </Button>
         {/* Announced as ArchiveAction announces a refused retire: the row
             still says Retired, so silence reads exactly like success. */}
-        <ErrorLine error={restore.error} />
+        <ErrorLine inline error={restore.error} />
       </>
     );
   }

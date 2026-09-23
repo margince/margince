@@ -2407,7 +2407,7 @@ export function DealsScreen({
         })}
         views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
       />
-      {advance.isError && <ErrorLine error={advance.error} />}
+      <ErrorLine error={advance.error} />
       <ConfirmAdvanceModal
         pending={pending}
         onClose={() => setPending(null)}
@@ -3296,7 +3296,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   zone={recordZone}
                   onClose={() => setOpenEmail(null)}
                 />
-                {advance.isError && <ErrorLine error={advance.error} />}
+                <ErrorLine error={advance.error} />
                 <ConfirmAdvanceModal
                   pending={pending}
                   onClose={() => setPending(null)}

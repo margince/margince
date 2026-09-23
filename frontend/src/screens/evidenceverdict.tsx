@@ -253,7 +253,7 @@ export function EvidenceVerdict({
         </Button>
         {/* The draft survives a failed save: the field above still holds what
             was typed, and the refusal names why. */}
-{reason && <ErrorLine>{reason}</ErrorLine>}
+        {reason && <ErrorLine inline>{reason}</ErrorLine>}
       </span>
     );
   }
@@ -275,7 +275,7 @@ export function EvidenceVerdict({
       >
         {t("evidence.correct")}
       </Button>
-{reason && <ErrorLine>{reason}</ErrorLine>}
+      {reason && <ErrorLine inline>{reason}</ErrorLine>}
     </span>
   );
 }

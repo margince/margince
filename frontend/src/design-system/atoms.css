@@ -1283,6 +1283,9 @@
   align-items: baseline;
   gap: var(--space-2);
 }
+span.error-line {
+  display: inline-flex;
+}
 
 /* A CARD'S TRAILING ACTION ROW: the verbs under a card's body, with the air
  * above them.

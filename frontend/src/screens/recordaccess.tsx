@@ -181,7 +181,7 @@ export function RecordAccess({
         {description}
       </span>
       {setVisibility.isError && (
-        <ErrorLine>
+        <ErrorLine inline>
           {isVersionSkewOf(setVisibility.error)
             ? t("edit.versionSkew")
             : problemMessageOf(setVisibility.error, t)}

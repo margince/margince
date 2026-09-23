@@ -81,12 +81,10 @@ export function BillingContactsPanel({
       }
     >
       <PanelBody>
-        {actions.remove.isError && (
-          // A refused removal is the one failure here a reader must not have
-          // to infer: the row stays and the button re-enables, which reads
-          // exactly like a contact who is still on the account.
-          <ErrorLine error={actions.remove.error} />
-        )}
+        {/* A refused removal is the one failure here a reader must not have
+            to infer: the row stays and the button re-enables, which reads
+            exactly like a contact who is still on the account. */}
+        <ErrorLine error={actions.remove.error} />
         {contacts.length === 0 ? (
           <p className="t-caption">{t("billing.none")}</p>
         ) : (

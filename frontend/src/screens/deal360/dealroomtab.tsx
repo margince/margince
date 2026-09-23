@@ -202,7 +202,7 @@ export function RoomText({
               >
                 {t("access.save")}
               </Button>
-              <ErrorLine error={save.error} />
+              <ErrorLine inline error={save.error} />
             </div>
           )}
         </div>
@@ -348,7 +348,7 @@ export function ViewAsBuyerButton({ room }: Readonly<{ room: DealRoom }>) {
         <ExternalLink aria-hidden />
         {t("roompage.viewAsBuyer")}
       </Button>
-      <ErrorLine error={preview.error} />
+      <ErrorLine inline error={preview.error} />
     </>
   );
 }

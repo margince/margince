@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { MoveButton } from "./movebutton";
 import {
   installFetchStub,
@@ -63,7 +63,11 @@ export const CreateTaskRefused: Story = {
   args: CREATE_TASK,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button"));
-    await canvas.findByRole("alert");
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Add this task" }),
+    );
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      "The deal this task names is archived.",
+    );
   },
 };

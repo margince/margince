@@ -272,7 +272,7 @@ export function DealBulkBar({
         <p>{t("deals.bulkArchiveConfirmBody")}</p>
       </ConfirmModal>
       {failed.length > 0 && (
-        <ErrorLine>
+        <ErrorLine inline>
           {t("deals.bulkFailed", {
             count: formatNumber(failed.length, locale),
           })}{" "}
