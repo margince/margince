@@ -181,6 +181,12 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	if err := deleteRequestSettlementsFor(ctx, tx, contactID, emails); err != nil {
 		return nil, err
 	}
+	// And what was read out of those conversations as promised, asked or
+	// decided — each row carrying the sentence it was read from, so this is the
+	// subject's own words and not only a conclusion about them.
+	if err := deleteConversationClaimsFor(ctx, tx, contactID); err != nil {
+		return nil, err
+	}
 	// And the handoffs naming them, for the same reason and on the same act.
 	if err := deleteSubjectHandoffs(ctx, tx, contactID); err != nil {
 		return nil, err
