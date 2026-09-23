@@ -24,6 +24,7 @@ import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
+import { LicenseBanner } from "./licensebanner";
 import {
   entryLabel,
   MOBILE_PRIMARY,
@@ -971,6 +972,7 @@ export function Shell({
             railless; these advisories belong only here. */}
           <EconomyBanner />
           <EmbedReindexBanner />
+          <LicenseBanner />
           {/* The import's gauge, floating bottom-centre of this column for as
             long as mail is arriving. Inside `.main` rather than beside the
             edge below, because it is positioned against the content column

@@ -47,7 +47,7 @@ import { stubPhoneViewport } from "./testing/shellharness";
 //
 // The state derivation is load-bearing enough to earn cases of its own: red is
 // for the tool not being reachable at all (no model bound, or a source it
-// cannot get to), amber is for a licence that is not clean, and a transient
+// cannot get to), amber is for a run that stalled, and a transient
 // tool failure colours nothing — that precision is the whole point of moving
 // off the eight-state vocabulary.
 
@@ -443,79 +443,9 @@ describe("AgentRail", () => {
     });
   });
 
-  // An installation that never had a licence is NOT a fault: that is the state
-  // every demo and every fresh dev stack is in, and an orb that is amber for all
-  // of them has stopped saying anything. Asked-and-refused is the fault, and the
-  // case below still carries it. Issue 2679 carries where the absent licence
-  // should be surfaced instead, which is not nowhere.
-  it("rests rather than warning when the installation has no licence", async () => {
-    // The licence answer is HELD and then released, and that is the whole
-    // difference between this test and one that proves nothing. The posture hook
-    // reads undefined until the query lands, and derive() calls that idle -- so
-    // asserting "not warning" against a live stub can pass before the absent
-    // licence has been seen at all, which is a green test for an assertion never
-    // made. Holding the response makes the first assertion about the state
-    // BEFORE the answer, and the second about the state after it.
-    let release: () => void = () => {};
-    const answered = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    let delivered = false;
-    stubAgentRailApi({
-      license: async () => {
-        await answered;
-        delivered = true;
-        return jsonResponse(LICENSE("absent"));
-      },
-    });
-    const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
-    );
-
-    release();
-    await waitFor(() => expect(delivered).toBe(true));
-    // The absent licence has now been answered and read, and the section still
-    // rests. That the answer REACHES derive() at all is proven by the refused
-    // case below, which is the same construction and does turn amber: without
-    // that pair, an assertion of "still idle" could not tell a licence that was
-    // seen and shrugged off from one that never arrived.
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
-    );
-  });
-
-  it("goes to warning when the licence is refused", async () => {
-    // Held and released like the case above, and this is the half that makes the
-    // pair mean something: the same pipeline, the same timing, and this one DOES
-    // reach warning. So "still idle" up there is a licence that was read and
-    // deliberately not escalated, rather than one that never landed.
-    let release: () => void = () => {};
-    const answered = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    stubAgentRailApi({
-      license: async () => {
-        await answered;
-        return jsonResponse(LICENSE("rejected"));
-      },
-    });
-    const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
-    );
-
-    release();
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("warning"),
-    );
-    await settlesOnLine(container, "License refused");
-  });
-
   // A seat without `license:read` gets `undefined`, not a fault: a read this
-  // seat may not make is none of its business, and must not turn the orb
-  // amber on every screen it opens.
-  it("gives neither a warning nor a licence row when the seat may not read the licence", async () => {
+  // seat may not make is none of its business, and its panel names no licence.
+  it("gives no licence row when the seat may not read the licence", async () => {
     const user = userEvent.setup();
     stubAgentRailApi({
       me: () =>
@@ -1217,16 +1147,7 @@ describe("AgentRail", () => {
   // still across the window the case above shows the tool taking.
   it("never lets a read caption a fault", async () => {
     vi.useFakeTimers();
-    stubAgentRailApi({
-      license: () =>
-        jsonResponse({
-          state: "rejected",
-          seats_used: 1,
-          over_limit: false,
-          checked_at: "2026-08-01T09:00:00Z",
-        }),
-      agentActivity: () => jsonResponse({ running: [], recent: [] }),
-    });
+    withRuns(RUN({ state: "stalled" }));
     const { container } = render(ROUTE);
     await act(() => vi.advanceTimersByTimeAsync(300));
     expect(block(container).getAttribute("data-core-state")).toBe("warning");
@@ -1235,26 +1156,24 @@ describe("AgentRail", () => {
     expect(container.querySelector(".arline")?.textContent).toBe(inFlight);
   });
 
-  // The colour and the sentence are always about the SAME thing. A workspace in
-  // grace keeps running its agent, so amber-for-the-licence and a live run are
-  // true at once — and the licence outranks the run, which means the run's
-  // sentence must not caption it. Captioning an amber orb "I'm putting your
-  // morning brief" tells a reader the brief is the fault.
+  // The colour and the sentence are always about the SAME thing. A run that
+  // failed unread and a second one still in flight are true at once, and the
+  // failure outranks the live run, so the live run's sentence must not caption
+  // it: a red orb captioned "I'm writing your morning brief" tells a reader the
+  // brief is the fault.
   it("never captions a state with a run that did not cause it", async () => {
+    window.localStorage.removeItem("margince.agent.faults-seen");
+    const failed = RUN({
+      id: "019f7e65-fbf7-7114-b114-40af4af63c01",
+      state: "failed",
+    });
     stubAgentRailApi({
-      license: () =>
-        jsonResponse({
-          state: "rejected",
-          seats_used: 1,
-          over_limit: false,
-          checked_at: "2026-08-01T09:00:00Z",
-        }),
       agentActivity: () =>
-        jsonResponse({ running: [RUN()], recent: [], faults: [] }),
+        jsonResponse({ running: [RUN()], recent: [failed], faults: [failed] }),
     });
     const { container } = render(ROUTE);
     await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("warning"),
+      expect(block(container).getAttribute("data-core-state")).toBe("error"),
     );
     expect(container.querySelector(".arline")?.textContent).not.toBe(
       BRIEF_RUNNING,

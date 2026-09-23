@@ -7784,6 +7784,10 @@ export const de = {
   "aibanner.link": "Kontingent verwalten",
   "aibanner.dismiss": "Schließen",
 
+  "licensebanner.body":
+    "Das Lizenz-Token dieser Installation wurde geprüft und abgelehnt.",
+  "licensebanner.link": "Lizenzen & Plätze öffnen",
+
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":
     "Nur ein Betreiber liest die Aufrufspur. Sie verzeichnet jeden Modellaufruf dieser Installation und wird deshalb nicht breiter gezeigt.",

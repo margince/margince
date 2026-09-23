@@ -69,7 +69,7 @@ export type Signals = Readonly<{
   /** What the installation is entitled to; undefined when this seat may not
    *  read it, which is not the same as an installation with no licence. */
   license: LicensePosture | undefined;
-  /** The licence posture in the reader's words, for the line and the panel. */
+  /** The licence posture in the reader's words, for the panel's pill. */
   licenseLine: string;
   /**
    * Mail being imported this moment, with the sentence that says so; null
@@ -171,14 +171,14 @@ function captureLine(
 }
 
 /**
- * The installation's entitlement, read the way the rail used to read it.
+ * The installation's entitlement, reduced to the posture its chrome shows.
  *
  * Absent for a seat without `license:read`, silently: a read they may not make
  * is not a fact being withheld from them, it is a fact that is none of their
- * work, and an orb that went amber about it on every screen they opened would be
- * a permission boundary drawn as a fault.
+ * work, and a notice about it on every screen they opened would be a permission
+ * boundary drawn as a fault.
  */
-function useLicensePosture(): LicensePosture | undefined {
+export function useLicensePosture(): LicensePosture | undefined {
   const mayRead = useCan("license", "read");
   const query = useLicenseEntitlement(mayRead);
   const entitlement = query.data;

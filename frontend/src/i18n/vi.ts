@@ -7695,6 +7695,10 @@ export const vi = {
   "aibanner.link": "Quản lý hạn mức",
   "aibanner.dismiss": "Bỏ qua",
 
+  "licensebanner.body":
+    "Token giấy phép của bản cài đặt này đã được kiểm tra và bị từ chối.",
+  "licensebanner.link": "Mở Giấy phép & chỗ ngồi",
+
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":
     "Chỉ người vận hành mới đọc được dấu vết từng lượt gọi. Nó ghi lại mọi lượt gọi mô hình của bản cài đặt, nên không hiển thị rộng hơn.",
