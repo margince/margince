@@ -43,13 +43,19 @@ import (
 // grant added for one of them would quietly let the others reach a surface they
 // were written to be refused by. Cloned for the same reason.
 func providerAdmin(e *Env) context.Context {
-	objects := maps.Clone(AdminPerms.Objects)
-	objects["integrations"] = principal.ObjectGrant{Read: true, Update: true, Delete: true}
 	return e.As(e.AdminUser, nil, principal.Permissions{
 		RoleKeys: AdminPerms.RoleKeys,
-		Objects:  objects,
+		Objects:  providerAdminObjects(),
 		RowScope: principal.RowScopeAll,
 	})
+}
+
+// providerAdminObjects is the grant set on its own, so a case that varies the
+// row scope does not have to restate which objects the seat holds.
+func providerAdminObjects() map[string]principal.ObjectGrant {
+	objects := maps.Clone(AdminPerms.Objects)
+	objects["integrations"] = principal.ObjectGrant{Read: true, Update: true, Delete: true}
+	return objects
 }
 
 // TestDeletingBoughtDataSparesWhatSomebodyElseWrote is the case that decides
@@ -236,5 +242,55 @@ func queryAsOwner(t *testing.T, e *Env, statement string, into any, args ...any)
 		return tx.QueryRow(context.Background(), statement, args...).Scan(into)
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestDeletingBoughtDataKeepsTheRunThatStillNamesASubject holds the half of the
+// promise that only shows up when the revert cannot finish.
+//
+// A subject the acting admin has no write authority over is SKIPPED — the
+// action reports it as a record not cleared and carries on, which is the right
+// call: one unreachable contact must not veto the whole deletion. But its
+// bought values are still sitting on the record, and the only thing that can
+// ever identify them again is the run row naming that contact. Scrubbing the
+// run alongside the ones that did clear turns "not cleared yet" into "not
+// clearable, ever", silently, on the success path.
+func TestDeletingBoughtDataKeepsTheRunThatStillNamesASubject(t *testing.T) {
+	e := Setup(t)
+	store := providerStoreFor(t, e)
+
+	unreachable := plantBoughtTitle(t, e, "Head of Elsewhere")
+	execAsOwner(t, e, `UPDATE contact SET owner_id = $1 WHERE id = $2`, e.Rep2, unreachable)
+
+	// Own-scope: the admin keeps the grant that lets them delete bought data
+	// and loses the reach to the record itself, which is exactly the seat the
+	// skip arm exists for.
+	narrow := e.As(e.AdminUser, nil, principal.Permissions{
+		RoleKeys: AdminPerms.RoleKeys,
+		Objects:  providerAdminObjects(),
+		RowScope: principal.RowScopeOwn,
+	})
+	if err := store.DeleteProviderData(narrow, "surfe"); err != nil {
+		t.Fatalf("one unreachable subject failed the whole deletion: %v", err)
+	}
+
+	var markers int
+	queryAsOwner(t, e, `SELECT count(*) FROM provider_applied_field WHERE contact_id = $1`,
+		&markers, unreachable)
+	if markers == 0 {
+		t.Fatal("the fixture no longer reaches the skip arm: the values were cleared after all")
+	}
+
+	var named int
+	queryAsOwner(t, e, `
+		SELECT count(*) FROM provider_run
+		 WHERE contact_id = $1 AND provider = 'surfe'`, &named, unreachable)
+	if named == 0 {
+		t.Error("the run stopped naming a subject whose bought values are still on the record — " +
+			"nothing can find them now, and the action reported success")
+	}
+
+	if got := titleOf(t, e, unreachable); got != "Head of Elsewhere" {
+		t.Errorf("the skipped subject's title is %q; the skip is supposed to leave the record alone", got)
 	}
 }
