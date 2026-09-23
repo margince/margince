@@ -172,13 +172,9 @@ func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdict
 			n, err := e.judgeClaimed(wsCtx, batch, budget)
 			resolved += n
 			if errors.Is(err, ai.ErrBudgetDeferred) {
-				// Every row this pass never reached is refunded: no model saw
-				// them, and with only PendingMaxAttempts to spend, charging for
-				// a budget stop would let two quiet cycles exhaust an address's
-				// allowance without a verdict ever being attempted on its
-				// merits — an infrastructure condition turned into a per-sender
-				// terminal answer nobody asked for.
-				e.releaseBatch(wsCtx, batch)
+				// The refund is judgeClaimed's, because it is what knows where
+				// it stopped. Releasing from here would hand back the whole
+				// batch, including the sender already deferred inside it.
 				e.log.InfoContext(wsCtx, "counterparty verdict: budget exhausted, stopping the pass", "resolved", resolved)
 				return nil
 			}
@@ -201,11 +197,34 @@ func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdict
 // when the victim's id was legitimately in the request. The extra calls land on
 // the cheapest rung of a background task, which is the right price for a
 // decision that creates or destroys records.
+// A budget stop refunds the rows it never REACHED, and only those, for the
+// reason stated below: a Defer clears claimed_by, so releasing the row it
+// stopped on attempts a refund that matches nothing and is lost in silence.
+// Released here rather than by the caller because this is what knows where it
+// stopped — a caller handed the remainder could still pass the whole batch.
 func (e *CounterpartyVerdictEngine) judgeClaimed(
 	ctx context.Context, claimed []capture.PendingCounterparty, budget *reAskBudget,
 ) (int, error) {
+	// A LOCAL rather than a method, which is what makes the wrong call
+	// unwritable instead of merely unwritten: only the loop that knows where it
+	// stopped can reach it, so no caller can hand back a batch including the
+	// row already refunded below. Best effort by nature — the lease expiry is
+	// the backstop that makes this an optimization rather than a correctness
+	// requirement, so a release that itself fails is logged and the row waits
+	// out its lease. The stored reason is fixed rather than the error's text:
+	// disposition_reason is read by operators and by the review queue, and a
+	// provider's raw message must not travel there. The cause reaches the log.
+	releaseUnreached := func(rest []capture.PendingCounterparty) {
+		for _, row := range rest {
+			if err := e.pending.Defer(ctx, row, verdictRetryBackoff,
+				"the pass stopped before reaching this sender", true); err != nil {
+				e.log.WarnContext(ctx, "counterparty verdict: releasing a claimed row failed",
+					"disposition", row.ID.String(), "err", err)
+			}
+		}
+	}
 	applied := 0
-	for _, row := range claimed {
+	for i, row := range claimed {
 		n, err := e.judgeOne(ctx, row, budget)
 		if err != nil {
 			// WHY it failed decides whether the row pays for it, and the cause
@@ -222,9 +241,11 @@ func (e *CounterpartyVerdictEngine) judgeClaimed(
 			outOfBudget := errors.Is(err, ai.ErrBudgetDeferred)
 			if deferErr := e.pending.Defer(ctx, row, verdictRetryBackoff,
 				"the verdict could not be completed", outOfBudget); deferErr != nil {
+				releaseUnreached(claimed[i+1:])
 				return applied, deferErr
 			}
 			if outOfBudget {
+				releaseUnreached(claimed[i+1:])
 				return applied, err
 			}
 			e.log.WarnContext(ctx, "counterparty verdict: judging a sender failed",
@@ -345,26 +366,4 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 		return 0, err
 	}
 	return 1, nil
-}
-
-// releaseBatch returns claimed rows to the queue when the pass stops before
-// reaching them — so the attempt is always refunded here: by definition no model
-// saw these. The row that CAUSED the stop was already deferred by judgeClaimed,
-// and its claim is spent, so this pass over it is a deliberate no-op rather than
-// a second refund. Best
-// effort by nature: the lease expiry is the backstop that makes this an
-// optimization rather than a correctness requirement, so a release that itself
-// fails is logged and the row waits out its lease.
-//
-// The stored reason is fixed rather than the error's text: disposition_reason is
-// read back by operators and by the review queue, and a provider's raw message
-// is exactly the kind of internal detail that must not travel there. The cause
-// reaches the log instead, where it belongs.
-func (e *CounterpartyVerdictEngine) releaseBatch(ctx context.Context, batch []capture.PendingCounterparty) {
-	for _, row := range batch {
-		if err := e.pending.Defer(ctx, row, verdictRetryBackoff, "the pass stopped before reaching this sender", true); err != nil {
-			e.log.WarnContext(ctx, "counterparty verdict: releasing a claimed row failed",
-				"disposition", row.ID.String(), "err", err)
-		}
-	}
 }
