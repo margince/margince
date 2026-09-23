@@ -447,9 +447,13 @@ describe("AI disclosure/diff banner (OP-11)", () => {
     expect(
       screen.getByText("This offer revision was drafted with AI assistance."),
     ).toBeTruthy();
-    expect(screen.getByText("1 line(s) added")).toBeTruthy();
-    expect(screen.getByText("1 line(s) removed")).toBeTruthy();
-    expect(screen.getByText("1 line(s) changed")).toBeTruthy();
+    // ONE of each, so the singular is what the summary must say. It said
+    // "1 line(s) added" and this test asserted it verbatim — the defect with a
+    // test holding it in place, which is how the plural pass found the other
+    // four (issue 2964).
+    expect(screen.getByText("1 line added")).toBeTruthy();
+    expect(screen.getByText("1 line removed")).toBeTruthy();
+    expect(screen.getByText("1 line changed")).toBeTruthy();
     expect(screen.getByText("Onboarding")).toBeTruthy();
     expect(screen.getByText("Legacy setup")).toBeTruthy();
     expect(screen.getByText("Consulting hours (revised)")).toBeTruthy();

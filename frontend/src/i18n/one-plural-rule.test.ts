@@ -12,6 +12,7 @@ import {
   parseSource,
 } from "../../scripts/lib/source-tree";
 import { en } from "./en";
+import { PLURAL_SINGLE_KEY_DEBT } from "./plural-debt";
 
 // A count that decides between two wordings decides it in SOME language's plural
 // rule, and the only question is whose. This product's answer is the reader's
@@ -384,5 +385,97 @@ describe("one plural rule", () => {
     for (const path of extensionFiles) {
       expect(files, `${path} is not being read`).toContain(path);
     }
+  });
+});
+
+// THE OTHER SHAPE, and the gate above cannot see it: one key with a count
+// interpolated into it.
+//
+// `ob.conv.activity.steps` was `"{count} steps"` and printed "1 steps" on a
+// cold install, at step 3 of 5, in a browser. There is no ternary and no second
+// arm, so the census above — which asks whether BOTH ARMS of a conditional are
+// catalogue keys — has nothing to inspect. It is not wrong; its subject does
+// not include this class, and a class a census cannot see is one it reports
+// PASS over forever.
+//
+// WHAT THE SUBJECT IS. A key whose value interpolates `{count}` and carries no
+// `_one`/`_other` sibling. That is the broad reading and it is deliberate: the
+// narrow one — a count immediately followed by a bare `-s` noun — was tried
+// first and is UNSOUND. It misses every string with an adjective in between
+// (`{count} open tasks`, `{count} visible assignments`, `{count} more
+// priorities in the queue`), all of which print "1 open tasks". Widening the
+// pattern does not rescue it either: "any `-s` word after the count" matches
+// `{count} converted, rates {date}`, where the count quantifies nothing. The
+// question is grammatical and the input is a template, so no lexical rule
+// separates the two — which means the narrowing has to be a DECLARED reason and
+// not a regex.
+//
+// So the corpus is derived from the catalogue and cleared by the register in
+// plural-debt.ts, which is closed and only shrinks.
+describe("one count, one key", () => {
+  const pluralSibling = (key: string): boolean =>
+    [`${key}_one`, `${key}_other`, `${key}.one`, `${key}.many`].some(
+      (sibling) => Object.hasOwn(en, sibling),
+    );
+
+  /** Every catalogue key that puts a count into a single message. */
+  const singleKeyCounts = (): string[] =>
+    Object.entries(en)
+      .filter(
+        ([key, value]) =>
+          typeof value === "string" &&
+          value.includes("{count}") &&
+          !key.endsWith("_one") &&
+          !key.endsWith("_other") &&
+          !key.endsWith(".one") &&
+          !key.endsWith(".many") &&
+          !pluralSibling(key),
+      )
+      .map(([key]) => key)
+      .sort();
+
+  it("registers every single-key count that was already here", () => {
+    const found = singleKeyCounts();
+    // Fail closed, for the reason the census above states: a walk that reads an
+    // empty catalogue finds no defect and reports PASS over all of them.
+    expect(found.length).toBeGreaterThan(50);
+
+    const unregistered = found.filter(
+      (key) => !PLURAL_SINGLE_KEY_DEBT.has(key),
+    );
+    expect(
+      unregistered,
+      "A new catalogue key interpolates {count} into one message, so it prints " +
+        "'1 steps' the day a reader reaches it with one. Give it a " +
+        "<base>_one / <base>_other pair and read it through usePlural. " +
+        "plural-debt.ts is CLOSED: it records what was already here and only " +
+        "shrinks, so adding a line there is not the way out of this.",
+    ).toEqual([]);
+  });
+
+  // The register cannot outlive what earned it. An entry for a key that has
+  // since been converted, renamed or deleted reads as a live exemption while
+  // exempting nothing — and the next author converting its neighbour would find
+  // a list they cannot trust.
+  it("keeps no register entry for a key the census no longer finds", () => {
+    const found = new Set(singleKeyCounts());
+    expect(
+      [...PLURAL_SINGLE_KEY_DEBT.keys()].filter((key) => !found.has(key)),
+      "A registered key is no longer a single-key count — converted, renamed " +
+        "or gone. Delete its line: the register only shrinks, and this is it " +
+        "shrinking.",
+    ).toEqual([]);
+  });
+
+  // The census's own census. It reads the catalogue it claims to read, and it
+  // recognises the shape in the spelling the real defect took.
+  it("sees a count interpolated into one key", () => {
+    const registered = [...PLURAL_SINGLE_KEY_DEBT.keys()];
+    expect(registered.length).toBeGreaterThan(50);
+    // The key this issue was filed for is CONVERTED, so it must be absent from
+    // both the census and the register — the one worked example that proves the
+    // way out is a plural pair rather than a line in the list.
+    expect(Object.hasOwn(en, "ob.conv.activity.steps_one")).toBe(true);
+    expect(PLURAL_SINGLE_KEY_DEBT.has("ob.conv.activity.steps")).toBe(false);
   });
 });
