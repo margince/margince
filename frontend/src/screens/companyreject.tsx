@@ -12,6 +12,8 @@ import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { useArchiveRecord } from "./archive";
 import { throwProblem } from "./common";
+import "./companyreject.css";
+import "./common.css";
 
 type Company = components["schemas"]["Company"];
 
@@ -128,15 +130,10 @@ export function CompanyRejectAction({
         onClose={() => setConfirming(false)}
         labelledBy={headingId}
       >
-        <Heading
-          size="large"
-          id={headingId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
+        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
           {t("company.reject")}
         </Heading>
-        <p style={{ marginBottom: "var(--space-4)" }}>
+        <p className="companyreject-confirm">
           {t("company.rejectConfirm", {
             name: company.display_name,
             domain: primary.domain,

@@ -25,6 +25,7 @@ import {
   prefillRowsFromRecord,
   seedMissingFields,
 } from "./edit.prefill";
+import "./common.css";
 
 // The agent rail's WROTE head for an edit, keyed by `recordKey` (agentrail-
 // copy.ts). Only the four record kinds a salesperson edits by hand carry
@@ -237,12 +238,7 @@ export function EditRecordModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
         {title}
       </Heading>
       <RecordFormBody

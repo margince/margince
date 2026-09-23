@@ -3,6 +3,7 @@
 
 import { Field } from "../design-system/atoms";
 import { useT } from "../i18n";
+import "./offers.css";
 
 /**
  * The discount and tax controls on the add-line form.
@@ -30,8 +31,7 @@ export function NewLineRates<T extends LineRates>({
             data-testid="new-line-discount"
             type="number"
             step="0.01"
-            className="input"
-            style={{ width: 90 }}
+            className="input offers-line-rate"
             value={value.discount_pct}
             onChange={(event) =>
               onChange((prev) => ({
@@ -49,8 +49,7 @@ export function NewLineRates<T extends LineRates>({
             data-testid="new-line-tax"
             type="number"
             step="0.01"
-            className="input"
-            style={{ width: 90 }}
+            className="input offers-line-rate"
             value={value.tax_rate}
             onChange={(event) =>
               onChange((prev) => ({

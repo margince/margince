@@ -1397,6 +1397,16 @@
   font-family: var(--fontFamilyHeading);
 }
 
+/* The roster read that failed outright, centred at a card's measure. Its margin
+   replaces `.readfail`'s own, so it chains that class. */
+.readfail.ob-conv-rosterfail {
+  max-width: 460px;
+  margin: 0 auto;
+}
+.ob-conv-rosterfail-retry {
+  margin-top: var(--space-3);
+}
+
 /* The four step-level promises: a real two-column grid on this wide surface,
    the shape the same four sentences could never hold in the rail's ~250px
    column (T7 — the honest hard case here is width, not content). The card and

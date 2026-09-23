@@ -19,8 +19,13 @@
 }
 
 .input.offers-line-quantity,
-.input.offers-line-price {
+.input.offers-line-price,
+.input.offers-line-rate {
   width: 90px;
+}
+
+.input.offers-line-periods {
+  width: 110px;
 }
 
 .offers-new-line {

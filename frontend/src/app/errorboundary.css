@@ -1,0 +1,4 @@
+/* The render-failure fallback: the retry sits a step below the two sentences. */
+.errorboundary-retry {
+  margin-top: var(--space-3);
+}

@@ -15,6 +15,7 @@ import {
   useCorrectProjectHealth,
   useRecordProjectHealth,
 } from "./projecthealth.queries";
+import "./common.css";
 
 const STATES: readonly ProjectHealthState[] = [
   "on_track",
@@ -112,12 +113,7 @@ export function ProjectHealthModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
         {correcting
           ? t("projectHealth.correctTitle")
           : t("projectHealth.recordTitle")}

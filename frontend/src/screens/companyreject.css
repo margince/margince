@@ -1,0 +1,4 @@
+/* The confirm sentence stands off the reason field under it. */
+.companyreject-confirm {
+  margin-bottom: var(--space-4);
+}

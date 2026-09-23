@@ -1,0 +1,8 @@
+/* The lookup's answer, a hit list or the unknown-sender card, under the form. */
+.clientsurface-answer {
+  margin-top: var(--space-3);
+}
+
+.clientsurface-unknown-detail {
+  margin-top: var(--space-1);
+}

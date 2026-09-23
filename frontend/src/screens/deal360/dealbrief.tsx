@@ -4,6 +4,7 @@ import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import "./deal360.css";
 
 /** How much of the brief shows before the reader asks for the rest. */
 const COLLAPSED_LINES = 6;
@@ -69,6 +70,7 @@ export function DealBrief({
   // paragraph wraps and is clamped, and asking about its length would offer
   // "Read more" on text already fully shown.
   const clampable = text.split("\n").length > COLLAPSED_LINES;
+  const clamped = clampable && !expanded;
   return (
     <Panel
       title={t("deal.brief")}
@@ -82,17 +84,10 @@ export function DealBrief({
     >
       <PanelBody>
         <p
-          className="t-body"
+          className={clamped ? "t-body d360-brief-clamped" : "t-body"}
           style={{
             whiteSpace: "pre-wrap",
-            ...(expanded || !clampable
-              ? {}
-              : {
-                  display: "-webkit-box",
-                  WebkitLineClamp: COLLAPSED_LINES,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }),
+            ...(clamped ? { WebkitLineClamp: COLLAPSED_LINES } : {}),
           }}
         >
           {text}

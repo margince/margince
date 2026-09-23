@@ -14,6 +14,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { stillHeld } from "./employmentcurrency";
 import { datePatch, patchEmployment, validDateEntry } from "./employmentpatch";
+import "./common.css";
 
 type Employment = components["schemas"]["Contact360Employment"];
 type Patch = components["schemas"]["UpdateRelationshipRequest"];
@@ -76,12 +77,7 @@ export function EmploymentEdit({
   const valid = validDateEntry(start) && validDateEntry(end);
   return (
     <Modal open={open} onClose={onClose} labelledBy={id}>
-      <Heading
-        size="large"
-        id={id}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={id} className="t-h2 dialog-heading">
         {t("employment.edit")}
       </Heading>
       <div className="form-stack">

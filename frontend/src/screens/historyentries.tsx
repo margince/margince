@@ -459,7 +459,7 @@ export function RecordHistory({
   }
 
   return (
-    <Card style={{ marginBottom: "var(--space-4)" }}>
+    <Card className="history-card">
       <QueryStates query={query} pendingLabel={t("tab.timeline")}>
         {body}
       </QueryStates>

@@ -1,0 +1,4 @@
+/* The hint under the date-field picker sits one step below its control. */
+.datefield-hint {
+  margin-top: var(--space-1);
+}

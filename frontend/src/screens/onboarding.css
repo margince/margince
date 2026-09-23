@@ -132,6 +132,19 @@
 .ob-companyform {
   margin-top: var(--space-6);
 }
+/* The saved note's tick, sized to the note's text; the failure card overrides
+   `.readfail`'s own margin, so it chains that class. */
+.ob-companyform-savedmark {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+}
+.ob-companyform-saved {
+  margin: var(--space-3) 0 0;
+}
+.readfail.ob-companyform-savefail {
+  margin-top: var(--space-3);
+}
 /* The trust adornments ride the field label (a .t-label): read-from-site tag
    right-aligned, everything vertically centered with the label text. */
 .ob-companyform .t-label {

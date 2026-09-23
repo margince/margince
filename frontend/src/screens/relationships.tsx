@@ -29,6 +29,8 @@ import {
 } from "./relationshipcandidates";
 import { KIND_LABELS } from "./relationshipkinds";
 import "./candidatepicker.css";
+import "./common.css";
+import "./relationships.css";
 import { ErrorLine } from "../design-system/errorline";
 
 // The Relationships tab (P-5): the one surface a contact/company 360 renders
@@ -420,12 +422,7 @@ export function AddRelationshipAction({
         {t(copy.add)}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
-        <Heading
-          size="large"
-          id={headingId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
+        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
           {t(copy.add)}
         </Heading>
         <div className="form-stack">
@@ -463,7 +460,7 @@ export function AddRelationshipAction({
             }}
           />
           <ErrorLine error={searchFailure} />
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          <ul className="relationships-candidates">
             {candidates.map((candidate) => (
               <li key={candidate.id}>
                 <Button
@@ -496,7 +493,7 @@ export function AddRelationshipAction({
             )}
           </Field>
           {target && (
-            <p style={{ marginBottom: "var(--space-1)" }}>
+            <p className="relationships-confirm">
               {t("rel.addConfirm", {
                 target: target.name,
                 kind: t(KIND_LABELS[kind]),
@@ -504,13 +501,7 @@ export function AddRelationshipAction({
             </p>
           )}
           <ErrorLine error={mutation.error} />
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--gapActions)",
-              justifyContent: "flex-end",
-            }}
-          >
+          <div className="form-actions">
             <Button onClick={close} disabled={mutation.isPending}>
               {t("create.cancel")}
             </Button>

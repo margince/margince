@@ -115,3 +115,8 @@
   padding-left: var(--space-2);
   border-left: 2px solid var(--accent);
 }
+
+/* The record's timeline card holds its distance from whatever follows it. */
+.history-card {
+  margin-bottom: var(--space-4);
+}

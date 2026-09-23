@@ -1,0 +1,19 @@
+.scheduledsends-send {
+  margin-bottom: var(--space-2);
+}
+
+/* Chained to `.input`: the field atom sizes itself, and this caps it. */
+.input.scheduledsends-move {
+  max-width: 220px;
+}
+
+/* The summary takes the row's free space and wraps the verbs under it before
+   it narrows past a readable subject line. */
+.scheduledsends-summary {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.scheduledsends-held {
+  margin-top: var(--space-1);
+}

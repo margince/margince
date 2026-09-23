@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Envelope, Warning } from "./types";
+import "./story-hosts.css";
 import "./view.css";
 
 // The two wrappers the MCP App stories mount their subjects into.
@@ -124,7 +125,7 @@ export function DocumentHost({
       ref={ref}
       title={title}
       sandbox="allow-scripts"
-      style={{ width: "100%", height: 420, border: 0 }}
+      className="storyhost-frame"
     />
   );
 }

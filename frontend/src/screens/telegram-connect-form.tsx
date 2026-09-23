@@ -11,6 +11,7 @@ import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { statusLabel, statusTone } from "./connector-status";
+import "./common.css";
 
 // The Telegram connector: one bot connects for the WHOLE workspace, not
 // per-user — there is no OAuth handshake, so first-connect is the same "paste a
@@ -106,12 +107,7 @@ export function TelegramConnectForm({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
         {connection
           ? t("connectors.telegramEditTitle")
           : t("connectors.telegramModalTitle")}

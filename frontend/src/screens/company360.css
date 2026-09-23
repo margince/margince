@@ -1979,3 +1979,8 @@
   overflow-wrap: anywhere;
   min-width: 0;
 }
+
+/* The rollup's fine print, set under the figures it qualifies. */
+.co-rollup-note {
+  margin-top: var(--space-2);
+}

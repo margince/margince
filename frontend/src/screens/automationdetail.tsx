@@ -93,7 +93,7 @@ function DetailLine({
   color,
 }: Readonly<{ label: string; value: string; color?: string }>) {
   return (
-    <p className="t-caption" style={{ marginTop: "var(--space-1)", color }}>
+    <p className="t-caption auto-detail-line" style={{ color }}>
       <span className="t-label">{label}</span> {value}
     </p>
   );
