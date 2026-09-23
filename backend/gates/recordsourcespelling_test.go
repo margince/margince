@@ -39,6 +39,7 @@ import (
 	"go/token"
 	"io/fs"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -53,16 +54,35 @@ import (
 const probeFile = "gates/recordsourcespelling_test.go"
 
 // recordSourceGoRoots are the subtrees a record's `source` is written or
-// asserted in Go. A site the sweep below finds outside both means the
-// obligation has moved somewhere this gate does not yet look.
+// asserted in Go. A site the negative-space walk below finds under backend/
+// but outside both roots means the obligation has moved somewhere this gate
+// does not yet look; a site sharing the key for a different vocabulary is
+// ratified in recordSourceExempt instead of widening the roots to cover it.
 var recordSourceGoRoots = []string{"internal", "gates"}
 
+// recordSourceExempt ratifies a file outside every root that nonetheless
+// holds a `Source`/`"source"` key for a DIFFERENT vocabulary — the same
+// word-sharing collision keyIsRecordSource's doc comment already accepts
+// inside the roots (`SourceSystem`, `Mode`), met again here in a directory
+// the roots do not cover. Each entry says what the other vocabulary is.
+var recordSourceExempt = gatekit.Waive(map[string]string{
+	"tools/gen-composition/contracts.go": "Source here is the path to one extension's own " +
+		"api/crm.yaml, read to assemble the composed contract — a schema file, not a record",
+	"tools/gen-composition/contracts_test.go": "the same schema-file field, planted and asserted",
+	"tools/gen-payloads/config.go": "Source is the OpenAPI 3.1 file this generator reads " +
+		"components/schemas from — a schema file, not a record",
+	"tools/gen-recordfields/main.go": "the \"source\" key marks the field's ROLE in a " +
+		"generated tool schema (surfaceStamped: never ask an agent to supply it) — a boolean " +
+		"flag, not a written or asserted value, so it can never carry a retired spelling",
+})
+
 // retiredGoSpellings returns one report line per record-source literal spelling
-// a retired word — a struct field or wire key set in a composite literal, and
-// the same site set by a later ASSIGNMENT (`spec.Source = "ui"`,
-// `body["source"] = "ui"`). A fixture builds most of its record by literal and
-// then overwrites one field for the one case under test, which is exactly
-// where the second shape came from.
+// a retired word — a struct field or wire key set in a composite literal, the
+// same site set by a later ASSIGNMENT (`spec.Source = "ui"`, `body["source"] =
+// "ui"`), and the same site read back in a COMPARISON (`args["source"] !=
+// "ui"`), in either operand order. A fixture builds most of its record by
+// literal, overwrites one field for the case under test, and then asserts on
+// what it put there — all three are the same site, spelled three ways.
 //
 // Reported by FILE PATH, not by line: this runs over sources swept from disk
 // by their own path rather than through a shared *token.FileSet, so a position
@@ -97,6 +117,15 @@ func retiredGoSpellings(path string, file *ast.File, retired []string) []string 
 				if word, ok := recordSourceValue(lhs, node.Rhs[i]); ok {
 					report(word)
 				}
+			}
+		case *ast.BinaryExpr:
+			if node.Op != token.EQL && node.Op != token.NEQ {
+				return true
+			}
+			if word, ok := recordSourceValue(node.X, node.Y); ok {
+				report(word)
+			} else if word, ok := recordSourceValue(node.Y, node.X); ok {
+				report(word)
 			}
 		}
 		return true
@@ -162,6 +191,8 @@ func hasRecordSourceKey(file *ast.File) bool {
 					break
 				}
 			}
+		case *ast.BinaryExpr:
+			found = keyIsRecordSource(node.X) || keyIsRecordSource(node.Y)
 		}
 		return !found
 	})
@@ -226,8 +257,73 @@ func sweepGoRecordSourcesUnder(t *testing.T, root string) []gatekit.ParsedFile {
 	return swept
 }
 
+// underAnyRoot reports whether path lies inside a declared root, matching
+// whole path segments so "internal" does not swallow a sibling directory
+// that merely starts with the same letters.
+func underAnyRoot(path string) bool {
+	for _, root := range recordSourceGoRoots {
+		if path == root || strings.HasPrefix(path, root+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+// recordSourceSubjectsOutsideRoots walks the rest of the BACKEND module — the
+// negative space gatekit.Scope would otherwise prove is empty, restored here
+// by hand because Scope's own walk excludes every "_test.go" file and a
+// fixture is this census's subject as much as a production default is.
+// Parses every hand-written and test Go source outside the declared roots,
+// generated files and testdata fixtures excluded as above, and returns every
+// site still holding a record-source key there.
+//
+// extensions/ is a separate Go module (its own go.mod) and outside this
+// walk's reach; nothing under it holds a record-source key today, checked by
+// hand rather than swept.
+func recordSourceSubjectsOutsideRoots(t *testing.T) []string {
+	t.Helper()
+	var outside []string
+	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, walkErr error) error {
+		switch {
+		case walkErr != nil:
+			return walkErr
+		case entry.IsDir():
+			if entry.Name() == "testdata" {
+				return filepath.SkipDir
+			}
+			return nil
+		case !strings.HasSuffix(path, ".go"), strings.HasSuffix(path, "_gen.go"):
+			return nil
+		}
+		rel := filepath.ToSlash(path)
+		if rel == probeFile || underAnyRoot(rel) {
+			return nil
+		}
+		fset := token.NewFileSet()
+		file, parseErr := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		if parseErr != nil {
+			return fmt.Errorf("could not read %s, and a source the sweep cannot read may hold a subject "+
+				"this census is never proven against: %w", rel, parseErr)
+		}
+		if hasRecordSourceKey(file) {
+			outside = append(outside, rel)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("sweeping the module's negative space for record-source sites: %v", err)
+	}
+	sort.Strings(outside)
+	return outside
+}
+
 func TestNoGoSourceLiteralSpellsARetiredWord(t *testing.T) {
 	t.Parallel()
+	// A waiver that stopped matching reads as ratification of code that is
+	// gone, so this one enumeration of the negative space is the one place
+	// that can say so.
+	defer recordSourceExempt.AssertAllMatched(t)
+
 	retired := provenance.RetiredRecordSourceSpellings()
 	for _, root := range recordSourceGoRoots {
 		swept := sweepGoRecordSourcesUnder(t, root)
@@ -241,6 +337,14 @@ func TestNoGoSourceLiteralSpellsARetiredWord(t *testing.T) {
 				t.Error(finding)
 			}
 		}
+	}
+	for _, path := range recordSourceSubjectsOutsideRoots(t) {
+		if recordSourceExempt.Waived(t, path) {
+			continue
+		}
+		t.Errorf("%s holds a record-source site outside every root this census sweeps (%s): widen "+
+			"the roots if this tier is now in scope, or ratify the file in recordSourceExempt with "+
+			"the reason it is not", path, strings.Join(recordSourceGoRoots, ", "))
 	}
 }
 
@@ -274,6 +378,12 @@ func f() { m := map[string]any{}; m["source"] = "ui" }`, true},
 		{"an assignment to a different field", `package p
 type T struct{ SourceSystem string }
 func f() { var t T; t.SourceSystem = "ui" }`, false},
+		{"a comparison, key on the left", `package p
+func f() bool { m := map[string]any{}; return m["source"] != "ui" }`, true},
+		{"a comparison, key on the right", `package p
+func f() bool { m := map[string]any{}; return "mcp" == m["source"] }`, true},
+		{"a comparison to the one spelling", `package p
+func f() bool { m := map[string]any{}; return m["source"] == "manual" }`, false},
 	} {
 		t.Run(probe.name, func(t *testing.T) {
 			fset := token.NewFileSet()
