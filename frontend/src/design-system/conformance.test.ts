@@ -393,7 +393,16 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   // both files are correct on their own. Hence a gate over the tree rather than a
   // rule someone has to remember while editing either sheet.
   it("declares each screen's class namespace in exactly one stylesheet", () => {
-    const namespaces = [{ prefix: "auth-", home: "screens/auth.css" }];
+    const namespaces = [
+      { prefix: "auth-", home: "screens/auth.css" },
+      { prefix: "book-", home: "screens/book.css" },
+      { prefix: "companydeepread-", home: "screens/companydeepread.css" },
+      { prefix: "corrections-", home: "screens/contactcorrections.css" },
+      { prefix: "historyfields-", home: "screens/historyfields.css" },
+      { prefix: "offers-", home: "screens/offers.css" },
+      { prefix: "strength-", home: "screens/strength.css" },
+      { prefix: "transcript-", home: "screens/transcriptread.css" },
+    ];
     const violations: string[] = [];
     for (const file of files) {
       if (!file.endsWith(".css")) {
