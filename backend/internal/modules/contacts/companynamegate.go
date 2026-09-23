@@ -31,6 +31,24 @@ import "strings"
 // English and German, the markets measured. A market that stacks a legal form
 // and trade vocabulary in FRONT of the brand belongs in companyformtables.go
 // instead — there the phrase is generic and its words are not.
+//
+// THE BAR FOR ADDING A WORD, because this is a precision policy and not a
+// language model: it appears in many unrelated company names in that market,
+// and identifies none of them. Both halves are needed — a word that is merely
+// frequent can still be somebody's brand, and deleting it takes the company
+// with it.
+//
+// Measured against 296 real names when the list was set: "group" appeared in 6,
+// "health" in 5, "care" in 4, and every genuine brand token in exactly one name
+// — the exception being an actual duplicate pair. That separation is what the
+// bar is asking for, and it is what a candidate word should be checked against
+// rather than judged by ear.
+//
+// Entering a new market means adding its generics, and the cost of not doing so
+// is graceful: the gate only ever REMOVES pairs from consideration, so a market
+// whose generics are missing keeps today's false positives rather than gaining
+// new ones. A Spanish estate still meets on "soluciones" the way an English one
+// met on "Solutions" before this list existed.
 var companyNameStopwords = map[string]bool{
 	// Corporate form that survives NormalizeCompanyName's legal-suffix strip.
 	"group": true, "holding": true, "holdings": true, "company": true,
