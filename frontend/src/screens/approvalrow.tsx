@@ -21,6 +21,7 @@ import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
+import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   ApprovalDetailModal,
   DecideOutcome,
@@ -28,11 +29,7 @@ import {
   editableStrings,
   StagedEditor,
 } from "./approvaleditor";
-import {
-  approvalKindLabel,
-  resolveDisplay,
-  stagedDayFormatter,
-} from "./approvalkind";
+import { approvalKindLabel } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import { stagedSendOf } from "./approvalsend";
 import {

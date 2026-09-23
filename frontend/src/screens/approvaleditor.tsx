@@ -18,12 +18,11 @@ import { isRealCalendarDay } from "../format/calendarday";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   EDITABLE_FIELDS,
   type EditableField,
   humanizeKind,
-  resolveDisplay,
-  stagedDayFormatter,
 } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
