@@ -9,11 +9,11 @@
 # location one.
 #
 # What the pin costs, stated plainly: mistralai/mistral-medium-3-5 is Mistral's
-# strongest current model and has NO EU endpoint, so the ladder above
-# local_small collapses onto mistral-small-2603 — cheap_cloud, premium and
-# frontier all name it. Three tiers naming one model is the honest reading of a
-# region whose only capable rung is the same one throughout; inventing a
-# distinction between them would describe a ladder that is not there.
+# strongest current model and has NO EU endpoint, so `premium` and `frontier`
+# both name mistral-small-2603. Two tiers naming one model is the honest
+# reading of a region whose top rung does not exist in it.
+#
+# `cheap_cloud` deliberately does NOT join them — see the note on that tier.
 #
 # The EU endpoint also bills about 10% above the default one across every model
 # below. The seeded price sheet carries the DEFAULT-endpoint number, because it
@@ -52,26 +52,21 @@ seeds:
         routing:
           only: [mistral/eu]
           require_parameters: true
-      # Three rungs, one model, and the ladder is the poorer for it. What this
-      # rung held before was ministral-14b, which returned a JSON envelope it
-      # had broken on most of its draft_reply runs — a multi-paragraph email
-      # body closed at the salutation and continued as a second bare string —
-      # and went on breaking it when the schema was enforced. A cheap rung that
-      # cannot return the shape is not cheap.
+      # A DIFFERENT model from the rung above it, and that is the point rather
+      # than an accident of shopping. mistral-small-2603 answers better here —
+      # ministral-14b breaks a multi-paragraph email body across JSON string
+      # boundaries, which is why draft_reply is not certified on this preset —
+      # and binding both rungs to the better model was tried and withdrawn.
       #
-      # The replacement was chosen on a hand replay of those failing requests,
-      # not on a record: mistral-small-2603 answered five of five cleanly where
-      # ministral-14b answered two. The certification record for this binding
-      # is what settles it, and until this preset is re-certified end to end
-      # that record does not yet exist for every task.
-      #
-      # It is not simply dearer, either: this model costs LESS on input
-      # ($0.15/M against $0.20) and three times more on output ($0.60 against
-      # $0.20), so the trade is paid by the generative tasks and refunded by
-      # the extractive ones.
+      # Two rungs naming one model is not a ladder. A task whose first rung is
+      # this one falls through to `premium` on failure, and if both name the
+      # same binding the fallback reaches the same endpoint: one upstream 429
+      # then burns the whole ladder, because the router walks each rung exactly
+      # once. Measured under the collapsed shape, 8 of 12 tasks on
+      # mistral-small-2603 failed that way while all 5 on ministral-8b passed.
       cheap_cloud:
         provider: openai_compatible
-        model: mistralai/mistral-small-2603
+        model: mistralai/ministral-14b-2512
         base_url: https://openrouter.ai/api
         routing:
           only: [mistral/eu]
