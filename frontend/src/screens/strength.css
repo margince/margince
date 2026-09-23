@@ -1,0 +1,19 @@
+/* The relationship-strength card's spacing: the bucket headline, each factor's label line and the caption under the factor bars. */
+
+.strength-headline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+/* No gap: the label and its percentage are held apart by the free space alone. */
+.strength-factor-head {
+  display: flex;
+  justify-content: space-between;
+}
+
+.strength-last-interaction {
+  margin-top: var(--space-2);
+}
