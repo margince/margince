@@ -140,6 +140,9 @@ func TestEveryHumanOnlyOperationNarrowsItsTransport(t *testing.T) {
 		if !ok {
 			continue
 		}
+		// An annotation written HERE rather than on an operation would shrink
+		// this walk without failing it; refusePathLevelAgentAccess says why.
+		refusePathLevelAgentAccess(t, path, operations)
 		for method, raw := range operations {
 			if !httpMethods[method] {
 				continue

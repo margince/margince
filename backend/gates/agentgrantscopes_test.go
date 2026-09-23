@@ -200,7 +200,7 @@ func between(src, from, to string) string {
 
 // sortedKeys is the set's keys in a stable order.
 //
-// It really does sort now. Both callers put the result in a FAILURE MESSAGE,
+// It really does sort now. Every caller puts the result in a FAILURE MESSAGE,
 // and map iteration order is randomised per run — so the same finding read
 // differently every time, which is how somebody comparing two runs concludes
 // the tree moved when only the map did.

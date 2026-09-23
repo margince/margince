@@ -164,14 +164,21 @@ func UpsertAction(replacing bool) principal.Action {
 }
 
 // RequireHuman refuses an AGENT (Passport) principal outright, whatever its
-// scope or the granting human's RBAC. It is the runtime twin of the
-// contract's `x-agent-access: human-only` for the operations the agent gate
-// cannot cover: reads. The gate only inspects mutating methods, so a
-// human-only GET (an admin-only sheet) must reject an agent principal here,
-// or an admin-minted read-scoped passport would satisfy the object grant and
-// see it. A buyer is refused too, by the shared helper: "human" here means a
-// seated member, and an external Deal Room participant is not one. The
-// connector and system principals are, and pass.
+// scope or the granting human's RBAC.
+//
+// The in-handler twin of the contract's `x-agent-access: human-only`, and no
+// longer the only thing answering for it: agentGate refuses an annotated route
+// centrally from the generated table, on reading methods (refusedAsHumanOnly)
+// as well as mutating ones, and roughly four hundred routes rely on that rather
+// than on a call here. This is defence in depth on the dozen that also ask, and
+// the gate's coverage is held by humanonlyenforcement_test.go.
+//
+// It is NOT the same question, which is why calling it is still worth
+// something. The gate asks whether this ROUTE is an agent's, reading an
+// annotation; this asks whether this CALLER is a human, reading the principal.
+// So it binds a route carrying no annotation at all, and it refuses a buyer as
+// well — "human" here means a seated member, and an external Deal Room
+// participant is not one. The connector and system principals are, and pass.
 func RequireHuman(ctx context.Context) error {
 	p, err := rbacActor(ctx)
 	if err != nil {

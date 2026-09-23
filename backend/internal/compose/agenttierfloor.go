@@ -188,3 +188,32 @@ func AgentToolTiers() map[string][]string {
 	}
 	return out
 }
+
+// AgentHumanOnlyOperations answers which contract operations the gate refuses
+// an agent outright, by operationId, sorted.
+//
+// Exported for one reader — the gate holding the contract's
+// `x-agent-access: human-only` annotation against the table generated from it.
+// `make drift` proves the committed table is what the generator produces; it
+// cannot prove the generator carried the annotation faithfully, because a
+// generator that dropped it would regenerate the same smaller table and drift
+// would pass. That correspondence is the gate's subject and this is what it
+// reads.
+//
+// By OPERATION rather than by the route agentPolicies is keyed on. The key
+// carries a `/v1` the generator prepends to every contract path, and a reader
+// that rebuilt the prefix to compare would be keeping a second copy of the
+// generator's own decision — which then agrees with itself whatever the
+// generator does. The operationId is the contract's own name for the operation
+// and needs no reconstruction.
+func AgentHumanOnlyOperations() []string {
+	ops := make([]string, 0, len(agentPolicies))
+	for _, policy := range agentPolicies {
+		if policy.Access != accessHumanOnly {
+			continue
+		}
+		ops = append(ops, policy.Op)
+	}
+	sort.Strings(ops)
+	return ops
+}
