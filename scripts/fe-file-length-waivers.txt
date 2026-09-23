@@ -40,7 +40,7 @@
 1183 frontend/src/screens/onboarding-conversation/company-act.test.tsx
 1184 frontend/src/screens/contactpage.tsx
 1200 frontend/src/screens/privacy.test.tsx
-1208 frontend/src/screens/contactprovider.test.tsx
+1173 frontend/src/screens/contactprovider.test.tsx
 1208 frontend/src/screens/worklist.row.tsx
 1245 frontend/src/screens/privacy.tsx
 1278 frontend/src/screens/connectors.tsx

@@ -14,6 +14,13 @@ import {
   providerCompletedProfile,
 } from "./contactprovider.fixtures";
 import {
+  completedKeepingNothing,
+  mount,
+  neverRun,
+  type Profile,
+  queuedRun,
+} from "./contactprovider.harness";
+import {
   installFetchStub,
   jsonResponse,
   meRoute,
@@ -25,87 +32,11 @@ import {
 // automatic lookups off reaches the provider ONLY through this panel, so a
 // verb they cannot find is a capability they do not have.
 
-type Profile = components["schemas"]["ContactProviderProfile"];
 type Contact = components["schemas"]["Contact"];
 
 afterEach(() => {
   cleanup();
 });
-
-/** A contact nobody has looked up: EVERY bought field empty, not merely the
- *  headline ones. The server has no run to fold values out of, so a fixture
- *  that kept a location or a department would be a payload this state cannot
- *  produce — and would quietly prove the plate on a profile that has data.
- *
- *  `provider` is set: a section belongs to one named vendor whether or not a
- *  run exists, which is what lets the reader tell who they are about to pay. */
-function neverRun(): Profile {
-  return {
-    ...providerCompletedProfile,
-    state: "never_run",
-    provider: "surfe",
-    retrieved_at: null,
-    emails: [],
-    mobile_phones: [],
-    linkedin_url: null,
-    current_employment: undefined,
-    job_history: [],
-    location: null,
-    departments: [],
-    seniorities: [],
-    latest_run: undefined,
-    contributing_runs: undefined,
-    categories_not_requested: [],
-  };
-}
-
-// A contact whose lookup COMPLETED and retained nothing free to show — the
-// shape every priced-category case below is about. The section state and the
-// run are ONE fact: a profile reading completed with no run on the record is
-// one no server sends, and a fixture that fabricates it lets a screen reading
-// the state stand in for a screen reading the history.
-function completedKeepingNothing(): Profile {
-  return {
-    ...neverRun(),
-    state: "completed",
-    latest_run: completedProviderRun,
-  };
-}
-
-function mount(profile: Profile, run: () => Response) {
-  const posted: unknown[] = [];
-  installFetchStub({
-    "GET /me": meRoute({ contact: ["read", "update"] }),
-    "POST /contacts/p-1/enrichment-runs": (body) => {
-      posted.push(body);
-      return run();
-    },
-  });
-  render(
-    <StoryProviders>
-      <ContactProviderSection contactId="p-1" profiles={[profile]} />
-    </StoryProviders>,
-  );
-  return posted;
-}
-
-const queuedRun = () =>
-  jsonResponse(
-    {
-      id: "run-9",
-      subject_kind: "contact",
-      provider: "surfe",
-      trigger: "manual",
-      state: "queued",
-      claims_unwritten: false,
-      requested_categories: ["professional_email"],
-      connection_version: 1,
-      created_at: "2026-08-20T09:00:00Z",
-      updated_at: "2026-08-20T09:00:00Z",
-      completed_at: null,
-    },
-    202,
-  );
 
 describe("a contact nobody has bought data for", () => {
   it("offers the lookup as a named plate rather than only a button in the header", async () => {
@@ -630,10 +561,7 @@ describe("the details that cost credits", () => {
 
   it("buys only the detail whose button was pressed", async () => {
     const user = userEvent.setup();
-    const posted = mountWithCatalog(
-      completedKeepingNothing(),
-      queuedRun,
-    );
+    const posted = mountWithCatalog(completedKeepingNothing(), queuedRun);
 
     // Anchored on the price, because the mobile button names the work email
     // too — it cannot be bought without one — and a loose /Buy work email/
@@ -653,10 +581,7 @@ describe("the details that cost credits", () => {
 
   it("buys the email with the mobile, because the provider will not look for one without it", async () => {
     const user = userEvent.setup();
-    const posted = mountWithCatalog(
-      completedKeepingNothing(),
-      queuedRun,
-    );
+    const posted = mountWithCatalog(completedKeepingNothing(), queuedRun);
 
     await user.click(
       await screen.findByRole("button", {
@@ -854,24 +779,19 @@ describe("the details that cost credits", () => {
   // on the record, the provider's answer says nothing about it, and Surfe bills
   // for the email pool all the same when the mobile press makes it look again.
   it("names the re-buy for a work address that came from the record", async () => {
-    mountWithCatalog(
-      completedKeepingNothing(),
-      queuedRun,
-      undefined,
-      {
-        emails: [
-          {
-            id: "e-1",
-            email: "dana@acme.example",
-            email_type: "work",
-            is_primary: true,
-            position: 0,
-            source: "manual",
-            captured_by: "u-1",
-          },
-        ],
-      },
-    );
+    mountWithCatalog(completedKeepingNothing(), queuedRun, undefined, {
+      emails: [
+        {
+          id: "e-1",
+          email: "dana@acme.example",
+          email_type: "work",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "u-1",
+        },
+      ],
+    });
 
     // The press still costs two credits and still returns a number, so it is
     // still offered — with the second charge named.
@@ -890,24 +810,19 @@ describe("the details that cost credits", () => {
   });
 
   it("still offers the work email when the record holds only a personal one", async () => {
-    mountWithCatalog(
-      completedKeepingNothing(),
-      queuedRun,
-      undefined,
-      {
-        emails: [
-          {
-            id: "e-2",
-            email: "dana@privatemail.example",
-            email_type: "personal",
-            is_primary: true,
-            position: 0,
-            source: "manual",
-            captured_by: "u-1",
-          },
-        ],
-      },
-    );
+    mountWithCatalog(completedKeepingNothing(), queuedRun, undefined, {
+      emails: [
+        {
+          id: "e-2",
+          email: "dana@privatemail.example",
+          email_type: "personal",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "u-1",
+        },
+      ],
+    });
 
     // The record keeps the same type distinction the provider's answer does,
     // and for the same reason: the two are separate purchases from separate
@@ -922,24 +837,19 @@ describe("the details that cost credits", () => {
   // one of the two and nobody said which, so it buys no offer and claims no
   // re-buy — the same answer the provider's unclassified address gets.
   it("treats an address the record files as other as neither purchase", async () => {
-    mountWithCatalog(
-      completedKeepingNothing(),
-      queuedRun,
-      undefined,
-      {
-        emails: [
-          {
-            id: "e-3",
-            email: "dana@unknown.example",
-            email_type: "other",
-            is_primary: false,
-            position: 0,
-            source: "import",
-            captured_by: "u-1",
-          },
-        ],
-      },
-    );
+    mountWithCatalog(completedKeepingNothing(), queuedRun, undefined, {
+      emails: [
+        {
+          id: "e-3",
+          email: "dana@unknown.example",
+          email_type: "other",
+          is_primary: false,
+          position: 0,
+          source: "import",
+          captured_by: "u-1",
+        },
+      ],
+    });
 
     expect(
       await screen.findByRole("button", { name: /Buy work email · 1 credit/ }),
@@ -950,24 +860,19 @@ describe("the details that cost credits", () => {
   // The other half of the same press, and the same defect: a number already on
   // the record is one the mobile press pays for again.
   it("offers no mobile purchase for a number the record already holds", async () => {
-    mountWithCatalog(
-      completedKeepingNothing(),
-      queuedRun,
-      undefined,
-      {
-        phones: [
-          {
-            id: "ph-1",
-            phone: "+491701234567",
-            phone_type: "mobile",
-            is_primary: true,
-            position: 0,
-            source: "manual",
-            captured_by: "u-1",
-          },
-        ],
-      },
-    );
+    mountWithCatalog(completedKeepingNothing(), queuedRun, undefined, {
+      phones: [
+        {
+          id: "ph-1",
+          phone: "+491701234567",
+          phone_type: "mobile",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "u-1",
+        },
+      ],
+    });
 
     expect(
       await screen.findByRole("button", { name: /Buy work email · 1 credit/ }),
@@ -1034,10 +939,7 @@ describe("the details that cost credits", () => {
 
   it("names the free categories when the plain lookup button is pressed", async () => {
     const user = userEvent.setup();
-    const posted = mountWithCatalog(
-      completedKeepingNothing(),
-      queuedRun,
-    );
+    const posted = mountWithCatalog(completedKeepingNothing(), queuedRun);
 
     // A run that completed, so the button offers a re-check rather than a
     // first lookup. Either wording drives the same press; what this case pins
