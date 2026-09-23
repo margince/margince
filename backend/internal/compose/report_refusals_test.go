@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
@@ -151,6 +152,10 @@ func (emptyRows) Values() ([]any, error) {
 
 func (emptyRows) RawValues() [][]byte {
 	panic("emptyRows: RawValues is not part of the row scan")
+}
+
+func (emptyRows) TypeMap() *pgtype.Map {
+	panic("emptyRows: TypeMap is not part of the row scan")
 }
 
 var _ pgx.Rows = emptyRows{}
