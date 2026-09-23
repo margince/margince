@@ -68,7 +68,7 @@ internal/compose/agentsplit.go#const block at const opApplyTag
 internal/compose/agenttasks.go#const taskColumns
 internal/compose/aicert/record.go#type Record.Scenarios
 internal/compose/aicert/reportcmd/report.go#var reportColumns
-internal/compose/aicert/run.go#type runCalls
+internal/compose/aicert/runcalls.go#type runCalls
 internal/compose/aicert/scenario.go#const sourceHandAuthored
 internal/compose/approval_kinds_test.go#var exportedApprovalKinds
 internal/compose/attentionreceiptseam.go#const approvalStatusApproved

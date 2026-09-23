@@ -219,9 +219,10 @@ func (w *window) asRequest(remainingOutputTokens, promptWindow int) model.Reques
 		maxTokens = remainingOutputTokens
 	}
 	return model.Request{
-		System:    w.system,
-		Messages:  w.bounded(promptWindow),
-		MaxTokens: maxTokens,
+		System:         w.system,
+		Messages:       w.bounded(promptWindow),
+		MaxTokens:      maxTokens,
+		ResponseSchema: stepSchema,
 	}
 }
 

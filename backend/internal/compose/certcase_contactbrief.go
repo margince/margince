@@ -36,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -65,7 +64,8 @@ func (contactBriefCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pre
 	}
 	in, byLabel := contactBriefInput(f)
 	return &contactBriefCase{
-		in: in, contactID: ids.NewV7().String(),
+		// From the Input, not beside it — see certcase_companybrief.go.
+		in: in, contactID: in.ID,
 		mustCite: byLabel[want.CitesLabel], citeLabel: want.CitesLabel,
 		mustName: want.NamesToken, mustAvoid: want.Avoids,
 	}, nil

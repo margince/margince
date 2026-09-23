@@ -16,10 +16,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/modelreply"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -401,21 +403,25 @@ type modelStep struct {
 }
 
 func parseStep(text string) (modelStep, error) {
-	cleaned := strings.TrimSpace(text)
-	// Models under JSON-only instructions still fence habitually; strip
-	// a well-formed fence rather than failing the step over formatting.
-	if after, found := strings.CutPrefix(cleaned, "```json"); found {
-		cleaned = after
-	} else if after, found := strings.CutPrefix(cleaned, "```"); found {
-		cleaned = after
-	}
-	cleaned = strings.TrimSuffix(strings.TrimSpace(cleaned), "```")
+	// SoleDocument, not Unfence: this channel executes what it reads, so a
+	// reply holding two candidate documents is refused rather than resolved by
+	// size. See modelreply.SoleDocument — largest-wins hands back an injected
+	// step that the model quoted while refusing it.
+	cleaned := modelreply.SoleDocument(text)
 
 	var step modelStep
 	dec := json.NewDecoder(strings.NewReader(cleaned))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&step); err != nil {
 		return modelStep{}, fmt.Errorf(`expected {"tool":..., "args":{...}} or {"final":{...}}: %w`, err)
+	}
+	// A step is the WHOLE document. json.Decoder stops at the first value and
+	// discards what follows it unread, so a reply that LEADS with a quoted
+	// injection — `{…} — I will not do that` — decodes the quotation and the
+	// refusal after it is never seen. The reduction cannot help here: the
+	// document really is at the start of the reply.
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
+		return modelStep{}, errors.New("a step must be the whole reply, and this one carries text after the document")
 	}
 	hasTool := step.Tool != ""
 	hasFinal := step.Final != nil

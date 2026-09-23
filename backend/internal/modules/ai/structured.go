@@ -89,7 +89,7 @@ func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Re
 	}
 	r.forgetCached(ctx, task, req)
 
-	retry := withValidatorFeedback(req, resp.Text, firstErr)
+	retry := feedbackFor(req, resp, firstErr)
 	resp, info, err = r.serveAttempt(ctx, lc, task, ladder, retry, attemptReasonSchemaInvalid)
 	if err != nil {
 		return model.Response{}, info, err
@@ -100,14 +100,14 @@ func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Re
 	}
 	r.forgetCached(ctx, task, retry)
 
-	escalated := withValidatorFeedback(req, resp.Text, secondErr)
+	escalated := feedbackFor(req, resp, secondErr)
 	resp, info, err = r.completeEscalated(ctx, lc, task, escalated)
 	if err != nil {
 		return model.Response{}, info, err
 	}
 	if finalErr := validate(resp.Text); finalErr != nil {
 		r.forgetCached(ctx, task, escalated)
-		return model.Response{}, info, rejected(task, info, finalErr)
+		return model.Response{}, info, rejected(task, info, finalErr, truncated(resp))
 	}
 	return resp, info, nil
 }
@@ -117,8 +117,18 @@ func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Re
 // unconfigured installation and gets its own sentinel on top of the terminal
 // one — the caller then has the choice between "your model misbehaved" and
 // "you have no model", which is the difference between a retry and a setting.
-func rejected(task Task, info RouteInfo, finalErr error) error {
-	err := fmt.Errorf("%w: %s after retry and escalation: %w", ErrOutputRejected, task, finalErr)
+func rejected(task Task, info RouteInfo, finalErr error, wasTruncated bool) error {
+	// The truncation is said BEFORE the validator's complaint, because the
+	// complaint is a consequence: a document cut mid-value is invalid for a
+	// reason that has nothing to do with how it was written. An operator reading
+	// this is owed the output ceiling and not the schema — and the task, which
+	// an earlier spelling of this branch dropped by rebuilding the error.
+	reason := "after retry and escalation"
+	if wasTruncated {
+		reason = "after retry and escalation, and the last answer was cut off at the output " +
+			"limit rather than finishing, so what the validator refused was an incomplete document"
+	}
+	err := fmt.Errorf("%w: %s %s: %w", ErrOutputRejected, task, reason, finalErr)
 	if info.Provider == ProviderFake {
 		return fmt.Errorf("%w: %w", ErrUnconfiguredModel, err)
 	}
@@ -146,10 +156,47 @@ func (r *Router) forgetCached(ctx context.Context, task Task, req model.Request)
 	r.cache.forget(key)
 }
 
+// truncationFeedback is what a cut-off attempt is told instead of a complaint
+// about its shape. Actionable where the schema complaint is not: a model whose
+// JSON was well-formed until the ceiling cut it can act on "you ran out of
+// room" and cannot act on "your JSON is invalid".
+const truncationFeedback = "Your previous answer was cut off because it reached the output limit " +
+	"before it finished. Answer the same question again, but much more briefly — " +
+	"the shortest complete answer that satisfies the schema."
+
+// truncated reports whether resp is a completion the provider stopped at the
+// output ceiling rather than at the end of its answer.
+func truncated(resp model.Response) bool {
+	return resp.FinishReason == model.FinishReasonLength
+}
+
+// withTruncationFeedback is the retry for an attempt that ran out of room.
+//
+// It does NOT echo the failed text back, unlike the schema-invalid retry: the
+// failed text here is up to a whole output budget of runaway, and quoting it
+// would spend the retry's own prompt window on the thing that caused the
+// problem. The instruction alone is what the model can act on.
+func withTruncationFeedback(req model.Request) model.Request {
+	out := req
+	out.Messages = append(append([]model.Message{}, req.Messages...),
+		model.Message{Role: roleUser, Content: truncationFeedback})
+	return out
+}
+
+// feedbackFor picks the retry an attempt has earned: a cut-off answer is told to
+// be shorter, and a complete-but-wrong one is shown why it was refused.
+func feedbackFor(req model.Request, resp model.Response, cause error) model.Request {
+	if truncated(resp) {
+		return withTruncationFeedback(req)
+	}
+	return withValidatorFeedback(req, resp.Text, cause)
+}
+
 // withValidatorFeedback appends the failed output and its validation
 // error as conversation turns, so the retry is a correction, not a
 // blind re-roll. The changed messages also miss the result cache — a
 // retry can never be served the cached invalid answer.
+//
 // Both echoed turns are DATA and go inside the request's boundary. The failed
 // output is the model repeating text a sender steered, and the validator's
 // message quotes tokens out of it, so appending either in the clear would put

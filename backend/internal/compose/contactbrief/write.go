@@ -186,6 +186,8 @@ func ParseBrief(reply, contactID string, in Input) ([]Sentence, error) {
 	// fence is answering correctly, and every other model-reply parser in the
 	// tree reduces through the same helper. Trimming whitespace alone drops the
 	// whole model lane to the deterministic floor on those providers.
+	//
+	// Held by: TestNoModelReplyParserSkipsTheFenceReduction (backend/gates/modelreplyfence_test.go)
 	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return nil, fmt.Errorf("parse the brief reply: %w", err)
 	}

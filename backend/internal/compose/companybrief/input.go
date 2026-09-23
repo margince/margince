@@ -63,6 +63,11 @@ var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 // pipeline, its contacts, and what has moved recently — each already pruned
 // to the reader's row scope by the read that produced it.
 type Input struct {
+	// ID is in the payload because the prompt tells the model to cite it — "a
+	// sentence about the account itself cites the company" — and knownRecords
+	// accepts {company, ID} as evidence. An id the model is not shown makes
+	// every company-level sentence ungroundable.
+	ID           string    `json:"id"`
 	Name         string    `json:"name"`
 	Industry     string    `json:"industry,omitempty"`
 	SizeBand     string    `json:"size_band,omitempty"`
@@ -249,7 +254,7 @@ const briefInputActivities = 12
 // re-queries: the 360 ran under the caller's gates, so anything absent from
 // it is absent because that caller may not see it.
 func FromView(view crmcontracts.Company360) Input {
-	in := Input{Name: view.Company.DisplayName}
+	in := Input{ID: view.Company.Id.String(), Name: view.Company.DisplayName}
 	if view.Company.Industry != nil {
 		in.Industry = *view.Company.Industry
 	}

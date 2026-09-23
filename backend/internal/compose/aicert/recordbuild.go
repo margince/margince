@@ -37,11 +37,11 @@ import (
 // to happen that no test would catch.
 func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profile ai.Profile, promptVersion string) Record {
 	results := acc.allResults
-	scores := make([]int, len(results))
-	for i, r := range results {
-		scores[i] = r.Score
-	}
-	sort.Ints(scores)
+	// Only what a judge graded: a run skipped for truncation carries Score 0
+	// because nobody scored it, and averaging that in reports the absence as a
+	// verdict. An all-ungraded task leaves both numbers at zero beside a
+	// not_supported verdict, which is what Verdict reaches for the same reason.
+	judgeP50, judgeMin, _ := judgeMedianAndMin(results)
 
 	sortedLatencies := append([]int64(nil), acc.latencies...)
 	sort.Slice(sortedLatencies, func(i, j int) bool { return sortedLatencies[i] < sortedLatencies[j] })
@@ -82,8 +82,8 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 		CertifiedScope:       acc.certifiedScope,
 		ContextApplied:       certLaneAppliesCompanyContext,
 		ContextScopes:        declaredCompanyContextScopes(task),
-		JudgeScoreP50:        scores[len(scores)/2],
-		JudgeScoreMin:        scores[0],
+		JudgeScoreP50:        judgeP50,
+		JudgeScoreMin:        judgeMin,
 		LatencyP50:           percentile(sortedLatencies, 0.50),
 		LatencyP95:           percentile(sortedLatencies, 0.95),
 		MeanTokens:           meanTokens,
@@ -100,7 +100,7 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 		// RateStore.RateFor call (price-on-read; never fabricate a price).
 		EstCostMicroUSD:      estCostMicroUSD,
 		JudgeServedModel:     acc.judgeServedModel,
-		SelfJudged:           acc.selfJudgedEveryRun,
+		SelfJudged:           acc.selfJudgedEveryRun && acc.anyRunGraded,
 		ServedIdentitySource: acc.identitySource,
 		RanAt:                ranAt.Format(time.RFC3339),
 		Scenarios:            acc.scenarios,

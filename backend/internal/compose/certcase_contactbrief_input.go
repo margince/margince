@@ -106,6 +106,7 @@ const (
 func contactBriefInput(f contactBriefFixture) (contactbrief.Input, map[string]string) {
 	now := time.Date(2026, time.September, 4, 12, 0, 0, 0, time.UTC)
 	in := contactbrief.Input{
+		ID:   ids.NewV7().String(),
 		Name: f.Name, Title: f.Title, Employer: f.Employer,
 		BuyingRole: f.BuyingRole, Strength: f.Strength,
 		SectionsOmitted: f.SectionsOmitted,

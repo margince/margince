@@ -72,6 +72,6 @@ seeds:
     # model is served at fp4-versus-bf16 stakes.
     embeddings:
       provider: openai_compatible
-      model: mistralai/mistral-embed
+      model: mistralai/mistral-embed-2312
       base_url: https://openrouter.ai/api
       dimensions: 1024

@@ -47,6 +47,57 @@ type RunResult struct {
 	Degraded         bool `json:"degraded"`
 	HardPass         bool `json:"hard_pass"`
 	Score            int  `json:"score"`
+	// Ungraded says no judge saw this run, so Score is absent rather than zero
+	// and must not reach a median or a minimum. A run cut off at the output
+	// ceiling is the case: there is no answer to have an opinion about, and
+	// folding its 0 into the judge's numbers would report the skipped opinion
+	// as a bad one — the same ambiguity, entered from the other side.
+	//
+	// It stays in the run, validator and pass counts: it happened, and the
+	// mechanical grade judged the same incomplete text production would have.
+	Ungraded bool `json:"ungraded,omitempty"`
+}
+
+// judgeMedianAndMin answers the median and minimum of the scores a judge
+// actually gave, and whether any were given.
+//
+// ONE reader for both the verdict and the record, because the guard is the whole
+// point: a task whose every run was cut off has an empty score set, and
+// indexing it is a panic. Written as two functions it was exactly that — the
+// verdict got the empty check and buildRecord, its sibling, did not.
+func judgeMedianAndMin(rs []RunResult) (median, minimum int, graded bool) {
+	scores := make([]int, 0, len(rs))
+	for _, r := range rs {
+		if r.Ungraded {
+			continue
+		}
+		scores = append(scores, r.Score)
+	}
+	if len(scores) == 0 {
+		return 0, 0, false
+	}
+	slices.Sort(scores)
+	return medianOf(scores), scores[0], true
+}
+
+// medianOf answers the median of a sorted, non-empty score set, averaging the
+// two middle values on an even count.
+//
+// The even case is reachable even though RunnerConfig.Repeats is odd: an
+// ungraded run leaves the run set odd and the SCORE set one shorter. Without
+// the average, a graded pair {10, 80} reported 80 — the upper middle — which is
+// the one direction a certification number must never err in, because it turns
+// a set with a failing grade in it into a passing median.
+//
+// Integer division truncates, so an exact half lands on the lower value. That
+// is the conservative side: a median is compared against a floor, and rounding
+// down can only withhold a verdict, never grant one.
+func medianOf(sorted []int) int {
+	mid := len(sorted) / 2
+	if len(sorted)%2 == 1 {
+		return sorted[mid]
+	}
+	return (sorted[mid-1] + sorted[mid]) / 2
 }
 
 // Verdict folds N runs of one scenario into a certification outcome per
@@ -60,10 +111,12 @@ type RunResult struct {
 // regardless of which verdict the run set lands on — it is the number a
 // dashboard trends over time, not just the pass/fail label.
 //
-// Verdict requires an ODD run count (N=0 or even panics): a median needs a
-// single middle element, and the runner's own config (RunnerConfig.Repeats)
+// Verdict requires an ODD run count (N=0 or even panics): ⌈2N/3⌉ is a
+// threshold on the RUN set, and the runner's own config (RunnerConfig.Repeats)
 // already enforces oddness before any run happens, so a call here with an
 // even N is a caller bug, not a certification input to report gracefully.
+// The median is NOT what the oddness buys — it comes from the graded subset,
+// which an ungraded run leaves even, and medianOf defines that case.
 func Verdict(rs []RunResult, b Bands) (verdict string, reliability float64) {
 	n := len(rs)
 	if n == 0 || n%2 == 0 {
@@ -71,18 +124,21 @@ func Verdict(rs []RunResult, b Bands) (verdict string, reliability float64) {
 	}
 
 	passed := 0
-	scores := make([]int, n)
-	for i, r := range rs {
-		scores[i] = r.Score
+	for _, r := range rs {
 		if r.HardPass {
 			passed++
 		}
 	}
 	reliability = float64(passed) / float64(n)
 
-	slices.Sort(scores)
-	median := scores[n/2]
-	minScore := scores[0]
+	// Every run ungraded leaves no opinion to band on. The mechanical grade
+	// still decides pass/fail, and the judge's half of the bands cannot be met
+	// by a score nobody gave — so the verdict falls to not-supported rather
+	// than certifying on an empty median.
+	median, minScore, graded := judgeMedianAndMin(rs)
+	if !graded {
+		return VerdictNotSupported, reliability
+	}
 
 	if passed == n && median >= b.CertifiedMin && minScore >= b.Floor {
 		return VerdictCertified, reliability

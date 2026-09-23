@@ -96,6 +96,9 @@ const briefInputChanges = 3
 // happened — each already pruned to the reader's row scope by the read that
 // produced it.
 type Input struct {
+	// ID is in the payload so a sentence about the contact can cite them; the
+	// prompt offers `entity_type: contact` and knownRecords accepts {contact, ID}.
+	ID           string `json:"id"`
 	Name         string `json:"name"`
 	Title        string `json:"title,omitempty"`
 	Employer     string `json:"employer,omitempty"`
@@ -250,6 +253,7 @@ type ActIn struct {
 // of gates that could disagree with the first.
 func FromView(view crmcontracts.Contact360) Input {
 	in := Input{
+		ID:              view.Contact.Id.String(),
 		Name:            view.Contact.FullName,
 		SectionsOmitted: omittedNames(view.SectionsOmitted),
 	}

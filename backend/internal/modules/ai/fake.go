@@ -39,6 +39,11 @@ type FakeStep struct {
 	Text        string
 	ServedModel string
 	Err         error
+	// FinishReason scripts the provider's stop reason, so a test can stand a
+	// TRUNCATED completion up: "length" is a successful HTTP response carrying a
+	// half-written body, which is a different thing from Err and the one the
+	// retry policy most needs to be able to see.
+	FinishReason string
 }
 
 // FakeCall is one recorded model invocation: the exact bytes that would
@@ -142,6 +147,7 @@ func (f *FakeClient) Complete(ctx context.Context, req model.Request) (model.Res
 		InputTokens:  len(payload) / 4,
 		OutputTokens: len(step.Text) / 4,
 		ServedModel:  servedModel,
+		FinishReason: step.FinishReason,
 	}, nil
 }
 

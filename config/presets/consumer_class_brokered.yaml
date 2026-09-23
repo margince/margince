@@ -1,0 +1,160 @@
+# yaml-language-server: $schema=../margince.schema.json
+# config/presets/consumer_class_brokered.yaml — weights a customer could host on
+# their own consumer hardware, served through the broker so we can measure them
+# before anybody buys a GPU.
+#
+# This preset answers ONE question: is the open-weight class that fits on a
+# 24GB card good enough to carry Margince's tasks? It is deliberately NOT the
+# sovereign binding. Every call here leaves the building — the models are the
+# ones a customer could run, the SERVING is DeepInfra's and Parasail's. That is
+# why `profile: cloud_frontier` below, and it is not a downgrade of ambition: the
+# sovereign Ollama binding of the same weights is a DIFFERENT measurement and
+# must file under a different profile, or the two records collide on one
+# filename (provider_model_envclass.json) and the honest local number
+# overwrites, or is overwritten by, this proxy.
+#
+# So: certify here first, cheaply, to find out which weights are worth the
+# hardware time. Then rebind the survivors to `provider: ollama` on loopback
+# with `profile: sovereign` and pay for the real run.
+#
+#     make e2e-ai ROUTING=config/presets/consumer_class_brokered.yaml \
+#       JUDGE=openai_compatible:mistralai/mistral-large-2512 \
+#       JUDGE_BASE_URL=https://openrouter.ai/api
+#
+# The judge is NOT from this family and NOT resolved from this file. Every rung
+# below is Gemma 4, and cert_judge leads at premium — so a judge taken from the
+# routing would grade Gemma 4 with Gemma 4 on every premium-led task, which is
+# certified by construction. mistral-large is named because it is the strongest
+# thing the same one credential already reaches.
+#
+# THE FAMILY, AND THE A/B. Gemma 4 is what this file binds. The other candidate
+# worth a run is Qwen — as of 2026-09 the consumer-local field's pick for a
+# single 24GB card is the dense `qwen/qwen3.8-27b` (262K window, tools and
+# structured output on 14 of its 16 endpoints). To A/B it, copy this file and
+# swap the three model ids; do NOT edit this one in place, because a record is
+# filed under the model it measured and the comparison is the point.
+#
+# WHAT WILL FAIL, AND WHY IT IS NOT THIS FILE'S BUG. document_extract sends a
+# PDF, and the OpenAI-compatible adapter's wire has image parts and no document
+# part (internal/modules/ai/carriage.go) — so that one task fails under any
+# openai_compatible binding, loudly. The Ollama wire is the same shape, so the
+# eventual sovereign run cannot serve it either: for a consumer-hosted
+# deployment, document_extract needs a rung on a provider whose wire carries
+# PDFs. Worth knowing BEFORE the hardware is bought, which is another reason to
+# run the cheap proxy first.
+#
+# Not loaded automatically — see README.md.
+version: 1
+
+seeds:
+  ai_routing:
+    # The profile is a three-value enum, and `cloud_frontier` is the one that
+    # fits: it means BYOK CLOUD (config/margince.schema.json), which is exactly
+    # this file — our own broker credential reaching a third party's inference
+    # host. It does NOT mean "a frontier-class model", and nothing here is one.
+    #
+    # The other two are wrong for different reasons. `sovereign` is zero egress
+    # and is enforced, not labelled: it refuses a cloud provider outright, and
+    # it is the profile the eventual Ollama binding of these same weights will
+    # carry. `eu_hosted` claims partner EU inference, which this file cannot
+    # promise — the endpoints it reaches at fp8 are DeepInfra's and Parasail's,
+    # pinned by precision and not by region.
+    profile: cloud_frontier
+    tiers:
+      # Every rung is sized to a hardware class an operator can check against
+      # their own box. The Q4 footprints are for the eventual Ollama run; they
+      # are stated here because they are the reason these three ids and not
+      # three larger ones.
+      #
+      # local_small leads 6 tasks — capture_classify, the two capture verdicts,
+      # owed_verdict, request_settlement, enrich. All short answers under a JSON
+      # schema, so schema adherence is the whole job and size buys little.
+      #
+      # 26b-a4b is the MoE: 26B of weights, ~4B active per token. That is the
+      # variant that makes this tier honest on a LAPTOP — it is the 16GB-class
+      # rung, fast on hardware that would crawl under a dense 26B.
+      local_small:
+        provider: openai_compatible
+        model: google/gemma-4-26b-a4b-it   # ~16GB at Q4; MoE, ~4B active
+        base_url: https://openrouter.ai/api
+        # An anchor, reused by every tier below: the serving preferences are one
+        # decision about what a consumer box looks like, so they are written
+        # once. Copy the WHOLE seeds block — lifting a single tier out of this
+        # file leaves an alias with nothing to point at.
+        routing: &consumer_serving
+          # sort: throughput for the reason the product default has it — it is
+          # the lever that collapses the broker's latency tail
+          # (docs/reference/openrouter.md).
+          sort: throughput
+          # fp8, NOT the product default's [fp16, bf16]. The question this file
+          # asks is what a consumer box produces, and a consumer box does not
+          # run bf16 — it runs a 4- to 8-bit quant. fp8 is the closest precision
+          # served for BOTH ids below with tools and structured output intact;
+          # fp4 exists for the 31B and not for the MoE, so pinning it would
+          # leave this tier with no endpoint at all. It is one step from what an
+          # operator will really run, and the direction of the error is known:
+          # the sovereign run at Q4 should score at or below this.
+          #
+          # Pinning ONE level rather than listing several is what makes repeats
+          # comparable — two answers from one model id at fp8 and at bf16 are
+          # two models for every purpose except billing.
+          quantizations: [fp8]
+          # Keeps a structured-output or tool request away from a host that
+          # cannot honour it. It matters more here than on a frontier binding:
+          # the fp8 endpoints for these ids are a short list, and one of them
+          # serves no tools.
+          require_parameters: true
+      # cheap_cloud leads 17 tasks, and one of them is agent_loop — a cumulative
+      # reason-act window fed 7 tools. TOOL CALLING is therefore this tier's
+      # hard requirement, not a nicety, and it is the thing to watch in the
+      # results: it is where an open-weight rung most often turns out not to
+      # carry the product.
+      cheap_cloud:
+        provider: openai_compatible
+        model: google/gemma-4-31b-it       # ~19GB at Q4; one 24GB card / 32GB Mac
+        base_url: https://openrouter.ai/api
+        routing: *consumer_serving
+      # premium leads 6 tasks and is the rung that decides whether any of this
+      # works. corpus_ask and site_extract drop every claim whose quote is not
+      # VERBATIM in the retrieved passage — that discipline, not fluency, is
+      # what small open weights are worst at, and no fallback rung exists to
+      # catch them (both are premium-only by contract).
+      #
+      # Bound to the same 31B as cheap_cloud on purpose: 31B dense at Q4 IS the
+      # ceiling of "consumer hardware", so a premium rung above it would be a
+      # model this preset's whole premise says the customer cannot run. The
+      # answer to "premium is too weak" is not a bigger local model, it is that
+      # those tasks need a cloud rung.
+      premium:
+        provider: openai_compatible
+        model: google/gemma-4-31b-it
+        base_url: https://openrouter.ai/api
+        routing: *consumer_serving
+      # No ladder leads at frontier (backend/api/ai-tasks.yaml), so this is here
+      # only so a task reaching for the top rung finds something bound. It is
+      # the same 31B for the reason premium is: there is nothing above it that a
+      # consumer box runs.
+      frontier:
+        provider: openai_compatible
+        model: google/gemma-4-31b-it
+        base_url: https://openrouter.ai/api
+        routing: *consumer_serving
+    # The embed lane is the one place this preset is NOT consumer-class, and it
+    # is the broker's fault rather than a choice: it fronts no open-weight
+    # embedding model worth binding. mistral-embed stands in.
+    #
+    # 1024 is mistral-embed's width AND bge-m3's — the model the sovereign
+    # Ollama binding will use — so a later move onto local weights does not
+    # change the COLUMN. It does not make the vectors comparable: two models
+    # write different spaces at the same width, and querying bge-m3 against
+    # stored mistral-embed vectors returns confident nonsense. Changing the
+    # embedding model means re-embedding everything already filed, whatever the
+    # width says. Equal width saves a migration, not a re-embed.
+    #
+    # No `routing:` block: the parser refuses one on the embed lane, since a
+    # single forward pass has no latency tail to bound.
+    embeddings:
+      provider: openai_compatible
+      model: mistralai/mistral-embed-2312
+      base_url: https://openrouter.ai/api
+      dimensions: 1024

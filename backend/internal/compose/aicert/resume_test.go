@@ -294,7 +294,7 @@ func TestAJournaledRunCarriesEveryFieldOfARunOutcome(t *testing.T) {
 		RunResult: RunResult{
 			Output: "the widget is blue", Outcome: "accepted", LatencyMS: 1234,
 			TokensIn: 11, TokensOut: 22, CachedTokens: 33, CacheWriteTokens: 44,
-			Degraded: true, HardPass: true, Score: 87,
+			Degraded: true, HardPass: true, Score: 87, Ungraded: true,
 		},
 		Provider: "openai_compatible", ServedModel: "z-ai/glm-5.2",
 		ServedIdentitySource: "provider_reported", JudgeServedModel: "claude-haiku-4.5",
