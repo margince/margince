@@ -316,6 +316,16 @@ func TestSpeakerPrefixAcceptsDiarizerNumberedLabels(t *testing.T) {
 		"url":                   {"https://example.test/page", ""},
 		"timestamp with colons": {"00:01:02: hello", ""},
 		"long number run":       {"Speaker 12345: hello", ""},
+		// A clause is refused on its WORD COUNT and on nothing else: it carries
+		// no digit, no slash and no number run, and at 38 characters it is
+		// inside the cap that stops the rows above.
+		"a sentence with a mid-sentence colon": {
+			"On the integration question you raised: we already speak to them", "",
+		},
+		"a short clause is still a sentence": {"On the other hand, however: we ship", ""},
+		// The other direction, so the bound cannot simply tighten: a name
+		// written out in full is still a speaker.
+		"a full name with a title": {"Dr. Anna Maria Müller: wir liefern", "Dr. Anna Maria Müller"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -377,6 +387,28 @@ func TestPreviewReportsSpeakersWithoutStoringAnything(t *testing.T) {
 	}
 	if anna.Label != "Anna" || anna.Turns != 1 || anna.Words != 4 {
 		t.Fatalf("anna = %+v", anna)
+	}
+}
+
+// Prose pasted into the onboarding step as a TRANSCRIPT, which is what a reader
+// who clicked "paste sent mail" does. Asked of the preview rather than of
+// splitSpeakerLine because the damage is downstream: only the chosen speaker's
+// turns reach the corpus, so the rest of the paste is dropped under the floor
+// and the failure arrives as poor voice rather than as an error.
+func TestProseWithAMidSentenceColonIsNotATranscript(t *testing.T) {
+	const prose = "On the integration question you raised: we already speak to the same warehouse system\n" +
+		"and the rollout took a fortnight. Happy to put you in touch with their team."
+
+	preview, err := PreviewCorpusText(voiceSourceKindTranscript, prose)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(preview.Speakers) != 0 || preview.IngestibleAsTranscript {
+		t.Fatalf("preview = %+v — a sentence with a colon in it is not a speaker turn", preview)
+	}
+	// All still there, as one voice — which is what the reader pasted.
+	if preview.UnattributedWords != preview.TotalWords || preview.TotalWords == 0 {
+		t.Fatalf("attributed %d of %d words to somebody", preview.TotalWords-preview.UnattributedWords, preview.TotalWords)
 	}
 }
 
