@@ -53,7 +53,7 @@ func TestRenewalReminderFiresWithinWindowButNotBeyondIt(t *testing.T) {
 	fieldCtx := e.As(e.Rep1, nil, CustomFieldAdminPerms)
 
 	field, err := svc.Create(fieldCtx, customfields.FieldSpec{
-		Object: "contact", Label: "Renewal Date", Type: customfields.TypeDate, Source: "ui",
+		Object: "contact", Label: "Renewal Date", Type: customfields.TypeDate, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("defining the renewal-date field: %v", err)
@@ -114,7 +114,7 @@ func TestRenewalReminderPreviewMatchesTheRealSeededRows(t *testing.T) {
 	fieldCtx := e.As(e.Rep1, nil, CustomFieldAdminPerms)
 
 	field, err := svc.Create(fieldCtx, customfields.FieldSpec{
-		Object: "contact", Label: "Renewal Date", Type: customfields.TypeDate, Source: "ui",
+		Object: "contact", Label: "Renewal Date", Type: customfields.TypeDate, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("defining the renewal-date field: %v", err)
@@ -202,7 +202,7 @@ func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
 	fieldCtx := e.As(e.Rep1, nil, CustomFieldAdminPerms)
 
 	field, err := svc.Create(fieldCtx, customfields.FieldSpec{
-		Object: "contact", Label: "Birthday", Type: customfields.TypeDate, Source: "ui",
+		Object: "contact", Label: "Birthday", Type: customfields.TypeDate, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("defining the birthday field: %v", err)

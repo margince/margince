@@ -112,7 +112,7 @@ func assertAcceptHTTPNonDeal422(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Attachment Holder", "source": "ui",
+		"full_name": "Attachment Holder", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}
@@ -156,7 +156,7 @@ func TestAcceptAttachmentExtractionHTTP(t *testing.T) {
 	var deal AnyMap
 	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": "HTTP Accept Deal", "pipeline_id": stages.PipelineID,
-		"stage_id": stages.Open, "source": "ui",
+		"stage_id": stages.Open, "source": "manual",
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("create deal = %d %v", status, deal)
 	}

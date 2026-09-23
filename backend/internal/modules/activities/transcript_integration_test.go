@@ -32,7 +32,7 @@ func TestLogActivityNormalizesAndStoresATranscript(t *testing.T) {
 	// hand-built LogActivityInput would skip the mapping and prove nothing
 	// about what a real caller sends.
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "meeting", Body: &raw, SourceSystem: &sourceSystem, Source: "ui",
+		Kind: "meeting", Body: &raw, SourceSystem: &sourceSystem, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("LogActivityInputFrom: %v", err)
@@ -80,7 +80,7 @@ func TestUpdateActivityNormalizesATranscriptBody(t *testing.T) {
 	raw := "Anna: hello"
 	sourceSystem := "transcript"
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "call", Body: &raw, SourceSystem: &sourceSystem, Source: "ui",
+		Kind: "call", Body: &raw, SourceSystem: &sourceSystem, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("LogActivityInputFrom: %v", err)
@@ -115,7 +115,7 @@ func TestUpdateActivityRefusesABlankTranscriptPatch(t *testing.T) {
 	raw := "Anna: hello"
 	sourceSystem := "transcript"
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "call", Body: &raw, SourceSystem: &sourceSystem, Source: "ui",
+		Kind: "call", Body: &raw, SourceSystem: &sourceSystem, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("LogActivityInputFrom: %v", err)

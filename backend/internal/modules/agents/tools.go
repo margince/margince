@@ -7,7 +7,8 @@ package agents
 // SystemOfRecordProvider seam so the same tools serve whichever provider
 // answers for the records. Record-type-generic by design:
 // one read_record with a record_type argument, mapping onto the per-type
-// contract operations. Writes stamp source="mcp"; captured_by is derived
+// contract operations. Writes stamp source="manual" (see ToolSource below);
+// captured_by is derived
 // from the authenticated Principal by the store — an agent cannot forge
 // provenance any more than a browser can.
 

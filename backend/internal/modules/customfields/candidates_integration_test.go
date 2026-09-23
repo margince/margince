@@ -122,11 +122,11 @@ func setupCandidates(t *testing.T) *candidatesFixture {
 			},
 		})
 
-	dateField, err := svc.Create(fctx, FieldSpec{Object: "lead", Label: "Renewal date", Type: TypeDate, Source: "ui"})
+	dateField, err := svc.Create(fctx, FieldSpec{Object: "lead", Label: "Renewal date", Type: TypeDate, Source: "manual"})
 	if err != nil {
 		t.Fatalf("defining the date field: %v", err)
 	}
-	textField, err := svc.Create(fctx, FieldSpec{Object: "lead", Label: "Segment", Type: TypeText, Source: "ui"})
+	textField, err := svc.Create(fctx, FieldSpec{Object: "lead", Label: "Segment", Type: TypeText, Source: "manual"})
 	if err != nil {
 		t.Fatalf("defining the text field: %v", err)
 	}

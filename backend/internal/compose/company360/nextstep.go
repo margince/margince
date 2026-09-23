@@ -26,6 +26,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // noNextStepSuggestion fires on an account that is live — it has an open
@@ -130,7 +131,7 @@ func TaskBody(
 		EntityId   openapi_types.UUID                            `json:"entity_id"`
 		EntityType crmcontracts.CreateTaskRequestLinksEntityType `json:"entity_type"`
 	}{{EntityId: openapi_types.UUID(entityID), EntityType: entityType}}
-	return crmcontracts.CreateTaskRequest{Subject: subject, Source: "ui", Links: &links}
+	return crmcontracts.CreateTaskRequest{Subject: subject, Source: provenance.RecordSourceManual, Links: &links}
 }
 
 // How many deals the advice names before it stops naming them. Past three the

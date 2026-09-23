@@ -24,7 +24,7 @@ func (e *relEnv) billingContact(t *testing.T, body AnyMap) (status int, id, deta
 	body["kind"] = "billing_contact"
 	body["contact_id"] = e.contactID
 	body["company_id"] = e.companyID
-	body["source"] = "ui"
+	body["source"] = "manual"
 	var out struct {
 		ID     string `json:"id"`
 		Detail string `json:"detail"`
@@ -116,7 +116,7 @@ func TestAnEmploymentRoleStaysFreeText(t *testing.T) {
 	// applied to every kind would refuse every job title in the product.
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
-		"role": "vp_of_something_nobody_enumerated", "source": "ui",
+		"role": "vp_of_something_nobody_enumerated", "source": "manual",
 	}, nil, nil); status != http.StatusCreated {
 		t.Errorf("an employment with a free-text role → %d, want 201", status)
 	}

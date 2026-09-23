@@ -44,7 +44,7 @@ func reviewedCard() contacts.VCardEntry {
 func seedNearMatch(ctx context.Context, t *testing.T, e *integration.Env, card contacts.VCardEntry) *ids.ContactID {
 	t.Helper()
 	if _, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
-		FullName: "Anna Weber", Source: "ui",
+		FullName: "Anna Weber", Source: "manual",
 		Emails: []contacts.ContactEmailInput{{Email: existingContactEmail, EmailType: "work", IsPrimary: true}},
 	}); err != nil {
 		t.Fatalf("seeding the existing contact: %v", err)
@@ -217,7 +217,7 @@ func TestAVacuousCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T) 
 	adminCtx := e.Admin()
 	repCtx := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	adminCandidate, err := e.Contacts.CreateContact(adminCtx, contacts.CreateContactInput{FullName: "A Different Priya", Source: "ui"})
+	adminCandidate, err := e.Contacts.CreateContact(adminCtx, contacts.CreateContactInput{FullName: "A Different Priya", Source: "manual"})
 	if err != nil {
 		t.Fatalf("seeding the admin's candidate: %v", err)
 	}
@@ -307,7 +307,7 @@ func TestATwoFieldCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T)
 	adminCtx := e.Admin()
 	repCtx := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	adminCandidate, err := e.Contacts.CreateContact(adminCtx, contacts.CreateContactInput{FullName: "A Different Jan Kowalski", Source: "ui"})
+	adminCandidate, err := e.Contacts.CreateContact(adminCtx, contacts.CreateContactInput{FullName: "A Different Jan Kowalski", Source: "manual"})
 	if err != nil {
 		t.Fatalf("seeding the admin's candidate: %v", err)
 	}

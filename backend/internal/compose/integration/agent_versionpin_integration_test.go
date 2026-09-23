@@ -87,7 +87,7 @@ func seedOfferForPin(t *testing.T, e *apptest.AppEnv) (string, string, pinOffer)
 
 	var offer pinOffer
 	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
-		"currency": "EUR", "source": "mcp",
+		"currency": "EUR", "source": "manual",
 		"line_items": []AnyMap{
 			{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0},
 		},

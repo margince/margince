@@ -277,6 +277,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `ratelimitnames_test.go` | H2 | A rate limiter's NAME is its bucket. |
 | `ratparsebound_test.go` | H2 | A decimal string is shape-checked before math/big parses it. |
 | `recencyorigins_test.go` | H2 | Every reading of "when was this record last touched" excludes the origins the system wrote itself. |
+| `recordsourcespelling_test.go` | H2 | A record's `source` names where the row came from, and whoever uses this product is one origin with one spelling. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |
 | `remediationnotbuyeractivity_test.go` | H2 | Remediation work must never read as buyer engagement. |
 | `reportasof_test.go` | H2 | A report's answer is labelled with the instant it was COMPUTED at. |
