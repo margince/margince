@@ -5,44 +5,14 @@ package deals
 
 import (
 	"context"
-	"strings"
+	"reflect"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
-
-// Every shipped language writes the follow-up summary in its own words, with
-// the English sentence's holes in the English order: the verbs are positional,
-// so a swapped pair prints the date where the deal's name belongs.
-func TestEveryShippedLanguageWritesItsOwnFollowUpSummary(t *testing.T) {
-	english, ok := summaryByLang[textlang.English]
-	if !ok {
-		t.Fatal("English has no summary set, and it is the fallback for everything else")
-	}
-	for _, lang := range textlang.Shipped {
-		t.Run(string(lang), func(t *testing.T) {
-			said, ok := summaryByLang[lang]
-			if !ok {
-				t.Fatalf("the product ships %s and this table has not learned it", lang)
-			}
-			got := said.draftFollowUp
-			if got == "" {
-				t.Fatal("draftFollowUp is empty, and a blank summary reaches the inbox as nothing at all")
-			}
-			if strings.Count(got, "%q") != 1 || strings.Count(got, "%s") != 2 || strings.Count(got, "%") != 3 {
-				t.Errorf("draftFollowUp must carry exactly one %%q and two %%s: %q", got)
-			}
-			if strings.Index(got, "%q") > strings.Index(got, "%s") {
-				t.Errorf("draftFollowUp puts a %%s before the deal's %%q: %q", got)
-			}
-			if lang != textlang.English && got == english.draftFollowUp {
-				t.Error("draftFollowUp is the English sentence verbatim; the entry exists and the reader still gets English")
-			}
-		})
-	}
-}
 
 // An unshipped language answers English rather than an empty set, because the
 // language comes off a settings row an admin can edit by hand.
@@ -129,55 +99,88 @@ func TestAFollowUpWithoutAResolverIsEnglish(t *testing.T) {
 	}
 }
 
-// sentenceFields lists every %s-only sentence with its holes: a translation
-// that drops one stops naming the criterion, the deal or the date it is about.
-func sentenceFields(said summaryCopy) map[string]struct {
-	sentence string
-	holes    int
-} {
-	type field = struct {
-		sentence string
-		holes    int
-	}
-	return map[string]field{
-		"followUpSubject":       {said.followUpSubject, 1},
-		"followUpBody":          {said.followUpBody, 2},
-		"followUpBodyQuoted":    {said.followUpBodyQuoted, 3},
-		"stageAutoApply":        {said.stageAutoApply, 0},
-		"stageAllSettled":       {said.stageAllSettled, 0},
-		"stageUnreliable":       {said.stageUnreliable, 0},
-		"stageNoCriteria":       {said.stageNoCriteria, 0},
-		"stageStillAsksForKey":  {said.stageStillAsksForKey, 1},
-		"stageOurSideOnlyKey":   {said.stageOurSideOnlyKey, 1},
-		"stageClosing":          {said.stageClosing, 0},
-		"stageCrossPipeline":    {said.stageCrossPipeline, 0},
-		"stageSkips":            {said.stageSkips, 0},
-		"stageOptionalOpenKey":  {said.stageOptionalOpenKey, 1},
-		"stageNotAgreedKey":     {said.stageNotAgreedKey, 1},
-		"stageUncertainKey":     {said.stageUncertainKey, 1},
-		"protectedMovedByYou":   {said.protectedMovedByYou, 0},
-		"protectedUndoneBefore": {said.protectedUndoneBefore, 0},
-		"protectedTurnedDown":   {said.protectedTurnedDown, 0},
-		"protectedRecently":     {said.protectedRecently, 0},
-	}
+// summaryVerbs is the formatting verbs each sentence's call site passes, in
+// order. The census holds its key set equal to summaryCopy's fields, so a
+// sentence added to the struct with no row here fails.
+var summaryVerbs = map[string][]string{
+	"draftFollowUp":         {"%q", "%s", "%s"},
+	"followUpSubject":       {"%s"},
+	"followUpBody":          {"%s", "%s"},
+	"followUpBodyQuoted":    {"%s", "%s", "%s"},
+	"stageAutoApply":        nil,
+	"stageAllSettled":       nil,
+	"stageUnreliable":       nil,
+	"stageNoCriteria":       nil,
+	"stageStillAsksForKey":  {"%s"},
+	"stageOurSideOnlyKey":   {"%s"},
+	"stageClosing":          nil,
+	"stageCrossPipeline":    nil,
+	"stageSkips":            nil,
+	"stageOptionalOpenKey":  {"%s"},
+	"stageNotAgreedKey":     {"%s"},
+	"stageUncertainKey":     {"%s"},
+	"protectedMovedByYou":   nil,
+	"protectedUndoneBefore": nil,
+	"protectedTurnedDown":   nil,
+	"protectedRecently":     nil,
 }
 
-// Every shipped language writes every task line and stage-policy reason in its
-// own words.
-func TestEveryShippedLanguageWritesItsOwnSentences(t *testing.T) {
-	english := sentenceFields(summaryByLang[textlang.English])
+// summarySentences reads every field of one set by reflection, so the census
+// walks the struct itself rather than a list that could fall behind it.
+func summarySentences(said summaryCopy) map[string]string {
+	value := reflect.ValueOf(said)
+	sentences := map[string]string{}
+	for i := range value.NumField() {
+		sentences[value.Type().Field(i).Name] = value.Field(i).String()
+	}
+	return sentences
+}
+
+// verbsIn answers a sentence's formatting verbs in order. Go's verbs are
+// positional, so a translation that swaps %q and %s prints the date where the
+// deal's name belongs.
+func verbsIn(sentence string) []string {
+	var verbs []string
+	for i := 0; i+1 < len(sentence); i++ {
+		if sentence[i] == '%' {
+			verbs = append(verbs, sentence[i:i+2])
+			i++
+		}
+	}
+	return verbs
+}
+
+// Every shipped language writes every sentence in its own words, with the
+// English sentence's formatting verbs in the English order.
+func TestEveryShippedLanguageWritesItsOwnDealSentences(t *testing.T) {
+	english := summarySentences(summaryByLang[textlang.English])
+	for name := range english {
+		if _, held := summaryVerbs[name]; !held {
+			t.Errorf("%s is a field of summaryCopy with no row in summaryVerbs, so nothing holds its verbs", name)
+		}
+	}
+	for name := range summaryVerbs {
+		if _, exists := english[name]; !exists {
+			t.Errorf("summaryVerbs holds %s, which summaryCopy no longer has", name)
+		}
+	}
 	for _, lang := range textlang.Shipped {
 		t.Run(string(lang), func(t *testing.T) {
-			for name, field := range sentenceFields(summaryFor(lang)) {
-				if field.sentence == "" {
-					t.Errorf("%s is empty, and a blank reason reaches the card as nothing at all", name)
+			said, ok := summaryByLang[lang]
+			if !ok {
+				t.Fatalf("the product ships %s and this table has not learned it", lang)
+			}
+			for name, got := range summarySentences(said) {
+				if got == "" {
+					t.Errorf("%s is empty, and a blank sentence reaches the record as nothing at all", name)
 					continue
 				}
-				if strings.Count(field.sentence, "%s") != field.holes || strings.Count(field.sentence, "%") != field.holes {
-					t.Errorf("%s must carry exactly %d %%s and no other verb: %q", name, field.holes, field.sentence)
+				if verbs := verbsIn(got); !slices.Equal(verbs, summaryVerbs[name]) {
+					t.Errorf("%s carries verbs %v, its call site passes %v in that order: %q",
+						name, verbs, summaryVerbs[name], got)
 				}
-				if lang != textlang.English && field.sentence == english[name].sentence {
-					t.Errorf("%s is the English sentence verbatim", name)
+				if lang != textlang.English && got == english[name] {
+					t.Errorf("%s is the English sentence verbatim; the entry exists and the reader still gets English", name)
 				}
 			}
 		})

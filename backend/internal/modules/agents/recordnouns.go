@@ -84,9 +84,9 @@ func MoreFields(lang textlang.Lang) string {
 
 // noun names a record type inside this set's sentences. English sentences
 // print the wire type as they always have; the others print the language's
-// word.
+// word. A set carrying no language is the zero value, and reads as English.
 func (said summaryCopy) noun(recordType string) string {
-	if said.lang == textlang.English {
+	if said.lang == textlang.English || said.lang == textlang.Unknown {
 		return recordType
 	}
 	return RecordNoun(said.lang, recordType)

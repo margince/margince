@@ -54,7 +54,7 @@ type summaryCopy struct {
 	analyticsQuery, annotateNothing, annotateNarrative, annotateBoth, annotateFindings,
 	stepUpRecords, stepUpChanges string
 
-	// lang is the language this set was picked for, which names its record
+	// lang is the language this set is written in, which names its record
 	// types (recordnouns.go). It is not a sentence, so the census skips it.
 	lang textlang.Lang
 }
@@ -65,6 +65,7 @@ type summaryCopy struct {
 //nolint:dupl // one block per language with the same keys is the table's shape; the census holds them in step
 var summaryByLang = map[textlang.Lang]summaryCopy{
 	textlang.English: {
+		lang:                textlang.English,
 		archive:             "Archive %s %s",
 		createHead:          "Create a %s",
 		updateHead:          "Update a %s",
@@ -138,6 +139,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		stepUpChanges:       "This agent has made %d changes against a limit of %d for this window (most recently through %s). Approve to let it continue for another %d.",
 	},
 	textlang.German: {
+		lang:                textlang.German,
 		archive:             "%s archivieren: %s",
 		createHead:          "%s anlegen",
 		updateHead:          "%s ändern",
@@ -211,6 +213,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		stepUpChanges:       "Dieser Agent hat %d Änderungen vorgenommen, bei einem Limit von %d für dieses Zeitfenster (zuletzt über %s). Gib frei, damit er für weitere %d weitermachen kann.",
 	},
 	textlang.Vietnamese: {
+		lang:                textlang.Vietnamese,
 		archive:             "Lưu trữ %s: %s",
 		createHead:          "Tạo %s",
 		updateHead:          "Cập nhật %s",
@@ -295,13 +298,10 @@ func summaryIn(ctx context.Context, language baselanguage.Resolver) summaryCopy 
 // summaryFor answers the set for lang, and the English set for a language the
 // table has not learned.
 func summaryFor(lang textlang.Lang) summaryCopy {
-	said, ok := summaryByLang[lang]
-	if !ok {
-		lang = textlang.English
-		said = summaryByLang[lang]
+	if said, ok := summaryByLang[lang]; ok {
+		return said
 	}
-	said.lang = lang
-	return said
+	return summaryByLang[textlang.English]
 }
 
 // WithBaseLanguage injects the installation's base language every staged

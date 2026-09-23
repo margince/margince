@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -294,5 +295,35 @@ func TestAgentWorkSummariesFollowTheInjectedLanguage(t *testing.T) {
 	}
 	if want := "2 Erkenntnis(se) in deinen Morgenbericht schreiben"; brief.Summary != want {
 		t.Errorf("annotation summary = %q, want %q", brief.Summary, want)
+	}
+}
+
+// Each set names the language it is written in, and the English wording of a
+// record type is the same whichever way a set was reached: a wire type with an
+// underscore prints as the wire type through the English set and through a set
+// that carries no language at all.
+func TestEverySetNamesItsLanguageAndEnglishKeepsTheWireType(t *testing.T) {
+	for lang, said := range summaryByLang {
+		if said.lang != lang {
+			t.Errorf("the %s set says it is written in %q", lang, said.lang)
+		}
+	}
+	english, unnamed := summaryFor(textlang.English), summaryCopy{}
+	if got, want := unnamed.noun("deal_room"), english.noun("deal_room"); got != want || got != "deal_room" {
+		t.Errorf("the unnamed set prints %q and the English set %q, want both \"deal_room\"", got, want)
+	}
+}
+
+// German uses only the plain hyphen: an em or en dash in a record noun or a
+// sentence breaks the house rule for German copy.
+func TestGermanCopyCarriesNoLongDash(t *testing.T) {
+	german := summarySentences(summaryByLang[textlang.German])
+	for recordType, noun := range recordNounsByLang[textlang.German] {
+		german["noun "+recordType] = noun
+	}
+	for name, text := range german {
+		if strings.ContainsAny(text, "\u2013\u2014") {
+			t.Errorf("German %s carries an em or en dash: %q", name, text)
+		}
 	}
 }

@@ -77,7 +77,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedMovedByYou:   "you moved this deal yourself in the last fortnight",
 		protectedUndoneBefore: "a stage move on this deal was undone before",
 		protectedTurnedDown:   "you turned this move down, and nothing new has been learned since",
-		protectedRecently:     "someone changed this deal's stage by hand recently",
+		protectedRecently:     "this deal is protected from automatic moves right now",
 	},
 	textlang.German: {
 		draftFollowUp:      "Entwirf ein Follow-up zu %q: Nach dem Austausch (%s) am %s ist kein nächster Schritt geplant.",
@@ -100,7 +100,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedMovedByYou:   "du hast diesen Deal in den letzten zwei Wochen selbst verschoben",
 		protectedUndoneBefore: "ein Phasenwechsel bei diesem Deal wurde schon einmal rückgängig gemacht",
 		protectedTurnedDown:   "du hast diesen Schritt abgelehnt, und seitdem ist nichts Neues bekannt geworden",
-		protectedRecently:     "jemand hat die Phase dieses Deals kürzlich von Hand geändert",
+		protectedRecently:     "dieser Deal ist derzeit vor automatischen Phasenwechseln geschützt",
 	},
 	textlang.Vietnamese: {
 		draftFollowUp:      "Soạn một follow-up cho %q: sau tương tác (%s) vào ngày %s chưa có bước tiếp theo nào được lên kế hoạch.",
@@ -123,7 +123,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedMovedByYou:   "bạn đã tự chuyển deal này trong hai tuần qua",
 		protectedUndoneBefore: "một lần chuyển giai đoạn của deal này đã từng bị hoàn tác",
 		protectedTurnedDown:   "bạn đã từ chối bước này, và từ đó đến nay chưa có thông tin mới nào",
-		protectedRecently:     "gần đây có người đã tự tay thay đổi giai đoạn của deal này",
+		protectedRecently:     "deal này hiện đang được bảo vệ khỏi các lần chuyển giai đoạn tự động",
 	},
 }
 

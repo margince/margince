@@ -127,8 +127,9 @@ func actPhrase(said approvalSummaryCopy, pol agentPolicy, method, path string) s
 		}
 		return upperFirst(verb)
 	}
-	// The record noun is the tool door's own (agents.RecordNoun), so one record
-	// type reads the same on a card from either door.
+	// The record noun is the tool door's own (agents.RecordNoun), so a translated
+	// card names a record type as the tool door does; English alone differs, the
+	// tool door printing the wire type and this door reading it aloud.
 	noun := agents.RecordNoun(said.lang, string(pol.RecordType))
 	if frame, framed := acts.recordFrames[pol.Tool]; framed {
 		return fmt.Sprintf(frame, noun)
