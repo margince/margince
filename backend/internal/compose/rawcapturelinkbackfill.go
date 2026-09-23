@@ -26,10 +26,17 @@ package compose
 // The read lives here because compose is the seam entitled to know both
 // spellings; the write lives in activities, which owns the table — the same
 // split meetingrsvpbackfill.go uses for the pass beside this one
-// (activities.CancelCapturedMeetingTx). Needs no marker table of its own,
-// unlike either: a row is its own state here, so `raw_capture_id IS NULL` is
-// both the candidate predicate and the record of what is left to do, and a
-// row this pass names is never offered again by construction.
+// (activities.CancelCapturedMeetingTx).
+//
+// It needs no marker table because every row a batch RETURNS is named, so the
+// candidate set strictly shrinks. That holds only while the limit bounds the
+// JOIN and not the scan behind it: an activity that will never have an
+// original — one typed by hand, a task, a system notice — is `raw_capture_id
+// IS NULL` forever, so a window taken before the join fills with those, the
+// batch links nothing, the drain stops, and every higher id is never reached.
+// The cost of the correct shape is that a drained workspace re-reads its
+// unlinkable rows once a tick and returns none, which is a scan rather than a
+// stall.
 //
 // A job for the reason every pass in this sequence is one and not an UPDATE
 // inside its own migration (participantbackfilljob.go's own doc comment states
@@ -108,9 +115,11 @@ func backfillRawCaptureLinksBatch(ctx context.Context, pool *pgxpool.Pool, limit
 func selectStoredOriginalLinks(ctx context.Context, tx pgx.Tx, limit int) ([]activities.StoredOriginalLink, error) {
 	mail, err := queryStoredOriginalLinks(ctx, tx, `
 		SELECT a.id, r.id
-		  FROM (SELECT id, source_system, source_id FROM activity
-		         WHERE raw_capture_id IS NULL ORDER BY id LIMIT $1) a
-		  JOIN raw_capture r ON r.source_system = a.source_system AND r.source_id = a.source_id`, limit)
+		  FROM activity a
+		  JOIN raw_capture r ON r.source_system = a.source_system AND r.source_id = a.source_id
+		 WHERE a.raw_capture_id IS NULL
+		 ORDER BY a.id
+		 LIMIT $1`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("compose: finding the originals behind captured mail: %w", err)
 	}
@@ -121,12 +130,14 @@ func selectStoredOriginalLinks(ctx context.Context, tx pgx.Tx, limit int) ([]act
 	// message ride the stored update payload itself.
 	channel, err := queryStoredOriginalLinks(ctx, tx, `
 		SELECT a.id, r.id
-		  FROM (SELECT id, source_system, source_id FROM activity
-		         WHERE raw_capture_id IS NULL ORDER BY id LIMIT $1) a
+		  FROM activity a
 		  JOIN raw_capture r ON r.source_system = a.source_system
 		   AND a.source_id = split_part(r.source_id, ':', 1) || ':'
 		                  || (r.payload->'message'->'chat'->>'id') || ':'
-		                  || (r.payload->'message'->>'message_id')`, limit)
+		                  || (r.payload->'message'->>'message_id')
+		 WHERE a.raw_capture_id IS NULL
+		 ORDER BY a.id
+		 LIMIT $1`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("compose: finding the originals behind captured channel messages: %w", err)
 	}

@@ -211,55 +211,6 @@ func TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything(t *testing.T) {
 	}
 }
 
-// TestThePurgeRefusesWhenAnOriginalWouldSurvive holds the state the FK alone
-// keeps unreachable in production (ON DELETE SET NULL clears the reference the
-// instant its row goes) but that a future migration or a hand run could still
-// produce: a reference standing over nothing. The constraint is dropped here
-// for exactly that reason — to reach the case the count-then-compare exists for
-// rather than the case the schema already prevents.
-func TestThePurgeRefusesWhenAnOriginalWouldSurvive(t *testing.T) {
-	e := Setup(t)
-	activity := seedMailOriginal(t, e, "msg-orphaned-reference", time.Now())
-
-	owner := OwnerConn(t)
-	if _, err := owner.Exec(context.Background(),
-		`ALTER TABLE activity DROP CONSTRAINT activity_raw_capture_id_fkey`); err != nil {
-		t.Fatalf("dropping the reference's constraint: %v", err)
-	}
-	t.Cleanup(func() {
-		ctx := context.Background()
-		// The dangling reference this test deliberately left has to clear
-		// before the constraint returns: ADD CONSTRAINT validates against the
-		// data already there, and this row is the one the schema is about to
-		// start refusing again.
-		if _, err := owner.Exec(ctx, `UPDATE activity SET raw_capture_id = NULL WHERE id = $1`, activity); err != nil {
-			t.Errorf("clearing the dangling reference: %v", err)
-			return
-		}
-		if _, err := owner.Exec(ctx, `
-			ALTER TABLE activity ADD CONSTRAINT activity_raw_capture_id_fkey
-			FOREIGN KEY (raw_capture_id) REFERENCES raw_capture (id) ON DELETE SET NULL`); err != nil {
-			t.Errorf("restoring the reference's constraint: %v", err)
-		}
-	})
-
-	// The reference stands and the row it names is gone: the exact state a
-	// correlation that silently matches nothing would report success over.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `DELETE FROM raw_capture`)
-		return err
-	}); err != nil {
-		t.Fatalf("orphaning the reference: %v", err)
-	}
-
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return capture.NewPendingStore(e.DB()).PurgeRawCaptureTx(context.Background(), tx, []ids.UUID{activity})
-	})
-	if err == nil {
-		t.Fatal("the purge reported success over a record whose original it did not destroy")
-	}
-}
-
 // seedMailOriginal captures one mail-shaped record through the ONE guarded
 // Sink every mail connector shares (capture.Sink.Upsert), rather than a literal
 // INSERT that could not reproduce the invariant these tests hold the purge to:

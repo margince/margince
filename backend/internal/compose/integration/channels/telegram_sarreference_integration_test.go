@@ -5,16 +5,11 @@
 
 package channels
 
-// The Art. 15 half of raw_capture's own reference: privacy/sarsections.go's
-// RawCapture disclosure gate used to ask whether an activity shared the
-// row's (source_system, source_id) pair. Telegram's poll keys the row on the
-// redelivery counter while the activity carries the chat-and-message key, so
-// that test matched nothing for a single Telegram capture — the original of
-// an OPEN message was withheld from its own subject, a failed access request
-// that nothing in a normal run ever surfaces. The gate now asks whether an
-// activity NAMES the row (activity.raw_capture_id), which is the reference
-// every capture lane writes regardless of how its own natural key spells the
-// row it stored.
+// The Art. 15 half of raw_capture's own reference. A channel original is keyed
+// on the poll's redelivery counter and never on the activity's own key, so the
+// disclosure gate can only follow activity.raw_capture_id — and a gate that
+// matches nothing withholds an open message from its own subject, which no
+// normal run surfaces.
 
 import (
 	"encoding/json"
