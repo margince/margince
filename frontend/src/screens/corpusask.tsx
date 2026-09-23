@@ -135,31 +135,23 @@ export function AskMarginceModal({
     }
   }, [items, corpusId]);
 
-  // A question carried in has already been ASKED, so arriving with one fills
-  // the box AND submits it. `asked` is what keeps one arrival to one ask: the
-  // effect is replayed for the set list landing, for the grant landing, and
-  // twice over on a development mount, and a model call is not a thing to make
-  // twice.
-  const carried = carriedQuestion?.trim() ?? "";
-  const asked = useRef("");
-  const submit = ask.mutate;
+  // The palette fills the box; it does not press Ask. A question typed into a
+  // palette is a question being COMPOSED — the reader was still writing it when
+  // the row matched — and asking it for them spends a model call on a fragment
+  // and shows them an answer to something they had not finished saying.
+  const carried = carriedQuestion ?? "";
+  const filled = useRef(false);
   useEffect(() => {
-    if (!open || carried === "") {
-      asked.current = "";
+    if (!open) {
+      filled.current = false;
       return;
     }
-    // Two things have to be known first, and neither is on the first render.
-    // A set, because an ask with none to search is one the mutation refuses.
-    // And the GRANT: the set is chosen from whatever the corpora cache holds,
-    // and a warm cache outlives the grant that filled it, so without this the
-    // dialog would ask on behalf of a reader it is not even drawn for.
-    if (!canAsk || corpusId === "" || asked.current === carried) {
+    if (filled.current) {
       return;
     }
-    asked.current = carried;
+    filled.current = true;
     setQuestion(carried);
-    submit({ corpusId, question: carried });
-  }, [open, canAsk, carried, corpusId, submit]);
+  }, [open, carried]);
 
   const runAsk = useCallback(() => {
     setOpenCite(null);
@@ -184,28 +176,29 @@ export function AskMarginceModal({
           </Heading>
           {/* The set scopes the whole dialog rather than one question, which is
               why it sits in the head and not beside the box: change it and the
-              NEXT ask goes somewhere else. Offered only when there is a choice
-              to make — one set is not a decision, it is a label. */}
-          {items && items.length > 1 ? (
-            <div className="ask-modal-set">
-              <Field label={t("corpusAsk.whichSet")}>
-                {(control) => (
-                  <Select
-                    {...control}
-                    options={items.map((set) => ({
-                      value: set.id,
-                      label: set.name,
-                    }))}
-                    value={corpusId}
-                    onChange={(next) => {
-                      setCorpusId(next);
-                      setOpenCite(null);
-                    }}
-                  />
-                )}
-              </Field>
-            </div>
-          ) : null}
+              NEXT ask goes somewhere else. ALWAYS drawn, even at one set — an
+              answer a reader cannot attribute to a named set is an answer they
+              cannot judge, and the day a second set arrives the control is
+              already where they learned to look. */}
+          <div className="ask-modal-set">
+            <Field label={t("corpusAsk.whichSet")}>
+              {(control) => (
+                <Select
+                  {...control}
+                  options={(items ?? []).map((set) => ({
+                    value: set.id,
+                    label: set.name,
+                  }))}
+                  value={corpusId}
+                  disabled={(items?.length ?? 0) < 2}
+                  onChange={(next) => {
+                    setCorpusId(next);
+                    setOpenCite(null);
+                  }}
+                />
+              )}
+            </Field>
+          </div>
         </header>
         <div className="ask-modal-body">
           <section className="ask-modal-ask">

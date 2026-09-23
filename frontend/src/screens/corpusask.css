@@ -3,11 +3,16 @@
  * sentence that sent them — a stacked layout scrolled the answer away the
  * moment they pressed a number. */
 
+/* ONE size, whatever it holds. The document pane arrives when a reader presses
+ * a citation, and a dialog that grew to fit it moved the sentence they were
+ * reading out from under them — the pane is the point of pressing, so its
+ * arrival must change nothing but the pane. */
 .ask-modal {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: 100%;
+  width: min(72rem, 92vw);
+  height: min(44rem, 86vh);
 }
 
 .ask-modal-head {
@@ -38,12 +43,14 @@
   flex-direction: column;
   gap: var(--space-3);
   flex-basis: 50%;
+  flex-grow: 1;
   min-width: 0;
   overflow-y: auto;
 }
 
 .ask-modal-doc {
   flex-basis: 50%;
+  flex-grow: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;

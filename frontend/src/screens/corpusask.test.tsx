@@ -2,7 +2,6 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -499,7 +498,11 @@ describe("AskMarginceModal", () => {
 
   // A carried question is one the reader has already asked. Filling the box and
   // waiting for a press was the surface admitting it could not answer.
-  it("asks the question the palette carried, once, with nothing left to press", async () => {
+  // The palette FILLS the box; it does not press Ask. A question typed into a
+  // palette is one still being composed — the row matched mid-word — so asking
+  // it would spend a model call on a fragment and answer something the reader
+  // had not finished saying.
+  it("fills the box with the question the palette carried, and waits", async () => {
     const backend = backendFor(ASKER);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(
@@ -510,136 +513,22 @@ describe("AskMarginceModal", () => {
       />,
     );
 
-    // In the box, not printed beside an empty one — and answered.
     await waitFor(() =>
       expect(screen.getByLabelText(/your question/i)).toHaveValue(
         "how long are messages kept",
       ),
     );
+    // Nothing was asked: the reader still has the press to make.
+    expect(backend.asked).toHaveLength(0);
+    expect(
+      screen.queryByText("Captured messages are kept for 400 days."),
+    ).toBeNull();
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Ask" }));
     expect(
       await screen.findByText("Captured messages are kept for 400 days."),
     ).toBeTruthy();
-    // ONE call. The arrival is replayed for the set list landing and for a
-    // caller re-rendering, and a model call is not a thing to make twice.
-    expect(backend.asked).toEqual([{ question: "how long are messages kept" }]);
-  });
-
-  // A carried question is SPENT the moment it is asked, so when it is asked has
-  // to be after the grant is known. `useAskableSets` is disabled without the
-  // grant and still serves whatever the ["knowledge-corpora"] entry holds, and
-  // a warm entry outlives the grant that filled it — so the set can be chosen,
-  // and the ask fired, for a reader who holds nothing. The server refuses that
-  // ask, the question is gone from the address, and the grant landing a moment
-  // later finds nothing left to ask.
-  //
-  // Which is why the assertion is about WHICH ask reached the server and not
-  // about how many did. Spent early there is still exactly one, and it is the
-  // one that fails.
-  it("holds a carried question until the grant lands, then asks it once", async () => {
-    let allowed = false;
-    const asked: unknown[] = [];
-    const fetchMock = vi.fn(
-      async (input: RequestInfo | URL, init?: RequestInit) => {
-        const req =
-          input instanceof Request ? input : new Request(String(input), init);
-        if (req.url.endsWith("/v1/me")) {
-          return jsonResponse(meFixture({ allow: allowed ? ASKER : {} }));
-        }
-        if (req.url.includes("/ask")) {
-          const { question } = (await req.json()) as { question: string };
-          asked.push({ question, granted: allowed });
-          // What the server does with an ask the grant does not cover, so a
-          // question spent early is a question lost rather than one answered.
-          return allowed
-            ? jsonResponse(answer())
-            : jsonResponse({ title: "Forbidden" }, 403);
-        }
-        if (req.url.includes("/knowledge/corpora")) {
-          return jsonResponse({ items: [SET] });
-        }
-        throw new Error(`unexpected request: ${req.method} ${req.url}`);
-      },
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    const view = render(
-      <AskMarginceModal
-        open
-        onClose={() => {}}
-        carriedQuestion="how long are messages kept"
-      />,
-    );
-    // The set list, under the key the card reads, cached by a reader who did
-    // hold the grant. This is the state the guard is about.
-    view.client.setQueryData(["knowledge-corpora"], { items: [SET] });
-
-    // Settled ungranted: /me has answered, the set list is in the cache the
-    // dialog reads, and React has run the effects that chain off both — the set
-    // being chosen is one pass and the ask would be the next. Waiting on the
-    // client rather than on the screen because an ask fired from here leaves no
-    // mark on the dialog, which is exactly what makes it invisible.
-    await waitFor(() =>
-      expect(view.client.getQueryState(["me"])?.status).toBe("success"),
-    );
-    expect(view.client.getQueryData(["knowledge-corpora"])).toBeDefined();
-    await act(async () => {});
-    await act(async () => {});
-
-    // Nothing is asked, whatever the cache holds, and the dialog says there is
-    // nothing here to ask — so the question is still there to ask.
-    expect(asked).toEqual([]);
-    expect(screen.getByText(/no document set to ask/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /^ask$/i })).toBeDisabled();
-
-    allowed = true;
-    await view.client.invalidateQueries({ queryKey: ["me"] });
-
-    // The question that was waiting is asked, and answered, and it reached the
-    // server WITH the grant in hand.
-    expect(
-      await screen.findByText("Captured messages are kept for 400 days."),
-    ).toBeTruthy();
-    expect(screen.getByLabelText(/your question/i)).toHaveValue(
-      "how long are messages kept",
-    );
-    expect(asked).toEqual([
-      { question: "how long are messages kept", granted: true },
-    ]);
-  });
-
-  // The positive half is what makes the negative half mean anything.
-  //
-  // Asserting only "the dialog refuses" passes BEFORE the list has arrived, so
-  // written that way it stayed green against a set that was present. Proving
-  // the box becomes askable with a set first is what makes the refusal that
-  // follows a statement about the EMPTY list.
-  it("will not ask when the workspace has filed no set", async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
-    render(<AskMarginceModal open onClose={() => {}} />);
-    await user.type(
-      await screen.findByLabelText(/your question/i),
-      "how long are messages kept",
-    );
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: /^ask$/i })).toBeEnabled(),
-    );
-    expect(screen.queryByText(/no document set to ask/i)).toBeNull();
-
-    cleanup();
-    vi.unstubAllGlobals();
-    const empty = backendFor(ASKER, { sets: [] });
-    vi.stubGlobal("fetch", empty.fetchMock);
-    render(<AskMarginceModal open onClose={() => {}} />);
-
-    // A question that can be submitted is a promise of an answer, and there is
-    // nothing here to search.
-    expect(await screen.findByText(/no document set to ask/i)).toBeTruthy();
-    await user.type(
-      screen.getByLabelText(/your question/i),
-      "how long are messages kept",
-    );
-    expect(screen.getByRole("button", { name: /^ask$/i })).toBeDisabled();
-    expect(empty.asked).toEqual([]);
+    expect(backend.asked).toHaveLength(1);
   });
 
   it("asks nothing, and reaches for no sets, for a reader who holds no grant", async () => {

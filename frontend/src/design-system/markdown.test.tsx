@@ -229,6 +229,40 @@ describe("the highlight has three outcomes and says which", () => {
     vi.restoreAllMocks();
   });
 
+  // The citation is cut from the SOURCE and carries its markup; the page shows
+  // the RENDERED text, where those markers are a font weight rather than
+  // characters. Without this the common handbook citation — almost every one of
+  // which is bold — matched nothing on a page that plainly contained it, and
+  // the reader was told the quote could not be pinpointed.
+  it("marks a quote that carries the source's own emphasis markers", () => {
+    const onHighlight = vi.fn<(outcome: MarkdownHighlightOutcome) => void>();
+    const { container } = render(
+      <Markdown
+        source={"**Full seat.** Can read and change things, subject to role."}
+        highlight={{
+          quote: "**Full seat.** Can read and change things, subject to role.",
+        }}
+        onHighlight={onHighlight}
+      />,
+    );
+    expect(onHighlight).toHaveBeenCalledWith("quote");
+    expect(container.querySelectorAll("mark").length).toBeGreaterThan(0);
+    // The asterisks are not on the page, so they are not in the mark either.
+    expect(container.textContent).not.toContain("**");
+  });
+
+  it("marks a quote whose emphasis wraps one word inside it", () => {
+    const onHighlight = vi.fn<(outcome: MarkdownHighlightOutcome) => void>();
+    render(
+      <Markdown
+        source={"A project is **not** a folder you create when you win."}
+        highlight={{ quote: "A project is **not** a folder you create" }}
+        onHighlight={onHighlight}
+      />,
+    );
+    expect(onHighlight).toHaveBeenCalledWith("quote");
+  });
+
   it("marks the quote where it is found, and scrolls to it", () => {
     const onHighlight = vi.fn<(outcome: MarkdownHighlightOutcome) => void>();
     const { container } = render(

@@ -38,15 +38,41 @@ export function collapseSpace(text: string): string {
  * why this returns whether it hit instead of throwing.
  */
 export function markQuote(blocks: Block[], quote: string): boolean {
-  const needle = collapseSpace(quote);
-  if (needle === "") return false;
-  for (const run of runsOf(blocks)) {
-    const span = locateCollapsed(runText(run.nodes), needle);
-    if (span === null) continue;
-    run.nodes = markNodes(run.nodes, span.start, span.end, { at: 0 });
-    return true;
+  // Two spellings of the same quote, tried in order. The citation was cut from
+  // the document's SOURCE, so it carries that source's markup — the handbook
+  // quotes "**Full seat.** Can read…", asterisks and all. What is on screen is
+  // the RENDERED text, where those asterisks are a font weight and not
+  // characters, so the literal quote matches nothing on a page that plainly
+  // contains it. Stripping the markers is what makes the common citation land;
+  // trying the raw form first is what keeps a quote whose own text contains an
+  // asterisk from being mangled into a miss.
+  for (const needle of [
+    collapseSpace(quote),
+    collapseSpace(withoutMarkers(quote)),
+  ]) {
+    if (needle === "") continue;
+    for (const run of runsOf(blocks)) {
+      const span = locateCollapsed(runText(run.nodes), needle);
+      if (span === null) continue;
+      run.nodes = markNodes(run.nodes, span.start, span.end, { at: 0 });
+      return true;
+    }
   }
   return false;
+}
+
+/**
+ * The quote as the page renders it: inline emphasis and code markers dropped.
+ *
+ * Only the markers a run can carry, and only where they wrap something — a
+ * lone asterisk in prose is prose. Block syntax is not touched, because a run
+ * never spans a heading's own hashes or a list's bullet.
+ */
+function withoutMarkers(quote: string): string {
+  return quote
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/(^|[\s(])[*_](\S(?:.*?\S)?)[*_](?=[\s).,;:!?]|$)/g, "$1$2")
+    .replace(/`([^`]+)`/g, "$1");
 }
 
 /** Mark the whole block that contains `line`, the coarse answer to a miss. */
