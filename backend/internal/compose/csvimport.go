@@ -326,7 +326,8 @@ func (h importHandlers) commitRun(
 	// browser goes away would leave the run `running` with rows already
 	// committed and nothing able to record the failure — a state neither
 	// approve (not awaiting) nor resume (not failed) can move.
-	commitCtx := context.WithoutCancel(ctx)
+	commitCtx, releaseCommit := context.WithTimeout(context.WithoutCancel(ctx), importCommitTimeout)
+	defer releaseCommit()
 	if _, err := migration.NewEngine(runs, writers).Run(commitCtx, approved.ID, source); err != nil {
 		// The engine has already recorded the failure and its checkpoint on the
 		// run; the caller is told which run to resume rather than being handed
@@ -362,7 +363,8 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 	// commit does (ApproveImportRun): cancelling it when the browser goes
 	// away must not leave the run `undoing` with rows already reversed and
 	// nothing able to record how far it got.
-	undoCtx := context.WithoutCancel(ctx)
+	undoCtx, releaseUndo := context.WithTimeout(context.WithoutCancel(ctx), importCommitTimeout)
+	defer releaseUndo()
 	if _, err := runs.Undo(undoCtx, run.ID, writers); err != nil {
 		httperr.Write(w, r, err)
 		return
