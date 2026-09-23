@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SLOWEST_MEASURED_TEST_MS } from "../../vitest.budget";
 import type { components } from "../api/schema";
+import { createQueryClient } from "../app/queryclient";
 import { LocaleProvider } from "../i18n";
 import { CompanyContextCard } from "./company-context";
 
@@ -109,7 +110,17 @@ const SITE_READ: SiteRead = {
 // The card scopes its write controls to what /me says the seat holds, so every
 // fixture below has to answer that probe: an unanswered one denies, and the
 // suite would then be driving a card with no controls at all.
-function meResponse(seat: SeatType, company: Grant): Me {
+//
+// `roles` carries admin by default, and that is not a convenience: GET /company
+// is gated on the literal admin ROLE (contacts' requireAnchorAdministrator →
+// auth.RequireAdmin), not on the company object, so a principal with every
+// company grant and no admin role is one the server refuses outright. A fixture
+// without it drives this card as a seat production never lets in here.
+function meResponse(
+  seat: SeatType,
+  company: Grant,
+  roles: string[] = ["admin"],
+): Me {
   return {
     user: {
       id: "00000000-0000-4000-8000-000000000001",
@@ -122,7 +133,7 @@ function meResponse(seat: SeatType, company: Grant): Me {
     workspace_name: "Acme",
     non_production: true,
     admin_password_link: false,
-    roles: [],
+    roles,
     teams: [],
     authorization: {
       seat_type: seat,
@@ -599,5 +610,55 @@ describe("CompanyContextCard refresh failures", () => {
     ).toBeTruthy();
     // The poll's own detail names a row nobody typed and no reader can act on.
     expect(screen.queryByText(/row not visible/)).toBeNull();
+  });
+});
+
+// A seat the server refuses the installation's own profile to.
+//
+// GET /company is gated on the literal admin ROLE, not on the company object,
+// so management, manager, rep and ops are all refused it — while still holding
+// installation_settings:read, which is what puts them on this settings tab at
+// all. Two other cards on that tab are genuinely theirs, so the tab is right to
+// open; this card is the one that must not be there.
+//
+// The assertion is the REQUEST COUNT, not the absence of the card. A card that
+// merely rendered nothing while still asking would leave the reader a blank
+// region and the server a refusal it can do nothing with, repeated for as long
+// as the tab stays open — which is what was reported: a viewport that stayed
+// empty past thirteen seconds with the same 403 arriving about fifty times a
+// second.
+describe("CompanyContextCard for a seat that is not an administrator", () => {
+  const ME_NOT_ADMIN = meResponse(
+    "full",
+    { create: false, read: true, update: false, delete: false },
+    [],
+  );
+
+  it("asks for no profile it would be refused, and draws nothing", async () => {
+    const stub = backend(ME_NOT_ADMIN);
+    vi.stubGlobal("fetch", stub);
+    const { container } = render(
+      // The PRODUCT's client rather than the harness's retry-free one:
+      // FE-PARAM-2's policy is part of what decides whether a refusal settles,
+      // so replacing it would ask a question the product never asks.
+      <QueryClientProvider client={createQueryClient()}>
+        <LocaleProvider>
+          <CompanyContextCard />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    const companyCalls = () =>
+      stub.mock.calls.filter(([input]) => {
+        const url = new URL(
+          String(input instanceof Request ? input.url : input),
+        );
+        return url.pathname === "/v1/company";
+      }).length;
+
+    // Long enough for the reported storm to show itself many times over.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(companyCalls()).toBe(0);
+    expect(container.textContent ?? "").toBe("");
   });
 });

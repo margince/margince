@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { usePublishSelection } from "../app/attention";
-import { useCanUpsert } from "../app/capability";
+import { useCanUpsert, useHoldsAdminRole } from "../app/capability";
 import { navigate } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
@@ -292,17 +292,24 @@ export function CompanyContextCard() {
   const t = useT();
   const queryClient = useQueryClient();
   const capabilities = useCompanyContextCapabilities();
-  // Every seat reads this profile — it is the shared business context behind
-  // drafting and search — and the settings entry that leads here opens on the
-  // read grant. Writing it is an upsert: the company is one standing record
+  // Writing it is an upsert: the company is one standing record
   // that the first save MINTS, so the server demands `create` when no anchor
   // exists and `update` when one does, deciding inside its own transaction. A
   // client asking for either verb alone would hide the editor from a principal
   // the server would have admitted.
   const me = useMe();
   const canEdit = useCanUpsert("company");
+  // The installation's own profile is administered, not read on a grant.
+  // GET /company takes auth.RequireAdmin (contacts' requireAnchorAdministrator)
+  // and refuses every other role outright — so a seat without the admin role
+  // has no profile to show and asking for one earns a 403 it can do nothing
+  // with. The settings tab this card sits on is reachable on
+  // installation_settings:read, which four roles hold, and the two cards beside
+  // this one are theirs to see; this one simply is not.
+  const isAdmin = useHoldsAdminRole();
   const company = useQuery({
     queryKey: ["company"],
+    enabled: isAdmin,
     queryFn: async (): Promise<CompanyProfile> => {
       const { data, error } = await api.GET("/company");
       if (error) {
@@ -526,6 +533,14 @@ export function CompanyContextCard() {
     stored !== null &&
     JSON.stringify(form) !== JSON.stringify(stored);
   useUnsavedGuard(dirty);
+
+  // Nothing rather than a refusal, for the reason the rollout flag returns
+  // nothing: a surface that is none of this reader's work is not a fact being
+  // withheld from them, and a card saying so on a tab they are entitled to
+  // open would draw a permission boundary as a fault.
+  if (!isAdmin) {
+    return null;
+  }
 
   if (capabilities.data && !capabilities.data.read_enabled) {
     return null;
