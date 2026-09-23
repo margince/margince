@@ -28,6 +28,26 @@ export async function itemsOf(locator: Locator): Promise<Locator[]> {
 }
 
 /**
+ * Why the rail never arrived, when the answer is the STACK and not the page.
+ *
+ * The app gates every authed route on onboarding (App.tsx) and draws no rail
+ * while the installation's journey is unfinished, so on a freshly seeded stack
+ * both waits below expire on `nav.rail`. That reads as "the app never loaded"
+ * and sends the next reader into the page, which is fine — it is the wrong
+ * page. Re-raised with the URL the gate chose, so the message names the
+ * precondition it is actually about.
+ */
+function railAbsence(page: Page, cause: unknown): Error {
+  if (!page.url().includes("/onboarding")) {
+    return cause instanceof Error ? cause : new Error(String(cause));
+  }
+  return new Error(
+    `signed in, but this stack sends every route to onboarding (${page.url()}) — finish it before a live run, or the specs measure the onboarding surface instead of the page they name`,
+    { cause },
+  );
+}
+
+/**
  * Sign in as the dev bootstrap admin, unless the session is already up.
  *
  * A dev stack that has been logged into already redirects /#/login straight to
@@ -51,7 +71,11 @@ export async function signIn(page: Page): Promise<void> {
   // the specs depends on — anchoring here rather than on a URL change means
   // the wait describes the state the tests need.
   const rail = page.locator("nav.rail").first();
-  await expect(email.or(rail)).toBeVisible();
+  try {
+    await expect(email.or(rail)).toBeVisible();
+  } catch (cause) {
+    throw railAbsence(page, cause);
+  }
   if (await rail.isVisible()) {
     return;
   }
@@ -61,7 +85,11 @@ export async function signIn(page: Page): Promise<void> {
     .first()
     .fill(process.env.E2E_PASSWORD ?? "demo-password-123");
   await page.locator('button[type="submit"]').first().click();
-  await expect(rail).toBeVisible();
+  try {
+    await expect(rail).toBeVisible();
+  } catch (cause) {
+    throw railAbsence(page, cause);
+  }
 }
 
 // Below the waits, and not one: the MEASURE two specs share. It lives here

@@ -147,6 +147,11 @@ export function CompanyLifecycleControl({
   const patch = useCompanyFieldPatch(company);
   return (
     <InlineChoice
+      // Named for the company record's own layout suite, which measures this
+      // control's drawn size. Neither the shared primitive's class (it matches
+      // every other screen's inline choice) nor the German copy inside it (a
+      // copy change must not fail a layout assertion) can name it.
+      testId="company-lifecycle"
       label={t("company.lifecycle")}
       // The badge already reads as the account's standing beside its name —
       // a "Lifecycle: " prefix in front of it would be the one value on the

@@ -46,6 +46,7 @@ export function InlineChoice({
   onSave,
   onEditingChange,
   onDirtyChange,
+  testId,
 }: Readonly<{
   // Names the field, for the reader and for assistive tech. A bare value in a
   // header row reads as one more fact among many.
@@ -66,6 +67,10 @@ export function InlineChoice({
   render: (value: string) => ReactNode;
   // Refused saves keep the draft and render a translated problem.
   onSave: (next: string) => Promise<void>;
+  // Handed to the READING, which is the control a layout suite measures. A
+  // caller that needs to reach this field without pinning the shared
+  // primitive's class or the copy inside it names it here.
+  testId?: string;
 }>) {
   const t = useT();
   const [editing, setEditing] = useState(false);
@@ -125,6 +130,7 @@ export function InlineChoice({
           value={value}
           render={render}
           readOnlyReason={readOnlyReason}
+          testId={testId}
           triggerRef={trigger}
           onOpen={() => {
             setPending(value);
@@ -238,6 +244,7 @@ function ChoiceReading({
   value,
   render,
   readOnlyReason,
+  testId,
   triggerRef,
   onOpen,
 }: Readonly<{
@@ -246,6 +253,12 @@ function ChoiceReading({
   value: string;
   render: (value: string) => ReactNode;
   readOnlyReason?: string;
+  // Names THIS control on THIS page, for a suite that must reach it without
+  // pinning either the shared primitive's class — which matches every other
+  // screen's — or the copy inside it. Carried by both shapes below, because
+  // which one renders depends on the reader's grant and a suite asserting a
+  // control's SIZE is asking about the same control either way.
+  testId?: string;
   triggerRef: RefObject<HTMLButtonElement | null>;
   onOpen: () => void;
 }>) {
@@ -259,6 +272,7 @@ function ChoiceReading({
       <span
         className={value ? undefined : "inlinechoice-unset"}
         title={readOnlyReason}
+        data-testid={testId}
       >
         {shown}
       </span>
@@ -269,6 +283,7 @@ function ChoiceReading({
       ref={triggerRef}
       type="button"
       className="inline-editable inline-editable-choice"
+      data-testid={testId}
       data-empty={!value}
       // aria-label, not title: the button's content is the VALUE, so without
       // this a screen reader announces "Not assessed, button", the state, with
