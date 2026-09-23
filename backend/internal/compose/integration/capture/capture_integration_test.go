@@ -221,6 +221,40 @@ func TestCaptureSyncIsIdempotentAndProvenanced(t *testing.T) {
 	}
 }
 
+// A stored original is evidence only if the activity can find its way back to
+// it — the join is what the retention sweep, a dispute and a re-parse all rely
+// on, and none of them is proven by raw_capture merely holding a matching row.
+func TestACapturedMailNamesItsStoredOriginal(t *testing.T) {
+	e := integration.SetupSearch(t)
+	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
+
+	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
+	registry.Register(&mailFake{linkTo: contactID})
+
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	connID, err := registry.Connect(grantCtx, "graph", connector.Auth("token"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := registry.SyncOnce(grantCtx, connID); err != nil {
+		t.Fatal(err)
+	}
+
+	var rawSourceID string
+	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT r.source_id
+			  FROM activity a JOIN raw_capture r ON r.id = a.raw_capture_id
+			 WHERE a.source_system = 'email'`).Scan(&rawSourceID)
+	})
+	if err != nil {
+		t.Fatalf("reading the reference back: %v", err)
+	}
+	if rawSourceID != "msg-1" {
+		t.Fatalf("the activity names raw_capture whose source_id is %q, not the original it was read from", rawSourceID)
+	}
+}
+
 func TestCaptureScopeIntersectionRefusesOverScopedConnector(t *testing.T) {
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))

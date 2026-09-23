@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -39,22 +40,36 @@ import (
 // identity, not a new policy — but it does mean the stored original is one
 // provider's rendering. Equal Message-IDs do not promise equal bytes: delivery
 // headers differ per mailbox, and a Bcc survives only on the sender's copy.
-func storeRawCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) error {
+func storeRawCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (ids.UUID, error) {
 	if len(rec.Raw) == 0 {
-		return nil
+		return ids.Nil, nil
 	}
 	payload, err := rawCapturePayload(rec.Raw)
 	if err != nil {
-		return err
+		return ids.Nil, err
 	}
-	if _, err := tx.Exec(ctx, `
+	var id ids.UUID
+	err = tx.QueryRow(ctx, `
 		INSERT INTO raw_capture (source_system, source_id, payload)
 		VALUES ($1, $2, $3)
-		ON CONFLICT (source_system, source_id) DO NOTHING`,
-		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, payload); err != nil {
-		return fmt.Errorf("capture: raw store: %w", err)
+		ON CONFLICT (source_system, source_id) DO NOTHING
+		RETURNING id`,
+		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, payload).Scan(&id)
+	if err == nil {
+		return id, nil
 	}
-	return nil
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return ids.Nil, fmt.Errorf("capture: raw store: %w", err)
+	}
+	// The first connector to deliver this message supplied the bytes on file.
+	// Its row is the one the activity names, so the second delivery reads the
+	// incumbent's id rather than leaving the reference unset.
+	if err := tx.QueryRow(ctx,
+		`SELECT id FROM raw_capture WHERE source_system = $1 AND source_id = $2`,
+		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID).Scan(&id); err != nil {
+		return ids.Nil, fmt.Errorf("capture: reading the stored original back: %w", err)
+	}
+	return id, nil
 }
 
 // RawCaptureBase64Encoding names the envelope rawCapturePayload uses for a

@@ -206,8 +206,15 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			return nil
 		}
 
-		if err := storeRawCapture(ctx, tx, rec); err != nil {
+		// Settled once, for both lanes: mail stores its original here and
+		// learns the id, a channel poll stored one already and named it on the
+		// record. Whichever supplied it, the activity below names that row.
+		stored, err := storeRawCapture(ctx, tx, rec)
+		if err != nil {
 			return err
+		}
+		if stored != ids.Nil {
+			rec.RawCaptureID = stored
 		}
 
 		switch fields := rec.Fields.(type) {
