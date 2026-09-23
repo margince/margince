@@ -403,31 +403,50 @@ func f() bool { m := map[string]any{}; return m["source"] == "manual" }`, false}
 }
 
 // The TypeScript half. Nothing in this tree parses TypeScript, so a screen's
-// `source` property is read as text: a comment-stripped regex over one object
-// property, weaker than the AST walk above and the right direction to be
-// wrong in — the shape sought is one property, and a false positive here is
-// one edit away from silence, while a miss would ship a retired spelling into
-// a row.
+// `source` property is read as text: a regex over one object property,
+// weaker than the AST walk above and the right direction to be wrong in — the
+// shape sought is one property, and a false positive here is one edit away
+// from silence, while a miss would ship a retired spelling into a row.
+//
+// There is no comment stripper. A `//` or a `/*` inside a STRING literal — a
+// URL, most often — reads identically to a comment opener to a regex that
+// does not track string state, and stripping past it blanks whatever real
+// code follows: the rest of the line for `//`, everything up to an unrelated
+// `*/` elsewhere in the file for `/*`. The tradeoff without one runs the other
+// way: a `source` mentioned in a comment is reported. That is a false
+// positive, one edit away from silence; the miss a stripper buys instead is
+// invisible, which is the one direction this census must not be wrong in.
 
 const frontendSourceTree = "../frontend/src"
 
 // tsRecordSource reads one `source: "<word>"` property out of a screen, in
-// either spelling an object literal admits — bare key or quoted. Quoted is
-// matched because a `"source": "ui"` written that way would otherwise parse
-// as nothing, and a site this scanner cannot see is a site this gate
-// silently agrees with.
-var tsRecordSource = regexp.MustCompile(`["']?\bsource\b["']?:\s*["']([a-z_]+)["']`)
-
-// tsCommentInScreens strips comments before the properties are read. Without
-// it, a line MENTIONING the retired spelling — and one screen carries a
-// comment explaining the convention — is reported as a write.
-var tsCommentInScreens = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
+// every spelling an object literal admits — bare key or quoted, a space
+// allowed on either side of the colon. Quoted is matched because a
+// `"source": "ui"` written that way would otherwise parse as nothing, and a
+// site this scanner cannot see is a site this gate silently agrees with.
+var tsRecordSource = regexp.MustCompile(`["']?\bsource\b["']?\s*:\s*["']([a-z_]+)["']`)
 
 // isFrontendSource reports whether a path is a screen this gate reads.
 // Stories and tests are read too: a story catalogues what we ship and a
 // fixture teaches the next author which word to type.
 func isFrontendSource(path string) bool {
 	return strings.HasSuffix(path, ".ts") || strings.HasSuffix(path, ".tsx")
+}
+
+// tsRecordSourceFindings reports one line per record-source property in text
+// that spells a retired word. Read directly by the probe suite below, for the
+// same reason retiredGoSpellings is: a census asserting a shape is ABSENT
+// passes identically over a clean tree and over a detector that has stopped
+// detecting.
+func tsRecordSourceFindings(path, text string, retired []string) []string {
+	var found []string
+	for _, match := range tsRecordSource.FindAllStringSubmatch(text, -1) {
+		if slices.Contains(retired, match[1]) {
+			found = append(found, fmt.Sprintf("%s: source is %q, and the one spelling is %q",
+				path, match[1], provenance.RecordSourceManual))
+		}
+	}
+	return found
 }
 
 func TestNoScreenSpellsARetiredRecordSource(t *testing.T) {
@@ -446,11 +465,8 @@ func TestNoScreenSpellsARetiredRecordSource(t *testing.T) {
 		if readErr != nil {
 			return readErr
 		}
-		stripped := tsCommentInScreens.ReplaceAllString(string(text), "")
-		for _, match := range tsRecordSource.FindAllStringSubmatch(stripped, -1) {
-			if slices.Contains(retired, match[1]) {
-				t.Errorf("%s: source is %q, and the one spelling is %q", path, match[1], provenance.RecordSourceManual)
-			}
+		for _, finding := range tsRecordSourceFindings(path, string(text), retired) {
+			t.Error(finding)
 		}
 		return nil
 	})
@@ -461,5 +477,31 @@ func TestNoScreenSpellsARetiredRecordSource(t *testing.T) {
 	// one way a census must not fail.
 	if walked == 0 {
 		t.Fatalf("%s holds no source file, so this gate judged nothing", frontendSourceTree)
+	}
+}
+
+func TestTheTSDetectorAnswersEveryPlantedShape(t *testing.T) {
+	t.Parallel()
+	for _, probe := range []struct {
+		name string
+		body string
+		want bool
+	}{
+		{"a bare key", `const body = { source: "ui" };`, true},
+		{"a single-quoted key", `const body = { 'source': "mcp" };`, true},
+		{"a double-quoted key", `const body = { "source": "ui" };`, true},
+		{"a space before the colon", `const body = { source : "ui" };`, true},
+		{"the one spelling", `const body = { source: "manual" };`, false},
+		{"a different provenance field", `const body = { source_system: "ui" };`, false},
+		{"a different provenance field, prefixed", `const body = { current_source: "ui" };`, false},
+		{"a served-identity field sharing the word", `const body = { served_identity_source: "ui" };`, false},
+		{"a retired spelling sharing a line with a URL", `fetch("https://api.example.com/x").then(() => post({ source: "mcp" }));`, true},
+	} {
+		t.Run(probe.name, func(t *testing.T) {
+			found := tsRecordSourceFindings("probe.ts", probe.body, provenance.RetiredRecordSourceSpellings())
+			if got := len(found) > 0; got != probe.want {
+				t.Errorf("the detector reported %v, want %v, for:\n%s\nfindings: %v", got, probe.want, probe.body, found)
+			}
+		})
 	}
 }
