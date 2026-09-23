@@ -376,7 +376,7 @@ ai-probe: composition ## Probe one AI task site against real input (free except 
 # second run over an unchanged handbook embeds the question and nothing else.
 # $$AIEVAL_Q rather than $(Q). make substitutes its own variables into the recipe
 # before any shell sees it, so a question carrying an apostrophe — "what's a won
-# deal", which is how people write — would close the quote and leave the shell
+# deal", which is how anyone asks it — would close the quote and leave the shell
 # parsing the rest of the sentence as a command. migrate-create takes this route
 # for the same reason.
 ai-eval: export AIEVAL_Q := $(Q)
