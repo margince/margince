@@ -7,7 +7,7 @@ import { useRecordZone } from "../app/recordzone";
 import { Button, TextInput } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
 import { factsKey } from "./companyfactspanel";
 import "./evidenceverdict.css";
 
@@ -188,22 +188,30 @@ export function EvidenceVerdict({
       queryClient.invalidateQueries({ queryKey: factsKey(companyId) }),
     ]);
   };
+  // The claim travels as a variable rather than through these closures: it
+  // carries the version both verbs pin, so a click running against the
+  // previous render's options would answer for a row the reader never saw.
   const confirm = useMutation({
-    mutationFn: claim.confirmPath,
+    mutationFn: (ruled: EvidenceClaim) => ruled.confirmPath(),
     onSuccess: settle,
   });
   const correct = useMutation({
-    mutationFn: claim.correctPath,
+    mutationFn: (edit: Readonly<{ ruled: EvidenceClaim; value: string }>) =>
+      edit.ruled.correctPath(edit.value),
     onSuccess: async () => {
       setCorrecting(false);
       await settle();
     },
   });
   const failure = confirm.error ?? correct.error;
-  // The reader's words, not the Error's. A refusal the server states only as
-  // a code carries no sentence anyone wrote for a reader, and the raw message
-  // is the developer placeholder the catalog exists to replace.
-  const reason = failure ? problemMessageOf(failure, t) : null;
+  // Losing the race is the one refusal a precondition creates, and the server
+  // states it as the bare sentinel `version skew` — two words naming a concept
+  // no reader has met. The catalog says what happened and what to do instead.
+  const reason = failure
+    ? isVersionSkewOf(failure)
+      ? t("edit.versionSkew")
+      : problemMessageOf(failure, t)
+    : null;
 
   // Already a human's word. Saying who and when is the whole point — a
   // confirmed value that does not say who confirmed it is no better evidenced
@@ -235,7 +243,7 @@ export function EvidenceVerdict({
           disabled={!correct.isPending && draft.trim() === ""}
           pending={correct.isPending}
           busyLabel={t("evidence.saving")}
-          onClick={() => correct.mutate(draft.trim())}
+          onClick={() => correct.mutate({ ruled: claim, value: draft.trim() })}
         >
           {t("evidence.save")}
         </Button>
@@ -258,7 +266,7 @@ export function EvidenceVerdict({
       <Button
         pending={confirm.isPending}
         busyLabel={t("evidence.saving")}
-        onClick={() => confirm.mutate()}
+        onClick={() => confirm.mutate(claim)}
       >
         {t("evidence.confirm")}
       </Button>

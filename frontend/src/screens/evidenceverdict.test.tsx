@@ -223,9 +223,10 @@ describe("a human's verdict on a machine's claim", () => {
     expect(calls[0].ifMatch).toBe("7");
   });
 
-  // Holding no version is holding no claim about what the write overwrites, so
-  // the honest answer is to send nothing. An unpinned request would land on top
-  // of an edit it never saw and report success to both editors.
+  // A guard, not a state a reader reaches: every read feeding this surface
+  // selects `version`. If one ever stops, holding no version is holding no
+  // claim about what the write overwrites, so the press sends nothing rather
+  // than landing an unpinned write on an edit it never saw.
   it("sends no verdict on a fact that came back without a version", async () => {
     const user = userEvent.setup();
     const calls = recordCalls();
@@ -239,20 +240,27 @@ describe("a human's verdict on a machine's claim", () => {
 
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
-    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe(
+        "The request failed. No cause reported.",
+      ),
+    );
     expect(calls).toEqual([]);
   });
 
-  // What the precondition buys: the loser of a race is told, in their own
-  // language, instead of being shown a success over a value they never read.
+  // What the precondition buys, and the words it buys it in. The server states
+  // this refusal as the bare sentinel below — `apperrors.ErrVersionSkew` is
+  // spelled onto the wire verbatim — so a screen that passes the server's
+  // detail through tells the loser of the race "version skew" and nothing more:
+  // two words naming a concept no reader has met, and no way to act on it.
   it("tells the reader the row moved under them", async () => {
     const user = userEvent.setup();
     refuseWith(409, {
       type: "https://errors.gradion.com/version_skew",
-      title: "Version conflict",
+      title: "Conflict",
       status: 409,
       code: "version_skew",
-      detail: "The resource changed since your last read; re-read and retry.",
+      detail: "version skew",
     });
     wrap(
       <EvidenceVerdict
@@ -265,8 +273,8 @@ describe("a human's verdict on a machine's claim", () => {
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain(
-        "The resource changed since your last read",
+      expect(screen.getByRole("alert").textContent).toBe(
+        "This record changed since you opened it — reload and try again.",
       ),
     );
   });
@@ -279,6 +287,7 @@ describe("a human's verdict on a machine's claim", () => {
     const user = userEvent.setup();
     refuseWith(403, {
       type: "https://errors.gradion.com/permission_denied",
+      title: "Forbidden",
       status: 403,
       code: "permission_denied",
     });
