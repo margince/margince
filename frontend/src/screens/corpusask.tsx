@@ -191,23 +191,23 @@ export function AskMarginceModal({
               cannot judge, and the day a second set arrives the control is
               already where they learned to look. */}
           <div className="ask-modal-set">
-            <Field label={t("corpusAsk.whichSet")}>
-              {(control) => (
-                <Select
-                  {...control}
-                  options={(items ?? []).map((set) => ({
-                    value: set.id,
-                    label: set.name,
-                  }))}
-                  value={corpusId}
-                  disabled={(items?.length ?? 0) < 2}
-                  onChange={(next) => {
-                    setCorpusId(next);
-                    setOpenCite(null);
-                  }}
-                />
-              )}
-            </Field>
+            {/* No visible label: the head is one line, and the control already
+                says what it is by naming the set inside it. The name a screen
+                reader needs rides on the control instead, so nothing is lost
+                where nothing was gained by printing it twice. */}
+            <Select
+              aria-label={t("corpusAsk.whichSet")}
+              options={(items ?? []).map((set) => ({
+                value: set.id,
+                label: set.name,
+              }))}
+              value={corpusId}
+              disabled={(items?.length ?? 0) < 2}
+              onChange={(next) => {
+                setCorpusId(next);
+                setOpenCite(null);
+              }}
+            />
           </div>
         </header>
         <div className="ask-modal-body">
