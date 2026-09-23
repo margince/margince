@@ -251,6 +251,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `onesqlliteralreader_test.go` | H2 | A census over the censuses: whoever judges this tree's SQL must read it the way Postgres receives it. |
 | `onestringfolder_test.go` | H2 | A census over the censuses: nobody writes a second reader for "what string does this Go expression hold". |
 | `onevoiceversionwriter_test.go` | H2 | voice\_profile\_version and voice\_profile\_delta each have ONE writer. |
+| `operationiduniqueness_test.go` | H2 | No two operations share an operationId. |
 | `outboundanonymity_test.go` | H2 | Every outbound HTTP request either says who is calling, or is registered as deliberately anonymous with the reason. |
 | `outboundidentityusers_test.go` | H3 | Every outbound identity has a request behind it. |
 | `ownerprivatepairing_test.go` | H2 | A table whose visibility admits 'owner' names the owner, or the record it marks most-private is the one nobody can read. |
