@@ -270,6 +270,11 @@ export const deals = [
     company_id: "o-brandt",
     project_id: null as string | null,
     status: "open",
+    // The reason a win carries when no signed agreement backs it. Declared on
+    // the fixture rather than only written by the advance below, because the
+    // patch map is typed from THIS literal — a field the seed writes and the
+    // fixture does not name is one the whole file's types do not know about.
+    won_without_contract_reason: null as string | null,
     writable: true,
     stalled: true,
     // Every mutable record carries its row version, because the advance and the
@@ -354,7 +359,10 @@ export const briefRun = {
       },
       evidence_ids: ["ev-1", "ev-2"],
       state: "new",
-      state_at: null,
+      // Written when the item is acted on or dismissed, so the fixture's type
+      // has to admit a timestamp rather than inferring the bare `null` it
+      // starts at.
+      state_at: null as string | null,
     },
     {
       id: "bi-2",
@@ -370,7 +378,7 @@ export const briefRun = {
       },
       evidence_ids: ["ev-3"],
       state: "new",
-      state_at: null,
+      state_at: null as string | null,
     },
   ],
 };

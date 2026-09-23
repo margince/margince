@@ -51,7 +51,8 @@
     // holds it against the set the shell caps — a src test cannot import a file
     // no project lists. The specs themselves stay out; they are typed by no
     // project today, and pulling them in is its own change.
-    "e2e/records.ts"
+    "e2e/records.ts",
+    "e2e/**/*.ts"
   ],
   // src/screens/ext/ is the COMPOSED lane's program — its screens call routes
   // that are in `paths` only under the merged contract — so it cannot be typed
