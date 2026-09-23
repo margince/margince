@@ -136,6 +136,8 @@ func Setup(t *testing.T) *Env {
 		}
 	}
 
+	seedSystemRoleRows(ctx, t, owner)
+
 	// Shared across the package's tests, and deliberately not closed here — see
 	// testdb.Pool for why the connections, not the pool object, are the cost.
 	pool, err := testdb.Pool(ctx, appDSN)

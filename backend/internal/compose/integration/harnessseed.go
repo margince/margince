@@ -18,8 +18,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -171,4 +175,106 @@ func (e *Env) SeedScrubTombstone(t *testing.T, entityType string, id ids.UUID, a
 		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, occurred_at)
 		VALUES ($1, 'system', 'system', 'erase', $2, $3, $4)`,
 		ids.NewV7(), entityType, id, at)
+}
+
+// seedSystemRoleRows lays down the SHIPPED role set for a fresh Env.
+//
+// Without it every seat here resolves through identity.EffectiveAuthority to no
+// permissions at all, so any job that binds a per-rep principal stops at its
+// first authorization check — and a test written against that passes while
+// driving none of the behaviour it names.
+//
+// Rows only: NOTHING is assigned, not even the admin role Bootstrap gives its
+// first user. A seat's authority is the thing most cases here are about, and
+// several use an UNGRANTED seat on purpose — that one such seat must not cost a
+// workspace its morning brief is a real guarantee held by a real test, and
+// seeding an assignment retires it silently. A case that wants a role asks for
+// it by name through GrantRole.
+func seedSystemRoleRows(ctx context.Context, t *testing.T, owner *pgx.Conn) {
+	t.Helper()
+	tx, err := owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := identity.SeedSystemRoles(ctx, tx); err != nil {
+		//craft:ignore swallowed-errors the seed error is the one to report; a rollback that also fails adds nothing
+		_ = tx.Rollback(ctx)
+		t.Fatal(err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// GrantRole gives a seat one of the SHIPPED roles, by key, the way an admin
+// changing somebody's role does.
+//
+// The point is what it unlocks: a job that binds a per-rep principal and
+// resolves its authority through identity.EffectiveAuthority gets real
+// permissions instead of none, so the test drives the behaviour rather than
+// stopping at the first gate. Until this existed, such a test passed
+// identically with the code under test rearranged — the permission check
+// short-circuited before either arrangement reached anything worth asserting.
+//
+// SHIPPED means `is_system`, and both statements say so. A fixture that seeds
+// its own role is free to name it anything, including a shipped key — and this
+// helper promising a shipped document while handing over that fixture's own is
+// the exact substitution it exists to prevent. Without the filter the promise
+// is in the comment and nowhere else.
+//
+// An unknown key is FATAL rather than a no-op — and a key that names only a
+// custom role is unknown here, by the same rule. A typo, or a borrowed name,
+// that granted nothing would leave the test in exactly the state this helper
+// exists to escape, and passing, which is the one failure a fixture must not
+// have.
+func (e *Env) GrantRole(t *testing.T, user ids.UUID, roleKey string) {
+	t.Helper()
+	if !e.tryGrantRole(t, user, roleKey) {
+		t.Fatalf("no shipped role is called %q, so %s was granted nothing and every authority "+
+			"check below would refuse them — which is what this call exists to prevent", roleKey, user)
+	}
+}
+
+// tryGrantRole is GrantRole without the fatal: it answers whether the seat now
+// holds the role, so a case can assert the REFUSAL rather than be ended by it.
+//
+// Split out because the refusal is the half worth testing and t.Fatalf cannot
+// be asserted against. Without it the is_system predicate below was covered by
+// nothing: removing it left every case green, because the only test reaching
+// for a custom key went through holdsRole, whose own filter answered instead.
+// A review pass caught that; planting it confirmed it.
+func (e *Env) tryGrantRole(t *testing.T, user ids.UUID, roleKey string) bool {
+	t.Helper()
+	var assigned int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			WITH granted AS (
+			  INSERT INTO role_assignment (role_id, user_id)
+			  SELECT id, $2 FROM role WHERE key = $1 AND is_system
+			  ON CONFLICT DO NOTHING
+			  RETURNING 1
+			)
+			SELECT count(*) FROM granted`, roleKey, user).Scan(&assigned)
+	}); err != nil {
+		t.Fatalf("granting %s the %q role: %v", user, roleKey, err)
+	}
+	// An insert that touched no row is either "already held" or "no such
+	// shipped role", and only the second is a refusal.
+	return assigned > 0 || e.holdsRole(t, user, roleKey)
+}
+
+// holdsRole answers whether the seat already carries the role, which is the
+// only honest reading of an insert that touched no row.
+func (e *Env) holdsRole(t *testing.T, user ids.UUID, roleKey string) bool {
+	t.Helper()
+	var held bool
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT EXISTS (
+			  SELECT 1 FROM role_assignment ra JOIN role r ON r.id = ra.role_id
+			   WHERE ra.user_id = $1 AND r.key = $2 AND r.is_system)`, user, roleKey).Scan(&held)
+	}); err != nil {
+		t.Fatalf("reading %s's roles: %v", user, err)
+	}
+	return held
 }
