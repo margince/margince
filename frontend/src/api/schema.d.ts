@@ -36612,6 +36612,14 @@ export interface components {
             line?: number;
             /** @description The 1-based column on that line, counted in CHARACTERS rather than bytes: it is read by a contact counting across a line, not by a program seeking in a file. Absent whenever `line` is. */
             column?: number;
+            /**
+             * @description The 1-based line the quote ENDS on. A reader who follows a citation wants the sentence marked, not a cursor dropped at its first character, and with the start alone a viewer can only guess how far the quoted span runs — a guess that runs long marks words the claim does not rest on. With `end_column` it closes the half-open range [line, column) .. [end_line, end_column) a highlight covers.
+             *     It is a line and column rather than a character offset into the document because nothing on this side holds the document. What the answer is written from is the retrieved passage, and a passage records the line it starts on and no offset at all — so a document-relative offset would want a new column, a migration and a backfill of every passage already stored, to say what the quote and the start location already determine between them.
+             *     Absent whenever `line` is: a span the passage could not locate has no end either, and half a range is a highlight over the wrong words.
+             */
+            end_line?: number;
+            /** @description The 1-based column on `end_line` just PAST the quote's last character, counted in CHARACTERS for the reason `column` is. Past rather than on, so the range is half-open: a quote that ends a line then needs no column the line does not have. Absent whenever `line` is. */
+            end_column?: number;
             /** @description A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist. */
             quote: string;
         };
@@ -36623,6 +36631,13 @@ export interface components {
             outcome: "answered" | "not_covered" | "not_ready" | "retrieval_unavailable" | "unreviewed";
             /** @description The answer IS this list, in order, when outcome is answered. Under unreviewed it is the nearest passages instead, which nothing has judged. Empty under every other outcome. */
             claims?: components["schemas"]["KnowledgeClaim"][];
+            /**
+             * @description The answer in one short paragraph, in the words a colleague would use, written by the same pass that wrote the claims. The claims are shaped like evidence on purpose — a sentence each, welded to a verbatim quote — which is what makes every one of them checkable, and also what makes the list read as a citation trail rather than as a reply to what was asked. This is the reply; the claims below it are why it is believable.
+             *     PRESENT ON not_covered TOO, and that is the case it matters most for. There it is the refusal in plain words — what these documents do not cover, and what they say about the subject instead. A reader who asked something the handbook never addresses otherwise meets an empty result and reads it as a malfunction; the sentence is what tells them the set was searched and came back with nothing, so they go and ask a colleague rather than assume the product broke.
+             *     It is the one place the writer may describe what it could not find. A claim may never say that: a claim is welded to a verbatim quote and renders as evidence, so a sentence like "I couldn't find instructions for this" arrives dressed exactly as an answer does. Giving the observation its own field is what keeps it out of the citation trail.
+             *     Absent when generated_by is deterministic: nothing wrote prose then, and a paragraph composed here over passages no writer read would be the one part of the answer with nothing holding it to the documents. Absent under not_ready, retrieval_unavailable and unreviewed, where no writer judged the passages at all — the claims under unreviewed are merely the nearest passages, so there is nothing to say plainly about them.
+             */
+            summary?: string | null;
             corpus: components["schemas"]["KnowledgeAnswerCorpus"];
             coverage: components["schemas"]["KnowledgeCoverage"];
             generated_by: components["schemas"]["WrittenBy"];

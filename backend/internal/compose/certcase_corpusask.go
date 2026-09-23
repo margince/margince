@@ -31,6 +31,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -150,6 +151,47 @@ func corpusAskPassages(f corpusAskFixture) ([]knowledge.Passage, map[string]stri
 	return passages, label, nil
 }
 
+// CorpusAskFixtureFrom renders passages a real retrieval returned as the
+// fixture THIS site takes, so a failure reproduced against a live corpus can be
+// handed straight to the certification case — and then to the corpus — without
+// anybody retyping the shape.
+//
+// It marshals the same struct Prepare decodes, which is the whole reason it
+// lives here: a renderer written beside the caller would be a second statement
+// of the fixture's shape, and the two would disagree the first time a field is
+// added to one of them.
+//
+// The labels are positional (p1, p2 …) because a retrieval has no names of its
+// own, and the expected answer names passages by label. No passage is marked
+// wrong: which neighbour is a trap is a judgement about the question, and
+// guessing it would write an expectation nobody made.
+//
+// It refuses an empty retrieval for the reason Prepare does — production never
+// asks the lane without passages, so a fixture carrying none would grade a call
+// the product does not make.
+func CorpusAskFixtureFrom(question string, passages []knowledge.Passage) ([]byte, error) {
+	if strings.TrimSpace(question) == "" {
+		return nil, errors.New("corpus_ask: a fixture with no question grades nothing")
+	}
+	if len(passages) == 0 {
+		return nil, errors.New(
+			"corpus_ask: no passages were retrieved, and production never asks the lane without them — there is no fixture to write")
+	}
+	f := corpusAskFixture{Question: question, Passages: make([]corpusAskPassageFixture, 0, len(passages))}
+	for i, p := range passages {
+		f.Passages = append(f.Passages, corpusAskPassageFixture{
+			Label:    fmt.Sprintf("p%d", i+1),
+			Document: p.DocumentName,
+			Text:     p.Text,
+		})
+	}
+	doc, err := json.MarshalIndent(f, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("corpus_ask: rendering the fixture: %w", err)
+	}
+	return append(doc, '\n'), nil
+}
+
 // corpusAskCase certifies one written answer over one set of passages.
 type corpusAskCase struct {
 	question string
@@ -184,7 +226,7 @@ func (c *corpusAskCase) Run(ctx context.Context, completer aitasks.Completer) (a
 // Evaluate runs the production quote check and asks whether what survived
 // cites the passages the scenario says the answer rests on.
 func (c *corpusAskCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	kept, err := GroundCorpusAnswer(trace.Output, c.passages)
+	answer, err := GroundCorpusAnswer(trace.Output, c.passages)
 	if err != nil {
 		// Unparseable is invalid rather than wrong: production composes the
 		// deterministic answer here, and grading it as a wrong answer would
@@ -192,7 +234,7 @@ func (c *corpusAskCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
 	cited := map[string]bool{}
-	for _, claim := range kept {
+	for _, claim := range answer.Claims {
 		cited[claim.ChunkId.String()] = true
 	}
 	// A citation the scenario marks WRONG fails the case whatever else the
@@ -222,10 +264,22 @@ func (c *corpusAskCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	// the question must return nothing rather than write a paragraph that
 	// sounds like an answer.
 	if len(c.expected) == 0 {
-		if len(kept) > 0 {
+		// The scenario says the only right reply is a refusal, so what is graded
+		// is the VERDICT and not what survived the quote check.
+		//
+		// Reading the surviving claims alone would let the failure this case
+		// exists for pass: a model that invents an answer and paraphrases its
+		// quotes has every claim stripped, arrives here with none, and looks
+		// exactly like one that declined. The two are opposite events — one
+		// fabricated and got caught downstream, the other judged correctly —
+		// and a case that cannot tell them apart proves nothing about the
+		// judgement it was written to measure.
+		if answer.Covered {
 			return aitasks.Outcome{
 				Result: aitasks.OutcomeWrongAnswer,
-				Detail: fmt.Sprintf("answered with %d claim(s) from passages that do not cover the question", len(kept)),
+				Detail: fmt.Sprintf(
+					"said the passages answer the question and wrote %d claim(s) from passages that do not cover it",
+					len(answer.Claims)),
 			}
 		}
 		return aitasks.Outcome{Result: aitasks.OutcomeAccepted}

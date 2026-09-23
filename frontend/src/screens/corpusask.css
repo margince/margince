@@ -1,0 +1,140 @@
+/* The ask dialog: a question and its answer beside the document that answers
+ * it. Two columns, because following a citation must not cost the reader the
+ * sentence that sent them — a stacked layout scrolled the answer away the
+ * moment they pressed a number. */
+
+/* The drawer owns the geometry; this fills it. Setting a width here is what
+ * made the content wider than the box that holds it, so the document pane fell
+ * off the edge and the set fell out of the head. */
+.ask-modal {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.ask-modal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--borderSubtle);
+  /* Room for the way out. The dialog draws its close over the top-right corner,
+   * absolutely, so it is not in this row's flow and the set — which ends the
+   * row — slid underneath it. One control height plus the inset it sits in. */
+  padding-inline-end: calc(var(--controlHeight) + var(--space-4) * 2);
+}
+
+/* The set scopes the whole dialog, so it sits with the title rather than beside
+ * the question: changing it is not part of asking THIS question, it decides
+ * where the next one goes. */
+.ask-modal-set {
+  margin-inline-start: auto;
+}
+
+/* Question across the top, then the answer — and the document beside it only
+ * once a citation is pressed. Two columns held open on an empty state spend
+ * half the dialog saying nothing, and on a refusal they say nothing for good:
+ * a refusal has no citation to open. */
+.ask-modal-ask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  flex-shrink: 0;
+}
+
+.ask-modal-body {
+  display: flex;
+  gap: var(--space-4);
+  min-height: 0;
+  flex-grow: 1;
+}
+
+.ask-modal-answer {
+  flex-grow: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+/* Only drawn with something in it, so it takes a share rather than a half: the
+ * answer keeps the room it needs to stay readable beside the page it cites. */
+.ask-modal-doc {
+  flex-basis: 52%;
+  flex-shrink: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-inline-start: 1px solid var(--borderSubtle);
+  padding-inline-start: var(--space-4);
+  overflow-y: auto;
+}
+
+/* The answer is PROSE. The citations are marks inside it rather than a list
+ * beside it, because a list of quotes reads as several answers and this is
+ * one. */
+.ask-summary {
+  margin: 0;
+  font: var(--fontBody);
+}
+
+.ask-bare-claims {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Indigo, because a citation is a claim about PROVENANCE: it says this sentence
+ * came from a passage a model read, and pressing it is how a reader checks
+ * that. Text on --aiLight takes --aiText, which is the pair that passes AA. */
+.ask-cite {
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightBold);
+  color: var(--aiText);
+  background: var(--aiLight);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-sm);
+  padding: 2px 5px; /* ds:ignore a citation interrupts a SENTENCE, so its box is sized to the line and not to the layout scale — the smallest step, 4px, makes the marker taller than the text it sits in and opens the line */
+  margin-inline: 2px; /* ds:ignore optical against the word before it, not a spacing relationship between two blocks */
+  cursor: pointer;
+  vertical-align: 2px;
+}
+
+.ask-cite:hover {
+  border-color: var(--ai);
+}
+
+.ask-cite-on {
+  color: var(--textOnAccent);
+  background: var(--ai);
+  border-color: var(--ai);
+}
+
+.ask-doc {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: var(--space-2);
+}
+
+.ask-doc-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.ask-doc-name {
+  font: var(--fontHeadingXXSmall);
+}
+
+.ask-doc-note {
+  margin: 0;
+}
+
+.ask-doc-body {
+  min-height: 0;
+  overflow-y: auto;
+}

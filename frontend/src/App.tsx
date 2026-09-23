@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { AskFromAddress } from "./app/askfromaddress";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
 import { DateFormatsProvider } from "./app/dateformats";
 import {
@@ -95,11 +96,6 @@ function routed<T>(factory: () => Promise<T>): () => Promise<T> {
   return factory;
 }
 
-const AskAiScreen = lazy(
-  routed(() =>
-    import("./screens/ai").then((m) => ({ default: m.AskAiScreen })),
-  ),
-);
 const BookingScreen = lazy(
   routed(() =>
     import("./screens/book").then((m) => ({ default: m.BookingScreen })),
@@ -468,7 +464,6 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // make it describe a fraction of what the reader is looking at.
     worklist: ({ id }) => <WorklistRedirect opensOn={id} />,
     analytics: () => <AnalyticsScreen />,
-    ai: () => <AskAiScreen />,
     // The screen resolves its own address, because which entry an address names
     // is the settings IA's question: the admin half lives a segment deeper, and
     // a legacy link to it is answered and rewritten there rather than here.
@@ -945,6 +940,8 @@ function AuthedApp({
           onClose={() => setPaletteOpen(false)}
           commands={commands}
         />
+        {/* Over whatever the reader was doing, not on a screen of its own. */}
+        <AskFromAddress />
       </RecordZoneProvider>
     </DateFormatsProvider>
   );

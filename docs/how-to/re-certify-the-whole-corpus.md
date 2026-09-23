@@ -56,7 +56,7 @@ cd backend
 
 # gemini_cloud: every tier on Gemini, one credential.
 make e2e-ai ROUTING=config/presets/gemini_cloud.yaml \
-  JUDGE=openai_compatible:mistralai/mistral-large-2512 \
+  JUDGE=openai_compatible:openai/gpt-oss-120b \
   JUDGE_BASE_URL=https://openrouter.ai/api \
   TRACE="$PWD/../.tmp/aicert/gemini" RESUME="$PWD/../.tmp/aicert/gemini/resume"
 
@@ -65,6 +65,15 @@ make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
   JUDGE=gemini:gemini-3.5-flash \
   TRACE="$PWD/../.tmp/aicert/openrouter" RESUME="$PWD/../.tmp/aicert/openrouter/resume"
 ```
+
+> **Check the judge is still served before you start.** A judge named here is a
+> model on somebody else's catalogue, and it can be withdrawn between sweeps
+> without anything in this tree changing. `mistralai/mistral-large-2512` stood
+> in this page until its non-batch endpoint disappeared, and the failure is not
+> obvious from the message: the task's own calls are made and BILLED, then every
+> run fails judging with `No endpoints found`, three attempts each, and no
+> record is written. Curl the provider's model list first — a judge that is gone
+> costs a sweep's worth of calls to discover.
 
 `TRACE=`/`RESUME=` must be **absolute**. The default the Makefile computes is,
 and for a reason a relative one silently gets wrong: a Go test runs with its
@@ -162,7 +171,7 @@ tells the two apart for free, and it is the only thing that does:
 ```bash
 cd backend
 make e2e-ai TASK=<task> ROUTING=config/presets/gemini_cloud.yaml \
-  JUDGE=openai_compatible:mistralai/mistral-large-2512 \
+  JUDGE=openai_compatible:openai/gpt-oss-120b \
   JUDGE_BASE_URL=https://openrouter.ai/api RESUME=
 make e2e-ai TASK=<task> ROUTING=config/presets/openrouter_cloud.yaml \
   JUDGE=gemini:gemini-3.5-flash RESUME=

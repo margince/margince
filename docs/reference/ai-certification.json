@@ -5,9 +5,9 @@
     "sites_best_partial": 0,
     "sites_best_stale": 3,
     "sites_absent": 0,
-    "scenarios": 168,
-    "records": 107,
-    "bindings": 12
+    "scenarios": 170,
+    "records": 108,
+    "bindings": 13
   },
   "bindings": [
     {
@@ -60,9 +60,9 @@
       "sites_current": 7,
       "sites_partial": 0,
       "sites_stale": 6,
-      "runs": 90,
-      "passed": 86,
-      "reliability": 0.9555555555555556,
+      "runs": 96,
+      "passed": 92,
+      "reliability": 0.9583333333333334,
       "slowest_p95_ms": 26168,
       "bands": {
         "certified": 9,
@@ -117,9 +117,9 @@
         "env": "cloud_frontier"
       },
       "sites": 39,
-      "sites_current": 38,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 1,
+      "sites_stale": 2,
       "runs": 351,
       "passed": 288,
       "reliability": 0.8205128205128205,
@@ -197,9 +197,9 @@
         "env": "eu_hosted"
       },
       "sites": 6,
-      "sites_current": 6,
+      "sites_current": 5,
       "sites_partial": 0,
-      "sites_stale": 0,
+      "sites_stale": 1,
       "runs": 42,
       "passed": 38,
       "reliability": 0.9047619047619048,
@@ -208,6 +208,26 @@
         "certified": 4,
         "supported_degraded": 1,
         "not_supported": 1
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "mistralai/mistral-medium-3-5",
+        "env": "eu_hosted"
+      },
+      "sites": 1,
+      "sites_current": 1,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 15,
+      "passed": 15,
+      "reliability": 1,
+      "slowest_p95_ms": 10068,
+      "bands": {
+        "certified": 1,
+        "supported_degraded": 0,
+        "not_supported": 0
       }
     },
     {
@@ -2093,8 +2113,8 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "google/gemma-4-31b-it",
-          "env": "cloud_frontier"
+          "model": "mistralai/mistral-medium-3-5",
+          "env": "eu_hosted"
         },
         "band": "certified",
         "reliability": 1,
@@ -2107,9 +2127,19 @@
           "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_from_the_passages_01.yaml"
         },
         {
+          "name": "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_when_the_passage_is_present_01.yaml"
+        },
+        {
           "name": "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_02.yaml"
+        },
+        {
+          "name": "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_03.yaml"
         },
         {
           "name": "corpus_ask_returns_nothing_when_the_passages_do_not_answer",
@@ -2127,7 +2157,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -2153,7 +2183,8 @@
             ],
             "grader_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
-              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer"
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
             ]
           }
         },
@@ -2165,15 +2196,15 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": 3,
-          "scenarios_total": 3,
-          "runs": 9,
-          "passed": 9,
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
           "reliability": 1,
-          "latency_p50_ms": 3506,
-          "latency_p95_ms": 8218,
+          "latency_p50_ms": 5090,
+          "latency_p95_ms": 11578,
           "reported": {
-            "accepted": 9,
+            "accepted": 15,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -2186,10 +2217,10 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
-          "scenarios_total": 3,
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -2201,7 +2232,22 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_cause": {
+            "case_changed": [
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "prompt_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "grader_changed": [
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ]
+          }
         },
         {
           "binding": {
@@ -2209,10 +2255,10 @@
             "model": "mistralai/mistral-large-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 3,
-          "scenarios_total": 3,
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
           "runs": 9,
           "passed": 8,
           "reliability": 0.8888888888888888,
@@ -2222,6 +2268,44 @@
             "accepted": 8,
             "wrong_answer": 0,
             "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_cause": {
+            "case_changed": [
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "prompt_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "grader_changed": [
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 2040,
+          "latency_p95_ms": 10068,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": ""

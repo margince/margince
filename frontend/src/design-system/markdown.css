@@ -1,0 +1,144 @@
+/* The corpus document reader (markdown.tsx).
+
+   A document opens BESIDE an answer, in a column narrower than a page, and the
+   reader is looking for one passage in it rather than reading it through. So
+   the rhythm here is tighter than prose furniture elsewhere: the heading scale
+   comes down two steps from the page's own, and the vertical interval is the
+   one the type tokens already carry rather than a second opinion about it. */
+
+.md {
+  color: var(--textPrimary);
+  font: var(--fontBody);
+  overflow-wrap: anywhere;
+}
+
+/* Everything the document draws is spaced by ONE rule, keyed on the sibling
+   relationship rather than on each element's own margin — a document is an
+   arbitrary sequence of blocks, and per-element margins collapse differently
+   depending on which pair happens to meet. */
+.md > * {
+  margin: 0;
+}
+.md > * + * {
+  margin-top: var(--paragraphSpacing);
+}
+
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  color: var(--textPrimary);
+}
+.md h1 {
+  font: var(--fontHeadingMedium);
+}
+.md h2 {
+  font: var(--fontHeadingSmall);
+}
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  font: var(--fontHeadingXSmall);
+}
+/* A heading answers to the text under it, not to the block above: the space
+   before it is what separates the sections. */
+.md > * + :is(h1, h2, h3, h4, h5, h6) {
+  margin-top: var(--space-6);
+}
+
+.md ul,
+.md ol {
+  padding-left: var(--space-5);
+}
+.md li + li {
+  margin-top: var(--space-1);
+}
+
+.md blockquote {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--borderStrong);
+  color: var(--textSecondary);
+}
+.md blockquote > * + * {
+  margin-top: var(--paragraphSpacing);
+}
+
+.md hr {
+  height: 1px;
+  border: 0;
+  background: var(--borderSubtle);
+}
+
+/* A fenced block wraps rather than scrolling sideways: this pane is narrow, and
+   a horizontal scrollbar inside a document the reader is skimming hides the
+   very line a citation points at. */
+.md-code {
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+  background: var(--bgWell);
+  font: var(--fontBodySmall);
+  white-space: pre-wrap;
+}
+.md-code code {
+  font-family: var(--fontFamilyMono);
+}
+/* An inline span keeps the body's own size: the mono face runs a little wider
+   at the same rung, and a size of its own here would be a rung nothing
+   declared (type-source.test.ts). */
+.md :not(pre) > code {
+  padding-inline: var(--space-1);
+  border-radius: var(--r-xs);
+  background: var(--bgChip);
+}
+
+.md a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md a:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+/* The box around it is `TableScroll` (atoms.css), which is where the overflow
+   and the keyboard's way into it live. */
+.md table {
+  border-collapse: collapse;
+  font: var(--fontBodySmall);
+}
+.md th,
+.md td {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--borderSubtle);
+  text-align: left;
+  vertical-align: top;
+}
+.md th {
+  background: var(--bgWell);
+  font-weight: var(--fontWeightMedium);
+}
+
+/* The found passage. The accent pair rather than the agent's indigo: indigo is
+   a claim about who decided something, and this decided nothing — it is the
+   reader's eye being pointed at words the document already contained. */
+.md mark {
+  padding-inline: var(--space-1);
+  border-radius: var(--r-sm);
+  background: var(--accentLight);
+  color: var(--accentText);
+}
+
+/* The coarser mark: the quote was not found and the block carrying the cited
+   LINE is what is offered instead. It is a band down the side rather than a
+   fill, because a filled block would make the same promise a <mark> does about
+   words nobody matched. */
+.md [data-markdown-mark] {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--accent);
+}

@@ -82,6 +82,16 @@ const commands: Command[] = [
 
 // The palette answers to both modifiers, but the affordance may advertise only
 // one, and ⌘ names a key a Windows keyboard does not have.
+// The DESTINATIONS, which is what every assertion below means by a row. Asking
+// sits above them and is not one: it answers a different question and is not
+// something the arrow keys walk, so a test that counted it would be asserting
+// about a control it never meant.
+function destinationRows(): HTMLElement[] {
+  return screen
+    .getAllByRole("button")
+    .filter((button) => !button.classList.contains("palette-ask"));
+}
+
 describe("paletteHotkeyCaps", () => {
   it("names the modifier the platform actually has", () => {
     expect(paletteHotkeyCaps("MacIntel")).toEqual(["⌘", "K"]);
@@ -121,21 +131,22 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("matches a keyword the row does not display, without showing it", async () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
     await userEvent.type(screen.getByRole("searchbox"), "pipeline");
-    const rows = screen.getAllByRole("button");
+    const rows = destinationRows();
     expect(rows[0].textContent).toContain("Deals");
     expect(rows[0].textContent).not.toContain("pipeline");
     await userEvent.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
   });
 
-  it("filters by label+subtitle case-insensitively and appends the see-all + Ask-AI rows last", async () => {
+  it("filters by label+subtitle case-insensitively and appends the see-all row last", async () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
     await userEvent.type(screen.getByRole("searchbox"), "COMPANY");
-    const rows = screen.getAllByRole("button");
-    expect(rows).toHaveLength(3);
+    const rows = destinationRows();
+    expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain("Brandt Automotive");
     expect(rows[1].textContent).toContain("See all results");
-    expect(rows[2].textContent).toContain("Ask AI");
+    // Asking is not among them, and is offered whatever was typed.
+    expect(screen.getByText("Ask your documents")).toBeTruthy();
   });
 
   it("Enter runs the selection; arrows move and clamp (AC-shell-5)", async () => {
@@ -149,26 +160,36 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(window.location.hash).toBe("#/deals");
   });
 
-  // The question rides in the ADDRESS, which is the only carrier the AI surface
-  // can be relied on to read: a reader already standing there changes no path,
-  // so nothing remounts, and a question held anywhere else is one nothing on
-  // that screen ever looks at.
-  it("the Ask-AI row carries the query in the address and lands on the AI surface (AC-shell-4)", async () => {
+  // Asking is offered ABOVE the destinations rather than among them, because it
+  // answers a different question and because the first row is the row Enter
+  // presses: pinned into the list it would have asked about a screen name a
+  // reader typed on their way to that screen. It carries what is in the box
+  // without asking it — a question matched mid-word is one still being written.
+  it("opens the dialog where the reader is, carrying the query and taking them nowhere", async () => {
+    window.location.hash = "#/deals";
     const onClose = vi.fn();
     render(<CommandPalette open onClose={onClose} commands={commands} />);
     await userEvent.type(screen.getByRole("searchbox"), "zzz nothing matches");
-    // rows are [see-all, ask-ai] here (no builtin/record matches): step past
-    // the see-all row to reach Ask-AI.
-    await userEvent.keyboard("{ArrowDown}");
-    await userEvent.keyboard("{Enter}");
-    expect(window.location.hash).toBe("#/ai?q=zzz+nothing+matches");
+    await userEvent.click(screen.getByText("Ask your documents"));
+    // The screen the reader was on is still the screen they are on.
+    // Two dials: presence opens it, the question rides beside it. An empty
+    // dial does not survive parseParams, so "open with an empty box" needs a
+    // dial of its own rather than an empty value.
+    expect(window.location.hash).toBe("#/deals?ask=1&askq=zzz+nothing+matches");
     // And nowhere else. The address is the whole carrier, so there is no
     // second copy for a reader's next tab to inherit.
     expect(sessionStorage.length).toBe(0);
-    // Closing is the palette's own answer to a selection and not something it
-    // waits for the address to trigger: a reader already standing on the AI
-    // surface changes no path, and the palette still has to get out of the way.
     expect(onClose).toHaveBeenCalled();
+  });
+
+  // Enter still belongs to the destinations: a reader who typed a screen name
+  // and pressed it goes there, and asking is not what they did.
+  it("Enter runs the first destination, not the ask", async () => {
+    window.location.hash = "#/home";
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "deals");
+    await userEvent.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/deals");
   });
 
   it("closes on a selection that lands on the address it is already at", async () => {
@@ -308,9 +329,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     await userEvent.clear(screen.getByRole("searchbox"));
     await userEvent.type(screen.getByRole("searchbox"), "Deals");
     expect(
-      screen
-        .getAllByRole("button")
-        .some((row) => row.textContent?.includes("Deals")),
+      destinationRows().some((row) => row.textContent?.includes("Deals")),
     ).toBe(true);
   });
 
@@ -539,9 +558,7 @@ describe("useBuiltinCommands", () => {
     // find it rather than concluding it was removed.
     await user.type(screen.getByRole("searchbox"), "general");
     await waitFor(() => {
-      expect(screen.getAllByRole("button")[0].textContent).toContain(
-        "Company profile",
-      );
+      expect(destinationRows()[0].textContent).toContain("Company profile");
     });
   });
 
@@ -579,7 +596,7 @@ describe("useBuiltinCommands", () => {
       const user = userEvent.setup();
       renderProbe();
       await user.type(screen.getByRole("searchbox"), typed);
-      const rows = screen.getAllByRole("button");
+      const rows = destinationRows();
       expect(rows[0].textContent).toContain(label);
       await user.keyboard("{Enter}");
       expect(window.location.hash).toBe(hash);
@@ -592,7 +609,7 @@ describe("useBuiltinCommands", () => {
     // Its own title, not a fourth spelling of it: "views" appears in no other
     // command, so matching on it proves the row carries the screen's own words.
     await user.type(screen.getByRole("searchbox"), "views");
-    const rows = screen.getAllByRole("button");
+    const rows = destinationRows();
     expect(rows[0].textContent).toContain("Filters & views");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/filters");
@@ -613,7 +630,7 @@ describe("useBuiltinCommands", () => {
     const user = userEvent.setup();
     renderProbe();
     await user.type(screen.getByRole("searchbox"), "scheduled");
-    const rows = screen.getAllByRole("button");
+    const rows = destinationRows();
     expect(rows[0].textContent).toContain("Scheduled messages");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/scheduled");

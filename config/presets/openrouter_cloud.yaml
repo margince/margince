@@ -12,8 +12,10 @@
 # config/margince.yaml, or:
 #
 #     make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
-#       JUDGE=openai_compatible:mistralai/mistral-large-2512 \
-#       JUDGE_BASE_URL=https://openrouter.ai/api
+#       JUDGE=gemini:gemini-3.5-flash
+#
+# The judge is OFF this preset on purpose: every model bound here is the leading
+# rung of some task, and the runner refuses a judge that grades itself.
 #
 # The measurements behind every `routing:` value here, and what was tried and
 # rejected: docs/reference/openrouter.md.
@@ -41,12 +43,19 @@ seeds:
         base_url: https://openrouter.ai/api
       premium:
         provider: openai_compatible
-        model: mistralai/mistral-large-2512
+        model: mistralai/mistral-medium-3-5
         base_url: https://openrouter.ai/api
         # Two endpoints, both first-party Mistral, so there is no lottery to
         # lose here and nothing for a sort to choose between. Stated rather than
         # inherited so a reader is not left wondering why this tier looks
         # different: the default would be harmless and would also be noise.
+        #
+        # This tier named mistral-large-2512 until the broker stopped serving it
+        # outside its batch endpoint. Nothing in this tree changed and every
+        # premium task on this preset began failing with "No endpoints found" —
+        # a model on somebody else's catalogue can be withdrawn under a
+        # committed config, so a preset is worth re-reaching before it is
+        # trusted.
         routing: {}
       frontier:
         provider: openai_compatible

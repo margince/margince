@@ -24,6 +24,7 @@ import {
 import { CREATE_ID, NAV } from "./nav";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 import { navigate, type Route } from "./router";
+import { openAsk } from "./urlstate";
 
 // ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a type
 // tag (screen / action / record); record entries are fed by the search seam
@@ -39,7 +40,10 @@ export type Command = {
   // older word must not be told the screen does not exist.
   keywords?: readonly string[];
   type: "screen" | "action" | "record";
-  route: Route;
+  // Where the row goes. Absent on a row that opens something OVER the page
+  // instead of leaving it — asking does that, and a route it never follows
+  // would be a claim about where the reader ends up that is simply untrue.
+  route?: Route;
 };
 
 // The words a settings entry answers to beyond its own label. A reader types the
@@ -194,10 +198,6 @@ const TYPE_KEY: Record<Command["type"], MessageKey> = {
   record: "palette.typeRecord",
 };
 
-// `#/ai?q=<question>`: the row's question travels in the ADDRESS, because a
-// reader already on the AI surface changes no path and so remounts nothing.
-export const ASK_QUESTION_PARAM = "q";
-
 export function CommandPalette({
   open,
   onClose,
@@ -266,30 +266,25 @@ export function CommandPalette({
       }
     : null;
 
-  const askRow: Command | null = query.trim()
-    ? {
-        id: "ask-ai",
-        label: t("palette.askAi", { query: query.trim() }),
-        type: "action",
-        route: { screen: "ai" },
-      }
-    : null;
-  const rows = [
-    ...filtered,
-    ...search.commands,
-    ...(seeAll ? [seeAll] : []),
-    ...(askRow ? [askRow] : []),
-  ];
+  // Asking leads, always. The palette answers two different questions — where
+  // do I go, and what does this company know — and only the first has a list of
+  // destinations to scan. A reader who came to ASK had to type something and
+  // then hunt past every screen whose name happened to match it, so the row sat
+  // last on the one journey it exists for. It carries the query when there is
+  // one and opens an empty box when there is not; either way it goes nowhere.
+  const rows = [...filtered, ...search.commands, ...(seeAll ? [seeAll] : [])];
   const clamp = (index: number) =>
     Math.max(0, Math.min(index, rows.length - 1));
 
   const run = (command: Command) => {
     onClose();
-    const asking = command.id === "ask-ai";
-    navigate(
-      command.route,
-      asking ? new Map([[ASK_QUESTION_PARAM, query.trim()]]) : undefined,
-    );
+    if (command.id === "ask-ai") {
+      openAsk(query.trim());
+      return;
+    }
+    if (command.route) {
+      navigate(command.route);
+    }
   };
 
   if (!mounted) {
@@ -384,6 +379,27 @@ export function CommandPalette({
               when one query replaces another under it — a reader typing through
               a slow search should see one steady bar, not one that blinks out
               and returns per letter. */}
+          {/* Asking, always, and deliberately NOT one of the options below.
+              The palette answers two questions — where do I go, and what does
+              this company know — and only the first has a list to scan. Pinned
+              into that list it took the first row, which is the row Enter
+              presses, so a reader typing a screen name would have asked about
+              it instead of going there. Here it is reachable on sight and by
+              Tab, and it carries whatever is typed into the box rather than
+              asking it: a question matched mid-word is one still being
+              written. */}
+          <button
+            type="button"
+            className="palette-ask t-body"
+            onClick={() => {
+              onClose();
+              openAsk(query.trim());
+            }}
+          >
+            <Sparkles aria-hidden />
+            <span className="label">{t("corpusAsk.title")}</span>
+            <Badge tone="ai">{t("palette.typeAction")}</Badge>
+          </button>
           {search.pending && (
             <PendingBody
               label={t("palette.searching")}

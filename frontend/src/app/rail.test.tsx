@@ -102,7 +102,6 @@ const CANONICAL_ORDER = [
   "Projects",
   "Filters & views",
   "Analytics",
-  "Ask Margince",
 ];
 
 // The rows of whatever level the panel is showing — the destinations, or a

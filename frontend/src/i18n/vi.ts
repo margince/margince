@@ -432,7 +432,6 @@ export const vi = {
   "nav.leads": "Lead",
   "nav.deals": "Deals",
   "nav.analytics": "Analytics",
-  "nav.ai": "Hỏi Margince",
   "nav.settings": "Cài đặt",
   "nav.automations": "Tự động hoá",
   "nav.group.records": "Dữ liệu",
@@ -526,7 +525,6 @@ export const vi = {
   "palette.aria": "Bảng lệnh",
   "palette.placeholder": "Tìm mọi thứ hoặc nhận câu trả lời từ Margince",
   "palette.empty": "Không có kết quả.",
-  "palette.askAi": "Hỏi AI: “{query}”",
   "palette.typeScreen": "Màn hình",
   "palette.typeAction": "Hành động",
   "palette.typeRecord": "Bản ghi",
@@ -4045,19 +4043,6 @@ export const vi = {
   "explain.col.owner": "Phụ trách",
   "explain.col.pipeline": "Pipeline",
 
-  "ai.sub": "mang Agent của riêng bạn — được quản trị bằng hợp đồng hai bậc",
-  "ai.tiers": "Một Agent được phép làm gì",
-  "ai.tierAutoExecute": "Đọc và soạn nháp chạy ngay.",
-  "ai.tierAutoExecuteDetail":
-    "Tra cứu, tóm tắt, bản nháp — thấy được, đảo ngược được, có ghi nhật ký.",
-  "ai.tierConfirmationRequired": "Các thay đổi nhạy cảm chờ bạn.",
-  "ai.tierConfirmationRequiredDetail":
-    "Trường tùy chỉnh mới, đăng ký webhook và làm giàu dữ liệu trả phí được xếp vào hộp phê duyệt trước. Hầu hết thay đổi bản ghi và tin nhắn gửi đi chạy ngay, trong phạm vi quyền bạn đã cấp.",
-  "ai.connect": "Kết nối một Agent",
-  "ai.connectDetail":
-    "Trỏ bất kỳ Agent hỗ trợ MCP nào vào tổ chức của bạn và cho phép quyền truy cập mà nó yêu cầu. Không cần chuẩn bị gì trước.",
-  "ai.paletteHint": "Hỏi từ bất cứ đâu bằng",
-
   "settings.accountCard": "Tài khoản của bạn",
   "unsaved.title": "Bạn có thay đổi chưa lưu",
   "unsaved.body":
@@ -6904,9 +6889,8 @@ export const vi = {
   "corpusAsk.whichSet": "Bộ nào",
   "corpusAsk.question": "Câu hỏi của bạn",
   "corpusAsk.submit": "Hỏi",
-  "corpusAsk.byModel": "Được viết từ các đoạn bên dưới",
-  "corpusAsk.atLine": "dòng {line}, cột {column}",
-  "corpusAsk.byPassages": "Chính các đoạn văn — không ai viết bản tóm tắt",
+  "corpusAsk.byModel": "Margince viết từ tài liệu của bạn",
+  "corpusAsk.byPassages": "Chính các đoạn trích — không ai viết câu trả lời",
   "corpusAsk.notReady":
     "Bộ này chưa đọc xong — {embedded} trên {total} đoạn có thể tìm kiếm. Câu hỏi của bạn không có gì sai; hãy thử lại sau ít phút.",
   "corpusAsk.retrievalUnavailable":
@@ -6917,6 +6901,21 @@ export const vi = {
   "corpusAsk.unreviewedTitle": "Chưa ai đọc các đoạn này",
   "corpusAsk.notReadyTitle": "Bộ này vẫn đang được đọc",
   "corpusAsk.retrievalUnavailableTitle": "Chưa cấu hình chỉ mục tìm kiếm",
+  "corpusAsk.noGrantTitle": "Bạn không mở được tài liệu của công ty này",
+  "corpusAsk.noGrant":
+    "Hỏi sẽ đọc một bộ tài liệu bạn chưa được cấp quyền. Quản trị viên có thể cấp cho bạn.",
+  "corpusAsk.noSetsTitle": "Chưa có bộ tài liệu nào để hỏi",
+  "corpusAsk.noSets":
+    "Công ty này chưa lưu tài liệu nào nên không có gì để tìm.",
+  "corpusAsk.citeAtLine": "{number}: {document}, dòng {line}",
+  "corpusAsk.citeInDocument": "{number}: trong {document}",
+  "corpusAsk.documentLoading": "Đang mở tài liệu…",
+  "corpusAsk.documentFailedTitle": "Không mở được tài liệu đó",
+  "corpusAsk.documentFailed":
+    "Hiện chưa đọc được {document}. Đoạn được trích dẫn nằm bên dưới.",
+  "corpusAsk.openFile": "Mở tệp",
+  "corpusAsk.quoteNotPinpointed":
+    "Trích dẫn này vắt qua một lần xuống dòng nên không đánh dấu chính xác được. Tài liệu được mở đúng chỗ xuất hiện đoạn đó.",
   "corpusAsk.notCovered.title": "Bộ này không bao gồm",
   "corpusAsk.notCovered.body":
     "{name} đã được tìm toàn bộ và không có gì đủ gần để trả lời. Bộ này bao gồm:",

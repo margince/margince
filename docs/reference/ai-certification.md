@@ -29,19 +29,19 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | … best state `partial` | 0 |
 | … best state `stale` | 3 |
 | … `absent` on every binding | 0 |
-| Scenarios in the corpus | 168 |
-| Committed records | 107 |
-| Bindings measured | 12 |
+| Scenarios in the corpus | 170 |
+| Committed records | 108 |
+| Bindings measured | 13 |
 
 ### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 17 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
+Counted per record — one (task, binding) pair — over the 19 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
-| the case | 12 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
-| **the prompt this build sends** | 13 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| the grader | 10 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
+| the case | 14 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
+| **the prompt this build sends** | 15 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
+| the grader | 12 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -101,7 +101,7 @@ Which model to run each site on, and what that choice rests on.
 | [`cold_start/company_message`](#cold_startcompany_message) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
 | [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
 | [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 2 | 4 |
-| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 4 |
+| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `certified` | 1.00 | `current` | 5 | 5 |
 | [`deal_health/deal_status`](#deal_healthdeal_status) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 3 | 3 |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.5-flash · eu_hosted` | `certified` | 1.00 | `current` | 4 | 1 |
 | [`draft_reply/account`](#draft_replyaccount) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 5 |
@@ -159,14 +159,15 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 40 | 34 | 0 | 6 | 456 | 407 | 0.89 | 4632ms | 19 | 8 | 13 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
-| `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 7 | 0 | 6 | 90 | 86 | 0.96 | 26168ms | 9 | 0 | 4 |
+| `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 7 | 0 | 6 | 96 | 92 | 0.96 | 26168ms | 9 | 0 | 4 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 4 | 0 | 2 | 138 | 123 | 0.89 | 23385ms | 2 | 0 | 4 |
-| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 39 | 38 | 0 | 1 | 351 | 288 | 0.82 | 237887ms | 19 | 7 | 13 |
+| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 39 | 37 | 0 | 2 | 351 | 288 | 0.82 | 237887ms | 19 | 7 | 13 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 11 | 0 | 0 | 11 | 160 | 113 | 0.71 | 20620ms | 8 | 0 | 3 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
-| `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
+| `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 5 | 0 | 1 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
+| `openai_compatible` | `mistralai/mistral-medium-3-5` | `eu_hosted` | 1 | 1 | 0 | 0 | 15 | 15 | 1.00 | 10068ms | 1 | 0 | 0 |
 | `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 40 | 35 | 0 | 5 | 453 | 341 | 0.75 | 140306ms | 11 | 9 | 20 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
@@ -204,6 +205,8 @@ model, real network).
 | `cold_start/field_extract` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/sitereadmessage` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `corpus_ask/corpus_ask` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `draft_reply/account` | `gemini · gemini-3.1-pro-preview · eu_hosted` | the case and the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/account` | `gemini · gemini-3.5-flash · eu_hosted` | the case and the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/contact` | `gemini · gemini-3.1-pro-preview · eu_hosted` | the case and the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it |
@@ -546,22 +549,25 @@ Records (4):
 
 Scope a run of it can claim: `full_invocation`.
 
-Scenarios (3):
+Scenarios (5):
 
 | Scenario | Expects | Case |
 |---|---|---|
 | `corpus_ask_answers_only_from_the_passage_that_says_it` | `accepted` | [corpus_ask_answers_from_the_passages_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_from_the_passages_01.yaml) |
+| `corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present` | `accepted` | [corpus_ask_answers_when_the_passage_is_present_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_when_the_passage_is_present_01.yaml) |
 | `corpus_ask_returns_nothing_when_the_only_passage_does_not_answer` | `accepted` | [corpus_ask_abstains_when_uncovered_02.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_02.yaml) |
+| `corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question` | `accepted` | [corpus_ask_abstains_when_uncovered_03.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_03.yaml) |
 | `corpus_ask_returns_nothing_when_the_passages_do_not_answer` | `accepted` | [corpus_ask_abstains_when_uncovered_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_01.yaml) |
 
-Records (4):
+Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1084ms | 1265ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 3506ms | 8218ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1046ms | 5723ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `current` | 3/3 | `supported_degraded` | 9 | 8 | 0.89 | 1030ms | 2714ms | 8 | 0 | 1 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/5 | `certified` | 9 | 9 | 1.00 | 1084ms | 1265ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 5090ms | 11578ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 9 | 9 | 1.00 | 1046ms | 5723ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `stale` | 0/5 | `supported_degraded` | 9 | 8 | 0.89 | 1030ms | 2714ms | 8 | 0 | 1 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2040ms | 10068ms | 15 | 0 | 0 | 0 |
 
 ### `deal_health`
 

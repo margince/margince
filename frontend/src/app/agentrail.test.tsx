@@ -722,12 +722,6 @@ describe("AgentRail", () => {
     ).toBe("true");
   });
 
-  it("renders nothing on the full Ask surface", () => {
-    stubAgentRailApi();
-    const { container } = render({ screen: "ai" });
-    expect(container.querySelector(".arblock")).toBeNull();
-  });
-
   it("says the runtime row is not readable without ai_diagnostics:read", async () => {
     const user = userEvent.setup();
     stubAgentRailApi({

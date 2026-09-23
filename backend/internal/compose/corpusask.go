@@ -11,7 +11,7 @@ package compose
 // have already cleared the floor. This file's whole job is prose, and it is
 // allowed to produce none.
 //
-// The guardrail has four steps, and the last two are here:
+// The guardrail has five steps, and the last two are here:
 //
 //  1. readiness            — deterministic, upstream
 //  2. retrieval            — deterministic, upstream
@@ -39,7 +39,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -47,8 +46,6 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -60,7 +57,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
-	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // corpusAskSystem is this site's prompt.
@@ -73,57 +69,76 @@ import (
 // having to judge it.
 const corpusAskSystem = `You answer questions using ONLY the numbered passages you are given.
 
-Write one claim per sentence of the answer. Every claim carries:
-  - text: one sentence of the answer, in your own words.
-  - id: the id of the passage that sentence rests on.
-  - quote: a span copied from that passage, CHARACTER FOR CHARACTER.
+FIRST decide one thing, before you write anything else: do the passages STATE
+the answer to the question that was asked?
 
-The quote must appear in the passage exactly as written there. Do not
-paraphrase it, do not fix its spelling, do not join two parts of the passage
+  - "answers"           — a passage says the thing the question asks for.
+  - "partially_answers" — the question asks for more than one thing and the
+                          passages state some of it but not the rest.
+  - "does_not_answer"   — the passages never state it, whether they are about
+                          the same subject or about something else entirely.
+
+Being about the same subject is NOT answering. A question asking HOW to do
+something is not answered by a passage saying what the thing IS, when it comes
+into being, who is allowed to do it, or what happens to it afterwards. If you
+find yourself assembling an answer out of parts that each say something else,
+the coverage is "does_not_answer".
+
+When coverage is "does_not_answer":
+  - return NO claims.
+  - write summary for the READER, in at most two short sentences: say their
+    documents do not answer this, then say what those documents do cover nearby
+    so they know where to look next. This is the ONLY place you may describe
+    what you could not find.
+    Write "Your handbook doesn't say how to create a project. It explains what a
+    project is and when one starts, but not how to make one."
+    Not "The documents do not contain information regarding project creation."
+
+When coverage is "partially_answers":
+  - write claims for the part you CAN ground, exactly as below.
+  - name the missing part in summary, in the reader's own terms: "Your handbook
+    says what a seat is, but not how to ask for one."
+  - never pad the gap with a claim built out of adjacent material. Half an
+    answer that says so beats a whole one that is partly invented.
+
+If two passages disagree, say so and cite both rather than picking one. A reader
+acting on the wrong half of a contradiction is worse off than one who knows the
+documents conflict.
+
+When coverage is "answers":
+  - write one claim per sentence of the answer. Every claim carries:
+      - text: one sentence of the answer, in your own words.
+      - id: the id of the passage that sentence rests on.
+      - quote: a span copied from that passage, CHARACTER FOR CHARACTER.
+  - write summary as the ANSWER, in the words a colleague would use, saying only
+    what your own claims say. Lead with the answer itself — never open by
+    describing the passages or restating the question. Two or three short
+    sentences; if one will do, write one.
+  - mark each sentence of summary with the claim it rests on, as a bracketed
+    number at the end of that sentence: [1] for your first claim, [2] for your
+    second, counting in the order you list them. A sentence resting on two
+    claims takes both, "…row scope. [2][3]". These are what a reader presses to
+    open the document at the passage, so a sentence with no number is a sentence
+    they cannot check.
+    Write "A full seat can read and change things. A read seat can only read,
+    whatever your role says."
+    Not "The passages describe two kinds of seat, which are as follows."
+
+The quote must appear in the passage exactly as written there. Copy it, including
+any markdown around it such as ** or backticks. Do not paraphrase it, do not fix
+its spelling, do not tidy its punctuation, do not join two parts of the passage
 with an ellipsis. If you cannot find a span that supports your sentence, do not
 write the sentence.
 
-If the passages do not answer the question, return no claims at all. An empty
-answer is correct and expected. Never answer from anything you know that is not
-in the passages, and never say the passages are insufficient — just return
-nothing.`
+Never answer from anything you know that is not in the passages. Never write a
+claim that reports your own search: a sentence such as "I couldn't find
+instructions for this" is not a claim about the documents, and it belongs in
+summary with coverage "does_not_answer".`
 
 // corpusAskLane is the chat lane this site takes. Nil is a composition without
 // one, and the answer is then the passages themselves.
 type corpusAskLane interface {
 	Complete(ctx context.Context, req model.Request) (model.Response, error)
-}
-
-// The reply's field names. They appear in the schema's property map, in the
-// required-key list beside it, and in the struct tags below; a key that
-// disagreed between any two of those would be a field the model is asked for
-// and the parser never reads.
-//
-// Held by: TestTheReplySchemaAndTheParserAgreeOnEveryKey (corpusask_test.go) —
-// it reads the generated schema and requires every key the parser decodes to
-// appear in it, so a fourth spelling introduced anywhere fails there.
-const (
-	claimTextKey  = "text"
-	claimIDKey    = "id"
-	claimQuoteKey = "quote"
-)
-
-// askedClaim is one claim as the model returns it.
-type askedClaim struct {
-	Text  string `json:"text"`
-	ID    string `json:"id"`
-	Quote string `json:"quote"`
-}
-
-type askedAnswer struct {
-	// A POINTER so an absent key is distinguishable from an empty list. They
-	// mean opposite things here: `{"claims":[]}` is the answer this site asks
-	// for when the passages do not cover the question, while `{}` — or any
-	// reply carrying none of this site's keys, which decodes to exactly the
-	// same zero value — is a reply in a shape this site does not take. Reading
-	// the second as the first would report "not covered", a confident statement
-	// about the corpus, on a reply that never answered the question.
-	Claims *[]askedClaim `json:"claims"`
 }
 
 // CorpusAskRequest builds the ONE model call this site makes.
@@ -177,24 +192,6 @@ func CorpusAskRequest(question string, passages []knowledge.Passage, lang string
 func corpusAskSystemFor(fence promptfence.Fence, lang string) string {
 	return corpusAskSystem + "\n" + promptlang.Rule(lang) + "\n" + promptvoice.Rule +
 		"\n" + fence.Rule("passage")
-}
-
-// corpusAskSchema is the reply shape, with this call's own passage ids as the
-// citation enum.
-func corpusAskSchema(ids []string) json.RawMessage {
-	return schema.Must(schema.Object(
-		map[string]schema.Node{
-			"claims": schema.Array(schema.Object(
-				map[string]schema.Node{
-					claimTextKey:  schema.String().Describe("One sentence of the answer, in your own words."),
-					claimIDKey:    schema.Enum(ids...).Describe("The passage this sentence rests on."),
-					claimQuoteKey: schema.String().Describe("A span copied from that passage, character for character."),
-				},
-				claimTextKey, claimIDKey, claimQuoteKey,
-			)),
-		},
-		"claims",
-	))
 }
 
 func passageIDs(passages []knowledge.Passage) []string {
@@ -263,153 +260,62 @@ func AnswerCorpus(
 		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeUnreviewed
 		return answer
 	}
-	if len(written) == 0 {
-		// The model read the passages and found nothing in them that answers
-		// the question — or wrote only claims the quote check dropped. Either
-		// way this is not_covered, and it is the honest answer: an answer that
-		// cites nothing is an ungrounded one, not a short grounded one.
+	answer.GeneratedBy = crmcontracts.WrittenByModel
+	if !written.Covered {
+		// The model READ the passages and said they do not answer the question.
+		// Its sentence is the refusal, and it is the only thing on screen that
+		// tells the reader what these documents do cover instead — without it
+		// they meet an empty page and read it as a malfunction.
+		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered
+		answer.Claims = nil
+		if summary := written.Summary; summary != "" {
+			answer.Summary = &summary
+		}
+		return answer
+	}
+	if len(written.Claims) == 0 {
+		// It said the passages DO answer, and then grounded nothing: every
+		// claim failed the quote check. That is not a short answer, it is an
+		// invented one whose evidence was taken away — the shape every measured
+		// fabrication took.
+		//
+		// So the summary is DROPPED here, and this is the whole difference from
+		// the branch above. That sentence asserts an answer; the claims that
+		// were meant to hold it up are gone, and nothing else on the page ever
+		// checked it. Printing it as the refusal would put the fabrication on
+		// screen wearing the one outcome a reader is entitled to trust.
 		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered
 		answer.Claims = nil
 		return answer
 	}
-	answer.Claims = &written
-	answer.GeneratedBy = crmcontracts.WrittenByModel
+	// The summary stands only while its numbers still mean what the writer
+	// meant. A dropped claim slides every later one up a place, so a sentence
+	// marked [2] would open what used to be [3] — and the reader has no way to
+	// tell. The claims are shown on their own instead, which the surface already
+	// draws for an answer that carried no prose.
+	if summary := written.Summary; summary != "" && !written.Renumbered {
+		answer.Summary = &summary
+	}
+	answer.Claims = &written.Claims
 	return answer
 }
 
 // askCorpusLane makes the call and keeps what survives the quote check.
 func askCorpusLane(
 	ctx context.Context, lane corpusAskLane, question string, passages []knowledge.Passage, lang string,
-) ([]crmcontracts.KnowledgeClaim, error) {
+) (CorpusAnswer, error) {
 	req := CorpusAskRequest(question, passages, lang)
 	resp, err := ai.Ask(ctx, lane, req, corpusReplyValid(passages))
 	if err != nil {
-		return nil, fmt.Errorf("the corpus ask lane: %w", err)
+		return CorpusAnswer{}, fmt.Errorf("the corpus ask lane: %w", err)
 	}
 	return GroundCorpusAnswer(resp.Text, passages)
-}
-
-// corpusReplyValid is the retry predicate, and it is the site's OWN read of the
-// reply rather than a looser shape check: the model is shown the refusal the
-// answer path would have raised, which is the only message that names the fault.
-//
-// It refuses exactly what GroundCorpusAnswer refuses, and no more. A reply whose
-// claims all fail the quote check is NOT refused: the prompt asks for no claims
-// when the passages do not cover the question, so a re-ask there would push a
-// model that answered correctly to answer again.
-func corpusReplyValid(passages []knowledge.Passage) ai.Validator {
-	return func(text string) error {
-		_, err := GroundCorpusAnswer(text, passages)
-		return err
-	}
-}
-
-// GroundCorpusAnswer parses a reply and keeps only the claims whose quote is
-// actually in the passage they cite.
-//
-// Exported because the certification lane reads a reply with the SAME checker
-// production uses. A cert that re-implemented this would measure a copy, and
-// the copy stays green through the change that breaks the original.
-func GroundCorpusAnswer(replyText string, passages []knowledge.Passage) ([]crmcontracts.KnowledgeClaim, error) {
-	var parsed askedAnswer
-	if err := json.Unmarshal([]byte(ai.Unfence(replyText)), &parsed); err != nil {
-		return nil, fmt.Errorf("the corpus ask reply is not the shape this site takes: %w", err)
-	}
-	if parsed.Claims == nil {
-		return nil, errors.New(`the corpus ask reply carries no "claims" key: an answer that cites nothing ` +
-			`is written as {"claims": []}`)
-	}
-	byID := make(map[string]knowledge.Passage, len(passages))
-	for _, p := range passages {
-		byID[p.ChunkID.String()] = p
-	}
-	var kept []crmcontracts.KnowledgeClaim
-	for _, c := range *parsed.Claims {
-		p, ok := byID[c.ID]
-		if !ok {
-			// The schema's enum should make this unreachable; it is checked
-			// anyway because "should be unreachable" is not a guarantee about
-			// a provider's output, and a citation to a passage this call never
-			// saw is the exact failure the enum exists to prevent.
-			continue
-		}
-		if !quotedFromDocument(p.Text, c.Quote) {
-			continue
-		}
-		text := strings.TrimSpace(c.Text)
-		claim := crmcontracts.KnowledgeClaim{
-			ChunkId:      openapi_types.UUID(p.ChunkID),
-			DocumentId:   openapi_types.UUID(p.DocumentID),
-			DocumentName: p.DocumentName,
-			Quote:        strings.TrimSpace(c.Quote),
-		}
-		if text != "" {
-			claim.Text = &text
-		}
-		locateClaim(&claim, p, c.Quote)
-		kept = append(kept, claim)
-	}
-	return kept, nil
 }
 
 // The quote check is quotedFromDocument, shared with the field-extract lane
 // rather than spelled again here. It is the same question — are these the
 // document's own words — and two spellings of one invariant drift until they
 // disagree about a reply one of them would have refused.
-
-// locateClaim stamps where in the document the quote begins, when the passage
-// can say.
-//
-// The quote is located by its RAW text rather than the trimmed or
-// whitespace-collapsed form, because the offset has to be an offset into the
-// document's real bytes — collapsing runs of spaces would shift every column
-// after the first one that collapsed. A quote the passage cannot locate leaves
-// both fields absent: a line number pointing at the wrong line is worse than
-// none, and the whole value of a citation is that following it lands you on the
-// sentence.
-func locateClaim(claim *crmcontracts.KnowledgeClaim, p knowledge.Passage, quote string) {
-	line, column := p.Locate(quote)
-	if line == 0 {
-		// A model may return a quote that only matches once whitespace is
-		// collapsed — a re-wrapped line. The claim survived the check on that
-		// basis, so try the collapsed text too rather than dropping a location
-		// the reader could have used.
-		line, column = p.Locate(collapseSpace(quote))
-	}
-	if line == 0 {
-		return
-	}
-	claim.Line = &line
-	claim.Column = &column
-}
-
-// passageClaims renders the retrieved passages as the deterministic answer:
-// each passage IS a claim, quoting itself, with no sentence written over it.
-//
-// The Text field is deliberately absent rather than empty. The contract says a
-// claim's text is absent when generated_by is deterministic — then the quote
-// stands on its own and no prose was written — and an empty string would render
-// as a blank sentence rather than as no sentence.
-func passageClaims(passages []knowledge.Passage) []crmcontracts.KnowledgeClaim {
-	claims := make([]crmcontracts.KnowledgeClaim, len(passages))
-	for i, p := range passages {
-		claims[i] = crmcontracts.KnowledgeClaim{
-			ChunkId:      openapi_types.UUID(p.ChunkID),
-			DocumentId:   openapi_types.UUID(p.DocumentID),
-			DocumentName: p.DocumentName,
-			Quote:        strings.TrimSpace(p.Text),
-		}
-		// The whole passage IS the quote here, so it begins where the passage
-		// begins — no search needed, and none possible: locating a string
-		// inside itself always answers offset zero.
-		if p.StartLine > 0 {
-			line, column := p.StartLine, 1
-			claims[i].Line = &line
-			claims[i].Column = &column
-		}
-	}
-	return claims
-}
 
 // corpusAskEngine serves askCorpus: retrieve deterministically, then write.
 //

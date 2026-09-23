@@ -6,7 +6,6 @@ import {
   Home,
   Layers2,
   type LucideIcon,
-  Sparkles,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -150,7 +149,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         labelKey: "nav.analytics",
         icon: ChartNoAxesCombined,
       },
-      { screen: "ai", labelKey: "nav.ai", icon: Sparkles },
     ],
   },
 ];
@@ -237,8 +235,7 @@ export function opensCreateForm(route: Route): boolean {
 // Every one of them reads DOWN: Brief is a briefing in sentences beside a rail
 // of context, with decision cards carrying drafted prose somebody has to read
 // before they can decide; Today is a queue worked top to bottom; Filters is a
-// list of saved views; Analytics is a column of report sections; AI is a
-// settings-like page of stacked choices; a share view is one record handed to a
+// list of saved views; Analytics is a column of report sections; a share view is one record handed to a
 // reader, prose beside facts; an offer is a detail page drawing its own
 // surface. Uncapped, each of them ran a line of text the full width of a wide
 // display with the words hugging the left edge, which is the failure the cap
@@ -251,7 +248,6 @@ export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
   "worklist",
   "filters",
   "analytics",
-  "ai",
   "share",
   "offers",
 ]);
