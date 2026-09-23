@@ -82,15 +82,39 @@ func TestAnUngradedRunIsLeftOutOfTheJudgesNumbers(t *testing.T) {
 	graded := func(score int) RunResult { return RunResult{HardPass: true, Score: score} }
 	cutOff := RunResult{Ungraded: true}
 
-	median, minimum, graded2 := judgeMedianAndMin([]RunResult{graded(90), cutOff, graded(100)})
-	if !graded2 {
+	median, minimum, anyGraded := judgeMedianAndMin([]RunResult{graded(90), cutOff, graded(100)})
+	if !anyGraded {
 		t.Fatal("two graded runs reported as ungraded")
 	}
 	if minimum == 0 {
 		t.Error("an ungraded run's zero reached the judge's minimum")
 	}
-	if median != 100 && median != 90 {
-		t.Errorf("median = %d, want one of the two scores a judge gave", median)
+	// EXACT, because the ungraded run is what makes the score set even, and an
+	// even median is the average of the two middles. Asserting only "one of
+	// the scores a judge gave" accepted the upper middle, which is the error
+	// below, so it is spelled out rather than bounded.
+	if median != 95 {
+		t.Errorf("median = %d, want 95 — the average of the two graded scores", median)
+	}
+}
+
+// An even graded set takes the AVERAGE of its two middles, never the upper one.
+//
+// This is the direction a certification number must not err in. RunnerConfig
+// repeats an odd number of times, so the run set is odd and a median looked
+// safe; an ungraded run leaves the SCORE set even, and upper-middle selection
+// then reports a pair {10, 80} as 80. That clears a DegradedMin of 60 on a set
+// half of whose grades are a 10.
+func TestAnEvenGradedSetTakesTheAverageOfItsMiddles(t *testing.T) {
+	t.Parallel()
+	graded := func(score int) RunResult { return RunResult{HardPass: true, Score: score} }
+
+	median, _, anyGraded := judgeMedianAndMin([]RunResult{graded(10), {Ungraded: true}, graded(80)})
+	if !anyGraded {
+		t.Fatal("two graded runs reported as ungraded")
+	}
+	if median != 45 {
+		t.Errorf("median = %d, want 45 — the upper middle certifies a set it should not", median)
 	}
 }
 

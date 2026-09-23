@@ -77,7 +77,27 @@ func judgeMedianAndMin(rs []RunResult) (median, minimum int, graded bool) {
 		return 0, 0, false
 	}
 	slices.Sort(scores)
-	return scores[len(scores)/2], scores[0], true
+	return medianOf(scores), scores[0], true
+}
+
+// medianOf answers the median of a sorted, non-empty score set, averaging the
+// two middle values on an even count.
+//
+// The even case is reachable even though RunnerConfig.Repeats is odd: an
+// ungraded run leaves the run set odd and the SCORE set one shorter. Without
+// the average, a graded pair {10, 80} reported 80 — the upper middle — which is
+// the one direction a certification number must never err in, because it turns
+// a set with a failing grade in it into a passing median.
+//
+// Integer division truncates, so an exact half lands on the lower value. That
+// is the conservative side: a median is compared against a floor, and rounding
+// down can only withhold a verdict, never grant one.
+func medianOf(sorted []int) int {
+	mid := len(sorted) / 2
+	if len(sorted)%2 == 1 {
+		return sorted[mid]
+	}
+	return (sorted[mid-1] + sorted[mid]) / 2
 }
 
 // Verdict folds N runs of one scenario into a certification outcome per
@@ -91,10 +111,12 @@ func judgeMedianAndMin(rs []RunResult) (median, minimum int, graded bool) {
 // regardless of which verdict the run set lands on — it is the number a
 // dashboard trends over time, not just the pass/fail label.
 //
-// Verdict requires an ODD run count (N=0 or even panics): a median needs a
-// single middle element, and the runner's own config (RunnerConfig.Repeats)
+// Verdict requires an ODD run count (N=0 or even panics): ⌈2N/3⌉ is a
+// threshold on the RUN set, and the runner's own config (RunnerConfig.Repeats)
 // already enforces oddness before any run happens, so a call here with an
 // even N is a caller bug, not a certification input to report gracefully.
+// The median is NOT what the oddness buys — it comes from the graded subset,
+// which an ungraded run leaves even, and medianOf defines that case.
 func Verdict(rs []RunResult, b Bands) (verdict string, reliability float64) {
 	n := len(rs)
 	if n == 0 || n%2 == 0 {

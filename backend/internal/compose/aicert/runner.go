@@ -362,7 +362,12 @@ type taskAccumulation struct {
 	passed                                                  int
 	provider, servedModel, identitySource, judgeServedModel string
 	selfJudgedEveryRun                                      bool
-	identitySet                                             bool
+	// anyRunGraded is false until a judge scores a run. selfJudgedEveryRun
+	// starts true, so without this a task whose every run was cut off would
+	// report SelfJudged beside an empty JudgeServedModel — "every run was
+	// graded by the candidate itself" said of a set no judge ever saw.
+	anyRunGraded bool
+	identitySet  bool
 	// certifiedScope is the narrowest scope any run's site covered. A task is
 	// one record but not always one site — cold_start ships a one-shot
 	// extraction beside three multi-turn conversations — so the record may
@@ -399,6 +404,7 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 	// from the record, and its empty ServedModel would read as not-self-judged
 	// for a run nobody judged at all.
 	if !outcome.Ungraded {
+		acc.anyRunGraded = true
 		acc.judgeServedModel = outcome.JudgeServedModel
 		if !selfJudged(outcome.ServedModel, outcome.JudgeServedModel) {
 			acc.selfJudgedEveryRun = false

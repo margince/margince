@@ -100,7 +100,7 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 		// RateStore.RateFor call (price-on-read; never fabricate a price).
 		EstCostMicroUSD:      estCostMicroUSD,
 		JudgeServedModel:     acc.judgeServedModel,
-		SelfJudged:           acc.selfJudgedEveryRun,
+		SelfJudged:           acc.selfJudgedEveryRun && acc.anyRunGraded,
 		ServedIdentitySource: acc.identitySource,
 		RanAt:                ranAt.Format(time.RFC3339),
 		Scenarios:            acc.scenarios,

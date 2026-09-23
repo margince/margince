@@ -327,29 +327,64 @@ func decoderSources(body *ast.BlockStmt) map[string]ast.Expr {
 //
 // Dropping the name reports BOTH reads, which is the honest direction: the
 // first one really is unreduced.
+//
+// Which means EVERY write has to be counted, not only the ones this census can
+// follow. Counting only single-value assignments made the retry shape above
+// invisible whenever its first write took another form — `var body = reply`,
+// `body, err := read(reply)`, `for _, body := range …` — because one write
+// went unseen, the name looked singly written, and it resolved to the reduced
+// second write. So writes are tallied first and the map is narrowed after: a
+// name survives only if it took exactly one write, by an assignment whose
+// value this walk can name.
 func assignedFrom(body *ast.BlockStmt) map[string]ast.Expr {
-	out := map[string]ast.Expr{}
-	reassigned := map[string]bool{}
+	writes := map[string]int{}
+	countWrite := func(target ast.Expr) {
+		if name, isIdent := target.(*ast.Ident); isIdent && name.Name != "_" {
+			writes[name.Name]++
+		}
+	}
+	single := map[string]ast.Expr{}
+	recordSingle := func(target ast.Expr, value ast.Expr) {
+		name, isIdent := target.(*ast.Ident)
+		if !isIdent || name.Name == "_" {
+			return
+		}
+		if _, already := single[name.Name]; !already {
+			single[name.Name] = value
+		}
+	}
 	ast.Inspect(body, func(n ast.Node) bool {
-		assign, isAssign := n.(*ast.AssignStmt)
-		if !isAssign || len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
-			return true
+		switch stmt := n.(type) {
+		case *ast.AssignStmt:
+			for _, target := range stmt.Lhs {
+				countWrite(target)
+			}
+			if len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1 {
+				recordSingle(stmt.Lhs[0], stmt.Rhs[0])
+			}
+		case *ast.ValueSpec:
+			for i, name := range stmt.Names {
+				countWrite(name)
+				// `var a, b = f()` names two and values one: there is no
+				// per-name value to follow, so only count the write.
+				if len(stmt.Values) == len(stmt.Names) {
+					recordSingle(name, stmt.Values[i])
+				}
+			}
+		case *ast.RangeStmt:
+			countWrite(stmt.Key)
+			countWrite(stmt.Value)
+		case *ast.IncDecStmt:
+			countWrite(stmt.X)
 		}
-		name, isIdent := assign.Lhs[0].(*ast.Ident)
-		if !isIdent {
-			return true
-		}
-		if _, already := out[name.Name]; already {
-			reassigned[name.Name] = true
-			return true
-		}
-		out[name.Name] = assign.Rhs[0]
 		return true
 	})
-	for name := range reassigned {
-		delete(out, name)
+	for name := range single {
+		if writes[name] != 1 {
+			delete(single, name)
+		}
 	}
-	return out
+	return single
 }
 
 // reductions are kernel/modelreply's entry points, either of which routes a
@@ -561,45 +596,74 @@ func TestTheCensusSeesEveryKnownModelReplyParser(t *testing.T) {
 // resolving a twice-written name.
 func TestTheCensusReportsARawReadARetryLaterReduces(t *testing.T) {
 	t.Parallel()
-	const src = `package p
-
-import "encoding/json"
-
-func ParseSomething(reply string) error {
-	body := reply
-	var out map[string]any
+	// One shape per way Go writes a name the first time, each wrapped around
+	// the same retry — `body = Unfence(reply)` — and carrying the same
+	// obligation: the FIRST read is raw and must be reported. A first write the
+	// census cannot see is the failure that matters, because the name then
+	// looks singly written and resolves to the reduced retry.
+	//
+	// The body is spelled per shape rather than substituted into one template:
+	// the range case has to put the decode INSIDE the loop, or the loop
+	// variable is a different `body` from the one read and the case proves
+	// nothing. It passed against the unfixed census in exactly that shape.
+	const decodeAndRetry = `	var out map[string]any
 	if err := json.Unmarshal([]byte(body), &out); err == nil {
 		return nil
 	}
 	body = Unfence(reply)
-	return json.Unmarshal([]byte(body), &out)
+	return json.Unmarshal([]byte(body), &out)`
+	shapes := map[string]string{
+		"short variable declaration": "\tbody := reply\n" + decodeAndRetry,
+		"var declaration":            "\tvar body = reply\n" + decodeAndRetry,
+		"multi-value assignment":     "\tbody, readErr := passthrough(reply)\n\t_ = readErr\n" + decodeAndRetry,
+		"range variable": "\tfor _, body := range []string{reply} {\n" +
+			"\t\tvar out map[string]any\n" +
+			"\t\tif err := json.Unmarshal([]byte(body), &out); err == nil {\n" +
+			"\t\t\treturn nil\n" +
+			"\t\t}\n" +
+			"\t\tbody = Unfence(reply)\n" +
+			"\t\treturn json.Unmarshal([]byte(body), &out)\n" +
+			"\t}\n\treturn nil",
+	}
+	for name, funcBody := range shapes {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			src := `package p
+
+import "encoding/json"
+
+func ParseSomething(reply string) error {
+` + funcBody + `
 }
 `
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "p.go", src, parser.SkipObjectResolution)
-	if err != nil {
-		t.Fatalf("parsing the planted source: %v", err)
-	}
-	fn, _ := file.Decls[1].(*ast.FuncDecl)
-	if fn == nil {
-		t.Fatal("the planted source has no function to read")
-	}
+			fset := token.NewFileSet()
+			file, err := parser.ParseFile(fset, "p.go", src, parser.SkipObjectResolution)
+			if err != nil {
+				t.Fatalf("parsing the planted source: %v", err)
+			}
+			fn, _ := file.Decls[1].(*ast.FuncDecl)
+			if fn == nil {
+				t.Fatal("the planted source has no function to read")
+			}
 
-	sources := decoderSources(fn.Body)
-	assigned := assignedFrom(fn.Body)
-	var unreduced int
-	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		call, isCall := n.(*ast.CallExpr)
-		if !isCall {
-			return true
-		}
-		if decoded, decodes := decodedExpr(call, sources); decodes && !reducesThroughUnfence(decoded, assigned) {
-			unreduced++
-		}
-		return true
-	})
-	if unreduced == 0 {
-		t.Error("the census cleared a function whose FIRST decode reads the reply raw — " +
-			"a reduction on the same name's second write must not clear the first read")
+			sources := decoderSources(fn.Body)
+			assigned := assignedFrom(fn.Body)
+			var unreduced int
+			ast.Inspect(fn.Body, func(n ast.Node) bool {
+				call, isCall := n.(*ast.CallExpr)
+				if !isCall {
+					return true
+				}
+				if decoded, decodes := decodedExpr(call, sources); decodes && !reducesThroughUnfence(decoded, assigned) {
+					unreduced++
+				}
+				return true
+			})
+			if unreduced == 0 {
+				t.Errorf("the census cleared a function whose FIRST decode reads the reply raw, "+
+					"written as a %s — a reduction on the same name's second write must not "+
+					"clear the first read, and every write has to be counted for that to hold", name)
+			}
+		})
 	}
 }
