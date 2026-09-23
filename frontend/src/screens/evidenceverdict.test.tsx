@@ -180,7 +180,7 @@ describe("a human's verdict on a machine's claim", () => {
 
   // The three verbs on a fact row have to agree about whether a precondition
   // matters. Removal has always pinned; a confirm and a correction that did not
-  // meant two people ruling on one claim overwrote each other with no conflict
+  // meant two users ruling on one claim overwrote each other with no conflict
   // and no trace — the failure the version column exists to prevent.
   it("confirms a fact against the row it agrees with", async () => {
     const user = userEvent.setup();
