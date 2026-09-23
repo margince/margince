@@ -162,14 +162,10 @@ func humanOnlyOperationsInContract(t *testing.T) map[string]string {
 					"table that enforces the annotation", method, path)
 				continue
 			}
-			at := strings.ToUpper(method) + " " + path
-			if first, repeated := declared[name]; repeated {
-				t.Errorf("operationId %q names two operations, %s and %s.\n\tThe generated table and this "+
-					"census both look an operation up by that id, so a repeat collapses two routes into one "+
-					"and clears the other by never comparing it.", name, first, at)
-				continue
-			}
-			declared[name] = at
+			// Keyed by operationId, which operationiduniqueness_test.go holds
+			// unique over this same document — so one id is one operation here
+			// and this map cannot quietly drop a route by overwriting it.
+			declared[name] = strings.ToUpper(method) + " " + path
 		}
 	}
 	return declared
