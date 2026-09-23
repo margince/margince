@@ -15,6 +15,24 @@ import type { Block, Inline, Run } from "./markdown-parse";
  */
 
 /**
+ * The characters the SERVER folds, spelled out rather than left to `\s`.
+ *
+ * Go's `strings.Fields` splits on `unicode.IsSpace`, and `\s` is not that set:
+ * it misses U+0085 NEL, which Go folds, and adds U+FEFF BOM, which Go does not.
+ * Neither is exotic in an uploaded corpus — NEL arrives in mainframe and EBCDIC
+ * exports, and a BOM sits at the head of most Windows-authored files, which is
+ * the line a handbook's title lives on. A quote carrying either normalises to
+ * two different strings on the two sides, so the viewer marks nothing where the
+ * server found its match, and the reader is shown the right document with no
+ * evidence in it.
+ *
+ * A literal class, because `backend/gates/frontendcollapsespace_test.go` reads
+ * it and compares it against `unicode.IsSpace` itself — in both directions.
+ */
+const SERVER_SPACE =
+  /[\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/;
+
+/**
  * Fold every run of whitespace into one space, and trim.
  *
  * This is the frontend spelling of `claims.CollapseSpace` — the server locates
@@ -24,7 +42,7 @@ import type { Block, Inline, Run } from "./markdown-parse";
  */
 export function collapseSpace(text: string): string {
   return text
-    .split(/\s+/)
+    .split(SERVER_SPACE)
     .filter((part) => part !== "")
     .join(" ");
 }
