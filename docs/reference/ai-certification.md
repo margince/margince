@@ -47,6 +47,188 @@ A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
 `current`; the per-binding truth is in the tables below.
 
+## What each preset gives you
+
+An operator deploys a [preset](../../config/presets/README.md), not a model. The preset binds a
+model per tier, and each task walks its own ladder until it reaches a tier the
+preset bound — so the grade a task gets under a preset is that model's grade,
+never the best grade anything reached. `untested` is a gap, not a failure: the
+preset binds a model there and no paid run has measured it yet.
+
+| Preset | Profile | `certified` | `supported_degraded` | `not_supported` | `untested` | Unbound |
+|---|---|---:|---:|---:|---:|---:|
+| [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml) | `cloud_frontier` | 11 | 2 | 15 | 1 | 0 |
+| [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml) | `eu_hosted` | 14 | 3 | 12 | 0 | 0 |
+| [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml) | `eu_hosted` | 4 | 5 | 14 | 6 | 0 |
+| [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml) | `eu_hosted` | 0 | 0 | 0 | 29 | 0 |
+
+Unbound counts tasks whose whole ladder this preset leaves empty — the router
+has nothing to call, so the feature is off rather than degraded.
+
+### `consumer_class_brokered.yaml`
+
+| Tier | Provider | Model |
+|---|---|---|
+| `local_small` | `openai_compatible` | `google/gemma-4-26b-a4b-it` |
+| `cheap_cloud` | `openai_compatible` | `google/gemma-4-31b-it` |
+| `premium` | `openai_compatible` | `google/gemma-4-31b-it` |
+| `frontier` | `openai_compatible` | `google/gemma-4-31b-it` |
+
+| Task | Served on | Model | Band | State |
+|---|---|---|---|---|
+| `account_scan` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
+| `agent_loop` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `stale` |
+| `brief_ranking` | `premium` | `google/gemma-4-31b-it` | `certified` | `current` |
+| `capture_classify` | `local_small` | `google/gemma-4-26b-a4b-it` | `not_supported` | `current` |
+| `capture_confidentiality_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | `certified` | `current` |
+| `capture_counterparty_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | `not_supported` | `current` |
+| `cert_judge` | `premium` | `google/gemma-4-31b-it` | `certified` | `current` |
+| `cold_start` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
+| `corpus_ask` | `premium` | `google/gemma-4-31b-it` | `certified` | `current` |
+| `deal_health` | `cheap_cloud` | `google/gemma-4-31b-it` | `certified` | `current` |
+| `document_extract` | `premium` | `google/gemma-4-31b-it` | `untested` | - |
+| `draft_reply` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
+| `enrich` | `local_small` | `google/gemma-4-26b-a4b-it` | `certified` | `current` |
+| `growth_fit` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
+| `offer_draft` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
+| `owed_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | `not_supported` | `stale` |
+| `propose_roles` | `cheap_cloud` | `google/gemma-4-31b-it` | `certified` | `current` |
+| `rate_extract` | `premium` | `google/gemma-4-31b-it` | `certified` | `current` |
+| `request_settlement` | `local_small` | `google/gemma-4-26b-a4b-it` | `not_supported` | `stale` |
+| `signal_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | `certified` | `current` |
+| `site_extract` | `premium` | `google/gemma-4-31b-it` | `supported_degraded` | `current` |
+| `site_fact_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | `supported_degraded` | `current` |
+| `site_triage` | `cheap_cloud` | `google/gemma-4-31b-it` | `certified` | `current` |
+| `stage_evidence_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
+| `summarize` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
+| `transcript_propose` | `cheap_cloud` | `google/gemma-4-31b-it` | `certified` | `current` |
+| `voice_build` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
+| `weekly_learnings` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
+| `weekly_review` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
+
+### `gemini_cloud.yaml`
+
+| Tier | Provider | Model |
+|---|---|---|
+| `local_small` | `gemini` | `gemini-3.1-flash-lite` |
+| `cheap_cloud` | `gemini` | `gemini-3.1-flash-lite` |
+| `premium` | `gemini` | `gemini-3.5-flash` |
+| `frontier` | `gemini` | `gemini-3.1-pro-preview` |
+
+| Task | Served on | Model | Band | State |
+|---|---|---|---|---|
+| `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
+| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
+| `brief_ranking` | `premium` | `gemini-3.5-flash` | `certified` | `current` |
+| `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `current` |
+| `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `current` |
+| `capture_counterparty_verdict` | `local_small` | `gemini-3.1-flash-lite` | `supported_degraded` | `stale` |
+| `cert_judge` | `premium` | `gemini-3.5-flash` | `certified` | `current` |
+| `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
+| `corpus_ask` | `premium` | `gemini-3.5-flash` | `certified` | `current` |
+| `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | `certified` | `current` |
+| `document_extract` | `premium` | `gemini-3.5-flash` | `certified` | `current` |
+| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
+| `enrich` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `current` |
+| `growth_fit` | `cheap_cloud` | `gemini-3.1-flash-lite` | `supported_degraded` | `current` |
+| `offer_draft` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
+| `owed_verdict` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `stale` |
+| `propose_roles` | `cheap_cloud` | `gemini-3.1-flash-lite` | `certified` | `current` |
+| `rate_extract` | `premium` | `gemini-3.5-flash` | `certified` | `current` |
+| `request_settlement` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `stale` |
+| `signal_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
+| `site_extract` | `premium` | `gemini-3.5-flash` | `not_supported` | `current` |
+| `site_fact_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | `certified` | `current` |
+| `site_triage` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
+| `stage_evidence_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
+| `summarize` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
+| `transcript_propose` | `cheap_cloud` | `gemini-3.1-flash-lite` | `certified` | `current` |
+| `voice_build` | `cheap_cloud` | `gemini-3.1-flash-lite` | `supported_degraded` | `current` |
+| `weekly_learnings` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
+| `weekly_review` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
+
+### `openrouter_cloud.yaml`
+
+| Tier | Provider | Model |
+|---|---|---|
+| `local_small` | `openai_compatible` | `openai/gpt-oss-120b` |
+| `cheap_cloud` | `openai_compatible` | `openai/gpt-oss-120b` |
+| `premium` | `openai_compatible` | `mistralai/mistral-medium-3-5` |
+| `frontier` | `openai_compatible` | `anthropic/claude-sonnet-4.6` |
+
+| Task | Served on | Model | Band | State |
+|---|---|---|---|---|
+| `account_scan` | `cheap_cloud` | `openai/gpt-oss-120b` | `certified` | `current` |
+| `agent_loop` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
+| `brief_ranking` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
+| `capture_classify` | `local_small` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+| `capture_confidentiality_verdict` | `local_small` | `openai/gpt-oss-120b` | `supported_degraded` | `current` |
+| `capture_counterparty_verdict` | `local_small` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
+| `cert_judge` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
+| `cold_start` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+| `corpus_ask` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
+| `deal_health` | `cheap_cloud` | `openai/gpt-oss-120b` | `certified` | `current` |
+| `document_extract` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
+| `draft_reply` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+| `enrich` | `local_small` | `openai/gpt-oss-120b` | `certified` | `current` |
+| `growth_fit` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+| `offer_draft` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+| `owed_verdict` | `local_small` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
+| `propose_roles` | `cheap_cloud` | `openai/gpt-oss-120b` | `supported_degraded` | `current` |
+| `rate_extract` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
+| `request_settlement` | `local_small` | `openai/gpt-oss-120b` | `supported_degraded` | `stale` |
+| `signal_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+| `site_extract` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
+| `site_fact_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | `certified` | `current` |
+| `site_triage` | `cheap_cloud` | `openai/gpt-oss-120b` | `supported_degraded` | `current` |
+| `stage_evidence_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+| `summarize` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+| `transcript_propose` | `cheap_cloud` | `openai/gpt-oss-120b` | `supported_degraded` | `current` |
+| `voice_build` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+| `weekly_learnings` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+| `weekly_review` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+
+### `openrouter_cloud_eu.yaml`
+
+| Tier | Provider | Model |
+|---|---|---|
+| `local_small` | `openai_compatible` | `mistralai/ministral-8b-2512` |
+| `cheap_cloud` | `openai_compatible` | `mistralai/ministral-14b-2512` |
+| `premium` | `openai_compatible` | `mistralai/mistral-small-2603` |
+| `frontier` | `openai_compatible` | `mistralai/mistral-small-2603` |
+
+| Task | Served on | Model | Band | State |
+|---|---|---|---|---|
+| `account_scan` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `agent_loop` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `brief_ranking` | `premium` | `mistralai/mistral-small-2603` | `untested` | - |
+| `capture_classify` | `local_small` | `mistralai/ministral-8b-2512` | `untested` | - |
+| `capture_confidentiality_verdict` | `local_small` | `mistralai/ministral-8b-2512` | `untested` | - |
+| `capture_counterparty_verdict` | `local_small` | `mistralai/ministral-8b-2512` | `untested` | - |
+| `cert_judge` | `premium` | `mistralai/mistral-small-2603` | `untested` | - |
+| `cold_start` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `corpus_ask` | `premium` | `mistralai/mistral-small-2603` | `untested` | - |
+| `deal_health` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `document_extract` | `premium` | `mistralai/mistral-small-2603` | `untested` | - |
+| `draft_reply` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `enrich` | `local_small` | `mistralai/ministral-8b-2512` | `untested` | - |
+| `growth_fit` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `offer_draft` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `owed_verdict` | `local_small` | `mistralai/ministral-8b-2512` | `untested` | - |
+| `propose_roles` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `rate_extract` | `premium` | `mistralai/mistral-small-2603` | `untested` | - |
+| `request_settlement` | `local_small` | `mistralai/ministral-8b-2512` | `untested` | - |
+| `signal_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `site_extract` | `premium` | `mistralai/mistral-small-2603` | `untested` | - |
+| `site_fact_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `site_triage` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `stage_evidence_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `summarize` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `transcript_propose` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `voice_build` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `weekly_learnings` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+| `weekly_review` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
+
 ## How to read this page
 
 | Word | What it means |

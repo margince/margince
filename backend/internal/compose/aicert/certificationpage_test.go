@@ -88,7 +88,9 @@ func TestAICertificationPage(t *testing.T) {
 	)
 
 	doc := buildAICertDoc(rows, unclaimed, corpus, records)
+	doc.Presets = attributeAICertPresets(loadAICertPresets(t), doc)
 	assertAICertDocCoversEverything(t, doc, rows, corpus, records)
+	assertAICertPresetsAreAttributed(t, doc.Presets, doc)
 	encoded, err := marshalAICertDoc(doc)
 	if err != nil {
 		t.Fatalf("encoding the certification document: %v", err)
@@ -241,6 +243,7 @@ func renderAICertPage(doc aiCertDoc) []byte {
 	var page strings.Builder
 	writeAICertHead(&page)
 	writeAICertTotals(&page, doc.Totals, doc)
+	writeAICertPresets(&page, doc.Presets)
 	writeAICertGlossary(&page)
 	writeAICertIndex(&page, doc.Sites)
 	writeAICertBindings(&page, doc.Bindings)
