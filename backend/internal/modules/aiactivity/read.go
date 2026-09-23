@@ -84,6 +84,10 @@ type Feed struct {
 	Live    []Item
 	Settled []Item
 	Faults  []Item
+	// LiveTotal counts the caller's live occurrences of every kind, past both
+	// the kinds filter and liveBound: a rail that narrates part of the record
+	// still has to know the AI is busy with the rest, or it reports idle.
+	LiveTotal int
 }
 
 // Item is one occurrence, as facts. The reader's locale decides the words, so
@@ -204,6 +208,15 @@ UNION ALL
    LIMIT $9
 )`
 
+// liveTotalSQL is the live arm's predicate with no kind filter and no bound.
+// It is a second statement, so its snapshot can trail feedSQL's by one commit;
+// that costs a pulse one poll late, never a line shown twice.
+const liveTotalSQL = `
+SELECT count(*)
+  FROM ai_task_run
+ WHERE actor_user_id = $1
+   AND state IN ('queued','running')`
+
 // Mine is what the AI is doing for THE CALLER now, and what it finished for
 // them today.
 //
@@ -262,7 +275,10 @@ func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string
 				return fmt.Errorf("unknown feed arm %q", arm)
 			}
 		}
-		return rows.Err()
+		if rowsErr := rows.Err(); rowsErr != nil {
+			return rowsErr
+		}
+		return tx.QueryRow(ctx, liveTotalSQL, contact).Scan(&feed.LiveTotal)
 	})
 	if err != nil {
 		return Feed{}, fmt.Errorf("aiactivity: %w", err)

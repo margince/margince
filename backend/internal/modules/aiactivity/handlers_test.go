@@ -24,6 +24,7 @@ import (
 // day boundary it was handed — the one derived value the transport owns.
 type stubReader struct {
 	live, settled, faults []Item
+	liveTotal             int
 	gotUser               ids.UUID
 	gotStartOfDay         time.Time
 	// gotKinds is what the transport passed down, and nil vs empty is the
@@ -36,7 +37,7 @@ type stubReader struct {
 func (s *stubReader) Mine(ctx context.Context, startOfToday time.Time, kinds []string) (Feed, error) {
 	actor, _ := principal.Actor(ctx)
 	s.called, s.gotUser, s.gotStartOfDay, s.gotKinds = true, actor.UserID, startOfToday, kinds
-	return Feed{Live: s.live, Settled: s.settled, Faults: s.faults}, nil
+	return Feed{Live: s.live, Settled: s.settled, Faults: s.faults, LiveTotal: s.liveTotal}, nil
 }
 
 // fixedNow is the suite's clock. Stated rather than read, because "today" is
@@ -281,5 +282,37 @@ func TestOneBadKindRefusesTheWholeFilter(t *testing.T) {
 	}
 	if reader.called {
 		t.Fatal("the store was reached with the surviving half of a refused filter")
+	}
+}
+
+// The live total is the store's number on the wire whatever the request
+// filtered, and a zero is written rather than omitted: an absent total is a
+// read still pending, and a present zero is an AI at rest.
+func TestTheLiveTotalReachesTheWireWhateverTheFilter(t *testing.T) {
+	narrated := []crmcontracts.AiActivityKind{crmcontracts.AiActivityKindMorningBrief}
+	for _, tc := range []struct {
+		name   string
+		total  int
+		params crmcontracts.GetMyAiActivityParams
+	}{
+		{"every kind", 3, crmcontracts.GetMyAiActivityParams{}},
+		{"a named kind", 3, crmcontracts.GetMyAiActivityParams{Kinds: &narrated}},
+		{"nothing live", 0, crmcontracts.GetMyAiActivityParams{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			NewHandlers(&stubReader{liveTotal: tc.total}, clock()).
+				GetMyAiActivity(rec, request(asHuman(ids.NewV7())), tc.params)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
+			}
+			var body crmcontracts.AiActivity
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatalf("decoding the body: %v", err)
+			}
+			if body.LiveTotal == nil || *body.LiveTotal != tc.total {
+				t.Fatalf("live_total = %v, want %d (body %s)", body.LiveTotal, tc.total, rec.Body.String())
+			}
+		})
 	}
 }

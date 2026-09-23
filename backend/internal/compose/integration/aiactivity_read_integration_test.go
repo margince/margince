@@ -44,6 +44,17 @@ func (f *readingFixture) feed(t *testing.T, user ids.UUID) aiactivity.Feed {
 	return feed
 }
 
+// feedOf is feed narrowed to the kinds a client draws.
+func (f *readingFixture) feedOf(t *testing.T, user ids.UUID, kinds ...string) aiactivity.Feed {
+	t.Helper()
+	feed, err := aiactivity.NewStore(f.env.DB()).
+		Mine(f.env.As(user, nil, principal.Permissions{}), f.midnight(t), kinds)
+	if err != nil {
+		t.Fatalf("Mine: %v", err)
+	}
+	return feed
+}
+
 // midnight is the start of the database's today, read from the database.
 func (f *readingFixture) midnight(t *testing.T) time.Time {
 	t.Helper()
@@ -302,5 +313,56 @@ func TestAFaultSurvivesTheSettledBoundLaterSuccessesFill(t *testing.T) {
 	// it, and an arm that simply mirrored `recent` would hold them too.
 	if len(feed.Faults) != 1 {
 		t.Errorf("the faults arm carries %d rows, want the one failure alone", len(feed.Faults))
+	}
+}
+
+// The live total counts work the filter hides. A caller that draws only the
+// narrated kinds still learns the AI is busy, or the rail says idle while a
+// transcript is being read.
+func TestTheLiveTotalCountsAKindTheFilterLeavesOut(t *testing.T) {
+	f := newTranscriptFixture(t)
+	f.drain(t)
+	reading := &readingFixture{env: f.env}
+
+	feed := reading.feedOf(t, f.env.AdminUser, "morning_brief", "document_extract", "site_read")
+	if len(feed.Live) != 0 {
+		t.Fatalf("live = %d occurrences, want none: the filter names no transcript kind", len(feed.Live))
+	}
+	if feed.LiveTotal != 1 {
+		t.Fatalf("live total = %d, want the one transcript reading the filter left out", feed.LiveTotal)
+	}
+}
+
+// Filtered to the kind that is live, the count and the list agree.
+func TestTheLiveTotalMatchesTheListWhenTheFilterAdmitsEverything(t *testing.T) {
+	f := newReadingFixture(t)
+	f.drain(t)
+
+	feed := f.feedOf(t, f.env.AdminUser, "document_extract")
+	if len(feed.Live) != 1 || feed.LiveTotal != 1 {
+		t.Fatalf("live/total = %d/%d, want 1/1", len(feed.Live), feed.LiveTotal)
+	}
+}
+
+// The bound caps what ships, never what is counted: twenty-six live readings
+// list twenty-five and count twenty-six.
+func TestTheLiveTotalIsNotCappedByTheLiveBound(t *testing.T) {
+	f := newReadingFixture(t)
+	for i := range 25 {
+		att := uploadDealAttachment(f.ctx, t, f.handlers, f.deal,
+			fmt.Sprintf("queued-%02d.pdf", i), []byte(fmt.Sprintf("bytes %02d", i)))
+		if _, _, err := f.store.StartExtractionReadQueued(f.ctx, ids.UUID(att.Id),
+			"human:"+f.env.AdminUser.String(), nil); err != nil {
+			t.Fatalf("queueing reading %d: %v", i, err)
+		}
+	}
+	f.drainEvery(t)
+
+	feed := f.feed(t, f.env.AdminUser)
+	if len(feed.Live) != 25 {
+		t.Fatalf("live = %d occurrences, want the bound of 25", len(feed.Live))
+	}
+	if feed.LiveTotal != 26 {
+		t.Fatalf("live total = %d, want all 26 live readings", feed.LiveTotal)
 	}
 }
