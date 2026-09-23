@@ -60,7 +60,7 @@ preset binds a model there and no paid run has measured it yet.
 | [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml) | `cloud_frontier` | 11 | 2 | 15 | 1 | 0 |
 | [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml) | `eu_hosted` | 14 | 3 | 12 | 0 | 0 |
 | [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml) | `eu_hosted` | 4 | 5 | 14 | 6 | 0 |
-| [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml) | `eu_hosted` | 9 | 1 | 18 | 1 | 0 |
+| [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml) | `eu_hosted` | 5 | 0 | 6 | 18 | 0 |
 
 Unbound counts tasks whose whole ladder this preset leaves empty — the router
 has nothing to call, so the feature is off rather than degraded.
@@ -193,41 +193,41 @@ has nothing to call, so the feature is off rather than degraded.
 | Tier | Provider | Model |
 |---|---|---|
 | `local_small` | `openai_compatible` | `mistralai/ministral-8b-2512` |
-| `cheap_cloud` | `openai_compatible` | `mistralai/ministral-14b-2512` |
+| `cheap_cloud` | `openai_compatible` | `mistralai/mistral-small-2603` |
 | `premium` | `openai_compatible` | `mistralai/mistral-small-2603` |
 | `frontier` | `openai_compatible` | `mistralai/mistral-small-2603` |
 
 | Task | Served on | Model | Band | State |
 |---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `certified` | `current` |
-| `agent_loop` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
+| `account_scan` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
+| `agent_loop` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
 | `brief_ranking` | `premium` | `mistralai/mistral-small-2603` | `certified` | `current` |
 | `capture_classify` | `local_small` | `mistralai/ministral-8b-2512` | `not_supported` | `current` |
 | `capture_confidentiality_verdict` | `local_small` | `mistralai/ministral-8b-2512` | `not_supported` | `current` |
 | `capture_counterparty_verdict` | `local_small` | `mistralai/ministral-8b-2512` | `not_supported` | `current` |
 | `cert_judge` | `premium` | `mistralai/mistral-small-2603` | `certified` | `current` |
-| `cold_start` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
+| `cold_start` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
 | `corpus_ask` | `premium` | `mistralai/mistral-small-2603` | `not_supported` | `current` |
-| `deal_health` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `supported_degraded` | `current` |
+| `deal_health` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
 | `document_extract` | `premium` | `mistralai/mistral-small-2603` | `untested` | - |
-| `draft_reply` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
+| `draft_reply` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
 | `enrich` | `local_small` | `mistralai/ministral-8b-2512` | `certified` | `current` |
-| `growth_fit` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
-| `offer_draft` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
+| `growth_fit` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
+| `offer_draft` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
 | `owed_verdict` | `local_small` | `mistralai/ministral-8b-2512` | `not_supported` | `current` |
-| `propose_roles` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `certified` | `current` |
+| `propose_roles` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
 | `rate_extract` | `premium` | `mistralai/mistral-small-2603` | `certified` | `current` |
 | `request_settlement` | `local_small` | `mistralai/ministral-8b-2512` | `certified` | `current` |
-| `signal_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
+| `signal_extract` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
 | `site_extract` | `premium` | `mistralai/mistral-small-2603` | `not_supported` | `current` |
-| `site_fact_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
-| `site_triage` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `certified` | `current` |
-| `stage_evidence_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
-| `summarize` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
-| `transcript_propose` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `certified` | `current` |
-| `voice_build` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
-| `weekly_learnings` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
-| `weekly_review` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
+| `site_fact_extract` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
+| `site_triage` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
+| `stage_evidence_extract` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
+| `summarize` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
+| `transcript_propose` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
+| `voice_build` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
+| `weekly_learnings` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
+| `weekly_review` | `cheap_cloud` | `mistralai/mistral-small-2603` | `untested` | - |
 
 ## How to read this page
 

@@ -24,9 +24,10 @@ carries its own copy — that file is the dev posture and has to stand alone.
 weights that host serves, which is a different question from
 `openrouter_cloud.yaml`'s "best model per tier". Two consequences a reader
 should meet before the file: `mistral-medium-3-5` has no EU endpoint, so
-`frontier` and `premium` both land on `mistral-small-2603`; and the embeddings
-lane cannot carry the pin at all, because `routing:` is not a field on an
-embeddings binding. Both are stated in the file.
+`cheap_cloud`, `premium` and `frontier` all land on `mistral-small-2603`,
+leaving `local_small` the only other rung; and the embeddings lane cannot carry
+the pin at all, because `routing:` is not a field on an embeddings binding.
+Both are stated in the file.
 
 `openrouter_cloud.yaml` cannot serve `document_extract`: that task sends a PDF,
 and the OpenAI-compatible wire's declarable carriage is text and image only. A

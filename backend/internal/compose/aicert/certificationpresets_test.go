@@ -26,6 +26,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -177,19 +178,14 @@ func countPresetTask(preset *aiCertPreset, row aiCertPresetTask) {
 		preset.Unbound++
 	case row.Band == "":
 		preset.Untested++
-	case row.Band == aicertBandCertified:
+	case row.Band == aicert.VerdictCertified:
 		preset.Bands.Certified++
-	case row.Band == aicertBandDegraded:
+	case row.Band == aicert.VerdictSupportedDegraded:
 		preset.Bands.SupportedDegraded++
 	default:
 		preset.Bands.NotSupported++
 	}
 }
-
-const (
-	aicertBandCertified = "certified"
-	aicertBandDegraded  = "supported_degraded"
-)
 
 // aiCertBandsByTaskBinding folds the document's per-site records down to one
 // verdict per (task, binding). A record is written per task and repeated on
@@ -202,26 +198,13 @@ func aiCertBandsByTaskBinding(doc aiCertDoc) map[string]aiCertPresetTask {
 		for _, rec := range site.Records {
 			key := site.Task + "\x00" + rec.Binding.label()
 			seen, found := worst[key]
-			if found && aiCertBandRank(seen.Band) <= aiCertBandRank(rec.Band) {
+			if found && bandRank(seen.Band) <= bandRank(rec.Band) {
 				continue
 			}
 			worst[key] = aiCertPresetTask{Band: rec.Band, State: rec.State}
 		}
 	}
 	return worst
-}
-
-// aiCertBandRank orders the bands worst-first, so "keep the lowest" is one
-// comparison rather than a switch at each call site.
-func aiCertBandRank(band string) int {
-	switch band {
-	case aicertBandCertified:
-		return 2
-	case aicertBandDegraded:
-		return 1
-	default:
-		return 0
-	}
 }
 
 func aiCertTasksOf(doc aiCertDoc) []string {

@@ -7,37 +7,34 @@ import (
 	"fmt"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
-// presetShell is the deploy-config envelope a preset under config/presets/ is
-// written in. Only the routing block is of interest, so the rest of the
-// envelope is read and dropped rather than modelled.
-type presetShell struct {
-	Seeds struct {
-		AIRouting yaml.Node `yaml:"ai_routing"`
-	} `yaml:"seeds"`
-}
-
-// ParsePreset decodes a preset file's bytes the way an operator who pasted its
-// `seeds.ai_routing` block into their own config would have it decoded.
+// ParsePreset decodes a preset file's bytes the way bootstrap decodes the same
+// block out of a deployment's own config: through deployconfig's unwrapper,
+// which resolves YAML aliases before re-encoding the subtree, and then through
+// this package's routing parser.
 //
-// A preset is a whole deploy config on disk and a RoutingConfig once parsed, so
-// something has to unwrap the envelope. Exported because two readers need the
-// same answer — the gate that holds every preset parseable, and the
-// certification page that reports what each preset binds — and a preset that
-// unwrapped differently for one of them would let the page describe bindings
-// the product would refuse.
+// Both steps are shared rather than re-spelled. A preset exists to be copied,
+// so a reader that unwrapped differently from the boot path could call a file
+// unparseable that an operator's deployment starts on — and a preset the gate
+// refuses while production accepts it is worse than no preset.
 func ParsePreset(raw []byte) (RoutingConfig, error) {
-	var shell presetShell
+	var shell struct {
+		Seeds struct {
+			AIRouting yaml.Node `yaml:"ai_routing"`
+		} `yaml:"seeds"`
+	}
 	if err := yaml.Unmarshal(raw, &shell); err != nil {
 		return RoutingConfig{}, fmt.Errorf("ai: preset: not a deploy config: %w", err)
 	}
 	if shell.Seeds.AIRouting.IsZero() {
 		return RoutingConfig{}, fmt.Errorf("ai: preset: carries no seeds.ai_routing — a preset with no binding binds nothing")
 	}
-	inner, err := yaml.Marshal(&shell.Seeds.AIRouting)
+	inner, err := deployconfig.SeedSubtreeBytes(shell.Seeds.AIRouting)
 	if err != nil {
-		return RoutingConfig{}, fmt.Errorf("ai: preset: re-encoding the routing block: %w", err)
+		return RoutingConfig{}, fmt.Errorf("ai: preset: %w", err)
 	}
 	return ParseRouting(inner)
 }

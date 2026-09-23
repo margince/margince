@@ -1090,7 +1090,7 @@
         {
           "tier": "cheap_cloud",
           "provider": "openai_compatible",
-          "model": "mistralai/ministral-14b-2512"
+          "model": "mistralai/mistral-small-2603"
         },
         {
           "tier": "premium",
@@ -1109,22 +1109,22 @@
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "certified",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "agent_loop",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "brief_ranking",
@@ -1186,11 +1186,11 @@
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "corpus_ask",
@@ -1208,11 +1208,11 @@
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "supported_degraded",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "document_extract",
@@ -1230,11 +1230,11 @@
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "enrich",
@@ -1252,22 +1252,22 @@
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "offer_draft",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "owed_verdict",
@@ -1285,11 +1285,11 @@
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "certified",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "rate_extract",
@@ -1318,11 +1318,11 @@
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "site_extract",
@@ -1340,96 +1340,96 @@
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "site_triage",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "certified",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "stage_evidence_extract",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "summarize",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "transcript_propose",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "certified",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "voice_build",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "weekly_learnings",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         },
         {
           "task": "weekly_review",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "current"
+          "band": "",
+          "state": ""
         }
       ],
       "bands": {
-        "certified": 9,
-        "supported_degraded": 1,
-        "not_supported": 18
+        "certified": 5,
+        "supported_degraded": 0,
+        "not_supported": 6
       },
-      "untested": 1,
+      "untested": 18,
       "unbound": 0
     }
   ],

@@ -434,16 +434,9 @@ func routingSeedFrom(declared yaml.Node) (ai.RoutingConfig, bool, error) {
 	if declared.IsZero() {
 		return ai.RoutingConfig{}, false, nil
 	}
-	// Aliases are resolved before re-encoding. A deployment may define
-	// `&defaults` elsewhere in margince.yaml and reference it here, which is
-	// ordinary YAML — but marshalling the subtree alone emits the alias with no
-	// anchor in scope, and the re-parse dies with "unknown anchor 'd'
-	// referenced": an internal parser detail handed to an operator whose file
-	// is valid. Resolving covers both idioms, a plain `*ref` and a `<<:` merge.
-	resolveAliases(&declared)
-	raw, err := yaml.Marshal(&declared)
+	raw, err := deployconfig.SeedSubtreeBytes(declared)
 	if err != nil {
-		return ai.RoutingConfig{}, false, fmt.Errorf("compose: re-encoding seeds.ai_routing: %w", err)
+		return ai.RoutingConfig{}, false, fmt.Errorf("compose: seeds.ai_routing: %w", err)
 	}
 	cfg, err := ai.ParseRouting(raw)
 	if err != nil {
@@ -467,28 +460,4 @@ func seedBookingPage(ctx context.Context, tx pgx.Tx) error {
 	}
 	_, err := activities.SeedBookingPageTx(ctx, tx, adminID)
 	return err
-}
-
-// resolveAliases replaces every alias in a node tree with a copy of what it
-// points at, so a subtree can be re-encoded on its own.
-//
-// Anchors are cleared as it goes: an anchor left on a node the subtree no
-// longer shares would be re-emitted as a definition nothing references, which
-// is noise in an error message and a diff.
-func resolveAliases(n *yaml.Node) {
-	if n == nil {
-		return
-	}
-	if n.Kind == yaml.AliasNode && n.Alias != nil {
-		// A copy, because the target may be shared with the rest of the
-		// document and resolving in place would rewrite what the other
-		// references see.
-		target := *n.Alias
-		resolveAliases(&target)
-		*n = target
-	}
-	n.Anchor = ""
-	for _, child := range n.Content {
-		resolveAliases(child)
-	}
 }
