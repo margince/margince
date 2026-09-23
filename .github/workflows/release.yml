@@ -231,7 +231,7 @@ jobs:
       # The docker-container driver: with the default docker driver the bake
       # metadata file carries no pushed-manifest digest, and the digest is
       # exactly what the release records.
-      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0
       # The runner is ephemeral, so every bake would otherwise start cold. Two
       # caches bridge the runs, and they cover different things:
       #   - CACHE=gha (docker-bake.hcl) exports the LAYER cache — its one
