@@ -16,7 +16,7 @@ package main
 //
 // IT OPENS NO DATABASE, which is why it can sit beside aitask.go without
 // costing that file its claim. The corpus is the embedded handbook, the chunker
-// is knowledge.ChunkText, and the ranking is knowledge.RankInMemory — a
+// is the production chunker, and the ranking is the module's own mirror — a
 // DECLARED MIRROR of the SQL in Store.Retrieve, held by an integration-lane
 // gate that runs both over one ingested corpus. askmirror.go carries the whole
 // argument; the short version is that a DB-free eval loop was worth a second
@@ -37,13 +37,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/platform/cliflags"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
-	"github.com/margince/margince/backend/internal/platform/vectorkit"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // previewWidth is how much of a passage the table shows: wide enough to
@@ -75,7 +71,7 @@ func aiTaskRetrieveFlagSet() (*flag.FlagSet, *aiTaskRetrieveFlags, *cliflags.Env
 	fs.StringVar(&cfg.question, "q", "", "short form of --question")
 	fs.StringVar(&cfg.page, "page", "", "restrict the corpus to one handbook page (e.g. records.md); empty ranks the whole handbook")
 	fs.StringVar(&cfg.modelSpec, "model", "", "embedding model, provider:model (e.g. mistral:mistral-embed)")
-	fs.Float64Var(&cfg.floor, "floor", knowledge.DefaultMinSimilarity,
+	fs.Float64Var(&cfg.floor, "floor", compose.CorpusProbeFloor,
 		"the grounding floor a passage must reach to be citable; a corpus row carries its own, this is the shipped default")
 	env.String(fs, &cfg.workDir, "work-dir", "MARGINCE_AITASK_DIR", workDirDefault,
 		"gitignored directory the captured fixture and the vector cache live in")
@@ -127,51 +123,20 @@ func runAITaskRetrieve(ctx context.Context, args []string, stdout io.Writer) err
 	if _, err := httpserver.InstallProcessLogger(stdout, cfg.logLevel, cfg.logFormat); err != nil {
 		return err
 	}
-	embedder, banner, err := compose.TaskProbeEmbedder(cfg.modelSpec)
+	result, err := compose.ProbeCorpusRetrieval(ctx, compose.CorpusProbe{
+		ModelSpec: cfg.modelSpec, Question: cfg.question,
+		Page: cfg.page, WorkDir: cfg.workDir, Floor: cfg.floor,
+	})
 	if err != nil {
 		return fmt.Errorf("aitask retrieve: %w", err)
 	}
-	// The embed lane meters every call against a workspace and refuses one
-	// raised outside a workspace context. This probe belongs to no workspace, so
-	// it mints an id per invocation rather than borrowing a real one: an id that
-	// matched a customer's would file this run's spend under their budget. The
-	// run verb mints one for the chat lane for the same reason.
-	ctx = principal.WithWorkspaceID(ctx, ids.NewV7())
-	identity, dims := embedder.EmbedIdentity()
-	if _, err := fmt.Fprintf(stdout, "%s → %s\n", banner, identity); err != nil {
+	if _, err := fmt.Fprintf(stdout, "%s → %s\n", result.Banner, result.EmbedIdentity); err != nil {
 		return err
 	}
-	chunks, err := handbookChunks(cfg.page)
-	if err != nil {
+	if err := writeRetrieval(stdout, cfg, result); err != nil {
 		return err
 	}
-	embedded, err := embedChunks(ctx, chunks, embedder, newVectorCache(cfg.workDir, identity), dims)
-	if err != nil {
-		return err
-	}
-	question, err := embedQuestion(ctx, cfg.question, embedder, dims)
-	if err != nil {
-		return err
-	}
-	passages := knowledge.RankInMemory(question, embedded, cfg.floor)
-	if err := writeRetrieval(stdout, cfg, len(embedded), passages); err != nil {
-		return err
-	}
-	return emitRetrievedFixture(stdout, cfg, passages)
-}
-
-// embedQuestion embeds the question the way knowledge.questionVector does,
-// including refusing a zero vector: every cosine against it is NaN, and a
-// ranking sorted on NaN puts arbitrary passages at the top of an answer.
-func embedQuestion(ctx context.Context, question string, embedder vectorkit.Embedder, dims int) ([]float32, error) {
-	vectors, err := embedInputs(ctx, embedder, []string{strings.TrimSpace(question)}, dims)
-	if err != nil {
-		return nil, fmt.Errorf("aitask retrieve: embedding the question: %w", err)
-	}
-	if vectorkit.IsZero(vectors[0]) {
-		return nil, errors.New("aitask retrieve: the embed lane returned a zero vector for this question, so nothing can be ranked")
-	}
-	return vectors[0], nil
+	return emitRetrievedFixture(stdout, cfg, result)
 }
 
 // writeRetrieval reports what would have reached the model: the status a screen
@@ -181,7 +146,8 @@ func embedQuestion(ctx context.Context, question string, embedder vectorkit.Embe
 // different question from the table's. The table says what was retrieved; the
 // status says how much corpus it was retrieved from, and an empty table means
 // opposite things at ten embedded passages and at four hundred.
-func writeRetrieval(w io.Writer, cfg aiTaskRetrieveFlags, embedded int, passages []knowledge.Passage) error {
+func writeRetrieval(w io.Writer, cfg aiTaskRetrieveFlags, result compose.CorpusProbeResult) error {
+	passages := result.Passages
 	scope := "the whole handbook"
 	if cfg.page != "" {
 		scope = cfg.page
@@ -192,7 +158,7 @@ func writeRetrieval(w io.Writer, cfg aiTaskRetrieveFlags, embedded int, passages
 	}
 	if _, err := fmt.Fprintf(w,
 		"\ncorpus    %s, %d embedded passage(s)\nquestion  %s\nfloor     %.3f (the closest %d are ranked, then the floor is applied)\noutcome   %s\n\n",
-		scope, embedded, cfg.question, cfg.floor, knowledge.RetrieveLimit, outcome); err != nil {
+		scope, result.Embedded, cfg.question, cfg.floor, compose.CorpusProbeLimit, outcome); err != nil {
 		return err
 	}
 	if len(passages) == 0 {
@@ -227,24 +193,20 @@ func passagePreview(text string) string {
 // An empty ranking writes nothing and says why: production never asks the lane
 // without passages, so there is no run to hand this to. That is a real finding
 // about the question — it is simply not something `run` can be pointed at.
-func emitRetrievedFixture(w io.Writer, cfg aiTaskRetrieveFlags, passages []knowledge.Passage) error {
-	if len(passages) == 0 {
+func emitRetrievedFixture(w io.Writer, cfg aiTaskRetrieveFlags, result compose.CorpusProbeResult) error {
+	if len(result.Fixture) == 0 {
 		_, err := fmt.Fprintln(w,
 			"Nothing cleared the floor, so there is no fixture to write — production would not ask the lane at all. The outcome above is the finding.")
 		return err
-	}
-	fixture, err := compose.CorpusAskFixtureFrom(cfg.question, passages)
-	if err != nil {
-		return fmt.Errorf("aitask retrieve: %w", err)
 	}
 	path := artifactOutOr(cfg.outPath, cfg.workDir, retrieveArtifactName(cfg.question))
 	if _, err := fmt.Fprintln(w); err != nil {
 		return err
 	}
-	if err := emitArtifact(w, path, fixture, "captured the retrieval as a corpus_ask fixture"); err != nil {
+	if err := emitArtifact(w, path, result.Fixture, "captured the retrieval as a corpus_ask fixture"); err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(w, retrieveFollowUp, path)
+	_, err := fmt.Fprintf(w, retrieveFollowUp, path)
 	return err
 }
 
