@@ -44,11 +44,13 @@ const namespaces = [
   { prefix: "transcript-", home: "screens/transcriptread.css" },
 ];
 
+const homeSheet = (home: string) => `src/${home}`;
+
 describe("a screen's class namespace", () => {
   it("is walked from a corpus that holds every namespace's home sheet", () => {
     const paths = sheets.map(({ path }) => path);
     for (const { home } of namespaces) {
-      expect(paths, home).toContain(`src/${home}`);
+      expect(paths, home).toContain(homeSheet(home));
     }
   });
 
@@ -59,7 +61,7 @@ describe("a screen's class namespace", () => {
       // which is exactly how the two onboarding sheets cite this surface.
       const declarations = withoutComments(readFileSync(file, "utf8"));
       for (const { prefix, home } of namespaces) {
-        if (path.endsWith(home)) {
+        if (path === homeSheet(home)) {
           continue;
         }
         for (const [selector] of declarations.matchAll(
