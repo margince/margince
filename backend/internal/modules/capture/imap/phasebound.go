@@ -16,24 +16,6 @@ import (
 	"time"
 )
 
-// withPhaseBound overrides how long a select+fetch phase may run before the
-// connection is closed under it. The seam exists so the bound can be asked
-// about in a test without one waiting out the shipped ninety seconds.
-func (c *Connector) withPhaseBound(d time.Duration) *Connector {
-	c.phaseBound = d
-	return c
-}
-
-// phaseBoundOr is the configured bound, or the shipped one. Read through a
-// method so a Connector built any other way still carries a bound: a zero
-// duration here would fire the abort immediately and fail every pull.
-func (c *Connector) phaseBoundOr() time.Duration {
-	if c.phaseBound > 0 {
-		return c.phaseBound
-	}
-	return pullDeadline
-}
-
 // withPhaseTimer overrides how the abort is scheduled, so a test can fire it at
 // a chosen moment instead of waiting on a clock.
 func (c *Connector) withPhaseTimer(schedule phaseTimer) *Connector {
@@ -42,9 +24,9 @@ func (c *Connector) withPhaseTimer(schedule phaseTimer) *Connector {
 }
 
 // phaseTimerOr is the injected scheduler, or the real clock. Read through a
-// method for the same reason phaseBoundOr is: a Connector built any other way
-// must still arm the abort, and a nil here would leave the phase unbounded —
-// the exact defect this file exists to close.
+// method rather than off the field so a Connector built any other way still
+// ARMS the abort: a nil here would leave the phase unbounded, which is the
+// exact defect this file exists to close.
 func (c *Connector) phaseTimerOr() phaseTimer {
 	if c.schedulePhase != nil {
 		return c.schedulePhase

@@ -221,7 +221,7 @@ func (c *Connector) syncStanding(ctx context.Context, auth connector.Auth, curso
 	// its own 30s keeps this pull, and the worker running it, for as long as
 	// it likes. A standing connector is one registry singleton serving every
 	// mailbox.
-	defer abortAfter(netConn, c.phaseBoundOr(), c.phaseTimerOr())()
+	defer abortAfter(netConn, pullDeadline, c.phaseTimerOr())()
 
 	selData, err := client.Select(creds.Mailbox, &imapv2.SelectOptions{ReadOnly: true}).Wait()
 	if err != nil {

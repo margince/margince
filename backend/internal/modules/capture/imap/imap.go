@@ -111,11 +111,6 @@ type Connector struct {
 	// dropped with the rest of the delivery-system mail.
 	bounces connector.BounceSink
 
-	// phaseBound is how long a select+fetch phase may run before the
-	// connection is closed under it. Zero is the shipped pullDeadline; it is
-	// overridable so the bound can be asked about without a test waiting out
-	// ninety seconds.
-	phaseBound time.Duration
 	// schedulePhase is how the abort above is armed; nil is the real clock.
 	// Injectable so a test fires it at a chosen point in the phase rather than
 	// racing one.
