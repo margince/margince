@@ -34,7 +34,7 @@ func TestLimitingAnActivityWithholdsItsContentFromEveryoneButItsAudience(t *test
 
 	subject, body := "Q3 renewal terms", "confidential pricing"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("outbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -82,7 +82,7 @@ func TestLimitingAnActivityWithholdsItsContentFromEveryoneButItsAudience(t *test
 	if after.Direction == nil || after.OccurredAt.IsZero() {
 		t.Errorf("the withheld row lost its safe markers: %+v", after)
 	}
-	page, _, err := e.Activities.ListActivities(colleague, activities.ListActivitiesInput{EntityType: strPtr("contact"), EntityID: &contact})
+	page, _, err := e.Activities.ListActivities(colleague, activities.ListActivitiesInput{EntityType: StrPtr("contact"), EntityID: &contact})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestTheContactPageWithholdsALimitedMessagesReasonFromAColleague(t *testing.
 
 	subject, body := "Aufhebungsvertrag draft", "terms nobody else is owed"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("outbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {

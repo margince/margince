@@ -86,7 +86,7 @@ func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
 	// change reads as one field entry. Removing "advance_phase" from
 	// privacy's fieldHistoryProjectedActions leaves this page empty.
 	fields, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "project", EntityID: p.ID.UUID, Field: strPtr("phase"),
+		EntityType: "project", EntityID: p.ID.UUID, Field: StrPtr("phase"),
 	})
 	if err != nil {
 		t.Fatalf("field history of a project: %v", err)

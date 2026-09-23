@@ -41,7 +41,7 @@ func TestASelfWrittenTaskIsStoredAgainstItsAuthor(t *testing.T) {
 	contact := e.SeedContact(t, "A Contact", &e.Rep1)
 
 	task, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
-		Kind: "task", Subject: strPtr("Call them back"), Source: "manual",
+		Kind: "task", Subject: StrPtr("Call them back"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -66,7 +66,7 @@ func TestANoteIsStoredWithNoAssignee(t *testing.T) {
 	contact := e.SeedContact(t, "A Contact", &e.Rep1)
 
 	note, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
-		Kind: "note", Subject: strPtr("They mentioned a rollout"), Source: "manual",
+		Kind: "note", Subject: StrPtr("They mentioned a rollout"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {

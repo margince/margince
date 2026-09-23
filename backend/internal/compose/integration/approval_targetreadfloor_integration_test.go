@@ -71,7 +71,7 @@ func TestAStagedTagArchiveNeedsTagReadAndNotOnlyTagDelete(t *testing.T) {
 	// The floor narrows the surface; it does not strand the row. A seat holding
 	// both grants sees the staging and decides it.
 	decider := e.As(e.Rep3, []ids.UUID{e.Team2}, tagPerms(principal.ObjectGrant{Read: true, Delete: true}))
-	pending, _, err := svc.List(decider, approvals.ListInput{Status: strPtr("pending"), Limit: 50})
+	pending, _, err := svc.List(decider, approvals.ListInput{Status: StrPtr("pending"), Limit: 50})
 	if err != nil {
 		t.Fatalf("decider list: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestAStagedTagArchiveNeedsTagReadAndNotOnlyTagDelete(t *testing.T) {
 	if _, err := svc.Get(decider, approvalID); err != nil {
 		t.Errorf("decider Get → %v, want ok", err)
 	}
-	if _, err := svc.Decide(decider, approvalID, false, strPtr("keeping it")); err != nil {
+	if _, err := svc.Decide(decider, approvalID, false, StrPtr("keeping it")); err != nil {
 		t.Errorf("decider reject → %v, want ok — seeing it and deciding it are one predicate", err)
 	}
 }

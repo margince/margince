@@ -38,7 +38,7 @@ func TestCompanyCounts_ListAndSingleReadAgreeWithTheEdges(t *testing.T) {
 		companyID := ids.From[ids.CompanyKind](company)
 		if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
 			Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
-			IsCurrentPrimary: boolPtr(ended == nil), EndedAt: ended, Source: "manual",
+			IsCurrentPrimary: BoolPtr(ended == nil), EndedAt: ended, Source: "manual",
 		}); err != nil {
 			t.Fatalf("seeding the employment edge: %v", err)
 		}
@@ -54,7 +54,7 @@ func TestCompanyCounts_ListAndSingleReadAgreeWithTheEdges(t *testing.T) {
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	for _, name := range []string{"D1", "D2", "D3"} {
 		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: name, AmountMinor: int64Ptr(1000), Currency: strPtr("EUR"),
+			Name: name, AmountMinor: Int64Ptr(1000), Currency: StrPtr("EUR"),
 			PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(acme)), Source: "manual",
 		}); err != nil {
 			t.Fatal(err)
@@ -97,7 +97,7 @@ func TestCompanyCounts_UngatedRoleSeesContactsButNoDealCount(t *testing.T) {
 	pID := ids.From[ids.ContactKind](staff)
 	oID := ids.From[ids.CompanyKind](acme)
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
-		Kind: "employment", ContactID: &pID, CompanyID: &oID, IsCurrentPrimary: boolPtr(true), Source: "manual",
+		Kind: "employment", ContactID: &pID, CompanyID: &oID, IsCurrentPrimary: BoolPtr(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func TestCompanyCounts_FollowTheCallersRowScope(t *testing.T) {
 		companyID := ids.From[ids.CompanyKind](acme)
 		if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
 			Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
-			IsCurrentPrimary: boolPtr(true), Source: "manual",
+			IsCurrentPrimary: BoolPtr(true), Source: "manual",
 		}); err != nil {
 			t.Fatalf("seeding the employment edge: %v", err)
 		}
@@ -186,7 +186,7 @@ func TestCompanyCounts_FollowTheCallersRowScope(t *testing.T) {
 	for _, owner := range []ids.UUID{e.Rep1, e.Rep3} {
 		ownerID := ids.From[ids.UserKind](owner)
 		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: "Deal of " + owner.String(), AmountMinor: int64Ptr(1000), Currency: strPtr("EUR"),
+			Name: "Deal of " + owner.String(), AmountMinor: Int64Ptr(1000), Currency: StrPtr("EUR"),
 			PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(acme)),
 			OwnerID: &ownerID, Source: "manual",
 		}); err != nil {

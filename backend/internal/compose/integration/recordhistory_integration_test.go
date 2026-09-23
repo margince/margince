@@ -365,7 +365,7 @@ func TestRecordHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 	leadID := seedLead(t, e, "Selma Subject", twinEmail, nil)
 
 	activity, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Subject: strPtr("Call with Selma"), Source: "manual",
+		Kind: "note", Subject: StrPtr("Call with Selma"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
 	})
 	if err != nil {

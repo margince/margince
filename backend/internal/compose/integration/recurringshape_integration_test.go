@@ -194,7 +194,7 @@ func TestAProductCanGoBackToSayingNothingAboutRepeating(t *testing.T) {
 	months := 3
 	created, err := e.Deals.CreateProduct(admin, deals.CreateProductInput{
 		Name: "Quarterly support", UnitPriceMinor: 300_000, Currency: "EUR", Source: "manual",
-		BillingModel: strPtr(deals.BillingRecurring), BillingIntervalMonths: &months,
+		BillingModel: StrPtr(deals.BillingRecurring), BillingIntervalMonths: &months,
 	})
 	if err != nil {
 		t.Fatalf("create a classified product: %v", err)

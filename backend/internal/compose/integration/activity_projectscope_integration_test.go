@@ -135,13 +135,13 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	}
 
 	mail := func(subject string, within *ids.ProjectID, occurredAt time.Time, others ...ids.UUID) string {
-		return log(activities.LogActivityInput{Kind: "email", Direction: strPtr("inbound")}, subject, within, occurredAt, others...)
+		return log(activities.LogActivityInput{Kind: "email", Direction: StrPtr("inbound")}, subject, within, occurredAt, others...)
 	}
 	task := func(subject string, within *ids.ProjectID) string {
 		return log(activities.LogActivityInput{Kind: "task"}, subject, within, roomFixedNow.AddDate(0, 0, -1))
 	}
 	meeting := func(subject string, within *ids.ProjectID, startsAt time.Time) string {
-		return log(activities.LogActivityInput{Kind: "meeting", MeetingStatus: strPtr("booked")}, subject, within, startsAt)
+		return log(activities.LogActivityInput{Kind: "meeting", MeetingStatus: StrPtr("booked")}, subject, within, startsAt)
 	}
 	otherAt := roomFixedNow.AddDate(0, 0, -1)
 	return scopeFixture{
@@ -317,7 +317,7 @@ func TestAScopedAccountPageDerivesItsHealthFromOneEngagement(t *testing.T) {
 	held := func(subject string, within ids.ProjectID, daysAgo int) time.Time {
 		at := roomFixedNow.AddDate(0, 0, -daysAgo)
 		logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-			Kind: "meeting", MeetingStatus: strPtr("booked"), Subject: &subject, OccurredAt: &at,
+			Kind: "meeting", MeetingStatus: StrPtr("booked"), Subject: &subject, OccurredAt: &at,
 			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: f.contact}},
 		})
 		if err != nil {
@@ -433,7 +433,7 @@ func TestAScopedAccountPageChasesOnlyTheEngagementItShows(t *testing.T) {
 	unanswered := func(subject string, within ids.ProjectID, daysAgo int) string {
 		at := roomFixedNow.AddDate(0, 0, -daysAgo)
 		logged, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
-			Kind: "email", Direction: strPtr("outbound"), Subject: &subject, OccurredAt: &at,
+			Kind: "email", Direction: StrPtr("outbound"), Subject: &subject, OccurredAt: &at,
 			Links: []activities.ActivityLinkInput{
 				{EntityType: "contact", EntityID: contact},
 				{EntityType: "company", EntityID: company},

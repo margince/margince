@@ -543,7 +543,7 @@ func TestTheDeliveryTransitionRecordsWhatActuallyAuthorizedIt(t *testing.T) {
 	// And a human-driven advance, which DID check project.update, carries no
 	// such evidence — the marker means something only if it is not on every row.
 	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), f.project, projects.AdvanceProjectPhaseInput{
-		ToPhase: projects.PhaseClosed, Reason: strPtr("Delivered."),
+		ToPhase: projects.PhaseClosed, Reason: StrPtr("Delivered."),
 	}); err != nil {
 		t.Fatal(err)
 	}

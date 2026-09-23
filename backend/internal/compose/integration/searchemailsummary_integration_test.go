@@ -51,7 +51,7 @@ func TestAnEmailSearchHitCarriesTheCanonicalRow(t *testing.T) {
 
 	subject, body := "Rennsteig renewal terms", "The quote is attached, and it holds until Friday."
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -109,7 +109,7 @@ func TestAWithheldEmailProducesNoSearchHit(t *testing.T) {
 
 	subject, body := "Rennsteig severance package", "the agreed figure is confidential"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("outbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -217,7 +217,7 @@ func TestEveryEmailOnAFullPageCarriesItsRow(t *testing.T) {
 		subject := "Rennsteig thread message"
 		body := "line one of message"
 		if _, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-			Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
+			Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("inbound"),
 			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 		}); err != nil {
 			t.Fatalf("log %d: %v", i, err)
@@ -255,7 +255,7 @@ func TestTheEmailSummaryBatchRefusesAWithheldRowOnItsOwn(t *testing.T) {
 
 	subject, body := "Severance figures", "the agreed figure is confidential"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("outbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {

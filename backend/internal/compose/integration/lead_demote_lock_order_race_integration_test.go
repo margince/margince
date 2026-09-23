@@ -155,7 +155,7 @@ func promotedPair(t *testing.T, e *Env, name, email string) (ids.LeadID, ids.Con
 	t.Helper()
 	lead := seedLead(t, e, name, email, &e.Rep1)
 	contact, merged, err := e.Contacts.PromoteLead(e.Admin(), lead, contacts.PromoteLeadInput{
-		Trigger: "inbound_reply", EvidenceNote: strPtr("replied to outreach"),
+		Trigger: "inbound_reply", EvidenceNote: StrPtr("replied to outreach"),
 	})
 	if err != nil {
 		t.Fatalf("promoting %s so there is a contact to contend over: %v", name, err)

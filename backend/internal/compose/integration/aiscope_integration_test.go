@@ -188,7 +188,7 @@ func TestMeetingBriefTakesARequestedProjectForAnUnattributedMeeting(t *testing.T
 	logMeeting := func(subject string, status string, at time.Time, within *ids.ProjectID) ids.UUID {
 		t.Helper()
 		logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-			Kind: "meeting", MeetingStatus: strPtr(status), Subject: &subject, OccurredAt: &at,
+			Kind: "meeting", MeetingStatus: StrPtr(status), Subject: &subject, OccurredAt: &at,
 			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: f.contact}},
 		})
 		if err != nil {

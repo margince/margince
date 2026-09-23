@@ -341,7 +341,7 @@ func TestCreateLeadTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
 		created, fresh, err = f.contacts.CreateLeadTx(f.ctx, tx, contacts.CreateLeadInput{
-			FullName: strPtr("Jean Bartik"), Email: &email, Status: "new", Source: "ui",
+			FullName: StrPtr("Jean Bartik"), Email: &email, Status: "new", Source: "ui",
 		})
 		return err
 	}); err != nil {
@@ -354,7 +354,7 @@ func TestCreateLeadTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		other := "betty@holberton.test"
 		_, _, err := f.contacts.CreateLeadTx(f.ctx, tx, contacts.CreateLeadInput{
-			FullName: strPtr("Betty Holberton"), Email: &other, Status: "new", Source: "ui",
+			FullName: StrPtr("Betty Holberton"), Email: &other, Status: "new", Source: "ui",
 			CustomFields: map[string]any{col: "enterprise"},
 		})
 		return err

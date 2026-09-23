@@ -45,7 +45,7 @@ func TestPromoteCreatesAContactCarryingProvenance(t *testing.T) {
 	admin := e.Admin()
 
 	contact, merged, err := e.Contacts.PromoteLead(admin, leadID, contacts.PromoteLeadInput{
-		Trigger: "inbound_reply", EvidenceNote: strPtr("replied to outreach"),
+		Trigger: "inbound_reply", EvidenceNote: StrPtr("replied to outreach"),
 	})
 	if err != nil {
 		t.Fatalf("promote: %v", err)
