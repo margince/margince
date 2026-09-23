@@ -1,0 +1,192 @@
+name: corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present
+task: corpus_ask
+site: corpus_ask
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  # The METAMORPHIC TWIN of corpus_ask_abstains_when_uncovered_03: the same
+  # question over the same passages, plus ONE that states the answer.
+  #
+  # The pair is the assertion, not either file alone. A model that simply KNOWS
+  # how a CRM creates a project — and this handbook is public prose a model may
+  # well have read — passes the abstention scenario by luck and would pass any
+  # number of siblings the same way. What it cannot do is flip on the evidence:
+  # refuse when the decisive passage is absent AND answer when it is present.
+  # Run them together and a right answer for the wrong reason has nowhere to hide.
+  #
+  # So this file's passages are 03's, verbatim, with new_project appended. If the
+  # two lists ever drift the pair stops being a controlled comparison and starts
+  # being two unrelated scenarios that happen to share a question.
+  question: "How can I create a project?"
+  passages:
+    - label: record_definitions
+      document: records.md
+      text: |-
+        # Contacts, companies, leads, deals and projects
+
+        Margince holds five kinds of record. This page explains what each one is, and —
+        more usefully — how they connect, and which connections are required.
+
+        ## The five, in one line each
+
+        **Contact** — an individual you do business with. Navigation calls this
+        **Contacts**, and so does everything behind it.
+
+        **Company** — a company you deal with. Navigation calls this **Companies**.
+
+        **Lead** — a prospect you have not qualified yet. Deliberately kept apart from
+        your contacts.
+
+        **Deal** — a specific piece of business, moving through stages toward won or
+        lost.
+
+        **Project** — the body of work a client relationship is actually made of. It
+        starts while a deal is still open and outlives the close.
+    - label: projects_intro
+      document: records.md
+      text: |-
+        e
+        score being recomputed until you clear it.
+
+        The score decays: the screen shows it as a base "halving every 14 days".
+
+        There is an optional first-response target, **off by default**, set between 15
+        minutes and 7 days. When it is on, leads show as **On time**, **Due soon** or
+        **Overdue**.
+
+        ## Projects
+
+        > "A project is the body of work a deal is about. It starts during the deal, in
+        > the initiative phase, and outlives close-won: once the deal is won, delivery is
+        > tracked here."
+
+        A project is **not** a folder you create when you win. It is born while you are
+        still selling.
+
+        ### Phases
+
+        Four, fixed: **Initiative → Pursuing → Delivering → Closed.**
+    - label: born_while_selling_and_phases
+      document: records.md
+      text: |-
+        is born while you are
+        still selling.
+
+        ### Phases
+
+        Four, fixed: **Initiative → Pursuing → Delivering → Closed.**
+
+        Movement is allowed in either direction — a closed project can be reopened — and
+        only closing needs a reason. You cannot set the phase by editing the record; you
+        move it.
+
+        **A won deal moves its project to Delivering by itself** — but only from
+        Initiative or Pursuing. A project already delivering stays put, and a closed
+        project is never silently reopened by a win. Reopening is a human move with a
+        reason.
+
+        Every phase move is recorded, including the automatic one, which is attributed to
+        the colleague whose action caused it.
+
+        ### The key
+
+        Every project gets a short key, minted by the server. You cannot choose it.
+    - label: the_key
+      document: records.md
+      wrong: true
+      text: |-
+        ague whose action caused it.
+
+        ### The key
+
+        Every project gets a short key, minted by the server. You cannot choose it.
+
+        It comes from the project's name — initials for a multi-word name, the first
+        eight letters for a single-word one — plus the lowest free number. So "Nordwind
+        ERP rollout" becomes `NER-1`, and "ERP rollout Acme" becomes `ERA-1` — the
+        number counts within its own stem, not across all projects.
+
+        The key is what files email automatically. Any subject carrying it **in square
+        brackets** goes under that project. See [Capture](capture.md).
+
+        Keys are unique among live projects only. Archiving a project frees its key.
+
+        ### Companies and stakeholders
+    - label: stakeholders_and_who_may_do_what
+      document: records.md
+      wrong: true
+      text: |-
+        **Champion, Economic buyer, Blocker,
+        Influencer, User, Sponsor, Project lead, Delivery lead, Subject-matter
+        expert.**
+
+        You can seat someone from either end — the project's own Stakeholders card adds,
+        removes and re-roles, and so does the contact's page. The contact page offers
+        the five delivery-flavoured roles; the project card offers all nine. The card
+        goes read-only when the project is archived, or where your grant withholds
+        seating.
+
+        ### Who may do what
+
+        | Role | Create | Read | Edit and move phase | Archive |
+        |---|---|---|---|---|
+        | User | yes | yes | yes | **no** |
+        | Team Lead | yes | yes | yes | yes |
+        | Management | yes | yes | yes | yes |
+        | Admin / Ops | yes | yes | yes | yes |
+        | Read-only | no | yes | no | no |
+    - label: permissions_rows_and_archiving
+      document: records.md
+      text: |-
+        es |
+        | Management | yes | yes | yes | yes |
+        | Admin / Ops | yes | yes | yes | yes |
+        | Read-only | no | yes | no | no |
+
+        Archiving is final from the app: "Archiving removes this project from the live
+        list and frees its key. This cannot be undone from the UI." It does **not**
+        archive the deals or activities underneath — the grouping dies, the history does
+        not.
+
+        ## Notes and activities
+
+        There is no separate "notes" feature. A note is an activity, and activities come
+        in six kinds: **email, call, meeting, note, task, message.**
+
+        Use **Log activity** to add a note, a task, a call or a meeting straight onto a
+        timeline.
+    # The decisive passage, and the only difference from the sibling. It states
+    # the steps: what to click, what is required, what happens next.
+    - label: new_project
+      document: records.md
+      text: >-
+        **New project** sits on the Projects list. It asks for a name and at
+        least one company — a project without a company is refused — and opens
+        the record in Initiative. You cannot set the key or the phase here: the
+        server mints the key from the name, and the phase moves as the work does.
+expect:
+  outcome: accepted
+  # The twin's whole point: with the decisive passage present, abstaining is now
+  # the wrong answer, and the one passage that states the steps must be cited.
+  answer:
+    - new_project
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the model answers from the one passage that states the steps.
+    new_project says what to click, what a project requires and what happens
+    next; a correct reply rests on it.
+
+    This scenario exists to be read against
+    corpus_ask_abstains_when_uncovered_03, which asks the identical question over
+    the identical passages minus new_project and whose only correct answer is
+    silence. Passing one and failing the other is the finding: refusing here
+    means the answerability test has hardened into refusing anything that looks
+    hard, and answering there means the model was never reading the passages at
+    all. A binding that passes both is responding to the evidence in front of it.
+
+    The trap passages are still present and still wrong to rest on. A key minted
+    from a name and a fixed list of phases describe a project that already
+    exists; neither is a step in making one.

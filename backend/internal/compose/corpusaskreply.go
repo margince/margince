@@ -69,10 +69,23 @@ const (
 	answerClaimsKey = "claims"
 )
 
-// The two things the model may say about coverage. Closed, and both spelled
-// out: a third value would be a verdict nothing downstream maps to an outcome.
+// What the model may say about coverage. Closed: a value not listed here is a
+// verdict nothing downstream maps to an outcome.
+//
+// PARTLY is its own word because a compound question is the common shape and
+// binary coverage forces a bad answer to it. Asked "what is a seat and how do I
+// request one", a handbook that defines seats and never covers requesting one
+// leaves a model choosing between refusing what it can answer and answering what
+// it cannot. Both are wrong, and which one it picks is a coin toss the reader
+// pays for. Given the third option it answers the half it has and says so.
+//
+// It is COVERED for the reader: grounded claims exist, so the answer stands on
+// evidence and the summary names the gap. The parser therefore treats it exactly
+// as `answers` — the value earns its place in the prompt, by giving the model
+// somewhere honest to put a half-answer, not in a branch here.
 const (
 	coverageAnswers      = "answers"
+	coveragePartly       = "partially_answers"
 	coverageDoesNotCover = "does_not_answer"
 )
 
@@ -121,7 +134,7 @@ type CorpusAnswer struct {
 func corpusAskSchema(ids []string) json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
-			answerCoverKey: schema.Enum(coverageAnswers, coverageDoesNotCover).
+			answerCoverKey: schema.Enum(coverageAnswers, coveragePartly, coverageDoesNotCover).
 				Describe("Whether the passages STATE the answer to the question asked."),
 			answerSummayKey: schema.String().
 				Describe("One or two plain sentences for the reader: the answer, or what the documents do not cover."),
@@ -177,11 +190,11 @@ func GroundCorpusAnswer(replyText string, passages []knowledge.Passage) (CorpusA
 		// judgement this site asked for, and the sentences are the half every
 		// measured failure came from.
 		return CorpusAnswer{Covered: false, Summary: summary}, nil
-	case coverageAnswers:
+	case coverageAnswers, coveragePartly:
 	default:
 		return CorpusAnswer{}, fmt.Errorf(
-			"the corpus ask reply says coverage %q, which is neither %q nor %q",
-			*parsed.Coverage, coverageAnswers, coverageDoesNotCover)
+			"the corpus ask reply says coverage %q, which is none of %q, %q or %q",
+			*parsed.Coverage, coverageAnswers, coveragePartly, coverageDoesNotCover)
 	}
 	if parsed.Claims == nil {
 		return CorpusAnswer{}, errors.New(`the corpus ask reply carries no "claims" key: an answer that cites ` +
