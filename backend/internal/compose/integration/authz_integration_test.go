@@ -32,7 +32,7 @@ func TestObjectLevelRBACDeniesUngrantedActions(t *testing.T) {
 	if _, err := e.Contacts.CreateContact(reader, contacts.CreateContactInput{FullName: "X", Source: "manual"}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("read_only create → %v, want ErrPermissionDenied", err)
 	}
-	if _, err := e.Contacts.UpdateContact(reader, ContactIDOf(target), contacts.UpdateContactInput{Title: strPtr("CEO")}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.Contacts.UpdateContact(reader, ContactIDOf(target), contacts.UpdateContactInput{Title: StrPtr("CEO")}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("read_only update → %v, want ErrPermissionDenied", err)
 	}
 	if _, err := e.Contacts.ArchiveContact(reader, ContactIDOf(target), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -91,13 +91,13 @@ func TestRowScopeTeamReadsEveryContactButWritesOnlyItsOwnTeams(t *testing.T) {
 	}
 	// Writes keep the team scope: the readable foreign row is refused, the
 	// hidden one stays hidden.
-	if _, err := e.Contacts.UpdateContact(rep, ContactIDOf(foreign), contacts.UpdateContactInput{Title: strPtr("Pwned")}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.Contacts.UpdateContact(rep, ContactIDOf(foreign), contacts.UpdateContactInput{Title: StrPtr("Pwned")}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("update another team's contact → %v, want ErrPermissionDenied", err)
 	}
-	if _, err := e.Contacts.UpdateContact(rep, ContactIDOf(private), contacts.UpdateContactInput{Title: strPtr("Pwned")}); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.Contacts.UpdateContact(rep, ContactIDOf(private), contacts.UpdateContactInput{Title: StrPtr("Pwned")}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("update another rep's private capture → %v, want ErrNotFound", err)
 	}
-	if _, err := e.Contacts.UpdateContact(rep, ContactIDOf(teammates), contacts.UpdateContactInput{Title: strPtr("Lead")}); err != nil {
+	if _, err := e.Contacts.UpdateContact(rep, ContactIDOf(teammates), contacts.UpdateContactInput{Title: StrPtr("Lead")}); err != nil {
 		t.Errorf("update a teammate's contact → %v, want success", err)
 	}
 
@@ -148,5 +148,3 @@ func TestZeroPermissionsFailClosed(t *testing.T) {
 		t.Errorf("unresolved permissions list → %v, want ErrPermissionDenied (fail closed)", err)
 	}
 }
-
-func strPtr(s string) *string { return &s }

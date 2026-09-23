@@ -31,7 +31,7 @@ func employContact(t *testing.T, e *Env, contact, company ids.UUID, ended *time.
 		Kind:             "employment",
 		ContactID:        &contactID,
 		CompanyID:        &companyID,
-		IsCurrentPrimary: boolPtr(ended == nil),
+		IsCurrentPrimary: BoolPtr(ended == nil),
 		EndedAt:          ended,
 		Source:           "manual",
 	}); err != nil {

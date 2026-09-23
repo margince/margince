@@ -40,13 +40,13 @@ func TestLastActivity_MovesTheContactAndEveryAccountItReaches(t *testing.T) {
 	contactID := ids.From[ids.ContactKind](staff)
 	companyID := ids.From[ids.CompanyKind](acme)
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
-		Kind: "employment", ContactID: &contactID, CompanyID: &companyID, IsCurrentPrimary: boolPtr(true), Source: "manual",
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID, IsCurrentPrimary: BoolPtr(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
 	}
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Other's deal", AmountMinor: int64Ptr(100), Currency: strPtr("EUR"),
+		Name: "Other's deal", AmountMinor: Int64Ptr(100), Currency: StrPtr("EUR"),
 		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(other)), Source: "manual",
 	})
 	if err != nil {
@@ -119,7 +119,7 @@ func TestLastActivity_MovesTheContactAndEveryAccountItReaches(t *testing.T) {
 	// the new account: the reach set moved without any activity being written.
 	lateID := ids.From[ids.CompanyKind](late)
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
-		Kind: "employment", ContactID: &contactID, CompanyID: &lateID, IsCurrentPrimary: boolPtr(false), Source: "manual",
+		Kind: "employment", ContactID: &contactID, CompanyID: &lateID, IsCurrentPrimary: BoolPtr(false), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +268,7 @@ func TestLastActivity_TheAccountClockSeeksInsteadOfScanningTheTimeline(t *testin
 	contactID := ids.From[ids.ContactKind](staff)
 	companyID := ids.From[ids.CompanyKind](acme)
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
-		Kind: "employment", ContactID: &contactID, CompanyID: &companyID, IsCurrentPrimary: boolPtr(true), Source: "manual",
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID, IsCurrentPrimary: BoolPtr(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
 	}

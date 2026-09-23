@@ -48,7 +48,7 @@ func TestACitedMessageCarriesItsRowForAReaderWhoMayReadIt(t *testing.T) {
 
 	subject, body := "Translation fallback decision", "Which locale wins when the string is missing?"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -93,7 +93,7 @@ func TestACitedMessageCarriesNoRowForAReaderOutsideItsAudience(t *testing.T) {
 
 	subject, body := "Severance terms", "the agreed figure is confidential"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("outbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -143,7 +143,7 @@ func TestASeatWithoutTheActivityGrantGetsNoRows(t *testing.T) {
 
 	subject, body := "Translation fallback decision", "Which locale wins?"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {

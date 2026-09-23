@@ -171,21 +171,21 @@ func TestActivityReadsAreScopedThroughLinks(t *testing.T) {
 	foreignOwner := e.As(e.Rep3, []ids.UUID{e.Team2}, AdminPerms)
 
 	secret, _, err := e.Activities.LogActivity(foreignOwner, activities.LogActivityInput{
-		Kind: "note", Subject: strPtr("Confidential pricing call"), Source: "manual",
+		Kind: "note", Subject: StrPtr("Confidential pricing call"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: foreignContact}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	visible, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
-		Kind: "note", Subject: strPtr("Team call"), Source: "manual",
+		Kind: "note", Subject: StrPtr("Team call"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: myContact}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	unlinked, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
-		Kind: "note", Subject: strPtr("Workspace-wide note"), Source: "manual",
+		Kind: "note", Subject: StrPtr("Workspace-wide note"), Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -467,10 +467,10 @@ func TestReopeningWithARedundantLostReasonStillCleans(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.Deals.AdvanceDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.AdvanceDealInput{ToStageID: lost, LostReason: strPtr("price")}); err != nil {
+	if _, err := e.Deals.AdvanceDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.AdvanceDealInput{ToStageID: lost, LostReason: StrPtr("price")}); err != nil {
 		t.Fatalf("closing as lost: %v", err)
 	}
-	reopened, err := e.Deals.AdvanceDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.AdvanceDealInput{ToStageID: open, LostReason: strPtr("price")})
+	reopened, err := e.Deals.AdvanceDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.AdvanceDealInput{ToStageID: open, LostReason: StrPtr("price")})
 	if err != nil {
 		t.Fatalf("reopen with redundant lost_reason: %v", err)
 	}
@@ -494,7 +494,7 @@ func TestIdempotentReplayDoesNotDiscloseOutOfScopeRecords(t *testing.T) {
 
 	src, key := "gmail", "msg-123"
 	if _, _, err := e.Activities.LogActivity(foreignOwner, activities.LogActivityInput{
-		Kind: "email", Subject: strPtr("Confidential thread"), Source: "connector",
+		Kind: "email", Subject: StrPtr("Confidential thread"), Source: "connector",
 		SourceSystem: &src, SourceID: &key,
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: foreignContact}},
 	}); err != nil {
@@ -502,7 +502,7 @@ func TestIdempotentReplayDoesNotDiscloseOutOfScopeRecords(t *testing.T) {
 	}
 	leadSrc, leadKey := "apollo", "lead-9"
 	theirLead, _, err := e.Contacts.CreateLead(admin, contacts.CreateLeadInput{
-		FullName: strPtr("Foreign lead"), OwnerID: userIDPtr(&e.Rep3), Source: "import",
+		FullName: StrPtr("Foreign lead"), OwnerID: userIDPtr(&e.Rep3), Source: "import",
 		SourceSystem: &leadSrc, SourceID: &leadKey,
 	})
 	if err != nil {
@@ -517,7 +517,7 @@ func TestIdempotentReplayDoesNotDiscloseOutOfScopeRecords(t *testing.T) {
 		t.Errorf("activity replay of a source key on an unreadable record → %v, want bare ErrConflict", err)
 	}
 	replayed, _, err := e.Contacts.CreateLead(rep, contacts.CreateLeadInput{
-		FullName: strPtr("Replay attempt"), Source: "import",
+		FullName: StrPtr("Replay attempt"), Source: "import",
 		SourceSystem: &leadSrc, SourceID: &leadKey,
 	})
 	if err != nil || replayed.Id != theirLead.Id {
@@ -585,11 +585,11 @@ func TestUnknownAccountFilterValuesAreRefusedRatherThanAnsweredEmpty(t *testing.
 	}{
 		{
 			"a stage outside the vocabulary", "lifecycle",
-			contacts.ListCompaniesInput{Lifecycle: strPtr("nearly_a_customer")},
+			contacts.ListCompaniesInput{Lifecycle: StrPtr("nearly_a_customer")},
 		},
 		{
 			"a relationship type outside the vocabulary", "relationship_type",
-			contacts.ListCompaniesInput{RelationshipType: strPtr("frenemy")},
+			contacts.ListCompaniesInput{RelationshipType: StrPtr("frenemy")},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -612,8 +612,8 @@ func TestUnknownAccountFilterValuesAreRefusedRatherThanAnsweredEmpty(t *testing.
 	// answer normally — a rule that refused everything would pass the test
 	// above and break the feature.
 	for _, in := range []contacts.ListCompaniesInput{
-		{Lifecycle: strPtr("customer")},
-		{RelationshipType: strPtr("partner")},
+		{Lifecycle: StrPtr("customer")},
+		{RelationshipType: StrPtr("partner")},
 	} {
 		if _, _, err := e.Contacts.ListCompanies(admin, in); err != nil {
 			t.Errorf("a filter value the contract defines was refused: %v", err)

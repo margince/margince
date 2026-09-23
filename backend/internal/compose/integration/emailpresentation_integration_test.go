@@ -40,7 +40,7 @@ const contractPathForLists = "../../../api/crm.yaml"
 func logEmailActivity(author context.Context, t *testing.T, e *Env, contact ids.UUID, subject, body string) ids.ActivityID {
 	t.Helper()
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -648,7 +648,7 @@ func assertBadge(
 	}
 
 	page, _, err := e.Activities.ListActivities(reader, activities.ListActivitiesInput{
-		EntityType: strPtr("contact"), EntityID: &contact,
+		EntityType: StrPtr("contact"), EntityID: &contact,
 	})
 	if err != nil {
 		t.Fatalf("listing the contact's timeline: %v", err)

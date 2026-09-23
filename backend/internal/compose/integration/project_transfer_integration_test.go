@@ -89,7 +89,7 @@ func TestTransferProjectOwnershipMovesEveryLiveProjectTheFromOwnerHolds(t *testi
 	// The move is readable where a single update's would be: the moved
 	// project's field history names the owner that was and the owner that is.
 	history, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "project", EntityID: first.ID.UUID, Field: strPtr("owner_id"),
+		EntityType: "project", EntityID: first.ID.UUID, Field: StrPtr("owner_id"),
 	})
 	if err != nil {
 		t.Fatalf("field history of a moved project: %v", err)

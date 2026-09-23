@@ -44,7 +44,7 @@ func recurringOffer(t *testing.T, e *Env, deal ids.UUID) ids.OfferID {
 		LineItems: []deals.OfferLineInputRow{{
 			Description: &description, Quantity: "1",
 			UnitPriceMinor: &perPeriodMinor, TaxRate: &taxRate,
-			BillingModel:          strPtr(deals.BillingRecurring),
+			BillingModel:          StrPtr(deals.BillingRecurring),
 			BillingIntervalMonths: &months,
 			IntervalCount:         &count,
 		}},
@@ -186,7 +186,7 @@ func TestSendingRefusesARecurringLineWithNoSettledTerm(t *testing.T) {
 		Currency: "EUR", Source: "manual",
 		LineItems: []deals.OfferLineInputRow{{
 			Description: &description, Quantity: "1", UnitPriceMinor: &price, TaxRate: &taxRate,
-			BillingModel: strPtr(deals.BillingRecurring), BillingIntervalMonths: &months,
+			BillingModel: StrPtr(deals.BillingRecurring), BillingIntervalMonths: &months,
 		}},
 	})
 	if err != nil {

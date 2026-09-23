@@ -359,7 +359,7 @@ func TestLoggingAnActivityWithAContactAndAProjectLinkWritesBothAndTheEvidence(t 
 	f := seedTwoEngagementAccount(t, e)
 	subject := "Cutover date confirmed"
 	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Direction: strPtr("outbound"), Subject: &subject,
+		Kind: "email", Direction: StrPtr("outbound"), Subject: &subject,
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "contact", EntityID: f.contact},
 			{EntityType: "project", EntityID: f.erp.UUID},

@@ -26,9 +26,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// boolPtr addresses a literal for the optional-bool fields the settings
+// integration.BoolPtr addresses a literal for the optional-bool fields the settings
 // endpoints take.
-func boolPtr(v bool) *bool { return &v }
 
 // captureSettingsCtx builds a human principal in the env workspace with a
 // specific capture_settings grant.
@@ -78,7 +77,7 @@ func TestCaptureSettingsStore(t *testing.T) {
 	}
 
 	// A rep (read-only) cannot toggle it.
-	if _, err := store.Update(rep, capturemod.SettingsPatch{AutoEnrich: boolPtr(false)}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := store.Update(rep, capturemod.SettingsPatch{AutoEnrich: integration.BoolPtr(false)}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("rep update err = %v, want permission denied", err)
 	}
 	if auditCount() != 0 {
@@ -86,7 +85,7 @@ func TestCaptureSettingsStore(t *testing.T) {
 	}
 
 	// Admin turns it off — one audit row, the new value returned and readable.
-	updated, err := store.Update(admin, capturemod.SettingsPatch{AutoEnrich: boolPtr(false)})
+	updated, err := store.Update(admin, capturemod.SettingsPatch{AutoEnrich: integration.BoolPtr(false)})
 	if err != nil {
 		t.Fatalf("admin update: %v", err)
 	}
@@ -101,7 +100,7 @@ func TestCaptureSettingsStore(t *testing.T) {
 	}
 
 	// An idempotent update (same value) is a no-op: no second audit row.
-	if _, err := store.Update(admin, capturemod.SettingsPatch{AutoEnrich: boolPtr(false)}); err != nil {
+	if _, err := store.Update(admin, capturemod.SettingsPatch{AutoEnrich: integration.BoolPtr(false)}); err != nil {
 		t.Fatalf("idempotent update: %v", err)
 	}
 	if auditCount() != 1 {

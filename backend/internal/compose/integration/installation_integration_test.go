@@ -30,8 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func boolPtr(v bool) *bool { return &v }
-
 // assertPurposeClass reads back the gate a seeded purpose answers to.
 func assertPurposeClass(ctx context.Context, t *testing.T, e *apptest.AppEnv, key, want string) {
 	t.Helper()
@@ -68,8 +66,8 @@ func TestBootstrapSeedsFollowTheDeploymentConfiguration(t *testing.T) {
 			ConsentPurposes: []deployconfig.ConsentPurpose{
 				{Key: "newsletter", Label: "Newsletter", DoubleOptIn: true},
 			},
-			StarterAutomations: boolPtr(false),
-			BookingPage:        boolPtr(false),
+			StarterAutomations: BoolPtr(false),
+			BookingPage:        BoolPtr(false),
 		},
 	}
 	if err := compose.EnsureInstallation(context.Background(), e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), cfg); err != nil {
@@ -219,7 +217,7 @@ func TestBootBindsWithoutReadingASpentBootstrapSecret(t *testing.T) {
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: "ops@spent.test", DisplayName: "Ops", PasswordFile: pwFile,
 		},
-		Seeds: deployconfig.Seeds{StarterAutomations: boolPtr(false), BookingPage: boolPtr(false)},
+		Seeds: deployconfig.Seeds{StarterAutomations: BoolPtr(false), BookingPage: BoolPtr(false)},
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	if err := compose.EnsureInstallation(context.Background(), e.Pool, log, cfg); err != nil {
@@ -248,7 +246,7 @@ func TestFirstBootStillFailsLoudlyOnAnUnreadableSecret(t *testing.T) {
 			Email: "ops@nosecret.test", DisplayName: "Ops",
 			PasswordFile: filepath.Join(t.TempDir(), "never-written"),
 		},
-		Seeds: deployconfig.Seeds{StarterAutomations: boolPtr(false), BookingPage: boolPtr(false)},
+		Seeds: deployconfig.Seeds{StarterAutomations: BoolPtr(false), BookingPage: BoolPtr(false)},
 	}
 	err := compose.EnsureInstallation(context.Background(), e.Pool,
 		slog.New(slog.NewTextHandler(io.Discard, nil)), cfg)

@@ -141,7 +141,7 @@ func TestProjectLastActivity_CountsOnlyDirectlyLinkedActivities(t *testing.T) {
 	project := seedProject(e.Admin(), t, e, "Programme", company, nil)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Phase one", AmountMinor: int64Ptr(100), Currency: strPtr("EUR"),
+		Name: "Phase one", AmountMinor: Int64Ptr(100), Currency: StrPtr("EUR"),
 		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(company)),
 		ProjectID: &project.ID, Source: "manual",
 	})

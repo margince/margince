@@ -213,7 +213,7 @@ func TestANumberCustomFieldFiltersOnEqAndGt(t *testing.T) {
 func TestACurrencyCustomFieldFiltersOnEqAndRefusesAFractionalOperand(t *testing.T) {
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{
-		Label: "Lifetime Value", Type: customfieldsmod.TypeCurrency, Currency: strPtr("USD"),
+		Label: "Lifetime Value", Type: customfieldsmod.TypeCurrency, Currency: integration.StrPtr("USD"),
 	})
 	big, small := f.seedTwoContacts(t, "LTV")
 	f.setField(t, big, column, float64(500000))
@@ -623,8 +623,6 @@ func TestEveryEnumOverTheRecordVocabularyMatchesTheCheckConstraint(t *testing.T)
 	}
 }
 
-func strPtr(s string) *string { return &s }
-
 // seedTaggablePair creates two records of one entity type and answers
 // their ids untyped — every caller widens through the same ApplyTag /
 // CreateList surface, which takes entity ids untyped for exactly this
@@ -655,11 +653,11 @@ func (f fixture) seedTaggablePair(t *testing.T, entity string, pipeline ids.Pipe
 	case "deal":
 		return f.e.SeedDeal(t, "Tagged Deal", pipeline, stage, nil), f.e.SeedDeal(t, "Plain Deal", pipeline, stage, nil)
 	default: // lead
-		a, _, err := f.contacts.CreateLead(f.ctx, contactsmod.CreateLeadInput{FullName: strPtr("Tagged Lead"), Source: "manual"})
+		a, _, err := f.contacts.CreateLead(f.ctx, contactsmod.CreateLeadInput{FullName: integration.StrPtr("Tagged Lead"), Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, _, err := f.contacts.CreateLead(f.ctx, contactsmod.CreateLeadInput{FullName: strPtr("Plain Lead"), Source: "manual"})
+		b, _, err := f.contacts.CreateLead(f.ctx, contactsmod.CreateLeadInput{FullName: integration.StrPtr("Plain Lead"), Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}

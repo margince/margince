@@ -485,7 +485,7 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 	hidden, _, err := e.Activities.LogActivity(
 		e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms),
 		activities.LogActivityInput{
-			Kind: "meeting", Subject: strPtr("Board compensation review"),
+			Kind: "meeting", Subject: StrPtr("Board compensation review"),
 			OccurredAt: &when, Source: "manual",
 			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ours}},
 		})

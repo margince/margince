@@ -173,8 +173,6 @@ func rollupCompanyReadPerms(scope principal.RowScope) principal.Permissions {
 	}
 }
 
-func int64Ptr(v int64) *int64 { return &v }
-
 // fixedClock pins CompanyHierarchyRollup's injected clock to instant, so a
 // test that seeds rows relative to a captured "now" reads at that exact
 // same instant rather than racing a fresh time.Now() call inside the
@@ -199,11 +197,11 @@ func TestCompanyRollupReconcilesTreeToSelves(t *testing.T) {
 	grandchild := seedRollupCompany(t, e, "Grandchild", nil, &childA)
 	now := time.Now().UTC()
 
-	seedRollupOpenDeal(t, e, st, root, int64Ptr(100_000), strPtr("EUR"))
+	seedRollupOpenDeal(t, e, st, root, Int64Ptr(100_000), StrPtr("EUR"))
 	seedRollupOpenDeal(t, e, st, root, nil, nil) // NULL amount: a real 0, never an error
-	seedRollupOpenDeal(t, e, st, childA, int64Ptr(50_000), strPtr("EUR"))
-	seedRollupOpenDeal(t, e, st, childA, int64Ptr(10_000), strPtr("USD")) // 0.5 → 5_000 base
-	seedRollupOpenDeal(t, e, st, grandchild, int64Ptr(20_000), strPtr("EUR"))
+	seedRollupOpenDeal(t, e, st, childA, Int64Ptr(50_000), StrPtr("EUR"))
+	seedRollupOpenDeal(t, e, st, childA, Int64Ptr(10_000), StrPtr("USD")) // 0.5 → 5_000 base
+	seedRollupOpenDeal(t, e, st, grandchild, Int64Ptr(20_000), StrPtr("EUR"))
 	seedRollupFxRate(t, e, "USD", "0.5", now.AddDate(0, 0, -2))
 	seedRollupWonDeal(t, e, st, root, 30_000, "EUR", "1.0", now)
 	seedRollupCompanyActivity(t, e, root, now.Add(-24*time.Hour))
@@ -280,7 +278,7 @@ func TestCompanyRollupRestrictedNodeDisclosedAndGrantRestores(t *testing.T) {
 	e.MakeCapturePrivate(t, "company", child, e.Rep3)
 	grandchild := seedRollupCompany(t, e, "Ownerless Grandchild", nil, &child)
 	for _, company := range []ids.UUID{root, child, grandchild} {
-		seedRollupOpenDeal(t, e, st, company, int64Ptr(10_000), strPtr("EUR"))
+		seedRollupOpenDeal(t, e, st, company, Int64Ptr(10_000), StrPtr("EUR"))
 	}
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, rollupCompanyReadPerms(principal.RowScopeOwn))
@@ -327,7 +325,7 @@ func TestCompanyRollupWeightedPipelineSurvivesStageArchival(t *testing.T) {
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	root := seedRollupCompany(t, e, "Root Co", nil, nil)
-	seedRollupOpenDeal(t, e, st, root, int64Ptr(10_000), strPtr("EUR"))
+	seedRollupOpenDeal(t, e, st, root, Int64Ptr(10_000), StrPtr("EUR"))
 	e.WsExec(t, `UPDATE stage SET archived_at = now() WHERE id = $1`, st.open)
 
 	res, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, root, "tree", time.Now)
@@ -346,8 +344,8 @@ func TestCompanyRollupFXRateUnavailableFailsWholeRead(t *testing.T) {
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	root := seedRollupCompany(t, e, "Root Co", nil, nil)
-	seedRollupOpenDeal(t, e, st, root, int64Ptr(100_000), strPtr("EUR"))
-	seedRollupOpenDeal(t, e, st, root, int64Ptr(10_000), strPtr("USD")) // no USD→EUR rate seeded
+	seedRollupOpenDeal(t, e, st, root, Int64Ptr(100_000), StrPtr("EUR"))
+	seedRollupOpenDeal(t, e, st, root, Int64Ptr(10_000), StrPtr("USD")) // no USD→EUR rate seeded
 
 	_, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, root, "tree", time.Now)
 	var fxErr *compose.FXRateUnavailableError
@@ -470,8 +468,8 @@ func TestCompanyRollupSelfScopeSkipsPruning(t *testing.T) {
 	st := seedRollupStages(t, e)
 	root := seedRollupCompany(t, e, "Root Co", &e.Rep1, nil)
 	child := seedRollupCompany(t, e, "Hidden Child", &e.Rep3, &root)
-	seedRollupOpenDeal(t, e, st, root, int64Ptr(10_000), strPtr("EUR"))
-	seedRollupOpenDeal(t, e, st, child, int64Ptr(50_000), strPtr("EUR"))
+	seedRollupOpenDeal(t, e, st, root, Int64Ptr(10_000), StrPtr("EUR"))
+	seedRollupOpenDeal(t, e, st, child, Int64Ptr(50_000), StrPtr("EUR"))
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, rollupCompanyReadPerms(principal.RowScopeOwn))
 	res, err := compose.CompanyHierarchyRollup(rep, e.Pool, root, "self", time.Now)

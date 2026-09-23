@@ -37,7 +37,7 @@ func TestATeamLeadsInboxCarriesTheirTeammatesStagedDecision(t *testing.T) {
 	strangers := stageFor(t, svc, e, "advance_deal", "deal", strangerDeal)
 
 	lead := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	pending := listIDs(lead, t, svc, approvals.ListInput{Status: strPtr("pending"), Limit: 50})
+	pending := listIDs(lead, t, svc, approvals.ListInput{Status: StrPtr("pending"), Limit: 50})
 
 	if !pending[teammates] {
 		t.Error("a lead under team scope cannot see their own teammate's staged decision — " +
@@ -64,7 +64,7 @@ func TestASeatUnderOwnScopeSeesOnlyItsOwn(t *testing.T) {
 	ownScope.RowScope = principal.RowScopeOwn
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, ownScope)
 
-	pending := listIDs(rep, t, svc, approvals.ListInput{Status: strPtr("pending"), Limit: 50})
+	pending := listIDs(rep, t, svc, approvals.ListInput{Status: StrPtr("pending"), Limit: 50})
 	if !pending[ownStaging] {
 		t.Error("a seat cannot see a staged decision against its own record")
 	}
