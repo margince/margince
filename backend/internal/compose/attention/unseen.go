@@ -17,7 +17,11 @@ package attention
 // from a count of rows that happened to arrive.
 
 import (
+	"context"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // boundedSources names the lanes that came back exactly at their own work
@@ -136,23 +140,27 @@ func duplicatesShown(lane []crmcontracts.AttentionItem) int {
 // The lane feed already names what a caller may not read; this widens the same
 // promise to say WHY. A day cannot read as clear while something that would
 // have filled it never answered, which is the one lie a worklist must not tell.
-func unavailable(day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavailable {
+func unavailable(ctx context.Context, day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavailable {
 	out := []crmcontracts.WorklistSourceUnavailable{}
 	if day.LanesOmitted == nil {
 		return out
 	}
+	// Whether the privacy lanes are withheld by the reader's ROLE — the
+	// permanent fact — rather than by anything about today. Asked once here,
+	// of the same grant their stores ask of, because the answer cannot change
+	// between lanes of one page.
+	privacyByRole := !auth.Allows(ctx, "privacy_request", principal.ActionRead)
 	for _, lane := range *day.LanesOmitted {
-		// The DSR lane is withheld BY ROLE for every reader who is not a
-		// privacy admin, permanently and by design. Naming it would put "part
-		// of your day is hidden" on every rep's page forever, which drowns the
-		// warning this list exists to give.
+		// A privacy lane withheld from a reader holding no privacy_request
+		// grant is that permanent role fact. Naming it would put "part of your
+		// day is hidden" on every rep's page forever, which drowns the warning
+		// this list exists to give.
 		//
-		// This suppression is WIDER than it should be, and the difference is
-		// worth stating rather than hiding: the DSR read also refuses a reader
-		// who has the admin role but lost `contact:read`, and that refusal is
-		// real news this list swallows. Telling the two apart needs a reason on
-		// the refusal, which the lane contract does not carry — issue filed.
-		if lane == laneDSR || lane == laneNoticeCase {
+		// A reader who DOES hold the grant and was still refused hit something
+		// else — the notice lane's separate contact:read gate, or a non-human
+		// principal on a queue that admits no machine — and that is real news
+		// about a mis-set seat, which is why only the role case is suppressed.
+		if privacyByRole && (lane == laneDSR || lane == laneNoticeCase) {
 			continue
 		}
 		out = append(out, crmcontracts.WorklistSourceUnavailable{
@@ -163,10 +171,9 @@ func unavailable(day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavai
 	return out
 }
 
-// laneDSR and laneNoticeCase are the lanes whose withholding is a permanent
-// role fact rather than news about this reader's day. Both are gated on the
-// same privacy_request object, so both are hidden from the same readers for the
-// same reason, and the caveat above applies to each identically.
+// laneDSR and laneNoticeCase are the lanes a reader without the privacy inbox
+// never sees. Both are gated on the same privacy_request object, so one grant
+// decides both, which is why one question above answers for the pair.
 const (
 	laneDSR        = crmcontracts.AttentionLanesOmitted("dsr")
 	laneNoticeCase = crmcontracts.AttentionLanesOmitted(sourceNoticeCase)

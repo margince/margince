@@ -381,7 +381,8 @@ func TestThePermanentlyWithheldPrivacyLaneDoesNotMarkEveryDayAFloor(t *testing.T
 	day := crmcontracts.Attention{AsOf: rankInstant, LanesOmitted: &omitted}
 
 	got := readingsOf(
-		classifyDay(day, rankInstant, dayMoney{}), boundedSources(day), unavailable(day))
+		classifyDay(day, rankInstant, dayMoney{}), boundedSources(day),
+		unavailable(pageReader(), day))
 
 	if got.MoreAvailable {
 		t.Fatal("the always-withheld privacy lane marked an ordinary day as a floor")

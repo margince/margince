@@ -337,7 +337,7 @@ func (s *Service) worklistFrom(
 	// `buyer_replies` and `prospecting` count, so leaving them out let a refused
 	// lane print a confident zero — the one direction these figures must never
 	// fail in.
-	missing := unavailable(day)
+	missing := unavailable(ctx, day)
 	for _, refusal := range besideTheDay {
 		if refusal != nil {
 			missing = append(missing, *refusal)
