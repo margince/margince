@@ -162,7 +162,7 @@ export type RestingFacts = Readonly<{
  *
  * Every one is a reading it already made. A kind with nothing to report is
  * absent rather than reworded into a cheerful nothing, so an installation with a
- * clean queue and no licence rotates through two lines and not five.
+ * clean queue and no fresh runs rotates through one line and not three.
  *
  * Never empty: an installation with nothing at all to report says so, and that
  * sentence is a reading like any other — it is what a clean queue and a reachable

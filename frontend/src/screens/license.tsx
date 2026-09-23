@@ -258,12 +258,11 @@ export function LicenseReading({
             license" and "licensed" are different facts about the installation,
             and a reader should not have to learn a colour to tell them apart. */}
         <PanelIntro>{t(stateKey(entitlement, capped))}</PanelIntro>
-        {/* This card is the ONE place the installation's licence gap is stated.
-            It used to be the orb as well: `license === "none"` mapped to amber,
-            so every demo and every fresh dev stack wore a permanent warning and
-            amber stopped meaning "a fault that can wait". Taking that away left
-            the fact stated nowhere an operator would meet it — a sub-line above
-            a seat meter that reads fine is not where somebody looks for it.
+        {/* This card is where the installation's licence gap is REPAIRED, so
+            it states the gap in every posture; the shell banner (refused) and
+            the agent panel's pill (absent or refused) name it and link here. The
+            orb never does: an unlicensed demo or dev stack would wear permanent
+            amber, and amber would stop meaning "a fault that can wait".
 
             Not `live="alert"`: `over_limit` above owns the only interruption on
             this screen, and neither of these is news that arrived while the

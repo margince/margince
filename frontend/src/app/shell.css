@@ -354,7 +354,7 @@
  * colour on collapse would read as two shells.
  *
  * Top to bottom: brand, the destinations (or the entries of a section the
- * reader walked into), More at phone width, then the installation's entitlement
+ * reader walked into), More at phone width, then the agent (app/agentrail.tsx)
  * pinned to the foot. */
 .rail {
   /* Glass over the glow: the pane's translucent ground with the blur that lets
@@ -1427,9 +1427,9 @@
   .rail.collapsed .navlevel {
     display: contents;
   }
-  /* The bottom bar carries destinations and nothing else. The group headings and
-     the entitlement row belong to a column with room for them, so the sheet
-     below is where they come back. */
+  /* The bottom bar carries destinations and nothing else. The brand block and
+     the group headings belong to a column with room for them, so the sheet
+     below is where they come back; the spacer and tooltips stay hidden. */
   .rail .navheading,
   .rail .ws,
   .rail .grow,

@@ -48,8 +48,8 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
  * the licence. Six subjects taking turns in one slot at the edge of every screen
  * is why a reader could not say what the line was for. What went is not lost,
  * it moved to where it is acted on: the spend has its own figure in the block,
- * the duplicates have their queue, and the licence is stated on the card in
- * settings that can actually repair it.
+ * the duplicates have their queue, and the licence is stated by the shell
+ * banner, the agent panel's pill and the settings card that repairs it.
  *
  * Nothing here is invented activity. A resting surface that narrated fake work
  * would teach a reader that none of the line means anything, which is exactly
