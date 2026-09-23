@@ -122,6 +122,16 @@ type CorpusAnswer struct {
 	Summary string
 	// Claims are the grounded sentences, each one's quote verified.
 	Claims []crmcontracts.KnowledgeClaim
+	// Renumbered is true when the quote check dropped a claim, so the positions
+	// the writer's summary points at are no longer the positions that survived.
+	//
+	// It matters because the summary marks each sentence with the NUMBER of the
+	// claim it rests on, and those numbers are the model's own count of what it
+	// wrote. Drop the second of three and the third slides into its place: the
+	// sentence still says [2], and [2] now opens a passage about something else
+	// — a citation pointing at the wrong evidence, which is the failure this
+	// whole surface exists to prevent.
+	Renumbered bool
 }
 
 // corpusAskSchema is the reply shape, with this call's own passage ids as the
@@ -202,7 +212,13 @@ func GroundCorpusAnswer(replyText string, passages []knowledge.Passage) (CorpusA
 		return CorpusAnswer{}, errors.New(`the corpus ask reply carries no "claims" key: an answer that cites ` +
 			`nothing is written as coverage "does_not_answer"`)
 	}
-	return CorpusAnswer{Covered: true, Summary: summary, Claims: groundClaims(*parsed.Claims, passages)}, nil
+	kept := groundClaims(*parsed.Claims, passages)
+	return CorpusAnswer{
+		Covered:    true,
+		Summary:    summary,
+		Claims:     kept,
+		Renumbered: len(kept) != len(*parsed.Claims),
+	}, nil
 }
 
 // groundClaims keeps the claims whose quote survives the check, stamping each

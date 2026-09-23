@@ -31,11 +31,10 @@ package knowledge
 //     production disagree about which passages an answer may rest on, and every
 //     scenario captured since is measuring something production does not do.
 //
-// The order of operations is part of what is mirrored and is easy to get
-// subtly wrong: rankIn takes the closest RetrieveLimit passages FIRST and
-// groundedIn applies the floor to those. Filtering by the floor first and then
-// taking eight would return a different set whenever more than eight passages
-// clear it.
+// The floor keeps a PREFIX, because both sides apply it to a list already
+// sorted by descending similarity — so "limit then floor" and "floor then
+// limit" return the same passages, and the gate below cannot tell them apart
+// because there is nothing to tell.
 
 import (
 	"math"

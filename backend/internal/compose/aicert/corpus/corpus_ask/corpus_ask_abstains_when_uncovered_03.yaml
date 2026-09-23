@@ -171,7 +171,8 @@ expect:
     which is what makes this hard and what makes it the scenario that matters:
     the model must decide whether the passages STATE the answer, not whether they
     are about the same subject. None of them says how a project is created,
-    so the ONLY correct reply is an empty list of claims.
+    so the only correct reply is the verdict
+    does_not_answer, carrying no claims.
 
     Three shapes of wrong answer are available here, and the corpus carries the
     material for all three because retrieval really does return it.
@@ -188,11 +189,12 @@ expect:
     question. A reader who asked how to create one and is told which roles may is
     left believing they were answered. Score it wrong.
 
-    The third is a sentence reporting the model's own search, such as "I couldn't
-    find instructions on how to add a project". The prompt tells the model never
-    to say the passages are insufficient, and such a sentence arrives dressed as a
-    grounded claim with a quote attached, so it renders in the citation UI exactly
-    as an answer does.
+    The third is a sentence reporting the model's own search — "I couldn't find
+    instructions on how to add a project" — written as a CLAIM. That sentence is
+    right and belongs in the summary, which is where the prompt asks for it; as a
+    claim it arrives welded to a quote and renders in the citation UI exactly as
+    an answer does, so the reader is shown evidence for a search report.
 
-    Returning nothing sends the reader to ask a colleague, which is the only
-    outcome here that leaves them better off than they started.
+    A refusal that says what these documents DO cover sends the reader to ask a
+    colleague, which is the only outcome here that leaves them better off than
+    they started.

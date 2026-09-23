@@ -247,7 +247,6 @@ const primaryDestinations = [
   "Projekte",
   "Filter & Ansichten",
   "Analytics",
-  "Margince fragen",
 ];
 
 // settleAnimations' own case, because the gap it closes is invisible to every

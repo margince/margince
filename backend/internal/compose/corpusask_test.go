@@ -726,6 +726,39 @@ func TestOnlyADeclaredRefusalKeepsItsSentence(t *testing.T) {
 
 // A grounded answer keeps its summary, so the drop above is the ungrounded case
 // and not the summary never arriving at all.
+// A dropped claim slides every later one up a place, so the numbers in the
+// writer's summary stop meaning what it meant: a sentence marked [2] opens what
+// used to be [3], and the reader has no way to tell. The prose goes; the claims
+// stay, which is the shape an answer with no summary already has.
+func TestASummaryGoesWhenTheQuoteCheckRenumbersTheClaims(t *testing.T) {
+	passages := askPassages()
+	covered := coverageAnswers
+	reply, err := json.Marshal(askedAnswer{
+		Coverage: &covered,
+		Summary:  "Kept for 400 days. [1] Purged nightly. [2]",
+		Claims: &[]askedClaim{
+			{Text: "A sentence nothing holds up.", ID: passages[0].ChunkID.String(), Quote: "no passage says this"},
+			{Text: "Messages are kept for 400 days.", ID: passages[0].ChunkID.String(), Quote: "kept for 400 days"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	answer := AnswerCorpus(t.Context(), &fixedLane{text: string(reply)}, answeredState(),
+		"how long are messages kept", passages, "en", slog.New(slog.DiscardHandler))
+
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered {
+		t.Fatalf("outcome %v, want answered — one claim did survive", answer.Outcome)
+	}
+	if answer.Summary != nil {
+		t.Fatalf("the summary survived a renumbering: %q — its [2] now opens the claim that was [1]", *answer.Summary)
+	}
+	if answer.Claims == nil || len(*answer.Claims) != 1 {
+		t.Fatalf("the surviving claim was not kept")
+	}
+}
+
 func TestAGroundedAnswerKeepsItsSummary(t *testing.T) {
 	passages := askPassages()
 	lane := &fixedLane{text: corpusAnswered("Messages are kept for 400 days. [1]", askedClaim{

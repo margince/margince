@@ -374,9 +374,18 @@ ai-probe: composition ## Probe one AI task site against real input (free except 
 # different binding measures nothing; it needs no database, because the corpus is
 # in the binary. Vectors are cached under .tmp/aitask by content hash, so the
 # second run over an unchanged handbook embeds the question and nothing else.
+# $$AIEVAL_Q rather than $(Q). make substitutes its own variables into the recipe
+# before any shell sees it, so a question carrying an apostrophe — "what's a won
+# deal", which is how people write — would close the quote and leave the shell
+# parsing the rest of the sentence as a command. migrate-create takes this route
+# for the same reason.
+ai-eval: export AIEVAL_Q := $(Q)
+ai-eval: export AIEVAL_MODEL := $(MODEL)
+ai-eval: export AIEVAL_PAGE := $(PAGE)
 ai-eval: composition ## Rank the shipped handbook for one question and capture what a corpus_ask run would be handed (embeds; cached after the first run). Q='how can I create a project' MODEL=provider:model PAGE=records.md ARGS='--floor 0.3'
 	$(LOAD_ENV_LOCAL) $(GOWORK_COMPOSED) $(GO) run ./cmd/worker aitask retrieve \
-	  --question '$(Q)' --model '$(MODEL)' $(if $(PAGE),--page '$(PAGE)',) $(ARGS) \
+	  --question "$$AIEVAL_Q" --model "$$AIEVAL_MODEL" \
+	  $(if $(PAGE),--page "$$AIEVAL_PAGE",) $(ARGS) \
 	  --work-dir $(CURDIR)/../.tmp/aitask
 
 # Composed for the same reason as migrate: build_template shells out to

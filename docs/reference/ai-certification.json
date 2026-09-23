@@ -2154,7 +2154,8 @@
             ],
             "grader_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
-              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer"
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
             ]
           }
         },
@@ -2179,10 +2180,18 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
+            "case_changed": [
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
             "prompt_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "grader_changed": [
               "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
               "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
             ]
@@ -2209,10 +2218,18 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
+            "case_changed": [
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
             "prompt_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "grader_changed": [
               "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
               "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
             ]
@@ -2239,10 +2256,18 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
+            "case_changed": [
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
             "prompt_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "grader_changed": [
               "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
               "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
             ]

@@ -74,7 +74,7 @@ const (
 var probeFlagVerbs = []string{verbList, verbScaffold, verbFetch, verbRun}
 
 // runAITaskProbe is the subcommand entry point, dispatched from run() before
-// the worker flags — which would otherwise demand a DSN only `retrieve` uses.
+// the worker flags — which would otherwise demand a DSN no verb here uses.
 //
 // A verb nobody serves prints the whole tree and THEN refuses. Both halves
 // matter: an operator who mistyped needs the list more than the sentence, and

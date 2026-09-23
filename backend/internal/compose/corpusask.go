@@ -288,7 +288,12 @@ func AnswerCorpus(
 		answer.Claims = nil
 		return answer
 	}
-	if summary := written.Summary; summary != "" {
+	// The summary stands only while its numbers still mean what the writer
+	// meant. A dropped claim slides every later one up a place, so a sentence
+	// marked [2] would open what used to be [3] — and the reader has no way to
+	// tell. The claims are shown on their own instead, which the surface already
+	// draws for an answer that carried no prose.
+	if summary := written.Summary; summary != "" && !written.Renumbered {
 		answer.Summary = &summary
 	}
 	answer.Claims = &written.Claims

@@ -39,9 +39,9 @@ Counted per record — one (task, binding) pair — over the 20 stale record(s) 
 
 | What moved | Records | What it means |
 |---|---:|---|
-| the case | 12 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
+| the case | 15 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
 | **the prompt this build sends** | 16 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| the grader | 10 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
+| the grader | 13 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -204,9 +204,9 @@ model, real network).
 | `cold_start/field_extract` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/sitereadmessage` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `corpus_ask/corpus_ask` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `gemini · gemini-3.5-flash · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `gemini · gemini-3.5-flash · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `draft_reply/account` | `gemini · gemini-3.1-pro-preview · eu_hosted` | the case and the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/account` | `gemini · gemini-3.5-flash · eu_hosted` | the case and the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/contact` | `gemini · gemini-3.1-pro-preview · eu_hosted` | the case and the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it |
