@@ -558,11 +558,14 @@ fe-drift:
 ## and writes the report directly.
 FE_COVERAGE ?=
 FE_SHARD ?=
+## Named on both sides because vitest's own default for --merge-reports moved
+## between majors (.vitest-reports → .vitest/blob); the upload step reads it too.
+FE_BLOB_DIR := .vitest-reports
 fe-unit:
 	bash frontend/scripts/check-lcov-paths.test.sh
 	bash frontend/scripts/check-shard-union.test.sh
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
-		$(if $(FE_SHARD),--shard=$(FE_SHARD) --reporter=blob --outputFile=.vitest-reports/blob-$(subst /,-,$(FE_SHARD)).json --reporter=default) \
+		$(if $(FE_SHARD),--shard=$(FE_SHARD) --reporter=blob --outputFile=$(FE_BLOB_DIR)/blob-$(subst /,-,$(FE_SHARD)).json --reporter=default) \
 		$(if $(FE_COVERAGE),--coverage.enabled)
 	$(if $(FE_SHARD),,$(if $(FE_COVERAGE),frontend/scripts/check-lcov-paths.sh frontend/coverage/lcov.info))
 
@@ -585,7 +588,7 @@ fe-unit:
 fe-unit-merge:
 	cd frontend && pnpm install --frozen-lockfile && mkdir -p .vitest-merge && \
 		pnpm exec vitest list --filesOnly >.vitest-merge/discovered.txt && \
-		pnpm exec vitest --merge-reports --coverage.enabled \
+		pnpm exec vitest --merge-reports=$(FE_BLOB_DIR) --coverage.enabled \
 			--reporter=default --reporter=json --outputFile.json=.vitest-merge/merged.json
 	frontend/scripts/check-shard-union.sh frontend/.vitest-merge/merged.json frontend/.vitest-merge/discovered.txt
 	frontend/scripts/check-lcov-paths.sh frontend/coverage/lcov.info
