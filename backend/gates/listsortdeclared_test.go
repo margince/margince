@@ -95,8 +95,17 @@ func operationsDeclaringSort(t *testing.T) []string {
 	if err := yaml.Unmarshal(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
+	shared := sharedSortIdentity(t, raw)
 	var out []string
-	for _, methods := range doc.Paths {
+	for path, methods := range doc.Paths {
+		// INHERITED parameters count. OpenAPI lets a path item declare a
+		// parameter list shared by all its methods, so an operation can offer
+		// the sort without naming it — and a census that read only the
+		// operation level would leave that one enrolled nowhere while the
+		// others kept it reporting a healthy total. Nothing in this contract
+		// inherits Sort today, which is exactly why it is worth reading: the
+		// first one to do so must not be the one that discovers the gap.
+		inherited := declaresSharedSort(t, methods["parameters"], shared)
 		for method, node := range methods {
 			if method == "parameters" {
 				continue
@@ -106,27 +115,100 @@ func operationsDeclaringSort(t *testing.T) []string {
 				Parameters  []yaml.Node `yaml:"parameters"`
 			}
 			if err := node.Decode(&op); err != nil {
-				t.Fatalf("reading %s out of the contract: %v", method, err)
+				t.Fatalf("reading %s %s out of the contract: %v", strings.ToUpper(method), path, err)
 			}
 			if op.OperationID == "" {
 				continue
 			}
-			for _, param := range op.Parameters {
-				var ref struct {
-					Ref string `yaml:"$ref"`
-				}
-				// A parameter is either a $ref or an inline declaration; only
-				// the first can be the shared one, and a decode that finds no
-				// $ref simply leaves it empty.
-				if err := param.Decode(&ref); err == nil && ref.Ref == sortParameterRef {
-					out = append(out, op.OperationID)
-					break
-				}
+			if declaresSharedSort(t, node, shared) || (inherited && !overridesSharedSort(t, node, shared)) {
+				out = append(out, op.OperationID)
 			}
 		}
 	}
 	sort.Strings(out)
 	return out
+}
+
+// parameterIdentity is what OpenAPI keys a parameter by, and therefore what an
+// operation has to repeat to override one it would otherwise inherit.
+type parameterIdentity struct {
+	Name string `yaml:"name"`
+	In   string `yaml:"in"`
+}
+
+// sharedSortIdentity reads the shared component's own name and location rather
+// than assuming them, so an override is recognised by what the contract says
+// the parameter IS.
+func sharedSortIdentity(t *testing.T, raw []byte) parameterIdentity {
+	t.Helper()
+	var doc struct {
+		Components struct {
+			Parameters map[string]parameterIdentity `yaml:"parameters"`
+		} `yaml:"components"`
+	}
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parsing the contract's components: %v", err)
+	}
+	shared, declared := doc.Components.Parameters["Sort"]
+	if !declared || shared.Name == "" || shared.In == "" {
+		t.Fatalf("the contract declares no shared Sort parameter to census against (read %+v)", shared)
+	}
+	return shared
+}
+
+// declaresSharedSort reports whether a parameter list — a path item's or an
+// operation's — carries the shared component.
+func declaresSharedSort(t *testing.T, node yaml.Node, _ parameterIdentity) bool {
+	t.Helper()
+	for _, param := range parameterList(t, node) {
+		var ref struct {
+			Ref string `yaml:"$ref"`
+		}
+		// A parameter is either a $ref or an inline declaration; only the
+		// first can be the shared one, and a decode that finds no $ref simply
+		// leaves it empty.
+		if err := param.Decode(&ref); err == nil && ref.Ref == sortParameterRef {
+			return true
+		}
+	}
+	return false
+}
+
+// overridesSharedSort reports whether an operation redeclares the inherited
+// parameter as its own — which takes it out of this census, because what it
+// then offers is a vocabulary of its own rather than the shared one.
+func overridesSharedSort(t *testing.T, node yaml.Node, shared parameterIdentity) bool {
+	t.Helper()
+	for _, param := range parameterList(t, node) {
+		var own parameterIdentity
+		if err := param.Decode(&own); err == nil && own == shared {
+			return true
+		}
+	}
+	return false
+}
+
+// parameterList reads the `parameters` sequence off a path item or an
+// operation, answering empty for a node that carries none.
+func parameterList(t *testing.T, node yaml.Node) []yaml.Node {
+	t.Helper()
+	if node.Kind == 0 {
+		return nil
+	}
+	if node.Kind == yaml.SequenceNode {
+		var list []yaml.Node
+		if err := node.Decode(&list); err != nil {
+			t.Fatalf("reading a parameter list out of the contract: %v", err)
+		}
+		return list
+	}
+	var holder struct {
+		Parameters []yaml.Node `yaml:"parameters"`
+	}
+	if err := node.Decode(&holder); err != nil {
+		t.Fatalf("reading a parameter list out of the contract: %v", err)
+	}
+	return holder.Parameters
 }
 
 // handlersNamingSort walks the tree for HTTP handlers and reports, per handler
@@ -267,11 +349,12 @@ func nthParamName(fn *ast.FuncDecl, at int) string {
 // text match, and that comment is exactly what a handler dropping the
 // parameter tends to grow.
 func namesSortOn(body *ast.BlockStmt, params string) bool {
+	written := assignedSortTargets(body, params)
 	found := false
 	ast.Inspect(body, func(n ast.Node) bool {
 		selector, ok := n.(*ast.SelectorExpr)
-		if !ok || selector.Sel.Name != "Sort" {
-			return true
+		if !ok || selector.Sel.Name != "Sort" || written[selector] {
+			return !found
 		}
 		if ident, isIdent := selector.X.(*ast.Ident); isIdent && ident.Name == params {
 			found = true
@@ -279,6 +362,35 @@ func namesSortOn(body *ast.BlockStmt, params string) bool {
 		return !found
 	})
 	return found
+}
+
+// assignedSortTargets collects the `params.Sort` selectors that are WRITTEN
+// rather than read.
+//
+// A handler that clears the caller's sort — `params.Sort = nil` — names the
+// field and honours nothing, which is the one shape that would satisfy this
+// census while doing the exact thing it exists to catch. Only the left side of
+// a plain assignment is excluded: `in.Sort = params.Sort` reads on the right,
+// and `params.Sort = something(params.Sort)` reads there too.
+func assignedSortTargets(body *ast.BlockStmt, params string) map[*ast.SelectorExpr]bool {
+	written := map[*ast.SelectorExpr]bool{}
+	ast.Inspect(body, func(n ast.Node) bool {
+		assign, isAssign := n.(*ast.AssignStmt)
+		if !isAssign || assign.Tok != token.ASSIGN {
+			return true
+		}
+		for _, target := range assign.Lhs {
+			selector, isSelector := target.(*ast.SelectorExpr)
+			if !isSelector || selector.Sel.Name != "Sort" {
+				continue
+			}
+			if ident, isIdent := selector.X.(*ast.Ident); isIdent && ident.Name == params {
+				written[selector] = true
+			}
+		}
+		return true
+	})
+	return written
 }
 
 // servesHTTP reports whether this method is an HTTP handler, by the signature
