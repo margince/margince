@@ -1,13 +1,19 @@
 {
   "totals": {
     "sites": 46,
-    "sites_best_current": 43,
+    "sites_best_current": 46,
     "sites_best_partial": 0,
-    "sites_best_stale": 3,
+    "sites_best_stale": 0,
     "sites_absent": 0,
+<<<<<<< HEAD
     "scenarios": 170,
     "records": 108,
     "bindings": 13
+=======
+    "scenarios": 168,
+    "records": 135,
+    "bindings": 15
+>>>>>>> b34e33514 (test(aicert): certify openrouter_cloud_eu against Mistral's EU endpoint)
   },
   "presets": [
     {
@@ -1106,8 +1112,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "certified",
+          "state": "current"
         },
         {
           "task": "agent_loop",
@@ -1117,8 +1123,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "brief_ranking",
@@ -1128,8 +1134,8 @@
             "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "certified",
+          "state": "current"
         },
         {
           "task": "capture_classify",
@@ -1139,8 +1145,8 @@
             "model": "mistralai/ministral-8b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "capture_confidentiality_verdict",
@@ -1150,8 +1156,8 @@
             "model": "mistralai/ministral-8b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "capture_counterparty_verdict",
@@ -1161,8 +1167,8 @@
             "model": "mistralai/ministral-8b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "cert_judge",
@@ -1172,8 +1178,8 @@
             "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "certified",
+          "state": "current"
         },
         {
           "task": "cold_start",
@@ -1183,8 +1189,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "corpus_ask",
@@ -1194,8 +1200,8 @@
             "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "deal_health",
@@ -1205,8 +1211,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "supported_degraded",
+          "state": "current"
         },
         {
           "task": "document_extract",
@@ -1227,8 +1233,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "enrich",
@@ -1238,8 +1244,8 @@
             "model": "mistralai/ministral-8b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "certified",
+          "state": "current"
         },
         {
           "task": "growth_fit",
@@ -1249,8 +1255,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "offer_draft",
@@ -1260,8 +1266,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "owed_verdict",
@@ -1271,8 +1277,8 @@
             "model": "mistralai/ministral-8b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "propose_roles",
@@ -1282,8 +1288,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "certified",
+          "state": "current"
         },
         {
           "task": "rate_extract",
@@ -1293,8 +1299,8 @@
             "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "certified",
+          "state": "current"
         },
         {
           "task": "request_settlement",
@@ -1304,8 +1310,8 @@
             "model": "mistralai/ministral-8b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "certified",
+          "state": "current"
         },
         {
           "task": "signal_extract",
@@ -1315,8 +1321,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "site_extract",
@@ -1326,8 +1332,8 @@
             "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "site_fact_extract",
@@ -1337,8 +1343,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "site_triage",
@@ -1348,8 +1354,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "certified",
+          "state": "current"
         },
         {
           "task": "stage_evidence_extract",
@@ -1359,8 +1365,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "summarize",
@@ -1370,8 +1376,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "transcript_propose",
@@ -1381,8 +1387,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "certified",
+          "state": "current"
         },
         {
           "task": "voice_build",
@@ -1392,8 +1398,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "weekly_learnings",
@@ -1403,8 +1409,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         },
         {
           "task": "weekly_review",
@@ -1414,16 +1420,16 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": ""
+          "band": "not_supported",
+          "state": "current"
         }
       ],
       "bands": {
-        "certified": 0,
-        "supported_degraded": 0,
-        "not_supported": 0
+        "certified": 9,
+        "supported_degraded": 1,
+        "not_supported": 18
       },
-      "untested": 29,
+      "untested": 1,
       "unbound": 0
     }
   ],
@@ -1571,6 +1577,26 @@
     {
       "binding": {
         "provider": "openai_compatible",
+        "model": "mistralai/ministral-14b-2512",
+        "env": "eu_hosted"
+      },
+      "sites": 33,
+      "sites_current": 33,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 309,
+      "passed": 190,
+      "reliability": 0.6148867313915858,
+      "slowest_p95_ms": 86185,
+      "bands": {
+        "certified": 7,
+        "supported_degraded": 7,
+        "not_supported": 19
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
         "model": "mistralai/ministral-8b-2512",
         "env": "cloud_frontier"
       },
@@ -1586,6 +1612,26 @@
         "certified": 1,
         "supported_degraded": 2,
         "not_supported": 0
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "mistralai/ministral-8b-2512",
+        "env": "eu_hosted"
+      },
+      "sites": 6,
+      "sites_current": 6,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 141,
+      "passed": 122,
+      "reliability": 0.8652482269503546,
+      "slowest_p95_ms": 12585,
+      "bands": {
+        "certified": 2,
+        "supported_degraded": 0,
+        "not_supported": 4
       }
     },
     {
@@ -1631,6 +1677,7 @@
     {
       "binding": {
         "provider": "openai_compatible",
+<<<<<<< HEAD
         "model": "mistralai/mistral-medium-3-5",
         "env": "eu_hosted"
       },
@@ -1646,6 +1693,23 @@
         "certified": 1,
         "supported_degraded": 0,
         "not_supported": 0
+=======
+        "model": "mistralai/mistral-small-2603",
+        "env": "eu_hosted"
+      },
+      "sites": 6,
+      "sites_current": 6,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 42,
+      "passed": 34,
+      "reliability": 0.8095238095238095,
+      "slowest_p95_ms": 2191,
+      "bands": {
+        "certified": 4,
+        "supported_degraded": 0,
+        "not_supported": 2
+>>>>>>> b34e33514 (test(aicert): certify openrouter_cloud_eu against Mistral's EU endpoint)
       }
     },
     {
@@ -1702,7 +1766,7 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
+          "model": "mistralai/ministral-14b-2512",
           "env": "eu_hosted"
         },
         "band": "certified",
@@ -1771,6 +1835,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 2061,
+          "latency_p95_ms": 3416,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -1804,8 +1891,17 @@
         "sales",
         "offer"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "mistralai/ministral-14b-2512",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0.5277777777777778,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_description_is_not_a_name",
@@ -2077,6 +2173,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 24,
+          "scenarios_total": 24,
+          "runs": 72,
+          "passed": 38,
+          "reliability": 0.5277777777777778,
+          "latency_p50_ms": 1928,
+          "latency_p95_ms": 3108,
+          "reported": {
+            "accepted": 38,
+            "wrong_answer": 34,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -2147,7 +2266,7 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "mistralai/mistral-large-2512",
+          "model": "mistralai/mistral-small-2603",
           "env": "eu_hosted"
         },
         "band": "certified",
@@ -2246,6 +2365,29 @@
           "reliability": 1,
           "latency_p50_ms": 1806,
           "latency_p95_ms": 2443,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-small-2603",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1530,
+          "latency_p95_ms": 1907,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -2392,6 +2534,29 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 13,
+          "reliability": 0.8666666666666667,
+          "latency_p50_ms": 1530,
+          "latency_p95_ms": 2683,
+          "reported": {
+            "accepted": 13,
+            "wrong_answer": 0,
+            "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -2550,6 +2715,29 @@
             "accepted": 42,
             "wrong_answer": 0,
             "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 14,
+          "scenarios_total": 14,
+          "runs": 42,
+          "passed": 38,
+          "reliability": 0.9047619047619048,
+          "latency_p50_ms": 1389,
+          "latency_p95_ms": 1582,
+          "reported": {
+            "accepted": 38,
+            "wrong_answer": 3,
+            "invalid": 1,
             "abstained": 0
           },
           "stale_reason": ""
@@ -2797,6 +2985,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 19,
+          "scenarios_total": 19,
+          "runs": 57,
+          "passed": 51,
+          "reliability": 0.8947368421052632,
+          "latency_p50_ms": 1427,
+          "latency_p95_ms": 2110,
+          "reported": {
+            "accepted": 51,
+            "wrong_answer": 4,
+            "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -2860,7 +3071,7 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "mistralai/mistral-large-2512",
+          "model": "mistralai/mistral-small-2603",
           "env": "eu_hosted"
         },
         "band": "certified",
@@ -2964,6 +3175,29 @@
           "reliability": 1,
           "latency_p50_ms": 1462,
           "latency_p95_ms": 2040,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-small-2603",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 1015,
+          "latency_p95_ms": 1734,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -3137,6 +3371,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 1419,
+          "latency_p95_ms": 6582,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -3256,6 +3513,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1419,
+          "latency_p95_ms": 6582,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -3371,6 +3651,29 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1419,
+          "latency_p95_ms": 6582,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -3495,6 +3798,29 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 1419,
+          "latency_p95_ms": 6582,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -3727,6 +4053,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-small-2603",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 7,
+          "reliability": 0.7777777777777778,
+          "latency_p50_ms": 1104,
+          "latency_p95_ms": 1757,
+          "reported": {
+            "accepted": 7,
+            "wrong_answer": 0,
+            "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -3803,6 +4152,29 @@
           "reliability": 1,
           "latency_p50_ms": 14129,
           "latency_p95_ms": 47100,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 6017,
+          "latency_p95_ms": 8034,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -4042,6 +4414,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 2154,
+          "latency_p95_ms": 5869,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 0,
+            "invalid": 3,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -4198,6 +4593,29 @@
             "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 2154,
+          "latency_p95_ms": 5869,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 0,
+            "invalid": 3,
             "abstained": 0
           },
           "stale_reason": ""
@@ -4367,6 +4785,29 @@
             "accepted": 2,
             "wrong_answer": 0,
             "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 2154,
+          "latency_p95_ms": 5869,
+          "reported": {
+            "accepted": 1,
+            "wrong_answer": 0,
+            "invalid": 2,
             "abstained": 0
           },
           "stale_reason": ""
@@ -4545,6 +4986,29 @@
             "accepted": 6,
             "wrong_answer": 0,
             "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 2154,
+          "latency_p95_ms": 5869,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 0,
+            "invalid": 1,
             "abstained": 0
           },
           "stale_reason": ""
@@ -4731,6 +5195,29 @@
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 6,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 2154,
+          "latency_p95_ms": 5869,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
             "invalid": 0,
             "abstained": 0
           },
@@ -4960,6 +5447,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 5,
+          "reliability": 0.4166666666666667,
+          "latency_p50_ms": 2154,
+          "latency_p95_ms": 5869,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 0,
+            "invalid": 7,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -5087,6 +5597,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 3120,
+          "latency_p95_ms": 4433,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -5179,6 +5712,29 @@
           "reported": {
             "accepted": 0,
             "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 1
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 15123,
+          "latency_p95_ms": 15814,
+          "reported": {
+            "accepted": 1,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 1
           },
@@ -5330,6 +5886,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 10,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 2642,
+          "latency_p95_ms": 6145,
+          "reported": {
+            "accepted": 7,
+            "wrong_answer": 3,
+            "invalid": 2,
+            "abstained": 3
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -5358,8 +5937,17 @@
       "key": "owed_verdict/owed",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "mistralai/ministral-8b-2512",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0.4166666666666667,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_direct_question_asks_us_and_a_report_does_not",
@@ -5447,6 +6035,29 @@
               "the_recipient_line_separates_a_request_from_a_copy"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 5,
+          "reliability": 0.4166666666666667,
+          "latency_p50_ms": 1833,
+          "latency_p95_ms": 2937,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 7,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -5569,6 +6180,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1808,
+          "latency_p95_ms": 4493,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -5601,7 +6235,7 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "mistralai/mistral-large-2512",
+          "model": "mistralai/mistral-small-2603",
           "env": "eu_hosted"
         },
         "band": "certified",
@@ -5716,6 +6350,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/mistral-small-2603",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 1150,
+          "latency_p95_ms": 1950,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "z-ai/glm-5.2",
             "env": "cloud_frontier"
           },
@@ -5748,7 +6405,7 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "mistralai/mistral-large-2512",
+          "model": "mistralai/mistral-small-2603",
           "env": "eu_hosted"
         },
         "band": "certified",
@@ -5858,6 +6515,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/mistral-small-2603",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1150,
+          "latency_p95_ms": 1950,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "z-ai/glm-5.2",
             "env": "cloud_frontier"
           },
@@ -5886,8 +6566,17 @@
       "key": "request_settlement/request_settle",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "mistralai/ministral-8b-2512",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_reply_that_says_nothing_either_way_is_answered_unsure",
@@ -5966,6 +6655,29 @@
               "an_answer_settles_a_request_and_an_acknowledgement_does_not"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 1700,
+          "latency_p95_ms": 12585,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -6078,6 +6790,29 @@
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 6,
+          "reliability": 0.5,
+          "latency_p50_ms": 1517,
+          "latency_p95_ms": 2385,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 6,
             "invalid": 0,
             "abstained": 0
           },
@@ -6280,6 +7015,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/mistral-small-2603",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 9,
+          "reliability": 0.6,
+          "latency_p50_ms": 1714,
+          "latency_p95_ms": 2191,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "z-ai/glm-5.2",
             "env": "cloud_frontier"
           },
@@ -6409,6 +7167,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 6,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 2234,
+          "latency_p95_ms": 3149,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -6441,8 +7222,8 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "google/gemma-4-31b-it",
-          "env": "cloud_frontier"
+          "model": "mistralai/ministral-14b-2512",
+          "env": "eu_hosted"
         },
         "band": "certified",
         "reliability": 1,
@@ -6514,6 +7295,29 @@
           "reliability": 1,
           "latency_p50_ms": 1614,
           "latency_p95_ms": 4068,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 1066,
+          "latency_p95_ms": 1980,
           "reported": {
             "accepted": 15,
             "wrong_answer": 0,
@@ -6661,6 +7465,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 9,
+          "scenarios_total": 9,
+          "runs": 27,
+          "passed": 4,
+          "reliability": 0.14814814814814814,
+          "latency_p50_ms": 830,
+          "latency_p95_ms": 3027,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 8,
+            "invalid": 15,
+            "abstained": 1
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -6756,6 +7583,29 @@
           "reported": {
             "accepted": 3,
             "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 7250,
+          "latency_p95_ms": 19903,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -6867,6 +7717,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 7250,
+          "latency_p95_ms": 19903,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -6957,6 +7830,29 @@
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 7250,
+          "latency_p95_ms": 19903,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
@@ -7068,6 +7964,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 7250,
+          "latency_p95_ms": 19903,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -7155,6 +8074,29 @@
           "reliability": 0,
           "latency_p50_ms": 20857,
           "latency_p95_ms": 71825,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 7250,
+          "latency_p95_ms": 19903,
           "reported": {
             "accepted": 0,
             "wrong_answer": 3,
@@ -7256,6 +8198,29 @@
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 7250,
+          "latency_p95_ms": 19903,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
@@ -7370,6 +8335,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1112,
+          "latency_p95_ms": 2252,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -7402,8 +8390,8 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "google/gemma-4-31b-it",
-          "env": "cloud_frontier"
+          "model": "mistralai/ministral-14b-2512",
+          "env": "eu_hosted"
         },
         "band": "certified",
         "reliability": 1,
@@ -7455,6 +8443,29 @@
           "reliability": 1,
           "latency_p50_ms": 2084,
           "latency_p95_ms": 237731,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1642,
+          "latency_p95_ms": 20668,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -7585,6 +8596,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 1642,
+          "latency_p95_ms": 20668,
+          "reported": {
+            "accepted": 1,
+            "wrong_answer": 0,
+            "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -7700,6 +8734,29 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 1642,
+          "latency_p95_ms": 20668,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 0,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -7823,6 +8880,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1642,
+          "latency_p95_ms": 20668,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
@@ -7921,6 +9001,29 @@
           "reported": {
             "accepted": 6,
             "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 5,
+          "reliability": 0.5555555555555556,
+          "latency_p50_ms": 5999,
+          "latency_p95_ms": 7763,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 4,
             "invalid": 0,
             "abstained": 0
           },
@@ -8033,6 +9136,29 @@
             "accepted": 9,
             "wrong_answer": 3,
             "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 5,
+          "reliability": 0.4166666666666667,
+          "latency_p50_ms": 1764,
+          "latency_p95_ms": 86185,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 5,
+            "invalid": 2,
             "abstained": 0
           },
           "stale_reason": ""
