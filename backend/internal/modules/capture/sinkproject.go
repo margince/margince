@@ -85,18 +85,20 @@ func (s *Sink) WithProjectAttribution(attribution ProjectAttribution) *Sink {
 	return &c
 }
 
-// attributeProject runs the ladder for one freshly captured activity and writes
-// at most one project link.
+// attributeProject runs the ladder for one captured activity and writes at
+// most one project link.
 //
 // Post-commit, in its own transaction, for the reason ensureCounterparty is:
 // the timeline row must never be lost to an attribution fault, and the capture
 // budget must not wait on this. A fault is recorded in system_log and never
 // returned — the message is already on the timeline and stays there.
 //
-// Nothing re-runs the ladder over it afterwards. link_reconcile repairs the
-// CONTACT links a captured message is owed; a project attribution it never made
-// is a filing decision nobody has re-asked, and saying otherwise here would
-// describe a repair that does not exist.
+// It runs on EVERY capture of the activity, not only the first, and that is the
+// retry. A transient fault used to leave the message unfiled forever — the
+// ladder ran on creation alone, so every later replay found the activity
+// present and skipped it, and the reconcile the old comment here promised had
+// no caller. alreadyFiledUnderAProject below is what makes the re-run cheap;
+// linkActivityToProject was always what made it safe.
 func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef) {
 	if s.projectKeys == nil || s.stampProject == nil {
 		return
