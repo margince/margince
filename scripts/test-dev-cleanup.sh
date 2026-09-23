@@ -623,6 +623,68 @@ quiet_probe() {
 }
 quiet_probe
 
+# EVERY NAME THE TAKEDOWN READS IS IN SCOPE WHERE PRODUCTION CALLS IT.
+#
+# The two probes above LIFT the takedown into this file, where `state`,
+# `with_database` and `stack_server_pids` are supplied by hand a few lines
+# earlier. That proves the logic and can say nothing about whether dev.sh has
+# any of it in scope at the line that runs it — and it did not. All three sat
+# below the call. Bash reported one unbound variable and two missing commands,
+# `stack_victims` swallowed them through its trailing `|| true`, and the
+# takedown announced nothing and killed nothing; the boot behind it then failed
+# on a port its own restart had just declined to free. A collector that can come
+# back short is the failure no reading catches, because short still looks green.
+#
+# DERIVED from the script on both sides: the names are whatever dev.sh defines,
+# and the reads are whatever these two bodies mention. Nothing here carries a
+# list that would go on passing after somebody adds a fourth helper below the
+# call.
+scope_probe() {
+    local report line kind name defline callline
+    report=$(awk '
+      function strip(l) { sub(/[[:space:]]*#.*$/, "", l); return l }
+      {
+        raw = $0
+        if (raw ~ /^[a-z_][a-zA-Z0-9_]*\(\) \{/) {
+          fn = raw; sub(/\(\).*$/, "", fn); fndef[fn] = NR; infunc = 1; cur = fn
+        }
+        else if (infunc && raw ~ /^\}[[:space:]]*$/) { infunc = 0; cur = "" }
+        else if (!infunc && raw ~ /^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=/) {
+          v = raw; sub(/^[[:space:]]*/, "", v); sub(/=.*$/, "", v)
+          if (!(v in vardef)) vardef[v] = NR
+        }
+        if (cur == "stack_victims" || cur == "take_down_running_stack") body = body "\n" strip(raw)
+        if (!callline && raw ~ /^[[:space:]]*take_down_running_stack[[:space:]]*$/) callline = NR
+      }
+      END {
+        for (f in fndef)
+          if (f != "stack_victims" && f != "take_down_running_stack" &&
+              body ~ ("[^a-zA-Z0-9_]" f "[^a-zA-Z0-9_]"))
+            print "function", f, fndef[f], callline
+        for (v in vardef)
+          if (body ~ ("\\$\\{?" v "[^a-zA-Z0-9_]"))
+            print "variable", v, vardef[v], callline
+      }
+    ' "$dev")
+    # The subject has to be FOUND before it can be judged. An awk program that
+    # matched nothing would print nothing and walk past every check below.
+    if [[ -z "$report" ]]; then
+        printf '  FAIL %s\n' "the scope scan found no names at all — dev.sh moved out from under it" >&2
+        failures=$((failures + 1))
+        return
+    fi
+    while read -r kind name defline callline; do
+        if [[ "$defline" -lt "$callline" ]]; then
+            printf '  ok   the takedown has %s %s in scope where dev.sh calls it\n' "$kind" "$name"
+        else
+            printf '  FAIL %s %s is defined on line %s, below the takedown that reads it on line %s\n' \
+                   "$kind" "$name" "$defline" "$callline" >&2
+            failures=$((failures + 1))
+        fi
+    done <<<"$report"
+}
+scope_probe
+
 if [[ "$failures" -gt 0 ]]; then
     printf 'FAIL: %d check(s)\n' "$failures" >&2
     exit 1
