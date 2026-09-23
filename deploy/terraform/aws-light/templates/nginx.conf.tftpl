@@ -1,0 +1,48 @@
+# Path routing that mirrors the full stack's ALB listener rules
+# (deploy/terraform/aws/alb.tf: aws_lb_listener_rule.api_v1_and_ops,
+# api_webhooks, api_mcp_oauth) — everything not matched here falls through
+# to web, the same default_action the ALB listener uses.
+#
+# Templated (ec2.tf) because TLS is now conditional (var.enable_tls,
+# variables.tf): the two shapes below render from ONE routing_block passed
+# in from ec2.tf's locals, so the TLS and plain-HTTP variants can't drift
+# from each other on which path goes to api vs web — only the listener
+# port and the :80→:443 redirect differ.
+
+server {
+    listen 80;
+    server_name ${domain};
+
+%{ if enable_tls ~}
+    # Certbot's webroot plugin (templates/user_data.sh.tpl) answers its
+    # HTTP-01 challenge here — this must keep working after TLS is up too,
+    # since renewal repeats the same challenge against the same port.
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://${domain}$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name ${domain};
+
+    # Same generation as the full stack's ALB listener
+    # (deploy/terraform/aws/alb.tf: ssl_policy =
+    # "ELBSecurityPolicy-TLS13-1-2-2021-06") — TLS 1.2/1.3 only, no legacy
+    # cipher fallback.
+    ssl_certificate     /etc/letsencrypt/live/${domain}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${domain}/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5:!3DES;
+    ssl_prefer_server_ciphers off;
+
+${routing_block}
+}
+%{ else ~}
+${routing_block}
+}
+%{ endif ~}
