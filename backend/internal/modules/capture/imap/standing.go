@@ -215,6 +215,13 @@ func (c *Connector) syncStanding(ctx context.Context, auth connector.Auth, curso
 		// A connection that will not take a deadline is not one to sync on.
 		return nil, fmt.Errorf("imap: arming the read deadline: %w", errors.Join(ErrUnreachable, err))
 	}
+	// The bound the client cannot clear. Everything below is the select+fetch
+	// phase, and the deadline armed above stops bounding it at the first
+	// response read — so without this a server answering every command inside
+	// its own 30s keeps this pull, and the worker running it, for as long as
+	// it likes. A standing connector is one registry singleton serving every
+	// mailbox.
+	defer abortAfter(netConn, pullDeadline, c.phaseTimerOr())()
 
 	selData, err := client.Select(creds.Mailbox, &imapv2.SelectOptions{ReadOnly: true}).Wait()
 	if err != nil {
