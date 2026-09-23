@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=../margince.schema.json
-# config/presets/openrouter_cloud_eu.yaml — every lane on Mistral's EU endpoint.
+# config/presets/openrouter_cloud_eu.yaml — every CHAT tier on Mistral's EU
+# endpoint. The embeddings lane cannot carry the pin; see the gap noted below.
 #
 # The sibling openrouter_cloud.yaml picks the best model per tier and lets the
 # broker choose a host. This file inverts that: the host is fixed first, and the

@@ -230,8 +230,10 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		rateOn(day, providerOpenAICompatible, "mistralai/mistral-large-2512", 500_000, 1_500_000, 50_000, 0),
 		// Read 2026-09-23, after the block above: mistral-large-2512 had lost
 		// every upstream endpoint by then and these two are what the presets
-		// bind in its place. medium-3-5 publishes no cached-input price, so 0
-		// here is "no cache discount" and uncached input is what a call pays.
+		// bind in its place. medium-3-5's cache column is 0 because Mistral
+		// publishes no cached-input price AND this adapter never reports a
+		// cached token — only the anthropic and gemini clients populate that
+		// field — so the column is unreachable rather than a discount.
 		rateOn(day, providerOpenAICompatible, "mistralai/mistral-small-2603", 150_000, 600_000, 15_000, 0),
 		rateOn(day, providerOpenAICompatible, "mistralai/mistral-medium-3-5", 1_500_000, 7_500_000, 0, 0),
 		rateOn(day, providerOpenAICompatible, "deepseek/deepseek-v4-flash", 140_000, 280_000, 28_000, 0),

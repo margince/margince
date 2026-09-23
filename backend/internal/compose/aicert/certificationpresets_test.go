@@ -51,6 +51,10 @@ type aiCertPreset struct {
 	Bands    aiCertBands `json:"bands"`
 	Untested int         `json:"untested"`
 	Unbound  int         `json:"unbound"`
+	// Unrecognised counts rows whose band this rollup has no column for. Always
+	// zero today; a nonzero one means the verdict vocabulary grew and this
+	// section is reporting less than it reads.
+	Unrecognised int `json:"unrecognised"`
 }
 
 type aiCertPresetTier struct {
@@ -182,8 +186,14 @@ func countPresetTask(preset *aiCertPreset, row aiCertPresetTask) {
 		preset.Bands.Certified++
 	case row.Band == aicert.VerdictSupportedDegraded:
 		preset.Bands.SupportedDegraded++
-	default:
+	case row.Band == aicert.VerdictNotSupported:
 		preset.Bands.NotSupported++
+	default:
+		// A verdict this rollup does not know is counted nowhere rather than
+		// folded into the worst band: a new one added upstream should show as
+		// a total that does not add up, which assertAICertPresetsAreAttributed
+		// reports, not as a silent not_supported.
+		preset.Unrecognised++
 	}
 }
 
@@ -289,7 +299,6 @@ func aiCertBandCell(row aiCertPresetTask) string {
 func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc aiCertDoc) {
 	t.Helper()
 	tasks := aiCertTasksOf(doc)
-	var measured int
 	for _, p := range presets {
 		if len(p.Tasks) != len(tasks) {
 			t.Errorf("preset %s reports %d tasks and the page ships %d", p.File, len(p.Tasks), len(tasks))
@@ -297,10 +306,16 @@ func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc 
 		if len(p.Tiers) == 0 {
 			t.Errorf("preset %s binds no tier, so every task under it would read as unbound", p.File)
 		}
-		measured += p.Bands.Certified + p.Bands.SupportedDegraded + p.Bands.NotSupported
-	}
-	if measured == 0 {
-		t.Error("no preset reaches a single measured band — the ladder attribution has stopped resolving, " +
-			"and a page of `untested` rows is a claim about the product rather than a missing join")
+		if p.Unrecognised > 0 {
+			t.Errorf("preset %s carries %d row(s) whose band this rollup has no column for", p.File, p.Unrecognised)
+		}
+		// PER PRESET, not summed across them. A total hides the failure this
+		// asks about: attribution keys a preset's profile against a record's
+		// env, so one typo'd `profile:` turns that preset entirely `untested`
+		// while every other preset keeps the sum comfortably positive.
+		if measured := p.Bands.Certified + p.Bands.SupportedDegraded + p.Bands.NotSupported; measured == 0 {
+			t.Errorf("preset %s reaches no measured band at all — every task reads untested or unbound, "+
+				"which is a claim about the product if true and a broken join if not", p.File)
+		}
 	}
 }

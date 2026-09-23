@@ -436,7 +436,7 @@ func routingSeedFrom(declared yaml.Node) (ai.RoutingConfig, bool, error) {
 	}
 	raw, err := deployconfig.SeedSubtreeBytes(declared)
 	if err != nil {
-		return ai.RoutingConfig{}, false, fmt.Errorf("compose: seeds.ai_routing: %w", err)
+		return ai.RoutingConfig{}, false, err
 	}
 	cfg, err := ai.ParseRouting(raw)
 	if err != nil {
