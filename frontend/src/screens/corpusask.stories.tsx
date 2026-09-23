@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { CorpusAskCard } from "./corpusask";
+import { AskMarginceModal } from "./corpusask";
 import {
   installFetchStub,
   jsonResponse,
@@ -25,9 +25,15 @@ import {
 // "no answer" they would send the reader after the wrong thing, and nothing in
 // the render gate would notice.
 //
-// `CorpusAskCard` renders NOTHING without `knowledge_corpus:read` and nothing
+// It is a DIALOG, opened from the command palette over whatever page the
+// reader was on, and it holds two columns: the answer on the left and the
+// document a citation opens on the right. Both halves are in every frame —
+// a story that captured only the answer would say nothing about the half the
+// citations exist to reach.
+//
+// `AskMarginceModal` refuses to ask without `knowledge_corpus:read` and refuses
 // when the workspace filed no set, so both are routed in every story: either
-// omission draws an empty page under a name that claims an answer.
+// omission draws a dead box under a name that claims an answer.
 
 type Answer = components["schemas"]["KnowledgeAnswer"];
 type Corpus = components["schemas"]["KnowledgeCorpus"];
@@ -58,9 +64,14 @@ const OTHER_SET: Corpus = {
   default_ask: false,
 };
 
+const DOC_ID = "00000000-0000-4000-8000-0000000000b1";
+
+// The written paragraph, with the marker the model puts at the end of the
+// sentence it is citing. `[1]` is what becomes the pressable source.
 const ANSWERED: Answer = {
   outcome: "answered",
   generated_by: "model",
+  summary: "Captured messages are kept for 400 days. [1]",
   corpus: {
     id: SET_ID,
     name: SET.name,
@@ -70,7 +81,7 @@ const ANSWERED: Answer = {
   claims: [
     {
       chunk_id: "00000000-0000-4000-8000-0000000000c1",
-      document_id: "00000000-0000-4000-8000-0000000000b1",
+      document_id: DOC_ID,
       document_name: "operating.md",
       line: 14,
       column: 3,
@@ -80,25 +91,48 @@ const ANSWERED: Answer = {
   ],
 };
 
-// A refusal wrote no prose, so it is `deterministic` — the badge is about who
-// produced a sentence, and here nobody did.
+// The document behind that citation, holding the quote verbatim: the pane
+// marks the span where it was written, which is the part that lets a reader
+// judge whether the sentence is a fair reading of it.
+const DOCUMENT = [
+  "# Operating",
+  "",
+  "## Retention",
+  "",
+  "Captured messages are kept for 400 days from the day they arrive.",
+  "Anything older is purged in the nightly sweep.",
+].join("\n");
+
+// A refusal cites nothing, but it is still WRITTEN: the model says in its own
+// words what this set holds instead, which is what the reader needs in order to
+// know where to go next.
 const NOT_COVERED: Answer = {
   ...ANSWERED,
   outcome: "not_covered",
-  generated_by: "deterministic",
+  summary:
+    "Nothing in this set priced a plan — it covers how the product is run, day to day.",
   claims: [],
 };
 
-// Mid-ingest, and the counts are the whole point: "try again shortly" is a
-// claim the reader can check only if the card says how far the reading got.
-const NOT_READY: Answer = {
+// The same refusal with nobody to write it. The set's standing topic statement
+// is then the only thing on screen saying what it is for, and it is quoted back
+// as the fallback rather than printed beside a sentence.
+const NOT_COVERED_UNWRITTEN: Answer = {
   ...NOT_COVERED,
+  generated_by: "deterministic",
+  summary: undefined,
+};
+
+// Mid-ingest: the set is still being read, so the question was never put to the
+// whole of it.
+const NOT_READY: Answer = {
+  ...NOT_COVERED_UNWRITTEN,
   outcome: "not_ready",
   coverage: { documents_total: 12, chunks_total: 1_180, chunks_embedded: 407 },
 };
 
 const RETRIEVAL_UNAVAILABLE: Answer = {
-  ...NOT_COVERED,
+  ...NOT_COVERED_UNWRITTEN,
   outcome: "retrieval_unavailable",
 };
 
@@ -108,10 +142,11 @@ const UNREVIEWED: Answer = {
   ...ANSWERED,
   outcome: "unreviewed",
   generated_by: "deterministic",
+  summary: undefined,
   claims: [
     {
       chunk_id: "00000000-0000-4000-8000-0000000000c1",
-      document_id: "00000000-0000-4000-8000-0000000000b1",
+      document_id: DOC_ID,
       document_name: "operating.md",
       line: 14,
       column: 3,
@@ -131,45 +166,48 @@ function askCard(
     "GET /me": meRoute({ knowledge_corpus: ["read"] }),
     "GET /knowledge/corpora": () => jsonResponse({ items: sets }),
     [ASK_ROUTE]: reply,
+    // The document pane fetches the file itself rather than JSON about it.
+    [`GET /knowledge/documents/${DOC_ID}`]: () => new Response(DOCUMENT),
   };
   return () => {
     installFetchStub(routes);
+    // No frame of our own: the dialog portals to the document body and brings
+    // its own width, and a wrapper around it would frame nothing.
     return (
       <StoryProviders>
-        {/* The card sits in a one-column reading width on its screen; at the
-            gallery's full width the passage lines run far longer than any
-            reader ever meets. */}
-        <div style={{ maxWidth: 720 }}>
-          <CorpusAskCard carriedQuestion={question} />
-        </div>
+        <AskMarginceModal open carriedQuestion={question} onClose={() => {}} />
       </StoryProviders>
     );
   };
 }
 
+// The dialog portals to the document body, so it is NOT inside the story's
+// canvas element. A play that queried the canvas would find an empty div and
+// time out on every frame — the surface is on the page, just not under the
+// story's own root.
+function dialog() {
+  return within(document.body);
+}
+
 // A carried question is ASKED on arrival, so the outcome stories press nothing:
 // they wait for the answer ITSELF rather than for a click to return, because
 // the reply commits a microtask later and a capture taken any earlier shows an
-// empty form under a story named for what the card said.
+// empty form under a story named for what the dialog said.
 function seeAnswer(settled: RegExp) {
-  return async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    await within(canvasElement).findByText(settled);
+  return async () => {
+    await dialog().findByText(settled);
   };
 }
 
-const meta: Meta<typeof CorpusAskCard> = {
+const meta: Meta<typeof AskMarginceModal> = {
   title: "Records/Ask your documents",
-  component: CorpusAskCard,
+  component: AskMarginceModal,
   parameters: { layout: "padded" },
 };
 export default meta;
 
-type Story = StoryObj<typeof CorpusAskCard>;
+type Story = StoryObj<typeof AskMarginceModal>;
 
-// The answer, whole: the sentence, WHO wrote it, the verbatim quote under it,
-// and the file plus the line the quote sits on. Every one of those is what
-// makes the sentence checkable, and a card that dropped any of them would
-// still look like an answer.
 // The frame and the wait the two answered frames share, NAMED on each rather
 // than inherited by one from the other.
 //
@@ -183,15 +221,20 @@ const answeredCard = askCard("how long are captured messages kept", () =>
 );
 const readTheAnswer = seeAnswer(/Captured messages are kept for 400 days/);
 
+// The answer, whole: the written sentence, the indigo badge saying an agent
+// wrote it, and the numbered source at the end of the sentence — whose
+// accessible name is the document and the line, so the number is never the only
+// thing telling a reader where it goes. A dialog that dropped any of them would
+// still look like an answer.
 export const Answered: Story = {
   render: answeredCard,
   play: readTheAnswer,
 };
 
-// The same answer on the dark ground. The "written from the passages" badge is
-// the indigo provenance mark, whose ground and text are both color-mix() of
-// tokens that lift with the dark accent — a badge that reads as a claim about a
-// model in light can go illegible here and nothing else on the card would.
+// The same answer on the dark ground. The AI-assisted badge is the indigo
+// provenance mark, whose ground and text are both color-mix() of tokens that
+// lift with the dark accent — a badge that reads as a claim about a model in
+// light can go illegible here and nothing else in the dialog would.
 export const AnsweredDark: Story = {
   render: answeredCard,
   play: readTheAnswer,
@@ -199,29 +242,40 @@ export const AnsweredDark: Story = {
 };
 
 // The refusal that is about the QUESTION: searched in full, nothing close
-// enough — and the set's topic statement quoted back, because a reader who has
-// just been refused is the reader who most needs to know what the set covers.
+// enough — and the writer's own sentence saying what the set holds instead,
+// because a reader who has just been refused is the reader who most needs to
+// know where to go next.
 export const NotCovered: Story = {
   render: askCard("what does the Professional plan cost", () =>
     jsonResponse(NOT_COVERED),
   ),
-  play: seeAnswer(/Not covered by this set/),
+  play: seeAnswer(/covers how the product is run/),
+};
+
+// The same refusal with no sentence written. The set's standing topic statement
+// is the fallback, and it is the only thing left on screen that says what this
+// set is for.
+export const NotCoveredUnwritten: Story = {
+  render: askCard("what does the Professional plan cost", () =>
+    jsonResponse(NOT_COVERED_UNWRITTEN),
+  ),
+  play: seeAnswer(/How this product is operated, day to day/),
 };
 
 // The refusal about the SET: it is still being read, and nothing is wrong with
-// the question. Its own plate with its own heading and the passage counts under
-// it — the same shape the not-covered refusal draws, so all three refusals read
-// alike — and its own WORDS, because a reader told "not covered" goes looking
-// for a document to file when the one they need is already there.
+// the question. Its own plate with its own heading — the same shape the
+// not-covered refusal draws, so all three refusals read alike — and its own
+// WORDS, because a reader told "not covered" goes looking for a document to
+// file when the one they need is already there.
 export const NotReady: Story = {
   render: askCard("how long are captured messages kept", () =>
     jsonResponse(NOT_READY),
   ),
-  play: seeAnswer(/not finished being read/),
+  play: seeAnswer(/Nothing is wrong with your question/),
 };
 
 // The refusal about the INSTALLATION: no search lane is bound, so nothing was
-// searched at all. Neither the question nor the set is at fault, and a card
+// searched at all. Neither the question nor the set is at fault, and a dialog
 // that said either would send the reader after the wrong thing.
 export const RetrievalUnavailable: Story = {
   render: askCard("how long are captured messages kept", () =>
@@ -231,8 +285,8 @@ export const RetrievalUnavailable: Story = {
 };
 
 // Neither an answer nor a refusal: the search found these passages and nothing
-// judged whether they answer the question. The caveat LEADS the panel, because
-// a passage sitting under a heading is read as an answer to it.
+// judged whether they answer the question. The caveat LEADS the answer column,
+// because a passage sitting where an answer goes is read as one.
 export const Unreviewed: Story = {
   render: askCard("what is the boiling point of nitrogen", () =>
     jsonResponse(UNREVIEWED),
@@ -248,10 +302,8 @@ export const Asking: Story = {
     "how long are captured messages kept",
     () => new Promise<Response>(() => {}),
   ),
-  play: async ({ canvasElement }) => {
-    const submit = await within(canvasElement).findByRole("button", {
-      name: "Ask",
-    });
+  play: async () => {
+    const submit = await dialog().findByRole("button", { name: "Ask" });
     await waitFor(() => expect(submit).toHaveAttribute("aria-busy", "true"));
   },
 };
@@ -262,10 +314,8 @@ export const Asking: Story = {
 // The resting frame and its wait, named on both for the reason given above the
 // answered pair: a `play` inherited through a spread loses its `play-fn` tag.
 const idleCard = askCard("", () => jsonResponse(ANSWERED));
-const askStaysRefused: Story["play"] = async ({ canvasElement }) => {
-  const submit = await within(canvasElement).findByRole("button", {
-    name: "Ask",
-  });
+const askStaysRefused: Story["play"] = async () => {
+  const submit = await dialog().findByRole("button", { name: "Ask" });
   await waitFor(() => expect(submit).toHaveAttribute("disabled"));
 };
 
@@ -288,8 +338,8 @@ export const IdleDark: Story = {
 // composes the question and presses the one indigo verb themselves.
 export const HandTyped: Story = {
   render: askCard("", () => jsonResponse(ANSWERED)),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+  play: async () => {
+    const canvas = dialog();
     await userEvent.type(
       await canvas.findByLabelText("Your question"),
       "how long are captured messages kept",
@@ -311,4 +361,20 @@ export const HandTyped: Story = {
 // choosing one first.
 export const WhichSet: Story = {
   render: askCard("", () => jsonResponse(ANSWERED), [SET, OTHER_SET]),
+};
+
+// The other column, which is what the citations exist to reach: pressing the
+// numbered source opens that document beside the answer with the quoted span
+// marked where it was written. An answer whose sources cannot be followed is a
+// set of claims, and the whole endpoint is built to refuse producing those.
+export const CitationOpen: Story = {
+  render: answeredCard,
+  play: async () => {
+    const canvas = dialog();
+    await canvas.findByText(/Captured messages are kept for 400 days/);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "operating.md, line 14" }),
+    );
+    await canvas.findByRole("link", { name: "Open file" });
+  },
 };

@@ -24,6 +24,7 @@ import {
 import { CREATE_ID, NAV } from "./nav";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 import { navigate, type Route } from "./router";
+import { openAsk } from "./urlstate";
 
 // ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a type
 // tag (screen / action / record); record entries are fed by the search seam
@@ -39,7 +40,10 @@ export type Command = {
   // older word must not be told the screen does not exist.
   keywords?: readonly string[];
   type: "screen" | "action" | "record";
-  route: Route;
+  // Where the row goes. Absent on a row that opens something OVER the page
+  // instead of leaving it — asking does that, and a route it never follows
+  // would be a claim about where the reader ends up that is simply untrue.
+  route?: Route;
 };
 
 // The words a settings entry answers to beyond its own label. A reader types the
@@ -194,10 +198,6 @@ const TYPE_KEY: Record<Command["type"], MessageKey> = {
   record: "palette.typeRecord",
 };
 
-// `#/ai?q=<question>`: the row's question travels in the ADDRESS, because a
-// reader already on the AI surface changes no path and so remounts nothing.
-export const ASK_QUESTION_PARAM = "q";
-
 export function CommandPalette({
   open,
   onClose,
@@ -271,7 +271,7 @@ export function CommandPalette({
         id: "ask-ai",
         label: t("palette.askAi", { query: query.trim() }),
         type: "action",
-        route: { screen: "ai" },
+        // No route: the dialog opens over the address the reader is on.
       }
     : null;
   const rows = [
@@ -285,11 +285,13 @@ export function CommandPalette({
 
   const run = (command: Command) => {
     onClose();
-    const asking = command.id === "ask-ai";
-    navigate(
-      command.route,
-      asking ? new Map([[ASK_QUESTION_PARAM, query.trim()]]) : undefined,
-    );
+    if (command.id === "ask-ai") {
+      openAsk(query.trim());
+      return;
+    }
+    if (command.route) {
+      navigate(command.route);
+    }
   };
 
   if (!mounted) {

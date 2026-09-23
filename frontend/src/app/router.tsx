@@ -38,7 +38,6 @@ export const SCREENS = [
   "projects",
   "worklist",
   "analytics",
-  "ai",
   "settings",
   "filters",
   "scheduled",
@@ -203,7 +202,6 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   // #/analytics/<section> — the picker chooses a view of one screen, so
   // switching sections re-renders the panel instead of throwing the screen away.
   analytics: 1,
-  ai: WHOLE_ADDRESS,
   // Not a tab, however much the sidebar looks like one: every settings entry is
   // its own page, and the admin half is a segment deeper.
   settings: WHOLE_ADDRESS,

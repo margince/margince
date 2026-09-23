@@ -149,11 +149,12 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(window.location.hash).toBe("#/deals");
   });
 
-  // The question rides in the ADDRESS, which is the only carrier the AI surface
-  // can be relied on to read: a reader already standing there changes no path,
-  // so nothing remounts, and a question held anywhere else is one nothing on
-  // that screen ever looks at.
-  it("the Ask-AI row carries the query in the address and lands on the AI surface (AC-shell-4)", async () => {
+  // The question rides in the ADDRESS, and the dialog it opens stands OVER
+  // whatever the reader was reading: asking is something done in the middle of
+  // other work, so the row must not take them anywhere. The dial is the whole
+  // carrier — a reload keeps the question, and the link can be sent.
+  it("the Ask-AI row opens the dialog where the reader is, taking them nowhere (AC-shell-4)", async () => {
+    window.location.hash = "#/deals";
     const onClose = vi.fn();
     render(<CommandPalette open onClose={onClose} commands={commands} />);
     await userEvent.type(screen.getByRole("searchbox"), "zzz nothing matches");
@@ -161,13 +162,13 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     // the see-all row to reach Ask-AI.
     await userEvent.keyboard("{ArrowDown}");
     await userEvent.keyboard("{Enter}");
-    expect(window.location.hash).toBe("#/ai?q=zzz+nothing+matches");
+    // The screen the reader was on is still the screen they are on.
+    expect(window.location.hash).toBe("#/deals?ask=zzz+nothing+matches");
     // And nowhere else. The address is the whole carrier, so there is no
     // second copy for a reader's next tab to inherit.
     expect(sessionStorage.length).toBe(0);
     // Closing is the palette's own answer to a selection and not something it
-    // waits for the address to trigger: a reader already standing on the AI
-    // surface changes no path, and the palette still has to get out of the way.
+    // waits for the address to trigger.
     expect(onClose).toHaveBeenCalled();
   });
 

@@ -1216,17 +1216,6 @@ export function AgentRail({
     restingTips(route.screen, t),
   );
 
-  // The one screen it absents itself from, and the reason is not layout: the Ask
-  // surface IS the agent, at hero size, and a second Core in the rail would be
-  // the product disagreeing with itself about how many agents there are. The
-  // railless screens need no rule of their own any more, because a section in
-  // the rail is absent wherever the rail is. Below every hook, because a screen
-  // this component draws nothing on is still a render it has to make the same
-  // calls in.
-  if (route.screen === "ai") {
-    return null;
-  }
-
   // Two things can hold the line, and this is their order: whatever the state
   // itself has to say, because a fault outranks small talk, and at rest the
   // rotation of true readings.

@@ -1,0 +1,122 @@
+/* The ask dialog: a question and its answer beside the document that answers
+ * it. Two columns, because following a citation must not cost the reader the
+ * sentence that sent them — a stacked layout scrolled the answer away the
+ * moment they pressed a number. */
+
+.ask-modal {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.ask-modal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+/* The set scopes the whole dialog, so it sits with the title rather than beside
+ * the question: changing it is not part of asking THIS question, it decides
+ * where the next one goes. */
+.ask-modal-set {
+  margin-inline-start: auto;
+}
+
+.ask-modal-body {
+  display: flex;
+  gap: var(--space-4);
+  min-height: 0;
+  flex-grow: 1;
+  padding-top: var(--space-3);
+}
+
+.ask-modal-ask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex-basis: 50%;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.ask-modal-doc {
+  flex-basis: 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-inline-start: 1px solid var(--borderSubtle);
+  padding-inline-start: var(--space-4);
+  overflow-y: auto;
+}
+
+/* The answer is PROSE. The citations are marks inside it rather than a list
+ * beside it, because a list of quotes reads as several answers and this is
+ * one. */
+.ask-summary {
+  margin: 0;
+  font: var(--fontBody);
+}
+
+.ask-bare-claims {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Indigo, because a citation is a claim about PROVENANCE: it says this sentence
+ * came from a passage a model read, and pressing it is how a reader checks
+ * that. Text on --aiLight takes --aiText, which is the pair that passes AA. */
+.ask-cite {
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightBold);
+  color: var(--aiText);
+  background: var(--aiLight);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-sm);
+  padding: 2px 5px;
+  margin-inline: 2px;
+  cursor: pointer;
+  vertical-align: 2px;
+}
+
+.ask-cite:hover {
+  border-color: var(--ai);
+}
+
+.ask-cite-on {
+  color: var(--textOnAccent);
+  background: var(--ai);
+  border-color: var(--ai);
+}
+
+.ask-doc {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: var(--space-2);
+}
+
+.ask-doc-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.ask-doc-name {
+  font: var(--fontHeadingXXSmall);
+}
+
+.ask-doc-note {
+  margin: 0;
+}
+
+.ask-doc-body {
+  min-height: 0;
+  overflow-y: auto;
+}

@@ -7,13 +7,14 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
-import { CorpusAskCard } from "./corpusask";
+import { AskMarginceModal } from "./corpusask";
 
 // Ask AI → Ask your documents.
 //
@@ -21,14 +22,20 @@ import { CorpusAskCard } from "./corpusask";
 // was designed around: the three refusals are three different statements and
 // the screen must never collapse them.
 //
-//   not_covered            about the QUESTION — and the set's topic statement
-//                          is quoted back, so the reader learns what it is for
+//   not_covered            about the QUESTION — and the reader is told what the
+//                          set DOES cover, so they learn where to go next
 //   not_ready              about the SET
 //   retrieval_unavailable  about the INSTALLATION
 //
 // A surface that drew one "no answer" state for all three would undo the
 // distinction the backend refuses to collapse, and the reader would go looking
 // for a document to upload when the truth was that nothing was searched.
+//
+// The second property, which arrived with the dialog: an answer is the
+// writer's own paragraph, and every sentence of it is FOLLOWABLE. A bracketed
+// number becomes a control that names the document it opens and opens it
+// beside the answer; a number naming a passage the answer does not carry is
+// dropped rather than drawn as a button that goes nowhere.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -39,6 +46,9 @@ function jsonResponse(body: unknown, status = 200) {
 
 const ASKER: GrantSpec = { knowledge_corpus: ["read"] };
 const SET_ID = "00000000-0000-4000-8000-0000000000a1";
+const OTHER_SET_ID = "00000000-0000-4000-8000-0000000000a2";
+const DOC_ID = "00000000-0000-4000-8000-0000000000b1";
+const OTHER_DOC_ID = "00000000-0000-4000-8000-0000000000b2";
 
 const SET = {
   id: SET_ID,
@@ -50,6 +60,49 @@ const SET = {
   coverage: { documents_total: 1, chunks_total: 4, chunks_embedded: 4 },
 };
 
+// A second set, so the picker exists at all: it is offered only where there is
+// a choice to make.
+const OTHER_SET = {
+  ...SET,
+  id: OTHER_SET_ID,
+  name: "Pricing",
+  topic_statement: "What each plan costs and what it includes.",
+  default_ask: false,
+};
+
+const KEPT = {
+  chunk_id: "00000000-0000-4000-8000-0000000000c1",
+  document_id: DOC_ID,
+  document_name: "operating.md",
+  line: 14,
+  column: 3,
+  text: "Captured messages are kept for 400 days.",
+  quote: "kept for 400 days from the day they arrive",
+};
+
+const PURGED = {
+  chunk_id: "00000000-0000-4000-8000-0000000000c2",
+  document_id: OTHER_DOC_ID,
+  document_name: "retention.md",
+  line: 6,
+  column: 1,
+  text: "Older messages are purged nightly.",
+  quote: "purged in the nightly sweep",
+};
+
+// The documents themselves, as the endpoint serves them: the bytes a citation
+// points INTO, each holding its claim's quote verbatim so the pane has
+// something real to mark.
+const DOCUMENTS: Record<string, string> = {
+  [DOC_ID]:
+    "# Operating\n\nMessages are kept for 400 days from the day they arrive.\n",
+  [OTHER_DOC_ID]:
+    "# Retention\n\nAnything older than that is purged in the nightly sweep.\n",
+};
+
+// The default shape of an answered ask: one written sentence carrying one
+// citation marker, which is what the model produces and what the dialog is
+// built to render.
 function answer(over: Record<string, unknown> = {}) {
   return {
     outcome: "answered",
@@ -60,17 +113,8 @@ function answer(over: Record<string, unknown> = {}) {
       topic_statement: SET.topic_statement,
     },
     coverage: SET.coverage,
-    claims: [
-      {
-        chunk_id: "00000000-0000-4000-8000-0000000000c1",
-        document_id: "00000000-0000-4000-8000-0000000000b1",
-        document_name: "operating.md",
-        line: 14,
-        column: 3,
-        text: "Captured messages are kept for 400 days.",
-        quote: "kept for 400 days from the day they arrive",
-      },
-    ],
+    summary: "Captured messages are kept for 400 days. [1]",
+    claims: [KEPT],
     ...over,
   };
 }
@@ -90,6 +134,12 @@ function backendFor(
       if (req.url.includes("/ask")) {
         asked.push(await req.json());
         return jsonResponse(opts.reply ?? answer());
+      }
+      if (req.url.includes("/knowledge/documents/")) {
+        const text = DOCUMENTS[req.url.split("/").pop() ?? ""];
+        return text === undefined
+          ? new Response("no such document", { status: 404 })
+          : new Response(text, { status: 200 });
       }
       if (req.url.includes("/knowledge/corpora")) {
         return jsonResponse({ items: opts.sets ?? [SET] });
@@ -122,158 +172,326 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function askAbout(question: string) {
-  await userEvent.type(
-    await screen.findByLabelText(/your question/i),
-    question,
-  );
-  await userEvent.click(screen.getByRole("button", { name: /^ask$/i }));
+type User = ReturnType<typeof userEvent.setup>;
+
+async function askAbout(user: User, question: string) {
+  await user.type(await screen.findByLabelText(/your question/i), question);
+  await user.click(screen.getByRole("button", { name: /^ask$/i }));
 }
 
-describe("CorpusAskCard", () => {
-  it("answers with the sentence and the passage it rests on", async () => {
+/** The pane beside the answer, which is where a pressed citation lands. */
+function documentPane() {
+  const pane = document.querySelector(".ask-modal-doc");
+  if (!(pane instanceof HTMLElement)) {
+    throw new Error("the dialog drew no document pane");
+  }
+  return pane;
+}
+
+describe("AskMarginceModal", () => {
+  it("answers with the written sentence, and names what each citation opens", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
-    render(<CorpusAskCard />);
-    await askAbout("how long are messages kept");
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
 
     expect(
       await screen.findByText("Captured messages are kept for 400 days."),
     ).toBeTruthy();
-    // The quote and the file it came from are BOTH on screen. A sentence
-    // without them is a claim a reader cannot check, which is the whole thing
-    // this endpoint refuses to produce.
+    // The marker became a control, and its accessible name says where it goes:
+    // a bare "1" tells a reader nothing, and a reader on a screen reader gets
+    // no tooltip to fall back on.
     expect(
-      screen.getByText("kept for 400 days from the day they arrive"),
+      screen.getByRole("button", { name: "operating.md, line 14" }),
     ).toBeTruthy();
-    expect(screen.getByText("operating.md")).toBeTruthy();
+    // And the whole surface says who wrote the sentence, because a paragraph
+    // presented without that is read as the workspace's own words.
+    expect(screen.getByText("AI-assisted")).toBeTruthy();
   });
 
-  it("says a model wrote the sentences", async () => {
-    vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
-    render(<CorpusAskCard />);
-    await askAbout("how long are messages kept");
+  // The numbers come from a model, so one of them can name a claim the answer
+  // never carried. A button that opens nothing is worse than a sentence that is
+  // merely uncited: the reader presses it, gets nothing, and stops trusting the
+  // ones that do work.
+  it("drops a citation marker that names a passage the answer does not carry", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ASKER, {
+        reply: answer({
+          summary:
+            "Captured messages are kept for 400 days. [1] Older ones are purged nightly. [2]",
+          claims: [KEPT],
+        }),
+      }).fetchMock,
+    );
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
 
-    expect(await screen.findByText(/written from the passages/i)).toBeTruthy();
+    const written = await screen.findByText(/Older ones are purged nightly/);
+    // The sentence survives whole; only the dead number is gone, and the one
+    // live citation is still pressable.
+    expect(written.textContent).not.toContain("[2]");
+    expect(within(written).getAllByRole("button")).toHaveLength(1);
+    expect(
+      within(written).getByRole("button", { name: "operating.md, line 14" }),
+    ).toBeTruthy();
   });
 
-  it("says nobody wrote a summary when the answer is the passages themselves", async () => {
+  it("opens the cited document beside the answer, and closes it again", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ASKER, {
+        reply: answer({
+          summary:
+            "Captured messages are kept for 400 days. [1] Older ones are purged nightly. [2]",
+          claims: [KEPT, PURGED],
+        }),
+      }).fetchMock,
+    );
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
+
+    // Nothing is open until the reader picks a citation, and the pane says so
+    // rather than standing blank.
+    expect(
+      within(documentPane()).getByText(/press a numbered source/i),
+    ).toBeTruthy();
+
+    await user.click(
+      await screen.findByRole("button", { name: "operating.md, line 14" }),
+    );
+    // The document itself, with the quoted span marked where it was written —
+    // which is the part that lets the reader judge whether the sentence is a
+    // fair reading of it.
+    expect(
+      await within(documentPane()).findByText("operating.md"),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(documentPane().querySelector("mark")?.textContent).toContain(
+        "kept for 400 days from the day they arrive",
+      ),
+    );
+
+    // A second citation opens ITS document, not the first one again.
+    await user.click(
+      screen.getByRole("button", { name: "retention.md, line 6" }),
+    );
+    expect(
+      await within(documentPane()).findByText("retention.md"),
+    ).toBeTruthy();
+    expect(within(documentPane()).queryByText("operating.md")).toBeNull();
+
+    // And pressing the open one again gives the reader the pane back.
+    await user.click(
+      screen.getByRole("button", { name: "retention.md, line 6" }),
+    );
+    expect(
+      await within(documentPane()).findByText(/press a numbered source/i),
+    ).toBeTruthy();
+  });
+
+  // An answer belongs to the set it was asked of. useMutation keeps its last
+  // result across a change of selection, so without the guard a reader who asks
+  // one set and switches to another reads the FIRST set's answer under the
+  // second set's name — and the citations under it point into documents the
+  // named set does not hold.
+  it("drops the answer when the reader moves to another set", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ASKER, { sets: [SET, OTHER_SET] }).fetchMock,
+    );
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
+    expect(
+      await screen.findByText("Captured messages are kept for 400 days."),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("combobox", { name: /which set/i }));
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "Pricing",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Captured messages are kept for 400 days."),
+      ).toBeNull(),
+    );
+    expect(
+      screen.queryByRole("button", { name: "operating.md, line 14" }),
+    ).toBeNull();
+  });
+
+  // The passages, standing on their own. A deterministic answer wrote no prose,
+  // and that is honest: the grounded part was never a sentence. They are still
+  // followable, which is the only thing that makes them worth showing.
+  it("offers the passages themselves when nothing wrote a summary", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backendFor(ASKER, {
         reply: answer({
           generated_by: "deterministic",
-          claims: [
-            {
-              chunk_id: "00000000-0000-4000-8000-0000000000c1",
-              document_id: "00000000-0000-4000-8000-0000000000b1",
-              document_name: "operating.md",
-              quote: "kept for 400 days from the day they arrive",
-            },
-          ],
+          summary: undefined,
+          claims: [KEPT],
         }),
       }).fetchMock,
     );
-    render(<CorpusAskCard />);
-    await askAbout("how long are messages kept");
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
 
-    // The reader is TOLD which writer produced this, rather than being left to
-    // infer it from the absence of a sentence.
-    expect(await screen.findByText(/nobody wrote a summary/i)).toBeTruthy();
     expect(
-      screen.getByText("kept for 400 days from the day they arrive"),
+      await screen.findByText(/Captured messages are kept for 400 days/),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: "operating.md, line 14" }),
+    );
+    expect(
+      await within(documentPane()).findByText("operating.md"),
     ).toBeTruthy();
   });
 
-  it("quotes the set's own topic statement back when it does not cover the question", async () => {
+  it("says in the writer's own words what the set covers instead", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backendFor(ASKER, {
-        reply: answer({ outcome: "not_covered", claims: [] }),
+        reply: answer({
+          outcome: "not_covered",
+          summary:
+            "Nothing here priced a plan; this set is about running the product.",
+          claims: [],
+        }),
       }).fetchMock,
     );
-    render(<CorpusAskCard />);
-    await askAbout("what does the Professional plan cost");
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "what does the Professional plan cost");
 
     expect(await screen.findByText(/not covered by this set/i)).toBeTruthy();
-    // The statement itself, verbatim: it is the only thing on screen that tells
-    // the reader what this set IS for, and they are reading it at their least
-    // patient moment.
+    // The writer's sentence LEADS, because it answers the reader's next
+    // question — where to go — in words about this question rather than in the
+    // set's standing blurb.
+    expect(
+      screen.getByText(
+        "Nothing here priced a plan; this set is about running the product.",
+      ),
+    ).toBeTruthy();
+    // And the blurb is not printed beside it: one paragraph saying where to go,
+    // not two competing for the reader's least patient moment.
+    expect(
+      screen.queryByText("How this product is operated, day to day."),
+    ).toBeNull();
+  });
+
+  it("falls back to the set's own topic statement when no sentence was written", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ASKER, {
+        reply: answer({
+          outcome: "not_covered",
+          summary: undefined,
+          claims: [],
+        }),
+      }).fetchMock,
+    );
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "what does the Professional plan cost");
+
+    expect(await screen.findByText(/not covered by this set/i)).toBeTruthy();
+    // The statement itself, verbatim: with nothing written, it is the only
+    // thing on screen that tells the reader what this set IS for.
     expect(
       screen.getByText("How this product is operated, day to day."),
     ).toBeTruthy();
   });
 
   it("says the SET is not ready, not that the question is uncovered", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backendFor(ASKER, {
         reply: answer({
           outcome: "not_ready",
+          summary: undefined,
           claims: [],
           coverage: { documents_total: 2, chunks_total: 9, chunks_embedded: 4 },
         }),
       }).fetchMock,
     );
-    render(<CorpusAskCard />);
-    await askAbout("how long are messages kept");
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
 
-    expect(await screen.findByText(/not finished being read/i)).toBeTruthy();
-    // And it says how far it got, so "try again shortly" is a claim the reader
-    // can check rather than a hope.
-    expect(screen.getByText(/4 of 9 passages/i)).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", {
+        name: "This set is still being read",
+      }),
+    ).toBeTruthy();
+    // Nothing is wrong with the question, and the reader is not sent looking
+    // for a document to file.
+    expect(
+      screen.getByText(/nothing is wrong with your question/i),
+    ).toBeTruthy();
     expect(screen.queryByText(/not covered by this set/i)).toBeNull();
   });
 
   it("says nothing was searched when the installation has no index", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backendFor(ASKER, {
-        reply: answer({ outcome: "retrieval_unavailable", claims: [] }),
+        reply: answer({
+          outcome: "retrieval_unavailable",
+          summary: undefined,
+          claims: [],
+        }),
       }).fetchMock,
     );
-    render(<CorpusAskCard />);
-    await askAbout("how long are messages kept");
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
 
     expect(await screen.findByText(/nothing was searched/i)).toBeTruthy();
     // Neither of the other two refusals, because neither is true: the question
     // is fine and so is the set.
     expect(screen.queryByText(/not covered by this set/i)).toBeNull();
-    expect(screen.queryByText(/not finished being read/i)).toBeNull();
+    expect(screen.queryAllByText(/still being read/i)).toHaveLength(0);
   });
 
   it("says nothing read the passages when no writer was in the path", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backendFor(ASKER, {
         reply: answer({
           outcome: "unreviewed",
           generated_by: "deterministic",
+          summary: undefined,
           // The passage the search ranked nearest, carrying no written
           // sentence — which is the shape a claim takes when nobody wrote one.
-          claims: [
-            {
-              chunk_id: "00000000-0000-4000-8000-0000000000c1",
-              document_id: "00000000-0000-4000-8000-0000000000b1",
-              document_name: "operating.md",
-              line: 14,
-              column: 3,
-              quote: "kept for 400 days from the day they arrive",
-            },
-          ],
+          claims: [{ ...KEPT, text: undefined }],
         }),
       }).fetchMock,
     );
-    render(<CorpusAskCard />);
-    await askAbout("what is the boiling point of nitrogen");
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "what is the boiling point of nitrogen");
 
     // The reader is TOLD, above the passage, rather than left to infer it from
     // a badge — a passage presented like an answer is read as one.
     expect(await screen.findByText(/nothing has read them/i)).toBeTruthy();
-    // And the passage is still on screen: the search did find it, and hiding it
-    // would throw away the only thing the ask produced.
-    expect(
-      screen.getByText(/kept for 400 days from the day they arrive/i),
-    ).toBeTruthy();
+    // And the passage is still reachable: the search did find it, and throwing
+    // it away would throw away the only thing the ask produced.
+    await user.click(
+      screen.getByRole("button", { name: "operating.md, line 14" }),
+    );
+    await waitFor(() =>
+      expect(documentPane().querySelector("mark")?.textContent).toContain(
+        "kept for 400 days from the day they arrive",
+      ),
+    );
     // It is not dressed as a refusal either. The set was searched in full and
     // the question may well be covered — nothing checked.
     expect(screen.queryByText(/not covered by this set/i)).toBeNull();
@@ -284,7 +502,13 @@ describe("CorpusAskCard", () => {
   it("asks the question the palette carried, once, with nothing left to press", async () => {
     const backend = backendFor(ASKER);
     vi.stubGlobal("fetch", backend.fetchMock);
-    render(<CorpusAskCard carriedQuestion="how long are messages kept" />);
+    render(
+      <AskMarginceModal
+        open
+        onClose={() => {}}
+        carriedQuestion="how long are messages kept"
+      />,
+    );
 
     // In the box, not printed beside an empty one — and answered.
     await waitFor(() =>
@@ -304,10 +528,9 @@ describe("CorpusAskCard", () => {
   // to be after the grant is known. `useAskableSets` is disabled without the
   // grant and still serves whatever the ["knowledge-corpora"] entry holds, and
   // a warm entry outlives the grant that filled it — so the set can be chosen,
-  // and the ask fired, for a reader this card renders nothing for. The server
-  // refuses that ask, the question is gone from the address, and the grant
-  // landing a moment later finds nothing left to ask: no box, no answer, and
-  // no error either, because the card is not on screen to draw one.
+  // and the ask fired, for a reader who holds nothing. The server refuses that
+  // ask, the question is gone from the address, and the grant landing a moment
+  // later finds nothing left to ask.
   //
   // Which is why the assertion is about WHICH ask reached the server and not
   // about how many did. Spent early there is still exactly one, and it is the
@@ -339,17 +562,21 @@ describe("CorpusAskCard", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     const view = render(
-      <CorpusAskCard carriedQuestion="how long are messages kept" />,
+      <AskMarginceModal
+        open
+        onClose={() => {}}
+        carriedQuestion="how long are messages kept"
+      />,
     );
     // The set list, under the key the card reads, cached by a reader who did
     // hold the grant. This is the state the guard is about.
     view.client.setQueryData(["knowledge-corpora"], { items: [SET] });
 
     // Settled ungranted: /me has answered, the set list is in the cache the
-    // card reads, and React has run the effects that chain off both — the set
+    // dialog reads, and React has run the effects that chain off both — the set
     // being chosen is one pass and the ask would be the next. Waiting on the
-    // client rather than on the screen because the card draws nothing here,
-    // and that is exactly what makes an ask fired from it invisible.
+    // client rather than on the screen because an ask fired from here leaves no
+    // mark on the dialog, which is exactly what makes it invisible.
     await waitFor(() =>
       expect(view.client.getQueryState(["me"])?.status).toBe("success"),
     );
@@ -357,10 +584,11 @@ describe("CorpusAskCard", () => {
     await act(async () => {});
     await act(async () => {});
 
-    // Nothing is offered without the grant, whatever the cache holds — and
-    // nothing is asked, so the question is still there to ask.
-    expect(screen.queryByLabelText(/your question/i)).toBeNull();
+    // Nothing is asked, whatever the cache holds, and the dialog says there is
+    // nothing here to ask — so the question is still there to ask.
     expect(asked).toEqual([]);
+    expect(screen.getByText(/no document set to ask/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^ask$/i })).toBeDisabled();
 
     allowed = true;
     await view.client.invalidateQueries({ queryKey: ["me"] });
@@ -380,34 +608,56 @@ describe("CorpusAskCard", () => {
 
   // The positive half is what makes the negative half mean anything.
   //
-  // Asserting only "the card is absent" passes BEFORE the list has arrived, so
-  // written that way it stayed green against a set that was present — the case
-  // was passing and empty, twice, until it was checked against its own
-  // opposite. Rendering with a set first proves the query path reaches the DOM;
-  // the rejection that follows is then a statement about the empty list.
-  it("offers the box for a set, and nothing at all when there is none", async () => {
+  // Asserting only "the dialog refuses" passes BEFORE the list has arrived, so
+  // written that way it stayed green against a set that was present. Proving
+  // the box becomes askable with a set first is what makes the refusal that
+  // follows a statement about the EMPTY list.
+  it("will not ask when the workspace has filed no set", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
-    render(<CorpusAskCard />);
-    expect(await screen.findByLabelText(/your question/i)).toBeTruthy();
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await user.type(
+      await screen.findByLabelText(/your question/i),
+      "how long are messages kept",
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^ask$/i })).toBeEnabled(),
+    );
+    expect(screen.queryByText(/no document set to ask/i)).toBeNull();
 
     cleanup();
     vi.unstubAllGlobals();
-    vi.stubGlobal("fetch", backendFor(ASKER, { sets: [] }).fetchMock);
-    render(<CorpusAskCard />);
+    const empty = backendFor(ASKER, { sets: [] });
+    vi.stubGlobal("fetch", empty.fetchMock);
+    render(<AskMarginceModal open onClose={() => {}} />);
 
-    // A box that answers nothing is worse than no box: a reader offered an
-    // input has been told a question will be answered.
-    await expect(screen.findByLabelText(/your question/i)).rejects.toThrow();
+    // A question that can be submitted is a promise of an answer, and there is
+    // nothing here to search.
+    expect(await screen.findByText(/no document set to ask/i)).toBeTruthy();
+    await user.type(
+      screen.getByLabelText(/your question/i),
+      "how long are messages kept",
+    );
+    expect(screen.getByRole("button", { name: /^ask$/i })).toBeDisabled();
+    expect(empty.asked).toEqual([]);
   });
 
-  it("offers nothing to a reader who holds no grant on document sets", async () => {
+  it("asks nothing, and reaches for no sets, for a reader who holds no grant", async () => {
+    const user = userEvent.setup();
     const backend = backendFor({});
     vi.stubGlobal("fetch", backend.fetchMock);
-    render(<CorpusAskCard />);
+    render(<AskMarginceModal open onClose={() => {}} />);
 
-    await expect(screen.findByLabelText(/your question/i)).rejects.toThrow();
-    // And it never asked. A reader with no grant would get a 403, which reads
-    // as a fault in the installation rather than as a permission.
+    expect(await screen.findByText(/no document set to ask/i)).toBeTruthy();
+    await user.type(
+      screen.getByLabelText(/your question/i),
+      "how long are messages kept",
+    );
+    expect(screen.getByRole("button", { name: /^ask$/i })).toBeDisabled();
+    expect(backend.asked).toEqual([]);
+    // And it never even listed the sets. A reader with no grant would get a
+    // 403, which reads as a fault in the installation rather than as a
+    // permission.
     expect(
       backend.fetchMock.mock.calls.some(([input]) =>
         String(input).includes("/knowledge/corpora"),
@@ -415,52 +665,32 @@ describe("CorpusAskCard", () => {
     ).toBe(false);
   });
 
-  it("offers the cited document as a download, and says where in it the quote sits", async () => {
-    vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
-    render(<CorpusAskCard />);
-    await askAbout("how long are messages kept");
-
-    // The FILE, downloadable. A citation nobody can follow is a citation in
-    // name only: the reader has the sentence and the quote, and this is what
-    // lets them open the document and see it in place.
-    const link = await screen.findByRole("link", { name: /operating\.md/i });
-    expect(link).toHaveAttribute(
-      "href",
-      "/v1/knowledge/documents/00000000-0000-4000-8000-0000000000b1",
-    );
-    expect(link).toHaveAttribute("download", "operating.md");
-
-    // And WHERE in it, so following the link lands on the sentence rather than
-    // on the top of a file the reader then has to search.
-    expect(screen.getByText(/line 14, column 3/i)).toBeTruthy();
-  });
-
-  it("says nothing about where when the passage could not locate the quote", async () => {
+  // A document that will not open is said so plainly, with the quote kept: the
+  // reader came to read that span, and the quote is the part we already have.
+  it("says so when the cited document will not open, and keeps the quote", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backendFor(ASKER, {
         reply: answer({
+          summary: "Older messages are purged nightly. [1]",
           claims: [
-            {
-              chunk_id: "00000000-0000-4000-8000-0000000000c1",
-              document_id: "00000000-0000-4000-8000-0000000000b1",
-              document_name: "operating.md",
-              text: "Messages are kept for 400 days.",
-              quote: "kept for 400 days from the day they arrive",
-            },
+            { ...PURGED, document_id: "00000000-0000-4000-8000-00000000ffff" },
           ],
         }),
       }).fetchMock,
     );
-    render(<CorpusAskCard />);
-    await askAbout("how long are messages kept");
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "when are messages purged");
 
-    // The download still stands — the file is openable whether or not the line
-    // is known. Only the location is withheld, because a line number pointing
-    // at the wrong line is worse than none.
+    await user.click(
+      await screen.findByRole("button", { name: "retention.md, line 6" }),
+    );
     expect(
-      await screen.findByRole("link", { name: /operating\.md/i }),
+      await within(documentPane()).findByText(/would not open/i),
     ).toBeTruthy();
-    expect(screen.queryByText(/line \d/i)).toBeNull();
+    expect(
+      within(documentPane()).getByText("purged in the nightly sweep"),
+    ).toBeTruthy();
   });
 });

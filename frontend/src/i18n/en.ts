@@ -421,7 +421,6 @@ export const en = {
   "nav.leads": "Leads",
   "nav.deals": "Deals",
   "nav.analytics": "Analytics",
-  "nav.ai": "Ask Margince",
   "nav.settings": "Settings",
   "nav.automations": "Automations",
   "nav.group.records": "Records",
@@ -4215,19 +4214,6 @@ export const en = {
   "explain.col.owner": "Owner",
   "explain.col.pipeline": "Pipeline",
 
-  "ai.sub": "bring your own agent — governed by the two-tier contract",
-  "ai.tiers": "What an agent may do",
-  "ai.tierAutoExecute": "Read & draft run instantly.",
-  "ai.tierAutoExecuteDetail":
-    "Lookups, summaries, drafts — visible, reversible, logged.",
-  "ai.tierConfirmationRequired": "Sensitive changes wait for you.",
-  "ai.tierConfirmationRequiredDetail":
-    "New custom fields, webhook subscriptions and paid enrichment stage into the inbox first. Most record changes and sends run instantly, within the scopes you granted.",
-  "ai.connect": "Connect an agent",
-  "ai.connectDetail":
-    "Point any MCP-capable agent at your company and approve the access it asks for. There is nothing to set up first.",
-  "ai.paletteHint": "Ask from anywhere with",
-
   "settings.accountCard": "Your account",
   "unsaved.title": "You have unsaved changes",
   "unsaved.body":
@@ -7188,7 +7174,6 @@ export const en = {
   "corpusAsk.question": "Your question",
   "corpusAsk.submit": "Ask",
   "corpusAsk.byModel": "Written from the passages below",
-  "corpusAsk.atLine": "line {line}, column {column}",
   "corpusAsk.byPassages": "The passages themselves — nobody wrote a summary",
   "corpusAsk.notReady":
     "This set is not finished being read yet — {embedded} of {total} passages are searchable. Nothing is wrong with your question; try again shortly.",
@@ -7200,6 +7185,21 @@ export const en = {
   "corpusAsk.unreviewedTitle": "Nobody has read these passages",
   "corpusAsk.notReadyTitle": "This set is still being read",
   "corpusAsk.retrievalUnavailableTitle": "No search index is configured",
+  "corpusAsk.noSetsTitle": "No document set to ask",
+  "corpusAsk.noSets":
+    "This company has filed no documents yet, so there is nothing to search.",
+  "corpusAsk.citeAtLine": "{document}, line {line}",
+  "corpusAsk.citeInDocument": "in {document}",
+  "corpusAsk.pickCiteTitle": "Nothing open yet",
+  "corpusAsk.pickCite":
+    "Press a numbered source in the answer to read it where it was written.",
+  "corpusAsk.documentLoading": "Opening the document…",
+  "corpusAsk.documentFailedTitle": "That document would not open",
+  "corpusAsk.documentFailed":
+    "{document} could not be read just now. The quoted passage is below.",
+  "corpusAsk.openFile": "Open file",
+  "corpusAsk.quoteNotPinpointed":
+    "This quote runs across a line break, so it could not be marked exactly. The document is open where it came from.",
   "corpusAsk.notCovered.title": "Not covered by this set",
   "corpusAsk.notCovered.body":
     "{name} was searched in full and holds nothing close enough to answer this. It covers:",

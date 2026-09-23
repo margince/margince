@@ -426,7 +426,6 @@ export const de = {
   "nav.leads": "Leads",
   "nav.deals": "Deals",
   "nav.analytics": "Analytics",
-  "nav.ai": "Margince fragen",
   "nav.settings": "Einstellungen",
   "nav.automations": "Automatisierungen",
   "nav.group.records": "Datensätze",
@@ -4081,19 +4080,6 @@ export const de = {
   "explain.col.owner": "Zuständig",
   "explain.col.pipeline": "Pipeline",
 
-  "ai.sub": "bring deinen eigenen Agenten mit — geregelt über die zwei Stufen",
-  "ai.tiers": "Was ein Agent darf",
-  "ai.tierAutoExecute": "Lesen & Entwerfen läuft sofort.",
-  "ai.tierAutoExecuteDetail":
-    "Nachschlagen, Zusammenfassen, Entwürfe — sichtbar, umkehrbar, protokolliert.",
-  "ai.tierConfirmationRequired": "Sensible Änderungen warten auf dich.",
-  "ai.tierConfirmationRequiredDetail":
-    "Neue benutzerdefinierte Felder, Webhook-Abonnements und kostenpflichtige Anreicherung landen zuerst im Eingang. Die meisten Datensatzänderungen und Sendungen laufen sofort, innerhalb der von dir erteilten Berechtigungen.",
-  "ai.connect": "Agent verbinden",
-  "ai.connectDetail":
-    "Verbinde einen MCP-fähigen Agenten mit deiner Firma und bestätige den Zugriff, um den er bittet. Es gibt nichts vorab einzurichten.",
-  "ai.paletteHint": "Frag von überall mit",
-
   "settings.accountCard": "Dein Konto",
   "unsaved.title": "Du hast ungespeicherte Änderungen",
   "unsaved.body":
@@ -6973,7 +6959,6 @@ export const de = {
   "corpusAsk.question": "Deine Frage",
   "corpusAsk.submit": "Fragen",
   "corpusAsk.byModel": "Aus den Textstellen unten geschrieben",
-  "corpusAsk.atLine": "Zeile {line}, Spalte {column}",
   "corpusAsk.byPassages":
     "Die Textstellen selbst — niemand hat eine Zusammenfassung geschrieben",
   "corpusAsk.notReady":
@@ -6986,6 +6971,21 @@ export const de = {
   "corpusAsk.unreviewedTitle": "Niemand hat diese Passagen gelesen",
   "corpusAsk.notReadyTitle": "Diese Sammlung wird noch gelesen",
   "corpusAsk.retrievalUnavailableTitle": "Kein Suchindex konfiguriert",
+  "corpusAsk.noSetsTitle": "Kein Dokumentensatz zum Fragen",
+  "corpusAsk.noSets":
+    "Dieses Unternehmen hat noch keine Dokumente abgelegt, es gibt also nichts zu durchsuchen.",
+  "corpusAsk.citeAtLine": "{document}, Zeile {line}",
+  "corpusAsk.citeInDocument": "in {document}",
+  "corpusAsk.pickCiteTitle": "Noch nichts geöffnet",
+  "corpusAsk.pickCite":
+    "Wähle eine nummerierte Quelle in der Antwort, um sie dort zu lesen, wo sie steht.",
+  "corpusAsk.documentLoading": "Dokument wird geöffnet…",
+  "corpusAsk.documentFailedTitle": "Dieses Dokument ließ sich nicht öffnen",
+  "corpusAsk.documentFailed":
+    "{document} konnte gerade nicht gelesen werden. Die zitierte Stelle steht unten.",
+  "corpusAsk.openFile": "Datei öffnen",
+  "corpusAsk.quoteNotPinpointed":
+    "Dieses Zitat läuft über einen Zeilenumbruch und ließ sich nicht genau markieren. Das Dokument ist an der Stelle geöffnet, aus der es stammt.",
   "corpusAsk.notCovered.title": "Von dieser Sammlung nicht abgedeckt",
   "corpusAsk.notCovered.body":
     "{name} wurde vollständig durchsucht und enthält nichts, was nah genug daran wäre. Die Sammlung deckt ab:",

@@ -36,6 +36,7 @@ import {
 } from "./app/router";
 import { Shell, useRoute } from "./app/shell";
 import { UnsavedGuard } from "./app/unsaved";
+import { ASK_PARAM, closeAsk, useUrlParams } from "./app/urlstate";
 import {
   Card,
   EmptyState,
@@ -95,10 +96,8 @@ function routed<T>(factory: () => Promise<T>): () => Promise<T> {
   return factory;
 }
 
-const AskAiScreen = lazy(
-  routed(() =>
-    import("./screens/ai").then((m) => ({ default: m.AskAiScreen })),
-  ),
+const AskMarginceModal = lazy(() =>
+  import("./screens/corpusask").then((m) => ({ default: m.AskMarginceModal })),
 );
 const BookingScreen = lazy(
   routed(() =>
@@ -468,7 +467,6 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // make it describe a fraction of what the reader is looking at.
     worklist: ({ id }) => <WorklistRedirect opensOn={id} />,
     analytics: () => <AnalyticsScreen />,
-    ai: () => <AskAiScreen />,
     // The screen resolves its own address, because which entry an address names
     // is the settings IA's question: the admin half lives a segment deeper, and
     // a legacy link to it is answered and rewritten there rather than here.
@@ -855,6 +853,11 @@ function AuthedApp({
   }, [authed, company.isSuccess, described, progress.unfinished, route.screen]);
 
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // The dial, not a piece of state: a reader can send a colleague a link that
+  // opens the dialog on the question they asked, and a reload keeps it.
+  const [dials] = useUrlParams();
+  const askedQuestion = dials.get(ASK_PARAM);
+  const askOpen = askedQuestion !== undefined;
   const commands = useBuiltinCommands();
   usePaletteHotkey(useCallback(() => setPaletteOpen((open) => !open), []));
 
@@ -945,6 +948,20 @@ function AuthedApp({
           onClose={() => setPaletteOpen(false)}
           commands={commands}
         />
+        {/* Asking lives OVER whatever the reader was doing, so it is mounted
+            beside the palette rather than on a screen: the question occurs in
+            the middle of other work, and the answer sends them back to it.
+            The dial is what opens it, so a reader can carry an ask in a link
+            and a reload does not lose the question they just typed. */}
+        {askOpen ? (
+          <Suspense fallback={null}>
+            <AskMarginceModal
+              open
+              carriedQuestion={askedQuestion}
+              onClose={closeAsk}
+            />
+          </Suspense>
+        ) : null}
       </RecordZoneProvider>
     </DateFormatsProvider>
   );

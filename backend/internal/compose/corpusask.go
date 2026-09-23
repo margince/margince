@@ -114,6 +114,12 @@ When coverage is "answers":
     what your own claims say. Lead with the answer itself — never open by
     describing the passages or restating the question. Two or three short
     sentences; if one will do, write one.
+  - mark each sentence of summary with the claim it rests on, as a bracketed
+    number at the end of that sentence: [1] for your first claim, [2] for your
+    second, counting in the order you list them. A sentence resting on two
+    claims takes both, "…row scope. [2][3]". These are what a reader presses to
+    open the document at the passage, so a sentence with no number is a sentence
+    they cannot check.
     Write "A full seat can read and change things. A read seat can only read,
     whatever your role says."
     Not "The passages describe two kinds of seat, which are as follows."
