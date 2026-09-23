@@ -21,6 +21,7 @@ public.activity.activity_owed_verdict_ruleset_shape CHECK (((owed_verdict_rulese
 public.activity.activity_owed_verdict_stamped CHECK (((owed_verdict IS NULL) = (owed_verdict_at IS NULL)))
 public.activity.activity_pkey PRIMARY KEY (id)
 public.activity.activity_project_last_activity CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin))) EXECUTE FUNCTION trg_activity_project_last_activity()
+public.activity.activity_raw_capture_id_fkey FOREIGN KEY (raw_capture_id) REFERENCES raw_capture(id) ON DELETE SET NULL
 public.activity.activity_refuse_restricted_mutation CREATE TRIGGER activity_refuse_restricted_mutation BEFORE DELETE OR UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()
 public.activity.activity_reply_verdict_check CHECK (((reply_verdict IS NULL) OR (reply_verdict = ANY (ARRAY['positive'::text, 'negative'::text, 'neutral'::text]))))
 public.activity.activity_reply_verdict_inbound CHECK (((reply_verdict IS NULL) OR (direction = 'inbound'::text)))
@@ -66,6 +67,7 @@ public.activity.owed_verdict text gen=- def=-
 public.activity.owed_verdict_at timestamp with time zone gen=- def=-
 public.activity.owed_verdict_ruleset text gen=- def=-
 public.activity.raw jsonb gen=- def=-
+public.activity.raw_capture_id uuid gen=- def=-
 public.activity.redacted_fields text[] NOT NULL gen=- def='{}'::text[]
 public.activity.remind_at timestamp with time zone gen=- def=-
 public.activity.reply_verdict text gen=- def=-
@@ -256,6 +258,7 @@ public.activity_participant_replay.outcome text NOT NULL gen=- def=-
 public.activity_participant_replay.replayed_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_participant_replay_pkey CREATE UNIQUE INDEX activity_participant_replay_pkey ON public.activity_participant_replay USING btree (activity_id)
 public.activity_pkey CREATE UNIQUE INDEX activity_pkey ON public.activity USING btree (id)
+public.activity_raw_capture_id_idx CREATE INDEX activity_raw_capture_id_idx ON public.activity USING btree (raw_capture_id) WHERE (raw_capture_id IS NOT NULL)
 public.activity_reader_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_reader_state.activity_id uuid NOT NULL gen=- def=-
 public.activity_reader_state.activity_reader_state_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
