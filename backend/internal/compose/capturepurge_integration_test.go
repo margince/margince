@@ -381,7 +381,7 @@ func stampCommercialCorrespondence(t *testing.T, e *integration.Env, activityID 
 //
 // The contact is what makes the request reach correspondence at all: a request
 // names a subject, and the subject's addresses are what match a counterparty.
-func seedRequestAgainstLawyer(t *testing.T, e *integration.Env, status, resolution string) (ids.UUID, ids.UUID) {
+func seedRequestAgainstLawyer(t *testing.T, e *integration.Env, status, resolution string) ids.UUID {
 	t.Helper()
 	const address = "anwalt@kanzlei.example"
 	evidence := seedPurgeableMail(t, e, address, "Mandat", e.Rep1)
@@ -401,7 +401,7 @@ func seedRequestAgainstLawyer(t *testing.T, e *integration.Env, status, resoluti
 		ids.NewV7(), status, subject, nullIfEmpty(resolution)); err != nil {
 		t.Fatalf("seeding the %s request: %v", status, err)
 	}
-	return evidence, subject
+	return evidence
 }
 
 // nullIfEmpty writes SQL NULL for a resolution an open request must not carry.
@@ -426,7 +426,7 @@ func nullIfEmpty(resolution string) *string {
 // own rule for that domain in the meantime.
 func TestAPurgeSkipsAMessageAnOpenRequestIsAbout(t *testing.T) {
 	e := integration.Setup(t)
-	evidence, _ := seedRequestAgainstLawyer(t, e, "open", "")
+	evidence := seedRequestAgainstLawyer(t, e, "open", "")
 
 	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindDomain, "kanzlei.example")
 	outcome := runPurge(t, e, e.Rep1, rule, false)
