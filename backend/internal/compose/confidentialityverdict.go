@@ -126,11 +126,9 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 		n, err := e.judgeClaimed(wsCtx, batch)
 		resolved += n
 		if errors.Is(err, ai.ErrBudgetDeferred) {
-			// Every thread this pass never reached is refunded: no model saw
-			// them, and charging for a budget stop would let two quiet cycles
-			// exhaust a thread's allowance and retire it to `unsure` — an
-			// infrastructure condition turned into a per-thread terminal answer.
-			e.releaseBatch(wsCtx, batch)
+			// The refund is judgeClaimed's, because it is what knows where it
+			// stopped. Releasing from here would hand back the whole batch,
+			// including the thread already deferred and refunded inside.
 			e.log.InfoContext(wsCtx, "confidentiality verdict: budget exhausted, stopping the pass", "resolved", resolved)
 			return nil
 		}
@@ -144,18 +142,42 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 // judgeClaimed judges each claimed thread on its OWN model call, and applies
 // each answer on its own transaction. The transaction IS the checkpoint, so a
 // budget stop or a crash keeps whatever was already decided.
-func (e *ConfidentialityVerdictEngine) judgeClaimed(ctx context.Context, claimed []capture.PendingThread) (int, error) {
+// A budget stop refunds the threads it never REACHED, and only those. The
+// thread it stopped on is deferred and refunded below, and releasing it a
+// second time attempts a refund that the first Defer's cleared claimed_by
+// silently matches nothing for — safe by that accident alone, and one relaxed
+// CAS away from double-decrementing a thread's attempts. The release happens
+// here rather than in the caller because this is what knows where it stopped:
+// a caller handed the remainder could still pass the whole batch.
+func (e *ConfidentialityVerdictEngine) judgeClaimed(
+	ctx context.Context, claimed []capture.PendingThread,
+) (int, error) {
+	// A LOCAL rather than a method, which is what makes the wrong call
+	// unwritable instead of merely unwritten: only the loop that knows where it
+	// stopped can reach this, so no caller can hand back a batch that includes
+	// the row already refunded below.
+	releaseUnreached := func(rest []capture.PendingThread) {
+		for _, row := range rest {
+			if err := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
+				"the workspace was out of model budget", true); err != nil {
+				e.log.WarnContext(ctx, "confidentiality verdict: releasing a claimed thread failed",
+					"thread", row.ID.String(), "err", err)
+			}
+		}
+	}
 	applied := 0
-	for _, row := range claimed {
+	for i, row := range claimed {
 		n, err := e.judgeOne(ctx, row)
 		applied += n
 		if err != nil {
 			outOfBudget := errors.Is(err, ai.ErrBudgetDeferred)
 			if deferErr := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
 				"the confidentiality verdict could not be completed", outOfBudget); deferErr != nil {
+				releaseUnreached(claimed[i+1:])
 				return applied, deferErr
 			}
 			if outOfBudget {
+				releaseUnreached(claimed[i+1:])
 				return applied, err
 			}
 			// Any other fault is a property of THIS thread, whose text an
@@ -331,18 +353,6 @@ func recomputeJudgedMessageTx(ctx context.Context, tx pgx.Tx, row capture.Pendin
 		return nil
 	}
 	return activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](row.ActivityID))
-}
-
-// releaseBatch hands a whole claimed batch back after a budget stop, so no
-// thread is charged for a pass that never reached a model.
-func (e *ConfidentialityVerdictEngine) releaseBatch(ctx context.Context, batch []capture.PendingThread) {
-	for _, row := range batch {
-		if err := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
-			"the workspace was out of model budget", true); err != nil {
-			e.log.WarnContext(ctx, "confidentiality verdict: releasing a claimed thread failed",
-				"thread", row.ID.String(), "err", err)
-		}
-	}
 }
 
 // RetireExhausted ends the threads that spent every attempt without an answer.
