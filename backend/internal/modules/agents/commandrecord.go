@@ -29,6 +29,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -250,6 +251,16 @@ func requireEnrichURL(raw string) error {
 	parsed, err := url.Parse(raw)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
 		return &BadArgsError{Cause: fmt.Errorf("url %q must be an absolute http(s) URL", raw)}
+	}
+	// The fetch policy, asked HERE as well as at the fetcher.
+	//
+	// Not belt and braces: the fetcher's refusal is a failed run the caller
+	// reads as "that did not work", and this one is a refused ARGUMENT the
+	// caller reads as "do not ask for that". An agent handed the second can
+	// correct itself; handed the first it retries. The fetcher stays the
+	// enforcing gate — every other path into it is covered there and not here.
+	if decision := webread.MayFetch(raw); !decision.Allowed {
+		return &BadArgsError{Cause: fmt.Errorf("url %q cannot be read: %s", raw, decision.Reason)}
 	}
 	return nil
 }
