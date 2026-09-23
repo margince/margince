@@ -117,7 +117,8 @@ type analyticsQueryResolver struct {
 // rows the caller's own scope bounds has no row an approval could bind to.
 // The population name is the one fact that says what is being released.
 func (r analyticsQueryResolver) Subject(ctx context.Context, cmd AnalyticsQueryCommand) (StageInfo, error) {
-	return StageInfo{Summary: fmt.Sprintf(summaryIn(ctx, r.language).analyticsQuery, cmd.Entity)}, nil
+	said := summaryIn(ctx, r.language)
+	return StageInfo{Summary: fmt.Sprintf(said.analyticsQuery, said.noun(cmd.Entity))}, nil
 }
 
 // Guards stands down, for runReportResolver's reason: the vocabulary is the

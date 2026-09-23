@@ -45,22 +45,21 @@ const (
 // StageMoveDecision is the outcome and why, in words that go on the card.
 type StageMoveDecision struct {
 	Outcome StageMoveOutcome
-	// Reason is the product's own sentence about this decision, in English. It
-	// names the fact that decided it, so a rep reading the card learns why this
-	// is being asked rather than that something was computed.
-	Reason string
 	// Exception is set where the facts are not merely insufficient but
 	// WRONG-LOOKING — a contradiction, an unhealthy source, a link nobody can
 	// vouch for. Observing quietly would leave a rep with a stage that never
 	// moves and no way to find out why.
-	Exception  string
-	unrendered stageReason
+	Exception string
+	// reason names the fact that decided it, so a rep reading the card learns
+	// why this is being asked rather than that something was computed.
+	reason stageReason
 }
 
-// ReasonIn is Reason in lang. A card is a shared record, so its writer renders
-// the reason in the installation's base language it resolved when it stores it.
+// ReasonIn is the product's own sentence about this decision, in lang. A card
+// is a shared record, so its writer renders it in the installation's base
+// language, resolved when the card is stored.
 func (d StageMoveDecision) ReasonIn(lang textlang.Lang) string {
-	return d.unrendered.in(lang)
+	return d.reason.in(lang)
 }
 
 // stageReason is a decision's sentence kept unrendered: the policy decides
@@ -89,12 +88,6 @@ func (r stageReason) in(lang textlang.Lang) string {
 		return said
 	}
 	return fmt.Sprintf(said, r.key)
-}
-
-// decided pairs an outcome with its reason, keeping the English Reason and the
-// unrendered one in step.
-func decided(outcome StageMoveOutcome, reason stageReason) StageMoveDecision {
-	return StageMoveDecision{Outcome: outcome, Reason: reason.in(textlang.English), unrendered: reason}
 }
 
 // CriterionFact is one exit criterion and what the ledger says about it.
@@ -161,12 +154,14 @@ const (
 // protectionReason is the sentence a protected deal's refusal reads.
 func protectionReason(p Protection) stageReason {
 	switch p {
+	case ProtectionHumanMove:
+		return plainReason(func(said summaryCopy) string { return said.protectedMovedByYou })
 	case ProtectionReversal:
 		return plainReason(func(said summaryCopy) string { return said.protectedUndoneBefore })
 	case ProtectionRejected:
 		return plainReason(func(said summaryCopy) string { return said.protectedTurnedDown })
 	default:
-		return plainReason(func(said summaryCopy) string { return said.protectedMovedByYou })
+		return plainReason(func(said summaryCopy) string { return said.protectedRecently })
 	}
 }
 
@@ -210,12 +205,18 @@ func DecideStageMove(facts StageMoveFacts) StageMoveDecision {
 	// authored by whoever had to author it, uncontradicted, on a deal nobody
 	// has recently steered.
 	if reason, ok := needsAJudgement(facts); ok {
-		return decided(OutcomeProposeConfirmFirst, reason)
+		return StageMoveDecision{Outcome: OutcomeProposeConfirmFirst, reason: reason}
 	}
 	if facts.Autopilot.Enabled && !facts.Autopilot.Suspended && facts.Autopilot.ThresholdsMet {
-		return decided(OutcomeAutoApply, plainReason(func(said summaryCopy) string { return said.stageAutoApply }))
+		return StageMoveDecision{
+			Outcome: OutcomeAutoApply,
+			reason:  plainReason(func(said summaryCopy) string { return said.stageAutoApply }),
+		}
 	}
-	return decided(OutcomePropose, plainReason(func(said summaryCopy) string { return said.stageAllSettled }))
+	return StageMoveDecision{
+		Outcome: OutcomePropose,
+		reason:  plainReason(func(said summaryCopy) string { return said.stageAllSettled }),
+	}
 }
 
 // refuseOnTheFacts asks every question whose answer is Observe.
@@ -225,12 +226,17 @@ func refuseOnTheFacts(facts StageMoveFacts) (StageMoveDecision, bool) {
 	// source that was not working, a link nobody can vouch for. Observing them
 	// silently leaves a stage that never moves and no way to find out why.
 	if exception := surfacedException(facts); exception != "" {
-		decision := decided(OutcomeObserve, plainReason(func(said summaryCopy) string { return said.stageUnreliable }))
-		decision.Exception = exception
-		return decision, true
+		return StageMoveDecision{
+			Outcome:   OutcomeObserve,
+			reason:    plainReason(func(said summaryCopy) string { return said.stageUnreliable }),
+			Exception: exception,
+		}, true
 	}
 	if facts.Protection != ProtectionNone {
-		return decided(OutcomeObserve, protectionReason(facts.Protection)), true
+		return StageMoveDecision{
+			Outcome: OutcomeObserve,
+			reason:  protectionReason(facts.Protection),
+		}, true
 	}
 	// A STAGE THAT ASKS FOR NOTHING SETTLES NOTHING. Every check below is a
 	// loop over the criteria, so an empty list passes all of them vacuously —
@@ -239,12 +245,17 @@ func refuseOnTheFacts(facts StageMoveFacts) (StageMoveDecision, bool) {
 	// The reason would have read "settled by the other side's own words" about
 	// a deal nobody had said anything about.
 	if len(facts.Criteria) == 0 {
-		return decided(OutcomeObserve, plainReason(func(said summaryCopy) string { return said.stageNoCriteria })), true
+		return StageMoveDecision{
+			Outcome: OutcomeObserve,
+			reason:  plainReason(func(said summaryCopy) string { return said.stageNoCriteria }),
+		}, true
 	}
 	for _, c := range facts.Criteria {
 		if c.Required && !c.Met {
-			return decided(OutcomeObserve,
-				keyedReason(func(said summaryCopy) string { return said.stageStillAsksForKey }, c.Key)), true
+			return StageMoveDecision{
+				Outcome: OutcomeObserve,
+				reason:  keyedReason(func(said summaryCopy) string { return said.stageStillAsksForKey }, c.Key),
+			}, true
 		}
 		// The rule the whole ledger rests on, asked again HERE because the
 		// ledger refuses such a row at the write and this reads rows already
@@ -253,8 +264,10 @@ func refuseOnTheFacts(facts StageMoveFacts) (StageMoveDecision, bool) {
 		// refusal, or one whose criterion kind changed after it was recorded,
 		// reaches this function and must not move a deal.
 		if c.Met && !SettlesBuyerMilestone(c.Kind, c.AuthorSide) {
-			return decided(OutcomeObserve,
-				keyedReason(func(said summaryCopy) string { return said.stageOurSideOnlyKey }, c.Key)), true
+			return StageMoveDecision{
+				Outcome: OutcomeObserve,
+				reason:  keyedReason(func(said summaryCopy) string { return said.stageOurSideOnlyKey }, c.Key),
+			}, true
 		}
 	}
 	return StageMoveDecision{}, false

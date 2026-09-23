@@ -222,8 +222,9 @@ func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs,
 	// Composed once and answered twice: the human's card and the caller's
 	// refusal describe one staged change, and a second wording of it would let
 	// the contact and the agent wait on two different descriptions.
-	summary := fmt.Sprintf(summaryIn(ctx, t.language).overwriteHuman,
-		args.RecordType, recordLabel(rec), strings.Join(split.Conflicts, ", "))
+	said := summaryIn(ctx, t.language)
+	summary := fmt.Sprintf(said.overwriteHuman,
+		said.noun(args.RecordType), recordLabel(rec), strings.Join(split.Conflicts, ", "))
 	id, alreadyApproved, err := t.staging.StageCall(ctx, StageRequest{
 		Tool:           "update_record",
 		ProposedChange: canonical,

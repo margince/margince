@@ -32,6 +32,8 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/margince/margince/backend/internal/modules/agents"
 )
 
 // summaryFieldLimit bounds how many body fields a summary enumerates. A
@@ -56,7 +58,7 @@ const summaryValueLimit = 48
 // verb and the record type are already on the policy, and together they are the
 // sentence.
 func restSummary(said approvalSummaryCopy, pol agentPolicy, r *http.Request, body []byte) string {
-	head := actPhrase(said.acts, pol, r.Method, r.URL.Path)
+	head := actPhrase(said, pol, r.Method, r.URL.Path)
 	fields := summaryFields(said, body)
 	// A CREATE is routed by its parent — createOffer posts under the deal the
 	// offer would belong to — and the parent appears nowhere in the body. The
@@ -101,7 +103,8 @@ func createdUnder(r *http.Request) string {
 // Falls back to the operation and its path when the policy declares no tool —
 // a route with no verb has nothing better to say, and the old shape is at least
 // unambiguous to whoever has to debug it.
-func actPhrase(acts agentActVocabulary, pol agentPolicy, method, path string) string {
+func actPhrase(said approvalSummaryCopy, pol agentPolicy, method, path string) string {
+	acts := said.acts
 	if pol.Tool == "" {
 		return fmt.Sprintf("%s (%s %s)", pol.Op, method, path)
 	}
@@ -124,18 +127,13 @@ func actPhrase(acts agentActVocabulary, pol agentPolicy, method, path string) st
 		}
 		return upperFirst(verb)
 	}
-	frame, framed := acts.recordFrames[pol.Tool]
-	noun, named := acts.records[pol.RecordType]
-	if framed && named {
+	// The record noun is the tool door's own (agents.RecordNoun), so one record
+	// type reads the same on a card from either door.
+	noun := agents.RecordNoun(said.lang, string(pol.RecordType))
+	if frame, framed := acts.recordFrames[pol.Tool]; framed {
 		return fmt.Sprintf(frame, noun)
 	}
-	return fmt.Sprintf("%s %s", upperFirst(verb), recordNoun(pol.RecordType))
-}
-
-// recordNoun is the record type as a reader says it: the wire spells
-// `deal_room`, a contact says "deal room".
-func recordNoun(record agentRecordType) string {
-	return strings.ReplaceAll(string(record), "_", " ")
+	return fmt.Sprintf("%s %s", upperFirst(verb), noun)
 }
 
 // opPhrases names the acts whose VERB is not enough to tell them apart.
@@ -223,7 +221,7 @@ func summaryFields(said approvalSummaryCopy, body []byte) []string {
 	rendered := make([]string, 0, len(keys))
 	for _, key := range keys {
 		if len(rendered) == summaryFieldLimit {
-			rendered = append(rendered, fmt.Sprintf(said.moreFields, len(keys)-summaryFieldLimit))
+			rendered = append(rendered, fmt.Sprintf(agents.MoreFields(said.lang), len(keys)-summaryFieldLimit))
 			break
 		}
 		rendered = append(rendered, key+"="+summaryValue(said, payload[key]))

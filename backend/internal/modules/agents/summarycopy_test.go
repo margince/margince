@@ -6,7 +6,8 @@ package agents
 import (
 	"context"
 	"encoding/json"
-	"strings"
+	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -14,88 +15,94 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// summaryFields lists one set's sentences beside the formatting verbs each must
-// carry, in the order the arguments are passed.
-func summaryFields(said summaryCopy) []struct {
-	name, got string
-	verbs     []string
-} {
-	return []struct {
-		name, got string
-		verbs     []string
-	}{
-		{"archive", said.archive, []string{"%s", "%s"}},
-		{"createHead", said.createHead, []string{"%s"}},
-		{"updateHead", said.updateHead, []string{"%s"}},
-		{"logHead", said.logHead, []string{"%s"}},
-		{"settingFields", said.settingFields, []string{"%s"}},
-		{"moreFields", said.moreFields, []string{"%d"}},
-		{"overwriteHuman", said.overwriteHuman, []string{"%s", "%s", "%s"}},
-		{"merge", said.merge, []string{"%s", "%s", "%s"}},
-		{"enrich", said.enrich, []string{"%s", "%s", "%s"}},
-		{"ownDomain", said.ownDomain, nil},
-		{"onDeal", said.onDeal, []string{"%s", "%s"}},
-		{"applyTag", said.applyTag, []string{"%s"}},
-		{"addLineItem", said.addLineItem, []string{"%s"}},
-		{"updateLineItem", said.updateLineItem, []string{"%s", "%s"}},
-		{"removeLineItem", said.removeLineItem, []string{"%s", "%s"}},
-		{"retireCustomField", said.retireCustomField, []string{"%s"}},
-		{"customFieldOptions", said.customFieldOptions, []string{"%s"}},
-		{"setStakeholder", said.setStakeholder, []string{"%s"}},
-		{"removeStakeholder", said.removeStakeholder, []string{"%s", "%s"}},
-		{"setCompany", said.setCompany, []string{"%s"}},
-		{"removeCompany", said.removeCompany, []string{"%s", "%s"}},
-		{"confirmFact", said.confirmFact, []string{"%s", "%s"}},
-		{"updateFact", said.updateFact, []string{"%s", "%s"}},
-		{"createFact", said.createFact, []string{"%s"}},
-		{"deleteFact", said.deleteFact, []string{"%s", "%s"}},
-		{"confirmProfileField", said.confirmProfileField, []string{"%s", "%s"}},
-		{"updateProfileField", said.updateProfileField, []string{"%s", "%s"}},
-		{"mergeTags", said.mergeTags, []string{"%q", "%q", "%q"}},
-		{"promoteLead", said.promoteLead, []string{"%s", "%s"}},
-		{"disqualifyLead", said.disqualifyLead, []string{"%s"}},
-		{"demoteLead", said.demoteLead, []string{"%s"}},
-		{"projectPhase", said.projectPhase, []string{"%s", "%s"}},
-		{"dealMove", said.dealMove, []string{"%s", "%s"}},
-		{"dealMoveOpen", said.dealMoveOpen, []string{"%s"}},
-		{"dealReopen", said.dealReopen, []string{"%s", "%s"}},
-		{"dealChange", said.dealChange, []string{"%s", "%s", "%s"}},
-		{"dealClose", said.dealClose, []string{"%s", "%s"}},
-		{"sendEmail", said.sendEmail, []string{"%s"}},
-		{"cc", said.cc, []string{"%s"}},
-		{"sendSubject", said.sendSubject, []string{"%q"}},
-		{"sendMessage", said.sendMessage, []string{"%q"}},
-		{"draftReply", said.draftReply, []string{"%s"}},
-		{"accountSend", said.accountSend, []string{"%s"}},
-		{"accountSendFiled", said.accountSendFiled, []string{"%q", "%d"}},
-		{"booking", said.booking, []string{"%q", "%s", "%s"}},
-		{"bookingHost", said.bookingHost, []string{"%s"}},
-		{"bookingLinks", said.bookingLinks, []string{"%d"}},
-		{"noSubject", said.noSubject, nil},
-		{"relinkActivity", said.relinkActivity, []string{"%s", "%s", "%s"}},
-		{"relinkThread", said.relinkThread, []string{"%q", "%s", "%s"}},
-		{"relinkActivities", said.relinkActivities, []string{"%d", "%s", "%s"}},
-		{"importPreview", said.importPreview, []string{"%s"}},
-		{"importCommit", said.importCommit, []string{"%d", "%s", "%s"}},
-		{"importCreate", said.importCreate, []string{"%d"}},
-		{"importUpdate", said.importUpdate, []string{"%d"}},
-		{"importUnchanged", said.importUnchanged, []string{"%d"}},
-		{"importSkip", said.importSkip, []string{"%d"}},
-		{"importIssues", said.importIssues, []string{"%d"}},
-		{"approveWord", said.approveWord, nil},
-		{"rejectWord", said.rejectWord, nil},
-		{"decideApproval", said.decideApproval, []string{"%s", "%s"}},
-		{"decideBundle", said.decideBundle, []string{"%s", "%s"}},
-		{"runReport", said.runReport, []string{"%s"}},
-		{"composeReport", said.composeReport, []string{"%d"}},
-		{"analyticsQuery", said.analyticsQuery, []string{"%s"}},
-		{"annotateNothing", said.annotateNothing, nil},
-		{"annotateNarrative", said.annotateNarrative, nil},
-		{"annotateBoth", said.annotateBoth, []string{"%d"}},
-		{"annotateFindings", said.annotateFindings, []string{"%d"}},
-		{"stepUpRecords", said.stepUpRecords, []string{"%d", "%d", "%s", "%d"}},
-		{"stepUpChanges", said.stepUpChanges, []string{"%d", "%d", "%s", "%d"}},
+// summaryVerbs is the formatting verbs each sentence's call site passes, in
+// order. The census holds its key set equal to summaryCopy's sentence fields,
+// so a sentence added to the struct with no row here fails.
+var summaryVerbs = map[string][]string{
+	"archive":             {"%s", "%s"},
+	"createHead":          {"%s"},
+	"updateHead":          {"%s"},
+	"logHead":             {"%s"},
+	"settingFields":       {"%s"},
+	"moreFields":          {"%d"},
+	"overwriteHuman":      {"%s", "%s", "%s"},
+	"merge":               {"%s", "%s", "%s"},
+	"enrich":              {"%s", "%s", "%s"},
+	"ownDomain":           nil,
+	"onDeal":              {"%s", "%s"},
+	"applyTag":            {"%s"},
+	"addLineItem":         {"%s"},
+	"updateLineItem":      {"%s", "%s"},
+	"removeLineItem":      {"%s", "%s"},
+	"retireCustomField":   {"%s"},
+	"customFieldOptions":  {"%s"},
+	"setStakeholder":      {"%s"},
+	"removeStakeholder":   {"%s", "%s"},
+	"setCompany":          {"%s"},
+	"removeCompany":       {"%s", "%s"},
+	"confirmFact":         {"%s", "%s"},
+	"updateFact":          {"%s", "%s"},
+	"createFact":          {"%s"},
+	"deleteFact":          {"%s", "%s"},
+	"confirmProfileField": {"%s", "%s"},
+	"updateProfileField":  {"%s", "%s"},
+	"mergeTags":           {"%q", "%q", "%q"},
+	"promoteLead":         {"%s", "%s"},
+	"disqualifyLead":      {"%s"},
+	"demoteLead":          {"%s"},
+	"projectPhase":        {"%s", "%s"},
+	"dealMove":            {"%s", "%s"},
+	"dealMoveOpen":        {"%s"},
+	"dealReopen":          {"%s", "%s"},
+	"dealChange":          {"%s", "%s", "%s"},
+	"dealClose":           {"%s", "%s"},
+	"sendEmail":           {"%s"},
+	"cc":                  {"%s"},
+	"sendSubject":         {"%q"},
+	"sendMessage":         {"%q"},
+	"draftReply":          {"%s"},
+	"accountSend":         {"%s"},
+	"accountSendFiled":    {"%q", "%d"},
+	"booking":             {"%q", "%s", "%s"},
+	"bookingHost":         {"%s"},
+	"bookingLinks":        {"%d"},
+	"noSubject":           nil,
+	"relinkActivity":      {"%s", "%s", "%s"},
+	"relinkThread":        {"%q", "%s", "%s"},
+	"relinkActivities":    {"%d", "%s", "%s"},
+	"importPreview":       {"%s"},
+	"importCommit":        {"%d", "%s", "%s"},
+	"importCreate":        {"%d"},
+	"importUpdate":        {"%d"},
+	"importUnchanged":     {"%d"},
+	"importSkip":          {"%d"},
+	"importIssues":        {"%d"},
+	"approveWord":         nil,
+	"rejectWord":          nil,
+	"decideApproval":      {"%s", "%s"},
+	"decideBundle":        {"%s", "%s"},
+	"runReport":           {"%s"},
+	"composeReport":       {"%d"},
+	"analyticsQuery":      {"%s"},
+	"annotateNothing":     nil,
+	"annotateNarrative":   nil,
+	"annotateBoth":        {"%d"},
+	"annotateFindings":    {"%d"},
+	"stepUpRecords":       {"%d", "%d", "%s", "%d"},
+	"stepUpChanges":       {"%d", "%d", "%s", "%d"},
+}
+
+// summarySentences reads every sentence field of one set by reflection, so the
+// census walks the struct itself rather than a list that could fall behind it.
+func summarySentences(said summaryCopy) map[string]string {
+	value := reflect.ValueOf(said)
+	sentences := map[string]string{}
+	for i := range value.NumField() {
+		if field := value.Field(i); field.Kind() == reflect.String && value.Type().Field(i).Name != "lang" {
+			sentences[value.Type().Field(i).Name] = field.String()
+		}
 	}
+	return sentences
 }
 
 // verbsIn answers a sentence's formatting verbs in order. Go's verbs are
@@ -115,28 +122,93 @@ func verbsIn(sentence string) []string {
 // Every shipped language writes the staging summaries in its own words, with
 // the English sentence's formatting verbs in the English order.
 func TestEveryShippedLanguageWritesItsOwnAgentSummaries(t *testing.T) {
-	english := summaryFields(summaryByLang[textlang.English])
+	english := summarySentences(summaryByLang[textlang.English])
+	for name := range english {
+		if _, held := summaryVerbs[name]; !held {
+			t.Errorf("%s is a sentence of summaryCopy with no row in summaryVerbs, so nothing holds its verbs", name)
+		}
+	}
+	for name := range summaryVerbs {
+		if _, exists := english[name]; !exists {
+			t.Errorf("summaryVerbs holds %s, which summaryCopy no longer has", name)
+		}
+	}
 	for _, lang := range textlang.Shipped {
 		t.Run(string(lang), func(t *testing.T) {
 			said, ok := summaryByLang[lang]
 			if !ok {
 				t.Fatalf("the product ships %s and this table has not learned it", lang)
 			}
-			for i, field := range summaryFields(said) {
-				if field.got == "" {
-					t.Errorf("%s is empty, and a blank summary reaches the inbox as nothing at all", field.name)
+			for name, got := range summarySentences(said) {
+				if got == "" {
+					t.Errorf("%s is empty, and a blank summary reaches the inbox as nothing at all", name)
 					continue
 				}
-				if got := strings.Join(verbsIn(field.got), " "); got != strings.Join(field.verbs, " ") {
-					t.Errorf("%s carries verbs [%s], want [%s] in that order: %q",
-						field.name, got, strings.Join(field.verbs, " "), field.got)
+				if verbs := verbsIn(got); !slices.Equal(verbs, summaryVerbs[name]) {
+					t.Errorf("%s carries verbs %v, its call site passes %v in that order: %q",
+						name, verbs, summaryVerbs[name], got)
 				}
-				if lang != textlang.English && field.got == english[i].got {
+				if lang != textlang.English && got == english[name] {
 					t.Errorf("%s is the English sentence verbatim; the entry exists and the reader still gets English",
-						field.name)
+						name)
 				}
 			}
 		})
+	}
+}
+
+// Every translated language names the same record types, each with a word. A
+// type one language learned and another did not would print a German noun on
+// one installation and a wire identifier on the next.
+func TestEveryTranslatedLanguageNamesTheSameRecordTypes(t *testing.T) {
+	german := recordNounsByLang[textlang.German]
+	if len(german) == 0 {
+		t.Fatal("German names no record type, and it is the reference set")
+	}
+	for _, lang := range textlang.Shipped {
+		if lang == textlang.English {
+			if _, has := recordNounsByLang[lang]; has {
+				t.Error("English carries a noun table; it reads the wire type aloud, and a table would be a second spelling")
+			}
+			continue
+		}
+		nouns, ok := recordNounsByLang[lang]
+		if !ok {
+			t.Errorf("the product ships %s and the record nouns have not learned it", lang)
+			continue
+		}
+		for recordType := range german {
+			if nouns[recordType] == "" {
+				t.Errorf("%s has no word for %s", lang, recordType)
+			}
+		}
+		for recordType := range nouns {
+			if _, known := german[recordType]; !known {
+				t.Errorf("%s names %s, which German does not", lang, recordType)
+			}
+		}
+	}
+}
+
+// English reads the wire type aloud, and a type a language has no word for
+// reads as the wire type rather than as nothing.
+func TestARecordNounFallsBackToTheWireType(t *testing.T) {
+	for _, tc := range []struct {
+		lang       textlang.Lang
+		recordType string
+		want       string
+	}{
+		{textlang.English, "deal_room", "deal room"},
+		{textlang.German, "deal_room", "Deal-Room"},
+		{textlang.German, "app_user", "app_user"},
+		{textlang.Lang("kl"), "saved_view", "saved view"},
+	} {
+		if got := RecordNoun(tc.lang, tc.recordType); got != tc.want {
+			t.Errorf("RecordNoun(%s, %s) = %q, want %q", tc.lang, tc.recordType, got, tc.want)
+		}
+	}
+	if got := MoreFields(textlang.German); got != "+%d weitere" {
+		t.Errorf("MoreFields(de) = %q, want the German set's overflow marker", got)
 	}
 }
 
@@ -144,7 +216,7 @@ func TestEveryShippedLanguageWritesItsOwnAgentSummaries(t *testing.T) {
 // language comes off a settings row an admin can edit by hand.
 func TestAnUnknownLanguageDescribesInEnglish(t *testing.T) {
 	unshipped := func(context.Context) textlang.Lang { return textlang.Lang("kl") }
-	if got := summaryIn(context.Background(), unshipped); got != summaryByLang[textlang.English] {
+	if got := summaryIn(context.Background(), unshipped); got != summaryFor(textlang.English) {
 		t.Errorf("an unshipped language answered %+v, want the English set", got)
 	}
 }
@@ -166,7 +238,7 @@ func TestTheToolDoorDescribesInTheComposedLanguage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("staging a served create answered %v", err)
 	}
-	if want := "Datensatz vom Typ contact anlegen, Felder: full_name, title"; info.Summary != want {
+	if want := "Kontakt anlegen, Felder: full_name, title"; info.Summary != want {
 		t.Errorf("summary = %q, want %q", info.Summary, want)
 	}
 }
@@ -181,7 +253,7 @@ func TestStagedSummariesFollowTheInjectedLanguage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("describing a patch: %v", err)
 	}
-	if want := "Datensatz vom Typ deal ändern, Felder: amount"; patch.Summary != want {
+	if want := "Deal ändern, Felder: amount"; patch.Summary != want {
 		t.Errorf("patch summary = %q, want %q", patch.Summary, want)
 	}
 

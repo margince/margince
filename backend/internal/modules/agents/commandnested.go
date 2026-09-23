@@ -249,7 +249,7 @@ type createOfferResolver struct {
 // no id at all is the only staged target this create could honestly carry.
 func (r createOfferResolver) Subject(ctx context.Context, cmd CreateOfferCommand) (StageInfo, error) {
 	said := summaryIn(ctx, r.language)
-	write := describeGenericWrite(said, fmt.Sprintf(said.createHead, offerRecordType), cmd.Fields)
+	write := describeGenericWrite(said, fmt.Sprintf(said.createHead, said.noun(offerRecordType)), cmd.Fields)
 	return StageInfo{
 		TargetType: offerRecordType,
 		Summary:    fmt.Sprintf(said.onDeal, write, cmd.DealID),

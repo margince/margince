@@ -39,10 +39,9 @@ package gates
 // a method told apart from a same-named, same-arity one only by its receiver's
 // type; a bare `return` of named results; a range variable's type; a module
 // outside internal/; and anything more than approvalSummaryHops hops away.
-// Nor a field another module FILLED with English and compose forwards: the
-// selector reads as forwarded, which is how deals' stage-move reason passed as
-// `facts.Decision.Reason`. That sentence is held by the writing module's own
-// census (deals: TestEveryShippedLanguageWritesItsOwnStageReasons).
+// Nor a field another module fills and compose forwards: the selector reads as
+// forwarded, so the writing module's own census holds that sentence (deals:
+// TestEveryShippedLanguageWritesItsOwnSentences).
 
 import (
 	"fmt"
@@ -69,12 +68,11 @@ import (
 // types its Service's exported methods accept.
 const approvalsServiceDir = "internal/modules/approvals"
 
-// The census found 74 Summary sites across six derived input types when it was
-// written. A renamed input struct or staging method would otherwise shrink it
-// to nothing and read clean; the site floor leaves room to merge a few sites,
-// and losing any whole input type fails the type floor.
+// The census never finds fewer staging-input Summary sites or input types than
+// these. A renamed input struct or staging method would otherwise shrink it to
+// nothing and read clean; merging sites lowers the floor in the same change.
 const (
-	approvalSummaryFloor = 60
+	approvalSummaryFloor = 72
 	approvalInputFloor   = 6
 )
 

@@ -23,6 +23,13 @@ type summaryCopy struct {
 	// name, then %s the interaction kind (an identifier, untranslated) and %s
 	// its date, in that order.
 	draftFollowUp string
+	// followUpSubject titles the drafted task. %s is the deal's name.
+	followUpSubject string
+	// followUpBody grounds the task in the exchange it answers: %s the
+	// interaction kind, then %s its date. followUpBodyQuoted adds the
+	// exchange's own subject between them, quoted and untranslated.
+	followUpBody       string
+	followUpBodyQuoted string
 
 	// The stage policy's reasons, one per decision it can reach. A field whose
 	// name ends in Key has one %s, the criterion's key, an identifier; the rest
@@ -42,13 +49,18 @@ type summaryCopy struct {
 	protectedMovedByYou   string
 	protectedUndoneBefore string
 	protectedTurnedDown   string
+	// protectedRecently reads for a Protection protectionReason has no case for.
+	protectedRecently string
 }
 
 // summaryByLang is the census, keyed by textlang.Lang so the test can walk
 // textlang.Shipped and ask this map directly.
 var summaryByLang = map[textlang.Lang]summaryCopy{
 	textlang.English: {
-		draftFollowUp: "Draft a follow-up on %q — a %s on %s left no next step planned",
+		draftFollowUp:      "Draft a follow-up on %q — a %s on %s left no next step planned",
+		followUpSubject:    "Follow up on %s",
+		followUpBody:       "Follow up on the %s from %s. No next step is on the timeline yet.",
+		followUpBodyQuoted: "Follow up on the %s “%s” from %s. No next step is on the timeline yet.",
 
 		stageAutoApply:        "every exit criterion is settled by the other side's own words, and this transition has been measured long enough to move itself",
 		stageAllSettled:       "every exit criterion for this stage is settled",
@@ -65,9 +77,13 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedMovedByYou:   "you moved this deal yourself in the last fortnight",
 		protectedUndoneBefore: "a stage move on this deal was undone before",
 		protectedTurnedDown:   "you turned this move down, and nothing new has been learned since",
+		protectedRecently:     "someone changed this deal's stage by hand recently",
 	},
 	textlang.German: {
-		draftFollowUp: "Entwirf ein Follow-up zu %q: Nach dem Austausch (%s) am %s ist kein nächster Schritt geplant.",
+		draftFollowUp:      "Entwirf ein Follow-up zu %q: Nach dem Austausch (%s) am %s ist kein nächster Schritt geplant.",
+		followUpSubject:    "Follow-up zu %s",
+		followUpBody:       "Follow-up zum Austausch (%s) vom %s. Im Verlauf steht noch kein nächster Schritt.",
+		followUpBodyQuoted: "Follow-up zum Austausch (%s) „%s“ vom %s. Im Verlauf steht noch kein nächster Schritt.",
 
 		stageAutoApply:        "jedes Austrittskriterium ist durch die eigenen Worte der Gegenseite erfüllt, und dieser Übergang wurde lange genug gemessen, um den Deal selbst zu verschieben",
 		stageAllSettled:       "jedes Austrittskriterium dieser Phase ist erfüllt",
@@ -84,9 +100,13 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedMovedByYou:   "du hast diesen Deal in den letzten zwei Wochen selbst verschoben",
 		protectedUndoneBefore: "ein Phasenwechsel bei diesem Deal wurde schon einmal rückgängig gemacht",
 		protectedTurnedDown:   "du hast diesen Schritt abgelehnt, und seitdem ist nichts Neues bekannt geworden",
+		protectedRecently:     "jemand hat die Phase dieses Deals kürzlich von Hand geändert",
 	},
 	textlang.Vietnamese: {
-		draftFollowUp: "Soạn một follow-up cho %q: sau tương tác (%s) vào ngày %s chưa có bước tiếp theo nào được lên kế hoạch.",
+		draftFollowUp:      "Soạn một follow-up cho %q: sau tương tác (%s) vào ngày %s chưa có bước tiếp theo nào được lên kế hoạch.",
+		followUpSubject:    "Follow-up cho %s",
+		followUpBody:       "Follow-up cho tương tác (%s) vào ngày %s. Dòng thời gian chưa có bước tiếp theo nào.",
+		followUpBodyQuoted: "Follow-up cho tương tác (%s) “%s” vào ngày %s. Dòng thời gian chưa có bước tiếp theo nào.",
 
 		stageAutoApply:        "mọi tiêu chí rời giai đoạn đều đã được xác nhận bằng chính lời của phía bên kia, và bước chuyển này đã được đo lường đủ lâu để tự thực hiện",
 		stageAllSettled:       "mọi tiêu chí rời giai đoạn này đều đã được đáp ứng",
@@ -103,6 +123,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedMovedByYou:   "bạn đã tự chuyển deal này trong hai tuần qua",
 		protectedUndoneBefore: "một lần chuyển giai đoạn của deal này đã từng bị hoàn tác",
 		protectedTurnedDown:   "bạn đã từ chối bước này, và từ đó đến nay chưa có thông tin mới nào",
+		protectedRecently:     "gần đây có người đã tự tay thay đổi giai đoạn của deal này",
 	},
 }
 

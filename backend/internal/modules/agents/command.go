@@ -211,10 +211,11 @@ func (a *archiveResolver) Subject(ctx context.Context, cmd ArchiveCommand) (Stag
 	if served {
 		label = recordLabel(rec)
 	}
+	said := summaryIn(ctx, a.language)
 	return StageInfo{
 		TargetType: cmd.RecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf(summaryIn(ctx, a.language).archive, cmd.RecordType, label),
+		Summary:    fmt.Sprintf(said.archive, said.noun(cmd.RecordType), label),
 	}, nil
 }
 
@@ -275,7 +276,7 @@ func (r createResolver) Subject(ctx context.Context, cmd CreateCommand) (StageIn
 	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType: cmd.RecordType,
-		Summary:    describeGenericWrite(said, fmt.Sprintf(said.createHead, cmd.RecordType), cmd.Fields),
+		Summary:    describeGenericWrite(said, fmt.Sprintf(said.createHead, said.noun(cmd.RecordType)), cmd.Fields),
 	}, nil
 }
 
@@ -349,7 +350,7 @@ func (r patchResolver) Subject(ctx context.Context, cmd PatchCommand) (StageInfo
 	return StageInfo{
 		TargetType: cmd.RecordType,
 		TargetID:   cmd.ID,
-		Summary:    describeGenericWrite(said, fmt.Sprintf(said.updateHead, cmd.RecordType), cmd.Fields),
+		Summary:    describeGenericWrite(said, fmt.Sprintf(said.updateHead, said.noun(cmd.RecordType)), cmd.Fields),
 	}, nil
 }
 

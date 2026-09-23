@@ -68,8 +68,9 @@ type relinkThreadResolver struct {
 // what keeps the resolver whole rather than a gap a later tier change falls
 // through.
 func (r *relinkThreadResolver) Subject(ctx context.Context, cmd RelinkThreadCommand) (StageInfo, error) {
+	said := summaryIn(ctx, r.language)
 	return destinationSubject(ctx, &r.destination, cmd.EntityType, cmd.EntityID,
-		fmt.Sprintf(summaryIn(ctx, r.language).relinkThread, cmd.ThreadKey, cmd.EntityType, cmd.EntityID))
+		fmt.Sprintf(said.relinkThread, cmd.ThreadKey, said.noun(cmd.EntityType), cmd.EntityID))
 }
 
 // Guards refuses a blank key and a destination outside the vocabulary, and
@@ -127,8 +128,9 @@ type relinkActivitiesResolver struct {
 // line is read by whoever may decide the destination, and the rows are not
 // theirs to be shown by name.
 func (r *relinkActivitiesResolver) Subject(ctx context.Context, cmd RelinkActivitiesCommand) (StageInfo, error) {
+	said := summaryIn(ctx, r.language)
 	return destinationSubject(ctx, &r.destination, cmd.EntityType, cmd.EntityID,
-		fmt.Sprintf(summaryIn(ctx, r.language).relinkActivities, len(cmd.ActivityIDs), cmd.EntityType, cmd.EntityID))
+		fmt.Sprintf(said.relinkActivities, len(cmd.ActivityIDs), said.noun(cmd.EntityType), cmd.EntityID))
 }
 
 // Guards refuses the destination vocabulary, an empty or oversized set — the

@@ -364,7 +364,7 @@ func gateCallCharges(t *testing.T, sourceSemantic, token string, redeemErr error
 	recorder := httptest.NewRecorder()
 	// nil tags: this walk redeems a deal advance, and a nil seam is a legal
 	// wiring for every command that does not name a tag.
-	gate := agentGate(reg, staging, stages, records, nil, nil, nil, auth.NewGate(fullSeat{}), nil)
+	gate := agentGate(reg, staging, stages, records, nil, nil, nil, auth.NewGate(fullSeat{}))
 	gate(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})).ServeHTTP(recorder, r)

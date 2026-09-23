@@ -22,7 +22,7 @@ import (
 )
 
 // inEnglish is the set the English-reading cases below are pinned against.
-var inEnglish = approvalSummaryByLang[textlang.English]
+var inEnglish = approvalSummaryCopyFor(textlang.English)
 
 // summaryRequest is the request shape restSummary reads. `params` are the
 // routed values in the order the pattern declares them — chi keeps that order,
@@ -213,13 +213,13 @@ func TestRestSummaryDistinguishesNullFromEmpty(t *testing.T) {
 // English kept apart.
 func TestNoTwoStageableActsShareAHeadline(t *testing.T) {
 	for _, lang := range textlang.Shipped {
-		acts := approvalSummaryByLang[lang].acts
+		said := approvalSummaryCopyFor(lang)
 		byPhrase := map[string][]string{}
 		for _, pol := range agentPolicies {
 			if pol.Access != accessTool || pol.Tier == tierAutoExecute {
 				continue
 			}
-			phrase := actPhrase(acts, pol, "POST", "/v1/x")
+			phrase := actPhrase(said, pol, "POST", "/v1/x")
 			byPhrase[phrase] = append(byPhrase[phrase], pol.Op)
 		}
 		for phrase, ops := range byPhrase {
@@ -265,12 +265,12 @@ func TestNoTwoStageableActsShareAHeadline(t *testing.T) {
 // Every headline a human can meet is words, never a wire identifier.
 func TestEveryStageableActReadsAsWords(t *testing.T) {
 	for _, lang := range textlang.Shipped {
-		acts := approvalSummaryByLang[lang].acts
+		said := approvalSummaryCopyFor(lang)
 		for key, pol := range agentPolicies {
 			if pol.Access != accessTool || pol.Tier == tierAutoExecute {
 				continue
 			}
-			phrase := actPhrase(acts, pol, "POST", "/v1/x")
+			phrase := actPhrase(said, pol, "POST", "/v1/x")
 			if phrase == "" {
 				t.Errorf("%s %s: staged calls render an empty headline", lang, key)
 				continue

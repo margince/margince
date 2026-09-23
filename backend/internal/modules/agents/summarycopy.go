@@ -8,8 +8,9 @@ package agents
 // An approval's summary is shared-record text: stored once and read by every
 // seat, so it follows the installation's base language, resolved when the call
 // is described. The same line reaches the calling agent in StageInfo, and the
-// base language is right for that reader too. Record types, field names,
-// addresses, subjects and labels are values, and pass through untranslated.
+// base language is right for that reader too. A record type reads as the
+// language's noun; field names, addresses, subjects and labels are values, and
+// pass through untranslated.
 
 import (
 	"context"
@@ -22,7 +23,8 @@ import (
 // (summarycopy_test.go) holds each one to the English sentence's formatting
 // verbs, in the English order, because Go's verbs are positional.
 type summaryCopy struct {
-	// Record writes. Record types, labels, field names and ids pass through.
+	// Record writes. A record type reads as the language's noun (recordnouns.go);
+	// labels, field names and ids pass through.
 	archive, createHead, updateHead, logHead, settingFields, moreFields, overwriteHuman, merge,
 	enrich, ownDomain string
 
@@ -42,7 +44,7 @@ type summaryCopy struct {
 	sendEmail, cc, sendSubject, sendMessage, draftReply, accountSend, accountSendFiled, booking,
 	bookingHost, bookingLinks, noSubject, relinkActivity, relinkThread, relinkActivities string
 
-	// Imports. The counts are the report's; the record type passes through.
+	// Imports. The counts are the report's; the record type reads as a noun.
 	importPreview, importCommit, importCreate, importUpdate, importUnchanged, importSkip,
 	importIssues string
 
@@ -51,6 +53,10 @@ type summaryCopy struct {
 	approveWord, rejectWord, decideApproval, decideBundle, runReport, composeReport,
 	analyticsQuery, annotateNothing, annotateNarrative, annotateBoth, annotateFindings,
 	stepUpRecords, stepUpChanges string
+
+	// lang is the language this set was picked for, which names its record
+	// types (recordnouns.go). It is not a sentence, so the census skips it.
+	lang textlang.Lang
 }
 
 // summaryByLang is the census, keyed by textlang.Lang so the test can walk
@@ -132,14 +138,14 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		stepUpChanges:       "This agent has made %d changes against a limit of %d for this window (most recently through %s). Approve to let it continue for another %d.",
 	},
 	textlang.German: {
-		archive:             "Datensatz vom Typ %s archivieren: %s",
-		createHead:          "Datensatz vom Typ %s anlegen",
-		updateHead:          "Datensatz vom Typ %s ändern",
-		logHead:             "Datensatz vom Typ %s erfassen",
+		archive:             "%s archivieren: %s",
+		createHead:          "%s anlegen",
+		updateHead:          "%s ändern",
+		logHead:             "%s erfassen",
 		settingFields:       ", Felder: %s",
 		moreFields:          "+%d weitere",
-		overwriteHuman:      "Datensatz vom Typ %s ändern: %s, überschreibt von Menschen bearbeitete Felder %s",
-		merge:               "Datensatz vom Typ %s zusammenführen: %s in %s",
+		overwriteHuman:      "%s %s ändern: manuell bearbeitete Felder überschreiben (%s)",
+		merge:               "%s zusammenführen: %s in %s",
 		enrich:              "%s von %s lesen und eine Anreicherung für %s vorschlagen",
 		ownDomain:           "seiner eigenen Domain",
 		onDeal:              "%s (Deal %s)",
@@ -205,14 +211,14 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		stepUpChanges:       "Dieser Agent hat %d Änderungen vorgenommen, bei einem Limit von %d für dieses Zeitfenster (zuletzt über %s). Gib frei, damit er für weitere %d weitermachen kann.",
 	},
 	textlang.Vietnamese: {
-		archive:             "Lưu trữ bản ghi loại %s: %s",
-		createHead:          "Tạo bản ghi loại %s",
-		updateHead:          "Cập nhật bản ghi loại %s",
-		logHead:             "Ghi nhận bản ghi loại %s",
+		archive:             "Lưu trữ %s: %s",
+		createHead:          "Tạo %s",
+		updateHead:          "Cập nhật %s",
+		logHead:             "Ghi nhận %s",
 		settingFields:       ", các trường: %s",
 		moreFields:          "+%d trường khác",
-		overwriteHuman:      "Cập nhật bản ghi loại %s %s: ghi đè các trường do người dùng chỉnh sửa %s",
-		merge:               "Hợp nhất bản ghi loại %s: %s vào %s",
+		overwriteHuman:      "Cập nhật %s %s: ghi đè các trường đã được chỉnh sửa thủ công (%s)",
+		merge:               "Hợp nhất %s: %s vào %s",
 		enrich:              "Đọc %s từ %s và đề xuất làm giàu dữ liệu cho %s",
 		ownDomain:           "tên miền của chính công ty",
 		onDeal:              "%s (deal %s)",
@@ -283,10 +289,19 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 // for a language this table has not learned: the language comes off a settings
 // row, and a sentence in English beats no sentence.
 func summaryIn(ctx context.Context, language baselanguage.Resolver) summaryCopy {
-	if said, ok := summaryByLang[language.Resolve(ctx)]; ok {
-		return said
+	return summaryFor(language.Resolve(ctx))
+}
+
+// summaryFor answers the set for lang, and the English set for a language the
+// table has not learned.
+func summaryFor(lang textlang.Lang) summaryCopy {
+	said, ok := summaryByLang[lang]
+	if !ok {
+		lang = textlang.English
+		said = summaryByLang[lang]
 	}
-	return summaryByLang[textlang.English]
+	said.lang = lang
+	return said
 }
 
 // WithBaseLanguage injects the installation's base language every staged

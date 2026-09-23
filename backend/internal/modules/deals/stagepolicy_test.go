@@ -11,7 +11,11 @@ package deals
 // it should have proposed moves a deal nobody agreed to move, and the rep
 // finds out from a forecast.
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 // settledFacts is the fully-evidenced single-step move every test below varies
 // ONE fact of. Written as the permissive case on purpose: a test that started
@@ -38,7 +42,7 @@ func settledFacts() StageMoveFacts {
 func TestASingleStepMoveWithObjectiveEvidenceProposes(t *testing.T) {
 	got := DecideStageMove(settledFacts())
 	if got.Outcome != OutcomePropose {
-		t.Fatalf("a fully evidenced single-step move decided %q (%s)", got.Outcome, got.Reason)
+		t.Fatalf("a fully evidenced single-step move decided %q (%s)", got.Outcome, got.ReasonIn(textlang.English))
 	}
 	if got.Exception != "" {
 		t.Errorf("an ordinary move surfaced the exception %q", got.Exception)
@@ -52,7 +56,7 @@ func TestAnUnmetRequiredCriterionOnlyObserves(t *testing.T) {
 	if got.Outcome != OutcomeObserve {
 		t.Fatalf("an unmet required criterion decided %q", got.Outcome)
 	}
-	if got.Reason == "" {
+	if got.ReasonIn(textlang.English) == "" {
 		t.Error("the refusal says nothing about which criterion is missing")
 	}
 }
@@ -70,7 +74,7 @@ func TestAnUnmetOptionalCriterionDoesNotRefuseButAsksForAGlance(t *testing.T) {
 	got := DecideStageMove(facts)
 	if got.Outcome == OutcomeObserve {
 		t.Fatalf("an unmet OPTIONAL criterion refused the move; the required "+
-			"flag then means nothing (%s)", got.Reason)
+			"flag then means nothing (%s)", got.ReasonIn(textlang.English))
 	}
 	if got.Outcome != OutcomeProposeConfirmFirst {
 		t.Errorf("an unmet optional criterion decided %q, want a card a contact looks at", got.Outcome)
@@ -98,7 +102,7 @@ func TestAStageWithNoCriteriaSettlesNothing(t *testing.T) {
 	}
 	got := DecideStageMove(bare)
 	if got.Outcome != OutcomeObserve {
-		t.Fatalf("a stage with no exit criteria decided %q (%s)", got.Outcome, got.Reason)
+		t.Fatalf("a stage with no exit criteria decided %q (%s)", got.Outcome, got.ReasonIn(textlang.English))
 	}
 }
 
@@ -187,8 +191,8 @@ func TestAProtectedDealIsNeverProposed(t *testing.T) {
 		if got.Outcome != OutcomeObserve {
 			t.Fatalf("a %s-protected deal decided %q", protection, got.Outcome)
 		}
-		if got.Reason != want {
-			t.Errorf("the %s refusal reads %q, not the protection's own reason %q", protection, got.Reason, want)
+		if got.ReasonIn(textlang.English) != want {
+			t.Errorf("the %s refusal reads %q, not the protection's own reason %q", protection, got.ReasonIn(textlang.English), want)
 		}
 	}
 }
@@ -330,7 +334,7 @@ func TestEveryDecisionSaysWhy(t *testing.T) {
 		"confirm-first": terminalFacts(),
 		"auto-applied":  autopilotFacts(),
 	} {
-		if got := DecideStageMove(facts); got.Reason == "" {
+		if got := DecideStageMove(facts); got.ReasonIn(textlang.English) == "" {
 			t.Errorf("the %s decision carries no reason", name)
 		}
 	}

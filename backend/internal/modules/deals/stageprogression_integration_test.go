@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // twoStagePipeline seeds a pipeline with two open stages and a deal on the
@@ -237,7 +238,7 @@ func TestAHumanStageMoveInTheLastFortnightBlocksAProposal(t *testing.T) {
 	if got.Decision.Outcome != OutcomeObserve {
 		t.Fatalf("a deal a human just moved decided %q", got.Decision.Outcome)
 	}
-	if got.Decision.Reason == "" {
+	if got.Decision.ReasonIn(textlang.English) == "" {
 		t.Error("the protection does not say why, so the rep cannot tell it " +
 			"from an ordinary refusal")
 	}
@@ -268,7 +269,7 @@ func TestCreatingADealIsNotAHumanStageMove(t *testing.T) {
 	got := facts(t, e, dealID)
 	if got.Decision.Outcome != OutcomePropose {
 		t.Fatalf("a freshly created, fully settled deal decided %q (%s)",
-			got.Decision.Outcome, got.Decision.Reason)
+			got.Decision.Outcome, got.Decision.ReasonIn(textlang.English))
 	}
 }
 
@@ -371,7 +372,7 @@ func TestARejectedMoveIsNotProposedAgainWithoutNewerEvidence(t *testing.T) {
 	if got.Decision.Outcome != OutcomeObserve {
 		t.Fatalf("a move the rep turned down decided %q", got.Decision.Outcome)
 	}
-	if got.Decision.Reason == "" {
+	if got.Decision.ReasonIn(textlang.English) == "" {
 		t.Error("the refusal does not say the rep already answered this")
 	}
 }
@@ -408,7 +409,7 @@ func TestNewerEvidenceReopensARejectedMove(t *testing.T) {
 	}
 	if got := facts(t, e, dealID); got.Decision.Outcome != OutcomePropose {
 		t.Fatalf("newer evidence did not reopen the move, deciding %q (%s)",
-			got.Decision.Outcome, got.Decision.Reason)
+			got.Decision.Outcome, got.Decision.ReasonIn(textlang.English))
 	}
 }
 

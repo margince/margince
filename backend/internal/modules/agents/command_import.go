@@ -93,9 +93,10 @@ func (r importResolver) Subject(ctx context.Context, cmd ImportCommand) (StageIn
 			Summary:    describeImport(summaryIn(ctx, r.language), object, report),
 		}, nil
 	}
+	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType: importRunRecordType,
-		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).importPreview, cmd.Object),
+		Summary:    fmt.Sprintf(said.importPreview, said.noun(cmd.Object)),
 	}, nil
 }
 
@@ -147,7 +148,7 @@ func describeImport(said summaryCopy, object string, report crmcontracts.ImportR
 		parts = append(parts, fmt.Sprintf(said.importSkip, d.Skipped))
 	}
 	summary := fmt.Sprintf(said.importCommit,
-		report.RowsRead, object, strings.Join(parts, ", "))
+		report.RowsRead, said.noun(object), strings.Join(parts, ", "))
 	if len(report.Issues) > 0 {
 		summary += fmt.Sprintf(said.importIssues, len(report.Issues))
 	}

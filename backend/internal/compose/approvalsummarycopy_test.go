@@ -55,7 +55,6 @@ var approvalSummaryHoles = map[string][]string{
 	"modelRateChanged":             {"%s", "%s", "%s", "%s"},
 	"modelRateNew":                 nil,
 	"createdUnder":                 nil,
-	"moreFields":                   {"%d"},
 	"nestedFields":                 {"%d"},
 }
 
@@ -70,7 +69,8 @@ func summarySentences(said approvalSummaryCopy) map[string]string {
 	value := reflect.ValueOf(said)
 	sentences := map[string]string{}
 	for i := range value.NumField() {
-		if field := value.Field(i); field.Kind() == reflect.String {
+		// Exactly string: the set's own textlang.Lang is a string kind and no sentence.
+		if field := value.Field(i); field.Type() == reflect.TypeFor[string]() {
 			sentences[value.Type().Field(i).Name] = field.String()
 		}
 	}
@@ -117,9 +117,6 @@ func TestTheGermanApprovalSummariesCarryNoDash(t *testing.T) {
 			sentences[key] = phrase
 		}
 	}
-	for record, noun := range german.acts.records {
-		sentences[string(record)] = noun
-	}
 	for name, sentence := range sentences {
 		if strings.ContainsAny(sentence, "—–") {
 			t.Errorf("German %s carries a long dash: %q", name, sentence)
@@ -132,29 +129,30 @@ func TestTheGermanApprovalSummariesCarryNoDash(t *testing.T) {
 //
 // The corpus is the policy table's mutating tool routes, not a list: a contract
 // change that makes a new verb stageable fails here rather than printing the
-// English verb on a German card.
+// English verb on a German card. It runs both ways, so a verb that stops being
+// stageable cannot leave a dead word behind.
 func TestEveryStageableAgentActHasItsWordsInEveryLanguage(t *testing.T) {
 	for _, lang := range textlang.Shipped {
 		if lang == textlang.English {
 			continue
 		}
 		acts := approvalSummaryByLang[lang].acts
+		reachedVerbs, reachedFrames := map[string]bool{}, map[string]bool{}
 		for route, pol := range agentPolicies {
 			method, _, _ := strings.Cut(route, " ")
 			if pol.Access != accessTool || !mutatingMethod(method) {
 				continue
 			}
 			if pol.RecordType == "" || !genericVerbs[pol.Tool] {
+				reachedVerbs[pol.Tool] = true
 				if acts.verbs[pol.Tool] == "" {
 					t.Errorf("%s has no words for %s (%s)", lang, pol.Tool, route)
 				}
 				continue
 			}
+			reachedFrames[pol.Tool] = true
 			if frame := acts.recordFrames[pol.Tool]; strings.Count(frame, "%s") != 1 {
 				t.Errorf("%s's frame for %s must hold exactly one record noun: %q", lang, pol.Tool, frame)
-			}
-			if acts.records[pol.RecordType] == "" {
-				t.Errorf("%s has no noun for the %s record (%s)", lang, pol.RecordType, route)
 			}
 		}
 		for op := range opPhrases {
@@ -162,13 +160,31 @@ func TestEveryStageableAgentActHasItsWordsInEveryLanguage(t *testing.T) {
 				t.Errorf("%s does not name %s, so its headline collapses into its sibling's", lang, op)
 			}
 		}
+		assertEveryWordIsReached(t, lang, "verb", acts.verbs, reachedVerbs)
+		assertEveryWordIsReached(t, lang, "frame", acts.recordFrames, reachedFrames)
+		namedOps := map[string]bool{}
+		for op := range opPhrases {
+			namedOps[op] = true
+		}
+		assertEveryWordIsReached(t, lang, "operation", acts.operations, namedOps)
+	}
+}
+
+// assertEveryWordIsReached fails a vocabulary entry no stageable call can name.
+func assertEveryWordIsReached[K comparable](t *testing.T, lang textlang.Lang, kind string, words map[K]string, reached map[K]bool) {
+	t.Helper()
+	for key := range words {
+		if reached[key] {
+			continue
+		}
+		t.Errorf("%s carries a %s for %v, which no stageable call names any more", lang, kind, key)
 	}
 }
 
 // A German card names the act and keeps the call's own fields verbatim.
 func TestAGermanCardNamesTheActInGerman(t *testing.T) {
 	pol := agentPolicy{Op: "updateDeal", Tool: toolUpdateRecord, RecordType: recordTypeDeal}
-	got := restSummary(approvalSummaryByLang[textlang.German], pol,
+	got := restSummary(approvalSummaryCopyFor(textlang.German), pol,
 		summaryRequest("PATCH", "/v1/deals/x"), []byte(`{"amount_minor":100}`))
 	if want := "Deal ändern: amount_minor=100"; got != want {
 		t.Errorf("the German card reads %q, want %q", got, want)
@@ -176,7 +192,7 @@ func TestAGermanCardNamesTheActInGerman(t *testing.T) {
 }
 
 // An unshipped language answers English rather than an empty set, because the
-// language comes off a settings row a contact can edit by hand.
+// language comes off a settings row an admin can edit by hand.
 func TestAnUnknownLanguageWritesEnglishApprovalSummaries(t *testing.T) {
 	said := approvalSummaryCopyFor(textlang.Lang("kl"))
 	if said.companyRename != approvalSummaryByLang[textlang.English].companyRename {

@@ -145,12 +145,12 @@ func (r *mergeResolver) Subject(ctx context.Context, cmd MergeCommand) (StageInf
 	if err != nil {
 		return StageInfo{}, err
 	}
+	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType:    cmd.RecordType,
 		TargetID:      cmd.TargetID,
 		TargetVersion: &survivor.Version,
-		Summary: fmt.Sprintf(summaryIn(ctx, r.language).merge,
-			cmd.RecordType, recordLabel(source), recordLabel(survivor)),
+		Summary:       fmt.Sprintf(said.merge, said.noun(cmd.RecordType), recordLabel(source), recordLabel(survivor)),
 	}, nil
 }
 

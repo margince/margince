@@ -53,18 +53,25 @@ func TestAnUnknownLanguageStagesTheFollowUpInEnglish(t *testing.T) {
 	}
 }
 
-type recordingFollowUpStager struct{ summaries []string }
+type stagedFollowUp struct {
+	summary  string
+	proposal FollowUpProposal
+}
+
+type recordingFollowUpStager struct{ staged []stagedFollowUp }
 
 func (s *recordingFollowUpStager) HasPendingFollowUp(context.Context, ids.UUID) (bool, error) {
 	return false, nil
 }
 
-func (s *recordingFollowUpStager) StageFollowUp(_ context.Context, _ ids.UUID, summary string, _ FollowUpProposal) error {
-	s.summaries = append(s.summaries, summary)
+func (s *recordingFollowUpStager) StageFollowUp(_ context.Context, _ ids.UUID, summary string, proposal FollowUpProposal) error {
+	s.staged = append(s.staged, stagedFollowUp{summary: summary, proposal: proposal})
 	return nil
 }
 
-func stagedFollowUpSummary(t *testing.T, reconciler *FollowUpReconciler) string {
+// stageOneFollowUp stages a call on "Acme Rollout" in the copy set the
+// reconciler's resolver answers, the way reconcileWorkspace resolves it.
+func stageOneFollowUp(t *testing.T, reconciler *FollowUpReconciler, subject *string) stagedFollowUp {
 	t.Helper()
 	stager := &recordingFollowUpStager{}
 	reconciler.stager = stager
@@ -74,40 +81,57 @@ func stagedFollowUpSummary(t *testing.T, reconciler *FollowUpReconciler) string 
 		activityID:   ids.New[ids.ActivityKind](),
 		activityKind: "call",
 		occurredAt:   time.Date(2026, 9, 21, 10, 0, 0, 0, time.UTC),
+		subject:      subject,
 	}
-	if err := reconciler.stage(context.Background(), cand, time.Date(2026, 9, 22, 0, 0, 0, 0, time.UTC)); err != nil {
+	ctx := context.Background()
+	if err := reconciler.stage(ctx, cand, time.Date(2026, 9, 22, 0, 0, 0, 0, time.UTC), summaryIn(ctx, reconciler.language)); err != nil {
 		t.Fatalf("stage: %v", err)
 	}
-	if len(stager.summaries) != 1 {
-		t.Fatalf("staged %d proposals, want exactly one", len(stager.summaries))
+	if len(stager.staged) != 1 {
+		t.Fatalf("staged %d proposals, want exactly one", len(stager.staged))
 	}
-	return stager.summaries[0]
+	return stager.staged[0]
 }
 
-// The staged summary is written in the language the injected resolver answers.
-func TestAFollowUpSummaryFollowsTheInjectedLanguage(t *testing.T) {
+// The staged summary and the drafted task are written in the language the
+// injected resolver answers; the exchange's own subject stays as it was.
+func TestAFollowUpFollowsTheInjectedLanguage(t *testing.T) {
 	german := func(context.Context) textlang.Lang { return textlang.German }
-	reconciler := NewFollowUpReconciler(nil, nil, nil).WithBaseLanguage(german)
+	offer := "Angebot Q4"
+	got := stageOneFollowUp(t, NewFollowUpReconciler(nil, nil, nil).WithBaseLanguage(german), &offer)
 
-	want := `Entwirf ein Follow-up zu "Acme Rollout": Nach dem Austausch (call) am 2026-09-21 ist kein nächster Schritt geplant.`
-	if got := stagedFollowUpSummary(t, reconciler); got != want {
-		t.Errorf("summary = %q, want %q", got, want)
+	for field, pair := range map[string][2]string{
+		"summary": {got.summary, `Entwirf ein Follow-up zu "Acme Rollout": Nach dem Austausch (call) am 2026-09-21 ist kein nächster Schritt geplant.`},
+		"subject": {got.proposal.Subject, "Follow-up zu Acme Rollout"},
+		"body":    {got.proposal.Body, "Follow-up zum Austausch (call) „Angebot Q4“ vom 2026-09-21. Im Verlauf steht noch kein nächster Schritt."},
+	} {
+		if pair[0] != pair[1] {
+			t.Errorf("%s = %q, want %q", field, pair[0], pair[1])
+		}
 	}
 }
 
-// A reconciler composed without a resolver writes the English sentence it
-// always wrote.
-func TestAFollowUpSummaryWithoutAResolverIsEnglish(t *testing.T) {
-	want := `Draft a follow-up on "Acme Rollout" — a call on 2026-09-21 left no next step planned`
-	if got := stagedFollowUpSummary(t, NewFollowUpReconciler(nil, nil, nil)); got != want {
-		t.Errorf("summary = %q, want %q", got, want)
+// A reconciler composed without a resolver writes the English it always wrote.
+func TestAFollowUpWithoutAResolverIsEnglish(t *testing.T) {
+	offer := "Q4 offer"
+	quoted := stageOneFollowUp(t, NewFollowUpReconciler(nil, nil, nil), &offer)
+	bare := stageOneFollowUp(t, NewFollowUpReconciler(nil, nil, nil), nil)
+
+	for field, pair := range map[string][2]string{
+		"summary":     {bare.summary, `Draft a follow-up on "Acme Rollout" — a call on 2026-09-21 left no next step planned`},
+		"subject":     {bare.proposal.Subject, "Follow up on Acme Rollout"},
+		"body":        {bare.proposal.Body, "Follow up on the call from 2026-09-21. No next step is on the timeline yet."},
+		"quoted body": {quoted.proposal.Body, "Follow up on the call “Q4 offer” from 2026-09-21. No next step is on the timeline yet."},
+	} {
+		if pair[0] != pair[1] {
+			t.Errorf("%s = %q, want %q", field, pair[0], pair[1])
+		}
 	}
 }
 
-// stageReasonFields lists the stage policy's sentences with their holes: a keyed
-// one names the criterion, and a translation that drops the %s stops saying
-// which criterion the card is about.
-func stageReasonFields(said summaryCopy) map[string]struct {
+// sentenceFields lists every %s-only sentence with its holes: a translation
+// that drops one stops naming the criterion, the deal or the date it is about.
+func sentenceFields(said summaryCopy) map[string]struct {
 	sentence string
 	holes    int
 } {
@@ -116,6 +140,9 @@ func stageReasonFields(said summaryCopy) map[string]struct {
 		holes    int
 	}
 	return map[string]field{
+		"followUpSubject":       {said.followUpSubject, 1},
+		"followUpBody":          {said.followUpBody, 2},
+		"followUpBodyQuoted":    {said.followUpBodyQuoted, 3},
 		"stageAutoApply":        {said.stageAutoApply, 0},
 		"stageAllSettled":       {said.stageAllSettled, 0},
 		"stageUnreliable":       {said.stageUnreliable, 0},
@@ -131,15 +158,17 @@ func stageReasonFields(said summaryCopy) map[string]struct {
 		"protectedMovedByYou":   {said.protectedMovedByYou, 0},
 		"protectedUndoneBefore": {said.protectedUndoneBefore, 0},
 		"protectedTurnedDown":   {said.protectedTurnedDown, 0},
+		"protectedRecently":     {said.protectedRecently, 0},
 	}
 }
 
-// Every shipped language writes every stage-policy reason in its own words.
-func TestEveryShippedLanguageWritesItsOwnStageReasons(t *testing.T) {
-	english := stageReasonFields(summaryByLang[textlang.English])
+// Every shipped language writes every task line and stage-policy reason in its
+// own words.
+func TestEveryShippedLanguageWritesItsOwnSentences(t *testing.T) {
+	english := sentenceFields(summaryByLang[textlang.English])
 	for _, lang := range textlang.Shipped {
 		t.Run(string(lang), func(t *testing.T) {
-			for name, field := range stageReasonFields(summaryFor(lang)) {
+			for name, field := range sentenceFields(summaryFor(lang)) {
 				if field.sentence == "" {
 					t.Errorf("%s is empty, and a blank reason reaches the card as nothing at all", name)
 					continue
@@ -156,12 +185,11 @@ func TestEveryShippedLanguageWritesItsOwnStageReasons(t *testing.T) {
 }
 
 // A decision's reason renders in whichever language the writer resolved, and
-// its English Reason is the sentence the policy always wrote.
+// its English is the sentence the policy always wrote.
 func TestAStageReasonRendersInTheWritersLanguage(t *testing.T) {
 	got := DecideStageMove(unmetFacts())
-	if want := "the stage still asks for problem_confirmed, and nothing says it is settled"; got.Reason != want ||
-		got.ReasonIn(textlang.English) != want {
-		t.Errorf("English reason = %q / %q, want %q", got.Reason, got.ReasonIn(textlang.English), want)
+	if want := "the stage still asks for problem_confirmed, and nothing says it is settled"; got.ReasonIn(textlang.English) != want {
+		t.Errorf("English reason = %q, want %q", got.ReasonIn(textlang.English), want)
 	}
 	if want := "die Phase verlangt noch problem_confirmed, und nichts zeigt, dass es erfüllt ist"; got.ReasonIn(textlang.German) != want {
 		t.Errorf("German reason = %q, want %q", got.ReasonIn(textlang.German), want)
@@ -171,5 +199,23 @@ func TestAStageReasonRendersInTheWritersLanguage(t *testing.T) {
 	protected.Protection = ProtectionRejected
 	if want := "du hast diesen Schritt abgelehnt, und seitdem ist nichts Neues bekannt geworden"; DecideStageMove(protected).ReasonIn(textlang.German) != want {
 		t.Errorf("German protection reason = %q, want %q", DecideStageMove(protected).ReasonIn(textlang.German), want)
+	}
+}
+
+// Every protection reads its own sentence, and a value protectionReason has no
+// case for still reads one: a protected deal's card never goes blank.
+func TestEveryProtectionSaysItsOwnReason(t *testing.T) {
+	seen := map[string]Protection{}
+	for _, protection := range []Protection{
+		ProtectionHumanMove, ProtectionReversal, ProtectionRejected, Protection("unmapped"),
+	} {
+		said := protectionReason(protection).in(textlang.English)
+		if said == "" {
+			t.Errorf("protection %q reads no sentence", protection)
+		}
+		if other, dup := seen[said]; dup {
+			t.Errorf("protections %q and %q read the same sentence %q", other, protection, said)
+		}
+		seen[said] = protection
 	}
 }

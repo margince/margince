@@ -7,10 +7,11 @@ package compose
 //
 // English needs no vocabulary of its own: its headline is the contract's tool
 // verb read aloud ("update record" + "deal"), which is how the English cards
-// have always read. Every other language carries a word for each verb and
-// record type a staged call can name, keyed by the same wire identifiers, and
-// the census derives that set from agentPolicies — a contract change that adds
-// a stageable verb fails a test before it reaches a German card as English.
+// have always read. Every other language carries a word for each verb a staged
+// call can name, keyed by the same wire identifiers, and the census derives that
+// set from agentPolicies — a contract change that adds a stageable verb fails a
+// test before it reaches a German card as English. Record nouns are the tool
+// door's own (agents.RecordNoun), so both doors name a record type alike.
 
 // agentActVocabulary is one language's words for an agent's act. A lookup that
 // misses falls back to the English reading of the wire verb.
@@ -20,8 +21,6 @@ type agentActVocabulary struct {
 	// recordFrames is the headline for a generic verb, with one %s for the
 	// record noun.
 	recordFrames map[string]string
-	// records is the record type as a reader of this language says it.
-	records map[agentRecordType]string
 	// operations names the acts whose verb alone cannot tell them apart; see
 	// opPhrases, which is the English set.
 	operations map[string]string
@@ -29,7 +28,7 @@ type agentActVocabulary struct {
 
 var agentActsEnglish = agentActVocabulary{operations: opPhrases}
 
-//nolint:dupl,goconst // one block per language with the same keys is the table's shape; the census holds them in step. The keys are the contract's own tool verbs, and a constant per verb would be a second spelling of the generated policy table.
+//nolint:goconst // the keys are the contract's own tool verbs, and a constant per verb would be a second spelling of the generated policy table.
 var agentActsGerman = agentActVocabulary{
 	verbs: map[string]string{
 		"advance_deal":             "Deal weiterbringen",
@@ -68,25 +67,7 @@ var agentActsGerman = agentActVocabulary{
 		toolArchiveRecord: "%s archivieren",
 		toolMergeRecords:  "Datensätze zusammenführen: %s",
 	},
-	records: map[agentRecordType]string{
-		recordTypeActivity:            "Aktivität",
-		recordTypeCompany:             "Unternehmen",
-		recordTypeContact:             "Kontakt",
-		recordTypeCustomField:         "Benutzerdefiniertes Feld",
-		recordTypeDeal:                "Deal",
-		recordTypeDealRoom:            "Deal-Room",
-		recordTypeDealRoomComment:     "Deal-Room-Kommentar",
-		recordTypeDealRoomThread:      "Deal-Room-Thread",
-		recordTypeLead:                "Lead",
-		recordTypeOffer:               "Angebot",
-		recordTypeOfferTemplate:       "Angebotsvorlage",
-		recordTypeProduct:             "Produkt",
-		recordTypeProject:             "Projekt",
-		recordTypeRelationship:        "Beziehung",
-		recordTypeSavedView:           "Gespeicherte Ansicht",
-		recordTypeTag:                 "Schlagwort",
-		recordTypeWebhookSubscription: "Webhook-Abonnement",
-	},
+
 	operations: map[string]string{
 		opScrapeCompany:            "Website dieses Unternehmens lesen",
 		opDeepReadCompany:          "Gesamte Website dieses Unternehmens lesen",
@@ -97,7 +78,6 @@ var agentActsGerman = agentActVocabulary{
 	},
 }
 
-//nolint:dupl,goconst // one block per language with the same keys is the table's shape; the census holds them in step. The keys are the contract's own tool verbs, and a constant per verb would be a second spelling of the generated policy table.
 var agentActsVietnamese = agentActVocabulary{
 	verbs: map[string]string{
 		"advance_deal":             "Chuyển giai đoạn của deal",
@@ -136,25 +116,7 @@ var agentActsVietnamese = agentActVocabulary{
 		toolArchiveRecord: "Lưu trữ %s",
 		toolMergeRecords:  "Gộp bản ghi: %s",
 	},
-	records: map[agentRecordType]string{
-		recordTypeActivity:            "hoạt động",
-		recordTypeCompany:             "công ty",
-		recordTypeContact:             "liên hệ",
-		recordTypeCustomField:         "trường tùy chỉnh",
-		recordTypeDeal:                "deal",
-		recordTypeDealRoom:            "phòng deal",
-		recordTypeDealRoomComment:     "bình luận phòng deal",
-		recordTypeDealRoomThread:      "chủ đề phòng deal",
-		recordTypeLead:                "lead",
-		recordTypeOffer:               "báo giá",
-		recordTypeOfferTemplate:       "mẫu báo giá",
-		recordTypeProduct:             "sản phẩm",
-		recordTypeProject:             "dự án",
-		recordTypeRelationship:        "mối quan hệ",
-		recordTypeSavedView:           "chế độ xem đã lưu",
-		recordTypeTag:                 "thẻ",
-		recordTypeWebhookSubscription: "đăng ký webhook",
-	},
+
 	operations: map[string]string{
 		opScrapeCompany:            "Đọc website của công ty này",
 		opDeepReadCompany:          "Đọc toàn bộ website của công ty này",

@@ -22,7 +22,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -82,13 +81,16 @@ type approvalSummaryCopy struct {
 	modelRateNew     string
 
 	// The REST gate's structural summary: the pseudo-field naming a nested
-	// create's parent, and the two counts that stand in for what is not listed.
+	// create's parent, and the count that stands in for a nested object. The
+	// count of fields left out is the tool door's (agents.MoreFields).
 	createdUnder string
-	moreFields   string
 	nestedFields string
 
 	// acts names what an agent's staged call does (approvalsummarycopyagent.go).
 	acts agentActVocabulary
+	// lang is the set's own language, stamped by approvalSummaryCopyFor for the
+	// words this set borrows from the tool door.
+	lang textlang.Lang
 }
 
 // approvalSummaryByLang is the census, keyed by textlang.Lang so the test can
@@ -130,7 +132,6 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		modelRateNew:     "(new)",
 
 		createdUnder: "under",
-		moreFields:   "+%d more",
 		nestedFields: "{%d fields}",
 
 		acts: agentActsEnglish,
@@ -172,7 +173,6 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		modelRateNew:     "(neu)",
 
 		createdUnder: "unter",
-		moreFields:   "+%d weitere",
 		nestedFields: "{%d Felder}",
 
 		acts: agentActsGerman,
@@ -214,7 +214,6 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		modelRateNew:     "(mới)",
 
 		createdUnder: "thuộc",
-		moreFields:   "+%d mục khác",
 		nestedFields: "{%d trường}",
 
 		acts: agentActsVietnamese,
@@ -222,13 +221,15 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 }
 
 // approvalSummaryCopyFor answers the installation's language, and English for
-// anything else — the language comes off a settings row a contact can edit, and
+// anything else — the language comes off a settings row an admin can edit, and
 // answering in a language beats answering in none.
 func approvalSummaryCopyFor(lang textlang.Lang) approvalSummaryCopy {
-	if said, ok := approvalSummaryByLang[lang]; ok {
-		return said
+	said, ok := approvalSummaryByLang[lang]
+	if !ok {
+		said, lang = approvalSummaryByLang[textlang.English], textlang.English
 	}
-	return approvalSummaryByLang[textlang.English]
+	said.lang = lang
+	return said
 }
 
 // approvalSummaryCopyIn is the set for a stager already inside a transaction.
@@ -238,5 +239,5 @@ func approvalSummaryCopyIn(ctx context.Context, tx pgx.Tx) approvalSummaryCopy {
 
 // approvalSummaryCopyOver is the set for a stager holding only the pool.
 func approvalSummaryCopyOver(ctx context.Context, pool *pgxpool.Pool) approvalSummaryCopy {
-	return approvalSummaryCopyFor(textlang.Lang(identity.BaseLanguageForPrompt(ctx, pool)))
+	return approvalSummaryCopyFor(installationLanguage(pool).Resolve(ctx))
 }

@@ -64,7 +64,7 @@ func (r logActivityResolver) Subject(ctx context.Context, cmd LogActivityCommand
 	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType: string(datasource.EntityActivity),
-		Summary:    describeGenericWrite(said, fmt.Sprintf(said.logHead, datasource.EntityActivity), cmd.Fields),
+		Summary:    describeGenericWrite(said, fmt.Sprintf(said.logHead, said.noun(string(datasource.EntityActivity))), cmd.Fields),
 	}, nil
 }
 
@@ -284,12 +284,12 @@ func (r *relinkActivityResolver) Subject(ctx context.Context, cmd RelinkActivity
 	if err != nil {
 		return StageInfo{}, err
 	}
+	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
-		Summary: fmt.Sprintf(summaryIn(ctx, r.language).relinkActivity,
-			cmd.ActivityID, cmd.EntityType, cmd.EntityID),
+		Summary:       fmt.Sprintf(said.relinkActivity, cmd.ActivityID, said.noun(cmd.EntityType), cmd.EntityID),
 	}, nil
 }
 
