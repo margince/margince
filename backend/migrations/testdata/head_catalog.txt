@@ -5019,6 +5019,7 @@ public.provider_applied_field.provider_applied_field_contact_id_fkey FOREIGN KEY
 public.provider_applied_field.provider_applied_field_identity_shape CHECK (((target_row_id IS NULL) <> (applied_value IS NULL)))
 public.provider_applied_field.provider_applied_field_pkey PRIMARY KEY (id)
 public.provider_applied_field.provider_applied_field_run_id_fkey FOREIGN KEY (run_id) REFERENCES provider_run(id) ON DELETE CASCADE
+public.provider_applied_field.provider_applied_field_run_subject_fkey FOREIGN KEY (run_id, contact_id, provider) REFERENCES provider_run(id, contact_id, provider) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED NOT VALID
 public.provider_applied_field.provider_applied_field_target_check CHECK ((target_table = ANY (ARRAY['contact'::text, 'contact_social'::text, 'contact_email'::text, 'contact_phone'::text, 'relationship'::text])))
 public.provider_applied_field.run_id uuid NOT NULL gen=- def=-
 public.provider_applied_field.target_field text NOT NULL gen=- def=-
@@ -5125,6 +5126,7 @@ public.provider_run.provider_run_requested_by_fkey FOREIGN KEY (requested_by) RE
 public.provider_run.provider_run_skip_reason_check CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted'::text, 'low_balance'::text, 'suppressed'::text, 'not_eligible'::text, 'duplicate_subject_candidate'::text, 'rate_limited'::text, 'already_fresh'::text, 'no_identifiers'::text]))))
 public.provider_run.provider_run_skip_reason_shape CHECK (((state = 'skipped'::text) = (skip_reason IS NOT NULL)))
 public.provider_run.provider_run_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'completed'::text, 'no_match'::text, 'skipped'::text, 'submission_unknown'::text, 'failed'::text, 'cancelled'::text])))
+public.provider_run.provider_run_subject_identity UNIQUE (id, contact_id, provider)
 public.provider_run.provider_run_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['contact'::text, 'scrubbed'::text])))
 public.provider_run.provider_run_subject_shape CHECK ((((subject_kind = 'contact'::text) AND (contact_id IS NOT NULL)) OR ((subject_kind = 'scrubbed'::text) AND (contact_id IS NULL))))
 public.provider_run.provider_run_trigger_check CHECK ((trigger = ANY (ARRAY['automatic_create'::text, 'automatic_import'::text, 'automatic_backfill'::text, 'scheduled_refresh'::text, 'manual'::text])))
@@ -5154,6 +5156,7 @@ public.provider_run_reservation.reserved_at timestamp with time zone NOT NULL ge
 public.provider_run_reservation.reserved_credits integer NOT NULL gen=- def=-
 public.provider_run_reservation.run_id uuid NOT NULL gen=- def=-
 public.provider_run_reservation_pkey CREATE UNIQUE INDEX provider_run_reservation_pkey ON public.provider_run_reservation USING btree (run_id, pool)
+public.provider_run_subject_identity CREATE UNIQUE INDEX provider_run_subject_identity ON public.provider_run USING btree (id, contact_id, provider)
 public.raw_capture acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.raw_capture.id uuid NOT NULL gen=- def=uuidv7()
 public.raw_capture.parts_slimmed_at timestamp with time zone gen=- def=-
