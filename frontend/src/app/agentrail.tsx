@@ -381,17 +381,19 @@ function RuntimeFacts({
 }
 
 /**
- * One list of scheduled runs, in the reader's words, under its own heading.
+ * The runs live now, in the reader's words, under the section's heading.
  *
  * A kind or state the copy map has no line for draws NOTHING — not a fallback
  * sentence, not the message key. A surface that answers an unknown run with an
  * invented sentence is one a reader cannot trust about the runs it DOES name.
- * When that empties the section, the section is absent too.
+ * An emptied section is absent. Work the live total holds beyond the rows gets
+ * one caption, unless a listed row is live: a stalled one is outside its lease.
  */
 function RunSection({
-  heading,
   items,
-}: Readonly<{ heading: MessageKey; items: readonly AiActivityItem[] }>) {
+  unnamed,
+}: Readonly<{ items: readonly AiActivityItem[]; unnamed: boolean }>) {
+  const heading = PANEL_HEADING.running;
   const t = useT();
   // flatMap rather than map+filter: the empty array drops the run AND narrows
   // the line to a string, where a filtered predicate would only have claimed it.
@@ -399,20 +401,24 @@ function RunSection({
     const line = speak(item, t);
     return line === null ? [] : [{ item, line }];
   });
-  if (said.length === 0) {
-    return null;
-  }
+  const namesLive = said.some(({ item }) => item.state !== "stalled");
+  if (said.length === 0 && !unnamed) return null;
   return (
     <PanelSection title={t(heading)}>
-      <ul className="arruns">
-        {said.map(({ item, line }) => (
-          <li className="arbox arrun" key={item.id}>
-            <span className="arrunline">
-              <RailLine line={line} />
-            </span>
-          </li>
-        ))}
-      </ul>
+      {said.length > 0 && (
+        <ul className="arruns">
+          {said.map(({ item, line }) => (
+            <li className="arbox arrun" key={item.id}>
+              <span className="arrunline">
+                <RailLine line={line} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {unnamed && !namesLive && (
+        <p className="arempty t-caption">{t("agent.panel.unnamedLive")}</p>
+      )}
     </PanelSection>
   );
 }
@@ -486,6 +492,7 @@ function AgentPanel({
   state,
   line,
   running,
+  unnamed,
   settled,
   signals,
   model,
@@ -498,6 +505,7 @@ function AgentPanel({
   line: SpokenLine;
   /** The scheduled runs the server reports as live. */
   running: readonly AiActivityItem[];
+  unnamed: boolean;
   /** What settled today, or undefined while no read of the feed has answered. */
   settled: readonly AiActivityItem[] | undefined;
   signals: Signals;
@@ -528,7 +536,7 @@ function AgentPanel({
           settled belongs to the recap further down, so an occurrence is in one
           section or the other and never both. The section is absent when its
           list is, rather than drawn empty. */}
-      <RunSection heading={PANEL_HEADING.running} items={running} />
+      <RunSection items={running} unnamed={unnamed} />
 
       {/* THREE cases, not two, and the difference is the whole doctrine of this
           surface: a count nobody has read is not a count of zero.
@@ -855,14 +863,13 @@ function derive(
       register: server.asking ? "agent" : "capture",
     };
   }
-  // This tab's own ask, which the feed has not caught up with yet. `working`
-  // rather than a lane read from the kind, because the kind is exactly what is
-  // not known here: a request in flight says the agent is busy and nothing
-  // about which half of its lifecycle it is in. No cause travels with it, so
-  // the line falls back to the generic word rather than borrowing a sentence
-  // about some other run, and the moment the feed carries the occurrence
-  // and names it.
-  if (server.asking) {
+  // Work the feed cannot name: this tab's own ask, before the feed catches up,
+  // or live work of a kind the rail does not narrate. `working` rather than a
+  // lane read from the kind, because the kind is exactly what is not known
+  // here. No cause travels with either, so the line falls back to the generic
+  // word rather than borrowing a sentence about some other run, until the
+  // feed carries an occurrence it can name.
+  if (server.asking || server.unnamed) {
     return { state: "working", cause: null, register: "agent" };
   }
   // A request that failed a moment ago does NOT colour the orb. One dropped
@@ -1265,6 +1272,7 @@ export function AgentRail({
               frame={frame}
               line={line}
               running={server.running}
+              unnamed={server.unnamed}
               settled={server.answered ? server.recent : undefined}
               spend={spend}
             />

@@ -36,8 +36,14 @@ import (
 // stamped against rather than the test host's idea of the date.
 func (f *readingFixture) feed(t *testing.T, user ids.UUID) aiactivity.Feed {
 	t.Helper()
+	return f.feedOf(t, user)
+}
+
+// feedOf is feed narrowed to the kinds a client draws; no kinds is every kind.
+func (f *readingFixture) feedOf(t *testing.T, user ids.UUID, kinds ...string) aiactivity.Feed {
+	t.Helper()
 	feed, err := aiactivity.NewStore(f.env.DB()).
-		Mine(f.env.As(user, nil, principal.Permissions{}), f.midnight(t), nil)
+		Mine(f.env.As(user, nil, principal.Permissions{}), f.midnight(t), kinds)
 	if err != nil {
 		t.Fatalf("Mine: %v", err)
 	}
@@ -98,6 +104,9 @@ func TestOneContactsWorkIsNotInAnothersFeed(t *testing.T) {
 
 	if feed := f.feed(t, f.env.Rep2); len(feed.Live) != 0 || len(feed.Settled) != 0 {
 		t.Fatalf("a different seat sees %d live and %d settled occurrences, want none", len(feed.Live), len(feed.Settled))
+	}
+	if total := f.feed(t, f.env.Rep2).LiveTotal; total != 0 {
+		t.Fatalf("a different seat's live total = %d, want 0: the count is as personal as the list", total)
 	}
 }
 
@@ -302,5 +311,86 @@ func TestAFaultSurvivesTheSettledBoundLaterSuccessesFill(t *testing.T) {
 	// it, and an arm that simply mirrored `recent` would hold them too.
 	if len(feed.Faults) != 1 {
 		t.Errorf("the faults arm carries %d rows, want the one failure alone", len(feed.Faults))
+	}
+}
+
+// The live total counts work the filter hides. A caller that draws only the
+// narrated kinds still learns the AI is busy, or the rail says idle while a
+// transcript is being read.
+func TestTheLiveTotalCountsAKindTheFilterLeavesOut(t *testing.T) {
+	f := newTranscriptFixture(t)
+	f.drain(t)
+	reading := &readingFixture{env: f.env}
+
+	feed := reading.feedOf(t, f.env.AdminUser, "morning_brief", "document_extract", "site_read")
+	if len(feed.Live) != 0 {
+		t.Fatalf("live = %d occurrences, want none: the filter names no transcript kind", len(feed.Live))
+	}
+	if feed.LiveTotal != 1 {
+		t.Fatalf("live total = %d, want the one transcript reading the filter left out", feed.LiveTotal)
+	}
+}
+
+// Filtered to the kind that is live, the count and the list agree.
+func TestTheLiveTotalMatchesTheListWhenTheFilterAdmitsTheLiveKind(t *testing.T) {
+	f := newReadingFixture(t)
+	f.drain(t)
+
+	feed := f.feedOf(t, f.env.AdminUser, "document_extract")
+	if len(feed.Live) != 1 || feed.LiveTotal != 1 {
+		t.Fatalf("live/total = %d/%d, want 1/1", len(feed.Live), feed.LiveTotal)
+	}
+}
+
+// The bound caps what ships, never what is counted: twenty-six live readings
+// list twenty-five and count twenty-six. The fixture's own reading is the 26th.
+func TestTheLiveTotalIsNotCappedByTheLiveBound(t *testing.T) {
+	f := newReadingFixture(t)
+	for i := range 25 {
+		att := uploadDealAttachment(f.ctx, t, f.handlers, f.deal,
+			fmt.Sprintf("queued-%02d.pdf", i), []byte(fmt.Sprintf("bytes %02d", i)))
+		if _, _, err := f.store.StartExtractionReadQueued(f.ctx, ids.UUID(att.Id),
+			"human:"+f.env.AdminUser.String(), nil); err != nil {
+			t.Fatalf("queueing reading %d: %v", i, err)
+		}
+	}
+	f.drainEvery(t)
+
+	feed := f.feed(t, f.env.AdminUser)
+	if len(feed.Live) != 25 {
+		t.Fatalf("live = %d occurrences, want the bound of 25", len(feed.Live))
+	}
+	if feed.LiveTotal != 26 {
+		t.Fatalf("live total = %d, want all 26 live readings", feed.LiveTotal)
+	}
+}
+
+// A run past its lease is not counted, filtered or not: it may have stopped, so
+// a pulse for it would claim work nobody is doing. The list still shows it
+// stalled when its kind is asked for.
+func TestTheLiveTotalLeavesOutARunPastItsLease(t *testing.T) {
+	f := newReadingFixture(t)
+	if _, err := f.store.BeginExtractionRead(f.ctx, f.readID, activities.ExtractionReadLease); err != nil {
+		t.Fatalf("BeginExtractionRead: %v", err)
+	}
+	f.drain(t)
+	if _, err := f.env.Pool.Exec(context.Background(),
+		`UPDATE ai_task_run SET stale_after = now() - interval '1 minute'
+		  WHERE source = $1 AND occurrence_key = $2`,
+		"attachment_extraction", f.readID.String()); err != nil {
+		t.Fatalf("ageing the lease: %v", err)
+	}
+
+	narrated := f.feedOf(t, f.env.AdminUser, "morning_brief", "site_read")
+	if len(narrated.Live) != 0 || narrated.LiveTotal != 0 {
+		t.Fatalf("filtered live/total = %d/%d, want 0/0: a stalled run of a kind the rail does not "+
+			"narrate must not make the orb pulse", len(narrated.Live), narrated.LiveTotal)
+	}
+	every := f.feed(t, f.env.AdminUser)
+	if len(every.Live) != 1 || every.Live[0].State != aiactivity.StateStalled {
+		t.Fatalf("unfiltered live = %v, want the one run as %q", every.Live, aiactivity.StateStalled)
+	}
+	if every.LiveTotal != 0 {
+		t.Fatalf("unfiltered live total = %d, want 0: the stalled row is listed, not counted", every.LiveTotal)
 	}
 }

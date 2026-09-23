@@ -29553,6 +29553,11 @@ export interface components {
              *     A run live past its lease is absent on purpose — it is reported as `stalled` in `running`, and listing it here as well would report one occurrence as two.
              */
             faults: components["schemas"]["AiActivityItem"][];
+            /**
+             * @description How many occurrences are queued or running WITHIN their lease for this caller, across EVERY kind. Neither the `kinds` parameter nor the 25-row bound on `running` narrows it, so it can exceed the length of `running`. A run past its lease is not counted, because a client pulsing for it would claim work that may have stopped; `running` reports it as `stalled` when its kind is asked for.
+             *     It counts work and carries no kind, subject or sentence: a client can tell the AI is busy with something it does not narrate, and must not caption that pulse as if there were a line to read. Optional so an older server can omit it, and a client reads its absence as unknown rather than zero; this server always writes it.
+             */
+            live_total?: number;
         };
         /**
          * @description A scheduled agent a rep can grant standing authority to. The set matches
@@ -59156,8 +59161,8 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description Restrict both arrays to these kinds of AI work, applied BEFORE the bounds.
-                 *     Omitted means every kind.
+                 * @description Restrict the arrays to these kinds of AI work, applied BEFORE the bounds.
+                 *     Omitted means every kind. `live_total` is never restricted.
                  *
                  *     An empty list is a 422, and so is a name this enum does not carry. Both come
                  *     back as an empty feed, and an empty feed is the TRUE answer for an AI at rest —

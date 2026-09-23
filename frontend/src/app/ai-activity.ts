@@ -123,6 +123,11 @@ export type AiActivity = Readonly<{
   /** Whether any AI work is live RIGHT NOW, as reported by a read that answered. */
   working: boolean;
   /**
+   * Whether the server counts live work beyond the rows it lists. Beside
+   * `running` because the kinds filter and the row bound narrow it, not this.
+   */
+  unnamed: boolean;
+  /**
    * Whether THIS TAB is holding a request open to a route that calls a model.
    *
    * Its own fact, beside the feed rather than mixed into it, because the two
@@ -203,9 +208,13 @@ export function useAiActivity(): AiActivity {
     //
     // A run this tab started is the third thing that makes the cadence live,
     // and the only one neither of the other two can see: the feed does not
-    // carry it yet and no model call is open for it.
+    // carry it yet and no model call is open for it. Live work the rail cannot
+    // name holds it too, or its pulse would outlast the work by an idle period.
     refetchInterval: (q) =>
-      watching || open > 0 || (q.state.data?.running ?? NOTHING).length > 0
+      watching ||
+      open > 0 ||
+      (q.state.data?.running ?? NOTHING).length > 0 ||
+      (q.state.data?.live_total ?? 0) > 0
         ? POLL_LIVE_MS
         : POLL_IDLE_MS,
   });
@@ -254,6 +263,9 @@ export function useAiActivity(): AiActivity {
   const recent = feed?.recent ?? NOTHING;
   const faults = feed?.faults ?? NOTHING;
   const asking = useLingeringAsk(open, recent[0]?.id);
+  // The total counts work within its lease, so a stalled row is not in it.
+  const listedLive = running.filter((item) => item.state !== "stalled");
+  const unnamed = (feed?.live_total ?? 0) > listedLive.length;
   return {
     running,
     recent,
@@ -264,7 +276,8 @@ export function useAiActivity(): AiActivity {
     // reads `working` pulses to say the AI is busy — so counting a stalled item
     // here would animate "still going" over a line that reads "it may have
     // stopped", softening the one verdict this state exists to deliver.
-    working: running.some((item) => item.state !== "stalled"),
+    working: listedLive.length > 0 || unnamed,
+    unnamed,
     asking,
   };
 }

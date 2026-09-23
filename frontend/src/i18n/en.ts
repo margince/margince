@@ -4496,6 +4496,9 @@ export const en = {
   "agent.panel.decisions": "Decisions",
   "agent.panel.nothingWaiting": "Nothing waiting",
   "agent.panel.nothingToday": "Nothing finished today",
+  // Live work of a kind the rail does not narrate: it admits the work and
+  // offers nothing to read, because there is no row behind it.
+  "agent.panel.unnamedLive": "Working in the background",
 
   // THE RUNTIME FACTS, as terms beside their values. Sentence case, because a
   // <dt> is a name rather than an inline word in a sentence — which is what

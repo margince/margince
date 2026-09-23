@@ -88,6 +88,9 @@ function jsonResponse(body: unknown): Response {
 }
 
 type Answers = Readonly<{
+  running?: readonly Occurrence[];
+  /** Absent means the body carries no `live_total` at all. */
+  liveTotal?: number;
   recent?: readonly Occurrence[];
   priced?: boolean;
   calls?: readonly unknown[];
@@ -123,9 +126,12 @@ function stubApi(answers: Answers) {
       }
       if (pathname.endsWith("/me/ai-activity")) {
         return jsonResponse({
-          running: [],
+          running: answers.running ?? [],
           recent: answers.recent ?? [],
           faults: [],
+          ...(answers.liveTotal === undefined
+            ? {}
+            : { live_total: answers.liveTotal }),
         });
       }
       if (pathname.endsWith("/connectors")) {
@@ -325,5 +331,110 @@ describe("the agent panel's report", () => {
     expect(en["agent.panel.nothingWaiting"]).not.toBe(
       en["agent.line.allClear"],
     );
+  });
+});
+
+// The live total counts work of every kind, and the rail narrates only some of
+// them. So the light may pulse for work it cannot name, and the panel admits
+// that work without offering a row to read — while a run it CAN name still
+// names itself, because the count never outranks the feed.
+describe("work the rail cannot name", () => {
+  const coreState = () =>
+    document.querySelector(".arblock")?.getAttribute("data-core-state");
+  const runningSection = (opened: Element) =>
+    [...opened.querySelectorAll("section.arsect")].find(
+      (section) =>
+        section.querySelector("h3")?.textContent ===
+        en["agent.panel.runningNow"],
+    );
+
+  it("pulses with the generic line and a caption, listing no run", async () => {
+    const opened = await openPanel({ liveTotal: 1 });
+    await waitFor(() => expect(coreState()).toBe("working"));
+    // The generic state word, since no cause travels with it.
+    expect(opened.querySelector(".arpsaying")?.textContent).toBe(
+      en["agent.state.working"],
+    );
+    const section = runningSection(opened);
+    expect(section?.querySelector(".arempty")?.textContent).toBe(
+      en["agent.panel.unnamedLive"],
+    );
+    expect(section?.querySelector(".arempty")?.className).toContain(
+      "t-caption",
+    );
+    expect(opened.querySelectorAll(".arrun")).toHaveLength(0);
+  });
+
+  it("names the run it can narrate, however large the total", async () => {
+    const opened = await openPanel({
+      running: [
+        {
+          id: "run-live",
+          kind: "morning_brief",
+          state: "running",
+          started_at: new Date(NOW - 60_000).toISOString(),
+        },
+      ],
+      liveTotal: 5,
+    });
+    await waitFor(() =>
+      expect(opened.querySelectorAll(".arrun")).toHaveLength(1),
+    );
+    expect(opened.querySelector(".arpsaying")?.textContent).toBe(
+      opened.querySelector(".arrunline")?.textContent,
+    );
+    expect(runningSection(opened)?.querySelector(".arempty")).toBeNull();
+  });
+
+  it("captions the background work beside a stalled row", async () => {
+    const opened = await openPanel({
+      running: [
+        {
+          id: "run-stalled",
+          kind: "morning_brief",
+          state: "stalled",
+          started_at: new Date(NOW - 60_000).toISOString(),
+        },
+      ],
+      liveTotal: 1,
+    });
+    await waitFor(() =>
+      expect(opened.querySelectorAll(".arrun")).toHaveLength(1),
+    );
+    expect(runningSection(opened)?.querySelector(".arempty")?.textContent).toBe(
+      en["agent.panel.unnamedLive"],
+    );
+  });
+
+  it("keeps the caption out while a named row is live", async () => {
+    const opened = await openPanel({
+      running: [
+        {
+          id: "run-live",
+          kind: "morning_brief",
+          state: "running",
+          started_at: new Date(NOW - 60_000).toISOString(),
+        },
+      ],
+      liveTotal: 2,
+    });
+    await waitFor(() =>
+      expect(opened.querySelectorAll(".arrun")).toHaveLength(1),
+    );
+    expect(runningSection(opened)?.querySelector(".arempty")).toBeNull();
+  });
+
+  it("rests when the total is zero and nothing is listed", async () => {
+    const opened = await openPanel({
+      liveTotal: 0,
+      recent: [settled(12, { state: "done", kind: "morning_brief" })],
+    });
+    // The recap row is the feed's own, so the feed has answered once it shows.
+    await waitFor(() =>
+      expect(opened.querySelectorAll(".aritem")).toHaveLength(1),
+    );
+    expect(coreState()).toBe("idle");
+    expect(runningSection(opened)).toBeUndefined();
+    expect(opened.textContent).not.toContain(en["agent.panel.unnamedLive"]);
   });
 });

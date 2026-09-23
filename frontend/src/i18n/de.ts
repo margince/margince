@@ -4330,6 +4330,7 @@ export const de = {
   "agent.panel.decisions": "Entscheidungen",
   "agent.panel.nothingWaiting": "Nichts offen",
   "agent.panel.nothingToday": "Heute nichts fertig",
+  "agent.panel.unnamedLive": "Arbeitet im Hintergrund",
   "agent.fact.model": "Modell",
   "agent.fact.tools": "Werkzeuge",
   "agent.fact.sources": "Quellen",

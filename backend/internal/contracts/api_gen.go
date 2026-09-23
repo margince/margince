@@ -18866,6 +18866,10 @@ type AiActivity struct {
 	// A run live past its lease is absent on purpose — it is reported as `stalled` in `running`, and listing it here as well would report one occurrence as two.
 	Faults []AiActivityItem `json:"faults"`
 
+	// LiveTotal How many occurrences are queued or running WITHIN their lease for this caller, across EVERY kind. Neither the `kinds` parameter nor the 25-row bound on `running` narrows it, so it can exceed the length of `running`. A run past its lease is not counted, because a client pulsing for it would claim work that may have stopped; `running` reports it as `stalled` when its kind is asked for.
+	// It counts work and carries no kind, subject or sentence: a client can tell the AI is busy with something it does not narrate, and must not caption that pulse as if there were a line to read. Optional so an older server can omit it, and a client reads its absence as unknown rather than zero; this server always writes it.
+	LiveTotal *int `json:"live_total,omitempty"`
+
 	// Recent Occurrences that SETTLED since midnight in the server's own timezone (not the reader's, and not UTC unless the server runs on it), newest-settled first, at most 10.
 	Recent []AiActivityItem `json:"recent"`
 
@@ -44051,8 +44055,8 @@ type GetMagicParams struct {
 
 // GetMyAiActivityParams defines parameters for GetMyAiActivity.
 type GetMyAiActivityParams struct {
-	// Kinds Restrict both arrays to these kinds of AI work, applied BEFORE the bounds.
-	// Omitted means every kind.
+	// Kinds Restrict the arrays to these kinds of AI work, applied BEFORE the bounds.
+	// Omitted means every kind. `live_total` is never restricted.
 	//
 	// An empty list is a 422, and so is a name this enum does not carry. Both come
 	// back as an empty feed, and an empty feed is the TRUE answer for an AI at rest —

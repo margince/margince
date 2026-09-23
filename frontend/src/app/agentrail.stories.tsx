@@ -37,6 +37,8 @@ type Answers = Readonly<{
    *  from nowhere else, so a story for one is a story about this feed. */
   running?: readonly unknown[];
   recent?: readonly unknown[];
+  /** Live work across every kind; absent is a body that does not say. */
+  liveTotal?: number;
   /** A mailbox import in flight, as the connections read reports it. */
   importing?: Readonly<{ scanned: number; estimated: number | null }>;
   /** What the month cost, in minor units, when anything in it was priced.
@@ -225,6 +227,9 @@ function story(
         jsonResponse({
           running: answers.running ?? [],
           recent: answers.recent ?? [],
+          ...(answers.liveTotal === undefined
+            ? {}
+            : { live_total: answers.liveTotal }),
         }),
     });
     return (
@@ -350,6 +355,14 @@ export const ImportingMailUnpreviewed: Story = {
  *  tab does reaches the orb, so the story is a run and not a pending write. */
 export const Working: Story = {
   render: story({ ...HEALTHY, running: [occurrence({})] }),
+};
+
+/** Working on something the rail does not narrate: the feed lists nothing, the
+ *  total says one run is live. The orb pulses on the generic word, and the
+ *  panel admits the work in one caption without offering a row to read. */
+export const UnnamedWork: Story = {
+  render: story({ ...HEALTHY, liveTotal: 1 }),
+  play: openThePanel,
 };
 
 /** Error: the overnight brief failed. It holds the orb until the panel has
