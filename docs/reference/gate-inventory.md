@@ -235,6 +235,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `maskablefieldobjects_test.go` | H2 | Every object the maskable-field catalog offers is an object some module actually withholds on. |
 | `maskedamountreaders_test.go` | H2 | maskableCatalog is what this build can withhold, one "\<object> \<field>" per line — the owner of this census's subject, and the only place it is named. |
 | `maskedamountroots_test.go` | H2 | What the deal-amount census's ROOTS are worth. |
+| `maskfacetcoverage_test.go` | H2 | Every object the maskable-field catalog offers is one some record's HISTORY withholds too. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on EVERY surface that can reach it, not just the one it was written for. |
 | `meetinghistorywriters_test.go` | H2 | Every statement that writes activity.meeting\_status also records the transition. |
 | `messagingruleapplied_test.go` | H2 | Every obligation a messaging pack declares is one the engine applies, or one this file records as not yet applied and says why. |
