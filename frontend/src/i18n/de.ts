@@ -6975,9 +6975,6 @@ export const de = {
     "Dieses Unternehmen hat noch keine Dokumente abgelegt, es gibt also nichts zu durchsuchen.",
   "corpusAsk.citeAtLine": "{document}, Zeile {line}",
   "corpusAsk.citeInDocument": "in {document}",
-  "corpusAsk.pickCiteTitle": "Noch nichts geöffnet",
-  "corpusAsk.pickCite":
-    "Wähle eine nummerierte Quelle in der Antwort, um sie dort zu lesen, wo sie steht.",
   "corpusAsk.documentLoading": "Dokument wird geöffnet…",
   "corpusAsk.documentFailedTitle": "Dieses Dokument ließ sich nicht öffnen",
   "corpusAsk.documentFailed":

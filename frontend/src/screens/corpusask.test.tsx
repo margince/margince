@@ -187,6 +187,11 @@ function documentPane() {
   return pane;
 }
 
+/** Whether a document is open at all. The pane exists only while one is. */
+function documentPaneIsOpen(): boolean {
+  return document.querySelector(".ask-modal-doc") !== null;
+}
+
 describe("AskMarginceModal", () => {
   it("answers with the written sentence, and names what each citation opens", async () => {
     const user = userEvent.setup();
@@ -252,11 +257,10 @@ describe("AskMarginceModal", () => {
     render(<AskMarginceModal open onClose={() => {}} />);
     await askAbout(user, "how long are messages kept");
 
-    // Nothing is open until the reader picks a citation, and the pane says so
-    // rather than standing blank.
-    expect(
-      within(documentPane()).getByText(/press a numbered source/i),
-    ).toBeTruthy();
+    // Nothing is open until the reader picks a citation, and the pane is not
+    // drawn at all until then: an empty column spends half the dialog saying
+    // nothing, and on a refusal it would say nothing for good.
+    expect(documentPaneIsOpen()).toBe(false);
 
     await user.click(
       await screen.findByRole("button", { name: "operating.md, line 14" }),
@@ -282,13 +286,11 @@ describe("AskMarginceModal", () => {
     ).toBeTruthy();
     expect(within(documentPane()).queryByText("operating.md")).toBeNull();
 
-    // And pressing the open one again gives the reader the pane back.
+    // And pressing the open one again gives the reader the width back.
     await user.click(
       screen.getByRole("button", { name: "retention.md, line 6" }),
     );
-    expect(
-      await within(documentPane()).findByText(/press a numbered source/i),
-    ).toBeTruthy();
+    await waitFor(() => expect(documentPaneIsOpen()).toBe(false));
   });
 
   // An answer belongs to the set it was asked of. useMutation keeps its last

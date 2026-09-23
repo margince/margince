@@ -6906,9 +6906,6 @@ export const vi = {
     "Công ty này chưa lưu tài liệu nào nên không có gì để tìm.",
   "corpusAsk.citeAtLine": "{document}, dòng {line}",
   "corpusAsk.citeInDocument": "trong {document}",
-  "corpusAsk.pickCiteTitle": "Chưa mở gì",
-  "corpusAsk.pickCite":
-    "Chọn một nguồn đánh số trong câu trả lời để đọc nó ngay tại chỗ được viết.",
   "corpusAsk.documentLoading": "Đang mở tài liệu…",
   "corpusAsk.documentFailedTitle": "Không mở được tài liệu đó",
   "corpusAsk.documentFailed":

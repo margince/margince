@@ -37,22 +37,15 @@ function useDocumentText(documentId: string | undefined) {
   });
 }
 
-export function CitedDocument({ claim }: Readonly<{ claim?: Claim }>) {
+export function CitedDocument({ claim }: Readonly<{ claim: Claim }>) {
   const t = useT();
-  const document = useDocumentText(claim?.document_id);
+  const document = useDocumentText(claim.document_id);
   // What the renderer managed to mark. A miss on one passage says nothing about
   // the next, so this starts over per citation — which the CALLER arranges with
   // a key rather than an effect resetting it after a render that already drew
   // the previous answer's verdict over the new passage.
   const [found, setFound] = useState<MarkdownHighlightOutcome>("quote");
 
-  if (!claim) {
-    return (
-      <EmptyState title={t("corpusAsk.pickCiteTitle")}>
-        <p>{t("corpusAsk.pickCite")}</p>
-      </EmptyState>
-    );
-  }
   if (document.isPending) {
     return <p className="t-caption">{t("corpusAsk.documentLoading")}</p>;
   }

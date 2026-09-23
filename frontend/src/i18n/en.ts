@@ -7189,9 +7189,6 @@ export const en = {
     "This company has filed no documents yet, so there is nothing to search.",
   "corpusAsk.citeAtLine": "{document}, line {line}",
   "corpusAsk.citeInDocument": "in {document}",
-  "corpusAsk.pickCiteTitle": "Nothing open yet",
-  "corpusAsk.pickCite":
-    "Press a numbered source in the answer to read it where it was written.",
   "corpusAsk.documentLoading": "Opening the document…",
   "corpusAsk.documentFailedTitle": "That document would not open",
   "corpusAsk.documentFailed":

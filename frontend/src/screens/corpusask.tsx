@@ -140,17 +140,22 @@ export function AskMarginceModal({
   // palette is a question being COMPOSED — the reader was still writing it when
   // the row matched — and asking it for them spends a model call on a fragment
   // and shows them an answer to something they had not finished saying.
+  //
+  // Keyed on the QUESTION rather than on having filled once: the dialog is not
+  // remounted between one carried question and the next — the address changes
+  // under it — so a boolean guard left the second reader looking at the first
+  // reader's question with their own nowhere on screen.
   const carried = carriedQuestion ?? "";
-  const filled = useRef(false);
+  const filled = useRef<string | null>(null);
   useEffect(() => {
     if (!open) {
-      filled.current = false;
+      filled.current = null;
       return;
     }
-    if (filled.current) {
+    if (filled.current === carried) {
       return;
     }
-    filled.current = true;
+    filled.current = carried;
     setQuestion(carried);
   }, [open, carried]);
 
@@ -211,47 +216,51 @@ export function AskMarginceModal({
             />
           </div>
         </header>
+        {/* The question spans the dialog, because asking is what the reader
+            came to do and the box is not half of anything. */}
+        <section className="ask-modal-ask">
+          {/* The bounded-search promise, and it stays on screen because it is
+              what makes a refusal mean something: a set that answers
+              everything is worth less than one that says when it cannot. */}
+          <p className="t-sub">{t("corpusAsk.sub")}</p>
+          <Field label={t("corpusAsk.question")}>
+            {(control) => (
+              <Textarea
+                {...control}
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+              />
+            )}
+          </Field>
+          <div className="form-actions">
+            <Button
+              // The one AI call to action on this surface: the model does the
+              // reading and writes the sentence.
+              variant="ai"
+              disabled={question.trim() === "" || corpusId === ""}
+              pending={ask.isPending}
+              onClick={runAsk}
+            >
+              {t("corpusAsk.submit")}
+            </Button>
+          </div>
+          {!canAsk || (items && items.length === 0) ? (
+            <EmptyState title={t("corpusAsk.noSetsTitle")}>
+              <p>{t("corpusAsk.noSets")}</p>
+            </EmptyState>
+          ) : null}
+          {ask.isError ? (
+            <Callout tone="danger" kind="outcome" title={t("corpusAsk.failed")}>
+              {problemMessageOf(ask.error, t)}
+            </Callout>
+          ) : null}
+        </section>
+        {/* The document arrives only when a reader asks for it, and the answer
+            has the width to itself until then. A pane held open on an empty
+            state spends half the dialog saying nothing — and on a refusal it
+            says nothing FOREVER, because a refusal has no citation to press. */}
         <div className="ask-modal-body">
-          <section className="ask-modal-ask">
-            {/* The bounded-search promise, and it stays on screen because it is
-                what makes a refusal mean something: a set that answers
-                everything is worth less than one that says when it cannot. */}
-            <p className="t-sub">{t("corpusAsk.sub")}</p>
-            <Field label={t("corpusAsk.question")}>
-              {(control) => (
-                <Textarea
-                  {...control}
-                  value={question}
-                  onChange={(event) => setQuestion(event.target.value)}
-                />
-              )}
-            </Field>
-            <div className="form-actions">
-              <Button
-                // The one AI call to action on this surface: the model does the
-                // reading and writes the sentence.
-                variant="ai"
-                disabled={question.trim() === "" || corpusId === ""}
-                pending={ask.isPending}
-                onClick={runAsk}
-              >
-                {t("corpusAsk.submit")}
-              </Button>
-            </div>
-            {!canAsk || (items && items.length === 0) ? (
-              <EmptyState title={t("corpusAsk.noSetsTitle")}>
-                <p>{t("corpusAsk.noSets")}</p>
-              </EmptyState>
-            ) : null}
-            {ask.isError ? (
-              <Callout
-                tone="danger"
-                kind="outcome"
-                title={t("corpusAsk.failed")}
-              >
-                {problemMessageOf(ask.error, t)}
-              </Callout>
-            ) : null}
+          <section className="ask-modal-answer">
             {answer ? (
               <AnswerView
                 answer={answer}
@@ -260,12 +269,11 @@ export function AskMarginceModal({
               />
             ) : null}
           </section>
-          <section className="ask-modal-doc">
-            {/* Keyed on the citation: the pane's own "could this be marked"
-                verdict belongs to ONE passage, and React keeps state across a
-                prop change unless told the subject changed. */}
-            <CitedDocument key={cited?.chunk_id ?? "none"} claim={cited} />
-          </section>
+          {cited ? (
+            <section className="ask-modal-doc">
+              <CitedDocument key={cited.chunk_id} claim={cited} />
+            </section>
+          ) : null}
         </div>
       </div>
     </Modal>
