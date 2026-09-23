@@ -3498,6 +3498,7 @@ public.extension_secret_user_key CREATE UNIQUE INDEX extension_secret_user_key O
 public.extension_secret_workspace_key CREATE UNIQUE INDEX extension_secret_workspace_key ON public.extension_secret USING btree (extension_name, key) WHERE (user_id IS NULL)
 public.extension_secret_workspace_user CREATE INDEX extension_secret_workspace_user ON public.extension_secret USING btree (user_id)
 public.f_fold_apostrophes(text) secdef=false cfg=- acl=- 
+public.f_fold_import_name(text) secdef=false cfg=- acl=- 
 public.f_unaccent(text) secdef=false cfg=- acl=- 
 public.federated_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.federated_identity.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -3914,6 +3915,8 @@ public.idx_company_domain_company CREATE INDEX idx_company_domain_company ON pub
 public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_disposition_due ON public.company_domain_disposition USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_company_fact_lookup CREATE INDEX idx_company_fact_lookup ON public.company_fact USING btree (category, field, value_key)
 public.idx_company_geocoded CREATE INDEX idx_company_geocoded ON public.company USING btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok'::text) AND (archived_at IS NULL))
+public.idx_company_import_display_name CREATE INDEX idx_company_import_display_name ON public.company USING btree (f_fold_import_name(display_name)) WHERE ((archived_at IS NULL) AND (merged_into_id IS NULL))
+public.idx_company_import_legal_name CREATE INDEX idx_company_import_legal_name ON public.company USING btree (f_fold_import_name(legal_name)) WHERE ((legal_name IS NOT NULL) AND (archived_at IS NULL) AND (merged_into_id IS NULL))
 public.idx_company_last_activity_keyset CREATE INDEX idx_company_last_activity_keyset ON public.company USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_company_legal_name_trgm CREATE INDEX idx_company_legal_name_trgm ON public.company USING gin (f_fold_apostrophes(lower(legal_name)) gin_trgm_ops)
 public.idx_company_lifecycle CREATE INDEX idx_company_lifecycle ON public.company USING btree (lifecycle) WHERE (archived_at IS NULL)

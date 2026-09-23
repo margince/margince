@@ -16,6 +16,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // The other half of the same promise: a file of contacts the business already
@@ -321,4 +323,96 @@ func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 	if after.Links == nil || after.Links.Applied != 1 {
 		t.Fatalf("applied = %+v, want the one link the preview promised", after.Links)
 	}
+}
+
+// A company whose display and legal names fold alike is ONE company, not an
+// ambiguity with itself.
+//
+// The lookup matches the file's name against display_name OR legal_name, so a
+// company called "Kelvin Systems" in both satisfies it twice. Today that is one
+// row and one company, because the OR is a predicate over the row — but the
+// index this replaced counted NAMES and needed a per-company `seen` set to
+// avoid exactly this, and any rewrite that goes back to matching name by name
+// (a UNION, a lateral over both columns) brings the defect with it. What it
+// looks like is a contact told that a second Kelvin Systems exists, which is a
+// company they will then go and create.
+func TestCSVImportLinksACompanyWhoseTwoNamesAreTheSame(t *testing.T) {
+	e := setupImportApp(t)
+	if status := e.Call(t, http.MethodPost, "/v1/companies",
+		map[string]any{"display_name": "Kelvin Systems", "legal_name": "Kelvin Systems"},
+		nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the company → %d, want 201", status)
+	}
+
+	report := importOneEmployer(t, e, "Kelvin Systems")
+	if report.Links == nil {
+		t.Fatal("the report carries no links section")
+	}
+	if len(report.Links.Unresolved) != 0 {
+		t.Fatalf("the link was refused: %+v — one company answering to one name twice is still "+
+			"one company, and reporting it as ambiguous invents a second one", report.Links.Unresolved)
+	}
+	if report.Links.Offered != 1 {
+		t.Fatalf("links.offered = %d, want the 1 the file names", report.Links.Offered)
+	}
+}
+
+// A file naming a company by its REGISTERED name links, and two companies
+// sharing a name do not.
+//
+// Both arms in one case because they are the two halves of the same read: it
+// matches display_name or legal_name, and it must stop at "more than one".
+// Split, the first could pass against a read that matched everything.
+func TestCSVImportResolvesALegalNameAndRefusesASharedOne(t *testing.T) {
+	e := setupImportApp(t)
+	if status := e.Call(t, http.MethodPost, "/v1/companies",
+		map[string]any{"display_name": "Faraday", "legal_name": "Faraday Electrical AG"},
+		nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the company → %d, want 201", status)
+	}
+	if report := importOneEmployer(t, e, "Faraday Electrical AG"); len(report.Links.Unresolved) != 0 {
+		t.Errorf("a file naming the company by its registered name did not link: %+v — the CRM may "+
+			"hold either name and a migration spells whichever the old system did",
+			report.Links.Unresolved)
+	}
+
+	// A second company wearing the first one's TRADING name. Which one employs
+	// the contact is a question only a human can answer.
+	if status := e.Call(t, http.MethodPost, "/v1/companies",
+		map[string]any{"display_name": "Faraday", "legal_name": "Faraday Holdings SE"},
+		nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the second company → %d, want 201", status)
+	}
+	report := importOneEmployer(t, e, "Faraday")
+	if len(report.Links.Unresolved) != 1 {
+		t.Fatalf("links = %+v, want the shared name reported unresolved rather than linked to "+
+			"whichever company the read happened to see first", report.Links)
+	}
+	if !strings.Contains(report.Links.Unresolved[0].Reason, "more than one") {
+		t.Errorf("reason = %q, want it to say the name is shared — a contact told 'not found' "+
+			"would go and create a third Faraday", report.Links.Unresolved[0].Reason)
+	}
+}
+
+// importOneEmployer runs a one-row contact file naming `company` as the
+// employer and answers the dry run's report.
+func importOneEmployer(t *testing.T, e *apptest.AppEnv, company string) importReportDTO {
+	t.Helper()
+	contacts := "Email,Full Name,Company\nada" + strings.ToLower(strings.Fields(company)[0]) +
+		"@x.test,Ada Lovelace," + company + "\n"
+	profile, status := uploadCSV(t, e, "contact", contacts)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	run, runStatus := createRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{
+		"Email": "email", "Full Name": "full_name", "Company": "company_name",
+	})
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	var report importReportDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); s != http.StatusOK {
+		t.Fatalf("report → %d, want 200", s)
+	}
+	return report
 }
