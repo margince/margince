@@ -70,23 +70,6 @@ func Object(props map[string]Node, required ...string) Node {
 	return Node{Type: typeObject, AdditionalProperties: &closed, Properties: props, Required: required}
 }
 
-// FreeObject produces an OPEN object: one whose keys this schema cannot know.
-//
-// The exception to Object, and narrow on purpose. A CLOSED object with no
-// properties — which is what Object(nil) renders — forbids every key inside
-// it, so a provider enforcing the schema refuses the very content the field
-// exists to carry. That is not a stricter schema, it is a field nothing can be
-// put in.
-//
-// Use it only where the keys belong to something outside this schema's
-// knowledge: the agent loop's step carries `args` for whichever tool the model
-// picked, and the tools are a runtime registry rather than a compile-time
-// shape. Everywhere the keys ARE known, Object is what closes them, and closed
-// is what the strict json_schema modes want.
-func FreeObject() Node {
-	return Node{Type: typeObject}
-}
-
 // Must renders a node to the wire bytes for ResponseSchema. It panics only on
 // a programmer error — a Node cannot fail to marshal — so it is safe in a
 // package-level var initializer.

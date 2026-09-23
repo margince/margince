@@ -473,15 +473,12 @@ Available tools:
   "additionalProperties": false,
   "properties": {
     "args": {
-      "description": "that tool's arguments. Required whenever tool is set; write {} for a tool that takes none.",
       "type": "object"
     },
     "final": {
-      "description": "your answer, when no tool call is left to make. Set this alone, with neither tool nor args.",
       "type": "object"
     },
     "tool": {
-      "description": "the name of ONE tool to call, from the tools listed to you. Set this and args, or set final, never both.",
       "type": "string"
     }
   },

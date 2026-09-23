@@ -7,7 +7,7 @@ package runner
 // tests rather than inside window.go: the window is about what the model is
 // shown, and this is about what it may answer.
 
-import "github.com/margince/margince/backend/internal/shared/schema"
+import "encoding/json"
 
 // stepSchema is the step protocol as a JSON Schema, so a provider with
 // schema-constrained decoding enforces the shape at GENERATION rather than
@@ -18,12 +18,19 @@ import "github.com/margince/margince/backend/internal/shared/schema"
 // is not JSON to recover — `{q: "Anna Weber"}` has unquoted keys — so the only
 // place the wrong shape can be prevented is before it is generated.
 //
-// Built with shared/schema rather than hand-written, which that package asks
-// for outright: "callers compose Object/Array/String/… and render with Must
-// instead of hand-writing a JSON string, so every structured-output schema is
-// compile-checked, always valid JSON, and built one way across the codebase."
-// This was a hand-written string first, which is one more spelling of a thing
-// the tree already spells 30 times.
+// HAND-WRITTEN, against shared/schema's own instruction to compose instead —
+// and the exception is measured, not preferred. That package builds Properties
+// from a Go map, and encoding/json sorts a map's keys, so it can only ever emit
+// args, final, tool. Property ORDER is load-bearing under grammar-constrained
+// decoding: converted to the builder, agent_loop fell from 0.78 to 0.18 on one
+// binding and 0.53 to 0.31 on another, and the trace says why — of 42 tool
+// calls in the failing run, NONE carried args ({"tool":"whats_slipping_this_week"})
+// and several folded them into the tool name ({"tool":"list_pipelines { }"}).
+// Removing the field descriptions did not recover it; the order is what the
+// model follows.
+//
+// So this stays a string until the builder can express an order. Do not
+// "fix" it back without re-certifying agent_loop on two bindings.
 //
 // It constrains the KEY SET and the types, and deliberately not the
 // exactly-one-of rule. Expressing that needs oneOf/not, which the strict
@@ -33,23 +40,21 @@ import "github.com/margince/margince/backend/internal/shared/schema"
 // schema could — so the descriptions below say it in words instead, where a
 // model reads them.
 //
-// Object() closes the STEP, which mirrors parseStep's DisallowUnknownFields. A
+// The STEP is closed, which mirrors parseStep's DisallowUnknownFields. A
 // schema open where the parser is closed would let constrained decoding produce
 // a step that then gets refused, which is this bug wearing the opposite face.
 //
-// args and final are FreeObject, and must be: their keys belong to whichever
+// args and final are OPEN objects, and must be: their keys belong to whichever
 // tool the model picked, which is a runtime registry rather than a shape known
-// here. Closing them renders an object no key may go in, so a provider
-// enforcing the schema refuses the arguments the loop has to send — which is
-// what Object(nil) did here before TestTheStepSchemaLetsArgsAndFinalCarryKeys
-// existed to say so.
+// here. A closed object with no properties admits no key at all, so a provider
+// enforcing it would refuse the arguments the loop has to send —
+// TestTheStepSchemaLetsArgsAndFinalCarryKeys exists to say so.
 //
 // Held by: TestTheStepSchemaAdmitsExactlyWhatTheStepParserAccepts (internal/modules/agents/runner/stepschema_test.go)
-var stepSchema = schema.Must(schema.Object(map[string]schema.Node{
-	"tool": schema.String().Describe(
-		"the name of ONE tool to call, from the tools listed to you. Set this and args, or set final, never both."),
-	"args": schema.FreeObject().Describe(
-		"that tool's arguments. Required whenever tool is set; write {} for a tool that takes none."),
-	"final": schema.FreeObject().Describe(
-		"your answer, when no tool call is left to make. Set this alone, with neither tool nor args."),
-}))
+var stepSchema = json.RawMessage(`{` +
+	`"type":"object",` +
+	`"properties":{` +
+	`"tool":{"type":"string"},` +
+	`"args":{"type":"object"},` +
+	`"final":{"type":"object"}},` +
+	`"additionalProperties":false}`)

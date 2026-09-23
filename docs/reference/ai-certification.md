@@ -30,7 +30,7 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | … best state `stale` | 2 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 168 |
-| Committed records | 106 |
+| Committed records | 107 |
 | Bindings measured | 12 |
 
 ### Why the stale records went stale
@@ -96,7 +96,7 @@ Which model to run each site on, and what that choice rests on.
 | [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 5 | 4 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 14 | 3 |
 | [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `not_supported` | 0.91 | `current` | 19 | 4 |
-| [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 2 | 5 |
+| [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 2 | 6 |
 | [`cold_start/acts`](#cold_startacts) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 5 | 4 |
 | [`cold_start/company_message`](#cold_startcompany_message) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
 | [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
@@ -161,13 +161,13 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 7 | 0 | 6 | 90 | 86 | 0.96 | 26168ms | 9 | 0 | 4 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
-| `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 5 | 0 | 1 | 138 | 123 | 0.89 | 92155ms | 2 | 0 | 4 |
+| `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 5 | 0 | 1 | 138 | 123 | 0.89 | 23385ms | 2 | 0 | 4 |
 | `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 39 | 38 | 0 | 1 | 351 | 288 | 0.82 | 237887ms | 19 | 7 | 13 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 11 | 0 | 0 | 11 | 160 | 113 | 0.71 | 20620ms | 8 | 0 | 3 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 39 | 35 | 0 | 4 | 447 | 335 | 0.75 | 317231ms | 10 | 9 | 20 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 40 | 36 | 0 | 4 | 453 | 341 | 0.75 | 140306ms | 11 | 9 | 20 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -443,7 +443,7 @@ Scenarios (2):
 | `grades_a_fabricated_answer_poorly` | `accepted` | [basic_02_low_score.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_02_low_score.yaml) |
 | `grades_a_well_grounded_answer_highly` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_01.yaml) |
 
-Records (5):
+Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -451,6 +451,7 @@ Records (5):
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 13560ms | 19444ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 1319ms | 1966ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 1462ms | 2040ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 4767ms | 8813ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 2425ms | 2800ms | 6 | 0 | 0 | 0 |
 
 ### `cold_start`
@@ -911,8 +912,8 @@ Records (3):
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1269ms | 1805ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `current` | 4/4 | `not_supported` | 12 | 8 | 0.67 | 3576ms | 92155ms | 8 | 2 | 2 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 4/4 | `supported_degraded` | 12 | 11 | 0.92 | 8044ms | 317231ms | 11 | 0 | 1 | 0 |
+| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `current` | 4/4 | `not_supported` | 12 | 8 | 0.67 | 3976ms | 23385ms | 8 | 0 | 4 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 4/4 | `supported_degraded` | 12 | 11 | 0.92 | 7833ms | 19316ms | 11 | 0 | 1 | 0 |
 
 ### `signal_extract`
 

@@ -6,7 +6,7 @@
     "sites_best_stale": 2,
     "sites_absent": 0,
     "scenarios": 168,
-    "records": 106,
+    "records": 107,
     "bindings": 12
   },
   "bindings": [
@@ -103,7 +103,7 @@
       "runs": 138,
       "passed": 123,
       "reliability": 0.8913043478260869,
-      "slowest_p95_ms": 92155,
+      "slowest_p95_ms": 23385,
       "bands": {
         "certified": 2,
         "supported_degraded": 0,
@@ -216,16 +216,16 @@
         "model": "openai/gpt-oss-120b",
         "env": "eu_hosted"
       },
-      "sites": 39,
-      "sites_current": 35,
+      "sites": 40,
+      "sites_current": 36,
       "sites_partial": 0,
       "sites_stale": 4,
-      "runs": 447,
-      "passed": 335,
-      "reliability": 0.7494407158836689,
-      "slowest_p95_ms": 317231,
+      "runs": 453,
+      "passed": 341,
+      "reliability": 0.7527593818984547,
+      "slowest_p95_ms": 140306,
       "bands": {
-        "certified": 10,
+        "certified": 11,
         "supported_degraded": 9,
         "not_supported": 20
       }
@@ -1526,6 +1526,29 @@
           "reliability": 1,
           "latency_p50_ms": 1462,
           "latency_p95_ms": 2040,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 4767,
+          "latency_p95_ms": 8813,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -4431,12 +4454,12 @@
           "runs": 12,
           "passed": 8,
           "reliability": 0.6666666666666666,
-          "latency_p50_ms": 3576,
-          "latency_p95_ms": 92155,
+          "latency_p50_ms": 3976,
+          "latency_p95_ms": 23385,
           "reported": {
             "accepted": 8,
-            "wrong_answer": 2,
-            "invalid": 2,
+            "wrong_answer": 0,
+            "invalid": 4,
             "abstained": 0
           },
           "stale_reason": ""
@@ -4454,8 +4477,8 @@
           "runs": 12,
           "passed": 11,
           "reliability": 0.9166666666666666,
-          "latency_p50_ms": 8044,
-          "latency_p95_ms": 317231,
+          "latency_p50_ms": 7833,
+          "latency_p95_ms": 19316,
           "reported": {
             "accepted": 11,
             "wrong_answer": 0,
