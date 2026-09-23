@@ -795,7 +795,7 @@ func TestTheAskEndpointIsAnsweredOnlyOnceWithCorpusAskHasRun(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodPost, "/v1/corpora/"+id.String()+"/ask", strings.NewReader("{"))
 		r.Header.Set("Content-Type", "application/json")
-		s.knowledgeHandlers.AskCorpus(w, r, id)
+		s.AskCorpus(w, r, id)
 		return w
 	}
 
