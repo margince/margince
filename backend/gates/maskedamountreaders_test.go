@@ -282,8 +282,8 @@ var deferredMaskedAmountReads = gatekit.Waive(map[string]string{})
 //
 // The compound subject keeps most of these out — forecast_call,
 // finance_payment and commission_entry each carry their own amount_minor and
-// never mention the deal table — but a statement that reads a FROZEN figure and
-// joins the deal for its name matches both halves. A frozen contribution is not
+// never spell the deal table in their source — but a statement that reads a
+// FROZEN figure and joins the deal for its name matches both halves. A frozen contribution is not
 // the deal's current amount: it is what the snapshot recorded, governed by the
 // recipient clause the share was minted with.
 var notTheDealAmount = gatekit.Waive(map[string]string{
@@ -318,10 +318,16 @@ func maskedAmountScope(columns *regexp.Regexp, builders map[string]bool) gatekit
 //
 // `amount_minor` is not a rare column name: forecast_call, finance_payment,
 // commission_entry and the forecast snapshot each carry one, and a mask on
-// deal.amount_minor says nothing about any of them. A pattern matching the
+// deal.amount_minor says nothing about most of them. A pattern matching the
 // column alone found forty reads that were not about a deal at all, which
 // would have cost forty declarations saying so — noise that buries the signal
 // this census exists to carry.
+//
+// Most, not all: a commission entry's basis IS the deal's amount, copied at
+// accrual, and the ledger reads it under a mask arm resolved on the deal row
+// (commissions/entryfieldmask.go). That one is held by its own test rather than
+// by this census, which cannot see it — the reach is a runtime clause, not a
+// FROM clause this scan could match.
 //
 // So a file is a subject when it holds a DECLARATION whose SQL both reads the
 // deal table and names an amount column. Per declaration rather than per

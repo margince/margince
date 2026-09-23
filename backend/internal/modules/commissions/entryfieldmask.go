@@ -19,6 +19,14 @@ package commissions
 // The reach itself is declared in auth's group closure, not here and not
 // between the two modules: contacts withholds the tier on its own record and
 // the ledger asks which of its rows survive.
+//
+// The deal's amount reaches the ledger too, and by a different route. An
+// entry's basis IS that amount, copied at accrual, so a mask on it that stopped
+// at the deal would hand the figure back here. The closure cannot carry this
+// one: a deal's mask may be conditioned on write authority, and which deals a
+// caller may write is a question only the deal row answers — so the arm is
+// resolved against that row, the way this module already resolves the deal's
+// row scope.
 
 import (
 	"context"
@@ -26,6 +34,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
+
+// dealAmountField is the WIRE field a deal's money mask names, which is not
+// this module's vocabulary and is spelt here rather than reached for.
+const dealAmountField = "amount_minor"
 
 // maskExcludedClause renders what every ledger read ANDs in: the rows this
 // caller's masks leave them. Empty means no mask reaches a commission entry and
@@ -35,5 +47,28 @@ func maskExcludedClause(ctx context.Context, arg func(any) int) (string, error) 
 	if err != nil {
 		return "", err
 	}
+	basis, err := dealAmountExcludedClause(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	if basis != "" {
+		clauses = append(clauses, basis)
+	}
 	return strings.Join(clauses, " AND "), nil
+}
+
+// dealAmountExcludedClause renders the arm that takes an entry out when the
+// deal's own amount is withheld from this reader. Empty means no mask of theirs
+// reaches it and the ledger is unnarrowed by this question.
+//
+// The rate is required and non-nullable on the wire like the rest, so there is
+// no rendering of the basis that says "withheld" and the ROW leaves the read.
+// Asked of the deal row rather than of the entry, because a conditioned mask
+// lifts on the deals the caller may WRITE and the entry carries no such answer.
+func dealAmountExcludedClause(ctx context.Context, arg func(any) int) (string, error) {
+	clause, masked, err := auth.MaskExcludedClause(ctx, "deal", dealAmountField, "d", arg)
+	if err != nil || !masked {
+		return "", err
+	}
+	return "EXISTS (SELECT 1 FROM deal d WHERE d.id = deal_id AND " + clause + ")", nil
 }
