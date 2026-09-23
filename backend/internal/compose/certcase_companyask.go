@@ -78,9 +78,7 @@ func (companyAskCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 			// with a settings row would not be comparable between installations.
 			return companybrief.AskRequest(question, in, string(textlang.English))
 		},
-		// ParseBrief, because AskRequest really does ask for flat sentences —
-		// and the id from the Input, so the account the model can cite is the
-		// account the filter accepts.
+		// ParseBrief, because AskRequest asks for flat sentences.
 		parse: companybrief.ParseBrief,
 		in:    in, companyID: in.ID, label: label, expected: want,
 	}, nil

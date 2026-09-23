@@ -143,15 +143,18 @@ seeds:
     # is the broker's fault rather than a choice: it fronts no open-weight
     # embedding model worth binding. mistral-embed stands in.
     #
-    # 1024 is load-bearing. It is mistral-embed's width AND bge-m3's — the model
-    # the sovereign Ollama binding will use — so moving this deployment onto
-    # local weights later does not change the vector width and does not force a
-    # re-embed of everything already filed. Picking any other width here would
-    # buy a migration for no reason. (No `routing:` block: the parser refuses
-    # one on the embed lane, since a single forward pass has no latency tail to
-    # bound.)
+    # 1024 is mistral-embed's width AND bge-m3's — the model the sovereign
+    # Ollama binding will use — so a later move onto local weights does not
+    # change the COLUMN. It does not make the vectors comparable: two models
+    # write different spaces at the same width, and querying bge-m3 against
+    # stored mistral-embed vectors returns confident nonsense. Changing the
+    # embedding model means re-embedding everything already filed, whatever the
+    # width says. Equal width saves a migration, not a re-embed.
+    #
+    # No `routing:` block: the parser refuses one on the embed lane, since a
+    # single forward pass has no latency tail to bound.
     embeddings:
       provider: openai_compatible
-      model: mistralai/mistral-embed
+      model: mistralai/mistral-embed-2312
       base_url: https://openrouter.ai/api
       dimensions: 1024

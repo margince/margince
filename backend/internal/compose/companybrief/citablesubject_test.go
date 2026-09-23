@@ -9,24 +9,9 @@ import (
 	"testing"
 )
 
-// The account the brief is about is citable.
-//
-// briefSystem tells the model "A sentence about the account itself cites the
-// company", and knownRecords accepts {company, companyID} as evidence. The id
-// reached neither: it was a parameter of Write and of the grounding filter,
-// never a field of Input, and Input is the only thing serialized into the
-// prompt. So the model was ordered to cite an id it had never been shown.
-//
-// What that cost: every company-level sentence — what this company is, how the
-// relationship stands — was dropped by keepGroundedSentences whatever the model
-// wrote, because the only entity_id it could put there was one the allowlist
-// does not hold. A brief whose account has no deals or activities to cite
-// instead collapsed to the deterministic floor entirely.
-//
-// Found by certification, and the reason it was not read as a bug for so long
-// is that it looks exactly like a weak model: Gemma 4 and Gemini-3.1-flash-lite
-// both abstained on the same two scenarios with the same message, "no sentence
-// cited a record of this account".
+// The account the brief is about is citable: the id the FILTER accepts has to
+// be an id the MODEL was shown, or every company-level sentence is dropped
+// whatever the model wrote.
 func TestTheAccountTheBriefIsAboutIsCitable(t *testing.T) {
 	t.Parallel()
 	const companyID = "01a0a940-f295-74dd-9999-000000000001"

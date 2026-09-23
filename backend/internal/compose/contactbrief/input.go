@@ -96,11 +96,8 @@ const briefInputChanges = 3
 // happened — each already pruned to the reader's row scope by the read that
 // produced it.
 type Input struct {
-	// ID is the contact this brief is about, in the payload so a sentence about
-	// them can cite them. Same defect and same reason as companybrief.Input.ID,
-	// which carries the account of it.
-	//
-	// Held by: TestTheContactTheBriefIsAboutIsCitable (internal/compose/contactbrief/citablesubject_test.go)
+	// ID is in the payload so a sentence about the contact can cite them; the
+	// prompt offers `entity_type: contact` and knownRecords accepts {contact, ID}.
 	ID           string `json:"id"`
 	Name         string `json:"name"`
 	Title        string `json:"title,omitempty"`

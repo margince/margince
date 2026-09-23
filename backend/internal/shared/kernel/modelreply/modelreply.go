@@ -4,11 +4,8 @@
 // Package modelreply reduces a model's reply to the JSON document in it.
 //
 // It lives in shared/kernel rather than beside the provider adapters because
-// BOTH tiers read model replies and the DAG forbids one reaching the other: the
-// modules that parse a completion cannot import a sibling module, so a reduction
-// owned by the ai module is unreachable from the agents module. It was
-// unreachable, and the agent loop hand-rolled a weaker trim of its own — which
-// is the duplication the reduction exists to prevent.
+// both tiers read model replies and a module may not import a sibling, so a
+// reduction owned by the ai module is unreachable from the agents module.
 //
 // Not to be confused with kernel/promptfence, which delimits untrusted content
 // going OUT in a prompt. This is what comes back.

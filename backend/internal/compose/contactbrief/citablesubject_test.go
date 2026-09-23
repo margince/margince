@@ -9,17 +9,9 @@ import (
 	"testing"
 )
 
-// The contact the brief is about is citable.
-//
-// Same defect as companybrief's, in the same shape: the prompt offers
-// `entity_type: contact` and knownRecords accepts {contact, contactID}, while
-// contactID was a parameter beside Input and Input is the only thing serialized
-// into the prompt. Every sentence about the contact the brief is about was
-// therefore ungroundable.
-//
-// Held here rather than only in companybrief because these are two prompts and
-// two filters — one being fixed says nothing about the other, and this pair was
-// wrong in both places at once.
+// The contact the brief is about is citable. Held here as well as in
+// companybrief because these are two prompts and two filters: one being right
+// says nothing about the other, and both were wrong.
 func TestTheContactTheBriefIsAboutIsCitable(t *testing.T) {
 	t.Parallel()
 	const contactID = "01a0a93f-642c-708a-aaaa-000000000001"

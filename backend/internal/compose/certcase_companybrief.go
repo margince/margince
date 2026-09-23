@@ -103,9 +103,8 @@ func (companyBriefCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pre
 		request: func(in companybrief.Input) model.Request {
 			return companybrief.BriefRequest(in, string(textlang.English))
 		},
-		// The account's id comes from the Input rather than beside it: the model
-		// is shown in.ID and the grounding filter is given companyID, and this
-		// site's whole defect was those being two different values.
+		// One id, from the Input: the model is shown in.ID and the filter is
+		// given companyID, and those being two values was the defect.
 		parse: parseSectionedBrief,
 		in:    in, companyID: in.ID, label: label, expected: want,
 	}, nil
