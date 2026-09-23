@@ -7,7 +7,7 @@ import { useRecordZone } from "../app/recordzone";
 import { Button, TextInput } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import { factsKey } from "./companyfactspanel";
 import "./evidenceverdict.css";
 
@@ -135,7 +135,12 @@ export function factClaim(companyId: string, fact: CompanyFact): EvidenceClaim {
     confirmPath: async () => {
       const { error } = await api.POST(
         "/companies/{id}/facts/{factKey}/confirm",
-        { params: { path: { id: companyId, factKey } } },
+        {
+          params: {
+            path: { id: companyId, factKey },
+            ...ifMatch(requireVersion(fact.version)),
+          },
+        },
       );
       if (error) {
         throwProblem(error);
@@ -143,7 +148,10 @@ export function factClaim(companyId: string, fact: CompanyFact): EvidenceClaim {
     },
     correctPath: async (value) => {
       const { error } = await api.PATCH("/companies/{id}/facts/{factKey}", {
-        params: { path: { id: companyId, factKey } },
+        params: {
+          path: { id: companyId, factKey },
+          ...ifMatch(requireVersion(fact.version)),
+        },
         body: { value },
       });
       if (error) {
@@ -192,6 +200,10 @@ export function EvidenceVerdict({
     },
   });
   const failure = confirm.error ?? correct.error;
+  // The reader's words, not the Error's. A refusal the server states only as
+  // a code carries no sentence anyone wrote for a reader, and the raw message
+  // is the developer placeholder the catalog exists to replace.
+  const reason = failure ? problemMessageOf(failure, t) : null;
 
   // Already a human's word. Saying who and when is the whole point — a
   // confirmed value that does not say who confirmed it is no better evidenced
@@ -232,9 +244,9 @@ export function EvidenceVerdict({
         </Button>
         {/* The draft survives a failed save: the field above still holds what
             was typed, and the refusal names why. */}
-        {failure && (
+        {reason && (
           <span role="alert" className="form-error">
-            {failure.message}
+            {reason}
           </span>
         )}
       </span>
@@ -258,9 +270,9 @@ export function EvidenceVerdict({
       >
         {t("evidence.correct")}
       </Button>
-      {failure && (
+      {reason && (
         <span role="alert" className="form-error">
-          {failure.message}
+          {reason}
         </span>
       )}
     </span>
