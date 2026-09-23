@@ -1307,7 +1307,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `corpus_ask` / `corpus_ask`
 
-`system 4,048 B (~1,012 tok)` — rules 3,776 B · boundary 272 B · after boundary 0 B · **cacheable 93%**
+`system 4,582 B (~1,145 tok)` — rules 4,310 B · boundary 272 B · after boundary 0 B · **cacheable 94%**
 
 <details><summary>system prompt</summary>
 
@@ -1329,18 +1329,26 @@ the coverage is "does_not_answer".
 
 When coverage is "does_not_answer":
   - return NO claims.
-  - write summary as one or two plain sentences telling the reader these
-    documents do not cover the question, and what they do say about the subject
-    instead. This is the ONLY place you may describe what you could not find.
+  - write summary for the READER, in at most two short sentences: say their
+    documents do not answer this, then say what those documents do cover nearby
+    so they know where to look next. This is the ONLY place you may describe
+    what you could not find.
+    Write "Your handbook doesn't say how to create a project. It explains what a
+    project is and when one starts, but not how to make one."
+    Not "The documents do not contain information regarding project creation."
 
 When coverage is "answers":
   - write one claim per sentence of the answer. Every claim carries:
       - text: one sentence of the answer, in your own words.
       - id: the id of the passage that sentence rests on.
       - quote: a span copied from that passage, CHARACTER FOR CHARACTER.
-  - write summary as a short plain-language answer, saying only what your own
-    claims say. It is what the reader reads first, so write it for them and not
-    as a list.
+  - write summary as the ANSWER, in the words a colleague would use, saying only
+    what your own claims say. Lead with the answer itself — never open by
+    describing the passages or restating the question. Two or three short
+    sentences; if one will do, write one.
+    Write "A full seat can read and change things. A read seat can only read,
+    whatever your role says."
+    Not "The passages describe two kinds of seat, which are as follows."
 
 The quote must appear in the passage exactly as written there. Copy it, including
 any markdown around it such as ** or backticks. Do not paraphrase it, do not fix
