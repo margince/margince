@@ -104,20 +104,14 @@ export function CompanyStep({
       </div>
 
       {saved && (
-        <p className="ob-sub" style={{ margin: "14px 0 0" }}>
-          <CheckCircle2
-            aria-hidden
-            style={{ width: 14, height: 14, verticalAlign: "-2px" }}
-          />{" "}
+        <p className="ob-sub ob-companyform-saved">
+          <CheckCircle2 aria-hidden className="ob-companyform-savedmark" />{" "}
           {t("ob.s1.savedNote")}
         </p>
       )}
 
       {saveError && (
-        <div
-          className="readfail warning"
-          style={{ marginTop: "var(--space-3)" }}
-        >
+        <div className="readfail warning ob-companyform-savefail">
           <span className="rfi">
             <Circle aria-hidden />
           </span>
@@ -129,7 +123,7 @@ export function CompanyStep({
       )}
 
       {missingRequired.length > 0 && (
-        <div className="urlnote err" style={{ marginTop: "var(--space-3)" }}>
+        <div className="urlnote err">
           <Circle aria-hidden />{" "}
           {t("ob.s1.requiredMissing", {
             fields: missingRequired

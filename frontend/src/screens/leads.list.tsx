@@ -411,13 +411,7 @@ function LeadsWorkbench({
             header: t("lead.status"),
             sort: "status",
             cell: (lead: Lead) => (
-              <span
-                style={{
-                  display: "inline-flex",
-                  gap: "var(--space-1)",
-                  alignItems: "center",
-                }}
-              >
+              <span className="lead-status-cell">
                 <StatusBadge status={lead.status} />
                 <SlaBadge state={lead.sla_state} />
               </span>

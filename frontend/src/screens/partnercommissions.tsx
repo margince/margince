@@ -5,6 +5,7 @@ import { useCanWrite } from "../app/capability";
 import { Badge, EmptyState, StatCard } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
+import { Row } from "../design-system/stack";
 import { StatStrip } from "../design-system/statstrip";
 import { stable } from "../format/collate";
 import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
@@ -13,6 +14,7 @@ import type { MessageKey } from "../i18n/en";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
 import { QueryGate, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
+import "./partnercommissions.css";
 
 // What a partner has earned, on the partner's own company page.
 //
@@ -172,7 +174,7 @@ function OutstandingStrip({
   return (
     <div
       data-testid="commission-outstanding"
-      style={{ marginBottom: "var(--space-4)" }}
+      className="partnercommissions-outstanding"
     >
       <StatStrip>
         {outstanding.map(({ currency, amountMinor, entryCount }) => (
@@ -293,7 +295,7 @@ function CommissionLedger({
                 );
               }
               return (
-                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <Row gap="2" wrap={false}>
                   {decisions.map((decision) => (
                     <CommissionDecision
                       key={decision}
@@ -302,7 +304,7 @@ function CommissionLedger({
                       companyId={companyId}
                     />
                   ))}
-                </div>
+                </Row>
               );
             },
           },

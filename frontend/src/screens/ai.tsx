@@ -5,6 +5,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
 import { CorpusAskCard } from "./corpusask";
+import "./ai.css";
 
 // Ask AI (B-EP09.12c, 03b): the BYO-agent surface. Agents connect over MCP
 // with a passport; this surface states the two-tier contract honestly —
@@ -40,14 +41,7 @@ export function AskAiScreen() {
       />
       <Panel title={t("ai.tiers")}>
         <PanelBody>
-          <ul
-            style={{
-              listStyle: "none",
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-2)",
-            }}
-          >
+          <ul className="askai-tiers">
             <li>
               <AutonomyDot tier="auto" />{" "}
               <strong>{t("ai.tierAutoExecute")}</strong>{" "}
@@ -68,7 +62,7 @@ export function AskAiScreen() {
             holds one line and truncates the rest of it. */}
         <PanelBody>
           <p className="t-sub">{t("ai.connectDetail")}</p>
-          <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
+          <p className="t-caption askai-hint">
             {t("ai.paletteHint")} <Kbd>⌘K</Kbd>
           </p>
         </PanelBody>

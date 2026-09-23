@@ -8,6 +8,8 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import "./archive.css";
+import "./common.css";
 
 // The shared archive/disqualify affordance (P-3): a human-direct DELETE that
 // soft-archives a contact/company/lead (sets archived_at; leads also
@@ -130,15 +132,10 @@ export function ArchiveAction<Archived extends { id: string }>({
         onClose={() => setConfirming(false)}
         labelledBy={headingId}
       >
-        <Heading
-          size="large"
-          id={headingId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
+        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
           {label}
         </Heading>
-        <p style={{ marginBottom: "var(--space-4)" }}>{confirmText}</p>
+        <p className="archive-confirm">{confirmText}</p>
         <ErrorLine error={mutation.error} />
         <div className="actions">
           <Button

@@ -12,6 +12,7 @@ import type { MessageKey } from "../i18n/en";
 import type { BillingContact, BillingContactRole } from "./billingcontacts";
 import type { BillingContactActions } from "./billingcontacts.queries";
 import { searchByEntity } from "./relationshipcandidates";
+import "./common.css";
 
 // The three capacities, in the order an invoice moves through them: it is
 // addressed to somebody, approved by somebody, then paid by somebody. Spelled
@@ -87,12 +88,7 @@ export function BillingContactModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
         {editing ? t("billing.changeTitle") : t("billing.addTitle")}
       </Heading>
       <div className="form-stack">

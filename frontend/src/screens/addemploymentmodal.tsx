@@ -18,6 +18,7 @@ import {
   searchCompanyCandidates,
 } from "./contactemployers";
 import { datePatch, validDateEntry } from "./employmentpatch";
+import "./common.css";
 
 // The "add a company" modal: pick the company (RecordPicker, the shared
 // debounced search-and-pick), optionally its role, and whether it is the
@@ -119,12 +120,7 @@ export function AddEmploymentModal({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
         {t("contact.rail.addEmployment")}
       </Heading>
       <div className="form-stack">

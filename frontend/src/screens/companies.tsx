@@ -31,6 +31,7 @@ import {
   useRecordTimeline,
 } from "../design-system/recordtimeline";
 import { RecordView } from "../design-system/recordview";
+import { Stack } from "../design-system/stack";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import {
@@ -478,17 +479,11 @@ function HierarchyRollupPanel({ companyId }: Readonly<{ companyId: string }>) {
 
   if (rollupQuery.isPending) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-3)",
-        }}
-      >
+      <Stack gap="3">
         <Skeleton width="60%" />
         <Skeleton width="90%" />
         <Skeleton width="75%" />
-      </div>
+      </Stack>
     );
   }
   if (rollupQuery.isError) {
@@ -526,13 +521,13 @@ function HierarchyRollupPanel({ companyId }: Readonly<{ companyId: string }>) {
           </div>
         </dl>
         {rollup.restricted_excluded.length > 0 && (
-          <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
+          <p className="t-caption co-rollup-note">
             {t("rollup.excluded", {
               count: formatNumber(rollup.restricted_excluded.length, locale),
             })}
           </p>
         )}
-        <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
+        <p className="t-caption co-rollup-note">
           {t("rollup.computedAt", {
             when: formatDateTime(rollup.computed_at, locale, recordZone),
           })}

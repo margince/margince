@@ -26,6 +26,7 @@ import {
   useRecordRoles,
   useUpdateRecordAssignment,
 } from "./recordassignments.queries";
+import "./common.css";
 
 const SUBJECT_KINDS: readonly AssignmentSubjectKind[] = ["user", "team"];
 
@@ -166,12 +167,7 @@ export function RecordTeamAssign({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
         {existing ? t("assignments.changeTitle") : t("assignments.addTitle")}
       </Heading>
       <div className="form-stack">

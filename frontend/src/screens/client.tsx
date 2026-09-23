@@ -11,8 +11,10 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { Row } from "../design-system/stack";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
+import "./client.css";
 
 // Client surfaces (B-EP09.13a): the rail-less extension chrome — the fixed
 // dark "Back to Margince" bar, a sender lookup that renders a mini-360 for a
@@ -66,30 +68,23 @@ export function ClientSurfaceScreen() {
         </div>
 
         {lookup.isSuccess && lookup.data.length > 0 && (
-          <Card style={{ marginTop: "var(--space-3)" }}>
+          <Card className="clientsurface-answer">
             {lookup.data.map((hit) => (
-              <div
-                key={hit.id}
-                style={{
-                  display: "flex",
-                  gap: "var(--space-2)",
-                  alignItems: "center",
-                }}
-              >
+              <Row key={hit.id} gap="2" wrap={false}>
                 <strong>{hit.title}</strong>
                 {hit.snippet && (
                   <span className="t-caption">{hit.snippet}</span>
                 )}
                 <a href={`#/contacts/${hit.id}`}>{t("client.open360")}</a>
-              </div>
+              </Row>
             ))}
           </Card>
         )}
 
         {lookup.isSuccess && lookup.data.length === 0 && (
-          <Card inset style={{ marginTop: "var(--space-3)" }}>
+          <Card inset className="clientsurface-answer">
             <p>{t("client.unknown")}</p>
-            <p style={{ marginTop: "var(--space-1)" }}>
+            <p className="clientsurface-unknown-detail">
               {t("client.unknownDetail")}
             </p>
             <div className="card-actions">

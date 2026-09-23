@@ -31,6 +31,7 @@ import { RecordEmailVerb } from "../recordemail";
 import { ShareAction } from "../share";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
+import "./deal360.css";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -131,14 +132,7 @@ function ReopenAction({
         <p className="t-sub" id="reopen-title">
           {t("deal.reopenPick")}
         </p>
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            flexWrap: "wrap",
-            margin: "var(--space-3) 0",
-          }}
-        >
+        <div className="d360-reopen-stages">
           {openStages.map((s) => (
             <Button
               key={s.id}

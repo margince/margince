@@ -59,6 +59,7 @@ import { RecordTabs } from "../design-system/recordtabs";
 import { useRecordTimeline } from "../design-system/recordtimeline";
 import { RecordView } from "../design-system/recordview";
 import { Select } from "../design-system/select";
+import { Row } from "../design-system/stack";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
 import { middayInstant } from "../format/calendarday";
@@ -2646,13 +2647,7 @@ function DealApprovals({
       <PanelBody className="form-stack">
         {approvals.map((approval) => (
           <div key={approval.id} className="staging-card">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-              }}
-            >
+            <Row gap="2" wrap={false}>
               <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
               {/* The same two facts the approvals inbox states, said the same
                 way. Printed off the wire they read `advance_deal` and
@@ -2664,7 +2659,7 @@ function DealApprovals({
               <ProvenanceTag
                 provenance={provenanceOf(approval.proposed_by, viewerId)}
               />
-            </div>
+            </Row>
             <ActionRow
               className="approval-gate"
               primary={

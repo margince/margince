@@ -35,6 +35,8 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ProblemError, problemExistingId, problemMessageOf } from "./common";
 import { RepeatableRowsField } from "./repeatablerowsfield";
+import "./create.css";
+import "./common.css";
 
 // The shared create-record form (contacts, companies, leads, deals): each
 // list screen declares its fields; the transport (which endpoint, how values
@@ -698,7 +700,7 @@ export function RecordFormBody({
       {existing && resolveExisting && (
         <Button
           type="button"
-          style={{ alignSelf: "flex-start" }}
+          className="create-view-existing"
           onClick={() => navigate(resolveExisting(existing.code, existing.id))}
         >
           {t("dedupe.viewExisting")}
@@ -799,12 +801,7 @@ export function CreateRecordModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
         {title}
       </Heading>
       <RecordFormBody

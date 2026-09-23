@@ -14,6 +14,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Row } from "../design-system/stack";
 import { SurfaceState } from "../design-system/surfacestate";
 import { localDateTimeValue } from "../format/calendarday";
 import {
@@ -33,6 +34,7 @@ import {
   WriteRefused,
 } from "./common";
 import { scheduleFields } from "./compose";
+import "./scheduledsends.css";
 import { QueueSkewNotice } from "./scheduledsends.notices";
 import { SendPermission } from "./sendpermission";
 import { useSendPermission } from "./usesendpermission";
@@ -265,7 +267,7 @@ function MoveControl({
         aria-label={t("sched.moveTo", { subject: send.subject })}
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
-        style={{ maxWidth: 220 }}
+        className="scheduledsends-move"
       />
       <Button
         variant="primary"
@@ -323,16 +325,9 @@ function SendRow({
     enabled: actionable,
   });
   return (
-    <Card as="div" style={{ marginBottom: "var(--space-2)" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          flexWrap: "wrap",
-        }}
-      >
-        <span style={{ flex: 1, minWidth: "12rem" }}>
+    <Card as="div" className="scheduledsends-send">
+      <Row gap="2">
+        <span className="scheduledsends-summary">
           <strong>{send.subject}</strong>
           <span className="t-caption"> · {recipientLine(send, t, locale)}</span>
           <br />
@@ -349,14 +344,14 @@ function SendRow({
             {t("sched.withdraw")}
           </Button>
         )}
-      </div>
+      </Row>
       {/* A held message says WHY on the row rather than in a tooltip: it is the
           only thing that tells the rep whether to move it or to give up on it,
           and a reason a rep has to hover for is a reason they do not read. An
           unmapped token prints nothing rather than the token — a reason nobody
           can act on is worse than the sentence above it standing alone. */}
       {heldReasonKey && (
-        <p style={{ marginTop: "var(--space-1)" }}>{t(heldReasonKey)}</p>
+        <p className="scheduledsends-held">{t(heldReasonKey)}</p>
       )}
       {/* The held reason above says a gate stopped it; this says WHOSE decision
           that was and whether anybody may change it, in the same words the
