@@ -307,12 +307,27 @@ func (s *PendingStore) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activit
 	if len(activityIDs) == 0 {
 		return nil
 	}
-	if _, err := tx.Exec(ctx, `
+	// How many of these records name an original, asked BEFORE the delete: it
+	// is the only number the delete can be checked against. A correlation that
+	// matches nothing is indistinguishable from a batch with nothing to destroy
+	// unless somebody counted, and that indistinguishability is what let a whole
+	// capture lane keep its provider originals while the pass reported success.
+	var named int64
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FROM activity
+		 WHERE id = ANY($1) AND raw_capture_id IS NOT NULL`, activityIDs).Scan(&named); err != nil {
+		return fmt.Errorf("capture: counting the originals behind the redacted records: %w", err)
+	}
+	tag, err := tx.Exec(ctx, `
 		DELETE FROM raw_capture r
 		 USING activity a
-		 WHERE a.id = ANY($1)
-		   AND r.source_system = a.source_system AND r.source_id = a.source_id`, activityIDs); err != nil {
+		 WHERE a.id = ANY($1) AND r.id = a.raw_capture_id`, activityIDs)
+	if err != nil {
 		return fmt.Errorf("capture: purging the redacted mail's provider originals: %w", err)
+	}
+	if tag.RowsAffected() != named {
+		return fmt.Errorf("capture: %d record(s) name a provider original and %d were destroyed; "+
+			"the rest would survive the erasure of the message they hold", named, tag.RowsAffected())
 	}
 	return nil
 }

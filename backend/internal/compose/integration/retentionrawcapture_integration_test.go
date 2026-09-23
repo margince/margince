@@ -8,11 +8,17 @@ package integration
 // The retention sweep's activity/erase destroys the message, not one copy of it.
 //
 // Clearing activity.body while raw_capture kept the verbatim provider payload
-// erased nothing: the two are joined on (source_system, source_id), which the
+// erased nothing: the two are correlated by activity.raw_capture_id, which the
 // erase deliberately preserves so the record of the message survives, and
 // privacy/sar.go exports raw_capture by email match. An Art. 15 package
 // therefore handed back the full original of a message whose retention window
 // had closed years earlier.
+//
+// The reference, not a shared key: a mail capture's raw_capture row happens to
+// carry the activity's own (source_system, source_id), but a channel poll's
+// raw_capture row is keyed on its own redelivery counter instead — so a purge
+// correlating by that pair destroyed every mail original and silently left
+// every channel one standing, joined to nothing the erase could find.
 //
 // This is the ACTIVITY-driven path, and it stays the only one that answers an
 // erase of the record: the `raw_capture` scope beside it ages an original on its
@@ -26,52 +32,49 @@ package integration
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 	e := Setup(t)
-	activity := ids.NewV7()
-	const sourceSystem, sourceID = "gmail", "msg-aged-out"
+	const sourceSystem, sourceID = connector.EmailSourceSystem, "msg-aged-out"
 
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		ctx := context.Background()
-		if _, err := tx.Exec(ctx, `
+		_, err := tx.Exec(context.Background(), `
 			INSERT INTO retention_policy (object_type, category, retain_days, action)
-			VALUES ('activity', NULL, 100, 'erase')`); err != nil {
-			return err
-		}
-		// The activity and its original, joined the way capture writes them:
-		// storeRawCapture keys on the message's natural key, and the activity
-		// carries the same pair.
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by, source_system, source_id)
-			VALUES ($1, 'email', 'Quarterly figures', 'the numbers themselves',
-			        now() - interval '400 days', 'capture', 'connector:t', $2, $3)`,
-			activity, sourceSystem, sourceID); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO raw_capture (source_system, source_id, payload)
-			VALUES ($1, $2, $3)`,
-			sourceSystem, sourceID, []byte(`{"subject":"Quarterly figures","body":"the numbers themselves"}`)); err != nil {
-			return err
-		}
-		// Provenance for the body about to be erased: without the delete it
-		// goes on naming who captured the text and from where, and it is
-		// SAR-exported.
-		_, err := tx.Exec(ctx, `
+			VALUES ('activity', NULL, 100, 'erase')`)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the retention policy: %v", err)
+	}
+
+	// The activity and its original, seeded through the Sink every mail
+	// connector shares — linked by raw_capture_id rather than by the natural
+	// key an erase deliberately keeps.
+	activity := seedMailOriginal(t, e, sourceID, time.Now().Add(-400*24*time.Hour))
+
+	// Provenance for the body about to be erased: without the delete it
+	// goes on naming who captured the text and from where, and it is
+	// SAR-exported.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
 			INSERT INTO field_provenance (object_type, object_id, field_name, source, captured_by)
-			VALUES ('activity', $1, 'body', 'capture', 'connector:t')`, activity)
+			VALUES ('activity', $1, 'body', 'capture', 'connector:test')`, activity)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the aged-out message: %v", err)
@@ -127,6 +130,40 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 	}
 }
 
+// TestTheSweepDestroysAChannelOriginalToo is the sibling defect the mail-keyed
+// join above could never surface: a channel poll's raw_capture row never
+// shares the activity's natural key, so a purge correlating on that pair
+// leaves it standing.
+func TestTheSweepDestroysAChannelOriginalToo(t *testing.T) {
+	e := Setup(t)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO retention_policy (object_type, category, retain_days, action)
+			VALUES ('activity', NULL, 100, 'erase')`)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the retention policy: %v", err)
+	}
+
+	seedTelegramOriginal(t, e, 5150, time.Now().Add(-400*24*time.Hour))
+
+	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+		t.Fatalf("running the retention sweep: %v", err)
+	}
+
+	var survivors int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM raw_capture WHERE source_system = $1`, capture.ProviderTelegram).Scan(&survivors)
+	}); err != nil {
+		t.Fatalf("counting the originals: %v", err)
+	}
+	if survivors != 0 {
+		t.Fatalf("%d channel original(s) survived the sweep that destroyed the message they hold", survivors)
+	}
+}
+
 // TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything holds the half of the
 // fix a passing sweep cannot show. The constructor is what stops a purger-less
 // service being built; this is what happens if one is anyway, and the two things
@@ -143,20 +180,14 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 func TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything(t *testing.T) {
 	e := Setup(t)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		ctx := context.Background()
-		if _, err := tx.Exec(ctx, `
+		_, err := tx.Exec(context.Background(), `
 			INSERT INTO retention_policy (object_type, category, retain_days, action)
-			VALUES ('activity', NULL, 100, 'erase')`); err != nil {
-			return err
-		}
-		_, err := tx.Exec(ctx, `
-			INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by)
-			VALUES ('email', 'Quarterly figures', 'the numbers themselves',
-			        now() - interval '400 days', 'capture', 'connector:t')`)
+			VALUES ('activity', NULL, 100, 'erase')`)
 		return err
 	}); err != nil {
-		t.Fatalf("seeding the aged-out message: %v", err)
+		t.Fatalf("seeding the retention policy: %v", err)
 	}
+	seedMailOriginal(t, e, "msg-purgerless", time.Now().Add(-400*24*time.Hour))
 
 	// nil, spelled out: the argument the constructor now demands, supplied as
 	// the value compose never passes.
@@ -178,4 +209,165 @@ func TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything(t *testing.T) {
 		t.Error("the refused pass had already erased the activity's body — a pass that cannot finish " +
 			"must destroy nothing, or it leaves the installation half-swept with no record of where it stopped")
 	}
+}
+
+// TestThePurgeRefusesWhenAnOriginalWouldSurvive holds the state the FK alone
+// keeps unreachable in production (ON DELETE SET NULL clears the reference the
+// instant its row goes) but that a future migration or a hand run could still
+// produce: a reference standing over nothing. The constraint is dropped here
+// for exactly that reason — to reach the case the count-then-compare exists for
+// rather than the case the schema already prevents.
+func TestThePurgeRefusesWhenAnOriginalWouldSurvive(t *testing.T) {
+	e := Setup(t)
+	activity := seedMailOriginal(t, e, "msg-orphaned-reference", time.Now())
+
+	owner := OwnerConn(t)
+	if _, err := owner.Exec(context.Background(),
+		`ALTER TABLE activity DROP CONSTRAINT activity_raw_capture_id_fkey`); err != nil {
+		t.Fatalf("dropping the reference's constraint: %v", err)
+	}
+	t.Cleanup(func() {
+		ctx := context.Background()
+		// The dangling reference this test deliberately left has to clear
+		// before the constraint returns: ADD CONSTRAINT validates against the
+		// data already there, and this row is the one the schema is about to
+		// start refusing again.
+		if _, err := owner.Exec(ctx, `UPDATE activity SET raw_capture_id = NULL WHERE id = $1`, activity); err != nil {
+			t.Errorf("clearing the dangling reference: %v", err)
+			return
+		}
+		if _, err := owner.Exec(ctx, `
+			ALTER TABLE activity ADD CONSTRAINT activity_raw_capture_id_fkey
+			FOREIGN KEY (raw_capture_id) REFERENCES raw_capture (id) ON DELETE SET NULL`); err != nil {
+			t.Errorf("restoring the reference's constraint: %v", err)
+		}
+	})
+
+	// The reference stands and the row it names is gone: the exact state a
+	// correlation that silently matches nothing would report success over.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `DELETE FROM raw_capture`)
+		return err
+	}); err != nil {
+		t.Fatalf("orphaning the reference: %v", err)
+	}
+
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return capture.NewPendingStore(e.DB()).PurgeRawCaptureTx(context.Background(), tx, []ids.UUID{activity})
+	})
+	if err == nil {
+		t.Fatal("the purge reported success over a record whose original it did not destroy")
+	}
+}
+
+// seedMailOriginal captures one mail-shaped record through the ONE guarded
+// Sink every mail connector shares (capture.Sink.Upsert), rather than a literal
+// INSERT that could not reproduce the invariant these tests hold the purge to:
+// the activity's raw_capture_id is whatever the Sink itself settled on.
+//
+// The Counterparty is left empty on purpose: the ladder that decides whether to
+// auto-create a contact then names nobody and decides nothing, which is what
+// lets a bare Sink run here with no counterparty ensurer wired — these tests
+// are about the purge, not about who a message is with.
+func seedMailOriginal(t *testing.T, e *Env, sourceID string, occurredAt time.Time) ids.UUID {
+	t.Helper()
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalConnector, ID: "connector:test",
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"activity": {Create: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+
+	ref, err := capture.NewSink(e.DB()).Upsert(ctx, connector.NormalizedRecord{
+		EntityType: "activity",
+		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: sourceID},
+		Fields: capture.ActivityFields{
+			Kind: "email", Subject: "Quarterly figures", Body: "the numbers themselves",
+			OccurredAt: occurredAt, Direction: connector.DirectionInbound,
+		},
+		Source:     "imap:" + sourceID,
+		CapturedBy: "connector:test",
+		Raw:        []byte(`{"subject":"Quarterly figures","body":"the numbers themselves"}`),
+	})
+	if err != nil {
+		t.Fatalf("seeding the captured mail: %v", err)
+	}
+	return ref.ID
+}
+
+// seedTelegramOriginal captures one channel message the way the real poll and
+// ingest worker do: InsertRawCaptureTx stores the poll's own copy under the
+// per-update redelivery key, and Normalize+Sink.Upsert then names that row by
+// reference — never by the chat-and-message key the activity itself carries,
+// which is the pair a redelivered poll can share across two different bots'
+// conversations and a purge must therefore never key on.
+//
+// The channel ensurer is left unwired, like seedMailOriginal's counterparty:
+// with none set, decideChannelCounterparty declines to create a contact
+// instead of dereferencing one, so a bare Sink is enough here too.
+func seedTelegramOriginal(t *testing.T, e *Env, updateID int64, occurredAt time.Time) ids.UUID {
+	t.Helper()
+	const botID = "bot-test"
+	update := telegramUpdateJSON(updateID, 9002, 12, 9001, occurredAt, "the numbers themselves")
+
+	var rawID ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var err error
+		rawID, err = capture.InsertRawCaptureTx(context.Background(), tx, capture.RawRecord{
+			SourceSystem: capture.ProviderTelegram,
+			SourceID:     fmt.Sprintf("update:%d", updateID),
+			Payload:      update,
+		})
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the channel poll's own original: %v", err)
+	}
+
+	env, err := telegram.BuildRawEnvelope(botID, update)
+	if err != nil {
+		t.Fatalf("building the normalize envelope: %v", err)
+	}
+	records, err := telegram.Normalize(context.Background(), env)
+	if err != nil {
+		t.Fatalf("normalizing the update: %v", err)
+	}
+	rec := records[0]
+	rec.RawCaptureID = rawID
+	fields, ok := rec.Fields.(telegram.ActivityFields)
+	if !ok {
+		t.Fatalf("normalized record carries %T, want telegram.ActivityFields", rec.Fields)
+	}
+	rec.Fields = capture.ActivityFields{
+		Kind: fields.Kind, ChannelProvider: fields.ChannelProvider,
+		Body: fields.Body, OccurredAt: fields.OccurredAt, Direction: fields.Direction,
+	}
+
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalConnector, ID: telegram.CapturedByTelegram,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"activity": {Create: true}, "contact": {Create: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	ref, err := capture.NewSink(e.DB()).Upsert(ctx, rec)
+	if err != nil {
+		t.Fatalf("capturing the channel message: %v", err)
+	}
+	return ref.ID
+}
+
+// telegramUpdateJSON renders one Telegram private-chat message update, verbatim
+// enough for telegram.BuildRawEnvelope and telegram.Normalize to read: the
+// package's own decoder types are unexported, so a test outside it builds the
+// bytes those functions accept rather than the struct they never expose.
+func telegramUpdateJSON(updateID, chatID, messageID, senderID int64, occurredAt time.Time, text string) []byte {
+	return []byte(fmt.Sprintf(
+		`{"update_id":%d,"message":{"message_id":%d,"date":%d,"text":%q,`+
+			`"chat":{"id":%d,"type":"private"},"from":{"id":%d,"username":"customer"}}}`,
+		updateID, messageID, occurredAt.Unix(), text, chatID, senderID))
 }

@@ -137,7 +137,16 @@ func (w *participantBackfillWorker) backfillWorkspace(ctx context.Context, ws id
 	// And after that, because the names it recovers are what a stale display
 	// name is refreshed from.
 	shown, err := w.refreshDisplayNamesWorkspace(wsCtx)
-	return total + replayed + repaired + closed + named + shown, err
+	if err != nil {
+		return total + replayed + repaired + closed + named + shown, err
+	}
+	// The reference every purge, export and retention selector now follows in
+	// place of a reconstructed correlation. Independent of every pass above it —
+	// it reads no participant, name or meeting status, only source_system and
+	// source_id against raw_capture — so its position in this sequence is not
+	// load-bearing.
+	linked, err := w.backfillRawCaptureLinksWorkspace(wsCtx)
+	return total + replayed + repaired + closed + named + shown + linked, err
 }
 
 // backfillMeetingRSVPWorkspace closes the meetings whose stored original says
@@ -149,6 +158,26 @@ func (w *participantBackfillWorker) backfillMeetingRSVPWorkspace(wsCtx context.C
 	total := 0
 	for i := 0; i < participantBackfillBatchesPerTick; i++ {
 		n, err := backfillMeetingRSVPBatch(wsCtx, w.pool, meetingRSVPBackfillPerTick, w.log)
+		if err != nil {
+			return total, err
+		}
+		if n == 0 {
+			return total, nil
+		}
+		total += n
+	}
+	return total, nil
+}
+
+// backfillRawCaptureLinksWorkspace names the original behind every activity
+// captured before it could hold a durable reference to it.
+//
+// Same drain shape as the passes around it: it stops the moment a batch links
+// nothing, so a workspace with none left costs one probe a tick.
+func (w *participantBackfillWorker) backfillRawCaptureLinksWorkspace(wsCtx context.Context) (int, error) {
+	total := 0
+	for i := 0; i < participantBackfillBatchesPerTick; i++ {
+		n, err := backfillRawCaptureLinksBatch(wsCtx, w.pool, rawCaptureLinkBackfillPerTick, w.log)
 		if err != nil {
 			return total, err
 		}
