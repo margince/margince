@@ -225,10 +225,33 @@ func TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead(t *testing.T) {
 // statement anywhere outside `internal`. Without it, a reader placed in cmd/,
 // pkg/ or an extension unit would not fail this census — it would be one this
 // census never reads, and it would go on answering PASS.
+//
+// And it reads a mask's PRESENCE rather than its placement: a declaration
+// rendering one somewhere in its body reads as gated even where the aggregate
+// beside it folds the raw column. Telling those apart needs a statement's shape
+// and not its text, so what holds it is an integration test per surface —
+// company360's deals band and the project header each have one.
+//
+// The compound subject also wants both halves in ONE declaration, and the deal's
+// own single read splits them: deals/deal_singleread.go names every column in
+// the `dealColumns` var and the table in readDeal's own literal, so neither
+// declaration is a site and the file is not in this census. The deal read and
+// the deal list are covered instead by deals/fieldmask.go — auth.ApplyFieldMasks
+// over dealWithholds, at the wire boundary rather than in the statement — which
+// is a whole-record pass with its own tests. So inMaskOwner below says the
+// module is reachable, not that its most direct reads are the ones reached.
 
 var dealTableRead = gatekit.TableReadPattern("deal")
 
-// maskOwner is the module that OWNS the deal object and the mask.
+// maskOwner is the module that OWNS the deal object and the mask, and the one
+// place this census may not stop reaching.
+//
+// It was exempt WHOLESALE once, on the reading that the owner of a mask applies
+// it. What that bought was a project-header total summing every deal filed
+// under a project with no mask on it at all — an aggregate the census could not
+// see because of where it lived, while every sibling total outside the module
+// was guarded. Owning the mask is the reason to read the module closely, not a
+// reason to skip it: this is where a statement reaches the column most directly.
 const maskOwner = "internal/modules/deals/"
 
 // The seeds are LISTED rather than derived from platform/auth's Mask* surface,
@@ -262,10 +285,27 @@ var lifecycleMaskedAmountReads = gatekit.Waive(map[string]string{
 	"internal/modules/privacy/sarsections.go:sarRecordSections": "the deal rows AS the Art. 15 export: what the installation holds about the data subject, assembled under the system principal on a request a human already authorised. A field mask narrows what a COLLEAGUE may read about a record; applying one here would make the subject's own answer incomplete, which is the defect the export exists to prevent",
 })
 
-// calleeGatedMaskedAmountReads: the statement carries the mask, but the
-// spelling that applies it is bound elsewhere.
+// calleeGatedMaskedAmountReads: the declaration's own body holds no mask
+// spelling, and what applies it sits elsewhere — bound into the statement after
+// this file hands it over, or run across the rows once they are read.
 var calleeGatedMaskedAmountReads = gatekit.Waive(map[string]string{
-	"internal/compose/reportprojects.go": "the project report's won-deal money total. It sums d.amount_minor_base under a FILTER on reportDealMaskToken, which reportsql.go binds from auth.MaskExcludedClause beside the row-scope token next to it — so the statement here is a template and the mask is resolved at bind time. The engine's own mask pass cannot cover this one: it asks the masks on the SPEC's entity, and the spec is projects while the sum is over deals",
+	"internal/compose/reportprojects.go":            "the project report's won-deal money total. It sums d.amount_minor_base under a FILTER on reportDealMaskToken, which reportsql.go binds from auth.MaskExcludedClause beside the row-scope token next to it — so the statement here is a template and the mask is resolved at bind time. The engine's own mask pass cannot cover this one: it asks the masks on the SPEC's entity, and the spec is projects while the sum is over deals",
+	"internal/modules/deals/dealfigures.go:Figures": "the Worklist's batched card read. It selects d.amount_minor bare and maskFigures, the declaration above it in the same file, withholds the figure afterwards in Go — auth.MaskedFields over auth.WritableSubset — because a card carries no masked_fields list for a rendered NULL to explain itself in. The mask is a whole-row decision here rather than a rendering, which is the one shape this census reads as ungated",
+})
+
+// writePreimageMaskedAmountReads: the statement reads the deal's own figures
+// inside a WRITE — for the patch's pre-image, or for the decision whether to
+// assign the column at all — rather than to answer a reader.
+//
+// The verdict is about the STATEMENT and reaches no further. What each of these
+// records lands in an audit image, and whether a trail serving that image
+// withholds the right columns is that trail's own read to answer; this register
+// does not vouch for it, and a reason here that claimed to would be a mitigation
+// nobody can check from the statement it is written beside.
+var writePreimageMaskedAmountReads = gatekit.Waive(map[string]string{
+	"internal/modules/deals/basecurrencyfreezewrite.go:frozenBaseBefore": "the frozen base amount a re-price or a reopen is about to overwrite. amount_minor_base is an internal column on no contract, so the writer has no pre-image to hand over and reads the row for one; recording nil instead would write \"there was no converted amount\" into the audit diff of every reopen, which is the row a reversal reads to put the old figure back",
+	"internal/modules/deals/forecasthistory.go:recordForecastMovement":   "INSERT INTO deal_forecast_history … SELECT FROM deal: the deal's state copied into its forecast trail, in the write's own transaction and after the patch landed. The statement answers a row count and no figure. Nothing in this tree READS that table yet, so the obligation belongs to whoever writes the first such read rather than to somebody who has already met it",
+	"internal/modules/deals/offer_dealsync.go:syncDealAmountFromOffer":   "the deal's current price under a row lock, so an accepted offer's gross can be compared against it and the audit diff can name what it replaced. The comparison is what keeps an accept re-pricing at the figure already held out of the forecast trail. The pre-image it reads reaches only that diff: the money the function returns in p.After() is the offer's own gross, which its caller supplied",
 })
 
 // ruledMaskedAmountReads: a read the product has ruled may print the figure
@@ -295,6 +335,7 @@ var maskVerdicts = []namedVerdict{
 	{"predicate", predicateMaskedAmountReads},
 	{"lifecycle", lifecycleMaskedAmountReads},
 	{"callee-gated", calleeGatedMaskedAmountReads},
+	{"write-preimage", writePreimageMaskedAmountReads},
 	{"not-the-amount", notTheDealAmount},
 	{"ruled", ruledMaskedAmountReads},
 	{"deferred", deferredMaskedAmountReads},
@@ -335,7 +376,7 @@ func maskedAmountScope(columns *regexp.Regexp, builders map[string]bool) gatekit
 // constants, and a literal-level test would stop seeing a read the moment
 // somebody moved its FROM clause into a fragment.
 func readsADealAmount(filePath string, file *ast.File, columns *regexp.Regexp, builders map[string]bool) bool {
-	if strings.HasPrefix(filePath, maskOwner) || strings.HasSuffix(filePath, "_gen.go") {
+	if strings.HasSuffix(filePath, "_gen.go") {
 		return false
 	}
 	for _, decl := range file.Decls {
@@ -538,9 +579,12 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	gated := maskGate.gatedFunctionsByPackage(t, files)
 	consts := constantTable{}
 
-	var satisfied int
+	var satisfied, inMaskOwner int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
+		if strings.HasPrefix(parsed.Path, maskOwner) {
+			inMaskOwner++
+		}
 		for _, decl := range parsed.File.Decls {
 			reads := dealAmountReadsIn(decl, columns, builders)
 			if len(reads) == 0 {
@@ -587,7 +631,8 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 					"  Either render the column through auth.MaskedColumnSQL, filter the rows with "+
 					"auth.MaskExcludedClause, or declare it in predicateMaskedAmountReads / "+
 					"lifecycleMaskedAmountReads / calleeGatedMaskedAmountReads / "+
-					"ruledMaskedAmountReads with the reason it needs neither.\n"+
+					"writePreimageMaskedAmountReads / ruledMaskedAmountReads with the reason "+
+					"it needs neither.\n"+
 					"  The read: %s", subject, gatekit.FirstLineOf(reads[0].SQL))
 			}
 		}
@@ -597,14 +642,22 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 			"stopped recognising this tree's SQL would report exactly this, and it reads the same "+
 			"as a tree where every figure is guarded", satisfied, wantMinimumMaskedAmountSites)
 	}
-	t.Logf("deal-amount reads: %d masked, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED",
-		satisfied, len(predicateMaskedAmountReads.Subjects()), len(lifecycleMaskedAmountReads.Subjects()),
-		len(calleeGatedMaskedAmountReads.Subjects()), len(ruledMaskedAmountReads.Subjects()),
-		len(deferredMaskedAmountReads.Subjects()))
+	if inMaskOwner == 0 {
+		t.Errorf("no file under %s is in this census, though the module owns the deal, the column "+
+			"and the mask. That module was exempt wholesale once and an unguarded project-header "+
+			"total lived inside it the whole time: a subject that stops reaching the owner sweeps "+
+			"a smaller tree and reports PASS with nothing left to notice", maskOwner)
+	}
+	t.Logf("deal-amount reads: %d masked (%d files in the mask owner), %d predicate, %d lifecycle, "+
+		"%d callee-gated, %d write-preimage, %d ruled, %d DEFERRED",
+		satisfied, inMaskOwner, len(predicateMaskedAmountReads.Subjects()), len(lifecycleMaskedAmountReads.Subjects()),
+		len(calleeGatedMaskedAmountReads.Subjects()), len(writePreimageMaskedAmountReads.Subjects()),
+		len(ruledMaskedAmountReads.Subjects()), len(deferredMaskedAmountReads.Subjects()))
 
 	predicateMaskedAmountReads.AssertAllMatched(t)
 	lifecycleMaskedAmountReads.AssertAllMatched(t)
 	calleeGatedMaskedAmountReads.AssertAllMatched(t)
+	writePreimageMaskedAmountReads.AssertAllMatched(t)
 	notTheDealAmount.AssertAllMatched(t)
 	ruledMaskedAmountReads.AssertAllMatched(t)
 	deferredMaskedAmountReads.AssertAllMatched(t)
