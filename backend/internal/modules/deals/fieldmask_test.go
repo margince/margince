@@ -80,6 +80,8 @@ func TestAWithheldPartnerNullsItsOwnColumnAlone(t *testing.T) {
 
 // maskFilterOperands is one operand per filter these cases narrow by, so each
 // narrows by something real rather than by a zero value.
+//
+// gatekit:fixture the value each filter narrows by — test input, not a cost.
 var maskFilterOperands = map[string]string{
 	filterCompanyID:          ids.NewV7().String(),
 	filterProjectID:          ids.NewV7().String(),
