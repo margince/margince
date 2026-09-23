@@ -165,13 +165,21 @@ func (w *telegramIngestWorker) Work(ctx context.Context, job *river.Job[Telegram
 		return jobs.FaultContext(ctx, fmt.Errorf("telegram_ingest: normalizing: %w", err))
 	}
 
-	return jobs.FaultContext(ctx, w.captureRecords(actorCtx, records))
+	return jobs.FaultContext(ctx, w.captureRecords(actorCtx, rawID, records))
 }
 
 // captureRecords hands every normalized record to the one guarded Sink,
 // translating the Fields type on the way.
-func (w *telegramIngestWorker) captureRecords(actorCtx context.Context, records []connector.NormalizedRecord) error {
+func (w *telegramIngestWorker) captureRecords(actorCtx context.Context, rawID ids.UUID, records []connector.NormalizedRecord) error {
 	for _, rec := range records {
+		// The poll persisted this update before the parse was enqueued, so the
+		// original already has an id and the sink has nothing to store: the
+		// record carries no Raw. Naming it here is what lets the activity point
+		// back at it, because the two rows' source_id columns never agree —
+		// the poll keys on the redelivery counter, the record on the chat and
+		// message.
+		rec.RawCaptureID = rawID
+
 		// Normalize returns its own package-local mirror of
 		// capture.ActivityFields (normalize.go explains why: capture already
 		// imports capture/telegram, so the reverse import would cycle). This

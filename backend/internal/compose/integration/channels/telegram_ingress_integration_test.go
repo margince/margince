@@ -85,6 +85,25 @@ func (c *telegramEnv) telegramActivities(t *testing.T, u telegramUpdate) int {
 		`SELECT count(*) FROM activity WHERE source_system = 'telegram' AND source_id = $1`, u.naturalKey())
 }
 
+// rawCaptureIDOfActivity reads back the raw_capture reference a captured
+// message settled on. The two tables' source_id columns never agree for
+// Telegram — the poll keys on the redelivery counter, the activity on the
+// chat and message — so this reference is the only thing that still
+// correlates a captured message to the row the poll stored it under.
+func (c *telegramEnv) rawCaptureIDOfActivity(t *testing.T, u telegramUpdate) string {
+	t.Helper()
+	var id string
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT coalesce(raw_capture_id::text, '') FROM activity
+			  WHERE source_system = 'telegram' AND source_id = $1`, u.naturalKey()).
+			Scan(&id)
+	}); err != nil {
+		t.Fatalf("reading back the raw_capture reference for %s: %v", u.naturalKey(), err)
+	}
+	return id
+}
+
 // channelIdentities counts the live bindings for one Telegram account.
 func (c *telegramEnv) channelIdentities(t *testing.T, u telegramUpdate) int {
 	t.Helper()
@@ -454,5 +473,52 @@ func TestOneInboundMessageLeavesOneRawEvidenceRowAndIsExportedOnce(t *testing.T)
 	}
 	if len(pkg.RawCapture) != 1 {
 		t.Errorf("the subject's SAR carries %d raw captures for their one message, want 1", len(pkg.RawCapture))
+	}
+}
+
+// TestATelegramMessageNamesTheOriginalThePollStored proves the activity a
+// Telegram message became points back at the raw row the poll persisted it
+// under, even though the two rows' source_id columns spell different keys
+// (the poll's redelivery counter vs. the activity's chat-and-message key).
+func TestATelegramMessageNamesTheOriginalThePollStored(t *testing.T) {
+	c := setupTelegramConnected(t)
+	u := telegramUpdate{updateID: 6101, messageID: 61, senderID: 771001, username: "onename", firstName: "Ori", text: "the message itself"}
+
+	c.ingestOne(t, u, compose.JobRunnerConfig{})
+
+	if id := c.rawCaptureIDOfActivity(t, u); id == "" {
+		t.Fatal("the captured Telegram activity names no original; the poll's row and the activity " +
+			"carry different source_id spellings, so nothing correlates them but the reference")
+	}
+}
+
+// TestARedeliveredUpdateKeepsTheSameOriginal is the case the two tables'
+// opposing conflict rules make possible: the poll's ON CONFLICT DO UPDATE
+// refreshes the raw row under its existing id, and upsertActivity's ON
+// CONFLICT DO NOTHING returns the incumbent — so a second delivery of the
+// same update must leave the first delivery's reference standing, not null
+// it or point it at a different row.
+func TestARedeliveredUpdateKeepsTheSameOriginal(t *testing.T) {
+	c := setupTelegramConnected(t)
+	u := telegramUpdate{updateID: 6202, messageID: 62, senderID: 771102, username: "again", firstName: "Deux", text: "delivered twice"}
+
+	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
+	startTelegramWorker(t, runner)
+
+	c.arrive(t, sub, u)
+	awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
+	first := c.rawCaptureIDOfActivity(t, u)
+	if first == "" {
+		t.Fatal("the first delivery left no raw_capture reference on the activity")
+	}
+
+	// The cursor never advanced, so Telegram sends the identical batch again.
+	c.rewindPollCursor(t, 0)
+	c.api.hold(u.body(t))
+	c.pollNow(t, sub, u.updateID+1)
+	awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
+
+	if second := c.rawCaptureIDOfActivity(t, u); first != second {
+		t.Fatalf("a redelivery re-pointed the activity: %q became %q", first, second)
 	}
 }
