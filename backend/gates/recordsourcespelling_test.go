@@ -38,7 +38,10 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -396,5 +399,67 @@ func f() bool { m := map[string]any{}; return m["source"] == "manual" }`, false}
 				t.Errorf("the detector reported %v, want %v, for:\n%s\nfindings: %v", got, probe.want, probe.body, found)
 			}
 		})
+	}
+}
+
+// The TypeScript half. Nothing in this tree parses TypeScript, so a screen's
+// `source` property is read as text: a comment-stripped regex over one object
+// property, weaker than the AST walk above and the right direction to be
+// wrong in — the shape sought is one property, and a false positive here is
+// one edit away from silence, while a miss would ship a retired spelling into
+// a row.
+
+const frontendSourceTree = "../frontend/src"
+
+// tsRecordSource reads one `source: "<word>"` property out of a screen, in
+// either spelling an object literal admits — bare key or quoted. Quoted is
+// matched because a `"source": "ui"` written that way would otherwise parse
+// as nothing, and a site this scanner cannot see is a site this gate
+// silently agrees with.
+var tsRecordSource = regexp.MustCompile(`["']?\bsource\b["']?:\s*["']([a-z_]+)["']`)
+
+// tsCommentInScreens strips comments before the properties are read. Without
+// it, a line MENTIONING the retired spelling — and one screen carries a
+// comment explaining the convention — is reported as a write.
+var tsCommentInScreens = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
+
+// isFrontendSource reports whether a path is a screen this gate reads.
+// Stories and tests are read too: a story catalogues what we ship and a
+// fixture teaches the next author which word to type.
+func isFrontendSource(path string) bool {
+	return strings.HasSuffix(path, ".ts") || strings.HasSuffix(path, ".tsx")
+}
+
+func TestNoScreenSpellsARetiredRecordSource(t *testing.T) {
+	t.Parallel()
+	retired := provenance.RetiredRecordSourceSpellings()
+	walked := 0
+	err := filepath.WalkDir(frontendSourceTree, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || !isFrontendSource(path) {
+			return nil
+		}
+		walked++
+		text, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		stripped := tsCommentInScreens.ReplaceAllString(string(text), "")
+		for _, match := range tsRecordSource.FindAllStringSubmatch(stripped, -1) {
+			if slices.Contains(retired, match[1]) {
+				t.Errorf("%s: source is %q, and the one spelling is %q", path, match[1], provenance.RecordSourceManual)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walking %s: %v", frontendSourceTree, err)
+	}
+	// A walk that read nothing reports PASS over a moved tree, which is the
+	// one way a census must not fail.
+	if walked == 0 {
+		t.Fatalf("%s holds no source file, so this gate judged nothing", frontendSourceTree)
 	}
 }

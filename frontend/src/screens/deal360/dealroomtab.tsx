@@ -227,7 +227,7 @@ function OpenRoomCard({
   const create = useMutation({
     mutationFn: async (roomTitle: string) => {
       const { data, error } = await api.POST("/deal-rooms", {
-        body: { deal_id: dealId, title: roomTitle, source: "ui" },
+        body: { deal_id: dealId, title: roomTitle, source: "manual" },
       });
       if (error) {
         throwProblem(error, t);

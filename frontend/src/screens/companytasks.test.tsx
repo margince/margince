@@ -106,7 +106,7 @@ const company360WithOpenTask = {
 const RECOMMENDED = 'Agree the next step on "PIM rollout Phase 2"';
 const preparedStep = {
   subject: RECOMMENDED,
-  source: "ui",
+  source: "manual",
   links: [{ entity_type: "deal", entity_id: "d-1" }],
 };
 const company360WithRecommendedStep = {
