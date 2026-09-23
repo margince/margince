@@ -78,5 +78,8 @@ func requestFrom(body crmcontracts.DraftCompanyEmailJSONRequestBody) (Request, e
 	if body.Intent != nil {
 		req.Intent = *body.Intent
 	}
+	if body.RewriteOf != nil {
+		req.RewriteOf = *body.RewriteOf
+	}
 	return req, nil
 }

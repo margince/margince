@@ -424,11 +424,13 @@ async function draftFromContact({
   entityId,
   projectId,
   intent,
+  rewriteOf,
   t,
 }: Readonly<{
   entityId: string;
   projectId: string;
   intent: string;
+  rewriteOf: string;
   t: ReturnType<typeof useT>;
 }>): Promise<DraftResult> {
   const { data, error, response } = await api.POST(
@@ -438,6 +440,7 @@ async function draftFromContact({
       body: {
         ...(projectId ? { project_id: projectId } : {}),
         ...(intent.trim() ? { intent: intent.trim() } : {}),
+        ...(rewriteOf.trim() ? { rewrite_of: rewriteOf.trim() } : {}),
       },
     },
   );
@@ -470,6 +473,7 @@ async function draftFromAccount({
   dealId,
   projectId,
   intent,
+  rewriteOf,
   t,
 }: Readonly<{
   entityType: RelinkKind;
@@ -478,6 +482,10 @@ async function draftFromAccount({
   dealId: string;
   projectId: string;
   intent: string;
+  // What the composer is SHOWING. Without it "make it shorter" is a second
+  // grounded draft from the same record rather than a shorter version of this
+  // one, and the rep's edits go with it.
+  rewriteOf: string;
   t: ReturnType<typeof useT>;
 }>): Promise<DraftResult> {
   // A LEAD grounds its own. The record IS the recipient — the address is on it
@@ -494,7 +502,7 @@ async function draftFromAccount({
   // below and told the rep the model was not configured while making no request
   // at all, on a deployment answering every other AI call on the same screen.
   if (entityType === "contact") {
-    return draftFromContact({ entityId, projectId, intent, t });
+    return draftFromContact({ entityId, projectId, intent, rewriteOf, t });
   }
   // A company page has to be told which contact, because an account has many.
   // A deal grounds nothing here: writing to a contact from whatever account
@@ -515,6 +523,7 @@ async function draftFromAccount({
         // correspondence never reaches the model.
         ...(projectId ? { project_id: projectId } : {}),
         ...(intent.trim() ? { intent: intent.trim() } : {}),
+        ...(rewriteOf.trim() ? { rewrite_of: rewriteOf.trim() } : {}),
       },
     },
   );
@@ -1093,6 +1102,10 @@ function useDraftMutation({
       resetUnavailable();
       const { grounding, activityId, entityType } = ask;
       const intentOf = ask.instruction ?? ask.intent;
+      // The body on screen, when there is one. An `instruction` is the rewrite
+      // verb the composer offers over an existing draft; a first draft carries
+      // none and sends nothing to rewrite.
+      const rewriteOf = ask.instruction ? ask.body : "";
       // A reply answers the message it is anchored to; an account-started
       // message has none, so it is grounded in the account itself and needs
       // the recipient named first.
@@ -1104,6 +1117,7 @@ function useDraftMutation({
         entityId: ask.entityId,
         ...grounding,
         intent: intentOf,
+        rewriteOf,
         t,
       });
     },

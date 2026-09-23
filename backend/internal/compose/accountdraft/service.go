@@ -45,6 +45,8 @@ type Request struct {
 	// own facts are folded in; empty is the account in general.
 	ProjectID *ids.ProjectID
 	Intent    string
+	// RewriteOf is the draft the composer is showing; empty is a first draft.
+	RewriteOf string
 	// Envelope is the correspondence this draft opens: the language it must be
 	// written in, the current time, and who is writing it. Resolved by the
 	// service, never by the model.
