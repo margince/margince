@@ -47,7 +47,7 @@ func createContactWithTag(t *testing.T, e *apptest.AppEnv, name string, tagIDs .
 	t.Helper()
 	var contact integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"full_name": name, "source": "ui",
+		"full_name": name, "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating %q: status=%d body=%v", name, status, contact)
 	}
@@ -263,7 +263,7 @@ func TestUsageCountsOnlyTheAdvertisedRecordTypes(t *testing.T) {
 
 	var company integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/companies", integration.AnyMap{
-		"display_name": "A Company", "source": "ui",
+		"display_name": "A Company", "source": "manual",
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("creating the company: status=%d body=%v", status, company)
 	}

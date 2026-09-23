@@ -205,7 +205,7 @@ func createBareCompany(t *testing.T, e *apptest.AppEnv) string {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
-		"display_name": "Voltaq Systems GmbH", "source": "ui",
+		"display_name": "Voltaq Systems GmbH", "source": "manual",
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company = %d, want 201", status)
 	}

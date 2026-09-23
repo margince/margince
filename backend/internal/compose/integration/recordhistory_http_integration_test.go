@@ -75,7 +75,7 @@ func seedRecordHistoryHTTPFixture(t *testing.T, e *apptest.AppEnv, dbEnv *Env) r
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Record History Subject",
-		"source":    "ui",
+		"source":    "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}

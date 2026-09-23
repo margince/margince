@@ -16,13 +16,13 @@ import (
 func TestMultiselectPreservesChoicesAndRefusesStrandedValues(t *testing.T) {
 	e := schemaWiredEnv(t)
 	status, field, problem := createCustomField(t, e, integration.AnyMap{
-		"object": "company", "label": "Capabilities", "type": "multiselect", "options": []string{"Fit, scope", "C++", "Other"}, "source": "ui",
+		"object": "company", "label": "Capabilities", "type": "multiselect", "options": []string{"Fit, scope", "C++", "Other"}, "source": "manual",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create field: %d %v", status, problem)
 	}
 	choices := []any{"Fit, scope", "C++"}
-	created, id := createWithCF(t, e, "/v1/companies", integration.AnyMap{"display_name": "Multiple choices", "source": "ui", field.ColumnName: choices})
+	created, id := createWithCF(t, e, "/v1/companies", integration.AnyMap{"display_name": "Multiple choices", "source": "manual", field.ColumnName: choices})
 	if !reflect.DeepEqual(created[field.ColumnName], choices) {
 		t.Fatalf("lost choices: %v", created)
 	}

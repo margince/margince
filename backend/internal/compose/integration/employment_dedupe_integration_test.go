@@ -27,7 +27,7 @@ func (e *relEnv) employment(t *testing.T, companyID string, body AnyMap) (status
 	body["kind"] = "employment"
 	body["contact_id"] = e.contactID
 	body["company_id"] = companyID
-	body["source"] = "ui"
+	body["source"] = "manual"
 	var out struct {
 		ID               string `json:"id"`
 		IsCurrentPrimary bool   `json:"is_current_primary"`

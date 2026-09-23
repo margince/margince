@@ -191,7 +191,7 @@ func TestANarrowedMessageStagesNoReviewEither(t *testing.T) {
 	// A contact the card resembles without matching: same name, different
 	// address, so the dedupe answers review rather than update or create.
 	if _, err := e.store.CreateContact(ctx, CreateContactInput{
-		FullName: "Petra Post", Source: "ui",
+		FullName: "Petra Post", Source: "manual",
 		Emails: []ContactEmailInput{{Email: "petra.post@anderswo.example", EmailType: "work", IsPrimary: true}},
 	}); err != nil {
 		t.Fatalf("seeding the contact the card resembles: %v", err)

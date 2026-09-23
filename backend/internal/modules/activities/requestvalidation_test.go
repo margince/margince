@@ -16,7 +16,7 @@ import (
 
 func TestOnlyTaskCreationCanAcceptARequest(t *testing.T) {
 	id := openapi_types.UUID(ids.NewV7())
-	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "note", RequestActivityId: &id, Source: "ui"})
+	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "note", RequestActivityId: &id, Source: "manual"})
 	var fault *RequestAcceptanceFieldError
 	if !errors.As(err, &fault) {
 		t.Fatalf("note acceptance = %v, want a correctable field refusal", err)

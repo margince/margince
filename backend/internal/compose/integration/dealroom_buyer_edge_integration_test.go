@@ -47,7 +47,7 @@ func openRoomWithABuyer(t *testing.T, e *apptest.AppEnv) buyerRoom {
 
 	var room AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms", AnyMap{
-		"deal_id": dealID, "title": "Acme rollout", "welcome_message": "Welcome, Laura.", "source": "ui",
+		"deal_id": dealID, "title": "Acme rollout", "welcome_message": "Welcome, Laura.", "source": "manual",
 	}, nil, &room); status != http.StatusCreated {
 		t.Fatalf("create room = %d %v", status, room)
 	}
@@ -55,7 +55,7 @@ func openRoomWithABuyer(t *testing.T, e *apptest.AppEnv) buyerRoom {
 
 	var issued AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+roomID+"/participants", AnyMap{
-		"full_name": "Laura Buyer", "email": "laura@buyer.example", "capability": "comment", "source": "ui",
+		"full_name": "Laura Buyer", "email": "laura@buyer.example", "capability": "comment", "source": "manual",
 	}, nil, &issued); status != http.StatusCreated {
 		t.Fatalf("invite = %d %v", status, issued)
 	}
@@ -232,7 +232,7 @@ func TestEveryDeadCredentialReadsAlikeAndARoomSessionHoldsNoCRMAuthority(t *test
 	// A read-only participant reads the list but cannot work it.
 	var viewerIssued AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/participants", AnyMap{
-		"full_name": "Victor Viewer", "email": "victor@buyer.example", "capability": "view", "source": "ui",
+		"full_name": "Victor Viewer", "email": "victor@buyer.example", "capability": "view", "source": "manual",
 	}, nil, &viewerIssued); status != http.StatusCreated {
 		t.Fatalf("invite viewer = %d %v", status, viewerIssued)
 	}
@@ -361,7 +361,7 @@ func inviteAnotherBuyer(t *testing.T, e *apptest.AppEnv, roomID, email string) i
 	t.Helper()
 	var issued AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+roomID+"/participants", AnyMap{
-		"full_name": "Mira Buyer", "email": email, "capability": "comment", "source": "ui",
+		"full_name": "Mira Buyer", "email": email, "capability": "comment", "source": "manual",
 	}, nil, &issued); status != http.StatusCreated {
 		t.Fatalf("invite = %d %v", status, issued)
 	}
@@ -408,13 +408,13 @@ func TestABuyerReadsAndDownloadsOnlyWhatTheReleaseNames(t *testing.T) {
 	attachmentID := uploadDealFile(t, e, dealID, "DPA_v7.pdf", []byte("%PDF-DPA"))
 	var doc AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
-		"attachment_id": attachmentID, "group_key": "legal", "title": "Data processing agreement", "source": "ui",
+		"attachment_id": attachmentID, "group_key": "legal", "title": "Data processing agreement", "source": "manual",
 	}, nil, &doc); status != http.StatusCreated {
 		t.Fatalf("add document = %d %v", status, doc)
 	}
 	docID, _ := doc["id"].(string)
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
-		"attachment_id": attachmentID, "group_key": "marketing", "source": "ui",
+		"attachment_id": attachmentID, "group_key": "marketing", "source": "manual",
 	}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("unknown group = %d, want 422", status)
 	}
@@ -484,7 +484,7 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 	attachmentID := uploadDealFile(t, e, dealID, "MSA_v2.pdf", []byte("%PDF-MSA"))
 	var doc AnyMap
 	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
-		"attachment_id": attachmentID, "group_key": "legal", "source": "ui",
+		"attachment_id": attachmentID, "group_key": "legal", "source": "manual",
 	}, nil, &doc)
 	docID, _ := doc["id"].(string)
 
@@ -494,7 +494,7 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 	laura, _ := session["session_token"].(string)
 	var ritaIssued, ritaSession AnyMap
 	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/participants", AnyMap{
-		"full_name": "Rita Buyer", "email": "rita@buyer.example", "capability": "comment", "source": "ui",
+		"full_name": "Rita Buyer", "email": "rita@buyer.example", "capability": "comment", "source": "manual",
 	}, nil, &ritaIssued)
 	publicCall(t, e, "POST", "/v1/public/rooms/exchange", AnyMap{"credential": ritaIssued["credential"]}, nil, &ritaSession)
 	rita, _ := ritaSession["session_token"].(string)
@@ -502,7 +502,7 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 	// The seller asks on the document; the buyer answers; both names show.
 	var opened AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/threads", AnyMap{
-		"document_id": docID, "body": "Does clause 4 work for you?", "source": "ui",
+		"document_id": docID, "body": "Does clause 4 work for you?", "source": "manual",
 	}, nil, &opened); status != http.StatusCreated {
 		t.Fatalf("open thread = %d %v", status, opened)
 	}
@@ -567,8 +567,8 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 	// with it, rather than hanging in the buyer's list pointing at nothing.
 	withdrawn := uploadDealFile(t, e, dealID, "pricing_internal.xlsx", []byte("secret"))
 	var withdrawnDoc AnyMap
-	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{"attachment_id": withdrawn, "group_key": "commercial", "source": "ui"}, nil, &withdrawnDoc)
-	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/threads", AnyMap{"document_id": withdrawnDoc["id"], "body": "note on pricing", "source": "ui"}, nil, nil)
+	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{"attachment_id": withdrawn, "group_key": "commercial", "source": "manual"}, nil, &withdrawnDoc)
+	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/threads", AnyMap{"document_id": withdrawnDoc["id"], "body": "note on pricing", "source": "manual"}, nil, nil)
 	e.Call(t, "DELETE", "/v1/deal-rooms/"+room.roomID+"/documents/"+withdrawnDoc["id"].(string), nil,
 		map[string]string{"If-Match": fmt.Sprint(withdrawnDoc["version"])}, nil)
 	var visible AnyMap
@@ -603,7 +603,7 @@ func TestAThreadClosesToTheBuyerWhenItsDocumentLeavesTheRoom(t *testing.T) {
 	attachmentID := uploadDealFile(t, e, dealID, "terms.pdf", []byte("%PDF-TERMS"))
 	var doc AnyMap
 	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
-		"attachment_id": attachmentID, "group_key": "legal", "source": "ui",
+		"attachment_id": attachmentID, "group_key": "legal", "source": "manual",
 	}, nil, &doc)
 	docID, _ := doc["id"].(string)
 

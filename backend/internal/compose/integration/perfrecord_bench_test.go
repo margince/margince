@@ -229,7 +229,7 @@ func createBenchContact(t *testing.T, e *apptest.AppEnv) string {
 	var contact AnyMap
 	if status := e.Call(t, http.MethodPost, "/v1/contacts", AnyMap{
 		"full_name": "Grace Hopper",
-		"source":    "ui",
+		"source":    "manual",
 		"emails":    []AnyMap{{"email": "grace@navy.mil", "is_primary": true}},
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
@@ -247,7 +247,7 @@ func createBenchCompanyAndDeal(t *testing.T, e *apptest.AppEnv) (string, string)
 	var company AnyMap
 	if status := e.Call(t, http.MethodPost, "/v1/companies", AnyMap{
 		"display_name": "Acme GmbH",
-		"source":       "ui",
+		"source":       "manual",
 		"domains":      []AnyMap{{"domain": "acme.example", "is_primary": true}},
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company = %d %v", status, company)
@@ -258,7 +258,7 @@ func createBenchCompanyAndDeal(t *testing.T, e *apptest.AppEnv) (string, string)
 	if status := e.Call(t, http.MethodPost, "/v1/deals", AnyMap{
 		"name": "Acme rollout", "amount_minor": 250_000_00, "currency": "EUR",
 		"pipeline_id": stages.PipelineID, "stage_id": stages.Open,
-		"company_id": companyID, "source": "ui",
+		"company_id": companyID, "source": "manual",
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("create deal = %d %v", status, deal)
 	}

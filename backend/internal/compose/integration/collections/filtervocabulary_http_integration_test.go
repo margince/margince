@@ -38,7 +38,7 @@ func TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
 
 	var field integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
-		"object": "contact", "label": "Loyalty Tier HTTP", "type": "text", "source": "ui",
+		"object": "contact", "label": "Loyalty Tier HTTP", "type": "text", "source": "manual",
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
 	}
@@ -49,7 +49,7 @@ func TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
 
 	var matching integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"full_name": "Match", "source": "ui",
+		"full_name": "Match", "source": "manual",
 	}, nil, &matching); status != http.StatusCreated {
 		t.Fatalf("create matching contact: status=%d body=%v", status, matching)
 	}
@@ -60,7 +60,7 @@ func TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
 
 	var other integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"full_name": "Other", "source": "ui",
+		"full_name": "Other", "source": "manual",
 	}, nil, &other); status != http.StatusCreated {
 		t.Fatalf("create non-matching contact: status=%d body=%v", status, other)
 	}
@@ -112,7 +112,7 @@ func TestTheFilterVocabularyOverHTTPOffersWhatAFilterAccepts(t *testing.T) {
 
 	var field integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
-		"object": "contact", "label": "Vocabulary Probe", "type": "picklist", "source": "ui",
+		"object": "contact", "label": "Vocabulary Probe", "type": "picklist", "source": "manual",
 		"options": []string{"gold", "silver"},
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
@@ -258,7 +258,7 @@ func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) 
 
 	var field integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
-		"object": "contact", "label": "Retiring Tier", "type": "text", "source": "ui",
+		"object": "contact", "label": "Retiring Tier", "type": "text", "source": "manual",
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
 	}

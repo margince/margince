@@ -75,7 +75,7 @@ func TestFactsOnlyRefreshNeverCallsTheModelEvenWhenTheRequestChanges(t *testing.
 		t.Fatal("facts read missed work or called a model")
 	}
 	assertCachedRequestMove(ctx, t, service, dealID, "create_task")
-	task, _, err := store.LogActivity(ctx, activities.LogActivityInput{Kind: "task", RequestActivityID: &id, Source: "ui"})
+	task, _, err := store.LogActivity(ctx, activities.LogActivityInput{Kind: "task", RequestActivityID: &id, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}

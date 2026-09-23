@@ -58,14 +58,14 @@ func TestArchivingADealFreezesItsRoomsInvitesAndNeverItsRevocations(t *testing.T
 	pipeline, open, _ := DealFixture(t, e)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Northgate rollout", pipeline, open, &e.Rep1))
 	room, err := rooms.CreateRoom(ctx, dealrooms.CreateRoomInput{
-		DealID: deal, Title: "Northgate rollout", Source: "ui",
+		DealID: deal, Title: "Northgate rollout", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("opening the room: %v", err)
 	}
 	roomID := ids.From[ids.DealRoomKind](ids.UUID(room.Id))
 	invited, err := rooms.InviteParticipant(ctx, roomID, dealrooms.InviteInput{
-		FullName: "Laura Buyer", Email: "laura@buyer.example", Capability: "comment", Source: "ui",
+		FullName: "Laura Buyer", Email: "laura@buyer.example", Capability: "comment", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seating the buyer: %v", err)
@@ -80,7 +80,7 @@ func TestArchivingADealFreezesItsRoomsInvitesAndNeverItsRevocations(t *testing.T
 
 	// Frozen: every way of handing MORE access out.
 	if _, err := rooms.InviteParticipant(ctx, roomID, dealrooms.InviteInput{
-		FullName: "Second Buyer", Email: "second@buyer.example", Capability: "comment", Source: "ui",
+		FullName: "Second Buyer", Email: "second@buyer.example", Capability: "comment", Source: "manual",
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("inviting onto an archived deal: got %v, want not found", err)
 	}
