@@ -298,13 +298,6 @@ describe("no suite pins itself to a class that styles nothing", () => {
         "e2e/contact-network.spec.ts walks .pn-edge",
         "the same retired drawing",
       ],
-      [
-        "e2e/company-record.spec.ts walks .co-standing",
-        "the class the company header retired in 1af81e93a, still walked by a " +
-          "suite CI never runs — it is skipped without a live BASE_URL, so the " +
-          "case is red for whoever next runs it. Repointing needs a stack to " +
-          "confirm against: issue 5732",
-      ],
     ]);
     for (const suite of suites) {
       const source = parseSource(suite, readFileSync(suite, "utf8"));
