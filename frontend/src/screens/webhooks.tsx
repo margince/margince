@@ -14,16 +14,16 @@ import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
-  DataTable,
   EmptyState,
   Modal,
   OverflowMenu,
   SectionHeader,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -347,23 +347,11 @@ function SecretRevealModal({
 }: Readonly<{ secret: string; onClose: () => void }>) {
   const t = useT();
   const headingId = useId();
-  const [copied, setCopied] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
-
-  async function copySecret() {
-    if (!navigator.clipboard) {
-      setCopyFailed(true);
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(secret);
-      setCopied(true);
-      setCopyFailed(false);
-    } catch {
-      setCopied(false);
-      setCopyFailed(true);
-    }
-  }
+  const copy = useClipboardCopy(secret, {
+    copy: t("webhooks.secret.copy"),
+    copied: t("webhooks.secret.copied"),
+    remedy: t("webhooks.secret.copyFailed"),
+  });
 
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
@@ -377,30 +365,22 @@ function SecretRevealModal({
         <pre className="code-block" data-testid="webhook-signing-secret">
           {secret}
         </pre>
-        {copyFailed && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("webhooks.secret.copyFailedTitle")}
-          >
-            {t("webhooks.secret.copyFailed")}
-          </Callout>
-        )}
+        {copy.notice}
       </div>
       {/* Dismissing is what DESTROYS the only copy of the secret: it lives in
           this component's state and is never re-derivable from any read. So
           Copy is the primary act here and Done is the quiet one. Done stays
           available before a copy — abandoning a subscription must be possible —
           but the caution says in words what it costs. */}
-      {!copied && (
+      {!copy.copied && (
         <p className="webhook-secret-caution">
           {t("webhooks.secret.leaveWarning")}
         </p>
       )}
       <div className="actions">
         <Button onClick={onClose}>{t("webhooks.secret.done")}</Button>
-        <Button variant="primary" onClick={() => void copySecret()}>
-          {copied ? t("webhooks.secret.copied") : t("webhooks.secret.copy")}
+        <Button variant="primary" onClick={copy.copy}>
+          {copy.label}
         </Button>
       </div>
     </Modal>
@@ -933,14 +913,14 @@ export function WebhooksCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("webhooks.sub")}</p>
+        <PanelIntro>{t("webhooks.sub")}</PanelIntro>
         {/* Outside QueryGate for the same reason the create button is: its
             `empty` branch replaces `children` wholesale, and the posture is most
             needed precisely when the list is empty — a seat that can neither add
             the first subscription nor be told why would read the empty card as
             the whole story. */}
         {showReadOnlyPosture && (
-          <p className="settings-panel-sub">{t("webhooks.readOnly")}</p>
+          <PanelIntro>{t("webhooks.readOnly")}</PanelIntro>
         )}
         {/* No signing key: delivery is off, so mutating controls are withheld
             and a not-enabled note explains why. It sits outside the gate too —

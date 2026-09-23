@@ -12,6 +12,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
+import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDateAbbrev, formatNumber } from "../format/format";
@@ -281,16 +282,12 @@ function ParticipantRow({
 // a rep most needs to know and will otherwise learn from a locked-out buyer.
 function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
   const t = useT();
-  const [copied, setCopied] = useState<"done" | "failed" | null>(null);
   const link = buyerLink(issued.credential);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied("done");
-    } catch {
-      setCopied("failed");
-    }
-  };
+  const copy = useClipboardCopy(link, {
+    copy: t("access.issued.copy"),
+    copied: t("access.issued.copied"),
+    remedy: t("access.issued.copyFailed"),
+  });
   return (
     <div className="access-issued">
       <IssuedNotice queued={issued.queued} email={issued.participant.email} />
@@ -298,16 +295,15 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
         {(control) => <TextInput {...control} readOnly value={link} />}
       </Field>
       <div className="card-actions">
-        <Button onClick={copy}>
+        <Button onClick={copy.copy}>
           <Copy aria-hidden />
-          {copied === "done"
-            ? t("access.issued.copied")
-            : t("access.issued.copy")}
+          {copy.label}
         </Button>
-        {copied === "failed" ? (
-          <span className="t-danger">{t("access.issued.copyFailed")}</span>
-        ) : null}
       </div>
+      {/* Below the row rather than inside it: the actions band lays controls
+          out side by side, and a notice squeezed in beside the button it is
+          about loses the line it needs to say what to do instead. */}
+      {copy.notice}
       <p className="t-caption">{t("access.issued.oneTime")}</p>
     </div>
   );

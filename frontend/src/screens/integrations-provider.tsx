@@ -21,7 +21,7 @@ import {
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
 import { Meter } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -89,7 +89,7 @@ export function ProviderCard() {
           a skeleton, a refusal, the no-provider state — brings the body's own
           top padding with it, and two stacked bodies would space them twice. */}
       <PanelBody className="provider-intro">
-        <p className="settings-panel-sub">{t("provider.sub")}</p>
+        <PanelIntro>{t("provider.sub")}</PanelIntro>
         {/* Hoisted OUT of QueryGate, the way the neighbouring webhooks card
             already does it: the gate's empty and error branches replace their
             children wholesale, so a posture line nested inside would go quiet
@@ -98,9 +98,7 @@ export function ProviderCard() {
             card keeps its place and says ONCE what a reader without any of the
             three writes is looking at; the controls below are then simply
             absent (design-system README, "Absent, disabled, or withheld"). */}
-        {readOnly && (
-          <p className="settings-panel-sub">{t("provider.readOnly")}</p>
-        )}
+        {readOnly && <PanelIntro>{t("provider.readOnly")}</PanelIntro>}
       </PanelBody>
       <QueryGate query={query} pendingLabel={t("provider.title")}>
         {(result) =>

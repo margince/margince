@@ -3,7 +3,7 @@ import { useCanWrite } from "../app/capability";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
@@ -49,7 +49,7 @@ export function AcquisitionSourcesCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("acqSources.sub")}</p>
+        <PanelIntro>{t("acqSources.sub")}</PanelIntro>
         <SettingList>
           <SettingRow
             label={t("acqSources.listLabel")}

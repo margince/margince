@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, vi } from "vitest";
+import { restoreClipboardStubs } from "./src/design-system/clipboard-testing";
 import { takeUnroutedSessionProbes } from "./src/screens/unrouted-session";
 
 // Node ≥23 ships its own global Web Storage: a `localStorage` getter that
@@ -197,6 +198,18 @@ afterEach(() => {
     );
   }
 });
+
+// A stubbed clipboard belongs to the case that installed it.
+//
+// `stubClipboard` replaces `navigator.clipboard` outright, and a case that
+// fails an assertion never reaches a restore of its own — so the stub stands
+// for every later case in the file, which reads as a run of unrelated failures
+// with the real one first and unremarkable. Registered here rather than per
+// file because the leak belongs to every suite that stubs, including the ones
+// nobody has written yet, and AFTER the probe check above so that under
+// vitest's stacked hook order the navigator is handed back even when that
+// check is the thing that throws.
+afterEach(restoreClipboardStubs);
 
 // The calendar-drift lane: run the whole suite as if it were N days from now.
 //

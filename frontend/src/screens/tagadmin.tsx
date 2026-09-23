@@ -8,7 +8,7 @@ import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { isTagTone, TAG_TONES, TagPill } from "../design-system/tagpill";
@@ -71,7 +71,7 @@ export function TagVocabularyCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("tagAdmin.sub")}</p>
+        <PanelIntro>{t("tagAdmin.sub")}</PanelIntro>
         {!canRead && <p className="tagadmin-note">{t("tagAdmin.withheld")}</p>}
         {failure?.error != null && (
           <Callout

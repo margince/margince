@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
 import { UsersAdminCard } from "./users-admin";
 
@@ -282,9 +283,9 @@ describe("admin-issued set-password link", () => {
 
   it("reports a copy failure instead of throwing where the clipboard API is absent", async () => {
     vi.stubGlobal("fetch", backend({ adminPasswordLink: true }));
-    // navigator.clipboard is undefined outside a secure context — and an
-    // email-less installation served over plain http is exactly that.
-    vi.stubGlobal("navigator", { ...navigator, clipboard: undefined });
+    // An email-less installation served over plain http is the deployment this
+    // whole feature serves, and it is exactly the one with no clipboard.
+    stubClipboard("absent");
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
@@ -294,7 +295,7 @@ describe("admin-issued set-password link", () => {
     // The admin is told to copy by hand rather than left with a dead button:
     // the heading says the copy did not happen, the body says what to do.
     expect(
-      await screen.findByText(/the link could not be copied/i),
+      await screen.findByText(/this browser refused the clipboard/i),
     ).toBeTruthy();
     expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
   });

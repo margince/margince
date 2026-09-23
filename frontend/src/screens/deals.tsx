@@ -33,7 +33,6 @@ import { ActionRow } from "../design-system/actionrow";
 import {
   Badge,
   Button,
-  DataTable,
   EmptyState,
   SegmentedControl,
 } from "../design-system/atoms";
@@ -43,6 +42,7 @@ import {
   type BoardMoneyColumn,
   PipelineBoard,
 } from "../design-system/composed";
+import { DataTable } from "../design-system/datatable";
 import { IconAction } from "../design-system/iconaction";
 import { IdentityLine } from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";

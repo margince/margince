@@ -10,7 +10,7 @@ import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDuration, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -457,7 +457,7 @@ export function EmbedReindexCard() {
   return (
     <Panel title={t("embedreindex.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("embedreindex.sub")}</p>
+        <PanelIntro>{t("embedreindex.sub")}</PanelIntro>
         <CardBoundary>{body}</CardBoundary>
       </PanelBody>
     </Panel>

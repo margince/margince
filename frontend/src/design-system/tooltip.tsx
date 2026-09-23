@@ -294,17 +294,16 @@ function useTip<T extends HTMLElement>(
     tip: open
       ? createPortal(
           <div
-            className="tooltip"
+            className={frame ? "tooltip" : "tooltip tooltip-unmeasured"}
             id={id}
             ref={box}
             role="tooltip"
+            // Only the MEASURED placement is inline, because only it is a
+            // number the render worked out; the state before it is a class.
             style={
               frame
                 ? { left: frame.left, top: frame.top, bottom: frame.bottom }
-                : // Before the first measurement the tip is laid out where it
-                  // can be measured but not seen. It cannot be `display: none`,
-                  // which has no box to measure at all.
-                  { left: 0, top: 0, visibility: "hidden" }
+                : undefined
             }
           >
             {text}

@@ -16,7 +16,7 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
@@ -346,14 +346,12 @@ export function PipelinesCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.pipelinesSub")}</p>
+        <PanelIntro>{t("settings.pipelinesSub")}</PanelIntro>
         {/* Said once, at the top, rather than annotating each absent control —
             the rule in design-system/README.md. A reader holding one of the two
             verbs can see for themselves which controls they got. */}
         {!canCreate && !canEdit && (
-          <p className="settings-panel-sub">
-            {t("settings.pipelinesReadOnly")}
-          </p>
+          <PanelIntro>{t("settings.pipelinesReadOnly")}</PanelIntro>
         )}
         <SettingList>
           <QueryGate

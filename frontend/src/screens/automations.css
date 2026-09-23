@@ -13,7 +13,7 @@
 
 /* The read-only posture, and the outcome of a create, standing above and below
    the rows they are about. Each is the card's own band rather than one more row,
-   so it pays for its own interval — the same interval `.settings-panel-sub`
+   so it pays for its own interval — the same interval `.panel-intro`
    pays, because `SettingList` owns the gaps BETWEEN rows and nothing above or
    below itself. */
 .auto-readonly {

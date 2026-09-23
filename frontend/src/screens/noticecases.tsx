@@ -19,7 +19,7 @@ import {
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate } from "../format/format";
@@ -250,7 +250,7 @@ export function NoticeCasesCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("notice.sub")}</p>
+        <PanelIntro>{t("notice.sub")}</PanelIntro>
         {/* One card's throw stays inside one card: this body renders a queue
             straight off the wire, and without a boundary a single malformed
             row costs the reader the whole tab. */}

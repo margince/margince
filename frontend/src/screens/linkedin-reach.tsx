@@ -4,9 +4,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { DataTable, EmptyState, Skeleton } from "../design-system/atoms";
+import { EmptyState, Skeleton } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { DataTable } from "../design-system/datatable";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -99,7 +100,7 @@ export function LinkedInReachCard() {
     // No per-card bottom margin: the tab owns the rhythm between its cards.
     <Panel title={t("linkedinReach.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("linkedinReach.sub")}</p>
+        <PanelIntro>{t("linkedinReach.sub")}</PanelIntro>
         {query.isPending && <Skeleton width="70%" />}
         {/* A failed read is not an empty one. EmptyState drew "no accounts
             reached" chrome around the server's own refusal, so a read nobody

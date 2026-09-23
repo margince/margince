@@ -90,6 +90,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
 | `linkceilingparity_test.go` | H2 | The per-activity link ceiling is one number, wherever it is spelled. |
 | `listsortvocabulary_test.go` | H3 | A sort the list OFFERS is a sort the server ACCEPTS. |
+| `localedoc_test.go` | H2 | The docs name exactly the locales the tree ships, and the catalogs are the set the Go validators admit. |
 | `lockspelling_test.go` | H2 | One lock, two modules, and no import between them. |
 | `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it (frontend/src/screens/brief.view.ts) and outbound mail links to it (internal/platform/mailcopy/link.go), because a message has to name a view before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly PANEL's labels. |

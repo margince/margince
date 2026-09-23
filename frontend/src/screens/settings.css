@@ -52,35 +52,11 @@
   margin: var(--space-4) 0 0;
 }
 
-/* A Card drew its descriptive line in the header, under the title. Panel's
-   header is a fixed-height band with room for a title and one control, so that
-   line moves into the body — where it is the first thing read, above the form
-   or the rows it describes, and it pays for its own interval to them.
-
-   Seventy panels across twenty screens carry this line, which makes it a
-   primitive stranded in a screen sheet rather than a screen's caption — the
-   design system is where it belongs, as Panel's own intro line. */
-p.settings-panel-sub {
-  margin-bottom: var(--space-4);
-}
-
-/* Inside a container that owns its intervals, the description's own margin ADDS
-   to the container's gap rather than collapsing into it — the same arithmetic
-   `.settings-stack > .section-header` above spells out. A `.form-stack` body
-   therefore measured 28px from the description to its rows where a plain body
-   measures 16, which is two rhythms for one relationship across cards that sit
-   next to each other. What is left here is the difference, so both spellings
-   land on the same 16. */
-.form-stack > p.settings-panel-sub {
-  margin-bottom: calc(var(--space-4) - var(--space-3));
-}
-
 /* A notice and the verb that commits an unsaved change, standing below the rows
    they belong to. It is the card's own band rather than one more row: an unsaved
    flip is a state of the whole card, and a callout in a row's control column
-   reads as that row's answer. The interval is here for the same reason
-   `.settings-panel-sub`'s is — `SettingList` owns the gaps BETWEEN rows and
-   nothing above or below itself. */
+   reads as that row's answer. The interval is here because `SettingList` owns
+   the gaps BETWEEN rows and nothing above or below itself. */
 .settings-panel-commit {
   display: flex;
   flex-direction: column;

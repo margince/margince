@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
 import { routeHash } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -114,42 +113,21 @@ export function AgendaSummary({
 /** Copy agenda, and what to say when the browser will not hand over a clipboard. */
 function CopyAgenda({ rows }: Readonly<{ rows: readonly TeamWeeklyRep[] }>) {
   const t = useT();
-  const [copied, setCopied] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  async function copy() {
-    // navigator.clipboard is UNDEFINED outside a secure context, so this is a
-    // missing capability rather than a rejected promise, and asking for
-    // writeText on it would throw before any catch could say why.
-    const writer = navigator.clipboard;
-    if (!writer) {
-      setFailed(true);
-      return;
-    }
-    try {
-      await writer.writeText(agendaText(rows, t("teamweekly.agenda.title")));
-      setCopied(true);
-      setFailed(false);
-    } catch {
-      setCopied(false);
-      setFailed(true);
-    }
-  }
+  // The text is composed from the rows on screen rather than from the review
+  // again, so a week that re-ranked under the reader stops saying Copied.
+  const copy = useClipboardCopy(
+    agendaText(rows, t("teamweekly.agenda.title")),
+    {
+      copy: t("teamweekly.agenda.copy"),
+      copied: t("teamweekly.agenda.copied"),
+      remedy: t("teamweekly.agenda.copyFailed"),
+    },
+  );
 
   return (
     <>
-      <Button onClick={() => void copy()}>
-        {copied ? t("teamweekly.agenda.copied") : t("teamweekly.agenda.copy")}
-      </Button>
-      {failed && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("teamweekly.agenda.copyFailedTitle")}
-        >
-          {t("teamweekly.agenda.copyFailed")}
-        </Callout>
-      )}
+      <Button onClick={copy.copy}>{copy.label}</Button>
+      {copy.notice}
     </>
   );
 }

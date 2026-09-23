@@ -58199,7 +58199,7 @@ type ServerInterface interface {
 	// List partner companies (companies with a partner row), filterable by role/cert status.
 	// (GET /partners)
 	ListPartners(w http.ResponseWriter, r *http.Request, params ListPartnersParams)
-	// List the caller's own Agent Seat Passports (metadata only — no token re-disclosure).
+	// List Agent Seat Passports — the caller's own, or the workspace's for a member administrator (metadata only — no token re-disclosure).
 	// (GET /passports)
 	ListPassports(w http.ResponseWriter, r *http.Request)
 	// Mint an Agent Seat Passport for the calling user's own agent.
@@ -61586,7 +61586,7 @@ func (_ Unimplemented) ListPartners(w http.ResponseWriter, r *http.Request, para
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the caller's own Agent Seat Passports (metadata only — no token re-disclosure).
+// List Agent Seat Passports — the caller's own, or the workspace's for a member administrator (metadata only — no token re-disclosure).
 // (GET /passports)
 func (_ Unimplemented) ListPassports(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

@@ -2,9 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, Button, DataTable, EmptyState } from "../design-system/atoms";
+import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody } from "../design-system/panel";
+import { DataTable } from "../design-system/datatable";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -120,7 +121,7 @@ export function CaptureSendersCard() {
   return (
     <Panel title={t("senders.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("senders.sub")}</p>
+        <PanelIntro>{t("senders.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("senders.title")}>
           {(list) =>
             list.data.length === 0 ? (
@@ -199,9 +200,7 @@ export function CaptureSendersCard() {
                   ]}
                 />
                 {setDecision.isError && (
-                  <p className="settings-panel-sub" role="alert">
-                    {problemMessageOf(setDecision.error, t)}
-                  </p>
+                  <p role="alert">{problemMessageOf(setDecision.error, t)}</p>
                 )}
               </>
             )

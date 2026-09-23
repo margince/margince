@@ -4,7 +4,7 @@ import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { StatCard } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -220,7 +220,7 @@ function SeatUsageReading({ seatsUsed }: Readonly<{ seatsUsed: number }>) {
   return (
     <Panel title={t("license.card.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("license.seats.capacityOnly")}</p>
+        <PanelIntro>{t("license.seats.capacityOnly")}</PanelIntro>
         <SettingList>
           <SettingRow
             label={t("license.seats.title")}
@@ -257,7 +257,7 @@ export function LicenseReading({
         {/* The state is said in words rather than as a coloured pill alone: "no
             license" and "licensed" are different facts about the installation,
             and a reader should not have to learn a colour to tell them apart. */}
-        <p className="settings-panel-sub">{t(stateKey(entitlement, capped))}</p>
+        <PanelIntro>{t(stateKey(entitlement, capped))}</PanelIntro>
         {/* This card is the ONE place the installation's licence gap is stated.
             It used to be the orb as well: `license === "none"` mapped to amber,
             so every demo and every fresh dev stack wore a permanent warning and

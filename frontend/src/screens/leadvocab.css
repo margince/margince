@@ -72,7 +72,7 @@
 /* The card's own band under the rows: the read-only posture, and a write the
    server refused. It is not one more row — the posture is true of every row in
    the list and a refusal belongs to the card — so it pays for its own interval,
-   the same one `.settings-panel-sub` pays above the list, because `SettingList`
+   the same one `.panel-intro` pays above the list, because `SettingList`
    owns the gaps BETWEEN rows and nothing above or below itself. */
 .lead-vocab-notices {
   display: flex;

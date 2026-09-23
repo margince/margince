@@ -12,7 +12,7 @@ import {
   TableScroll,
 } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
@@ -245,7 +245,7 @@ export function AiCallsCard() {
     return (
       <Panel title={t("aicalls.title")}>
         <PanelBody>
-          <p className="settings-panel-sub">{t("aicalls.sub")}</p>
+          <PanelIntro>{t("aicalls.sub")}</PanelIntro>
           <QueryGate query={me} pendingLabel={t("aicalls.title")}>
             {() => <EmptyState>{t("aicalls.withheld")}</EmptyState>}
           </QueryGate>
@@ -258,7 +258,7 @@ export function AiCallsCard() {
   return (
     <Panel title={t("aicalls.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("aicalls.sub")}</p>
+        <PanelIntro>{t("aicalls.sub")}</PanelIntro>
         <QueryStates query={query} pendingLabel={t("aicalls.title")}>
           <SettingList>
             <SettingRow

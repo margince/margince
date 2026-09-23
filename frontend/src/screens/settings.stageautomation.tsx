@@ -3,8 +3,9 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { BusyMark, DataTable, EmptyState } from "../design-system/atoms";
+import { BusyMark, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import {

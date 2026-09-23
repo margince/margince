@@ -4,6 +4,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
 import { ShareViewButton } from "./analytics.share";
 
@@ -112,7 +113,7 @@ describe("sharing a forecast view", () => {
     vi.stubGlobal("fetch", shareStub());
     // No clipboard at all — an http origin, which is where this actually
     // happens. Silently doing nothing would leave the reader pressing Copy.
-    vi.stubGlobal("navigator", { ...navigator, clipboard: undefined });
+    stubClipboard("absent");
     render(
       <ShareViewButton
         target="forecast"
@@ -126,6 +127,9 @@ describe("sharing a forecast view", () => {
       await screen.findByRole("button", { name: "Copy link" }),
     );
 
-    expect(await screen.findByText(/could not be copied/)).toBeTruthy();
+    expect(
+      await screen.findByText(/this browser refused the clipboard/i),
+    ).toBeTruthy();
+    expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
   });
 });

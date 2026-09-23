@@ -534,6 +534,8 @@ export const de = {
 
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
+  "clipboard.copyFailedTitle":
+    "Dieser Browser gibt die Zwischenablage nicht frei",
 
   "explain.open": "Diese Zahl erklären",
   "explain.mayHaveMoved":
@@ -1247,8 +1249,7 @@ export const de = {
   "access.issued.linkLabel": "Der Link",
   "access.issued.copy": "Link kopieren",
   "access.issued.copied": "Kopiert",
-  "access.issued.copyFailed":
-    "Kopieren fehlgeschlagen; markiere den Link und kopiere ihn.",
+  "access.issued.copyFailed": "Markiere den Link und kopiere ihn von Hand.",
   "access.issued.oneTime":
     "Persönlicher Einmal-Link. Er funktioniert einmal, auf einem Gerät. Jede Person braucht ihre eigene Einladung.",
   "access.issueLinkTitle": "Neuen Link für {name} ausstellen",
@@ -1957,8 +1958,7 @@ export const de = {
   "co.intro.body": "Nachricht",
   "co.intro.basedOn": "Grundlage",
   "co.intro.copy": "Kopieren",
-  "co.intro.copyFailed":
-    "Der Browser hat das Kopieren nicht zugelassen. Markiere die Nachricht und kopiere sie selbst.",
+  "co.intro.copyFailed": "Markiere die Nachricht und kopiere sie selbst.",
   "co.intro.copied": "Kopiert",
   "co.intro.openMail": "Im E-Mail-Programm öffnen",
   "co.map.askIntro": "Um Vorstellung bitten",
@@ -2987,8 +2987,6 @@ export const de = {
     "{count} Themen für Montag, beginnend mit {first}.",
   "teamweekly.agenda.copy": "Agenda kopieren",
   "teamweekly.agenda.copied": "Kopiert",
-  "teamweekly.agenda.copyFailedTitle":
-    "Dieser Browser gibt die Zwischenablage nicht frei",
   "teamweekly.agenda.copyFailed": "Markier die Liste und kopier sie von Hand.",
   "teamweekly.focus.help_requested": "Hat um Hilfe gebeten",
   "teamweekly.focus.leads_breached": "Antwortfristen überschritten",
@@ -3971,7 +3969,6 @@ export const de = {
     "Wenn du ohne Kopieren schließt, ist der Link verloren. Du müsstest einen neuen erstellen.",
   "analytics.share.copy": "Link kopieren",
   "analytics.share.copied": "Kopiert",
-  "analytics.share.copyFailedTitle": "Der Link konnte nicht kopiert werden",
   "analytics.share.copyFailed": "Markiere ihn oben und kopiere ihn von Hand.",
   "analytics.share.done": "Fertig",
   "analytics.frame": "Stand {asOf} · {zone}",
@@ -7602,7 +7599,6 @@ export const de = {
   "users.link.urlLabel": "Passwort-Link",
   "users.link.copy": "Link kopieren",
   "users.link.copied": "Kopiert",
-  "users.link.copyFailedTitle": "Der Link konnte nicht kopiert werden",
   "users.link.copyFailed": "Markiere ihn im Feld und kopiere ihn von Hand.",
   "users.link.expires": "Gültig bis {when}.",
   "users.link.failedTitle": "Der Link konnte nicht erstellt werden",
@@ -7830,7 +7826,6 @@ export const de = {
   "aiexport.copy": "YAML kopieren",
   "aiexport.copied": "Kopiert",
   "aiexport.download": ".yaml herunterladen",
-  "aiexport.copyFailedTitle": "Kopieren fehlgeschlagen",
   "aiexport.copyFailed": "Vorschau verwenden oder Datei herunterladen.",
   "aiexport.close": "Schließen",
   "aiexport.previewLabel": "Szenariovorschau",
@@ -7957,6 +7952,8 @@ export const de = {
   "oauthApp.writeFailed": "Die Änderung wurde nicht gespeichert",
   "oauthApp.remove": "App entfernen",
   "oauthApp.redirectCopied": "Kopiert",
+  "oauthApp.redirectCopyFailed":
+    "Markiere die Adresse und kopiere sie von Hand.",
   "oauthApp.redirectCopy": "URI für {purpose} kopieren",
   "oauthApp.redirect.mailbox_connect": "Postfach",
   "oauthApp.redirect.calendar_connect": "Kalender",
@@ -8249,8 +8246,6 @@ export const de = {
     "Dieser Schlüssel wird nur einmal angezeigt und kann danach nicht erneut abgerufen werden. Speichere ihn jetzt — Zustellungen werden damit signiert.",
   "webhooks.secret.copy": "Kopieren",
   "webhooks.secret.copied": "Kopiert",
-  "webhooks.secret.copyFailedTitle":
-    "Der Schlüssel konnte nicht kopiert werden",
   "webhooks.secret.copyFailed": "Wähle ihn oben aus und kopiere ihn von Hand.",
   "webhooks.secret.done": "Fertig",
   "webhooks.secret.leaveWarning":

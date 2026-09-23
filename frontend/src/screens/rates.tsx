@@ -5,14 +5,14 @@ import type { components } from "../api/schema";
 import { useCan, useCanUpsert } from "../app/capability";
 import {
   Button,
-  DataTable,
   EmptyState,
   Field,
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import {
@@ -146,7 +146,7 @@ export function FxRatesCard() {
       }
     >
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("settings.rates.fxIntro")}</p>
+        <PanelIntro>{t("settings.rates.fxIntro")}</PanelIntro>
         {/* A sheet whose write affordances are all withheld says so ONCE, here,
             rather than annotating each absent control. The rule (design-system
             README): a permission-withheld SURFACE states it, while individual
@@ -370,7 +370,7 @@ export function ModelCostsCard() {
       }
     >
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("settings.rates.modelIntro")}</p>
+        <PanelIntro>{t("settings.rates.modelIntro")}</PanelIntro>
         {/* A sheet whose write affordances are all withheld says so ONCE, here,
             rather than annotating each absent control. The rule (design-system
             README): a permission-withheld SURFACE states it, while individual
