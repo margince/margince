@@ -24,7 +24,8 @@ import (
 )
 
 // maskForRecord answers the fields of one record whose history is withheld from
-// the caller, each configured mask's group already expanded by auth.
+// the caller, each configured mask's group and every facet of the record whose
+// fields its images carry already expanded by auth.
 func maskForRecord(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (entityFieldMask, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
@@ -33,8 +34,8 @@ func maskForRecord(ctx context.Context, tx pgx.Tx, entityType string, entityID i
 	// The widest answer first, because it is free. Only a mask conditioned on
 	// write authority narrows under the lifted one, so only a reader who carries
 	// one pays the statement that resolves the row's write arm.
-	withheld := auth.MaskedFields(actor, entityType, false)
-	if lifted := auth.MaskedFields(actor, entityType, true); len(lifted) < len(withheld) {
+	withheld := auth.MaskedHistoryFields(actor, entityType, false)
+	if lifted := auth.MaskedHistoryFields(actor, entityType, true); len(lifted) < len(withheld) {
 		// A narrower lifted answer is auth saying the condition CAN be answered
 		// here, which it says only for a record carrying an owner and a grant —
 		// so the record reaching this line is always one WritableSubset takes.

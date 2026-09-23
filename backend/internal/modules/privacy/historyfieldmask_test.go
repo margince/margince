@@ -77,6 +77,16 @@ func TestTheMaskAReaderReadsARecordsHistoryUnder(t *testing.T) {
 			entityType: entityTypeActivity,
 			want:       []string{"body"},
 		},
+		{
+			// The partner is a FACET of the company: its fields are written
+			// into the company's audit images, so the company's trail is where
+			// a mask on the partner has to reach or the tier is readable in
+			// full from every past value of it.
+			name:       "a facet's mask reaches the trail its fields are written into",
+			reader:     maskedReader(alwaysMask("partner", "margin_tier")),
+			entityType: "company",
+			want:       []string{"margin_tier"},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

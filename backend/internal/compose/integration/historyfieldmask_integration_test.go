@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -157,6 +158,101 @@ func TestAMaskedAmountIsGoneFromADealsRecordHistoryImages(t *testing.T) {
 				if _, carried := image[field]; carried {
 					t.Errorf("a %s image carries %s, want the money group withheld on both sides", entry.Action, field)
 				}
+			}
+		}
+	}
+}
+
+// The partner's tier as seeded and as raised. Both are assertion subjects: a
+// tier is a closed vocabulary, so the VALUE is what a diff side discloses.
+const (
+	seededMarginTier = "tier1_15"
+	raisedMarginTier = "tier2_20"
+)
+
+// The mask names these the way an administrator configures it, which is not
+// the entity type the trail is filed under.
+const (
+	partnerObject   = "partner"
+	marginTierField = "margin_tier"
+)
+
+// maskedTierReader seeds a company whose partner terms were tiered and then
+// re-tiered through the real writer, and binds a reader whose role withholds
+// the partner's margin tier.
+//
+// The partner is a FACET of the company: UpsertPartner audits its images onto
+// ('company', company_id), so the tier and every past value of it live in the
+// COMPANY's trail while the mask is configured on `partner`.
+func maskedTierReader(t *testing.T, e *Env) (reader context.Context, company ids.UUID) {
+	t.Helper()
+	seeded := seededMarginTier
+	company = e.SeedPartnerCompany(t, "Tiered", &seeded, &e.Rep1)
+	raised := raisedMarginTier
+	if _, err := e.Contacts.UpsertPartner(e.PartnerSeat(), contacts.UpsertPartnerInput{
+		CompanyID: companyIDOf(company), PartnerRole: "consulting", MarginTier: &raised,
+	}); err != nil {
+		t.Fatalf("re-tiering the partner: %v", err)
+	}
+
+	perms := activityLifecyclePerms
+	perms.Objects = map[string]principal.ObjectGrant{objCompany: {Read: true}}
+	perms.FieldMasks = []principal.FieldMask{
+		{Object: partnerObject, Field: marginTierField, Condition: principal.MaskAlways},
+	}
+	return e.As(e.Rep1, []ids.UUID{e.Team1}, perms), company
+}
+
+func TestAMaskedMarginTierIsGoneFromItsCompanysFieldHistory(t *testing.T) {
+	e := Setup(t)
+	reader, company := maskedTierReader(t, e)
+
+	page, err := privacy.ListFieldHistory(reader, e.DB(),
+		privacy.FieldHistoryFilter{EntityType: objCompany, EntityID: company})
+	if err != nil {
+		t.Fatalf("reading the company's field history: %v", err)
+	}
+	if len(page.Entries) == 0 {
+		t.Fatal("the history is empty, so nothing below proves a mask — the seed wrote no projectable rows")
+	}
+	tiers := []string{seededMarginTier, raisedMarginTier}
+	for _, entry := range page.Entries {
+		if entry.Field == marginTierField {
+			t.Errorf("the history names %s, want the partner's mask to reach the company's trail", entry.Field)
+		}
+		for _, side := range []*string{entry.OldValue, entry.NewValue} {
+			if side != nil && slices.Contains(tiers, *side) {
+				t.Errorf("%s carries %q — a withheld tier reached the reader through a diff side", entry.Field, *side)
+			}
+		}
+	}
+
+	var refused *values.ParseError
+	field := marginTierField
+	_, err = privacy.ListFieldHistory(reader, e.DB(),
+		privacy.FieldHistoryFilter{EntityType: objCompany, EntityID: company, Field: &field})
+	if !errors.As(err, &refused) || refused.Code != auth.CodeFieldMasked {
+		t.Errorf("filtering by a withheld field → %v, want the %s refusal, never an empty page", err, auth.CodeFieldMasked)
+	}
+}
+
+func TestAMaskedMarginTierIsGoneFromItsCompanysRecordHistoryImages(t *testing.T) {
+	e := Setup(t)
+	reader, company := maskedTierReader(t, e)
+
+	page, err := privacy.ListRecordHistory(reader, e.DB(),
+		privacy.RecordHistoryFilter{EntityType: objCompany, EntityID: company})
+	if err != nil {
+		t.Fatalf("reading the company's record history: %v", err)
+	}
+	if len(page.Entries) == 0 {
+		t.Fatal("the record history is empty, so nothing below proves a mask")
+	}
+	for _, entry := range page.Entries {
+		for _, image := range []map[string]any{entry.Before, entry.After} {
+			if _, carried := image[marginTierField]; carried {
+				t.Errorf("a %s image carries %s, want the partner's tier withheld on both sides",
+					entry.Action, marginTierField)
 			}
 		}
 	}
