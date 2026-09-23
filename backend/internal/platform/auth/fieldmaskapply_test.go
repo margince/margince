@@ -296,5 +296,7 @@ func (r *uuidRows) Err() error                                   { return nil }
 func (r *uuidRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
 func (r *uuidRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
 func (r *uuidRows) Conn() *pgx.Conn                              { return nil }
-func (r *uuidRows) Values() ([]any, error)                       { panic("uuidRows: Values not implemented") }
-func (r *uuidRows) RawValues() [][]byte                          { panic("uuidRows: RawValues not implemented") }
+
+func (r *uuidRows) Values() ([]any, error) { panic("uuidRows: Values not implemented") }
+
+func (r *uuidRows) RawValues() [][]byte { panic("uuidRows: RawValues not implemented") }
