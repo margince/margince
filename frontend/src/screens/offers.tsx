@@ -18,7 +18,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { formatMoney, formatNumber } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import {
   isVersionSkewOf,
   problemMessageOf,
@@ -1075,6 +1075,7 @@ function DiffLine({
 
 function AiDisclosureBanner({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   if (!offer.ai_generated) {
     return null;
@@ -1095,7 +1096,7 @@ function AiDisclosureBanner({ offer }: Readonly<{ offer: Offer }>) {
             {added.length > 0 && (
               <div>
                 <p className="t-label">
-                  {t("offer.diffAdded", {
+                  {plural("offer.diffAdded", added.length, {
                     count: formatNumber(added.length, locale),
                   })}
                 </p>
@@ -1114,7 +1115,7 @@ function AiDisclosureBanner({ offer }: Readonly<{ offer: Offer }>) {
             {removed.length > 0 && (
               <div>
                 <p className="t-label">
-                  {t("offer.diffRemoved", {
+                  {plural("offer.diffRemoved", removed.length, {
                     count: formatNumber(removed.length, locale),
                   })}
                 </p>
@@ -1133,7 +1134,7 @@ function AiDisclosureBanner({ offer }: Readonly<{ offer: Offer }>) {
             {changed.length > 0 && (
               <div>
                 <p className="t-label">
-                  {t("offer.diffChanged", {
+                  {plural("offer.diffChanged", changed.length, {
                     count: formatNumber(changed.length, locale),
                   })}
                 </p>
