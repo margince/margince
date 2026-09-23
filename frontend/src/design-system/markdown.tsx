@@ -70,10 +70,27 @@ export type { MarkdownHighlight, MarkdownHighlightOutcome };
  * come to disagree about what a star means, and same closed element list, so a
  * sentence is no more able to inject markup than a document is.
  */
-export function InlineMarkdown({ text }: Readonly<{ text: string }>) {
+export function InlineMarkdown({
+  text,
+  links = true,
+}: Readonly<{
+  text: string;
+  /**
+   * Whether a link in `text` may become one on the page.
+   *
+   * False where the text is not held to anything. The ask's summary is prose a
+   * model wrote and NOTHING quote-checks it — every claim beside it is welded to
+   * a verbatim span, that sentence is not — so a passage that talks the writer
+   * into "[Verify your seat](https://evil.example)" would otherwise put a live
+   * link inside the answer panel, under the badge that says a model wrote it.
+   * The label survives; only its destination is dropped.
+   */
+  links?: boolean;
+}>) {
+  const nodes = links ? parseInline(text) : withoutLinks(parseInline(text));
   return (
     <>
-      {parseInline(text).map((node, at) => (
+      {nodes.map((node, at) => (
         // The index IS the identity: these are the nodes of one immutable
         // sentence, in order, and nothing reorders or removes one.
         // biome-ignore lint/suspicious/noArrayIndexKey: positional by nature
@@ -81,6 +98,17 @@ export function InlineMarkdown({ text }: Readonly<{ text: string }>) {
       ))}
     </>
   );
+}
+
+/** Every link replaced by the text it displayed, at any depth. */
+function withoutLinks(nodes: readonly Inline[]): Inline[] {
+  return nodes.flatMap((node) => {
+    if (node.kind === "link") return withoutLinks(node.children);
+    if (node.kind === "strong" || node.kind === "em" || node.kind === "mark") {
+      return [{ ...node, children: withoutLinks(node.children) }];
+    }
+    return [node];
+  });
 }
 
 export function Markdown({

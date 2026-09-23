@@ -41,15 +41,33 @@ func askPassages() []knowledge.Passage {
 	}}
 }
 
-// corpusReply renders a model answer over the given passage ids. A call with no
-// claims renders `{"claims": []}` rather than a null, which is the difference
-// between the empty answer this site asks for and a reply it cannot read.
+// corpusReply renders a model answer over the given passage ids: a reply that
+// DECLARES the passages answer the question. A call with no claims is therefore
+// not an abstention — it is a model that said it could answer and then grounded
+// nothing, which is the shape every measured fabrication took. corpusRefusal is
+// the abstention.
 func corpusReply(claims ...askedClaim) string {
 	if claims == nil {
 		claims = []askedClaim{}
 	}
 	covered := coverageAnswers
 	out, err := json.Marshal(askedAnswer{Coverage: &covered, Claims: &claims})
+	if err != nil {
+		panic(err)
+	}
+	return string(out)
+}
+
+// corpusRefusal renders the reply this site asks for when the passages do not
+// cover the question: the verdict, and the sentence that says what they cover
+// instead.
+func corpusRefusal() string {
+	declined := coverageDoesNotCover
+	out, err := json.Marshal(askedAnswer{
+		Coverage: &declined,
+		Summary:  "These documents do not cover that.",
+		Claims:   &[]askedClaim{},
+	})
 	if err != nil {
 		panic(err)
 	}

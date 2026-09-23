@@ -7184,6 +7184,9 @@ export const en = {
   "corpusAsk.unreviewedTitle": "Nobody has read these passages",
   "corpusAsk.notReadyTitle": "This set is still being read",
   "corpusAsk.retrievalUnavailableTitle": "No search index is configured",
+  "corpusAsk.noGrantTitle": "You cannot open this company's documents",
+  "corpusAsk.noGrant":
+    "Asking reads a set of documents you have not been granted. An administrator can give you access.",
   "corpusAsk.noSetsTitle": "No document set to ask",
   "corpusAsk.noSets":
     "This company has filed no documents yet, so there is nothing to search.",

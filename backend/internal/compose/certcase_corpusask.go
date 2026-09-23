@@ -264,10 +264,22 @@ func (c *corpusAskCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	// the question must return nothing rather than write a paragraph that
 	// sounds like an answer.
 	if len(c.expected) == 0 {
-		if answer.Covered && len(answer.Claims) > 0 {
+		// The scenario says the only right reply is a refusal, so what is graded
+		// is the VERDICT and not what survived the quote check.
+		//
+		// Reading the surviving claims alone would let the failure this case
+		// exists for pass: a model that invents an answer and paraphrases its
+		// quotes has every claim stripped, arrives here with none, and looks
+		// exactly like one that declined. The two are opposite events — one
+		// fabricated and got caught downstream, the other judged correctly —
+		// and a case that cannot tell them apart proves nothing about the
+		// judgement it was written to measure.
+		if answer.Covered {
 			return aitasks.Outcome{
 				Result: aitasks.OutcomeWrongAnswer,
-				Detail: fmt.Sprintf("answered with %d claim(s) from passages that do not cover the question", len(answer.Claims)),
+				Detail: fmt.Sprintf(
+					"said the passages answer the question and wrote %d claim(s) from passages that do not cover it",
+					len(answer.Claims)),
 			}
 		}
 		return aitasks.Outcome{Result: aitasks.OutcomeAccepted}

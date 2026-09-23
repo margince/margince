@@ -6,10 +6,9 @@ package compose
 // The reply half of asking a corpus: the shape the model answers in, and the
 // reading of it that decides what a contact is shown.
 //
-// Split from corpusask.go on the file-length cap. That file builds the ONE
-// request and assembles the answer; this one owns the reply's vocabulary, so
-// the schema the model is given and the parser that reads it sit beside each
-// other and cannot drift apart unnoticed.
+// That file builds the ONE request and assembles the answer; this one owns the
+// reply's vocabulary, so the schema the model is given and the parser that reads
+// it sit beside each other and cannot drift apart unnoticed.
 //
 // WHY COVERAGE IS A FIELD AND NOT AN ABSENCE.
 //
@@ -57,16 +56,17 @@ import (
 // disagreed between any two of those would be a field the model is asked for
 // and the parser never reads.
 //
-// Held by: TestTheReplySchemaAndTheParserAgreeOnEveryKey (corpusask_test.go) —
-// it reads the generated schema and requires every key the parser decodes to
-// appear in it, so a spelling introduced anywhere fails there.
+// Held by: TestTheReplySchemaAndTheParserAgreeOnEveryKey (corpusask_test.go),
+// which reads the GENERATED schema and requires every key the parser decodes to
+// appear in it — the answer's three and the claim's three alike, so a fourth
+// spelling introduced anywhere fails there.
 const (
-	claimTextKey    = "text"
-	claimIDKey      = "id"
-	claimQuoteKey   = "quote"
-	answerCoverKey  = "coverage"
-	answerSummayKey = "summary"
-	answerClaimsKey = "claims"
+	claimTextKey     = "text"
+	claimIDKey       = "id"
+	claimQuoteKey    = "quote"
+	answerCoverKey   = "coverage"
+	answerSummaryKey = "summary"
+	answerClaimsKey  = "claims"
 )
 
 // What the model may say about coverage. Closed: a value not listed here is a
@@ -136,7 +136,7 @@ func corpusAskSchema(ids []string) json.RawMessage {
 		map[string]schema.Node{
 			answerCoverKey: schema.Enum(coverageAnswers, coveragePartly, coverageDoesNotCover).
 				Describe("Whether the passages STATE the answer to the question asked."),
-			answerSummayKey: schema.String().
+			answerSummaryKey: schema.String().
 				Describe("One or two plain sentences for the reader: the answer, or what the documents do not cover."),
 			answerClaimsKey: schema.Array(schema.Object(
 				map[string]schema.Node{
@@ -147,7 +147,7 @@ func corpusAskSchema(ids []string) json.RawMessage {
 				claimTextKey, claimIDKey, claimQuoteKey,
 			)),
 		},
-		answerCoverKey, answerSummayKey, answerClaimsKey,
+		answerCoverKey, answerSummaryKey, answerClaimsKey,
 	))
 }
 
@@ -178,8 +178,10 @@ func GroundCorpusAnswer(replyText string, passages []knowledge.Passage) (CorpusA
 		return CorpusAnswer{}, fmt.Errorf("the corpus ask reply is not the shape this site takes: %w", err)
 	}
 	if parsed.Coverage == nil {
-		return CorpusAnswer{}, errors.New(`the corpus ask reply carries no "coverage" key: a reply must say ` +
-			`whether the passages answer the question, as "answers" or "does_not_answer"`)
+		return CorpusAnswer{}, fmt.Errorf(
+			"the corpus ask reply carries no %q key: a reply must say whether the passages answer the "+
+				"question, as %q, %q or %q",
+			answerCoverKey, coverageAnswers, coveragePartly, coverageDoesNotCover)
 	}
 	summary := strings.TrimSpace(parsed.Summary)
 	switch *parsed.Coverage {

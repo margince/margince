@@ -19,6 +19,11 @@ package knowledge
 //   - Neither number is retyped. RetrieveLimit is read by both, and the floor
 //     arrives as an argument from whoever knows it — the corpus row in SQL, a
 //     flag defaulting to DefaultMinSimilarity in the eval loop.
+//   - Postgres leaves TIES in an arbitrary order and this pins them by document
+//     and start line, so the two can differ among passages of identical
+//     similarity — which is outside what the gate below covers, because its
+//     fixture places every passage at a distance of its own. Real embeddings do
+//     not tie; a fixture that did would be measuring float equality.
 //   - TestTheInMemoryRankerSelectsExactlyWhatTheSQLDoes, in the integration
 //     lane, ingests one corpus through the real ingest path and runs BOTH over
 //     it, asserting identical selection AND identical order. It is what this
@@ -50,10 +55,11 @@ type EmbeddedPassage struct {
 // embedded passage of a corpus and the floor that corpus declares.
 //
 // Vectors of a width other than the question's are skipped rather than ranked.
-// That mirrors the `c.embed_identity = $3` predicate the SQL carries for the
-// same reason: a vector from another binding lives in a space this question's
-// vector does not share, and comparing the two widths is an error in Postgres
-// rather than a small number.
+// That is a CRASH GUARD and not the identity filter the SQL's
+// `c.embed_identity = $3` predicate is: two bindings of the same width live in
+// different spaces and this check admits both. What keeps one binding's vectors
+// in front of this function is the probe's cache, which is keyed per identity —
+// so the caller, not this loop, is what makes the comparison meaningful.
 func RankInMemory(question []float32, corpus []EmbeddedPassage, floor float64) []Passage {
 	ranked := make([]Passage, 0, len(corpus))
 	for _, p := range corpus {
@@ -64,7 +70,7 @@ func RankInMemory(question []float32, corpus []EmbeddedPassage, floor float64) [
 			DocumentName: p.DocumentName,
 			Text:         p.Chunk.Text,
 			StartLine:    p.Chunk.StartLine,
-			Similarity:   CosineSimilarity(question, p.Vector),
+			Similarity:   cosineSimilarity(question, p.Vector),
 		})
 	}
 	// Stable, and by document then start line on a tie: Postgres is free to
@@ -96,13 +102,13 @@ func RankInMemory(question []float32, corpus []EmbeddedPassage, floor float64) [
 	return grounded
 }
 
-// CosineSimilarity is `1 - (a <=> b)`, the expression rankIn projects.
+// cosineSimilarity is `1 - (a <=> b)`, the expression rankIn projects.
 //
 // Zero for a zero vector on either side rather than NaN. Postgres never reaches
 // that case — a zero vector is refused before storage, because `ORDER BY sim
 // DESC` sorts NaN first and one stored zero would outrank the whole corpus —
 // and answering 0 here keeps the same passage unciteable instead of first.
-func CosineSimilarity(a, b []float32) float64 {
+func cosineSimilarity(a, b []float32) float64 {
 	var dot, normA, normB float64
 	for i := range a {
 		x, y := float64(a[i]), float64(b[i])

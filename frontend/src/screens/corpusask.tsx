@@ -244,7 +244,17 @@ export function AskMarginceModal({
               {t("corpusAsk.submit")}
             </Button>
           </div>
-          {!canAsk || (items && items.length === 0) ? (
+          {/* Two different facts, and the reader can act on only one of them.
+              A company with no documents filed has nothing to search; a reader
+              without the grant is looking at a company that may be full of
+              them. Telling the second they have no documents is a false
+              statement about somebody else's data. */}
+          {canAsk ? null : (
+            <EmptyState title={t("corpusAsk.noGrantTitle")}>
+              <p>{t("corpusAsk.noGrant")}</p>
+            </EmptyState>
+          )}
+          {canAsk && items && items.length === 0 ? (
             <EmptyState title={t("corpusAsk.noSetsTitle")}>
               <p>{t("corpusAsk.noSets")}</p>
             </EmptyState>
@@ -286,6 +296,14 @@ export function AskMarginceModal({
 // a sentence with no number beside it is one they cannot follow to a document.
 const CITE_MARKER = /\[(\d+)\]/g;
 
+/** Whether any marker in `summary` names a claim the answer actually carries. */
+function resolvesAnyCite(summary: string, claims: readonly Claim[]): boolean {
+  for (const found of summary.matchAll(CITE_MARKER)) {
+    if (claims[Number(found[1]) - 1]) return true;
+  }
+  return false;
+}
+
 function AnswerView({
   answer,
   openCite,
@@ -300,6 +318,11 @@ function AnswerView({
     return <Refusal answer={answer} />;
   }
   const claims = answer.claims ?? [];
+  // A summary leads ONLY when its markers reach the claims beside it. The
+  // numbers come from a model; one that wrote none, or wrote only numbers no
+  // claim answers to, has written a paragraph a reader cannot check.
+  const summary = answer.summary ?? "";
+  const showSummary = summary !== "" && resolvesAnyCite(summary, claims);
   return (
     <div className="form-stack">
       {/* NOBODY READ THESE. The passages are what the search ranked nearest,
@@ -326,20 +349,22 @@ function AnswerView({
           ? t("corpusAsk.byModel")
           : t("corpusAsk.byPassages")}
       </Badge>
-      {answer.summary ? (
+      {showSummary ? (
         <p className="ask-summary">
           <Summary
-            summary={answer.summary}
+            summary={summary}
             claims={claims}
             openCite={openCite}
             onOpenCite={onOpenCite}
           />
         </p>
       ) : null}
-      {/* The claims, when no summary carried them. A deterministic answer never
-          has one — nothing wrote prose — and the quotes then stand on their
-          own, which is honest: the grounded part was never the sentence. */}
-      {answer.summary ? null : (
+      {/* The claims, when the summary did not carry them. A deterministic answer
+          has no summary at all — nothing wrote prose — and a written one whose
+          markers resolve to nothing is the same situation for a reader: a
+          paragraph with its evidence off screen, which is the shape the coverage
+          field was added to prevent. The quotes then stand on their own. */}
+      {showSummary ? null : (
         <ul className="ask-bare-claims">
           {claims.map((claim, at) => (
             <li key={claim.chunk_id}>
@@ -384,7 +409,11 @@ function Summary({
       continue;
     }
     parts.push(
-      <InlineMarkdown key={`t${cut}`} text={summary.slice(cut, found.index)} />,
+      <InlineMarkdown
+        key={`t${cut}`}
+        links={false}
+        text={summary.slice(cut, found.index)}
+      />,
     );
     cut = found.index + found[0].length;
     if (claim) {
@@ -399,7 +428,9 @@ function Summary({
       );
     }
   }
-  parts.push(<InlineMarkdown key={`t${cut}`} text={summary.slice(cut)} />);
+  parts.push(
+    <InlineMarkdown key={`t${cut}`} links={false} text={summary.slice(cut)} />,
+  );
   return <>{parts}</>;
 }
 

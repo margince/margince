@@ -11,7 +11,7 @@ package compose
 // have already cleared the floor. This file's whole job is prose, and it is
 // allowed to produce none.
 //
-// The guardrail has four steps, and the last two are here:
+// The guardrail has five steps, and the last two are here:
 //
 //  1. readiness            — deterministic, upstream
 //  2. retrieval            — deterministic, upstream
@@ -261,22 +261,35 @@ func AnswerCorpus(
 		return answer
 	}
 	answer.GeneratedBy = crmcontracts.WrittenByModel
-	if summary := written.Summary; summary != "" {
-		answer.Summary = &summary
+	if !written.Covered {
+		// The model READ the passages and said they do not answer the question.
+		// Its sentence is the refusal, and it is the only thing on screen that
+		// tells the reader what these documents do cover instead — without it
+		// they meet an empty page and read it as a malfunction.
+		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered
+		answer.Claims = nil
+		if summary := written.Summary; summary != "" {
+			answer.Summary = &summary
+		}
+		return answer
 	}
-	if !written.Covered || len(written.Claims) == 0 {
-		// Two ways to arrive here and one honest outcome. The model judged that
-		// the passages do not state the answer — or it judged that they do and
-		// then grounded nothing, every claim having failed the quote check.
+	if len(written.Claims) == 0 {
+		// It said the passages DO answer, and then grounded nothing: every
+		// claim failed the quote check. That is not a short answer, it is an
+		// invented one whose evidence was taken away — the shape every measured
+		// fabrication took.
 		//
-		// The second is not a shorter version of an answer; it is an answer
-		// with no evidence left, and it is the shape the measured fabrications
-		// took. The summary survives either way, because that sentence is what
-		// tells the reader the documents do not cover this rather than leaving
-		// them to read an empty page as a malfunction.
+		// So the summary is DROPPED here, and this is the whole difference from
+		// the branch above. That sentence asserts an answer; the claims that
+		// were meant to hold it up are gone, and nothing else on the page ever
+		// checked it. Printing it as the refusal would put the fabrication on
+		// screen wearing the one outcome a reader is entitled to trust.
 		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered
 		answer.Claims = nil
 		return answer
+	}
+	if summary := written.Summary; summary != "" {
+		answer.Summary = &summary
 	}
 	answer.Claims = &written.Claims
 	return answer

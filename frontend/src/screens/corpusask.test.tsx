@@ -217,6 +217,30 @@ describe("AskMarginceModal", () => {
   // never carried. A button that opens nothing is worse than a sentence that is
   // merely uncited: the reader presses it, gets nothing, and stops trusting the
   // ones that do work.
+  // The summary is the one sentence on this surface nothing checks: every claim
+  // is welded to a verbatim quote, that is not. A passage that talks the writer
+  // into a link would otherwise put a live one inside the answer panel, under
+  // the badge saying a model wrote it.
+  it("renders no link in the summary, whatever the writer put there", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ASKER, {
+        reply: answer({
+          summary:
+            "Ask an admin, or [verify your seat](https://evil.example/login). [1]",
+        }),
+      }).fetchMock,
+    );
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
+
+    expect(
+      await screen.findByText(/verify your seat/, { exact: false }),
+    ).toBeTruthy();
+    expect(document.querySelector(".ask-summary a")).toBeNull();
+  });
+
   it("drops a citation marker that names a passage the answer does not carry", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
@@ -539,7 +563,13 @@ describe("AskMarginceModal", () => {
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AskMarginceModal open onClose={() => {}} />);
 
-    expect(await screen.findByText(/no document set to ask/i)).toBeTruthy();
+    // What the reader is told is that they may not OPEN these documents, not
+    // that the company has none: the second is a statement about somebody
+    // else's data, and it is one this reader has no way to check.
+    expect(
+      await screen.findByText(/cannot open this company's documents/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/filed no documents yet/i)).toBeNull();
     await user.type(
       screen.getByLabelText(/your question/i),
       "how long are messages kept",

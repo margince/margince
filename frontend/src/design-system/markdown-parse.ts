@@ -294,7 +294,13 @@ function takeParagraph(lines: string[], i: number, first: number): Taken {
 // Inline
 // ---------------------------------------------------------------------------
 
-const CODE_SPAN = /^(`+)([\s\S]+?)\1/;
+// The opening run only. Finding the CLOSE with a backreference — /^(`+)(.+?)\1/ —
+// is what made this the one part of the renderer an uploaded document could
+// weaponise: with no closing run, the engine retries every prefix length at
+// every offset, which is cubic. A line of 8,000 backticks took five seconds of
+// the main thread inside render, and a corpus is a place a tenant member can
+// put a file. takeCode scans for the close instead, which is linear.
+const CODE_OPEN = /^`+/;
 // A destination may carry one level of balanced parentheses, as CommonMark
 // allows: `alert(1)` is a plausible payload and a reader of the refusal test
 // should see the real shape of one.
@@ -342,14 +348,30 @@ function takeInline(rest: string): { node: Inline; length: number } | null {
 }
 
 function takeCode(rest: string): { node: Inline; length: number } | null {
-  const match = CODE_SPAN.exec(rest);
-  if (match === null) return null;
-  // Code is a leaf: what a span holds is the literal characters between the
-  // backticks, emphasis and brackets included, which is the whole point of it.
-  return {
-    node: { kind: "code", text: match[2].trim() },
-    length: match[0].length,
-  };
+  const opener = CODE_OPEN.exec(rest);
+  if (opener === null) return null;
+  const fence = opener[0];
+  // The closing run is the same length and no longer: scanned for, never
+  // backtracked into. A run of the wrong length is content, so the search
+  // continues past it rather than giving up on the span.
+  for (let at = fence.length; at < rest.length; ) {
+    const found = rest.indexOf(fence, at);
+    if (found < 0) return null;
+    const end = found + fence.length;
+    if (rest[end] === "`") {
+      // A longer run than the opener: not this span's close, skip the whole run.
+      at = end;
+      while (rest[at] === "`") at += 1;
+      continue;
+    }
+    // Code is a leaf: what a span holds is the literal characters between the
+    // backticks, emphasis and brackets included, which is the whole point of it.
+    return {
+      node: { kind: "code", text: rest.slice(fence.length, found).trim() },
+      length: end,
+    };
+  }
+  return null;
 }
 
 function takeWrapped(
@@ -406,6 +428,14 @@ function safeHref(raw: string): string | null {
   // biome-ignore lint/suspicious/noControlCharactersInRegex: see just above
   const href = raw.replace(/[\u0000-\u0020\u007F]/g, "");
   if (href === "") return null;
-  if (!HAS_SCHEME.test(href)) return href.startsWith("//") ? null : href;
+  // A schemeless reference is the handbook's own `capture.md#filing`, and it is
+  // admitted — but NOT one that starts with two separators. The WHATWG parser
+  // treats a backslash as a slash for a special scheme, so `\\evil.example`,
+  // `/\evil.example` and `\/evil.example` all resolve to another ORIGIN while
+  // reading as a relative path — and, being "not external", would have been
+  // drawn without even the new-tab that marks a link as leaving.
+  if (!HAS_SCHEME.test(href)) {
+    return /^[/\\][/\\]/.test(href) || href.startsWith("\\") ? null : href;
+  }
   return SAFE_SCHEME.test(href) ? href : null;
 }

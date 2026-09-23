@@ -213,6 +213,42 @@ describe("nothing in the source becomes markup", () => {
   });
 });
 
+describe("an uploaded document cannot take the reader's tab or origin", () => {
+  // A corpus holds files a tenant member uploads, and this parser runs
+  // SYNCHRONOUSLY inside render. The first version located a code span's close
+  // with a backreference, so a line of unclosed backticks made the engine retry
+  // every prefix at every offset: 8,000 of them held the main thread for five
+  // seconds, and nothing downstream has a timeout to save the tab.
+  it("reads a long run of unclosed backticks in linear time", () => {
+    const hostile = `a${"`".repeat(8000)}${"x".repeat(8000)}`;
+    const started = performance.now();
+    render(<Markdown source={hostile} />);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
+  it("still reads a code span, and the longer run that is not its close", () => {
+    const { container } = render(<Markdown source="a `b` c ``d`` e" />);
+    expect(
+      [...container.querySelectorAll("code")].map((el) => el.textContent),
+    ).toEqual(["b", "d"]);
+  });
+
+  // The WHATWG parser treats a backslash as a slash for a special scheme, so
+  // each of these resolves to ANOTHER ORIGIN while reading as a relative path —
+  // and a relative path is drawn without the new tab that marks a link as
+  // leaving. The `//` spelling was refused from the start; its siblings were not.
+  it.each([
+    "\\\\evil.example/login",
+    "/\\evil.example/login",
+    "\\/evil.example/login",
+    "//evil.example/login",
+  ])("refuses %s, which resolves off-origin", (href) => {
+    const { container } = render(<Markdown source={`[Reset it](${href})`} />);
+    expect(container.querySelector("a")).toBeNull();
+    expect(container.textContent).toContain("Reset it");
+  });
+});
+
 describe("the highlight has three outcomes and says which", () => {
   let scrolled: HTMLElement[];
 

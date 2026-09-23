@@ -6901,6 +6901,9 @@ export const vi = {
   "corpusAsk.unreviewedTitle": "Chưa ai đọc các đoạn này",
   "corpusAsk.notReadyTitle": "Bộ này vẫn đang được đọc",
   "corpusAsk.retrievalUnavailableTitle": "Chưa cấu hình chỉ mục tìm kiếm",
+  "corpusAsk.noGrantTitle": "Bạn không mở được tài liệu của công ty này",
+  "corpusAsk.noGrant":
+    "Hỏi sẽ đọc một bộ tài liệu bạn chưa được cấp quyền. Quản trị viên có thể cấp cho bạn.",
   "corpusAsk.noSetsTitle": "Chưa có bộ tài liệu nào để hỏi",
   "corpusAsk.noSets":
     "Công ty này chưa lưu tài liệu nào nên không có gì để tìm.",

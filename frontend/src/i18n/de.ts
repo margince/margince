@@ -6970,6 +6970,10 @@ export const de = {
   "corpusAsk.unreviewedTitle": "Niemand hat diese Passagen gelesen",
   "corpusAsk.notReadyTitle": "Diese Sammlung wird noch gelesen",
   "corpusAsk.retrievalUnavailableTitle": "Kein Suchindex konfiguriert",
+  "corpusAsk.noGrantTitle":
+    "Du kannst die Dokumente dieses Unternehmens nicht öffnen",
+  "corpusAsk.noGrant":
+    "Fragen liest einen Dokumentensatz, für den du keine Freigabe hast. Eine Administratorin kann dir Zugriff geben.",
   "corpusAsk.noSetsTitle": "Kein Dokumentensatz zum Fragen",
   "corpusAsk.noSets":
     "Dieses Unternehmen hat noch keine Dokumente abgelegt, es gibt also nichts zu durchsuchen.",
