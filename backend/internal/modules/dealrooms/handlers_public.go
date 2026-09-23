@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -68,6 +69,13 @@ func (h Handlers) ExchangeDealRoomCredential(w http.ResponseWriter, r *http.Requ
 // caller's point of view: a failure is logged for the operator and never
 // reported to the anonymous requester, who must not be able to tell a known
 // address from an unknown one by the shape of the answer.
+// linkRequestTimeout bounds the detached work after the 202, on the other
+// UNAUTHENTICATED edge. Sized for a note write, a credential mint and one SMTP
+// round trip, with room for a relay that is slow rather than dead: too short
+// retires a credential and delivers nothing, the outcome this whole path is
+// arranged to avoid.
+const linkRequestTimeout = 2 * time.Minute
+
 func (h Handlers) RequestDealRoomLink(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.DealRoomLinkRequest
 	if !httperr.Decode(w, r, &req) {
@@ -87,7 +95,9 @@ func (h Handlers) RequestDealRoomLink(w http.ResponseWriter, r *http.Request) {
 	// would retire a credential and deliver nothing. The reissue is attributed
 	// to the installation, the same actor the other anonymous edges write under.
 	answerAndFlush(w, r, http.StatusAccepted)
-	ctx := principal.WithActor(context.WithoutCancel(r.Context()), linkRequestPrincipal)
+	detached, release := context.WithTimeout(context.WithoutCancel(r.Context()), linkRequestTimeout)
+	defer release()
+	ctx := principal.WithActor(detached, linkRequestPrincipal)
 	// The ask is recorded for the seller whether or not a link can go out:
 	// without a relay, the seller handing one over is the only way in.
 	if err := h.store.NoteLinkRequest(ctx, email.String()); err != nil {

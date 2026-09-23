@@ -97,9 +97,10 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	// disclose whether the address maps to an account. Failures on the
 	// async path are operator incidents, logged — never a different
 	// answer to the caller.
-	workCtx := context.WithoutCancel(r.Context())
+	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), resetSendTimeout)
 	done := h.resetSendStarted // test seam; nil in production
 	go func() {
+		defer releaseSend() // here, not in the handler — see resetSendTimeout
 		if done != nil {
 			defer done()
 		}
