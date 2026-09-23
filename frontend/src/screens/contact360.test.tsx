@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { RelationshipPulse, ThinState } from "./contact360";
+import { RelationshipPulse, ThinState, WhoKnowsThem } from "./contact360";
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -151,5 +151,48 @@ describe("the thin contact page", () => {
 
     expect(screen.queryByText(/Brandt Automotive GmbH/)).toBeNull();
     expect(screen.getByText(/Add their employer/)).toBeTruthy();
+  });
+});
+
+// The network card is the route in: each colleague by name, with the proof that
+// they are one — whether the traffic runs both ways, and when they last heard back.
+describe("who here knows them", () => {
+  it("lists each colleague who knows the contact, with the proof of the route", async () => {
+    render(
+      <LocaleProvider initial="en">
+        <WhoKnowsThem
+          view={{
+            ...viewWith(null),
+            network: {
+              colleagues: [
+                {
+                  user_id: "u-anna",
+                  display_name: "Anna Rep",
+                  strength_bucket: "strong",
+                  interactions_90d: 12,
+                  inbound_90d: 5,
+                  outbound_90d: 7,
+                  last_inbound_at: "2026-08-17T12:00:00Z",
+                },
+                {
+                  user_id: "u-ben",
+                  display_name: "Ben Rep",
+                  strength_bucket: "weak",
+                  interactions_90d: 3,
+                  inbound_90d: 0,
+                  outbound_90d: 3,
+                },
+              ],
+            },
+          }}
+        />
+      </LocaleProvider>,
+    );
+
+    const rows = await screen.findAllByRole("listitem");
+    expect(rows.map((row) => row.textContent)).toEqual([
+      "Anna Rep12 two-way exchanges in 90 days · replied 17/08/2026",
+      "Ben Rep3 interactions in 90 days, one-sided",
+    ]);
   });
 });
