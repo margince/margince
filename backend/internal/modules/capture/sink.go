@@ -210,9 +210,15 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			return nil
 		}
 
-		if err := storeRawCapture(ctx, tx, rec); err != nil {
+		// Stamped back onto the record, so the activity below can name the
+		// original it was read from and a purge can follow the link instead of
+		// joining on two writers' keys and hoping they agree. rec is a value
+		// copy; this settles it for every reader downstream of here.
+		storedOriginal, err := storeRawCapture(ctx, tx, rec)
+		if err != nil {
 			return err
 		}
+		rec.StoredOriginal = storedOriginal
 
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
