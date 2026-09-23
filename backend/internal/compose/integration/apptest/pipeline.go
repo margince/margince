@@ -98,9 +98,8 @@ func CreateOpenDeal(t *testing.T, e *AppEnv, stages SeededStages) string {
 	var company map[string]any
 	status := e.Call(t, "POST", "/v1/companies", map[string]any{
 		"display_name": "Acme GmbH",
-		//nolint:goconst // "source" is the record's provenance KEY, and the Go census
-		// (backend/gates/recordsourcespelling_test.go) reads that key as a string literal
-		// at each site — a shared constant here would be a key the census cannot see.
+		//nolint:goconst // kept literal for the reason internal/compose/dealstatus/move.go's
+		// identical waiver states: the Go census reads this key as a string literal.
 		"source":  provenance.RecordSourceManual,
 		"domains": []map[string]any{{"domain": "acme.example", "is_primary": true}},
 	}, nil, &company)
