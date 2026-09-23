@@ -6,8 +6,8 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { useMe } from "../screens/common";
-import { useLicensePosture } from "./agentrail-reads";
 import { useCan } from "./capability";
+import { useLicensePosture } from "./license-posture";
 import { LicenseBanner } from "./licensebanner";
 import { type GrantSpec, meFixture } from "./mefixture";
 
