@@ -52,10 +52,6 @@ import (
 // does not exist.
 var audienceReasonWriters = map[string]string{
 	"internal/modules/activities/activityprojection.go": "TestAWithheldRowCarriesNoAudienceReason",
-	// The scan moved out of sectionstimeline.go when that file crossed the
-	// length cap; the behaviour and its proof are unchanged, only the file that
-	// assigns the field.
-	"internal/compose/contact360/timelinerow.go": "TestTheContactPageWithholdsALimitedMessagesReasonFromAColleague",
 }
 
 func TestEveryAudienceReasonWriterIsProvedToWithholdIt(t *testing.T) {
