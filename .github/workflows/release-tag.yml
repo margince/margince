@@ -39,7 +39,7 @@ jobs:
   # compile PostgreSQL from source. Both checks below fail in seconds.
   version:
     name: The tag is a version, on main, with a verdict
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     timeout-minutes: 10
     permissions:
       contents: read
@@ -175,7 +175,7 @@ jobs:
   release:
     name: Publish the GitHub release
     needs: [version, desktop-macos, desktop-windows]
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     # Transfer work, not build work: two artifact downloads, one re-zip, one
     # upload. The bundles were produced inside the desktop lanes' own ceilings.
     timeout-minutes: 30
