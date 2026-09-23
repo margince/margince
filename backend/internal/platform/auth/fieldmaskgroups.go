@@ -26,8 +26,10 @@ type maskSubject struct{ object, field string }
 // two constants for one string is the drift this package exists to refuse. An
 // offer has no table here, so it gets a name of its own.
 const (
-	maskObjDeal       = tableDeal
-	maskFieldCurrency = "currency"
+	maskObjDeal          = tableDeal
+	maskObjCommission    = "commission"
+	maskFieldAmountMinor = "amount_minor"
+	maskFieldCurrency    = "currency"
 )
 
 // maskGroups says what a mask on the key also withholds.
@@ -47,8 +49,8 @@ var maskGroups = map[maskSubject][]maskSubject{
 	// An ARR left standing beside a withheld one-off amount discloses the size
 	// of the deal the mask was meant to hide, so the two travel with the
 	// currency that would otherwise still read as a priced deal.
-	{maskObjDeal, "amount_minor"}:       {{maskObjDeal, "expected_arr_minor"}, {maskObjDeal, maskFieldCurrency}},
-	{maskObjDeal, "expected_arr_minor"}: {{maskObjDeal, "amount_minor"}, {maskObjDeal, maskFieldCurrency}},
+	{maskObjDeal, maskFieldAmountMinor}: {{maskObjDeal, "expected_arr_minor"}, {maskObjDeal, maskFieldCurrency}},
+	{maskObjDeal, "expected_arr_minor"}: {{maskObjDeal, maskFieldAmountMinor}, {maskObjDeal, maskFieldCurrency}},
 	// A commission entry says the tier three ways: frozen at accrual, as the
 	// rate it became (tier2_20 is 2000bps), and as the amount over the basis it
 	// produced that rate from. None of the three is a member an administrator
@@ -59,8 +61,9 @@ var maskGroups = map[maskSubject][]maskSubject{
 	// required integers on the wire, so it answers this group by leaving the ROW
 	// out of its reads rather than the column out of the row.
 	{"partner", "margin_tier"}: {
-		{"commission", "margin_tier_at_accrual"}, {"commission", "rate_bps"},
-		{"commission", "amount_minor"},
+		{maskObjCommission, "margin_tier_at_accrual"},
+		{maskObjCommission, "rate_bps"},
+		{maskObjCommission, maskFieldAmountMinor},
 	},
 }
 
