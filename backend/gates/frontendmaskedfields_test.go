@@ -52,10 +52,11 @@ var maskedGuardRender = regexp.MustCompile(`<FieldGuard\b[^>]*mode=[^>]*"masked"
 // words.
 var withheldMessage = regexp.MustCompile(`t\("record\.notShown"\)`)
 
-// maskDrawing is one DECLARATION's answer about one field: the screen it sits
-// in, and whether that same declaration states the refusal. Per declaration
-// and not per file, because a component drawing one withheld field says
-// nothing about the next field down the same screen.
+// maskDrawing is one BRANCH's answer about one field: the screen it sits in,
+// and whether the code deciding that field's cell states the refusal. Per
+// branch and not per declaration, because a component drawing one withheld
+// field through the shared control says nothing about the next field it tests
+// for in its own body.
 type maskDrawing struct {
 	file    string
 	refuses bool
@@ -99,24 +100,24 @@ func TestEveryMaskableFieldIsDrawnAsWithheld(t *testing.T) {
 		if !offered[field] || anyRefuses(drawings) {
 			continue
 		}
-		t.Errorf("%q is tested for in %s and no declaration testing for it draws the refusal "+
-			"itself: a screen that knows the field is withheld and draws its own words for it is a "+
-			"second spelling of the refusal, and one that draws the shared one for a NEIGHBOURING "+
-			"field leaves this one blank", field, screensOf(drawings))
+		t.Errorf("%q is tested for in %s and no branch testing for it draws the refusal itself: a "+
+			"screen that knows the field is withheld and draws its own words for it is a second "+
+			"spelling of the refusal, and one that draws the shared one for a NEIGHBOURING field "+
+			"leaves this one blank", field, screensOf(drawings))
 	}
 	offeredWithoutCell.AssertAllMatched(t)
 	drawnWithoutOffer.AssertAllMatched(t)
 }
 
-// drawsWithheld reports whether this declaration states the refusal, in either
-// of the shared spellings the product has for it.
-func drawsWithheld(declaration string) bool {
-	return maskedGuardRender.MatchString(declaration) || withheldMessage.MatchString(declaration)
+// drawsWithheld reports whether this stretch of a screen states the refusal,
+// in either of the shared spellings the product has for it.
+func drawsWithheld(branch string) bool {
+	return maskedGuardRender.MatchString(branch) || withheldMessage.MatchString(branch)
 }
 
-// anyRefuses reports whether one of the declarations testing for a field draws
-// the refusal, which is the association this mirror holds: the neighbours of a
-// declaration answer for their own fields and not for this one.
+// anyRefuses reports whether one of the branches testing for a field draws the
+// refusal, which is the association this mirror holds: the branches beside one
+// answer for their own fields and not for this one.
 func anyRefuses(drawings []maskDrawing) bool {
 	return slices.ContainsFunc(drawings, func(drawing maskDrawing) bool { return drawing.refuses })
 }
@@ -157,9 +158,9 @@ func maskedFieldsDrawnUnder(root string) (map[string][]maskDrawing, error) {
 			return readErr
 		}
 		for _, declaration := range declarationsIn(string(source)) {
-			drawing := maskDrawing{file: path, refuses: drawsWithheld(declaration)}
-			for _, field := range maskedFieldTests(declaration) {
-				drawn[field] = append(drawn[field], drawing)
+			for _, test := range maskedFieldTests(declaration) {
+				drawn[test.field] = append(drawn[test.field],
+					maskDrawing{file: path, refuses: drawsWithheld(test.branch)})
 			}
 		}
 		return nil
@@ -218,26 +219,109 @@ var (
 	// maskedFieldLiteral is a field as the wire spells one, which keeps a window's
 	// other literals out: a type guard's "string" is not a field.
 	maskedFieldLiteral = regexp.MustCompile(`"([a-z][a-z0-9]*(?:_[a-z0-9]+)*)"`)
+	// ifCondition is the keyword a bracket group opens the condition of, whose
+	// consequent is the cell that condition decides.
+	ifCondition = regexp.MustCompile(`\bif\s*$`)
+	// conditionOperator is what a test the screen BRANCHES on is followed by.
+	// Optional chaining and a default are neither, and both sit exactly there.
+	conditionOperator = regexp.MustCompile(`^(\?[^.?]|&&|\|\|)`)
 )
 
-// maskedFieldTests is the field names one source asks a record's masked_fields
-// about.
+// maskedFieldTest is one field a screen asks a record's masked_fields about,
+// and the code answering for it.
+type maskedFieldTest struct {
+	field  string
+	branch string
+}
+
+// maskedFieldTests is the fields one source asks a record's masked_fields
+// about, each with the branch drawing its cell.
 //
 // It reads EXPRESSIONS rather than lines: each anchor is followed to the close
 // of the call it sits in, so a literal further down the file cannot be read as
 // a field this screen tests for, and a test spread over five lines still is.
-func maskedFieldTests(source string) []string {
+func maskedFieldTests(source string) []maskedFieldTest {
 	body := tsComment.ReplaceAllString(source, " ")
-	var fields []string
+	var tests []maskedFieldTest
 	for _, anchor := range maskedAnchor.FindAllStringIndex(body, -1) {
-		for _, field := range fieldsAskedIn(balancedWindow(body[anchor[0]:])) {
-			if !slices.Contains(fields, field) {
-				fields = append(fields, field)
+		window := balancedWindow(body[anchor[0]:])
+		branch := branchDeciding(body, anchor[0], window)
+		for _, field := range fieldsAskedIn(window) {
+			test := maskedFieldTest{field: field, branch: branch}
+			if !slices.Contains(tests, test) {
+				tests = append(tests, test)
 			}
 		}
 	}
-	slices.Sort(fields)
-	return fields
+	slices.SortStableFunc(tests, func(a, b maskedFieldTest) int { return strings.Compare(a.field, b.field) })
+	return tests
+}
+
+// branchDeciding is the code answering for the field tested at anchor: the
+// conditional whose test names it, or the whole declaration where the test is
+// not a condition at all — a screen handing the withheld list on to a control
+// asks one question for every key in it, and the control drawing them is not
+// in this declaration to read.
+//
+// It only ever NARROWS what a refusal is read from, so a shape it cannot place
+// falls back to the declaration: the widest reading, and the one a field drawn
+// in a screen's own words beside a guarded neighbour escapes through.
+func branchDeciding(declaration string, anchor int, window string) string {
+	if branch, ok := ifBranchAround(declaration, anchor); ok {
+		return branch
+	}
+	rest := declaration[anchor+len(window):]
+	if conditionOperator.MatchString(strings.TrimLeft(rest, " \t\n")) {
+		return window + consequentAfter(rest)
+	}
+	return declaration
+}
+
+// ifBranchAround is the if statement whose condition holds an index: the
+// condition and the cell it guards, where the index sits in one at all.
+func ifBranchAround(declaration string, at int) (string, bool) {
+	opener, condition, ok := enclosingGroup(declaration, at)
+	if !ok || declaration[opener] != '(' || !ifCondition.MatchString(declaration[:opener]) {
+		return "", false
+	}
+	return condition + consequentAfter(declaration[opener+len(condition):]), true
+}
+
+// enclosingGroup is the innermost bracket group holding an index: where it
+// opens, and the text from there to its close. Absent where the index sits at
+// the declaration's own level, and absent where the group never closes — a
+// bracket inside a string literal miscounts the depth, and a branch read short
+// is a refusal this mirror stops seeing.
+func enclosingGroup(declaration string, at int) (int, string, bool) {
+	var open []int
+	for i, r := range declaration[:at] {
+		switch r {
+		case '(', '[', '{':
+			open = append(open, i)
+		case ')', ']', '}':
+			// A closer with nothing open shuts a group above this text: a
+			// declaration opens at the first line in the first column, which is
+			// the close of a signature wherever one is spread over several lines.
+			if len(open) > 0 {
+				open = open[:len(open)-1]
+			}
+		}
+	}
+	if len(open) == 0 {
+		return 0, "", false
+	}
+	opener := open[len(open)-1]
+	// The declaration bounds itself: a branch is as long as the cell it draws,
+	// which is well past the cap one field test is read under.
+	group, closed := balancedFrom(declaration[opener:], len(declaration))
+	return opener, group, closed
+}
+
+// consequentAfter is the cell a condition draws: the block or arm following
+// it, or the single statement a screen wrote no braces around.
+func consequentAfter(text string) string {
+	statement, _ := balancedFrom(strings.TrimLeft(text, " \t\n"), len(text))
+	return statement
 }
 
 // fieldsAskedIn is the names a membership test in this window asks about: the
@@ -264,6 +348,13 @@ const maskedWindowCap = 800
 // to the close of the call or subscript it opens, or to the end of the
 // statement when it opens none.
 func balancedWindow(text string) string {
+	window, _ := balancedFrom(text, maskedWindowCap)
+	return window
+}
+
+// balancedFrom is that window under a bound of the caller's choosing, and
+// whether it ended on the close of a group the text itself opened.
+func balancedFrom(text string, bound int) (string, bool) {
 	depth := 0
 	for i, r := range text {
 		switch r {
@@ -272,18 +363,18 @@ func balancedWindow(text string) string {
 		case ')', ']', '}':
 			depth--
 			if depth <= 0 {
-				return text[:i+1]
+				return text[:i+1], depth == 0
 			}
 		case ';':
 			if depth == 0 {
-				return text[:i]
+				return text[:i], false
 			}
 		}
-		if i >= maskedWindowCap {
-			return text[:i]
+		if i >= bound {
+			return text[:i], false
 		}
 	}
-	return text
+	return text, false
 }
 
 // openingBracketed is the array literal ending at the close of text, read back
@@ -347,7 +438,11 @@ func TestTheMaskedCellScanReadsTheSpellingsTheScreensUse(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			if got := maskedFieldTests(c.source); !slices.Equal(got, c.want) {
+			var got []string
+			for _, test := range maskedFieldTests(c.source) {
+				got = append(got, test.field)
+			}
+			if !slices.Equal(got, c.want) {
 				t.Fatalf("read %v, want %v", got, c.want)
 			}
 		})
@@ -418,5 +513,116 @@ function MarginTierRow({ partner }) {
 	}
 	if anyRefuses(drawn["margin_tier"]) {
 		t.Fatal("a field drawn in the screen's own words was vouched for by its neighbour's control")
+	}
+}
+
+// TestTheRefusalIsReadPerBranchAndNotPerDeclaration plants the shape one
+// declaration can still hide: two withheld fields tested by the same
+// component, one drawn through the shared control and one in the screen's own
+// words, where the guarded branch answered for both.
+//
+// The last case is the edge of that reading. A declaration handing the whole
+// withheld list to a control tests no field in a branch of its own, so the one
+// refusal it states answers for every key in the list — which is what the
+// control does with them.
+func TestTheRefusalIsReadPerBranchAndNotPerDeclaration(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name    string
+		screen  string
+		refused []string
+		blank   []string
+	}{
+		{
+			name: "sibling cells of one facts strip",
+			screen: `function DealFacts({ deal }) {
+  const masked = deal.masked_fields ?? [];
+  return (
+    <RecordFacts>
+      {masked.includes("amount_minor") ? (
+        <FieldGuard mode="masked" />
+      ) : (
+        <Money minor={deal.amount_minor} />
+      )}
+      {masked.includes("currency") ? (
+        <span>no currency for you</span>
+      ) : (
+        <span>{deal.currency}</span>
+      )}
+    </RecordFacts>
+  );
+}
+`,
+			refused: []string{"amount_minor"},
+			blank:   []string{"currency"},
+		},
+		{
+			name: "sibling readings of one cell",
+			screen: `function AmountCell({ deal }) {
+  if (deal.masked_fields?.includes("amount_minor")) {
+    return <FieldGuard mode="masked" />;
+  }
+  if (deal.masked_fields?.includes("currency")) {
+    return <span>no currency for you</span>;
+  }
+  return null;
+}
+`,
+			refused: []string{"amount_minor"},
+			blank:   []string{"currency"},
+		},
+		{
+			name: "sibling readings named before the return",
+			screen: `function DealCells({ deal }) {
+  const masked = deal.masked_fields ?? [];
+  const amount = masked.includes("amount_minor") ? <FieldGuard mode="masked" /> : deal.amount_minor;
+  const currency = masked.includes("currency") ? <span>no currency for you</span> : deal.currency;
+  return <Row amount={amount} currency={currency} />;
+}
+`,
+			refused: []string{"amount_minor"},
+			blank:   []string{"currency"},
+		},
+		{
+			name: "the withheld list handed to a control",
+			screen: `function DealForm({ deal, t }) {
+  const masked = deal.masked_fields ?? [];
+  return (
+    <RecordFields
+      readOnlyFields={Object.fromEntries(
+        masked.map((key) => [key, t("record.notShown")]),
+      )}
+      maskedFields={masked.filter((key) =>
+        ["amount_minor", "currency"].includes(key),
+      )}
+    />
+  );
+}
+`,
+			refused: []string{"amount_minor", "currency"},
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			root := t.TempDir()
+			if err := os.WriteFile(filepath.Join(root, "deal.tsx"), []byte(c.screen), 0o600); err != nil {
+				t.Fatalf("writing the fixture screen: %v", err)
+			}
+			drawn, err := maskedFieldsDrawnUnder(root)
+			if err != nil {
+				t.Fatalf("reading the fixture screen: %v", err)
+			}
+			for _, field := range c.refused {
+				if !anyRefuses(drawn[field]) {
+					t.Errorf("the branch drawing %q through the shared control read as drawing no refusal", field)
+				}
+			}
+			for _, field := range c.blank {
+				if anyRefuses(drawn[field]) {
+					t.Errorf("%q is drawn in the screen's own words and was vouched for by a guarded "+
+						"branch of the same declaration", field)
+				}
+			}
+		})
 	}
 }
