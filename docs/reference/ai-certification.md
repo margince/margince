@@ -312,9 +312,9 @@ Which model to run each site on, and what that choice rests on.
 | [`summarize/meeting_brief`](#summarizemeeting_brief) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `not_supported` | 0.00 | `current` | 1 | 4 |
 | [`summarize/meeting_plan`](#summarizemeeting_plan) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 4 |
 | [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 4 |
-| [`voice_build/demo_draft`](#voice_builddemo_draft) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
+| [`voice_build/demo_draft`](#voice_builddemo_draft) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 4 |
 | [`voice_build/derive`](#voice_buildderive) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 1 | 5 |
-| [`voice_build/eval_draft`](#voice_buildeval_draft) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 5 |
+| [`voice_build/eval_draft`](#voice_buildeval_draft) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 5 |
 | [`voice_build/eval_scores`](#voice_buildeval_scores) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 5 |
 | [`weekly_learnings/learn`](#weekly_learningslearn) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `not_supported` | 0.67 | `current` | 3 | 4 |
 | [`weekly_review/narrative`](#weekly_reviewnarrative) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `not_supported` | 0.75 | `current` | 4 | 4 |
@@ -346,7 +346,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 4 | 0 | 2 | 138 | 123 | 0.89 | 23385ms | 2 | 0 | 4 |
 | `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 39 | 38 | 0 | 1 | 351 | 288 | 0.82 | 237887ms | 19 | 7 | 13 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 11 | 0 | 0 | 11 | 160 | 113 | 0.71 | 20620ms | 8 | 0 | 3 |
-| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 33 | 33 | 0 | 0 | 309 | 190 | 0.61 | 86185ms | 7 | 7 | 19 |
+| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 33 | 33 | 0 | 0 | 309 | 191 | 0.62 | 86185ms | 7 | 8 | 18 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 141 | 122 | 0.87 | 12585ms | 2 | 0 | 4 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
@@ -826,7 +826,7 @@ Records (6):
 | `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 2567ms | 237887ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 2154ms | 5869ms | 0 | 0 | 3 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 1 | 0.33 | 2143ms | 4807ms | 1 | 0 | 2 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 966ms | 3036ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/contact`
@@ -847,7 +847,7 @@ Records (6):
 | `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 2567ms | 237887ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 2154ms | 5869ms | 0 | 0 | 3 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 2 | 0.67 | 2143ms | 4807ms | 2 | 0 | 1 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 966ms | 3036ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/first`
@@ -868,7 +868,7 @@ Records (6):
 | `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `not_supported` | 3 | 2 | 0.67 | 2567ms | 237887ms | 2 | 0 | 1 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 1 | 0.33 | 2154ms | 5869ms | 1 | 0 | 2 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 2143ms | 4807ms | 0 | 0 | 3 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 966ms | 3036ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/intro`
@@ -890,7 +890,7 @@ Records (6):
 | `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 24063ms | 46554ms | 6 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 6 | 1.00 | 10016ms | 26168ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 2567ms | 237887ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 5 | 0.83 | 2154ms | 5869ms | 5 | 0 | 1 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 0 | 0.00 | 2143ms | 4807ms | 0 | 0 | 6 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `supported_degraded` | 6 | 5 | 0.83 | 966ms | 3036ms | 5 | 0 | 1 | 0 |
 
 #### `draft_reply/intro_note`
@@ -913,7 +913,7 @@ Records (6):
 | `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 9 | 1.00 | 24063ms | 46554ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 8 | 0.89 | 10016ms | 26168ms | 8 | 0 | 1 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 9 | 9 | 1.00 | 2567ms | 237887ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `not_supported` | 9 | 6 | 0.67 | 2154ms | 5869ms | 6 | 3 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `not_supported` | 9 | 6 | 0.67 | 2143ms | 4807ms | 6 | 3 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 3/3 | `not_supported` | 9 | 8 | 0.89 | 966ms | 3036ms | 8 | 0 | 1 | 0 |
 
 #### `draft_reply/reply`
@@ -938,7 +938,7 @@ Records (7):
 | `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/4 | `not_supported` | 12 | 12 | 1.00 | 10016ms | 26168ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 4/4 | `not_supported` | 12 | 11 | 0.92 | 2567ms | 237887ms | 11 | 0 | 1 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 2508ms | 2685ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 4/4 | `not_supported` | 12 | 5 | 0.42 | 2154ms | 5869ms | 5 | 0 | 7 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 4/4 | `not_supported` | 12 | 2 | 0.17 | 2143ms | 4807ms | 2 | 0 | 10 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/4 | `not_supported` | 12 | 12 | 1.00 | 966ms | 3036ms | 12 | 0 | 0 | 0 |
 
 ### `enrich`
@@ -1257,7 +1257,7 @@ Records (4):
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 9/9 | `not_supported` | 27 | 17 | 0.63 | 1151ms | 1939ms | 11 | 8 | 2 | 6 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 9/9 | `not_supported` | 27 | 12 | 0.44 | 3840ms | 13618ms | 6 | 15 | 0 | 6 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 9/9 | `not_supported` | 27 | 4 | 0.15 | 830ms | 3027ms | 3 | 8 | 15 | 1 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 9/9 | `not_supported` | 27 | 11 | 0.41 | 1263ms | 3715ms | 5 | 13 | 3 | 6 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 9/9 | `not_supported` | 27 | 11 | 0.41 | 820ms | 1583ms | 5 | 15 | 1 | 6 |
 
 ### `summarize`
@@ -1422,7 +1422,7 @@ Records (4):
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1211ms | 3313ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 2084ms | 237731ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1642ms | 20668ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1381ms | 15657ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 1417ms | 2045ms | 0 | 0 | 3 | 0 |
 
 #### `voice_build/derive`
@@ -1442,7 +1442,7 @@ Records (5):
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1211ms | 3313ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 2084ms | 237731ms | 0 | 0 | 3 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 3 | 0 | 0.00 | 1358ms | 20620ms | 0 | 0 | 3 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 1 | 0.33 | 1642ms | 20668ms | 1 | 0 | 2 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 1381ms | 15657ms | 0 | 0 | 3 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 1 | 0.33 | 1417ms | 2045ms | 1 | 0 | 2 | 0 |
 
 #### `voice_build/eval_draft`
@@ -1462,7 +1462,7 @@ Records (5):
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 2 | 0.67 | 1211ms | 3313ms | 2 | 1 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 2084ms | 237731ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1358ms | 20620ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 2 | 0.67 | 1642ms | 20668ms | 2 | 0 | 1 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1381ms | 15657ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 2 | 0.67 | 1417ms | 2045ms | 2 | 1 | 0 | 0 |
 
 #### `voice_build/eval_scores`
@@ -1482,7 +1482,7 @@ Records (5):
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1211ms | 3313ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 2084ms | 237731ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1358ms | 20620ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1642ms | 20668ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1381ms | 15657ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1417ms | 2045ms | 3 | 0 | 0 | 0 |
 
 ### `weekly_learnings`
