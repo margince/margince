@@ -77,7 +77,12 @@ const (
 // an audit trail that records a correction differently depending on which
 // sidecar it touched is one nobody can query.
 type evidenceRow struct {
-	ID              ids.UUID
+	ID ids.UUID
+	// Version is what an If-Match precondition is compared against. Read under
+	// the row lock, which is what lets the comparison be a plain one: nothing
+	// can move the version between this read and the patch, so the write needs
+	// no CAS of its own to notice.
+	Version         int64
 	Value           string
 	Source          string
 	EvidenceSnippet *string
@@ -166,9 +171,10 @@ func (s *Store) writeProfileField(
 		changedKey: field,
 		value:      in.Value,
 		ifVersion:  in.IfVersion,
-		readBefore: func(ctx context.Context, tx pgx.Tx) (evidenceRow, bool, error) {
-			return readProfileFieldRowForWrite(ctx, tx, companyID, field, in.Value)
+		locate: func(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
+			return locateProfileFieldRowForWrite(ctx, tx, companyID, field, in.Value)
 		},
+		readLocked: readProfileFieldRowLocked,
 		readAfter: func(ctx context.Context, tx pgx.Tx) (crmcontracts.CompanyProfileField, error) {
 			return readProfileFieldWire(ctx, tx, companyID, field)
 		},
@@ -293,12 +299,12 @@ func writeCanonicalCompanyColumn(
 // the value rather than a bare flag. Agreeing with a claim nobody made is not
 // an act the product has, and inventing an empty row to agree with would record
 // a human verdict on a value no one ever proposed.
-func readProfileFieldRowForWrite(
+func locateProfileFieldRowForWrite(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, field string, value *string,
-) (evidenceRow, bool, error) {
-	row, err := readProfileFieldRow(ctx, tx, companyID, field)
+) (ids.UUID, bool, error) {
+	id, err := profileFieldRowID(ctx, tx, companyID, field)
 	if !errors.Is(err, apperrors.ErrNotFound) || value == nil {
-		return row, false, err
+		return id, false, err
 	}
 	// A contact stating a fact for the first time is a human act, and only a
 	// human's. An agent reaching this arm would MINT a legal-identity claim on
@@ -307,13 +313,36 @@ func readProfileFieldRowForWrite(
 	// a value that human never saw. Correcting a claim that already exists stays
 	// open to an agent, because there the machine's proposal is what it answers.
 	if err := requireHumanOrigination(ctx); err != nil {
-		return row, false, err
+		return ids.UUID{}, false, err
 	}
 	if err := insertHumanProfileField(ctx, tx, companyID, field); err != nil {
-		return row, false, err
+		return ids.UUID{}, false, err
 	}
-	created, err := readProfileFieldRow(ctx, tx, companyID, field)
+	created, err := profileFieldRowID(ctx, tx, companyID, field)
 	return created, true, err
+}
+
+// profileFieldRowID names the row a write is about, and nothing else about it.
+//
+// Only the id, because a value read here would be read BEFORE the lock: the row
+// can change between this statement and the patch, and a before-image taken
+// from it would describe a state the write never replaced. What this resolves
+// is the row's ADDRESS — (company_id, field) is unique — and the one race left
+// is the row being deleted, which the lock answers with not-found.
+func profileFieldRowID(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, field string,
+) (ids.UUID, error) {
+	var id ids.UUID
+	err := tx.QueryRow(ctx,
+		`SELECT id FROM company_profile_field WHERE company_id = $1 AND field = $2`,
+		companyID, field).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return ids.UUID{}, fmt.Errorf("locate company profile field: %w", err)
+	}
+	return id, nil
 }
 
 // requireHumanOrigination refuses an agent the arm that creates a claim.
@@ -374,16 +403,18 @@ func insertHumanProfileField(
 	return nil
 }
 
-func readProfileFieldRow(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, field string,
-) (evidenceRow, error) {
-	var r evidenceRow
+// readProfileFieldRowLocked reads the machine's whole claim, under the lock the
+// writer already holds on this row. By id, because the lock is by id: looking
+// the row up again by (company_id, field) would be reading a row the lock does
+// not name.
+func readProfileFieldRowLocked(ctx context.Context, tx pgx.Tx, id ids.UUID) (evidenceRow, error) {
+	r := evidenceRow{ID: id}
 	err := tx.QueryRow(ctx, `
-		SELECT id, value, source, evidence_snippet, source_url, confidence, verified_at, verified_by, captured_by
+		SELECT version, value, source, evidence_snippet, source_url, confidence, verified_at, verified_by, captured_by
 		  FROM company_profile_field
-		 WHERE company_id = $1 AND field = $2`,
-		companyID, field,
-	).Scan(&r.ID, &r.Value, &r.Source, &r.EvidenceSnippet, &r.SourceURL, &r.Confidence,
+		 WHERE id = $1`,
+		id,
+	).Scan(&r.Version, &r.Value, &r.Source, &r.EvidenceSnippet, &r.SourceURL, &r.Confidence,
 		&r.VerifiedAt, &r.VerifiedBy, &r.CapturedBy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return r, apperrors.ErrNotFound

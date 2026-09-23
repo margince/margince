@@ -35,11 +35,17 @@ type evidenceWrite[T any] struct {
 	// claim changes who stands behind it, not what it says.
 	value     *string
 	ifVersion *int64
-	// readBefore locates the row and returns the machine's claim in full, which
-	// becomes the audit before-image. The bool says the row did not exist and
-	// this write minted it: there is then no prior state, and the audit records
-	// a creation rather than an update against an image nobody ever wrote.
-	readBefore func(context.Context, pgx.Tx) (evidenceRow, bool, error)
+	// locate names WHICH row this write is about, and mints it for the verb
+	// that creates one. Its id and nothing else: the writer locks that id
+	// before anything about the row is read. The bool says the row did not
+	// exist and this write minted it — there is then no prior state, and the
+	// audit records a creation rather than an update against an image nobody
+	// ever wrote.
+	locate func(context.Context, pgx.Tx) (ids.UUID, bool, error)
+	// readLocked returns the machine's claim in full, which becomes the audit
+	// before-image. It runs UNDER the row lock, which is what makes the image
+	// describe the state the patch below actually replaces.
+	readLocked func(context.Context, pgx.Tx, ids.UUID) (evidenceRow, error)
 	// canonical moves the corrected value out of the sidecar and onto the
 	// record it describes. Nil for a claim that lives only in the sidecar and
 	// so has nothing to keep in step.
@@ -95,35 +101,44 @@ func writeEvidence[T any](
 		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
 			return fmt.Errorf("read transaction time: %w", err)
 		}
-		before, created, err := w.readBefore(ctx, tx)
+		id, created, err := w.locate(ctx, tx)
+		if err != nil {
+			return err
+		}
+		// The LOCK, before anything about the row is read.
+		//
+		// The before-image and the patch have to describe one row state, and
+		// they did not: the read happened here and the lock was taken twenty
+		// lines below, inside the patch. A concurrent write landing in that
+		// window left an audit entry answering "what did it say before I fixed
+		// it" with a value the fix never replaced — and, for a removal, naming
+		// a claim other than the one that was deleted.
+		lock, err := storekit.LockRow(ctx, tx, w.table, id, w.archived)
+		if err != nil {
+			return err
+		}
+		before, err := w.readLocked(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		// The caller's If-Match, decided against the version read under that
+		// lock. A plain comparison rather than a CAS on the update: nothing can
+		// move the version now, and LockRow has already answered not-found for
+		// the row that is gone — which is the only other thing a CAS's second
+		// query was there to tell apart.
+		if w.ifVersion != nil && *w.ifVersion != before.Version {
+			return apperrors.ErrVersionSkew
+		}
+
+		p, err := humanVerdictPatch(ctx, before, w.value, actor.UserID, now)
 		if err != nil {
 			return err
 		}
 
-		p := storekit.NewPatch()
-		if w.value != nil {
-			p.Set(auditKeyValue, before.Value, *w.value)
-		}
-		p.Set(auditKeySource, before.Source, companySourceHuman)
-		p.Set(auditKeyVerifiedAt, before.VerifiedAt, now)
-		p.Set(auditKeyVerifiedBy, before.VerifiedBy, actor.UserID)
-		// The row changes HANDS, not just provenance. Both enrichment upserts
-		// decline to overwrite a row whose captured_by is a human, and they test
-		// that column rather than `source` — so a verdict that moved source
-		// alone was reclaimed by the next ordinary refresh, silently undoing
-		// the correction a contact had just made.
-		capturedBy, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return err
-		}
-		p.Set(auditKeyCapturedBy, before.CapturedBy, capturedBy)
-
-		// The patch runs even for a removal, and it is what enforces the
-		// caller's version precondition and takes the row lock — so a stale
-		// If-Match refuses the delete exactly as it refuses a correction,
-		// rather than the delete needing its own copy of that rule.
-		if err := p.ApplyGuardedIn(ctx, tx, w.table, before.ID,
-			w.ifVersion, w.archived); err != nil {
+		// The patch runs even for a removal, so the row a delete is about
+		// carries the same provenance the audit entry below reports — and it
+		// runs under the lock above rather than taking one of its own.
+		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
 		if w.remove {
@@ -168,10 +183,40 @@ func writeEvidence[T any](
 	return out, err
 }
 
-// removeEvidenceRow deletes one sidecar row, after the guarded patch above has
-// already taken the row lock and enforced any version precondition. What is
-// left to it is the delete itself and the two records it owes: one audit row
-// holding the whole removed claim as its before-image, and one event.
+// humanVerdictPatch is what a correction or a confirmation writes: the value
+// when there is one, and in either case the provenance saying a human now
+// stands behind the claim.
+//
+// The machine's own proposal is NOT in here. evidence_snippet, source_url and
+// confidence stay exactly as extracted, which is what lets the before-image
+// carry them into the audit trail rather than an answer overwriting them.
+func humanVerdictPatch(
+	ctx context.Context, before evidenceRow, value *string, by ids.UUID, now time.Time,
+) (*storekit.Patch, error) {
+	p := storekit.NewPatch()
+	if value != nil {
+		p.Set(auditKeyValue, before.Value, *value)
+	}
+	p.Set(auditKeySource, before.Source, companySourceHuman)
+	p.Set(auditKeyVerifiedAt, before.VerifiedAt, now)
+	p.Set(auditKeyVerifiedBy, before.VerifiedBy, by)
+	// The row changes HANDS, not just provenance. Both enrichment upserts
+	// decline to overwrite a row whose captured_by is a human, and they test
+	// that column rather than `source` — so a verdict that moved source
+	// alone was reclaimed by the next ordinary refresh, silently undoing
+	// the correction a contact had just made.
+	capturedBy, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return nil, err
+	}
+	p.Set(auditKeyCapturedBy, before.CapturedBy, capturedBy)
+	return p, nil
+}
+
+// removeEvidenceRow deletes one sidecar row, after the writer above has taken
+// the row lock and enforced any version precondition. What is left to it is the
+// delete itself and the two records it owes: one audit row holding the whole
+// removed claim as its before-image, and one event.
 //
 // `delete` is the honest audit action here because the row really is gone —
 // the bytes are not kept under a flag — which is what the action's own
