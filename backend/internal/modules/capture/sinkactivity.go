@@ -381,10 +381,10 @@ func (s *Sink) upsertActivity(
 		// not. Unknown stores NULL, which is what every row carried before this
 		// and what the search index already treats as "no stemming".
 		string(textlang.DetectFirst(fields.Body, fields.Subject)),
-		// NULLIF on the zero id, not the zero id itself: the column FKs into
-		// raw_capture and a zero uuid names no row. An activity typed by hand
-		// or captured by a connector that keeps no original stores NULL.
-		nullableRawCaptureID(rec.RawCaptureID)).Scan(&id)
+		// A nil pointer is what stores SQL NULL: an activity typed by hand or
+		// captured by a connector that keeps no original names no raw_capture
+		// row (storekit.UUIDOrNil).
+		storekit.UUIDOrNil(rec.RawCaptureID)).Scan(&id)
 	if err == nil {
 		// Field-level provenance (B-E02.12) for the content fields this
 		// capture set — same source/author the row itself carries.
@@ -420,14 +420,6 @@ func (s *Sink) upsertActivity(
 		return ids.ActivityID{}, false, err
 	}
 	return id, false, nil
-}
-
-// nullableRawCaptureID renders an unset original as SQL NULL.
-func nullableRawCaptureID(id ids.UUID) *ids.UUID {
-	if id == ids.Nil {
-		return nil
-	}
-	return &id
 }
 
 // linkActivity resolves the normalized record's link refs. Every target

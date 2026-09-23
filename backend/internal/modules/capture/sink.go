@@ -206,9 +206,9 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			return nil
 		}
 
-		// Settled once, for both lanes: mail stores its original here and
-		// learns the id, a channel poll stored one already and named it on the
-		// record. Whichever supplied it, the activity below names that row.
+		// Settled once, for both lanes: a caller that already stored the original
+		// (a channel poll) names it here; a caller that has not (mail) leaves it
+		// zero and storeRawCapture stores it and returns the id it settles on.
 		stored, err := storeRawCapture(ctx, tx, rec)
 		if err != nil {
 			return err

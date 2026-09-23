@@ -64,6 +64,11 @@ func storeRawCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRec
 	// The first connector to deliver this message supplied the bytes on file.
 	// Its row is the one the activity names, so the second delivery reads the
 	// incumbent's id rather than leaving the reference unset.
+	//
+	// No EnsureVisible probe here, unlike upsertActivity's sibling replay below
+	// it: raw_capture carries no row-level security and no visibility helper,
+	// and this SELECT returns only the id of a row keyed by the natural key the
+	// caller itself supplied.
 	if err := tx.QueryRow(ctx,
 		`SELECT id FROM raw_capture WHERE source_system = $1 AND source_id = $2`,
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID).Scan(&id); err != nil {

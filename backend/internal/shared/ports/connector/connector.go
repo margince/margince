@@ -179,13 +179,9 @@ type NormalizedRecord struct {
 	CapturedBy string // "connector:<name>" — REQUIRED
 	Raw        []byte // re-parseable original → raw jsonb, off the hot path
 
-	// The already-stored original this record was read from, when the caller
-	// stored it before normalizing. A channel poll persists the provider's
-	// update and enqueues the parse as two transactions, so by the time a
-	// record exists its original already has an id; mail normalizes and stores
-	// in one pass and leaves this zero for the sink to settle. Either way the
-	// activity ends up naming the row, which is the only correlation between
-	// the two tables: their source_id columns answer different questions.
+	// The already-stored original this record was read from. A caller that
+	// persisted one before normalizing sets this; left zero, the sink stores
+	// Raw itself and the activity still ends up naming the row either way.
 	RawCaptureID ids.UUID
 
 	// What this record is known by to EVERY door, as distinct from the natural
