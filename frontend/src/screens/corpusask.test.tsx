@@ -582,8 +582,6 @@ describe("AskMarginceModal", () => {
     expect(screen.queryByText(/not covered by this set/i)).toBeNull();
   });
 
-  // A carried question is one the reader has already asked. Filling the box and
-  // waiting for a press was the surface admitting it could not answer.
   // The palette FILLS the box; it does not press Ask. A question typed into a
   // palette is one still being composed — the row matched mid-word — so asking
   // it would spend a model call on a fragment and answer something the reader
