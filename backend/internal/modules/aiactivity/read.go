@@ -123,6 +123,10 @@ type Item struct {
 // what stops a worker which died mid-run from being displayed as working.
 const StateStalled = "stalled"
 
+// pastLeaseSQL is the one rule for a live run past the lease its source
+// declared: the feed renders it stalled, troubled lists it, the count omits it.
+const pastLeaseSQL = `stale_after IS NOT NULL AND stale_after < now()`
+
 // feedSQL reads both halves of the feed in ONE statement, and that is what
 // makes "one occurrence, one line" true rather than asserted.
 //
@@ -168,7 +172,7 @@ const StateStalled = "stalled"
 const feedSQL = `
 (
   SELECT 'live' AS arm, id, kind,
-         CASE WHEN stale_after IS NOT NULL AND stale_after < now() THEN 'stalled' ELSE state END,
+         CASE WHEN ` + pastLeaseSQL + ` THEN '` + StateStalled + `' ELSE state END,
          COALESCE(started_at, queued_at), finished_at,
          left(degrade_reason, $4), left(summary, $5), left(subject_label, $8),
          left(subject_type, $10), subject_id
@@ -208,14 +212,15 @@ UNION ALL
    LIMIT $9
 )`
 
-// liveTotalSQL is the live arm's predicate with no kind filter and no bound.
-// It is a second statement, so its snapshot can trail feedSQL's by one commit;
-// that costs a pulse one poll late, never a line shown twice.
+// liveTotalSQL counts the live arm's rows within their lease, every kind, unbounded.
+// It reads a later snapshot than feedSQL, so a run settling between them could
+// put the total under the list; Mine's clamp keeps it >= the live rows it counts.
 const liveTotalSQL = `
 SELECT count(*)
   FROM ai_task_run
  WHERE actor_user_id = $1
-   AND state IN ('queued','running')`
+   AND state IN ('queued','running')
+   AND NOT (` + pastLeaseSQL + `)`
 
 // Mine is what the AI is doing for THE CALLER now, and what it finished for
 // them today.
@@ -226,10 +231,10 @@ SELECT count(*)
 // standing between that and a leak would be every caller remembering to pass
 // its own — the shape this repo gates against everywhere else. Here there is
 // nothing to remember: another seat's feed cannot be expressed.
-// kinds narrows both arrays before the bounds. Nil means every kind — the
-// complete record — and that is deliberately what an omitted filter gives:
-// every AI task reports here, so the server's answer is complete unless a
-// client says which part of it that client draws.
+// kinds narrows the arrays before their bounds; LiveTotal ignores it. Nil
+// means every kind — the complete record — and that is deliberately what an
+// omitted filter gives: every AI task reports here, so the server's answer is
+// complete unless a client says which part of it that client draws.
 func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string) (Feed, error) {
 	contact, contactErr := personalReader(ctx)
 	if contactErr != nil {
@@ -278,10 +283,26 @@ func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string
 		if rowsErr := rows.Err(); rowsErr != nil {
 			return rowsErr
 		}
-		return tx.QueryRow(ctx, liveTotalSQL, contact).Scan(&feed.LiveTotal)
+		if countErr := tx.QueryRow(ctx, liveTotalSQL, contact).Scan(&feed.LiveTotal); countErr != nil {
+			return countErr
+		}
+		feed.LiveTotal = max(feed.LiveTotal, withinLease(feed.Live))
+		return nil
 	})
 	if err != nil {
 		return Feed{}, fmt.Errorf("aiactivity: %w", err)
 	}
 	return feed, nil
+}
+
+// withinLease counts the live items liveTotalSQL also admits: every one the
+// feed did not render stalled.
+func withinLease(live []Item) int {
+	count := 0
+	for _, item := range live {
+		if item.State != StateStalled {
+			count++
+		}
+	}
+	return count
 }

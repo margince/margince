@@ -55,7 +55,7 @@ func TestMyAiActivityServesTheRealHandlerToAHuman(t *testing.T) {
 		t.Errorf("recent is absent: the contract requires it even on a day with no settled occurrence")
 	}
 	if body.LiveTotal == nil || *body.LiveTotal != 0 {
-		t.Errorf("live_total = %v, want a present 0: an absent total is a read still pending, not an AI at rest", body.LiveTotal)
+		t.Errorf("live_total = %v, want a present 0: an absent total is unknown, not an AI at rest", body.LiveTotal)
 	}
 }
 

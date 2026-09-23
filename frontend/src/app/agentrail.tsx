@@ -391,8 +391,8 @@ function RuntimeFacts({
  */
 function RunSection({
   items,
-  liveTotal,
-}: Readonly<{ items: readonly AiActivityItem[]; liveTotal: number | null }>) {
+  unnamed,
+}: Readonly<{ items: readonly AiActivityItem[]; unnamed: boolean }>) {
   const heading = PANEL_HEADING.running;
   const t = useT();
   // flatMap rather than map+filter: the empty array drops the run AND narrows
@@ -402,7 +402,7 @@ function RunSection({
     return line === null ? [] : [{ item, line }];
   });
   if (said.length === 0) {
-    return (liveTotal ?? 0) > items.length ? (
+    return unnamed ? (
       <PanelSection title={t(heading)}>
         <p className="arempty t-caption">{t("agent.panel.unnamedLive")}</p>
       </PanelSection>
@@ -492,7 +492,7 @@ function AgentPanel({
   state,
   line,
   running,
-  liveTotal,
+  unnamed,
   settled,
   signals,
   model,
@@ -505,7 +505,7 @@ function AgentPanel({
   line: SpokenLine;
   /** The scheduled runs the server reports as live. */
   running: readonly AiActivityItem[];
-  liveTotal: number | null;
+  unnamed: boolean;
   /** What settled today, or undefined while no read of the feed has answered. */
   settled: readonly AiActivityItem[] | undefined;
   signals: Signals;
@@ -536,7 +536,7 @@ function AgentPanel({
           settled belongs to the recap further down, so an occurrence is in one
           section or the other and never both. The section is absent when its
           list is, rather than drawn empty. */}
-      <RunSection items={running} liveTotal={liveTotal} />
+      <RunSection items={running} unnamed={unnamed} />
 
       {/* THREE cases, not two, and the difference is the whole doctrine of this
           surface: a count nobody has read is not a count of zero.
@@ -869,7 +869,7 @@ function derive(
   // here. No cause travels with either, so the line falls back to the generic
   // word rather than borrowing a sentence about some other run, until the
   // feed carries an occurrence it can name.
-  if (server.asking || (server.liveTotal ?? 0) > server.running.length) {
+  if (server.asking || server.unnamed) {
     return { state: "working", cause: null, register: "agent" };
   }
   // A request that failed a moment ago does NOT colour the orb. One dropped
@@ -1272,7 +1272,7 @@ export function AgentRail({
               frame={frame}
               line={line}
               running={server.running}
-              liveTotal={server.liveTotal}
+              unnamed={server.unnamed}
               settled={server.answered ? server.recent : undefined}
               spend={spend}
             />

@@ -361,7 +361,7 @@ export const Working: Story = {
  *  total says one run is live. The orb pulses on the generic word, and the
  *  panel admits the work in one caption without offering a row to read. */
 export const UnnamedWork: Story = {
-  render: story({ ...HEALTHY, running: [], recent: [], liveTotal: 1 }),
+  render: story({ ...HEALTHY, liveTotal: 1 }),
   play: openThePanel,
 };
 

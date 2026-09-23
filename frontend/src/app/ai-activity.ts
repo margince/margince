@@ -123,10 +123,10 @@ export type AiActivity = Readonly<{
   /** Whether any AI work is live RIGHT NOW, as reported by a read that answered. */
   working: boolean;
   /**
-   * How many occurrences are live across EVERY kind; null until a read says.
-   * Beside `running` because the kinds filter and the row bound narrow that list and never this.
+   * Whether the server counts live work beyond the rows it lists. Beside
+   * `running` because the kinds filter and the row bound narrow it, not this.
    */
-  liveTotal: number | null;
+  unnamed: boolean;
   /**
    * Whether THIS TAB is holding a request open to a route that calls a model.
    *
@@ -263,7 +263,9 @@ export function useAiActivity(): AiActivity {
   const recent = feed?.recent ?? NOTHING;
   const faults = feed?.faults ?? NOTHING;
   const asking = useLingeringAsk(open, recent[0]?.id);
-  const liveTotal = feed?.live_total ?? null;
+  // The total counts work within its lease, so a stalled row is not in it.
+  const listedLive = running.filter((item) => item.state !== "stalled");
+  const unnamed = (feed?.live_total ?? 0) > listedLive.length;
   return {
     running,
     recent,
@@ -274,14 +276,8 @@ export function useAiActivity(): AiActivity {
     // reads `working` pulses to say the AI is busy — so counting a stalled item
     // here would animate "still going" over a line that reads "it may have
     // stopped", softening the one verdict this state exists to deliver.
-    //
-    // The total counts past-lease work too, so only what it holds BEYOND the
-    // listed rows can be work the list does not show — a lone stalled row
-    // still does not pulse.
-    working:
-      running.some((item) => item.state !== "stalled") ||
-      (liveTotal ?? 0) > running.length,
-    liveTotal,
+    working: listedLive.length > 0 || unnamed,
+    unnamed,
     asking,
   };
 }

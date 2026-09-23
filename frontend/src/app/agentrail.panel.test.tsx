@@ -351,7 +351,7 @@ describe("work the rail cannot name", () => {
   it("pulses with the generic line and a caption, listing no run", async () => {
     const opened = await openPanel({ liveTotal: 1 });
     await waitFor(() => expect(coreState()).toBe("working"));
-    // The head's line, which the tool's own reads never borrow.
+    // The generic state word, since no cause travels with it.
     expect(opened.querySelector(".arpsaying")?.textContent).toBe(
       en["agent.state.working"],
     );
@@ -387,9 +387,16 @@ describe("work the rail cannot name", () => {
   });
 
   it("rests when the total is zero and nothing is listed", async () => {
-    const opened = await openPanel({ liveTotal: 0 });
-    await waitFor(() => expect(opened.querySelector(".arnone")).not.toBeNull());
+    const opened = await openPanel({
+      liveTotal: 0,
+      recent: [settled(12, { state: "done", kind: "morning_brief" })],
+    });
+    // The recap row is the feed's own, so the feed has answered once it shows.
+    await waitFor(() =>
+      expect(opened.querySelectorAll(".aritem")).toHaveLength(1),
+    );
     expect(coreState()).toBe("idle");
     expect(runningSection(opened)).toBeUndefined();
+    expect(opened.textContent).not.toContain(en["agent.panel.unnamedLive"]);
   });
 });

@@ -29554,8 +29554,8 @@ export interface components {
              */
             faults: components["schemas"]["AiActivityItem"][];
             /**
-             * @description How many occurrences are live for this caller — queued, running, or past their lease — across EVERY kind. Neither the `kinds` parameter nor the 25-row bound on `running` narrows it, so it can exceed the length of `running`.
-             *     It counts work and carries no kind, subject or sentence: a client can tell the AI is busy with something it does not narrate, and must not caption that pulse as if there were a line to read. Optional in the contract; the server always writes it.
+             * @description How many occurrences are queued or running WITHIN their lease for this caller, across EVERY kind. Neither the `kinds` parameter nor the 25-row bound on `running` narrows it, so it can exceed the length of `running`. A run past its lease is not counted, because a client pulsing for it would claim work that may have stopped; `running` reports it as `stalled` when its kind is asked for.
+             *     It counts work and carries no kind, subject or sentence: a client can tell the AI is busy with something it does not narrate, and must not caption that pulse as if there were a line to read. Optional so an older server can omit it, and a client reads its absence as unknown rather than zero; this server always writes it.
              */
             live_total?: number;
         };

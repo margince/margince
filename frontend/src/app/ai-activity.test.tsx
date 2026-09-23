@@ -533,7 +533,7 @@ describe("the reader's own ask", () => {
 // The total counts live work of EVERY kind, past the filter and the bound, so
 // the rail can say the AI is busy with work its list will never carry.
 describe("the live total", () => {
-  it("is absent until the read answers, then the server's number", async () => {
+  it("claims no unnamed work until the read answers", async () => {
     let answer: (response: Response) => void = () => {};
     const { result } = mount(
       () =>
@@ -542,11 +542,11 @@ describe("the live total", () => {
         }),
     );
     await advance(0);
-    expect(result.current.liveTotal).toBeNull();
+    expect(result.current.unnamed).toBe(false);
 
     answer(jsonResponse({ ...activity([]), live_total: 3 }));
     await advance(0);
-    expect(result.current.liveTotal).toBe(3);
+    expect(result.current.unnamed).toBe(true);
   });
 
   it("reports working when the feed lists nothing but work is live", async () => {
@@ -562,16 +562,33 @@ describe("the live total", () => {
     expect(reads).toHaveLength(2);
   });
 
-  // The total counts past-lease work as live, so a lone stalled row counted
-  // in it is still the "it may have stopped" line, not a pulse.
-  it("does not pulse for the stalled row it counts", async () => {
+  it("names no work beyond the rows when the total matches them", async () => {
     const { result } = mount(() =>
-      jsonResponse({
-        ...activity([{ ...A_RUN, state: "stalled" }]),
-        live_total: 1,
-      }),
+      jsonResponse({ ...activity([A_RUN]), live_total: 1 }),
+    );
+    await advance(0);
+    expect(result.current.unnamed).toBe(false);
+  });
+
+  // The server counts work within its lease, so a stalled row is listed but
+  // never in the total: it does not pulse, and it hides no live run beside it.
+  it("does not pulse for a listed stalled row, which the total leaves out", async () => {
+    const stalled: AiActivityItem = { ...A_RUN, state: "stalled" };
+    const { result } = mount(() =>
+      jsonResponse({ ...activity([stalled]), live_total: 0 }),
     );
     await advance(0);
     expect(result.current.working).toBe(false);
+    expect(result.current.unnamed).toBe(false);
+  });
+
+  it("still pulses for live work of another kind beside a stalled row", async () => {
+    const stalled: AiActivityItem = { ...A_RUN, state: "stalled" };
+    const { result } = mount(() =>
+      jsonResponse({ ...activity([stalled]), live_total: 1 }),
+    );
+    await advance(0);
+    expect(result.current.unnamed).toBe(true);
+    expect(result.current.working).toBe(true);
   });
 });

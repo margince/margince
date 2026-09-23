@@ -286,8 +286,8 @@ func TestOneBadKindRefusesTheWholeFilter(t *testing.T) {
 }
 
 // The live total is the store's number on the wire whatever the request
-// filtered, and a zero is written rather than omitted: an absent total is a
-// read still pending, and a present zero is an AI at rest.
+// filtered, and a zero is written rather than omitted: an absent total is
+// unknown, and a present zero is an AI at rest.
 func TestTheLiveTotalReachesTheWireWhateverTheFilter(t *testing.T) {
 	narrated := []crmcontracts.AiActivityKind{crmcontracts.AiActivityKindMorningBrief}
 	for _, tc := range []struct {
