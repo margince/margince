@@ -25,9 +25,9 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 46 |
-| … best state `current` | 44 |
+| … best state `current` | 43 |
 | … best state `partial` | 0 |
-| … best state `stale` | 2 |
+| … best state `stale` | 3 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 168 |
 | Committed records | 107 |
@@ -35,11 +35,11 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 ### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 14 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
+Counted per record — one (task, binding) pair — over the 17 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
-| the case | 9 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
+| the case | 12 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
 | **the prompt this build sends** | 13 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
 | the grader | 10 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
 
@@ -117,7 +117,7 @@ Which model to run each site on, and what that choice rests on.
 | [`propose_roles/committee`](#propose_rolescommittee) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 3 |
 | [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 2 | 5 |
 | [`rate_extract/pricing`](#rate_extractpricing) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 5 |
-| [`request_settlement/request_settle`](#request_settlementrequest_settle) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 4 | 3 |
+| [`request_settlement/request_settle`](#request_settlementrequest_settle) | - | - | - | `stale` | 4 | 3 |
 | [`signal_extract/thread_events`](#signal_extractthread_events) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 3 |
 | [`site_extract/profile`](#site_extractprofile) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 5 | 6 |
 | [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 4 |
@@ -157,17 +157,17 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 40 | 35 | 0 | 5 | 456 | 407 | 0.89 | 4632ms | 19 | 8 | 13 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 40 | 34 | 0 | 6 | 456 | 407 | 0.89 | 4632ms | 19 | 8 | 13 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 7 | 0 | 6 | 90 | 86 | 0.96 | 26168ms | 9 | 0 | 4 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
-| `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 5 | 0 | 1 | 138 | 123 | 0.89 | 23385ms | 2 | 0 | 4 |
+| `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 4 | 0 | 2 | 138 | 123 | 0.89 | 23385ms | 2 | 0 | 4 |
 | `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 39 | 38 | 0 | 1 | 351 | 288 | 0.82 | 237887ms | 19 | 7 | 13 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 11 | 0 | 0 | 11 | 160 | 113 | 0.71 | 20620ms | 8 | 0 | 3 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 40 | 36 | 0 | 4 | 453 | 341 | 0.75 | 140306ms | 11 | 9 | 20 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 40 | 35 | 0 | 5 | 453 | 341 | 0.75 | 140306ms | 11 | 9 | 20 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -228,6 +228,9 @@ model, real network).
 | `rate_extract/fx` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `rate_extract/pricing` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `rate_extract/pricing` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `request_settlement/request_settle` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case changed under scenario an_answer_settles_a_request_and_an_acknowledgement_does_not since the record scored it |
+| `request_settlement/request_settle` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | the case changed under scenario an_answer_settles_a_request_and_an_acknowledgement_does_not since the record scored it |
+| `request_settlement/request_settle` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario an_answer_settles_a_request_and_an_acknowledgement_does_not since the record scored it |
 | `site_extract/profile` | `openai_compatible · anthropic/claude-haiku-4.5 · eu_hosted` | 5 scenarios it scored have changed since (the case): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
 | `site_extract/profile` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `site_extract/profile` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -911,9 +914,9 @@ Records (3):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1269ms | 1805ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `current` | 4/4 | `not_supported` | 12 | 8 | 0.67 | 3976ms | 23385ms | 8 | 0 | 4 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 4/4 | `supported_degraded` | 12 | 11 | 0.92 | 7833ms | 19316ms | 11 | 0 | 1 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 3/4 | `certified` | 12 | 12 | 1.00 | 1269ms | 1805ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 3/4 | `not_supported` | 12 | 8 | 0.67 | 3976ms | 23385ms | 8 | 0 | 4 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 3/4 | `supported_degraded` | 12 | 11 | 0.92 | 7833ms | 19316ms | 11 | 0 | 1 | 0 |
 
 ### `signal_extract`
 

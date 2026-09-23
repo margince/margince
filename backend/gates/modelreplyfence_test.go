@@ -230,9 +230,21 @@ func modelReplyUnmarshalSites(t *testing.T) map[string]bool {
 			if _, takesAReply := replyParamOf(fn); !takesAReply {
 				continue
 			}
+			// A decoder is usually built in one statement and read in the
+			// next, so its SOURCE has to be carried between them before any
+			// decode can be judged.
+			sources := decoderSources(fn.Body)
+			// The reduction is often a statement of its own —
+			// `cleaned := modelreply.Unfence(text)` — so reaching it means
+			// following what a name was assigned from.
+			assigned := assignedFrom(fn.Body)
 			ast.Inspect(fn.Body, func(n ast.Node) bool {
 				call, isCall := n.(*ast.CallExpr)
-				if !isCall || !decodesJSON(call) {
+				if !isCall {
+					return true
+				}
+				decoded, decodes := decodedExpr(call, sources)
+				if !decodes {
 					return true
 				}
 				// EVERY unmarshal in the body, not only one whose argument
@@ -249,7 +261,7 @@ func modelReplyUnmarshalSites(t *testing.T) map[string]bool {
 				// OR, not assignment: one function may unmarshal twice (a
 				// re-ask path), and a single reduced site does not clear the
 				// other. Any un-reduced read is a finding.
-				sites[name] = sites[name] || !expressionMentions(call.Args[0], "Unfence")
+				sites[name] = sites[name] || !reducesThroughUnfence(decoded, assigned)
 				return true
 			})
 		}
@@ -279,25 +291,129 @@ func replyParamOf(fn *ast.FuncDecl) (string, bool) {
 	return "", false
 }
 
-// decodesJSON reports whether call decodes JSON, in either spelling the tree
-// uses: json.Unmarshal(...) and json.NewDecoder(...).Decode(...).
+// decoderSources maps each json.NewDecoder assigned to a variable in body to
+// the READER it was built over, so `dec := json.NewDecoder(r)` followed by
+// `dec.Decode(&v)` can be judged on r.
 //
-// BOTH, because matching only the first is the second blind spot this census
-// had. parseStep decodes with a Decoder so it can set DisallowUnknownFields, and
-// an Unmarshal-only scan walked straight past the parser whose breakage started
-// all of this — reporting a clean tree while the site sat in it.
-func decodesJSON(call *ast.CallExpr) bool {
+// Needed because the interesting decoder in this tree is exactly that shape:
+// runner.parseStep builds one in its own statement so it can set
+// DisallowUnknownFields. A check that only understood the chained spelling
+// walked straight past it — this census reported 36 sites and NONE of them was
+// parseStep, while a comment above claimed the census covered what the
+// behaviour table could not.
+func decoderSources(body *ast.BlockStmt) map[string]ast.Expr {
+	sources := map[string]ast.Expr{}
+	ast.Inspect(body, func(n ast.Node) bool {
+		assign, isAssign := n.(*ast.AssignStmt)
+		if !isAssign || len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
+			return true
+		}
+		name, isIdent := assign.Lhs[0].(*ast.Ident)
+		call, isCall := assign.Rhs[0].(*ast.CallExpr)
+		if !isIdent || !isCall || !isNewDecoder(call) || len(call.Args) == 0 {
+			return true
+		}
+		sources[name.Name] = call.Args[0]
+		return true
+	})
+	return sources
+}
+
+// assignedFrom maps each name assigned a single value in body to that value, so
+// a check can follow `cleaned := modelreply.Unfence(text)` to the call that
+// reduced it.
+func assignedFrom(body *ast.BlockStmt) map[string]ast.Expr {
+	out := map[string]ast.Expr{}
+	ast.Inspect(body, func(n ast.Node) bool {
+		assign, isAssign := n.(*ast.AssignStmt)
+		if !isAssign || len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
+			return true
+		}
+		if name, isIdent := assign.Lhs[0].(*ast.Ident); isIdent {
+			out[name.Name] = assign.Rhs[0]
+		}
+		return true
+	})
+	return out
+}
+
+// reducesThroughUnfence reports whether what a decode reads came through the
+// reduction, following assignments a bounded number of hops.
+//
+// BOUNDED rather than exhaustive, and the direction of the error is the point:
+// a chain longer than this reports the site as unreduced, which is a finding a
+// reader can dismiss in a second. Following forever, or giving up and calling
+// it clean, is the under-recognition this census exists to avoid.
+func reducesThroughUnfence(expr ast.Expr, assigned map[string]ast.Expr) bool {
+	const hops = 4
+	frontier := []ast.Expr{expr}
+	for range hops {
+		var next []ast.Expr
+		for _, e := range frontier {
+			if expressionMentions(e, "Unfence") {
+				return true
+			}
+			ast.Inspect(e, func(n ast.Node) bool {
+				if name, isIdent := n.(*ast.Ident); isIdent {
+					if from, known := assigned[name.Name]; known {
+						next = append(next, from)
+					}
+				}
+				return true
+			})
+		}
+		if len(next) == 0 {
+			return false
+		}
+		frontier = next
+	}
+	return false
+}
+
+// isNewDecoder reports whether call is json.NewDecoder(...).
+func isNewDecoder(call *ast.CallExpr) bool {
+	sel, isSel := call.Fun.(*ast.SelectorExpr)
+	if !isSel || sel.Sel.Name != "NewDecoder" {
+		return false
+	}
+	pkg, isIdent := sel.X.(*ast.Ident)
+	return isIdent && pkg.Name == "json"
+}
+
+// decodedExpr answers the expression a JSON decode READS, in either spelling
+// this tree uses, and whether call decodes at all.
+//
+// The expression, not the call's first argument: json.Unmarshal takes the bytes
+// it reads, but Decode takes the DESTINATION — `dec.Decode(&step)` — and asking
+// whether &step mentions Unfence would clear every decoder in the tree for the
+// wrong reason. What a Decode reads is the reader its decoder was built over.
+func decodedExpr(call *ast.CallExpr, sources map[string]ast.Expr) (ast.Expr, bool) {
 	sel, isSel := call.Fun.(*ast.SelectorExpr)
 	if !isSel {
-		return false
+		return nil, false
 	}
 	if sel.Sel.Name == "Unmarshal" {
 		pkg, isIdent := sel.X.(*ast.Ident)
-		return isIdent && pkg.Name == "json"
+		if isIdent && pkg.Name == "json" && len(call.Args) > 0 {
+			return call.Args[0], true
+		}
+		return nil, false
 	}
-	// A Decode call's receiver is the decoder, and what matters is that the
-	// decoder was built here — json.NewDecoder(...) somewhere in the chain.
-	return sel.Sel.Name == "Decode" && expressionMentions(sel.X, "NewDecoder")
+	if sel.Sel.Name != "Decode" {
+		return nil, false
+	}
+	// `dec.Decode(&v)`, where dec was built earlier in this function.
+	if name, isIdent := sel.X.(*ast.Ident); isIdent {
+		if source, built := sources[name.Name]; built {
+			return source, true
+		}
+		return nil, false
+	}
+	// `json.NewDecoder(r).Decode(&v)`, chained.
+	if inner, isCall := sel.X.(*ast.CallExpr); isCall && isNewDecoder(inner) && len(inner.Args) > 0 {
+		return inner.Args[0], true
+	}
+	return nil, false
 }
 
 // expressionMentions reports whether ident appears anywhere inside expr — the reply
@@ -359,7 +475,7 @@ func TestNoModelReplyParserSkipsTheFenceReduction(t *testing.T) {
 		t.Errorf("%d model-reply parser(s) json.Unmarshal their reply without ai.Unfence: %s\n"+
 			"A model that wraps its JSON in a ```json fence has answered correctly, and these sites "+
 			"read that as malformed — the caller then serves its deterministic floor and the deployment "+
-			"looks like a weak model. internal/modules/ai/output.go owns the reduction.",
+			"looks like a weak model. internal/shared/kernel/modelreply owns the reduction.",
 			len(unreduced), strings.Join(unreduced, ", "))
 	}
 }
@@ -376,6 +492,16 @@ func TestNoModelReplyParserSkipsTheFenceReduction(t *testing.T) {
 func TestTheCensusSeesEveryKnownModelReplyParser(t *testing.T) {
 	t.Parallel()
 	seen := modelReplyUnmarshalSites(t)
+	// runner.parseStep by NAME, because no row can drive it: it is unexported in
+	// another package. It is also the parser this whole gate came from, and the
+	// census could not see it for a while — it builds its decoder in its own
+	// statement, and a check that understood only the chained spelling reported
+	// 36 sites with this one absent. Named here so that cannot recur quietly.
+	if _, found := seen["runner.parseStep"]; !found {
+		t.Error("the census does not see runner.parseStep, the agent loop's own step parser — " +
+			"it decodes with json.NewDecoder assigned to a variable, so a scan that reads only " +
+			"json.Unmarshal or the chained decoder walks past it")
+	}
 	for _, parserRow := range modelReplyParsers() {
 		if _, found := seen[parserRow.pkgFunc]; !found {
 			t.Errorf("the census did not find %s, which the behaviour table drives as site %s — "+

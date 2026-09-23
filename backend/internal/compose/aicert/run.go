@@ -314,6 +314,7 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	traceCalls(ctx, trace, "judge", task, sc, run, attempt, judgeCalls, log)
 
 	graded := ungradedRun(output, evaluated.Result, outcomeAsExpected && capsOK, pooled, aitasks.ScopeOf(factory))
+	graded.Ungraded = false
 	graded.Score = score
 	graded.JudgeServedModel = judgeServedModel
 	graded.JudgeDegraded = judgeDegraded
@@ -338,6 +339,7 @@ func ungradedRun(output, outcome string, passed bool, pooled runCalls, scope str
 			CachedTokens:     pooled.CachedTokens,
 			CacheWriteTokens: pooled.CacheWriteTokens,
 			HardPass:         passed,
+			Ungraded:         true,
 		},
 		Provider:             pooled.Provider,
 		ServedModel:          pooled.ServedModel,

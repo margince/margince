@@ -47,6 +47,28 @@ type RunResult struct {
 	Degraded         bool `json:"degraded"`
 	HardPass         bool `json:"hard_pass"`
 	Score            int  `json:"score"`
+	// Ungraded says no judge saw this run, so Score is absent rather than zero
+	// and must not reach a median or a minimum. A run cut off at the output
+	// ceiling is the case: there is no answer to have an opinion about, and
+	// folding its 0 into the judge's numbers would report the skipped opinion
+	// as a bad one — the same ambiguity, entered from the other side.
+	//
+	// It stays in the run, validator and pass counts: it happened, and the
+	// mechanical grade judged the same incomplete text production would have.
+	Ungraded bool `json:"ungraded,omitempty"`
+}
+
+// judgeScores is the scores a judge actually gave, which is what a median and a
+// minimum may be taken over.
+func judgeScores(rs []RunResult) []int {
+	scores := make([]int, 0, len(rs))
+	for _, r := range rs {
+		if r.Ungraded {
+			continue
+		}
+		scores = append(scores, r.Score)
+	}
+	return scores
 }
 
 // Verdict folds N runs of one scenario into a certification outcome per
@@ -71,17 +93,23 @@ func Verdict(rs []RunResult, b Bands) (verdict string, reliability float64) {
 	}
 
 	passed := 0
-	scores := make([]int, n)
-	for i, r := range rs {
-		scores[i] = r.Score
+	for _, r := range rs {
 		if r.HardPass {
 			passed++
 		}
 	}
 	reliability = float64(passed) / float64(n)
 
+	scores := judgeScores(rs)
 	slices.Sort(scores)
-	median := scores[n/2]
+	// Every run ungraded leaves no opinion to band on. The mechanical grade
+	// still decides pass/fail, and the judge's half of the bands cannot be met
+	// by a score nobody gave — so the verdict falls to not-supported rather
+	// than certifying on an empty median.
+	if len(scores) == 0 {
+		return VerdictNotSupported, reliability
+	}
+	median := scores[len(scores)/2]
 	minScore := scores[0]
 
 	if passed == n && median >= b.CertifiedMin && minScore >= b.Floor {

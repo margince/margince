@@ -54,3 +54,32 @@ func TestASingleRenderingIsStillDemanded(t *testing.T) {
 		t.Error("a phrase naming the expected thing was refused")
 	}
 }
+
+// A rendering names the document, not a verb that shares a word with it.
+//
+// `remainingNamesIt` is substring matching, so a bare "offer" is satisfied by
+// "Offer a meeting next week" — a phrase naming something this conversation
+// never owed. The renderings are written to identify the thing.
+func TestARenderingDoesNotMatchAnUnrelatedUseOfTheWord(t *testing.T) {
+	t.Parallel()
+	const accepted = "angebot|offer for|the offer|an offer|quote"
+
+	for name, tc := range map[string]struct {
+		remaining string
+		want      bool
+	}{
+		"the German noun":        {"Angebot für die zweite Charge schicken", true},
+		"an English rendering":   {"Send offer for the second batch", true},
+		"the other rendering":    {"Send the quote", true},
+		"an unrelated offer":     {"Offer a meeting next week", false},
+		"offering to help":       {"Offer support during onboarding", false},
+		"a different obligation": {"Confirm the November dates", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if got := remainingNamesIt(tc.remaining, accepted); got != tc.want {
+				t.Errorf("remainingNamesIt(%q) = %v, want %v", tc.remaining, got, tc.want)
+			}
+		})
+	}
+}

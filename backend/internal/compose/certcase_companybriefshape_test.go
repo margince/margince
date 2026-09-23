@@ -5,6 +5,7 @@ package compose
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -81,10 +82,29 @@ func TestTheCompanyAskCaseStillReadsFlatSentences(t *testing.T) {
 
 // A sentence about the account itself survives, which is the whole point of the
 // account carrying its id.
+//
+// Asserted on the ACCOUNT's id and on a sentence citing it, not on the presence
+// of any `"id":` in the prompt: this fixture carries an open deal, whose record
+// id satisfies that weaker check on its own. Written the weak way first, it
+// passed with the account id absent — the regression it names would have walked
+// straight back in under a green test.
 func TestACompanyBriefSentenceAboutTheAccountItselfSurvives(t *testing.T) {
 	prepared := prepareCompanyBrief(t, `["stalled_retrofit"]`)
 	sent := requestIDs(t, prepared)
-	if !strings.Contains(sent, `"id":"`) {
-		t.Fatal("the summary carries no account id, so no sentence about the account can cite it")
+
+	// Input serializes the account's own id first and its name next, so this
+	// pair identifies the SUBJECT rather than one of its records.
+	account := regexp.MustCompile(`\{"id":"([0-9a-f-]{36})","name":`).FindStringSubmatch(sent)
+	if account == nil {
+		t.Fatalf("the summary carries no account id before its name, so no sentence about the "+
+			"account can cite it:\n%s", sent)
+	}
+
+	sectioned := `{"sections":[{"kind":"snapshot","sentences":[` +
+		`{"text":"They make automotive parts.","nature":"fact",` +
+		`"evidence":[{"entity_type":"company","entity_id":"` + account[1] + `"}]}]}]}`
+
+	if got := prepared.Evaluate(aitasks.Trace{Output: sectioned}); got.Result == aitasks.OutcomeAbstained {
+		t.Errorf("a sentence citing the account by the id the summary supplied was dropped: %s", got.Detail)
 	}
 }

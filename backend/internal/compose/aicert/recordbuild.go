@@ -37,10 +37,10 @@ import (
 // to happen that no test would catch.
 func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profile ai.Profile, promptVersion string) Record {
 	results := acc.allResults
-	scores := make([]int, len(results))
-	for i, r := range results {
-		scores[i] = r.Score
-	}
+	// Only what a judge graded: a run skipped for truncation carries Score 0
+	// because nobody scored it, and averaging that in reports the absence as a
+	// verdict.
+	scores := judgeScores(results)
 	sort.Ints(scores)
 
 	sortedLatencies := append([]int64(nil), acc.latencies...)

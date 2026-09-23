@@ -47,7 +47,11 @@ expect:
       #
       # What the check is for is that the phrase NAMES the thing rather than
       # restating their message, which is what the rubric below asks for.
-      remaining_names: angebot|offer|quote
+      # Each names the DOCUMENT, not a verb that happens to share a word. Bare
+      # "offer" also matches "Offer a meeting next week", which names something
+      # this conversation never owed; "offer for" keeps the measured reply
+      # "Send offer for the second batch" without admitting it.
+      remaining_names: angebot|offer for|the offer|an offer|quote
   rubric: >
     The first conversation is settled. They proposed a time and offered to move
     it; the reply agrees to the date in four words. Nothing is left for our side
