@@ -189,8 +189,8 @@ func AgentToolTiers() map[string][]string {
 	return out
 }
 
-// AgentHumanOnlyOperations answers which contract operations the gate refuses
-// an agent outright, by operationId, sorted.
+// AgentHumanOnlyRoutes answers which contract operations the gate refuses an
+// agent outright, as operationId → the route key it is refused under.
 //
 // Exported for one reader — the gate holding the contract's
 // `x-agent-access: human-only` annotation against the table generated from it.
@@ -200,20 +200,26 @@ func AgentToolTiers() map[string][]string {
 // would pass. That correspondence is the gate's subject and this is what it
 // reads.
 //
-// By OPERATION rather than by the route agentPolicies is keyed on. The key
-// carries a `/v1` the generator prepends to every contract path, and a reader
-// that rebuilt the prefix to compare would be keeping a second copy of the
-// generator's own decision — which then agrees with itself whatever the
-// generator does. The operationId is the contract's own name for the operation
-// and needs no reconstruction.
-func AgentHumanOnlyOperations() []string {
-	ops := make([]string, 0, len(agentPolicies))
-	for _, policy := range agentPolicies {
+// The ROUTE comes back beside the operation because the two are what the gate
+// uses separately: agentGate looks a call up by route, and only the operation
+// carries the annotation. A set of operation ids alone cannot see a route that
+// has drifted onto the wrong policy — both ids stay present, the set matches,
+// and the human-only route is admitted under a tool policy. The caller binds
+// the pair rather than trusting either half.
+//
+// The key's `/v1` is the generator's, not the contract's, and this does not
+// strip it: a reader that reconstructed the prefix to compare would hold a
+// second copy of that decision and agree with itself whatever the generator
+// did. The caller matches on the contract path as a SUFFIX and checks the one
+// prefix is the same for every row, which asks the question without owning the
+// answer.
+func AgentHumanOnlyRoutes() map[string]string {
+	routes := make(map[string]string, len(agentPolicies))
+	for route, policy := range agentPolicies {
 		if policy.Access != accessHumanOnly {
 			continue
 		}
-		ops = append(ops, policy.Op)
+		routes[policy.Op] = route
 	}
-	sort.Strings(ops)
-	return ops
+	return routes
 }

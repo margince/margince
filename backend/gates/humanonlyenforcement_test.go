@@ -9,17 +9,16 @@ package gates
 //
 // `x-agent-access: human-only` in api/crm.yaml is a sentence in a document.
 // What refuses an agent is agentGate, and it does not read the document: it
-// reads agentPolicies, a Go map generated from it. Between the annotation and
-// the refusal sits one generator, and until this gate existed nothing compared
-// its input to its output.
+// reads agentPolicies, a Go map generated from it. One generator sits between
+// the annotation and the refusal, and this compares its input to its output.
 //
-// `make drift` does not. It regenerates the table and diffs the result against
+// `make drift` cannot. It regenerates the table and diffs the result against
 // the committed file, which proves the file is current and nothing else — a
-// generator that stopped carrying the annotation would produce a smaller table,
-// the diff would be clean, and drift would pass. Every route that quietly lost
-// its class would then be an ordinary agent-readable route, refused by nothing,
-// with the annotation still sitting in the contract saying otherwise. That is
-// the failure this asks about, and it is invisible from either side alone.
+// generator that stopped carrying the annotation emits a smaller table, the
+// diff is clean, and drift passes. Every route that lost its class is then an
+// ordinary agent-readable route, refused by nothing, with the annotation still
+// in the contract saying otherwise. That failure is invisible from either side
+// alone.
 //
 // agentgateinstalled_test.go holds the other half — that the middleware is
 // wrapped around the routes at all. Between them: the gate is installed, and
@@ -35,6 +34,7 @@ package gates
 // correctly. That is agentgateredeem_test.go's subject.
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -58,47 +58,83 @@ func TestEveryHumanOnlyOperationReachesTheGate(t *testing.T) {
 			"proved nothing — either the annotation was renamed or the walk no longer reaches the operations")
 	}
 
-	enforced := map[string]bool{}
-	for _, op := range compose.AgentHumanOnlyOperations() {
-		enforced[op] = true
-	}
+	enforced := compose.AgentHumanOnlyRoutes()
 	if len(enforced) == 0 {
 		t.Fatal("the generated agentPolicies table refuses no operation as human-only, so the annotation " +
 			"reaches nothing that enforces it")
 	}
 
+	prefixes := map[string]bool{}
 	for _, op := range sortedKeys(declared) {
-		if !enforced[op] {
+		route, held := enforced[op]
+		if !held {
 			t.Errorf("%s declares x-agent-access: %s in api/crm.yaml and the generated agentPolicies table "+
 				"does not carry it.\n\tagentGate refuses an agent from that table, so the route is open to any "+
 				"passport-bearing agent while the contract says it is not. Regenerate (make gen); if it is still "+
 				"missing, tools/gen-agentpolicy stopped carrying the annotation.", op, humanOnlyAccess)
+			continue
 		}
+		prefix, matched := basePathBetween(route, declared[op])
+		if !matched {
+			t.Errorf("%s is human-only at %q in api/crm.yaml and the generated table refuses it under %q.\n\t"+
+				"agentGate looks a call up by ROUTE and only the operation carries the annotation, so a route "+
+				"on the wrong policy refuses one call and admits another while both operation ids are still "+
+				"present.", op, declared[op], route)
+			continue
+		}
+		prefixes[prefix] = true
 	}
 	for op := range enforced {
-		if !declared[op] {
+		if _, ok := declared[op]; !ok {
 			t.Errorf("the generated agentPolicies table refuses %s as %s and api/crm.yaml does not declare "+
 				"it.\n\tA caller reads the contract, so a refusal it cannot predict is as much a defect as a "+
 				"wrong one. Either annotate the operation or stop refusing it.", op, humanOnlyAccess)
 		}
 	}
+	// ONE prefix, whatever it is. The generator prepends a base path the
+	// contract's paths do not carry; asking that every route agrees on it binds
+	// the shape without this gate deciding what it should be, and catches a
+	// generator that started prefixing some routes and not others.
+	if len(prefixes) > 1 {
+		t.Errorf("the generated routes do not share one base path: %v.\n\tagentGate keys on the chi pattern the "+
+			"contract router registered, so a route carrying a different base is one the gate never matches.",
+			sortedKeys(prefixes))
+	}
 }
 
-// humanOnlyOperationsInContract reads the operationIds the contract marks
-// human-only.
+// basePathBetween reports the base path the generated route carries in front of
+// the contract's own, and whether the two name the same operation at all.
 //
-// By operationId, which is what the generated table records alongside each
-// route, so neither side has to rebuild the other's key. The route key carries
-// a `/v1` prefix the generator prepends, and a gate that reconstructed it would
-// agree with itself whatever the generator chose to do with it.
-func humanOnlyOperationsInContract(t *testing.T) map[string]bool {
+// Both sides read "METHOD path", and only the path differs: the generator
+// prepends a base the contract's paths do not carry. So the method must match
+// exactly and the path must be a suffix — which binds the route to the
+// operation without this gate deciding what the base should be.
+func basePathBetween(route, declared string) (string, bool) {
+	routeMethod, routePath, ok := strings.Cut(route, " ")
+	if !ok {
+		return "", false
+	}
+	declaredMethod, declaredPath, ok := strings.Cut(declared, " ")
+	if !ok || routeMethod != declaredMethod {
+		return "", false
+	}
+	return strings.CutSuffix(routePath, declaredPath)
+}
+
+// humanOnlyOperationsInContract reads the operations the contract marks
+// human-only, as operationId → the "METHOD /path" it is declared at.
+//
+// Keyed by operationId, which is what the generated table records alongside
+// each route, so neither side has to rebuild the other's key; valued by the
+// route so the caller can bind the two rather than trust either alone.
+func humanOnlyOperationsInContract(t *testing.T) map[string]string {
 	t.Helper()
 	doc := loadContract(t)
 	paths, ok := doc["paths"].(map[string]any)
 	if !ok {
 		t.Fatal("api/crm.yaml carries no paths, so this census would clear every operation by reading none")
 	}
-	declared := map[string]bool{}
+	declared := map[string]string{}
 	for path, item := range paths {
 		operations, ok := item.(map[string]any)
 		if !ok {
@@ -119,7 +155,7 @@ func humanOnlyOperationsInContract(t *testing.T) map[string]bool {
 					"table that enforces the annotation", method, path)
 				continue
 			}
-			declared[name] = true
+			declared[name] = strings.ToUpper(method) + " " + path
 		}
 	}
 	return declared
