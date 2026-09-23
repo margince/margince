@@ -401,14 +401,6 @@ const WITHIN_CAP: LicenseEntitlement = {
   checked_at: CHECKED_AT,
 };
 
-const OVER_CAP: LicenseEntitlement = {
-  state: "valid",
-  seats_used: 27,
-  seats_granted: 25,
-  over_limit: true,
-  checked_at: CHECKED_AT,
-};
-
 /**
  * The session a frame about the foot needs: `license:read`, and the entitlement
  * itself. Both halves, because without either the read is never answered.
@@ -421,15 +413,21 @@ function stubEntitlement(entitlement: LicenseEntitlement) {
 }
 
 /**
- * A licence within its seat cap, under both panel states side by side.
+ * The rail's foot under both panel states side by side.
+ *
+ * A licence is stubbed because the shell's providers want one, not because the
+ * foot reports it — it has not since the posture moved to its own banner. Two
+ * further frames stubbed an over-cap licence and a seat without `license:read`
+ * and photographed this same picture, which is what retired them; what each of
+ * them knew is now said where the behaviour is, in app/license-posture.ts.
  *
  * `.rail.collapsed` sets `overflow: visible` so its tooltips can escape the 56px
  * box, so the collapsed panel neither scrolls nor clips: in a window shorter
  * than its 44px rows add up to, its foot sits below the viewport. The expanded
  * panel scrolls; read the collapsed foot in a window tall enough to hold it.
  */
-export const RailEntitlement: Story = {
-  name: "the foot — seats used against granted",
+export const RailFoot: Story = {
+  name: "the foot — collapsed and expanded",
   render: () => {
     stubEntitlement(WITHIN_CAP);
     return (
@@ -443,43 +441,6 @@ export const RailEntitlement: Story = {
               <SidebarExample initiallyCollapsed />
             </div>
           </div>
-        </SeedInstallation>
-      </StoryProviders>
-    );
-  },
-};
-
-/**
- * Over the seat cap. Reported, never enforced, and reported on the settings
- * card rather than in the rail: the foot draws nothing different here.
- */
-export const RailEntitlementPressing: Story = {
-  name: "the foot — over the seat cap",
-  render: () => {
-    stubEntitlement(OVER_CAP);
-    return (
-      <StoryProviders>
-        <SeedInstallation>
-          <SidebarExample initiallyCollapsed={false} />
-        </SeedInstallation>
-      </StoryProviders>
-    );
-  },
-};
-
-/**
- * A principal without `license:read`. The entitlement is never requested — the
- * grant is read from the session the shell already holds — and nothing says it
- * is missing: a fact that is none of somebody's work is not being withheld.
- */
-export const RailEntitlementWithoutTheGrant: Story = {
-  name: "the foot — no license:read",
-  render: () => {
-    stubSession();
-    return (
-      <StoryProviders>
-        <SeedInstallation>
-          <SidebarExample initiallyCollapsed={false} />
         </SeedInstallation>
       </StoryProviders>
     );

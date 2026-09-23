@@ -45,7 +45,6 @@ import type {
   AiActivityItem,
   AiCall,
   AiPosture,
-  LicensePosture,
   Signals,
   Spend,
 } from "./agentrail-reads";
@@ -64,6 +63,7 @@ import { PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { plain, type SpokenLine, speak, spokenText } from "./ai-activity-speak";
 import { useAgentTierMap } from "./autonomy";
+import type { LicensePosture } from "./license-posture";
 import { usePopoverDismiss } from "./popover";
 import type { Route } from "./router";
 import { routeHash } from "./router";

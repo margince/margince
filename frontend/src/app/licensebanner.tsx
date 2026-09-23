@@ -4,7 +4,7 @@
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import { settingsHref } from "../screens/settingsrouting";
-import { useLicensePosture } from "./agentrail-reads";
+import { useLicensePosture } from "./license-posture";
 import { routeHash } from "./router";
 
 // A refused licence is a standing installation condition, not something the

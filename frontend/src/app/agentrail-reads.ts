@@ -9,9 +9,9 @@ import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { usePendingApprovals } from "../screens/approvals.queries";
 import { useConnectors } from "../screens/connectors";
-import { useLicenseEntitlement } from "../screens/license";
 import { useCan, useHoldsAdminRole } from "./capability";
 import { type CaptureProgress, liveCapture } from "./capture-progress";
+import { type LicensePosture, useLicensePosture } from "./license-posture";
 
 // WHAT THE AGENT SECTION READS. The rail's row, the state it derives and the
 // panel beside it all stand on these answers and on nothing else: approvals
@@ -27,18 +27,6 @@ export type AiActivityItem = components["schemas"]["AiActivityItem"];
 
 /** One terminal attempt of the model-call trace, as `/ai/calls` reports it. */
 export type AiCall = components["schemas"]["AiCallSummary"];
-
-/**
- * What the installation's entitlement adds up to, for a surface that reports
- * rather than enforces.
- *
- * `none` and `refused` are the two a contact has to act on, and they are why the
- * Core carries this at all: an installation with no licence is not a healthy
- * agent with a footnote, it is a standing fault, and the rail used to state it
- * as a grey row at the very bottom that nobody read. `pressing` is the same
- * claim one step softer: over the seat cap, in grace, or renewal due.
- */
-export type LicensePosture = "ok" | "pressing" | "refused" | "none";
 
 /**
  * What the deployment has bound, as `/assistant/profile` reports it.
@@ -168,34 +156,6 @@ function captureLine(
   return capture.fraction === null
     ? said
     : `${said} · ${formatPercent(capture.fraction, locale)}`;
-}
-
-/**
- * The installation's entitlement, reduced to the posture its chrome shows.
- *
- * Absent for a seat without `license:read`, silently: a read they may not make
- * is not a fact being withheld from them, it is a fact that is none of their
- * work, and a notice about it on every screen they opened would be a permission
- * boundary drawn as a fault.
- */
-export function useLicensePosture(): LicensePosture | undefined {
-  const mayRead = useCan("license", "read");
-  const query = useLicenseEntitlement(mayRead);
-  const entitlement = query.data;
-  if (!mayRead || !entitlement) {
-    return undefined;
-  }
-  if (entitlement.state === "rejected") {
-    return "refused";
-  }
-  if (entitlement.state !== "valid") {
-    return "none";
-  }
-  return entitlement.over_limit ||
-    entitlement.license?.in_grace === true ||
-    entitlement.license?.renewal_due === true
-    ? "pressing"
-    : "ok";
 }
 
 /**
