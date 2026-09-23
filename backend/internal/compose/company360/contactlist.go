@@ -73,7 +73,22 @@ func (s *Service) ContactPage(
 		return crmcontracts.CompanyContactListResponse{}, err
 	}
 	var out crmcontracts.CompanyContactListResponse
-	now := s.now().UTC()
+	// ONE instant for the whole walk, taken from the cursor when there is one.
+	//
+	// The ranking is a function of `now` — strength decays and engagement
+	// flips — so a page that recomputed it at its own arrival time sorted
+	// against a different order than the page before it, and a contact whose
+	// standing crossed the boundary in between was served twice or not at all.
+	// The page looks complete either way, which is what makes it the same
+	// failure the 25-row truncation had, moved to the page boundary.
+	//
+	// The token already carried this instant and nothing read it. Reading it is
+	// also not a new promise: the shared cursor parameter in the contract
+	// already claims stability under concurrent updates.
+	now, err := s.walkInstant(q.Cursor)
+	if err != nil {
+		return crmcontracts.CompanyContactListResponse{}, err
+	}
 	// The custom-field catalog opens a transaction of its own, so it is read
 	// before this one takes the connection — the same order Graph uses.
 	active, err := s.contacts.ActiveCompanyColumns(ctx)
@@ -146,6 +161,9 @@ func (s *Service) rankedContactRows(
 		out.Data = append(out.Data, contactRow(c, identity[c.ContactID], now))
 	}
 	if hasMore && len(page) > 0 {
+		// The SAME instant forward, not a fresh one: `now` is the walk's own
+		// origin here, so page three resumes from where page one started
+		// rather than re-pinning to page two's arrival.
 		token, err := storekit.EncodeOpaque(contactCursor{
 			Sort: q.Sort, ID: page[len(page)-1].ContactID.UUID, AsOf: now,
 		})
@@ -248,6 +266,37 @@ func sortContacts(all []contacts.ContactStrength, order string, identity map[ids
 // after it. A contact that has since left the account is not in the slice any
 // more: rather than guess a position, the read refuses, because resuming from a
 // position that no longer exists is how a page silently skips contacts.
+// walkInstant is the moment this page ranks against: the cursor's, continuing a
+// walk, or this request's, starting one.
+//
+// THE TOKEN IS UNSIGNED. storekit.EncodeOpaque is base64 over JSON, and that
+// package's own note says a well-formed token is not yet a valid position — the
+// caller checks the fields before trusting them. So an instant that names no
+// walk is refused rather than honoured: zero, because a token this service
+// minted always carries one, and the future, because no page has been served
+// from there.
+//
+// A BACKDATED one is honoured, and deliberately. It re-ranks rows the caller
+// can already see, against an order those rows held; that is what resuming an
+// old walk means, and refusing it would break the long pause this pinning
+// exists to survive.
+func (s *Service) walkInstant(token *string) (time.Time, error) {
+	now := s.now().UTC()
+	if token == nil || *token == "" {
+		return now, nil
+	}
+	pos, err := storekit.DecodeOpaque[contactCursor](*token)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if pos.AsOf.IsZero() || pos.AsOf.After(now) {
+		return time.Time{}, fmt.Errorf(
+			"company360: the cursor names an instant no page was served from: %w",
+			&storekit.MalformedCursorError{})
+	}
+	return pos.AsOf.UTC(), nil
+}
+
 func cursorOffset(all []contacts.ContactStrength, token *string, order string) (int, error) {
 	if token == nil || *token == "" {
 		return 0, nil
