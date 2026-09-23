@@ -23,8 +23,8 @@ type maskSubject struct{ object, field string }
 
 // The names the table below repeats. maskObjDeal is DERIVED from the table
 // constant rather than respelt: the two vocabularies coincide on that name, and
-// two constants for one string is the drift this package exists to refuse. An
-// offer has no table here, so it gets a name of its own.
+// two constants for one string is the drift this package exists to refuse. A
+// commission has no table here, so it gets a name of its own.
 const (
 	maskObjDeal          = tableDeal
 	maskObjCommission    = "commission"

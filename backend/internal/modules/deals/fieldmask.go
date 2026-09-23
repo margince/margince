@@ -43,8 +43,7 @@ const maskObject = "deal"
 //
 //nolint:goconst // wire field names against column names, each its own vocabulary
 var dealMaskableFields = map[string]func(*crmcontracts.Deal){
-	// The money group — which mask pulls in which other field — lives in
-	// auth.maskGroups now; each func here withholds only its own column.
+	// Each func nulls only its own column; auth.maskGroups decides the group.
 	"amount_minor":       func(d *crmcontracts.Deal) { d.AmountMinor = nil },
 	"expected_arr_minor": func(d *crmcontracts.Deal) { d.ExpectedArrMinor = nil },
 	"currency":           func(d *crmcontracts.Deal) { d.Currency = nil },
