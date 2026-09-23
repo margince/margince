@@ -27,7 +27,7 @@ import { rulesIn } from "../testing/css";
 //             `t-danger` or `form-error` token. `field-error` is Field's own
 //             slot and is not this line.
 //   sheet   — a `className` carrying a screen class whose every rule sets
-//             only the danger ink and margins: `.share-error` is `t-danger`
+//             only the danger ink and margins: `.x-error` is `t-danger`
 //             under another name. The list is derived from the screen and
 //             extension sheets, because a named list is a second copy of them
 //             that misses the next one a screen writes. A design-system sheet
@@ -37,15 +37,17 @@ import { rulesIn } from "../testing/css";
 //             an alert owns its cause: a line inside an element, intrinsic or
 //             component, carrying a literal `role="alert"` is read out with
 //             it. A status or a polite region inserted with its text is often
-//             never announced, so a cause under one is still a line.
+//             never announced, so a cause under one is still a line. A
+//             computed role (a danger `Callout`) does not skip, so a cause
+//             inside one takes a waiver.
 //   alert   — an intrinsic element carrying `role="alert"` around a LINE:
 //             text and expressions only, no element child. A composite — a
 //             heading, a glyph, a verb inside the region — is another thing.
 //   name    — any identifier `RefusalLine` outside an import.
 //
-// Stylesheets are not read: `color: var(--dangerText)` in a screen sheet also
-// marks a figure or a glyph, so the message line is caught by what it SAYS
-// (message) and how it announces (alert) rather than by its colour.
+// The message and alert arms read a line by what it SAYS and how it announces;
+// the sheet arm reads a class whose whole rule is the ink. A figure or a glyph
+// drawn in the ink is not a line, and carries a reasoned `ds:ignore`.
 //
 // Every arm is held at zero, in every file, wherever the spelling reappears.
 //
@@ -174,13 +176,9 @@ function sheetClassOn(
     : undefined;
 }
 
-/** A declaration that leaves a line a line: the danger ink, or a margin. */
-function inkOrMargin(declaration: string): boolean {
-  return (
-    /^color:\s*var\(--dangerText\)$/.test(declaration) ||
-    /^margin(-[a-z]+)*:/.test(declaration)
-  );
-}
+const dangerInk = /^color\s*:\s*var\(--dangerText\b[^)]*\)\s*(!important)?$/;
+
+const margin = /^margin(-[a-z]+)*\s*:/;
 
 type Sheet = { where: string; text: string };
 
@@ -210,9 +208,14 @@ function dangerOnlyClasses(sheets: readonly Sheet[]): Set<string> {
       if (!alone || dangerClass.test(alone[1]) || alone[1] === "field-error") {
         continue;
       }
-      const onlyInk =
-        declarations.every(inkOrMargin) &&
-        declarations.some((declaration) => declaration.startsWith("color"));
+      // A margin-only rule, a breakpoint's spacing say, leaves the class as it was.
+      if (declarations.every((declaration) => margin.test(declaration))) {
+        continue;
+      }
+      const onlyInk = declarations.every(
+        (declaration) =>
+          dangerInk.test(declaration) || margin.test(declaration),
+      );
       (onlyInk ? inked : other).add(alone[1]);
     }
   }
@@ -599,6 +602,14 @@ describe("a failure line under a control has one spelling", () => {
           ".x-error { color: var(--dangerText); }\n.x-error { display: flex; }",
         ),
       ).toEqual([]);
+      const derives = [
+        ".x-error { color: var(--dangerText) !important; }",
+        ".x-error { color : var(--dangerText, #b00); }",
+        ".x-error { color: var(--dangerText); }\n@media (max-width: 720px) { .x-error { margin-top: 0; } }",
+      ];
+      for (const sheet of derives) {
+        expect(read(line, undefined, sheet), sheet).toHaveLength(1);
+      }
       expect(
         read(line, undefined, ".row > .x-error { color: var(--dangerText); }"),
       ).toEqual([]);
