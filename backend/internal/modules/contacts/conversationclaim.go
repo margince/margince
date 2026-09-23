@@ -98,7 +98,12 @@ func (s *Store) RecordConversationClaim(ctx context.Context, in ClaimInput) (crm
 
 	var out crmcontracts.ConversationClaim
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritableLive(ctx, tx, "contact", in.ContactID.UUID); err != nil {
+		// HELD, not merely probed. The probe reads a snapshot and the insert is
+		// a later statement, so an Art. 17 erasure committing between them
+		// would put a claim — and the verbatim sentence on it — back against a
+		// contact the operator has just been told is gone. Holding the row is
+		// what makes the probe's answer still true at the write.
+		if err := auth.HoldWritableLive(ctx, tx, "contact", in.ContactID.UUID); err != nil {
 			return err
 		}
 		// Activities are reachability-scoped rather than row-scoped, so they

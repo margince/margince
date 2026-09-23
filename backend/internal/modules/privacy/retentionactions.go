@@ -209,8 +209,6 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 // deliberately rather than left for it to notice.
 //
 // Held by: TestErasingAndAnonymizingClearTheSameTables (backend/gates/contactscrub_test.go)
-//
-//nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
 func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// The identifiers the graph holds the subject by, read BEFORE the deletes
 	// below destroy the rows they come from. subjectGraphIdentifiers says which
@@ -244,35 +242,12 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(contactCustom)), id, erasedName)
 	if err == nil {
-		// The double-opt-in token goes with the addresses it was sent to. It is
-		// a bearer secret whose only function is to authorise a consent GRANT
-		// for this subject, so one left standing after an anonymization is a
-		// live invitation to record a lawful basis for somebody the row no
-		// longer names. An anonymized subject may lawfully return, which is
-		// what the suppression list is for — but they return by being invited
-		// again, not by an old token in an old mailbox still working.
-		_, err = tx.Exec(ctx, `DELETE FROM consent_doi_token WHERE contact_id = $1`, id)
-	}
-	if err == nil {
-		// The confirm-details link goes for the same reason, and a stronger
-		// one: it does not merely authorise a grant, it DISPLAYS the record. A
-		// link left live would show an old mailbox the fields this statement
-		// has just emptied.
-		_, err = tx.Exec(ctx, `DELETE FROM confirm_token WHERE contact_id = $1`, id)
-	}
-	if err == nil {
-		// The withdrawal link goes too, and it is the one that would linger
-		// longest: 24 months against the double-opt-in token's weeks. It also
-		// HOLDS THE ADDRESS the link was written to, in its own column, which
-		// is precisely the content the statement above just cleared from the
-		// contact row — so leaving it would keep an anonymized subject's mailbox
-		// legible in a table the anonymization did not touch.
-		_, err = tx.Exec(ctx, `DELETE FROM withdrawal_credential WHERE contact_id = $1`, id)
+		err = deleteConsentCredentials(ctx, tx, id)
 	}
 	if err == nil {
 		// And what came back through it, which is the subject's own name and
-		// address in plaintext — exactly the content the anonymization above
-		// just cleared from the contact row.
+		// address in plaintext — exactly the content the anonymize just cleared
+		// from the contact row.
 		_, err = tx.Exec(ctx, `DELETE FROM contact_confirm_submission WHERE contact_id = $1`, id)
 	}
 	if err == nil {
@@ -290,18 +265,20 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		err = deleteIdentifyingSatellites(ctx, tx, id)
 	}
 	// The JUDGEMENTS made about them: what a classifier concluded their replies
-	// meant with every human correction of it, and the handoffs naming them.
-	// The activity TEXT survives an anonymize — no floor applies — so a verdict
-	// or a "rejected: not qualified" left beside those words goes on reading as
-	// a live conclusion about somebody the row no longer names.
+	// meant with every human correction of it, what was read out of their
+	// conversations as promised or asked or decided, and the handoffs naming
+	// them. The activity TEXT survives an anonymize — no floor applies — so a
+	// conclusion left beside those words goes on reading as a live claim about
+	// somebody the row no longer names, and a CLAIM carries the sentence it was
+	// read from, which makes it the subject's own words rather than only our
+	// reading of them.
 	if err == nil {
 		err = deleteReplyVerdictHistoryFor(ctx, tx, id)
 	}
 	if err == nil {
-		// And what we concluded our own replies DID about what they asked. The
-		// same argument one line up: the words survive an anonymize, so a
-		// settlement saying we still owe somebody something would go on
-		// naming an obligation to a record that no longer names them.
+		err = deleteConversationClaimsFor(ctx, tx, id)
+	}
+	if err == nil {
 		err = deleteRequestSettlementsFor(ctx, tx, id, subjectEmails)
 	}
 	if err == nil {
