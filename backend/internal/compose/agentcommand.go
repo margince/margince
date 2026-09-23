@@ -15,10 +15,12 @@ package compose
 // (restSummary), and stagedTarget says why.
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -56,6 +58,14 @@ type restCommandDeps struct {
 	// written from. Same reason `stages` and `imports` are here: a human
 	// deciding "fold X into Y" cannot be shown the ids and asked to mean it.
 	tags agents.Tags
+	// language is the installation's base language, which every staged line
+	// is written in — this door's own and the one a command's resolver writes.
+	language baselanguage.Resolver
+}
+
+// summaryCopy is the set the inbox line for this request is written in.
+func (d restCommandDeps) summaryCopy(ctx context.Context) approvalSummaryCopy {
+	return approvalSummaryCopyFor(d.language.Resolve(ctx))
 }
 
 // restCommands maps a crm.yaml operationId to the decoder that turns an HTTP
@@ -259,7 +269,7 @@ func previewImportCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, 
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewImportCall(deps.imports, cmd), nil
+	return agents.NewImportCall(deps.imports, deps.language, cmd), nil
 }
 
 // commitImportCommand decodes POST /v1/imports/{id}/approve. The run id IS the
@@ -272,7 +282,7 @@ func commitImportCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewImportCall(deps.imports, agents.ImportCommand{
+	return agents.NewImportCall(deps.imports, deps.language, agents.ImportCommand{
 		Verb:  agents.ImportVerbCommit,
 		RunID: id,
 	}), nil
@@ -283,7 +293,7 @@ func archiveCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, _ []
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewArchiveCall(deps.records, agents.ArchiveCommand{
+	return agents.NewArchiveCall(deps.records, deps.language, agents.ArchiveCommand{
 		RecordType: string(pol.RecordType),
 		ID:         id,
 	}), nil
@@ -299,8 +309,8 @@ func archiveCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, _ []
 // stream has one honest reading, and the gate already took it.
 //
 //nolint:ireturn,unparam // ireturn: a decoder's whole product is the erased command-and-resolver pair the table above is typed by. unparam: the error is always nil TODAY (a create has no id to fail parsing), but every restCommands entry shares this signature, and archiveCommand/patchCommand both use theirs
-func createCommand(pol agentPolicy, _ restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
-	return agents.NewCreateCall(agents.CreateCommand{
+func createCommand(pol agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+	return agents.NewCreateCall(deps.language, agents.CreateCommand{
 		RecordType: string(pol.RecordType),
 		Fields:     json.RawMessage(body),
 	}), nil
@@ -316,7 +326,7 @@ func patchCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, body [
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewPatchCall(deps.records, agents.PatchCommand{
+	return agents.NewPatchCall(deps.records, deps.language, agents.PatchCommand{
 		RecordType: string(pol.RecordType),
 		ID:         id,
 		Fields:     json.RawMessage(body),

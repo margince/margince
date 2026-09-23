@@ -76,7 +76,7 @@ func TestScrapeStagesEnrichmentBoundToCompany(t *testing.T) {
 	e := integration.Setup(t)
 	companyID := insertCompany(t, e, e.Rep1, "acme.example", "")
 	fake := ai.NewFakeClient().Script(acmeExtraction)
-	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, contacts: e.Contacts, approvals: approvals.NewService(e.DB())}
+	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, contacts: e.Contacts, approvals: approvals.NewService(e.DB()), pool: e.Pool}
 
 	proposal, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), companyID, "")
 	if err != nil {
@@ -126,7 +126,7 @@ func TestScrapeHidesAnInvisibleCompany(t *testing.T) {
 	hidden := insertCompany(t, e, e.Rep3, "hidden.example", "")
 	e.MakeCapturePrivate(t, "company", hidden, e.Rep3)
 	fake := ai.NewFakeClient().Script(acmeExtraction)
-	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, contacts: e.Contacts, approvals: approvals.NewService(e.DB())}
+	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, contacts: e.Contacts, approvals: approvals.NewService(e.DB()), pool: e.Pool}
 
 	// Both the domain path and the override path must 404 a company the caller
 	// cannot see — existence-hiding, before any egress on their behalf.
@@ -148,7 +148,7 @@ func TestScrapeDegradesHonestly(t *testing.T) {
 	companyID := insertCompany(t, e, e.Rep1, "acme.example", "")
 	allHallucinated := ai.NewFakeClient().Script(
 		`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"nowhere on the page","confidence":0.9}]}`)
-	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, allHallucinated).ColdStart}, contacts: e.Contacts, approvals: approvals.NewService(e.DB())}
+	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, allHallucinated).ColdStart}, contacts: e.Contacts, approvals: approvals.NewService(e.DB()), pool: e.Pool}
 	var unreadable *unreadableError
 	if _, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), companyID, ""); !errors.As(err, &unreadable) {
 		t.Fatalf("all-hallucinated extraction → %v, want unreadable", err)
@@ -169,7 +169,7 @@ func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 
 	svc := approvals.NewService(e.DB())
 	svc.WithEffect("enrich", scrapeAcceptEffect(svc, e.Contacts))
-	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, contacts: e.Contacts, approvals: svc}
+	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, contacts: e.Contacts, approvals: svc, pool: e.Pool}
 
 	proposal, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), companyID, "")
 	if err != nil {

@@ -177,14 +177,19 @@ func TestAnUnhealthySourceOrUncertainLinkageSurfacesAnException(t *testing.T) {
 // between "we are not sure" and "you moved this yourself".
 func TestAProtectedDealIsNeverProposed(t *testing.T) {
 	facts := settledFacts()
-	facts.Protected = true
-	facts.ProtectedReason = "you moved this deal by hand last week"
-	got := DecideStageMove(facts)
-	if got.Outcome != OutcomeObserve {
-		t.Fatalf("a protected deal decided %q", got.Outcome)
-	}
-	if got.Reason != facts.ProtectedReason {
-		t.Errorf("the refusal reads %q, not the protection's own reason", got.Reason)
+	for protection, want := range map[Protection]string{
+		ProtectionHumanMove: "you moved this deal yourself in the last fortnight",
+		ProtectionReversal:  "a stage move on this deal was undone before",
+		ProtectionRejected:  "you turned this move down, and nothing new has been learned since",
+	} {
+		facts.Protection = protection
+		got := DecideStageMove(facts)
+		if got.Outcome != OutcomeObserve {
+			t.Fatalf("a %s-protected deal decided %q", protection, got.Outcome)
+		}
+		if got.Reason != want {
+			t.Errorf("the %s refusal reads %q, not the protection's own reason %q", protection, got.Reason, want)
+		}
 	}
 }
 
@@ -193,8 +198,7 @@ func TestAProtectedDealIsNeverProposed(t *testing.T) {
 // contact it works for, and doing it silently.
 func TestProtectionOutranksAMeasuredAutopilot(t *testing.T) {
 	facts := settledFacts()
-	facts.Protected = true
-	facts.ProtectedReason = "you moved this deal by hand last week"
+	facts.Protection = ProtectionHumanMove
 	facts.Autopilot = AutopilotFacts{Enabled: true, ThresholdsMet: true}
 	if got := DecideStageMove(facts); got.Outcome != OutcomeObserve {
 		t.Fatalf("a protected deal with the autopilot on decided %q", got.Outcome)

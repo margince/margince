@@ -18,7 +18,12 @@ package deals
 // caller has to have measured the transition first, which is what
 // FactsAutopilot carries.
 
-import "time"
+import (
+	"fmt"
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 // StageMoveOutcome is what the policy entitles the caller to do.
 type StageMoveOutcome string
@@ -40,15 +45,56 @@ const (
 // StageMoveDecision is the outcome and why, in words that go on the card.
 type StageMoveDecision struct {
 	Outcome StageMoveOutcome
-	// Reason is the product's own sentence about this decision. It names the
-	// fact that decided it, so a rep reading the card learns why this is being
-	// asked rather than that something was computed.
+	// Reason is the product's own sentence about this decision, in English. It
+	// names the fact that decided it, so a rep reading the card learns why this
+	// is being asked rather than that something was computed.
 	Reason string
 	// Exception is set where the facts are not merely insufficient but
 	// WRONG-LOOKING — a contradiction, an unhealthy source, a link nobody can
 	// vouch for. Observing quietly would leave a rep with a stage that never
 	// moves and no way to find out why.
-	Exception string
+	Exception  string
+	unrendered stageReason
+}
+
+// ReasonIn is Reason in lang. A card is a shared record, so its writer renders
+// the reason in the installation's base language it resolved when it stores it.
+func (d StageMoveDecision) ReasonIn(lang textlang.Lang) string {
+	return d.unrendered.in(lang)
+}
+
+// stageReason is a decision's sentence kept unrendered: the policy decides
+// without knowing who reads the card, and the writer picks the language.
+type stageReason struct {
+	sentence func(summaryCopy) string
+	// key fills the sentence's one %s where keyed is set.
+	key   string
+	keyed bool
+}
+
+func plainReason(sentence func(summaryCopy) string) stageReason {
+	return stageReason{sentence: sentence}
+}
+
+func keyedReason(sentence func(summaryCopy) string, key string) stageReason {
+	return stageReason{sentence: sentence, key: key, keyed: true}
+}
+
+func (r stageReason) in(lang textlang.Lang) string {
+	if r.sentence == nil {
+		return ""
+	}
+	said := r.sentence(summaryFor(lang))
+	if !r.keyed {
+		return said
+	}
+	return fmt.Sprintf(said, r.key)
+}
+
+// decided pairs an outcome with its reason, keeping the English Reason and the
+// unrendered one in step.
+func decided(outcome StageMoveOutcome, reason stageReason) StageMoveDecision {
+	return StageMoveDecision{Outcome: outcome, Reason: reason.in(textlang.English), unrendered: reason}
 }
 
 // CriterionFact is one exit criterion and what the ledger says about it.
@@ -85,12 +131,9 @@ type StageMoveFacts struct {
 	SingleStep bool
 	// SamePipeline is false where the move would cross pipelines.
 	SamePipeline bool
-	// Protected marks a deal a human has recently steered: a stage move by a
-	// contact in the protection window, a reversal on the record, or a proposal
-	// for this same target already rejected with no newer evidence since.
-	Protected bool
-	// ProtectedReason names which of those it was, so the Reason can say so.
-	ProtectedReason string
+	// Protection marks a deal a human has recently steered, and names how, so
+	// the Reason can say so. The zero value is a deal nobody has steered.
+	Protection Protection
 	// SourceUnhealthy marks evidence read from a source that was not working
 	// properly — a mailbox behind on sync, a failed reading.
 	SourceUnhealthy bool
@@ -98,6 +141,33 @@ type StageMoveFacts struct {
 	LinkageUncertain bool
 	// Autopilot carries the caller's measurement of this transition.
 	Autopilot AutopilotFacts
+}
+
+// Protection is how a human recently steered a deal's stage.
+type Protection string
+
+const (
+	// ProtectionNone is a deal nobody has recently steered.
+	ProtectionNone Protection = ""
+	// ProtectionHumanMove is a stage move by a contact in the protection window.
+	ProtectionHumanMove Protection = "human_move"
+	// ProtectionReversal is a stage move on the record that was undone.
+	ProtectionReversal Protection = "reversal"
+	// ProtectionRejected is a proposal for this same target already rejected,
+	// with no newer evidence since.
+	ProtectionRejected Protection = "rejected"
+)
+
+// protectionReason is the sentence a protected deal's refusal reads.
+func protectionReason(p Protection) stageReason {
+	switch p {
+	case ProtectionReversal:
+		return plainReason(func(said summaryCopy) string { return said.protectedUndoneBefore })
+	case ProtectionRejected:
+		return plainReason(func(said summaryCopy) string { return said.protectedTurnedDown })
+	default:
+		return plainReason(func(said summaryCopy) string { return said.protectedMovedByYou })
+	}
 }
 
 // AutopilotFacts is what the caller has measured about letting this transition
@@ -139,19 +209,13 @@ func DecideStageMove(facts StageMoveFacts) StageMoveDecision {
 	// Everything below here has met evidence for every required criterion,
 	// authored by whoever had to author it, uncontradicted, on a deal nobody
 	// has recently steered.
-	if reason := needsAJudgement(facts); reason != "" {
-		return StageMoveDecision{Outcome: OutcomeProposeConfirmFirst, Reason: reason}
+	if reason, ok := needsAJudgement(facts); ok {
+		return decided(OutcomeProposeConfirmFirst, reason)
 	}
 	if facts.Autopilot.Enabled && !facts.Autopilot.Suspended && facts.Autopilot.ThresholdsMet {
-		return StageMoveDecision{
-			Outcome: OutcomeAutoApply,
-			Reason:  "every exit criterion is settled by the other side's own words, and this transition has been measured long enough to move itself",
-		}
+		return decided(OutcomeAutoApply, plainReason(func(said summaryCopy) string { return said.stageAutoApply }))
 	}
-	return StageMoveDecision{
-		Outcome: OutcomePropose,
-		Reason:  "every exit criterion for this stage is settled",
-	}
+	return decided(OutcomePropose, plainReason(func(said summaryCopy) string { return said.stageAllSettled }))
 }
 
 // refuseOnTheFacts asks every question whose answer is Observe.
@@ -161,17 +225,12 @@ func refuseOnTheFacts(facts StageMoveFacts) (StageMoveDecision, bool) {
 	// source that was not working, a link nobody can vouch for. Observing them
 	// silently leaves a stage that never moves and no way to find out why.
 	if exception := surfacedException(facts); exception != "" {
-		return StageMoveDecision{
-			Outcome:   OutcomeObserve,
-			Reason:    "the evidence for this stage cannot be relied on as it stands",
-			Exception: exception,
-		}, true
+		decision := decided(OutcomeObserve, plainReason(func(said summaryCopy) string { return said.stageUnreliable }))
+		decision.Exception = exception
+		return decision, true
 	}
-	if facts.Protected {
-		return StageMoveDecision{
-			Outcome: OutcomeObserve,
-			Reason:  facts.ProtectedReason,
-		}, true
+	if facts.Protection != ProtectionNone {
+		return decided(OutcomeObserve, protectionReason(facts.Protection)), true
 	}
 	// A STAGE THAT ASKS FOR NOTHING SETTLES NOTHING. Every check below is a
 	// loop over the criteria, so an empty list passes all of them vacuously —
@@ -180,17 +239,12 @@ func refuseOnTheFacts(facts StageMoveFacts) (StageMoveDecision, bool) {
 	// The reason would have read "settled by the other side's own words" about
 	// a deal nobody had said anything about.
 	if len(facts.Criteria) == 0 {
-		return StageMoveDecision{
-			Outcome: OutcomeObserve,
-			Reason:  "this stage does not say what it takes to leave it, so nothing here can settle it",
-		}, true
+		return decided(OutcomeObserve, plainReason(func(said summaryCopy) string { return said.stageNoCriteria })), true
 	}
 	for _, c := range facts.Criteria {
 		if c.Required && !c.Met {
-			return StageMoveDecision{
-				Outcome: OutcomeObserve,
-				Reason:  "the stage still asks for " + c.Key + ", and nothing says it is settled",
-			}, true
+			return decided(OutcomeObserve,
+				keyedReason(func(said summaryCopy) string { return said.stageStillAsksForKey }, c.Key)), true
 		}
 		// The rule the whole ledger rests on, asked again HERE because the
 		// ledger refuses such a row at the write and this reads rows already
@@ -199,10 +253,8 @@ func refuseOnTheFacts(facts StageMoveFacts) (StageMoveDecision, bool) {
 		// refusal, or one whose criterion kind changed after it was recorded,
 		// reaches this function and must not move a deal.
 		if c.Met && !SettlesBuyerMilestone(c.Kind, c.AuthorSide) {
-			return StageMoveDecision{
-				Outcome: OutcomeObserve,
-				Reason:  c.Key + " names something the buyer does, and only our own side has said it",
-			}, true
+			return decided(OutcomeObserve,
+				keyedReason(func(said summaryCopy) string { return said.stageOurSideOnlyKey }, c.Key)), true
 		}
 	}
 	return StageMoveDecision{}, false
@@ -224,22 +276,22 @@ func surfacedException(facts StageMoveFacts) string {
 	return ""
 }
 
-// needsAJudgement names why a move a human should look at is one, or "" where
-// the move is ordinary.
+// needsAJudgement names why a move a human should look at is one, and false
+// where the move is ordinary.
 //
 // Each of these is a move whose MISTAKE is expensive, independently of how
 // good the evidence is. Winning a deal that is not won, skipping a stage the
 // pipeline exists to enforce, or acting on a date somebody floated are all
 // errors a rep would rather catch on a card than find later in a forecast.
-func needsAJudgement(facts StageMoveFacts) string {
+func needsAJudgement(facts StageMoveFacts) (stageReason, bool) {
 	if facts.FromTerminal || facts.ToTerminal {
-		return "this move enters or leaves a closing stage, which is always a contact's call"
+		return plainReason(func(said summaryCopy) string { return said.stageClosing }), true
 	}
 	if !facts.SamePipeline {
-		return "this move would cross into another pipeline"
+		return plainReason(func(said summaryCopy) string { return said.stageCrossPipeline }), true
 	}
 	if !facts.SingleStep {
-		return "this move skips or goes back a stage rather than advancing by one"
+		return plainReason(func(said summaryCopy) string { return said.stageSkips }), true
 	}
 	for _, c := range facts.Criteria {
 		if !c.Met {
@@ -247,7 +299,7 @@ func needsAJudgement(facts StageMoveFacts) string {
 			// said it was optional — but it is not nothing either: a stage
 			// carrying an unsettled criterion of any kind is one a contact
 			// should glance at before the deal moves itself.
-			return c.Key + " is not settled, and the stage lists it"
+			return keyedReason(func(said summaryCopy) string { return said.stageOptionalOpenKey }, c.Key), true
 		}
 		// Anything but an explicit agreement. CommitmentNone is a criterion
 		// settled by a record rather than by anybody's undertaking — a
@@ -255,13 +307,13 @@ func needsAJudgement(facts StageMoveFacts) string {
 		// commitment is a row that never said, and a policy treating silence
 		// as agreement would act on the one value nobody chose.
 		if c.Commitment != CommitmentAgreed && c.Commitment != CommitmentNone {
-			return c.Key + " does not rest on anything the other side agreed to"
+			return keyedReason(func(said summaryCopy) string { return said.stageNotAgreedKey }, c.Key), true
 		}
 		if c.Confidence != nil && *c.Confidence < ambiguousConfidence {
-			return "the reading of " + c.Key + " is not certain enough to act on unasked"
+			return keyedReason(func(said summaryCopy) string { return said.stageUncertainKey }, c.Key), true
 		}
 	}
-	return ""
+	return stageReason{}, false
 }
 
 // ProtectionWindow is how long a human's own stage move keeps the product from

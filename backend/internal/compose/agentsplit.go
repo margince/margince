@@ -288,6 +288,7 @@ func applyAutoExecuteAndStageResidue(w http.ResponseWriter, r *http.Request, nex
 	// the post-write one, and this call's own successful half cannot invalidate
 	// its own staged half. A pin named here would not survive the trip anyway:
 	// approvalsAdapter.Stage (registry.go) forwards none, deliberately.
+	said := commands.summaryCopy(r.Context())
 	approvalID, alreadyApproved, sErr := staging.StageCall(r.Context(), agents.StageRequest{
 		Tool:           pol.Tool,
 		ProposedChange: canonical,
@@ -298,8 +299,8 @@ func applyAutoExecuteAndStageResidue(w http.ResponseWriter, r *http.Request, nex
 		// names the values it would write, not only the field names it would
 		// write them to: "overwrite human-edited amount_minor" told an
 		// approver which field was at stake and never with what.
-		Summary: "overwrite human-edited " + strings.Join(split.Conflicts, ", ") + " — " +
-			restSummary(pol, r, split.Staged),
+		Summary: fmt.Sprintf(said.overwriteHumanEdited, strings.Join(split.Conflicts, ", "),
+			restSummary(said, pol, r, split.Staged)),
 	})
 	if sErr != nil {
 		httperr.Write(w, r, partiallyApplied(split.Conflicts, sErr))

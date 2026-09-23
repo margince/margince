@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -326,7 +327,7 @@ func applyOne(ctx context.Context, ex Executors, eff workflow.Effect, action wor
 		// effect, because the release executors are registered per kind and
 		// these have none. A card whose approval does nothing is worse than a
 		// refusal, so they join the declared-but-unbuilt kinds below and say so.
-		id, err := stageForApproval(ctx, ex.Approvals, action)
+		id, err := stageForApproval(ctx, ex.Approvals, ex.Language, action)
 		if err != nil {
 			return action, nil, err
 		}
@@ -345,7 +346,7 @@ func applyOne(ctx context.Context, ex Executors, eff workflow.Effect, action wor
 		if err != nil {
 			return recorded, nil, err
 		}
-		id, err := stageHeldDraft(ctx, ex.Approvals, action.Target, proposal)
+		id, err := stageHeldDraft(ctx, ex.Approvals, ex.Language, action.Target, proposal)
 		if err != nil {
 			return recorded, nil, err
 		}
@@ -376,7 +377,7 @@ func applyUpdate(ctx context.Context, provider datasource.SystemOfRecordProvider
 // hash that, never a fabricated placeholder — so a redelivered firing of
 // the identical action reaches the identical diff_hash a human already
 // saw, instead of minting a fresh unrecognizable staging each retry.
-func stageForApproval(ctx context.Context, approvals Approvals, action workflow.Action) (ids.ApprovalID, error) {
+func stageForApproval(ctx context.Context, approvals Approvals, language baselanguage.Resolver, action workflow.Action) (ids.ApprovalID, error) {
 	raw := action.Args
 	if len(raw) == 0 {
 		raw = json.RawMessage(`{}`)
@@ -391,7 +392,7 @@ func stageForApproval(ctx context.Context, approvals Approvals, action workflow.
 		DiffHash:       diffHash,
 		TargetType:     string(action.Target.Type),
 		TargetID:       action.Target.ID,
-		Summary:        fmt.Sprintf("automation wants to %s on %s %s", action.Kind, action.Target.Type, action.Target.ID),
+		Summary:        fmt.Sprintf(summaryIn(ctx, language).stagedAction, action.Kind, action.Target.Type, action.Target.ID),
 	})
 }
 
@@ -417,7 +418,7 @@ const HeldDraftKind = "held_draft"
 //
 // The summary names the addressee, because the inbox row is read before the
 // draft is opened and "send an email" is not a decision anyone can take.
-func stageHeldDraft(ctx context.Context, approvals Approvals, target datasource.EntityRef, proposal HeldDraftProposal) (ids.ApprovalID, error) {
+func stageHeldDraft(ctx context.Context, approvals Approvals, language baselanguage.Resolver, target datasource.EntityRef, proposal HeldDraftProposal) (ids.ApprovalID, error) {
 	if approvals == nil {
 		// A composition with no staging seam cannot hold this draft for
 		// anybody, and the alternative to saying so is a nil dereference. It
@@ -440,7 +441,7 @@ func stageHeldDraft(ctx context.Context, approvals Approvals, target datasource.
 		DiffHash:       diffHash,
 		TargetType:     string(target.Type),
 		TargetID:       target.ID,
-		Summary:        fmt.Sprintf("an automation drafted a reply to %s — read it before it goes", proposal.To),
+		Summary:        fmt.Sprintf(summaryIn(ctx, language).heldDraft, proposal.To),
 		JoinPending:    true,
 	})
 }

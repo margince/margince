@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -486,7 +487,7 @@ func TestAStagedSummaryNamesEveryArgumentItReleases(t *testing.T) {
 	host, deal, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
 
 	t.Run("a send names its cc, not only its to", func(t *testing.T) {
-		got := describeSend(SendEmailCommand{
+		got := describeSend(summaryByLang[textlang.English], SendEmailCommand{
 			To: []string{"buyer@example.test"}, Cc: []string{"rival@example.test"}, Subject: "Q3 pricing",
 		})
 		for _, want := range []string{"buyer@example.test", "rival@example.test", `"Q3 pricing"`} {
@@ -502,7 +503,7 @@ func TestAStagedSummaryNamesEveryArgumentItReleases(t *testing.T) {
 			Start: time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC),
 			End:   time.Date(2026, 8, 10, 9, 30, 0, 0, time.UTC),
 		}
-		got := describeBooking(cmd, []RecordLink{
+		got := describeBooking(summaryByLang[textlang.English], cmd, []RecordLink{
 			{EntityType: "deal", EntityID: deal}, {EntityType: "company", EntityID: company},
 		})
 		for _, want := range []string{host.String(), "2 record(s)", `"Review"`} {

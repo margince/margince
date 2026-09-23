@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -71,7 +72,7 @@ type CompanyEnricher interface {
 
 // RegisterEnrichTool wires the enrich verb over the site-read seam.
 func RegisterEnrichTool(r *Registry, p datasource.SystemOfRecordProvider, enricher CompanyEnricher) {
-	r.Register(enrichCompany{p: p, enricher: enricher})
+	r.Register(enrichCompany{p: p, enricher: enricher, language: r.language})
 }
 
 type enrichArgs struct {
@@ -83,6 +84,7 @@ type enrichArgs struct {
 type enrichCompany struct {
 	p        datasource.SystemOfRecordProvider
 	enricher CompanyEnricher
+	language baselanguage.Resolver
 }
 
 func (t enrichCompany) Spec() mcp.ToolSpec {
@@ -132,7 +134,7 @@ func (t enrichCompany) StageInfo(ctx context.Context, in json.RawMessage) (Stage
 	if err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewEnrichCall(t.p, EnrichCommand(args)))
+	return StageSubject(ctx, NewEnrichCall(t.p, t.language, EnrichCommand(args)))
 }
 
 func (t enrichCompany) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

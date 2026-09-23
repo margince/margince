@@ -91,7 +91,7 @@ func (r reviewRouter) RouteForDecisionTx(
 		// times it is asked about one review.
 		DiffHash:    in.ReviewID.String(),
 		JoinPending: true,
-		Summary:     reviewSummary(in),
+		Summary:     reviewSummary(approvalSummaryCopyIn(ctx, tx), in),
 	})
 	if err != nil {
 		return ids.UUID{}, err
@@ -101,13 +101,12 @@ func (r reviewRouter) RouteForDecisionTx(
 
 // reviewSummary is the line a decider reads in the queue before opening
 // anything. It says what was refused and how widely, and names no recipient.
-func reviewSummary(in consent.ReviewRouteRequest) string {
-	recipients := "1 recipient"
+func reviewSummary(said approvalSummaryCopy, in consent.ReviewRouteRequest) string {
+	recipients := said.reviewOneRecipient
 	if in.Recipients != 1 {
-		recipients = fmt.Sprintf("%d recipients", in.Recipients)
+		recipients = fmt.Sprintf(said.reviewRecipients, in.Recipients)
 	}
-	return fmt.Sprintf("A send was refused for %s (%s) and somebody is asking whether it may go anyway",
-		recipients, in.ReasonCode)
+	return fmt.Sprintf(said.reviewSendRefused, recipients, in.ReasonCode)
 }
 
 // reviewDecisionEffect is what approving the card does: the directed send

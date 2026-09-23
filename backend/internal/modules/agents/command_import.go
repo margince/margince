@@ -27,6 +27,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
 // ImportCommand is one call against an import run.
@@ -56,11 +57,14 @@ const (
 // identically. A preview needs no seam and may pass nil.
 //
 //nolint:ireturn // the call is the product, same as every other family here
-func NewImportCall(imports Imports, cmd ImportCommand) GovernedCall {
-	return bind[ImportCommand](importResolver{imports: imports}, cmd)
+func NewImportCall(imports Imports, language baselanguage.Resolver, cmd ImportCommand) GovernedCall {
+	return bind[ImportCommand](importResolver{imports: imports, language: language}, cmd)
 }
 
-type importResolver struct{ imports Imports }
+type importResolver struct {
+	imports  Imports
+	language baselanguage.Resolver
+}
 
 // Subject names what the approval binds to.
 //
@@ -86,12 +90,12 @@ func (r importResolver) Subject(ctx context.Context, cmd ImportCommand) (StageIn
 		return StageInfo{
 			TargetType: importRunRecordType,
 			TargetID:   cmd.RunID,
-			Summary:    describeImport(object, report),
+			Summary:    describeImport(summaryIn(ctx, r.language), object, report),
 		}, nil
 	}
 	return StageInfo{
 		TargetType: importRunRecordType,
-		Summary:    fmt.Sprintf("Check a file of %s records against this workspace, writing nothing", cmd.Object),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).importPreview, cmd.Object),
 	}, nil
 }
 
@@ -130,22 +134,22 @@ func (r importResolver) reportFor(
 // be used. The unusable count is never omitted when it is non-zero, even
 // though it is the least flattering number — a summary that quietly drops it
 // reads as a clean import.
-func describeImport(object string, report crmcontracts.ImportRunReport) string {
+func describeImport(said summaryCopy, object string, report crmcontracts.ImportRunReport) string {
 	d := report.Disposition
-	parts := []string{fmt.Sprintf("create %d", d.Created)}
+	parts := []string{fmt.Sprintf(said.importCreate, d.Created)}
 	if d.Updated > 0 {
-		parts = append(parts, fmt.Sprintf("update %d", d.Updated))
+		parts = append(parts, fmt.Sprintf(said.importUpdate, d.Updated))
 	}
 	if d.Unchanged > 0 {
-		parts = append(parts, fmt.Sprintf("leave %d unchanged", d.Unchanged))
+		parts = append(parts, fmt.Sprintf(said.importUnchanged, d.Unchanged))
 	}
 	if d.Skipped > 0 {
-		parts = append(parts, fmt.Sprintf("skip %d", d.Skipped))
+		parts = append(parts, fmt.Sprintf(said.importSkip, d.Skipped))
 	}
-	summary := fmt.Sprintf("Import %d rows as %s records: %s",
+	summary := fmt.Sprintf(said.importCommit,
 		report.RowsRead, object, strings.Join(parts, ", "))
 	if len(report.Issues) > 0 {
-		summary += fmt.Sprintf(". %d row(s) could not be used", len(report.Issues))
+		summary += fmt.Sprintf(said.importIssues, len(report.Issues))
 	}
 	return summary
 }

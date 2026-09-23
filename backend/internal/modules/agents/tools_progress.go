@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -31,8 +32,9 @@ type progressDealArgs struct {
 }
 
 type progressDeal struct {
-	p      datasource.SystemOfRecordProvider
-	stages StageResolver
+	p        datasource.SystemOfRecordProvider
+	stages   StageResolver
+	language baselanguage.Resolver
 }
 
 func (t progressDeal) Spec() mcp.ToolSpec {
@@ -83,7 +85,7 @@ func (t progressDeal) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewAdvanceDealCall(t.p, t.stages, AdvanceDealCommand{
+	return StageSubject(ctx, NewAdvanceDealCall(t.p, t.stages, t.language, AdvanceDealCommand{
 		DealID:    args.DealID,
 		ToStageID: args.ToStageID,
 	}))

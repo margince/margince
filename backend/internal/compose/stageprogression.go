@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // stageProgressionActor is what the audit trail names as the proposer. No
@@ -165,7 +166,10 @@ func (p *StageProgressionProposer) Propose(ctx context.Context, dealID ids.DealI
 func (p *StageProgressionProposer) stageCard(
 	ctx context.Context, tx pgx.Tx, facts deals.StageProgressionFacts,
 ) error {
-	raw, err := json.Marshal(progressionChange(facts))
+	// One language for the card and its payload, so the summary and the
+	// "because" a decider opens are the same sentence.
+	lang := baseLanguageForSummary(ctx, tx)
+	raw, err := json.Marshal(progressionChange(facts, lang))
 	if err != nil {
 		return fmt.Errorf("render the proposed stage move: %w", err)
 	}
@@ -196,7 +200,7 @@ func (p *StageProgressionProposer) stageCard(
 		// supplied. The deal is a versioned target, so the card is pinned to
 		// the row the payload above was written from — which is only true
 		// because the facts read and this staging share one transaction.
-		Summary: facts.Decision.Reason,
+		Summary: facts.Decision.ReasonIn(lang),
 		// JoinPending with an identity of the TARGET STAGE: a second
 		// reading proposing the same move supersedes the first rather than
 		// competing with it in the inbox, where approving the stale one
@@ -220,7 +224,7 @@ func (p *StageProgressionProposer) stageCard(
 }
 
 // progressionChange is the payload a human reads.
-func progressionChange(facts deals.StageProgressionFacts) deals.StageProgressionChange {
+func progressionChange(facts deals.StageProgressionFacts, lang textlang.Lang) deals.StageProgressionChange {
 	criteria := make([]deals.ProposedCriterion, 0, len(facts.Criteria))
 	for _, c := range facts.Criteria {
 		criteria = append(criteria, deals.ProposedCriterion{
@@ -239,7 +243,7 @@ func progressionChange(facts deals.StageProgressionFacts) deals.StageProgression
 		FromName:     facts.FromName,
 		ToName:       facts.ToName,
 		Criteria:     criteria,
-		Because:      facts.Decision.Reason,
+		Because:      facts.Decision.ReasonIn(lang),
 		ConfirmFirst: facts.Decision.Outcome == deals.OutcomeProposeConfirmFirst,
 	}
 	if facts.NeedsWinReason {

@@ -29,8 +29,8 @@ import (
 // — so this is the same shape createCommand takes for every other create.
 //
 //nolint:ireturn,unparam // ireturn: a decoder's whole product is the erased command-and-resolver pair restCommands is typed by. unparam: the error is always nil TODAY (a create has no id to fail parsing), but every restCommands entry shares this signature
-func logActivityCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
-	return agents.NewLogActivityCall(agents.LogActivityCommand{Fields: json.RawMessage(body)}), nil
+func logActivityCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+	return agents.NewLogActivityCall(deps.language, agents.LogActivityCommand{Fields: json.RawMessage(body)}), nil
 }
 
 // annotateBriefCommand decodes PUT /v1/brief/annotations. The body's prose is
@@ -38,7 +38,7 @@ func logActivityCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, body 
 // so there is no id to bind and nothing a decider could redirect.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func annotateBriefCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+func annotateBriefCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
 	var req struct {
 		Narrative string `json:"narrative"`
 		Items     []struct {
@@ -48,7 +48,7 @@ func annotateBriefCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, bod
 	if err := json.Unmarshal(body, &req); err != nil {
 		return nil, err
 	}
-	return agents.NewAnnotateBriefCall(agents.AnnotateBriefCommand{
+	return agents.NewAnnotateBriefCall(deps.language, agents.AnnotateBriefCommand{
 		Items:     len(req.Items),
 		Narrative: req.Narrative != "",
 	}), nil
@@ -59,12 +59,12 @@ func annotateBriefCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, bod
 // stamped here so the staged command names what the door will write.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func createTaskCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+func createTaskCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
 	fields, err := agents.TaskAsActivity(json.RawMessage(body))
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewLogActivityCall(agents.LogActivityCommand{Fields: fields}), nil
+	return agents.NewLogActivityCall(deps.language, agents.LogActivityCommand{Fields: fields}), nil
 }
 
 // draftEmailCommand decodes POST /v1/activities/{id}/draft-email. The optional
@@ -76,7 +76,7 @@ func draftEmailCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ [
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewDraftEmailCall(deps.records, agents.DraftEmailCommand{ActivityID: id}), nil
+	return agents.NewDraftEmailCall(deps.records, deps.language, agents.DraftEmailCommand{ActivityID: id}), nil
 }
 
 // relinkActivityCommand decodes POST /v1/activities/{id}/relink. The
@@ -97,7 +97,7 @@ func relinkActivityCommand(_ agentPolicy, deps restCommandDeps, r *http.Request,
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewRelinkActivityCall(deps.records, agents.RelinkActivityCommand{
+	return agents.NewRelinkActivityCall(deps.records, deps.language, agents.RelinkActivityCommand{
 		ActivityID: id,
 		EntityType: in.EntityType,
 		EntityID:   in.EntityID,
@@ -118,7 +118,7 @@ func relinkThreadCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, b
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewRelinkThreadCall(deps.records, agents.RelinkThreadCommand{
+	return agents.NewRelinkThreadCall(deps.records, deps.language, agents.RelinkThreadCommand{
 		ThreadKey: in.ThreadKey, EntityType: in.EntityType, EntityID: in.EntityID,
 	}), nil
 }
@@ -133,7 +133,7 @@ func relinkActivitiesCommand(_ agentPolicy, deps restCommandDeps, _ *http.Reques
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewRelinkActivitiesCall(deps.records, agents.RelinkActivitiesCommand{
+	return agents.NewRelinkActivitiesCall(deps.records, deps.language, agents.RelinkActivitiesCommand{
 		ActivityIDs: in.ActivityIDs, EntityType: in.EntityType, EntityID: in.EntityID,
 	}), nil
 }
@@ -145,12 +145,12 @@ func relinkActivitiesCommand(_ agentPolicy, deps restCommandDeps, _ *http.Reques
 // this door could be hiding.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func runReportCommand(_ agentPolicy, _ restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+func runReportCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
 	report, err := pathOperand(r, "report")
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewRunReportCall(agents.RunReportCommand{Report: report}), nil
+	return agents.NewRunReportCall(deps.language, agents.RunReportCommand{Report: report}), nil
 }
 
 // analyticsQueryCommand decodes POST /v1/analytics/query. A POST because a
@@ -159,14 +159,14 @@ func runReportCommand(_ agentPolicy, _ restCommandDeps, r *http.Request, _ []byt
 // population name.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func analyticsQueryCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+func analyticsQueryCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
 	var in struct {
 		Entity string `json:"entity"`
 	}
 	if err := json.Unmarshal(body, &in); err != nil {
 		return nil, err
 	}
-	return agents.NewAnalyticsQueryCall(agents.AnalyticsQueryCommand{Entity: in.Entity}), nil
+	return agents.NewAnalyticsQueryCall(deps.language, agents.AnalyticsQueryCommand{Entity: in.Entity}), nil
 }
 
 // composeReportCommand decodes POST /v1/analytics/reports/render.
@@ -182,7 +182,7 @@ func analyticsQueryCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, bo
 // entitled to fewer.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func composeReportCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+func composeReportCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
 	var in struct {
 		Blocks []json.RawMessage `json:"blocks"`
 	}
@@ -192,7 +192,7 @@ func composeReportCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, bod
 		// and a second wrapping here would be a second spelling of one answer.
 		return nil, err
 	}
-	return agents.NewComposeReportCall(agents.ComposeReportCommand{Blocks: len(in.Blocks)}), nil
+	return agents.NewComposeReportCall(deps.language, agents.ComposeReportCommand{Blocks: len(in.Blocks)}), nil
 }
 
 // decideApprovalCommand decodes a decision on ONE staged proposal. The verdict
@@ -200,7 +200,7 @@ func composeReportCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, bod
 // operations over one decision, and the body carries only the reason.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func decideApprovalCommand(pol agentPolicy, _ restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+func decideApprovalCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
 	id, err := pathOperand(r, "id")
 	if err != nil {
 		return nil, err
@@ -209,7 +209,7 @@ func decideApprovalCommand(pol agentPolicy, _ restCommandDeps, r *http.Request, 
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewDecideApprovalCall(agents.DecideApprovalCommand{
+	return agents.NewDecideApprovalCall(deps.language, agents.DecideApprovalCommand{
 		ApprovalID: approvalID, Approve: approvesApproval(pol.Op),
 	}), nil
 }
@@ -217,7 +217,7 @@ func decideApprovalCommand(pol agentPolicy, _ restCommandDeps, r *http.Request, 
 // decideBundleCommand decodes the same decision given to a whole act.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func decideBundleCommand(pol agentPolicy, _ restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+func decideBundleCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
 	id, err := pathOperand(r, "bundle_id")
 	if err != nil {
 		return nil, err
@@ -226,7 +226,7 @@ func decideBundleCommand(pol agentPolicy, _ restCommandDeps, r *http.Request, _ 
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewDecideBundleCall(agents.DecideBundleCommand{
+	return agents.NewDecideBundleCall(deps.language, agents.DecideBundleCommand{
 		BundleID: bundleID, Approve: approvesApproval(pol.Op),
 	}), nil
 }

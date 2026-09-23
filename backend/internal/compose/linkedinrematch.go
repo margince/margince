@@ -162,7 +162,7 @@ func (w *linkedInRematchWorker) sweepWorkspace(ctx context.Context, ws ids.UUID)
 			// source and re-points nothing — is read by neither this pass nor
 			// the matcher, so it stays where it is; the ghost row has no
 			// terminal state for a contact that left the live set.
-			_, err = StageLinkedInMatches(ownerCtx, w.approvals, w.store)
+			_, err = StageLinkedInMatches(ownerCtx, w.pool, w.approvals, w.store)
 			return err
 		})
 	return total, err

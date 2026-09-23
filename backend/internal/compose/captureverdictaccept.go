@@ -47,7 +47,7 @@ const (
 // stageCounterpartyReview offers one unresolvable sender to a human. Returns the
 // staged proposal's id so the ledger row can point at it — a re-run then finds
 // the existing offer instead of stacking another copy in the inbox.
-func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, row capture.PendingCounterparty) (ids.UUID, error) {
+func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, said approvalSummaryCopy, row capture.PendingCounterparty) (ids.UUID, error) {
 	proposal := approvalsubject.Counterparty{
 		DispositionID: row.ID,
 		Email:         row.Email,
@@ -67,7 +67,7 @@ func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, row ca
 		DiffHash:       hex.EncodeToString(digest[:]),
 		TargetType:     counterpartyTargetType,
 		TargetID:       row.ActivityID,
-		Summary:        "Is " + row.Email + " a contact worth keeping?",
+		Summary:        fmt.Sprintf(said.counterpartyWorthKeeping, row.Email),
 		// The verdict pass is an at-least-once worker: a retried batch must
 		// return the existing offer rather than multiply inbox rows.
 		JoinPending: true,

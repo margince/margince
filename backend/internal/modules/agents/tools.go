@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -63,16 +64,16 @@ type StageResolver interface {
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor) {
 	r.Register(searchRecords{p: p})
 	r.Register(readRecord{p: p})
-	r.Register(createRecord{p: p, duplicates: duplicates})
-	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals})
+	r.Register(createRecord{p: p, duplicates: duplicates, language: r.language})
+	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals, language: r.language})
 	r.Register(logActivity{p: p})
 	r.Register(createTask{p: p})
-	r.Register(advanceDeal{p: p, stages: stages})
-	r.Register(progressDeal{p: p, stages: stages})
+	r.Register(advanceDeal{p: p, stages: stages, language: r.language})
+	r.Register(progressDeal{p: p, stages: stages, language: r.language})
 	r.Register(qualifyLead{p: p, consumerMail: consumerMail})
-	r.Register(archiveRecord{p: p})
-	r.Register(promoteLead{p: p, promoter: promoter})
-	r.Register(mergeRecords{p: p})
+	r.Register(archiveRecord{p: p, language: r.language})
+	r.Register(promoteLead{p: p, promoter: promoter, language: r.language})
+	r.Register(mergeRecords{p: p, language: r.language})
 }
 
 // FieldOwnership answers the human-edit-precedence question
@@ -241,6 +242,7 @@ type createRecord struct {
 	// failing: silence is what this surface did before, so it is the safe
 	// degradation.
 	duplicates OpenDuplicatesFor
+	language   baselanguage.Resolver
 }
 
 func (t createRecord) Spec() mcp.ToolSpec {
@@ -334,7 +336,7 @@ func (t createRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	// archiveRecord.StageInfo, command.go), so it converts rather than
 	// restating the fields: a field CreateCommand grows fails to compile here
 	// instead of quietly leaving it unset.
-	return StageSubject(ctx, NewCreateCall(CreateCommand(args)))
+	return StageSubject(ctx, NewCreateCall(t.language, CreateCommand(args)))
 }
 
 // --- log_activity (🟢 write) ---

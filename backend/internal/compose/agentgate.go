@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -46,11 +47,11 @@ const approvalTokenHeader = "X-Approval-Token"
 // mutation; anything larger is not a plausible contract payload.
 const maxGatedBody = 1 << 20
 
-func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.StageResolver, records datasource.SystemOfRecordProvider, ownership agents.FieldOwnership, imports agents.Imports, tags agents.Tags, gate *auth.Gate) func(http.Handler) http.Handler {
+func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.StageResolver, records datasource.SystemOfRecordProvider, ownership agents.FieldOwnership, imports agents.Imports, tags agents.Tags, gate *auth.Gate, language baselanguage.Resolver) func(http.Handler) http.Handler {
 	// ONE set of read-side dependencies for both questions this door asks of a
 	// command: what tier it runs at, and what an approval of it would bind to.
 	// They were two structs while the tier had its own table to feed.
-	deps := restCommandDeps{records: records, stages: stages, channels: channelKinds{}, imports: imports, tags: tags}
+	deps := restCommandDeps{records: records, stages: stages, channels: channelKinds{}, imports: imports, tags: tags, language: language}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()

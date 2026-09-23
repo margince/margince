@@ -46,7 +46,7 @@ func TestABookingAttachedToNothingIsRefusedTheSameWayAtBothDoors(t *testing.T) {
 	// A nil record seam is safe and is part of the claim: an empty list is
 	// refused before anything is looked up, so the tool door answers without
 	// reading a record — which is why the two doors can be compared here at all.
-	toolErr := agents.NewBookMeetingCall(nil, agents.BookMeetingCommand{
+	toolErr := agents.NewBookMeetingCall(nil, nil, agents.BookMeetingCommand{
 		Start: start, End: start.Add(time.Hour),
 	}).Guards(ctx)
 

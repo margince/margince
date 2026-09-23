@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -151,12 +152,13 @@ type ArchiveCommand struct {
 // than discouraged.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewArchiveCall(records datasource.SystemOfRecordProvider, cmd ArchiveCommand) GovernedCall {
-	return bind[ArchiveCommand](&archiveResolver{records: records}, cmd)
+func NewArchiveCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd ArchiveCommand) GovernedCall {
+	return bind[ArchiveCommand](&archiveResolver{records: records, language: language}, cmd)
 }
 
 type archiveResolver struct {
-	records datasource.SystemOfRecordProvider
+	records  datasource.SystemOfRecordProvider
+	language baselanguage.Resolver
 	// seen is the command rec was read for, so a resolver asked about a second
 	// target reads that target rather than answering about the first.
 	seen ArchiveCommand
@@ -197,24 +199,23 @@ func (a *archiveResolver) target(ctx context.Context, cmd ArchiveCommand) (rec d
 // passes through — and discards whatever a caller passed, so a version
 // computed here would be a number nothing reads.
 func (a *archiveResolver) Subject(ctx context.Context, cmd ArchiveCommand) (StageInfo, error) {
-	info := StageInfo{
-		TargetType: cmd.RecordType,
-		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Archive %s %s", cmd.RecordType, cmd.ID),
-	}
 	rec, served, err := a.target(ctx, cmd)
 	if err != nil {
 		return StageInfo{}, err
 	}
-	if !served {
-		// The id is the only name this type has here.
-		return info, nil
-	}
-	// "Archive contact 0195c3…" tells the approver nothing about who
+	// The id is the only name a type the seam does not speak has here. Where it
+	// does, "Archive contact 0195c3…" tells the approver nothing about who
 	// disappears, and the approvals surface hands the inbox no other
 	// human-readable name for the target.
-	info.Summary = fmt.Sprintf("Archive %s %s", cmd.RecordType, recordLabel(rec))
-	return info, nil
+	label := cmd.ID.String()
+	if served {
+		label = recordLabel(rec)
+	}
+	return StageInfo{
+		TargetType: cmd.RecordType,
+		TargetID:   cmd.ID,
+		Summary:    fmt.Sprintf(summaryIn(ctx, a.language).archive, cmd.RecordType, label),
+	}, nil
 }
 
 // Guards refuses, before anything is staged, every archive that was never going
@@ -258,20 +259,23 @@ type CreateCommand struct {
 // fields.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewCreateCall(cmd CreateCommand) GovernedCall {
-	return bind[CreateCommand](createResolver{}, cmd)
+func NewCreateCall(language baselanguage.Resolver, cmd CreateCommand) GovernedCall {
+	return bind[CreateCommand](createResolver{language: language}, cmd)
 }
 
-type createResolver struct{}
+type createResolver struct {
+	language baselanguage.Resolver
+}
 
 // Subject names the record TYPE the approval binds to — with no id and no
 // pin, because there is no row yet for either to describe. This is the shape
 // a staged create already had before this seam existed (#982); the REST door
 // now stages the identical shape for the same operation.
-func (createResolver) Subject(_ context.Context, cmd CreateCommand) (StageInfo, error) {
+func (r createResolver) Subject(ctx context.Context, cmd CreateCommand) (StageInfo, error) {
+	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType: cmd.RecordType,
-		Summary:    describeGenericWrite("Create", cmd.RecordType, cmd.Fields),
+		Summary:    describeGenericWrite(said, fmt.Sprintf(said.createHead, cmd.RecordType), cmd.Fields),
 	}, nil
 }
 
@@ -323,12 +327,13 @@ type PatchCommand struct {
 // of that caller would be exactly the abstraction T3/T8 forbid.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewPatchCall(records datasource.SystemOfRecordProvider, cmd PatchCommand) GovernedCall {
-	return bind[PatchCommand](patchResolver{records: records}, cmd)
+func NewPatchCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd PatchCommand) GovernedCall {
+	return bind[PatchCommand](patchResolver{records: records, language: language}, cmd)
 }
 
 type patchResolver struct {
-	records datasource.SystemOfRecordProvider
+	records  datasource.SystemOfRecordProvider
+	language baselanguage.Resolver
 }
 
 // Subject names the record TYPE and ID the approval binds to, with no pin:
@@ -339,11 +344,12 @@ type patchResolver struct {
 // patch already had before this seam existed (#982) — a record's values are
 // the record, and the staged row carries all of them in proposed_change,
 // which the inbox shows beside this line.
-func (patchResolver) Subject(_ context.Context, cmd PatchCommand) (StageInfo, error) {
+func (r patchResolver) Subject(ctx context.Context, cmd PatchCommand) (StageInfo, error) {
+	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType: cmd.RecordType,
 		TargetID:   cmd.ID,
-		Summary:    describeGenericWrite("Update", cmd.RecordType, cmd.Fields),
+		Summary:    describeGenericWrite(said, fmt.Sprintf(said.updateHead, cmd.RecordType), cmd.Fields),
 	}, nil
 }
 

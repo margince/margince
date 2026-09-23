@@ -31,6 +31,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -51,8 +52,8 @@ type MergeCommand struct {
 // both halves through the record seam the merge itself writes through.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewMergeCall(records datasource.SystemOfRecordProvider, cmd MergeCommand) GovernedCall {
-	return bind[MergeCommand](&mergeResolver{records: records}, cmd)
+func NewMergeCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd MergeCommand) GovernedCall {
+	return bind[MergeCommand](&mergeResolver{records: records, language: language}, cmd)
 }
 
 type mergeResolver struct {
@@ -71,6 +72,7 @@ type mergeResolver struct {
 	survivor datasource.Record
 	source   datasource.Record
 	read     bool
+	language baselanguage.Resolver
 }
 
 // errNothingToMerge refuses a merge of a record into itself: there is no
@@ -147,7 +149,7 @@ func (r *mergeResolver) Subject(ctx context.Context, cmd MergeCommand) (StageInf
 		TargetType:    cmd.RecordType,
 		TargetID:      cmd.TargetID,
 		TargetVersion: &survivor.Version,
-		Summary: fmt.Sprintf("Merge %s %s into %s",
+		Summary: fmt.Sprintf(summaryIn(ctx, r.language).merge,
 			cmd.RecordType, recordLabel(source), recordLabel(survivor)),
 	}, nil
 }
@@ -195,14 +197,16 @@ type EnrichCommand struct {
 // reading the company through the record seam.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewEnrichCall(records datasource.SystemOfRecordProvider, cmd EnrichCommand) GovernedCall {
+func NewEnrichCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd EnrichCommand) GovernedCall {
 	return bind[EnrichCommand](&enrichResolver{
-		company: anchoredRecord{records: records, entityType: datasource.EntityCompany},
+		language: language,
+		company:  anchoredRecord{records: records, entityType: datasource.EntityCompany},
 	}, cmd)
 }
 
 type enrichResolver struct {
-	company anchoredRecord
+	company  anchoredRecord
+	language baselanguage.Resolver
 }
 
 // Subject names the COMPANY the approval binds to, pins its version, and
@@ -213,7 +217,8 @@ func (r *enrichResolver) Subject(ctx context.Context, cmd EnrichCommand) (StageI
 	if err != nil {
 		return StageInfo{}, err
 	}
-	target := "its own domain"
+	said := summaryIn(ctx, r.language)
+	target := said.ownDomain
 	if cmd.URL != "" {
 		target = cmd.URL
 	}
@@ -221,7 +226,7 @@ func (r *enrichResolver) Subject(ctx context.Context, cmd EnrichCommand) (StageI
 		TargetType:    string(datasource.EntityCompany),
 		TargetID:      cmd.CompanyID,
 		TargetVersion: &rec.Version,
-		Summary: fmt.Sprintf("Read %s from %s and propose enrichment of %s",
+		Summary: fmt.Sprintf(said.enrich,
 			cmd.Depth, target, recordLabel(rec)),
 	}, nil
 }

@@ -60,6 +60,9 @@ type followUpStager struct {
 	// stored on the card — so they are read as the contact the card is for, never
 	// under the sweep's own unbounded principal.
 	owner dealOwnerAuthority
+	// pool reads the installation's base language the drafted reply's card is
+	// written in.
+	pool *pgxpool.Pool
 }
 
 // HasPendingFollowUp answers for BOTH shapes a follow-up can take.
@@ -240,8 +243,7 @@ func (s followUpStager) stageDraftedReply(
 	//
 	// The draft's own subject is what the rep recognises: it is the thread
 	// they are answering, in the words the counterparty used.
-	replySummary := fmt.Sprintf("A reply to %q is drafted and waiting to be sent — "+
-		"the conversation left no next step planned", draft.Subject)
+	replySummary := fmt.Sprintf(approvalSummaryCopyOver(ctx, s.pool).draftedReplyWaiting, draft.Subject)
 	// Staged as the SWEEP, recording the OWNER as the human it acts for.
 	//
 	// The two halves answer different questions and both are load-bearing. The
@@ -309,8 +311,9 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 		svc:   approvals.NewService(db),
 		draft: drafter,
 		owner: dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)},
+		pool:  pool,
 	}
-	return deals.NewFollowUpReconciler(db, stager, log)
+	return deals.NewFollowUpReconciler(db, stager, log).WithBaseLanguage(installationLanguage(pool))
 }
 
 // followUpPrecheck refuses a DECISION whose payload the effect could not use.

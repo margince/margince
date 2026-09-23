@@ -35,7 +35,7 @@ func promoteLeadCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewPromoteLeadCall(deps.records, agents.PromoteLeadCommand{
+	return agents.NewPromoteLeadCall(deps.records, deps.language, agents.PromoteLeadCommand{
 		LeadID:  id,
 		Trigger: in.Trigger,
 	}), nil
@@ -50,7 +50,7 @@ func disqualifyLeadCommand(_ agentPolicy, deps restCommandDeps, r *http.Request,
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewDisqualifyLeadCall(deps.records, agents.DisqualifyLeadCommand{LeadID: id}), nil
+	return agents.NewDisqualifyLeadCall(deps.records, deps.language, agents.DisqualifyLeadCommand{LeadID: id}), nil
 }
 
 // demoteLeadCommand decodes POST /v1/leads/{id}/demote. The reason travels
@@ -69,7 +69,7 @@ func demoteLeadCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bod
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewDemoteLeadCall(deps.records, agents.DemoteLeadCommand{
+	return agents.NewDemoteLeadCall(deps.records, deps.language, agents.DemoteLeadCommand{
 		LeadID: id,
 		Reason: in.Reason,
 	}), nil
@@ -92,7 +92,7 @@ func advanceProjectPhaseCommand(_ agentPolicy, deps restCommandDeps, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewAdvanceProjectPhaseCall(deps.records, agents.AdvanceProjectPhaseCommand{
+	return agents.NewAdvanceProjectPhaseCall(deps.records, deps.language, agents.AdvanceProjectPhaseCommand{
 		ProjectID: id,
 		ToPhase:   in.ToPhase,
 		Reason:    in.Reason,
@@ -154,7 +154,7 @@ func advanceDealCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 	if err := httperr.RequireBodyID("to_stage_id", in.ToStageID); err != nil {
 		return nil, err
 	}
-	return agents.NewAdvanceDealCall(deps.records, deps.stages, agents.AdvanceDealCommand{
+	return agents.NewAdvanceDealCall(deps.records, deps.stages, deps.language, agents.AdvanceDealCommand{
 		DealID:    id,
 		ToStageID: in.ToStageID,
 	}), nil

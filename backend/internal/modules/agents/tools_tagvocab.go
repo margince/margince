@@ -29,6 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -163,7 +164,10 @@ const clearColor = "none"
 // editing a word are auto-execute because the same seat can undo either from
 // the vocabulary screen; a merge rewrites every record carrying the source and
 // releases the source's name, and nothing records where those taggings went.
-type mergeTags struct{ tags Tags }
+type mergeTags struct {
+	tags     Tags
+	language baselanguage.Resolver
+}
 
 func (t mergeTags) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
@@ -194,7 +198,7 @@ func (t mergeTags) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewMergeTagsCall(t.tags, MergeTagsCommand{
+	return StageSubject(ctx, NewMergeTagsCall(t.tags, t.language, MergeTagsCommand{
 		SourceID: args.TagID,
 		TargetID: args.IntoTagID,
 	}))

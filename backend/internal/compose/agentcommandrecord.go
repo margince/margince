@@ -64,7 +64,7 @@ func mergeCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, body [
 	if err := httperr.RequireBodyID("target_id", in.TargetID); err != nil {
 		return nil, err
 	}
-	return agents.NewMergeCall(deps.records, agents.MergeCommand{
+	return agents.NewMergeCall(deps.records, deps.language, agents.MergeCommand{
 		RecordType: string(pol.RecordType),
 		SourceID:   sourceID,
 		TargetID:   in.TargetID,
@@ -92,7 +92,7 @@ func mergeTagsCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewMergeTagsCall(deps.tags, agents.MergeTagsCommand{
+	return agents.NewMergeTagsCall(deps.tags, deps.language, agents.MergeTagsCommand{
 		SourceID: sourceID,
 		TargetID: in.IntoTagID,
 	}), nil
@@ -150,7 +150,7 @@ func enrichCall(deps restCommandDeps, r *http.Request, body []byte, depth agents
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewEnrichCall(deps.records, agents.EnrichCommand{
+	return agents.NewEnrichCall(deps.records, deps.language, agents.EnrichCommand{
 		CompanyID: id,
 		URL:       in.URL,
 		Depth:     depth,

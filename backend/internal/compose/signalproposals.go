@@ -127,16 +127,20 @@ type contradiction struct {
 // the next hourly pass, and this reads open signals rather than new ones.
 func (p *SignalProposer) RunWorkspace(ctx context.Context) (int, error) {
 	var found []contradiction
+	var said approvalSummaryCopy
 	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
-		found, err = readContradictions(ctx, tx)
-		return err
+		if found, err = readContradictions(ctx, tx); err != nil {
+			return err
+		}
+		said = approvalSummaryCopyIn(ctx, tx)
+		return nil
 	}); err != nil {
 		return 0, fmt.Errorf("compose: reading the accounts their mail contradicts: %w", err)
 	}
 	standing := 0
 	for _, account := range found {
-		live, err := p.offerStageChange(ctx, account)
+		live, err := p.offerStageChange(ctx, said, account)
 		if err != nil {
 			return standing, err
 		}
@@ -193,7 +197,7 @@ func readContradictions(ctx context.Context, tx pgx.Tx) ([]contradiction, error)
 // inbox, and StageUnlessDeclined keeps a human's "no" from being asked again
 // next hour — the signal that produced it stays open, so without the durable
 // memory this offer would come back every pass forever.
-func (p *SignalProposer) offerStageChange(ctx context.Context, account contradiction) (bool, error) {
+func (p *SignalProposer) offerStageChange(ctx context.Context, said approvalSummaryCopy, account contradiction) (bool, error) {
 	identity, err := lifecycleIdentity(account.CompanyID, lifecycleEnded)
 	if err != nil {
 		return false, err
@@ -216,9 +220,8 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, account contradic
 		Identity:       identity,
 		TargetType:     string(recordTypeCompany),
 		TargetID:       account.CompanyID.UUID,
-		Summary: fmt.Sprintf("Their mail says the contract ended. Move this account from %s to %s?",
-			account.Stage, lifecycleEnded),
-		JoinPending: true,
+		Summary:        fmt.Sprintf(said.contractEndedMove, account.Stage, lifecycleEnded),
+		JoinPending:    true,
 	})
 	if err != nil {
 		return false, err

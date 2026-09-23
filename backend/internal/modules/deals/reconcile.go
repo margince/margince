@@ -37,6 +37,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
 // FollowUpReconcileKind is the approvals staging kind the pass surfaces
@@ -119,6 +120,9 @@ type FollowUpReconciler struct {
 	// now is the pass's clock so the reconciliation window and the
 	// proposed due date reproduce under a fixed test clock.
 	now func() time.Time
+	// language is the installation's base language the staged summary is
+	// written in; nil writes English.
+	language baselanguage.Resolver
 }
 
 // NewFollowUpReconciler builds the follow-up pass over a workspace-bound
@@ -252,7 +256,7 @@ func (r *FollowUpReconciler) stage(ctx context.Context, cand followUpCandidate, 
 		EvidenceDirection:  cand.activityDirection,
 		EvidenceOccurredAt: cand.occurredAt,
 	}
-	summary := fmt.Sprintf("Draft a follow-up on %q — a %s on %s left no next step planned",
+	summary := fmt.Sprintf(summaryIn(ctx, r.language).draftFollowUp,
 		cand.dealName, cand.activityKind, cand.occurredAt.Format(time.DateOnly))
 	return r.stager.StageFollowUp(ctx, cand.dealID.UUID, summary, proposal)
 }

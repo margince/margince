@@ -165,7 +165,7 @@ var ruledCompanyReads = gatekit.Waive(map[string]string{
 // census a real read the day a statement is spelled unusually. Over-recognition
 // answered by a named declaration is the safe direction.
 var notTheCompanyTable = gatekit.Waive(map[string]string{
-	"internal/modules/agents/commandsidecar.go:Subject": "`fmt.Sprintf(\"Remove fact %s from company %s\", …)` and its confirm twin — the one-line summary an agent command shows a human in the approval queue. The file holds no SQL at all; every read behind these commands goes through the record seam contacts owns",
+	"internal/modules/agents/summarycopy.go": "the `Remove fact %s from company %s` copy-table entry and its confirm twin — the one-line summary an agent command shows a human in the approval queue. The file holds no SQL at all; every read behind these commands goes through the record seam contacts owns",
 })
 
 // deferredCompanyReads: a DISCLOSING read that is still ungated, each naming

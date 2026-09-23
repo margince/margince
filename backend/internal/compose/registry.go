@@ -95,7 +95,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// the contract tightened and the REST door refuses (#982) — one credential,
 	// two answers, which is what ADR-0055 exists to prevent.
 	opts = append(opts, withContractTierFloor(),
-		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider))
+		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
+		agents.WithBaseLanguage(installationLanguage(pool)))
 	// ONE approvals service for both directions of the 🟡 loop, and it is the
 	// service that carries the follow-on EFFECTS. Staging can run on a bare
 	// engine — it writes a proposal and nothing else — but deciding cannot: a

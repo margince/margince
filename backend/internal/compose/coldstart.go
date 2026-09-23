@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -27,6 +28,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -38,6 +40,8 @@ import (
 type coldStartEngine struct {
 	extract   evidenceExtractor
 	approvals *approvals.Service
+	// pool reads the installation's base language the card is written in.
+	pool *pgxpool.Pool
 }
 
 // coldStartFieldValid is this engine's slice of the shared vocabulary: the
@@ -124,7 +128,7 @@ func (e *coldStartEngine) Propose(ctx context.Context, req crmcontracts.ColdStar
 		return crmcontracts.ColdStartProposal{}, err
 	}
 	kind := coldStartProposalKind(req)
-	summary, announce := coldStartStagingNotice(req, kind, len(fields))
+	summary, announce := coldStartStagingNotice(approvalSummaryCopyOver(ctx, e.pool), req, kind, len(fields))
 	return e.stage(ctx, crmcontracts.ColdStartProposal{
 		SourceKind: kind,
 		SourceUrl:  req.Url,
@@ -149,19 +153,19 @@ func coldStartProposalKind(req crmcontracts.ColdStartRequest) crmcontracts.ColdS
 // announced coldstart.read_back_proposed payload. The pasted text /
 // statement is tenant data and never announced — only its kind and how
 // much it grounded.
-func coldStartStagingNotice(req crmcontracts.ColdStartRequest, kind crmcontracts.ColdStartProposalSourceKind, fieldCount int) (string, crmcontracts.PublicEventColdstartReadBackProposed) {
+func coldStartStagingNotice(said approvalSummaryCopy, req crmcontracts.ColdStartRequest, kind crmcontracts.ColdStartProposalSourceKind, fieldCount int) (string, crmcontracts.PublicEventColdstartReadBackProposed) {
 	if req.Url != nil {
-		return "Cold-start read-back of " + *req.Url, crmcontracts.PublicEventColdstartReadBackProposed{
+		return fmt.Sprintf(said.coldStartFromURL, *req.Url), crmcontracts.PublicEventColdstartReadBackProposed{
 			SourceUrl:  req.Url,
 			FieldCount: fieldCount,
 		}
 	}
-	subject := "pasted text"
+	summary := said.coldStartFromText
 	if kind == crmcontracts.ColdStartProposalSourceKindSelfDescription {
-		subject = "a self-description"
+		summary = said.coldStartFromSelfDescription
 	}
 	sourceKind := string(kind)
-	return "Cold-start read-back of " + subject, crmcontracts.PublicEventColdstartReadBackProposed{
+	return summary, crmcontracts.PublicEventColdstartReadBackProposed{
 		SourceKind: &sourceKind,
 		FieldCount: fieldCount,
 	}
