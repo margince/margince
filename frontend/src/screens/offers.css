@@ -1,6 +1,8 @@
-/* The offer 360's own spacing and the widths of its line-item editors. */
+/* The offer 360's own spacing and the widths of its line-item editors. A rule
+   that overrides an atom's own declaration chains the atom's class, so it wins
+   by specificity rather than by which sheet loaded last. */
 
-.offers-edit-title {
+.heading.offers-edit-title {
   margin-bottom: var(--space-3);
 }
 
@@ -8,16 +10,16 @@
   margin-top: var(--space-2);
 }
 
-.offers-line-description {
+.input.offers-line-description {
   width: 180px;
 }
 
-.offers-line-unit {
+.input.offers-line-unit {
   width: 70px;
 }
 
-.offers-line-quantity,
-.offers-line-price {
+.input.offers-line-quantity,
+.input.offers-line-price {
   width: 90px;
 }
 
