@@ -5,4 +5,4 @@
 // with GOWORK=off.
 module github.com/margince/margince/desktop/launcher
 
-go 1.27.0
+go 1.27.1
