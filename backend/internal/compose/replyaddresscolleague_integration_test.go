@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // seedMeetingWith writes one captured meeting whose only party besides the
@@ -43,6 +44,18 @@ func TestAReplyIsNeverAddressedToAColleagueOnTheOwnDomain(t *testing.T) {
 	var refusal *activities.NoReplyAddressError
 	if !errors.As(err, &refusal) || !refusal.Colleague {
 		t.Fatalf("ReplyAddress → %v, want the colleague refusal", err)
+	}
+	// AND a decline, because two callers ask different questions of one
+	// refusal: the nightly drafter reads the typed one and proposes a task,
+	// the engine reads the decline and records a skip. Replacing rather than
+	// wrapping would have cost the meeting its task as well as its draft.
+	var declined *workflow.DeclinedError
+	if !errors.As(err, &declined) {
+		t.Fatalf("ReplyAddress → %v, want a decline the engine records as a skip", err)
+	}
+	if declined.Reason != refusal.Error() {
+		t.Errorf("the decline reads %q and the refusal %q — the run says one thing and the "+
+			"refusal another", declined.Reason, refusal.Error())
 	}
 
 	// The admit case: the same meeting with a guest is answered to the guest.

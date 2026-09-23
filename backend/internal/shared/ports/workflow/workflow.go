@@ -221,12 +221,23 @@ type RunResult struct {
 // no table or column name.
 type DeclinedError struct {
 	Reason string
+	// Cause is the refusal a seam translated into this decline. It TRAVELS:
+	// a decline says how the engine should treat the outcome, not what it was,
+	// and a sibling caller reading the typed refusal still has to find it.
+	Cause error
 }
 
 func (e *DeclinedError) Error() string { return e.Reason }
 
+// Unwrap hands back the refusal, so errors.As reaches it through the decline.
+func (e *DeclinedError) Unwrap() error { return e.Cause }
+
 // Declined builds the skip a handler returns to say it acted on nothing.
 func Declined(reason string) error { return &DeclinedError{Reason: reason} }
+
+// DeclinedBecause is Declined for a refusal a seam was handed: the engine
+// reads the decline, a caller reading the original finds it underneath.
+func DeclinedBecause(err error) error { return &DeclinedError{Reason: err.Error(), Cause: err} }
 
 // StagedApprovalError is the typed form of the "staged as approval"
 // answer: a chat client shows the message, while a programmatic caller
