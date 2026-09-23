@@ -87,8 +87,8 @@ func TestAThreadlessCandidateCarriesNoPriorMessage(t *testing.T) {
 	contact := e.buyer(t)
 	activity := ids.NewV7()
 	// Threadless, and labelled so the waiting queue admits it at all.
-	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, capture_label, source, captured_by)
-		VALUES ($1, 'email', 'inbound', 'No thread here', now() - interval '2 days', 'meeting', 'seed', 'system')`,
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, capture_label, capture_labeled_at, source, captured_by)
+		VALUES ($1, 'email', 'inbound', 'No thread here', now() - interval '2 days', 'meeting', now(), 'seed', 'system')`,
 		activity)
 	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address)
 		VALUES ($1, $2, 'from', 'buyer@customer.test')`, ids.NewV7(), activity)

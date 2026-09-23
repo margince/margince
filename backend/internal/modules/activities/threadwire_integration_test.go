@@ -25,9 +25,12 @@ func TestThreadColumnsReachTheWire(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := e.seedAnchor(t, "msg-1", "thread-A")
-	// The two batched-classification columns, set the way capture sets them.
+	// The two batched-classification columns, set the way capture sets them —
+	// the label with its stamp, which activity_capture_label_stamped holds as
+	// one fact.
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE activity SET capture_label = 'commitment', bulk_mail_attested = true WHERE id = $1`,
+		`UPDATE activity SET capture_label = 'commitment', capture_labeled_at = now(),
+		        bulk_mail_attested = true WHERE id = $1`,
 		anchor); err != nil {
 		t.Fatalf("labelling the anchor: %v", err)
 	}
