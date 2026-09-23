@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package owedverdict
 
 // The ruleset stamp's stability, and the reason it is built the way it is.
 //
@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
@@ -22,15 +23,15 @@ import (
 // The stamp is a property of the code, not of the process that computed it.
 func TestTheRulesetStampIsStableAcrossProcesses(t *testing.T) {
 	build := func(fence promptfence.Fence) string {
-		return owedSystemFor(fence) + "\n" + owedPrompt(fence, []owedCandidate{owedRulesetSample})
+		return SystemFor(fence) + "\n" + Prompt(fence, []activities.OwedCandidate{rulesetSample})
 	}
 	first, second := ai.PromptDigest(build), ai.PromptDigest(build)
 	if first != second {
 		t.Fatalf("the stamp moved between two computations in one process: %q then %q — "+
 			"every restart would re-judge every workspace", first, second)
 	}
-	if first != owedRuleset {
-		t.Errorf("owedRuleset = %q but recomputing the same builder gives %q", owedRuleset, first)
+	if first != Ruleset {
+		t.Errorf("Ruleset = %q but recomputing the same builder gives %q", Ruleset, first)
 	}
 }
 
@@ -47,16 +48,16 @@ func TestTheRulesetStampIsStableAcrossProcesses(t *testing.T) {
 // — reintroduces exactly this.
 func TestAUserTurnDigestedAloneIsNotStable(t *testing.T) {
 	userTurn := func(fence promptfence.Fence) string {
-		return owedPrompt(fence, []owedCandidate{owedRulesetSample})
+		return Prompt(fence, []activities.OwedCandidate{rulesetSample})
 	}
 	if first, second := ai.PromptDigest(userTurn), ai.PromptDigest(userTurn); first == second {
-		t.Fatalf("a user turn digested alone is stable at %q, so the folding in owedRuleset "+
+		t.Fatalf("a user turn digested alone is stable at %q, so the folding in Ruleset "+
 			"no longer earns its keep — check whether PromptDigest or the fence changed", first)
 	}
 	// And the two-builder form, which is the shape the tidy-up takes.
-	if first, second := ai.PromptDigest(owedSystemFor, userTurn), ai.PromptDigest(owedSystemFor, userTurn); first == second {
+	if first, second := ai.PromptDigest(SystemFor, userTurn), ai.PromptDigest(SystemFor, userTurn); first == second {
 		t.Fatal("PromptDigest(system, userTurn) is stable, so the one-string form is no longer required — " +
-			"the comment on owedRuleset should be corrected rather than left overstating the constraint")
+			"the comment on Ruleset should be corrected rather than left overstating the constraint")
 	}
 }
 
@@ -66,7 +67,7 @@ func TestAUserTurnDigestedAloneIsNotStable(t *testing.T) {
 // A sample missing one of them would leave that part of the prompt free to
 // change under verdicts still claiming to have been judged by it.
 func TestTheRulesetSampleRendersEveryLineOfTheTemplate(t *testing.T) {
-	rendered := owedPrompt(promptfence.New(), []owedCandidate{owedRulesetSample})
+	rendered := Prompt(promptfence.New(), []activities.OwedCandidate{rulesetSample})
 	for _, line := range []string{"Subject:", "To:", "Cc:", "calendar invitation", "context_for", "Sent:"} {
 		if !strings.Contains(rendered, line) {
 			t.Errorf("the ruleset sample does not render %q, so an edit to that line would not move the stamp", line)
