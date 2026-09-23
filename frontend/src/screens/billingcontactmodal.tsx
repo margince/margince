@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { Button, Field, Modal } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
@@ -10,7 +11,6 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { BillingContact, BillingContactRole } from "./billingcontacts";
 import type { BillingContactActions } from "./billingcontacts.queries";
-import { RefusalLine } from "./common";
 import { searchByEntity } from "./relationshipcandidates";
 
 // The three capacities, in the order an invoice moves through them: it is
@@ -130,7 +130,7 @@ export function BillingContactModal({
           )}
         </Field>
         <p className="t-caption">{t("billing.roleNote")}</p>
-        {write.isError && <RefusalLine error={write.error} />}
+        <ErrorLine error={write.error} />
         <div className="actions">
           <Button variant="ghost" onClick={onClose} disabled={write.isPending}>
             {t("deals.cancel")}

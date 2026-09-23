@@ -4,9 +4,10 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { RefusalLine, throwProblem } from "./common";
+import { throwProblem } from "./common";
 
 // "My mail with this party is nobody else's."
 //
@@ -178,7 +179,7 @@ export function CounterpartyHoldRow({
           {t("hold.holdDomain", { domain })}
         </Button>
       </div>
-      {place.isError && <RefusalLine error={place.error} />}
+      <ErrorLine error={place.error} />
       <ConfirmModal
         open={asking !== null}
         onClose={() => setAsking(null)}

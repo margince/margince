@@ -10,8 +10,9 @@ import {
   SectionHeader,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 
 // Client surfaces (B-EP09.13a): the rail-less extension chrome — the fixed
 // dark "Back to Margince" bar, a sender lookup that renders a mini-360 for a
@@ -99,13 +100,7 @@ export function ClientSurfaceScreen() {
           </Card>
         )}
 
-        {lookup.isError && (
-          <p
-            style={{ color: "var(--dangerText)", marginTop: "var(--space-3)" }}
-          >
-            {problemMessageOf(lookup.error, t)}
-          </p>
-        )}
+        <ErrorLine error={lookup.error} />
 
         <footer className="client-footer">
           <Badge>{t("client.isolation")}</Badge>

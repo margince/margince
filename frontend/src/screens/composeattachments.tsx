@@ -22,6 +22,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
 import { FileDropzone } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
 import { Popover } from "../design-system/popover";
@@ -31,7 +32,7 @@ import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
 import { type CarriageViolation, carriageViolations } from "./carriage";
 import { useProviderCarriage } from "./channelproviders";
-import { problemMessageOf, RefusalLine, throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import type { RelinkKind } from "./compose";
 import "./composeattachments.css";
 
@@ -287,7 +288,7 @@ function AttachPicker({
       {library.isPending ? (
         <PendingBody label={t("compose.filesLoading")} lines={2} />
       ) : library.isError ? (
-        <RefusalLine error={library.error} />
+        <ErrorLine error={library.error} />
       ) : files.length === 0 ? (
         <p>{t("compose.filesNone")}</p>
       ) : (
@@ -319,7 +320,7 @@ function AttachPicker({
       {upload.isPending && (
         <p aria-live="polite">{t("compose.fileUploading")}</p>
       )}
-      {failed && <p role="alert">{failed}</p>}
+      {failed && <ErrorLine>{failed}</ErrorLine>}
     </div>
   );
 }

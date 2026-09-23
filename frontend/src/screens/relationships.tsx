@@ -20,7 +20,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { DEAL_COVERAGE_KEY } from "./activitykeys";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import type { CreateField } from "./create";
 import {
   type Candidate,
@@ -29,6 +29,7 @@ import {
 } from "./relationshipcandidates";
 import { KIND_LABELS } from "./relationshipkinds";
 import "./candidatepicker.css";
+import { ErrorLine } from "../design-system/errorline";
 
 // The Relationships tab (P-5): the one surface a contact/company 360 renders
 // its relationship edges through (employment, deal stakeholder, partner-of,
@@ -461,11 +462,7 @@ export function AddRelationshipAction({
               setTarget(null);
             }}
           />
-          {searchFailure ? (
-            <p style={{ color: "var(--dangerText)" }}>
-              {problemMessageOf(searchFailure, t)}
-            </p>
-          ) : null}
+          <ErrorLine error={searchFailure} />
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {candidates.map((candidate) => (
               <li key={candidate.id}>
@@ -506,11 +503,7 @@ export function AddRelationshipAction({
               })}
             </p>
           )}
-          {mutation.isError && (
-            <p style={{ color: "var(--dangerText)" }}>
-              {problemMessageOf(mutation.error, t)}
-            </p>
-          )}
+          <ErrorLine error={mutation.error} />
           <div
             style={{
               display: "flex",

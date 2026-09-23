@@ -9,10 +9,11 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { RefusalLine, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import {
   REVIEW_TEMPLATES_KEY,
   type ReviewQuestion,
@@ -160,7 +161,7 @@ export function ReviewTemplateEditor({
         >
           {t("reviewTemplates.addQuestion")}
         </Button>
-        {save.isError && <RefusalLine error={save.error} />}
+        <ErrorLine error={save.error} />
         <div className="actions">
           <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
             {t("deals.cancel")}

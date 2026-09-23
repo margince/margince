@@ -5,6 +5,7 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
@@ -271,14 +272,14 @@ export function DealBulkBar({
         <p>{t("deals.bulkArchiveConfirmBody")}</p>
       </ConfirmModal>
       {failed.length > 0 && (
-        <span style={{ color: "var(--dangerText)" }}>
+        <ErrorLine inline>
           {t("deals.bulkFailed", {
             count: formatNumber(failed.length, locale),
           })}{" "}
           {failed
             .map((outcome) => `${outcome.name}: ${outcome.error}`)
             .join(" · ")}
-        </span>
+        </ErrorLine>
       )}
     </>
   );

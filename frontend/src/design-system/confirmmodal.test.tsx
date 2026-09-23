@@ -97,7 +97,7 @@ describe("ConfirmModal", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("renders a danger-styled error message when error is set", () => {
+  it("announces the error message when error is set", () => {
     rtlRender(
       <ConfirmModal
         open
@@ -110,9 +110,7 @@ describe("ConfirmModal", () => {
         <p>Body copy</p>
       </ConfirmModal>,
     );
-    const message = screen.getByText("archive failed");
-    expect(message.getAttribute("role")).toBe("alert");
-    expect(message.getAttribute("style")).toContain("var(--dangerText)");
+    expect(screen.getByRole("alert").textContent).toBe("archive failed");
   });
 
   it("renders no error paragraph when error is null", () => {
@@ -128,7 +126,7 @@ describe("ConfirmModal", () => {
         <p>Body copy</p>
       </ConfirmModal>,
     );
-    expect(screen.queryByText("archive failed")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   // Both buttons refuse the press while the act is in flight, and they refuse

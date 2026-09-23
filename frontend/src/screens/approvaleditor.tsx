@@ -11,6 +11,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { EvidenceChip } from "../design-system/trust";
@@ -26,7 +27,7 @@ import {
   stagedDayFormatter,
 } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem } from "./common";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
 // dialog behind its meta line, and the inline staged-draft editor. They sit
@@ -302,18 +303,13 @@ export function DecideOutcome({
   const generic = decide.isError && !skew && !alreadyDecided;
   return (
     <>
-      {generic && (
-        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>
-          {problemMessageOf(decide.error, t)}
-        </p>
-      )}
+      {generic && <ErrorLine error={decide.error} />}
       {skew && (
-        <div style={{ marginTop: "var(--space-2)" }}>
-          <p style={{ color: "var(--dangerText)" }}>
-            {t("decision.versionSkew")}
-          </p>
-          <Button onClick={onReRead}>{t("decision.reRead")}</Button>
-        </div>
+        <ErrorLine
+          actions={<Button onClick={onReRead}>{t("decision.reRead")}</Button>}
+        >
+          {t("decision.versionSkew")}
+        </ErrorLine>
       )}
     </>
   );

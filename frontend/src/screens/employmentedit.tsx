@@ -8,10 +8,10 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { RefusalLine } from "./common";
 import { stillHeld } from "./employmentcurrency";
 import { datePatch, patchEmployment, validDateEntry } from "./employmentpatch";
 
@@ -144,7 +144,7 @@ export function EmploymentEdit({
           disabled={status !== "current" || saving.isPending}
           onChange={(e) => setPrimary(e.target.checked)}
         />
-        {saving.isError && <RefusalLine error={saving.error} />}
+        <ErrorLine error={saving.error} />
         <Button
           disabled={!valid || saving.isPending}
           onClick={() => {

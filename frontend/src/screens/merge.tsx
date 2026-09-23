@@ -7,8 +7,8 @@ import { navigate, type Route } from "../app/router";
 import { Button, Modal, SearchField } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
 import "./candidatepicker.css";
+import { ErrorLine } from "../design-system/errorline";
 
 // The shared "Merge into…" affordance (P-2): a human direct call that folds
 // this record (the source, A) into a picked survivor (B) — A is archived
@@ -149,11 +149,7 @@ export function MergeAction<Survivor extends { id: string }>({
             setTarget(null);
           }}
         />
-        {searchFailure ? (
-          <p style={{ color: "var(--dangerText)" }}>
-            {problemMessageOf(searchFailure, t)}
-          </p>
-        ) : null}
+        <ErrorLine error={searchFailure} />
         <ul
           style={{ listStyle: "none", margin: "var(--space-2) 0", padding: 0 }}
         >
@@ -174,11 +170,7 @@ export function MergeAction<Survivor extends { id: string }>({
             {t("merge.confirm", { source: sourceName, target: target.name })}
           </p>
         )}
-        {mutation.isError && (
-          <p style={{ color: "var(--dangerText)" }}>
-            {problemMessageOf(mutation.error, t)}
-          </p>
-        )}
+        <ErrorLine error={mutation.error} />
         <div className="actions">
           <Button onClick={close} disabled={mutation.isPending}>
             {t("create.cancel")}

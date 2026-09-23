@@ -4,10 +4,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { Button, Modal } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
 
 // The shared archive/disqualify affordance (P-3): a human-direct DELETE that
 // soft-archives a contact/company/lead (sets archived_at; leads also
@@ -139,14 +139,7 @@ export function ArchiveAction<Archived extends { id: string }>({
           {label}
         </Heading>
         <p style={{ marginBottom: "var(--space-4)" }}>{confirmText}</p>
-        {mutation.isError && (
-          // role="alert" so a refused archive is announced: the dialog stays
-          // open either way, and without this the only difference between "it
-          // failed" and "it is still working" is a line of red text.
-          <p role="alert" style={{ color: "var(--dangerText)" }}>
-            {problemMessageOf(mutation.error, t)}
-          </p>
-        )}
+        <ErrorLine error={mutation.error} />
         <div className="actions">
           <Button
             onClick={() => setConfirming(false)}

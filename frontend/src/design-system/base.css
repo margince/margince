@@ -600,11 +600,11 @@ a:not([class]):focus-visible {
   color: var(--textSecondary);
 }
 
-/* Colour only, and deliberately: a failure is said in the ink of the type it is
-   worn over — `t-caption t-danger`, `t-sub t-danger` — never in a shape of its
-   own. It stands AFTER the roles, and has to: a role that declares its own ink
-   weighs exactly what this class weighs, so ordered before them the failure
-   would come out grey at every one of those pairings. */
+/* Colour only, and deliberately: the danger ink and nothing else. A failure
+   said as a message line is `ErrorLine` (errorline.tsx), the one element that
+   wears it. It stands AFTER the roles, and has to: a role that declares its own
+   ink weighs exactly what this class weighs, so ordered before them the failure
+   would come out grey. */
 .t-danger {
   color: var(--dangerText);
 }

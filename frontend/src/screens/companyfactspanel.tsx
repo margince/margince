@@ -7,12 +7,13 @@ import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, TextInput } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { QueryStates, throwProblem } from "./common";
 import { FactRow } from "./companyfactrow";
 import { isTechnicalFact } from "./companytechnical";
 import {
@@ -308,11 +309,7 @@ function AddFactForm({
         icon={<X aria-hidden />}
         onClick={onDone}
       />
-      {add.error && (
-        <span role="alert" className="form-error">
-          {problemMessageOf(add.error, t)}
-        </span>
-      )}
+      <ErrorLine inline error={add.error} />
     </div>
   );
 }

@@ -41,3 +41,7 @@
 .approval-detail-value {
   overflow-wrap: anywhere;
 }
+
+.approval-decided {
+  margin-top: var(--space-3);
+}

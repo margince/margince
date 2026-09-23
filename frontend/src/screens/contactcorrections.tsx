@@ -6,10 +6,11 @@ import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, TextInput } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ProfileField = components["schemas"]["ContactProfileField"];
@@ -239,14 +240,7 @@ function EnrichedField({
           </p>
         )}
 
-        {record.isError && (
-          <p
-            role="alert"
-            style={{ margin: "var(--space-2) 0 0", color: "var(--dangerText)" }}
-          >
-            {problemMessageOf(record.error, t)}
-          </p>
-        )}
+        <ErrorLine error={record.error} />
       </div>
       {mayCorrect && (
         <div

@@ -5,13 +5,14 @@ import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import { AddEmploymentModal } from "./addemploymentmodal";
-import { problemMessageOf, RefusalLine, throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import { EmploymentRow } from "./contactemploymentrow";
 import {
   bodyState,
@@ -242,7 +243,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
         {noPrimaryEmployer && (
           <p className="t-caption">{t("contact.rail.noPrimaryEmployer")}</p>
         )}
-        {more.isError && <RefusalLine error={more.error} />}
+        <ErrorLine error={more.error} />
         {more.hasNextPage && (
           <Button
             pending={more.isFetchingNextPage}

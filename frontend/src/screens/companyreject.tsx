@@ -7,10 +7,11 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import { Button, Field, Modal } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { useArchiveRecord } from "./archive";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 
 type Company = components["schemas"]["Company"];
 
@@ -155,14 +156,7 @@ export function CompanyRejectAction({
             />
           )}
         </Field>
-        {mutation.isError && (
-          // role="alert" so a refused rejection is announced: the dialog stays
-          // open either way, and without this the only difference between "it
-          // failed" and "it is still working" is a line of red text.
-          <p role="alert" style={{ color: "var(--dangerText)" }}>
-            {problemMessageOf(mutation.error, t)}
-          </p>
-        )}
+        <ErrorLine error={mutation.error} />
         <div className="actions">
           <Button
             onClick={() => setConfirming(false)}
