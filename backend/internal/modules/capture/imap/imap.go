@@ -116,6 +116,10 @@ type Connector struct {
 	// overridable so the bound can be asked about without a test waiting out
 	// ninety seconds.
 	phaseBound time.Duration
+	// schedulePhase is how the abort above is armed; nil is the real clock.
+	// Injectable so a test fires it at a chosen point in the phase rather than
+	// racing one.
+	schedulePhase phaseTimer
 }
 
 // WithBounceSink returns a copy that records delivery reports instead of

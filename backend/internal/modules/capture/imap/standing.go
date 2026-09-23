@@ -38,24 +38,6 @@ import (
 // cursor. This is the only flavor — register it on the capture registry.
 func NewStanding() *Connector { return &Connector{dial: dialLogin} }
 
-// withPhaseBound overrides how long a select+fetch phase may run before the
-// connection is closed under it. The seam exists so the bound can be asked
-// about in a test without one waiting out the shipped ninety seconds.
-func (c *Connector) withPhaseBound(d time.Duration) *Connector {
-	c.phaseBound = d
-	return c
-}
-
-// phaseBoundOr is the configured bound, or the shipped one. Read through a
-// method so a Connector built any other way still carries a bound: a zero
-// duration here would fire the abort immediately and fail every pull.
-func (c *Connector) phaseBoundOr() time.Duration {
-	if c.phaseBound > 0 {
-		return c.phaseBound
-	}
-	return pullDeadline
-}
-
 // withDialer overrides the session dialer — the testable seam (the real
 // dialer's TLS and SSRF properties are its own concern; the sync logic is
 // this package's).
@@ -142,27 +124,6 @@ func dialLogin(ctx context.Context, creds Credentials) (*imapclient.Client, net.
 		return nil, nil, ErrLoginRejected
 	}
 	return client, tlsConn, nil
-}
-
-// abortAfter closes the connection once the phase has run too long, and
-// answers the func that disarms it.
-//
-// A CLOSE rather than a deadline, because a deadline is the client's to
-// manage: go-imap sets its own before every response read and clears it
-// afterwards, so anything armed on the connection is gone by the second one.
-// Closing is also the honest shape — the client reads on one goroutine, so a
-// read deadline firing fails every pending command anyway. This says that is
-// what it meant.
-//
-// The commands in flight fail with a use-of-closed-connection error, which
-// reaches the caller as an ordinary pull failure: the watermark does not
-// advance, and the next cycle retries from where this one started.
-func abortAfter(conn net.Conn, after time.Duration) func() {
-	timer := time.AfterFunc(after, func() {
-		//craft:ignore swallowed-errors the abort IS the remedy; a close that fails leaves the pull to its own error
-		_ = conn.Close()
-	})
-	return func() { timer.Stop() }
 }
 
 // announceClient sends the RFC 2971 ID, which is how a mailbox provider names
@@ -260,7 +221,7 @@ func (c *Connector) syncStanding(ctx context.Context, auth connector.Auth, curso
 	// its own 30s keeps this pull, and the worker running it, for as long as
 	// it likes. A standing connector is one registry singleton serving every
 	// mailbox.
-	defer abortAfter(netConn, c.phaseBoundOr())()
+	defer abortAfter(netConn, c.phaseBoundOr(), c.phaseTimerOr())()
 
 	selData, err := client.Select(creds.Mailbox, &imapv2.SelectOptions{ReadOnly: true}).Wait()
 	if err != nil {
