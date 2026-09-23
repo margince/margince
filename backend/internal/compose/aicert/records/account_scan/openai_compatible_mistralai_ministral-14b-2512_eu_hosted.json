@@ -1,0 +1,61 @@
+{
+  "task": "account_scan",
+  "provider": "openai_compatible",
+  "served_model": "mistralai/ministral-14b-2512",
+  "env_class": "eu_hosted",
+  "prompt_version": "pbd1a99af9bd0a8371495ec6d2fc1f37f",
+  "corpus_version": "v1",
+  "verdict": "certified",
+  "runs": 6,
+  "passed": 6,
+  "reliability": 1,
+  "reported_accepted": 6,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": [
+    "identity"
+  ],
+  "judge_score_p50": 85,
+  "judge_score_min": 70,
+  "latency_p50": 2061,
+  "latency_p95": 3416,
+  "mean_tokens": 1775,
+  "mean_tokens_in": 1639,
+  "mean_tokens_out": 136,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 355,
+  "judge_served_model": "gemini-3.5-flash",
+  "self_judged": false,
+  "served_identity_source": "echo",
+  "ran_at": "2026-09-23T10:21:07Z",
+  "scenarios": [
+    {
+      "scenario": "scan_finds_the_promise_we_did_not_keep",
+      "site": "company_scan",
+      "stamp": "e4a2b1ff677c2413c4d3682116ec08ef9ab6bf532a3c5fd73e01346080312bdf5e319fbe3047230e21589dfda26c79263172cea30a0e5bca45724667ce407634e2ad0d8ec118ac0a9a3231660a312b9b606e5c0f033b194af8462abbcc7035e4",
+      "verdict": "certified",
+      "runs": 3,
+      "passed": 3,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "scan_finds_the_question_nobody_answered",
+      "site": "company_scan",
+      "stamp": "240aad2c1d74d8cab18a980b65e302d6a28a1530040e74a6182b23c4bb420c322dfd1f1dde258eeec323781bc41c7afd0d4d50d4319b70a7780739b35322173800157acd9a2301d408faff7eec4efbe0542734e2395f656ce9187d6b3d8deda0",
+      "verdict": "certified",
+      "runs": 3,
+      "passed": 3,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

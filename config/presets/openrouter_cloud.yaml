@@ -45,10 +45,15 @@ seeds:
         provider: openai_compatible
         model: mistralai/mistral-medium-3-5
         base_url: https://openrouter.ai/api
-        # Two endpoints, both first-party Mistral, so there is no lottery to
-        # lose here and nothing for a sort to choose between. Stated rather than
-        # inherited so a reader is not left wondering why this tier looks
-        # different: the default would be harmless and would also be noise.
+        # `{}` is load-bearing, not decoration: the inherited default filters
+        # on `quantizations: [fp16, bf16]`, and Mistral's first-party endpoints
+        # declare their precision as `unknown`. Inheriting it empties the
+        # candidate set and the broker answers every premium call with "No
+        # endpoints found for the request with quantization: fp16,bf16".
+        #
+        # What the opt-out gives up costs nothing here. Both endpoints are
+        # first-party Mistral, so there is no serving lottery to lose and
+        # nothing for a sort to choose between.
         #
         # This tier named mistral-large-2512 until the broker stopped serving it
         # outside its batch endpoint. Nothing in this tree changed and every

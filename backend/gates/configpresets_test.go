@@ -22,20 +22,10 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 const presetDir = "../config/presets"
-
-// presetShell is the deploy-config envelope a preset is written in; only the
-// routing block is under test here.
-type presetShell struct {
-	Seeds struct {
-		AIRouting yaml.Node `yaml:"ai_routing"`
-	} `yaml:"seeds"`
-}
 
 func presetFiles(t *testing.T) []string {
 	t.Helper()
@@ -61,18 +51,10 @@ func routingFromPreset(t *testing.T, path string) ai.RoutingConfig {
 	if err != nil {
 		t.Fatalf("%s: %v", path, err)
 	}
-	var shell presetShell
-	if err := yaml.Unmarshal(raw, &shell); err != nil {
-		t.Fatalf("%s: not a deploy config: %v", path, err)
-	}
-	if shell.Seeds.AIRouting.IsZero() {
-		t.Fatalf("%s: carries no seeds.ai_routing — a preset with no binding binds nothing", path)
-	}
-	inner, err := yaml.Marshal(&shell.Seeds.AIRouting)
-	if err != nil {
-		t.Fatalf("%s: %v", path, err)
-	}
-	cfg, err := ai.ParseRouting(inner)
+	// ai.ParsePreset and not a local unwrap: the certification page reports
+	// what each preset binds by parsing the same files, and two unwrappers
+	// would let that page describe a binding this gate never checked.
+	cfg, err := ai.ParsePreset(raw)
 	if err != nil {
 		t.Fatalf("%s: the parser refuses this preset, so an operator who copied it could not boot: %v", path, err)
 	}

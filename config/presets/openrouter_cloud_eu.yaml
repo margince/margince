@@ -1,0 +1,105 @@
+# yaml-language-server: $schema=../margince.schema.json
+# config/presets/openrouter_cloud_eu.yaml — every CHAT tier on Mistral's EU
+# endpoint. The embeddings lane cannot carry the pin; see the gap noted below.
+#
+# The sibling openrouter_cloud.yaml picks the best model per tier and lets the
+# broker choose a host. This file inverts that: the host is fixed first, and the
+# tiers get whichever Mistral weights that host serves. `only: [mistral/eu]` is
+# OpenRouter's EU-region endpoint for Mistral SAS — not the base `mistral` slug,
+# which matches every region and so is a vendor preference rather than a
+# location one.
+#
+# What the pin costs, stated plainly: mistralai/mistral-medium-3-5 is Mistral's
+# strongest current model and has NO EU endpoint, so `premium` and `frontier`
+# both name mistral-small-2603. Two tiers naming one model is the honest
+# reading of a region whose top rung does not exist in it.
+#
+# `cheap_cloud` deliberately does NOT join them — see the note on that tier.
+#
+# The EU endpoint also bills about 10% above the default one across every model
+# below. The seeded price sheet carries the DEFAULT-endpoint number, because it
+# is keyed by model id and both presets bind the same ids; a deployment running
+# this preset and reconciling against an invoice edits ai_model_rate.
+#
+# Not loaded automatically — see README.md. Copy the `seeds` block into your own
+# config/margince.yaml, or:
+#
+#     make e2e-ai ROUTING=config/presets/openrouter_cloud_eu.yaml \
+#       JUDGE=openai_compatible:mistralai/mistral-small-2603 \
+#       JUDGE_BASE_URL=https://openrouter.ai/api
+#
+# On the `routing:` block's fields and the measurements behind them:
+# docs/reference/openrouter.md.
+version: 1
+
+seeds:
+  ai_routing:
+    profile: eu_hosted
+    tiers:
+      # Every tier writes `routing:` out rather than inheriting the product
+      # default, and the reason is not style. That default filters on
+      # `quantizations: [fp16, bf16]`, and Mistral's first-party endpoints
+      # declare their precision as `unknown` — so inheriting it would leave the
+      # candidate set EMPTY and every call would fail to route. A tier here
+      # states the pin and nothing about precision.
+      #
+      # No `sort:` either: the pin leaves exactly one endpoint, so an ordering
+      # preference would have nothing to order and would disable the broker's
+      # load balancing to achieve it.
+      local_small:
+        provider: openai_compatible
+        model: mistralai/ministral-8b-2512
+        base_url: https://openrouter.ai/api
+        routing:
+          only: [mistral/eu]
+          require_parameters: true
+      # A DIFFERENT model from the rung above it, and that is the point rather
+      # than an accident of shopping. mistral-small-2603 answers better here —
+      # ministral-14b breaks a multi-paragraph email body across JSON string
+      # boundaries, which is why draft_reply is not certified on this preset —
+      # and binding both rungs to the better model was tried and withdrawn.
+      #
+      # Two rungs naming one model is not a ladder. A task whose first rung is
+      # this one falls through to `premium` on failure, and if both name the
+      # same binding the fallback reaches the same endpoint: one upstream 429
+      # then burns the whole ladder, because the router walks each rung exactly
+      # once. Measured under the collapsed shape, 8 of 12 tasks on
+      # mistral-small-2603 failed that way while all 5 on ministral-8b passed.
+      cheap_cloud:
+        provider: openai_compatible
+        model: mistralai/ministral-14b-2512
+        base_url: https://openrouter.ai/api
+        routing:
+          only: [mistral/eu]
+          require_parameters: true
+      premium:
+        provider: openai_compatible
+        model: mistralai/mistral-small-2603
+        base_url: https://openrouter.ai/api
+        routing:
+          only: [mistral/eu]
+          require_parameters: true
+      frontier:
+        provider: openai_compatible
+        model: mistralai/mistral-small-2603
+        base_url: https://openrouter.ai/api
+        routing:
+          only: [mistral/eu]
+          require_parameters: true
+    # KNOWN GAP: the embeddings lane cannot carry the pin. `routing:` is not a
+    # field on an embeddings binding and the parser refuses one there, so this
+    # lane reaches Mistral the vendor and the broker picks which of its regions
+    # serves the call. A deployment that needs the embedding text to stay in
+    # region binds this lane straight to https://api.mistral.ai instead of to
+    # the broker, and accepts a second credential for it.
+    #
+    # KNOWN GAP: like its sibling, this preset cannot serve document_extract.
+    # That task sends a PDF, and the OpenAI-compatible wire's declarable
+    # carriage is text and image only — the adapter refuses the attachment
+    # rather than dropping it, so a full certification run fails that one task
+    # loudly and correctly.
+    embeddings:
+      provider: openai_compatible
+      model: mistralai/mistral-embed-2312
+      base_url: https://openrouter.ai/api
+      dimensions: 1024

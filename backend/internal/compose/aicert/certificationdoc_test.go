@@ -30,10 +30,15 @@ import (
 )
 
 // aiCertDoc is the whole certification surface, in the order the page renders
-// it: totals, then one row per binding, then every shipped site, then the
-// records no site claims.
+// it: totals, then what each preset gives an operator, then one row per
+// binding, then every shipped site, then the records no site claims.
 type aiCertDoc struct {
-	Totals    aiCertTotals      `json:"totals"`
+	Totals aiCertTotals `json:"totals"`
+	// Presets come first because that is the order a reader needs them in: an
+	// operator picks a preset and inherits its models, so "how did this model
+	// do" is a question they can only ask after this field has answered which
+	// models are theirs.
+	Presets   []aiCertPreset    `json:"presets"`
 	Bindings  []aiCertBinding   `json:"bindings"`
 	Sites     []aiCertSite      `json:"sites"`
 	Unclaimed []aiCertUnclaimed `json:"unclaimed_records"`

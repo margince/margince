@@ -394,6 +394,17 @@ func (c *openAICompatClient) sendChat(ctx context.Context, req model.Request, st
 	if err := c.refuseUnsupportedAttachments(req.Attachments); err != nil {
 		return nil, err
 	}
+	payload, _, err := sendablePayload(ctx, c.chatWire(req, stream), req.SecretStripper)
+	if err != nil {
+		return nil, err
+	}
+	return c.post(ctx, "/v1/chat/completions", payload)
+}
+
+// chatWire assembles the request body. Separated from sendChat so the body a
+// binding produces can be asserted without a round trip — the strictness below
+// is decided here and is invisible in a response.
+func (c *openAICompatClient) chatWire(req model.Request, stream bool) openAICompatChatWire {
 	wire := openAICompatChatWire{
 		Model: req.Model, Stream: stream, MaxTokens: req.MaxTokens,
 		Provider: c.routing.providerWire(), Reasoning: c.routing.reasoningWire(),
@@ -403,14 +414,12 @@ func (c *openAICompatClient) sendChat(ctx context.Context, req model.Request, st
 	}
 	wire.Messages = openAICompatMessages(req.System, req.Messages, req.Attachments)
 	if len(req.ResponseSchema) > 0 {
-		// strict:false: vLLM's guided-decoding backends still constrain to the
-		// schema, but this avoids the OpenAI-exact strict rules (every object
-		// needs additionalProperties:false + all-required) rejecting a schema
-		// the callers don't write that way. The parse→validate→retry policy
-		// and the evidence gate remain the real authority regardless.
 		wire.ResponseFormat = &openAICompatResponseFormat{
-			Type:       jsonSchemaFormatType,
-			JSONSchema: openAICompatJSONSchema{Name: openAICompatSchemaName, Schema: req.ResponseSchema, Strict: false},
+			Type: jsonSchemaFormatType,
+			JSONSchema: openAICompatJSONSchema{
+				Name: openAICompatSchemaName, Schema: req.ResponseSchema,
+				Strict: schemaAllowsStrict(req.ResponseSchema),
+			},
 		}
 	}
 	for _, tool := range req.Tools {
@@ -421,11 +430,7 @@ func (c *openAICompatClient) sendChat(ctx context.Context, req model.Request, st
 		tw.Function.Parameters = tool.InputSchema
 		wire.Tools = append(wire.Tools, tw)
 	}
-	payload, _, err := sendablePayload(ctx, wire, req.SecretStripper)
-	if err != nil {
-		return nil, err
-	}
-	return c.post(ctx, "/v1/chat/completions", payload)
+	return wire
 }
 
 func (c *openAICompatClient) post(ctx context.Context, path string, payload []byte) (io.ReadCloser, error) {

@@ -14,10 +14,19 @@ because the choice decides where this installation's text goes.
 | [`gemini_cloud.yaml`](gemini_cloud.yaml) | every tier to Gemini, embeddings to `gemini-embedding-001` | `GEMINI_API_KEY` |
 | [`openrouter_cloud.yaml`](openrouter_cloud.yaml) | every tier to an OpenRouter-brokered model | `OPENAI_COMPATIBLE_API_KEY` |
 | [`consumer_class_brokered.yaml`](consumer_class_brokered.yaml) | every tier to a Gemma 4 an operator could self-host, brokered at fp8 | `OPENAI_COMPATIBLE_API_KEY` |
+| [`openrouter_cloud_eu.yaml`](openrouter_cloud_eu.yaml) | every chat tier to Mistral's EU-region endpoint (`only: [mistral/eu]`) | `OPENAI_COMPATIBLE_API_KEY` |
 
 `gemini_cloud.yaml` is the binding a dev stack bootstraps with today, lifted out
 of `margince.dev.yaml` so it can be named and reused. The dev overlay still
 carries its own copy — that file is the dev posture and has to stand alone.
+
+`openrouter_cloud_eu.yaml` fixes the HOST first and takes whatever Mistral
+weights that host serves, which is a different question from
+`openrouter_cloud.yaml`'s "best model per tier". Two consequences a reader
+should meet before the file: `mistral-medium-3-5` has no EU endpoint, so
+`premium` and `frontier` both land on `mistral-small-2603`; and the embeddings lane cannot carry
+the pin at all, because `routing:` is not a field on an embeddings binding.
+Both are stated in the file.
 
 `openrouter_cloud.yaml` cannot serve `document_extract`: that task sends a PDF,
 and the OpenAI-compatible wire's declarable carriage is text and image only. A
