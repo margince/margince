@@ -591,11 +591,18 @@ function usePatchCategories() {
       }
       return data;
     },
-    onSettled: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ["provider-connections"],
-      });
-    },
+    // RETURNED, not fired and forgotten. This mutation writes under If-Match
+    // with the version the card was rendered from, so it stays pending until
+    // the refetch that replaces that version has landed — a switch that went
+    // idle first would let the next press send the stale map under the stale
+    // version, and the server refuses it with a conflict the admin has no way
+    // to account for.
+    //
+    // The other mutations on this card write blind, so the same shape costs
+    // them only a briefly stale render, and they are left as they are rather
+    // than made to wait for a reason that is not theirs.
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ["provider-connections"] }),
   });
 }
 
