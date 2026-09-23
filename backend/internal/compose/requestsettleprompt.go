@@ -171,6 +171,15 @@ func validateSettlePayload(payload settlePayload, batch []settleCandidate) strin
 		if r.Verdict != activities.RequestStillOwed && strings.TrimSpace(r.Remaining) != "" {
 			return fmt.Sprintf("verdict %q carries a remaining phrase, which only still_owed may", clampToken(r.Verdict))
 		}
+		// And the other direction, which nothing held: a still_owed naming
+		// nothing renders a worklist row telling a rep they owe something and
+		// not what. The schema's required list and the column's CHECK both
+		// constrain only the sentence above, so this was the one place left to
+		// say it — and saying it here puts the model through the retry with the
+		// reason, rather than storing an item nobody can act on.
+		if r.Verdict == activities.RequestStillOwed && strings.TrimSpace(r.Remaining) == "" {
+			return "a still_owed verdict carries no remaining phrase; name in a few plain words what we still owe"
+		}
 	}
 	return ""
 }

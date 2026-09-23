@@ -282,6 +282,22 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	// presentation, not a defect).
 	output := ai.Unfence(caseTrace.Output)
 
+	// A cut-off answer is not graded. The judge's score is a model's opinion OF
+	// AN ANSWER, and a run that stopped at the output ceiling does not have
+	// one: asked anyway, the judge read the fragment that arrived and returned
+	// 0 with an entirely positive reason, which is a number that reads like
+	// quality and is not. Skipping it also stops paying a second model to form
+	// an opinion about a truncation the candidate side already recorded.
+	//
+	// The run still counts, and counts as whatever the site's validator made of
+	// it — the mechanical grade is what the verdict rests on, and it judged the
+	// same incomplete text production would have.
+	if pooled.Truncated {
+		log.WarnContext(ctx, "aicert: the candidate was cut off at the output ceiling, so this run is not sent to the judge",
+			"task", string(task), "scenario", sc.Name, "site", sc.Site, "outcome", evaluated.Result)
+		return ungradedRun(output, evaluated.Result, outcomeAsExpected && capsOK, pooled, aitasks.ScopeOf(factory)), nil
+	}
+
 	judgeMark := judgeRec.mark()
 	score, judgeServedModel, judgeDegraded, err := judgeScore(ctx, judge, judgeRec, sc, caseTrace, output, log)
 	if err != nil {
@@ -297,25 +313,37 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	}
 	traceCalls(ctx, trace, "judge", task, sc, run, attempt, judgeCalls, log)
 
+	graded := ungradedRun(output, evaluated.Result, outcomeAsExpected && capsOK, pooled, aitasks.ScopeOf(factory))
+	graded.Score = score
+	graded.JudgeServedModel = judgeServedModel
+	graded.JudgeDegraded = judgeDegraded
+	return graded, nil
+}
+
+// ungradedRun is one run's outcome with everything the CANDIDATE side knows and
+// nothing the judge does — the shape a truncated run keeps, and the shape a
+// scored one is built from before its score is set.
+//
+// One builder for both rather than two: the ungraded path started as a copy of
+// the scored one, and a copy is where a field added to the record later reaches
+// the judged runs and misses the cut-off ones.
+func ungradedRun(output, outcome string, passed bool, pooled runCalls, scope string) runOutcome {
 	return runOutcome{
 		RunResult: RunResult{
 			Output:           output,
-			Outcome:          evaluated.Result,
+			Outcome:          outcome,
 			LatencyMS:        pooled.LatencyMS,
 			TokensIn:         pooled.TokensIn,
 			TokensOut:        pooled.TokensOut,
 			CachedTokens:     pooled.CachedTokens,
 			CacheWriteTokens: pooled.CacheWriteTokens,
-			HardPass:         outcomeAsExpected && capsOK,
-			Score:            score,
+			HardPass:         passed,
 		},
 		Provider:             pooled.Provider,
 		ServedModel:          pooled.ServedModel,
 		ServedIdentitySource: pooled.ServedIdentitySource,
-		CertifiedScope:       aitasks.ScopeOf(factory),
-		JudgeServedModel:     judgeServedModel,
-		JudgeDegraded:        judgeDegraded,
-	}, nil
+		CertifiedScope:       scope,
+	}
 }
 
 // driveCandidate runs the prepared case over the candidate router and returns
@@ -402,8 +430,13 @@ func (c routedCompleter) Complete(ctx context.Context, req model.Request) (model
 //     a (provider, model) heading asks that question; the judge, whose score is
 //     whichever attempt parsed, does not.
 type runCalls struct {
-	Calls                                       []ai.Call
-	Degraded                                    bool
+	Calls    []ai.Call
+	Degraded bool
+	// Truncated says a call in this run stopped at the output ceiling rather
+	// than at the end of its answer. OR-ed across the run like Degraded, and
+	// for its reason: one cut-off attempt leaves the run without an answer to
+	// score, whichever attempt it was.
+	Truncated                                   bool
 	Provider, ServedModel, ServedIdentitySource string
 	TokensIn, TokensOut                         int
 	CachedTokens, CacheWriteTokens              int
@@ -428,6 +461,7 @@ func poolRunCalls(calls []ai.Call) (runCalls, error) {
 	}
 	for _, c := range calls {
 		pooled.Degraded = pooled.Degraded || c.Degraded
+		pooled.Truncated = pooled.Truncated || c.FinishReason == model.FinishReasonLength
 		pooled.TokensIn += c.TokensIn
 		pooled.TokensOut += c.TokensOut
 		pooled.CachedTokens += c.CachedTokens
