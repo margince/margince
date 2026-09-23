@@ -529,3 +529,49 @@ describe("the reader's own ask", () => {
     });
   });
 });
+
+// The total counts live work of EVERY kind, past the filter and the bound, so
+// the rail can say the AI is busy with work its list will never carry.
+describe("the live total", () => {
+  it("is absent until the read answers, then the server's number", async () => {
+    let answer: (response: Response) => void = () => {};
+    const { result } = mount(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    await advance(0);
+    expect(result.current.liveTotal).toBeNull();
+
+    answer(jsonResponse({ ...activity([]), live_total: 3 }));
+    await advance(0);
+    expect(result.current.liveTotal).toBe(3);
+  });
+
+  it("reports working when the feed lists nothing but work is live", async () => {
+    const { result, reads } = mount(() =>
+      jsonResponse({ ...activity([]), live_total: 1 }),
+    );
+    await advance(0);
+    expect(result.current.running).toEqual([]);
+    expect(result.current.working).toBe(true);
+
+    // And the cadence follows it, so the pulse ends with the work.
+    await advance(POLL_LIVE_MS);
+    expect(reads).toHaveLength(2);
+  });
+
+  // The total counts past-lease work as live, so a lone stalled row counted
+  // in it is still the "it may have stopped" line, not a pulse.
+  it("does not pulse for the stalled row it counts", async () => {
+    const { result } = mount(() =>
+      jsonResponse({
+        ...activity([{ ...A_RUN, state: "stalled" }]),
+        live_total: 1,
+      }),
+    );
+    await advance(0);
+    expect(result.current.working).toBe(false);
+  });
+});

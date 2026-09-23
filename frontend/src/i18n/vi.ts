@@ -4273,6 +4273,7 @@ export const vi = {
   "agent.panel.decisions": "Quyết định",
   "agent.panel.nothingWaiting": "Không có gì chờ",
   "agent.panel.nothingToday": "Hôm nay chưa xong việc nào",
+  "agent.panel.unnamedLive": "Đang làm việc trong nền",
   "agent.fact.model": "Mô hình",
   "agent.fact.tools": "Công cụ",
   "agent.fact.sources": "Nguồn",

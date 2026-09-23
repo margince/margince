@@ -123,6 +123,11 @@ export type AiActivity = Readonly<{
   /** Whether any AI work is live RIGHT NOW, as reported by a read that answered. */
   working: boolean;
   /**
+   * How many occurrences are live across EVERY kind; null until a read says.
+   * Beside `running` because the kinds filter and the row bound narrow that list and never this.
+   */
+  liveTotal: number | null;
+  /**
    * Whether THIS TAB is holding a request open to a route that calls a model.
    *
    * Its own fact, beside the feed rather than mixed into it, because the two
@@ -203,9 +208,13 @@ export function useAiActivity(): AiActivity {
     //
     // A run this tab started is the third thing that makes the cadence live,
     // and the only one neither of the other two can see: the feed does not
-    // carry it yet and no model call is open for it.
+    // carry it yet and no model call is open for it. Live work the rail cannot
+    // name holds it too, or its pulse would outlast the work by an idle period.
     refetchInterval: (q) =>
-      watching || open > 0 || (q.state.data?.running ?? NOTHING).length > 0
+      watching ||
+      open > 0 ||
+      (q.state.data?.running ?? NOTHING).length > 0 ||
+      (q.state.data?.live_total ?? 0) > 0
         ? POLL_LIVE_MS
         : POLL_IDLE_MS,
   });
@@ -254,6 +263,7 @@ export function useAiActivity(): AiActivity {
   const recent = feed?.recent ?? NOTHING;
   const faults = feed?.faults ?? NOTHING;
   const asking = useLingeringAsk(open, recent[0]?.id);
+  const liveTotal = feed?.live_total ?? null;
   return {
     running,
     recent,
@@ -264,7 +274,14 @@ export function useAiActivity(): AiActivity {
     // reads `working` pulses to say the AI is busy — so counting a stalled item
     // here would animate "still going" over a line that reads "it may have
     // stopped", softening the one verdict this state exists to deliver.
-    working: running.some((item) => item.state !== "stalled"),
+    //
+    // The total counts past-lease work too, so only what it holds BEYOND the
+    // listed rows can be work the list does not show — a lone stalled row
+    // still does not pulse.
+    working:
+      running.some((item) => item.state !== "stalled") ||
+      (liveTotal ?? 0) > running.length,
+    liveTotal,
     asking,
   };
 }
