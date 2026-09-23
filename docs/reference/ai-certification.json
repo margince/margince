@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 46,
-    "sites_best_current": 40,
+    "sites_best_current": 39,
     "sites_best_partial": 0,
-    "sites_best_stale": 5,
+    "sites_best_stale": 6,
     "sites_absent": 1,
     "scenarios": 169,
     "records": 76,
