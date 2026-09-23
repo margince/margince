@@ -256,6 +256,15 @@ type leadCollisionPayload struct {
 // The email is deliberately not among them. It is the address the collision was
 // found ON, so the incumbent necessarily has one and the fold never touches it.
 func incumbentLeadFields(ctx context.Context, tx pgx.Tx, id ids.LeadID) (leadCollisionPayload, error) {
+	// The OBJECT gate, here rather than inherited from the caller.
+	//
+	// captureLead returns on the collision path BEFORE it reaches upsertLead,
+	// which is where the create grant is asked — so this branch passes through
+	// no lead object gate at all, and EnsureVisible below answers only the row
+	// question. A read is what this does, so read is what it asks.
+	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
+		return leadCollisionPayload{}, err
+	}
 	var current leadCollisionPayload
 	if err := tx.QueryRow(ctx,
 		`SELECT coalesce(full_name, ''), coalesce(company_name, ''), coalesce(title, '')

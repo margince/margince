@@ -20,13 +20,16 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -101,5 +104,36 @@ func TestACaptureCollisionCardCarriesWhatTheLeadAlreadyHolds(t *testing.T) {
 			t.Errorf("the staged card's %s is %v, want %q — the reader cannot tell which "+
 				"captured values the accept will drop", field, got, want)
 		}
+	}
+}
+
+// The collision path asks the lead object gate on its own account.
+//
+// captureLead returns on this path BEFORE it reaches upsertLead, which is where
+// the create grant is asked — so a connector whose granting human holds no lead
+// read would otherwise be handed the incumbent's name, company and title, and
+// the row probe beside it answers only WHICH leads, never WHETHER.
+func TestACaptureCollisionRefusesAConnectorWithNoLeadRead(t *testing.T) {
+	e := setupMerge(t)
+	e.capturedLeadWithFields(t, "apollo", "a-1", capture.LeadFields{
+		FullName: "Jonas Petersen", Email: "jonas@nordwind.test",
+	})
+
+	writeOnly := principal.WithActor(connectorCtx(e.Env), principal.Principal{
+		Type: principal.PrincipalConnector, ID: "connector:test",
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"lead": {Create: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	_, err := e.sink.Upsert(writeOnly, connector.NormalizedRecord{
+		EntityType: "lead",
+		NaturalKey: connector.NaturalKey{SourceSystem: "legacy_crm", SourceID: "h-9"},
+		Fields:     capture.LeadFields{FullName: "J. Petersen", Email: "jonas@nordwind.test"},
+		Source:     "legacy_crm:h-9", CapturedBy: "connector:test",
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("the collision path answered %v for a connector with no lead read, want "+
+			"ErrPermissionDenied — it reads the incumbent's name, company and title onto a card", err)
 	}
 }
