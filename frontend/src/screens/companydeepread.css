@@ -1,0 +1,22 @@
+/* The website read's report — spacing only; its step list is `deepread-*` in company360.css. */
+
+.companydeepread-report {
+  margin-top: var(--space-3);
+}
+
+/* A status badge or a proposal dot beside the captions that count it. */
+.companydeepread-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin: 0;
+}
+.companydeepread-proposals {
+  margin-top: var(--space-3);
+}
+
+/* A note under the tally: why the read paused, or why it stopped early. */
+.companydeepread-note {
+  margin: var(--space-2) 0 0;
+}

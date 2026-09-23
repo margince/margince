@@ -334,7 +334,8 @@ discipline even if the test tree regresses.
 | Action rows | `design-system/actionrow.test.ts` | a container whose element children are two or more buttons and nothing else, that does not get `gap: var(--gapActions)` from a class it names or from its own inline style — including a class **no stylesheet defines**, which is the failure a CSS-only gate cannot see. Waived in line with `{/* ds:ignore <reason> */}` |
 | Contract type drift | `make frontend-check` | `pnpm gen:api` produces a diff in `src/api/schema.d.ts` / `public-events.ts` |
 | Lint | `pnpm lint` (Biome) | formatting and lint findings over `src` + `index.html` |
-| Conformance suite | `design-system/conformance.test.ts` | the AST-accurate arm of the same rules, plus: hard-coded user-facing copy outside the i18n catalogs, a class namespace declared in two stylesheets, a service worker shipped or registered (there is none), an invalid web-app manifest |
+| Conformance suite | `design-system/conformance.test.ts` | the AST-accurate arm of the same rules, plus: hard-coded user-facing copy outside the i18n catalogs, a service worker shipped or registered (there is none), an invalid web-app manifest |
+| Stylesheet namespaces | `design-system/stylesheetnamespace.test.ts` | a screen's class namespace declared in a stylesheet other than its home sheet, across every `.css` under `frontend/src` and each extension's frontend layer |
 | Token canon | `design-system/tokens.test.ts` | a Ledger-Green value drifting from the design canon |
 | Typecheck + build | `pnpm build` (`tsc -b && vite build`) | any type error |
 | Unit tests | `pnpm test` (Vitest) | co-located `*.test.tsx` |

@@ -1,0 +1,25 @@
+/* The booking page's spacing: the controls row, the lines between it and the slots, and the lines inside a result card. */
+
+.book-controls {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.book-public-controls {
+  flex-wrap: wrap;
+}
+
+.book-welcome,
+.book-consent {
+  margin-bottom: var(--space-3);
+}
+
+.book-card-line {
+  margin-top: var(--space-1);
+}
+
+.book-failure {
+  margin-top: var(--space-3);
+}

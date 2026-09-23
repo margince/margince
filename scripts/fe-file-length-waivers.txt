@@ -36,7 +36,7 @@
 1139 frontend/src/screens/companyrail.test.tsx
 1145 frontend/src/screens/record360/spine.test.tsx
 1160 frontend/src/screens/onboarding-conversation/company-act.tsx
-1159 frontend/src/design-system/conformance.test.ts
+1120 frontend/src/design-system/conformance.test.ts
 1183 frontend/src/screens/onboarding-conversation/company-act.test.tsx
 1184 frontend/src/screens/contactpage.tsx
 1200 frontend/src/screens/privacy.test.tsx
@@ -72,7 +72,6 @@
 3784 frontend/src/screens/deals.tsx
 505 frontend/src/screens/recordchronology.tsx
 513 frontend/src/design-system/relationshipmap.tsx
-513 frontend/src/screens/contact360.tsx
 514 frontend/src/screens/documentextraction.tsx
 516 frontend/src/design-system/margince-workbench.tsx
 516 frontend/src/design-system/richtext.tsx

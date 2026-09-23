@@ -1,0 +1,47 @@
+/* The offer 360's own spacing and the widths of its line-item editors. A rule
+   that overrides an atom's own declaration chains the atom's class, so it wins
+   by specificity rather than by which sheet loaded last. */
+
+.heading.offers-edit-title {
+  margin-bottom: var(--space-3);
+}
+
+.offers-diff-summary {
+  margin-top: var(--space-2);
+}
+
+.input.offers-line-description {
+  width: 180px;
+}
+
+.input.offers-line-unit {
+  width: 70px;
+}
+
+.input.offers-line-quantity,
+.input.offers-line-price {
+  width: 90px;
+}
+
+.offers-new-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.offers-new-line-product {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.offers-product-field {
+  min-width: 220px;
+}
+
+.offers-add-line {
+  margin-top: var(--space-6);
+}

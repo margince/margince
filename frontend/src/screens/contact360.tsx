@@ -15,6 +15,7 @@ import { currentEmployer, stillHeld } from "./employmentcurrency";
 import { EntityRef } from "./entityref";
 import { dealRoleLabel } from "./record360";
 import { changeSentence } from "./relationshipchange";
+import "./contact360.css";
 
 export type Contact360 = components["schemas"]["Contact360"];
 type ProfileField = components["schemas"]["ContactProfileField"];
@@ -106,13 +107,13 @@ export function ThinState({
   return (
     <Panel title={t("contact.thin.title")}>
       <PanelBody>
-        <p style={{ margin: 0 }}>
+        <p className="pe-panel-text">
           {t("contact.thin.known", {
             name: view.contact.full_name,
             what: [email, employer?.company_name].filter(Boolean).join(" · "),
           })}
         </p>
-        <p style={{ margin: "var(--space-2) 0 0" }}>{remediation}</p>
+        <p className="pe-thin-remediation">{remediation}</p>
         {/* A bare `.btn` names no variant, and the variants are what carry the
             fill, the border and the ink — so this rendered transparent,
             borderless and unreadable against the plate behind it. It is the one
@@ -153,7 +154,7 @@ export function RelationshipPulse({ view }: Readonly<{ view: Contact360 }>) {
   return (
     <Panel title={t("contact.pulse.title")}>
       <PanelBody>
-        <p style={{ margin: 0 }}>
+        <p className="pe-panel-text">
           {warmest
             ? t("contact.pulse.warmestIs", { name: warmest.display_name })
             : t("contact.pulse.nobodyYet")}
@@ -183,7 +184,7 @@ export function RelationshipPulse({ view }: Readonly<{ view: Contact360 }>) {
         />
         {s && (
           <Disclosure summary={t("contact.pulse.why")}>
-            <p style={{ margin: 0 }}>
+            <p className="pe-panel-text">
               {t("contact.pulse.arithmetic", {
                 score: formatNumber(s.score, locale),
                 recency: formatDecimal(s.factors.recency, locale, 2),
@@ -213,15 +214,7 @@ function RelationshipChanges({ view }: Readonly<{ view: Contact360 }>) {
     return null;
   }
   return (
-    <ul
-      style={{
-        margin: "var(--space-2) 0 0",
-        padding: 0,
-        listStyle: "none",
-        display: "grid",
-        gap: "var(--space-1)",
-      }}
-    >
+    <ul className="pe-changes">
       {changes.map((c) => (
         <li key={c.kind}>{changeSentence(c, t)}</li>
       ))}
@@ -341,12 +334,9 @@ export function IdentityRail({
       {career.length > 0 && (
         <Panel title={t("contact.career.title")}>
           <PanelBody>
-            <ul style={{ margin: 0, paddingLeft: "var(--space-4)" }}>
+            <ul className="pe-career">
               {career.map((e) => (
-                <li
-                  key={e.relationship_id}
-                  style={{ marginTop: "var(--space-1)" }}
-                >
+                <li key={e.relationship_id} className="pe-career-item">
                   {/* EntityRef preserves the company link and handles withheld names. */}
                   <EntityRef
                     kind="company"
@@ -389,7 +379,7 @@ function ConsentGuard({ view }: Readonly<{ view: Contact360 }>) {
   return (
     <Panel title={t("contact.consent.title")}>
       <PanelBody>
-        <p style={{ margin: 0 }}>
+        <p className="pe-panel-text">
           {granted.length > 0
             ? t("contact.consent.allowed", {
                 purposes: granted.map((g) => g.purpose_key ?? "").join(", "),
@@ -397,7 +387,7 @@ function ConsentGuard({ view }: Readonly<{ view: Contact360 }>) {
             : t("contact.consent.noneGranted")}
         </p>
         {blocked.length > 0 && (
-          <p style={{ margin: "var(--space-1) 0 0" }}>
+          <p className="pe-consent-blocked">
             {t("contact.consent.blocked", {
               purposes: blocked.map((b) => b.purpose_key ?? "").join(", "),
             })}
@@ -460,9 +450,9 @@ export function WhoKnowsThem({ view }: Readonly<{ view: Contact360 }>) {
   return (
     <Panel title={t("contact.network.title")}>
       <PanelBody>
-        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        <ul className="pe-network">
           {colleagues.map((c) => (
-            <li key={c.user_id} style={{ padding: "var(--space-2) 0" }}>
+            <li key={c.user_id} className="pe-network-item">
               <strong>{c.display_name}</strong>
               <div>{proofLine(c, t, locale, recordZone)}</div>
             </li>

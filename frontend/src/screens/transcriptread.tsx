@@ -22,6 +22,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
+import "./transcriptread.css";
 
 type Activity = components["schemas"]["Activity"];
 type TranscriptReadReport = components["schemas"]["TranscriptReadReport"];
@@ -138,15 +139,7 @@ function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
 
   return (
     <>
-      <p
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          flexWrap: "wrap",
-          margin: "var(--space-3) 0 0",
-        }}
-      >
+      <p className="transcript-tally">
         <AutonomyDot tier="confirm" />
         <span className="t-caption">
           {loading
@@ -246,16 +239,8 @@ function TranscriptReadPanel({
   const terminal = report.status === "done" || report.status === "failed";
 
   return (
-    <div style={{ marginTop: "var(--space-3)" }}>
-      <p
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          flexWrap: "wrap",
-          margin: 0,
-        }}
-      >
+    <div className="transcript-reading">
+      <p className="transcript-status">
         <Badge tone={report.status === "failed" ? "danger" : undefined}>
           {t(READ_STATUS_LABELS[report.status])}
         </Badge>
@@ -351,7 +336,7 @@ export function TranscriptReadCard({
           {t("transcriptread.cta")}
         </Button>
       }
-      style={{ marginTop: "var(--space-3)" }}
+      className="transcript-card"
     >
       {latest.isPending && <Skeleton width="40%" />}
       {/* A 404 is "never read" and resolves to null; anything else means we do
