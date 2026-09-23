@@ -51,6 +51,11 @@
       "matchDatasources": ["docker"],
       "matchPackageNames": ["redis"],
       "allowedVersions": "<7.3"
+    },
+    {
+      "description": "TypeScript stays below 7 until the native compiler ships a stable JS API. The frontend's design-system and contract gates parse source through the `typescript` module's compiler API (createSourceFile, forEachChild, SyntaxKind); 7.x exports only a version stub plus `unstable/*` entry points, so taking it fails every one of those gates rather than the typecheck. Lift this cap in the same change that moves the gates onto 7's API once it is stable.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
     }
   ],
   "vulnerabilityAlerts": {

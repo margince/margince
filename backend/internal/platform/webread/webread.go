@@ -10,6 +10,9 @@
 //   - SSRF-guarded: the dialer refuses non-public addresses POST-dial, so a
 //     DNS answer cannot steer a tenant-supplied URL into the deployment's own
 //     network, and every redirect hop re-enters the guard.
+//   - the product's own fetch policy applied FIRST (fetchpolicy.go): the
+//     platforms whose terms prohibit automated collection are refused before
+//     their robots.txt is even asked for.
 //   - robots.txt honored (the ADR-0006 "robots/ToS respected" promise): a
 //     path the site disallows for us is refused HERE, not left to caller
 //     discipline. An unreachable robots (5xx, network) reads as deny — when a
@@ -308,6 +311,11 @@ func (f *Fetcher) getBytes(ctx context.Context, rawURL, accept string, limit int
 // pathAllowed resolves the host's robots policy (cached per host) and asks it
 // about the path.
 func (f *Fetcher) pathAllowed(ctx context.Context, page *url.URL) (bool, error) {
+	// OUR policy first, and the ordering is the point: asking a denied
+	// platform for its robots.txt is itself a request to that platform.
+	if decision := MayFetch(page.String()); !decision.Allowed {
+		return false, fmt.Errorf("%w: %s", ErrFetchPolicy, decision.Reason)
+	}
 	origin := page.Scheme + "://" + page.Host
 
 	f.mu.Lock()

@@ -4,7 +4,7 @@ module github.com/margince/margince/backend
 // `ON DELETE SET NULL (column_list)` semantics and current-toolchain
 // tooling. Contributors/operators need the 1.27 toolchain; this is a PoC
 // choice, revisit if broader portability becomes a goal.
-go 1.27.0
+go 1.27.1
 
 replace github.com/margince/margince/composition => ../composition
 

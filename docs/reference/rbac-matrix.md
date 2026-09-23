@@ -88,7 +88,7 @@ changes none.
 | `embedding_reindex` | -RU- | ---- | ---- | ---- | ---- | -RU- |
 | `extension_access` | -R-- | ---- | ---- | ---- | ---- | -R-- |
 | `finance` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
-| `forecast` | CR-- | CR-- | CR-- | -R-- | -R-- | CR-- |
+| `forecast` | CRU- | CRU- | CRU- | -RU- | -R-- | CRU- |
 | `fx_rate` | CRU- | ---- | ---- | ---- | ---- | CRU- |
 | `import_run` | CRUD | ---- | ---- | ---- | ---- | CRUD |
 | `installation_settings` | -RU- | -R-- | -R-- | -R-- | -R-- | -RU- |

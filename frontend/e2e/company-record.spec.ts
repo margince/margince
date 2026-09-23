@@ -327,12 +327,21 @@ test.describe("company record — the mockup's visual weight", () => {
   test("the lifecycle control is a control, not a tag", async ({ page }) => {
     // A filled button of ~190x48 in State A, sitting beside the name. The
     // 75x22 pale chip reads as metadata a reader cannot act on.
+    // By the test id the header hands its InlineChoice, for the reason the
+    // readings row above is: `.co-standing` was this page's own class and the
+    // page stopped drawing it, so the walk found nothing and threw naming a
+    // CONTROL — which sends a reader looking for a missing control rather than
+    // a missing selector. The primitive's own class would match every other
+    // screen's inline choice, and the copy inside it is German chrome this
+    // suite deliberately does not pin.
     const box = await page
-      .locator(".co-standing .badge, .co-standing button")
+      .locator('[data-testid="company-lifecycle"]')
       .first()
       .boundingBox();
     if (!box) {
-      throw new Error("the lifecycle control has no box");
+      throw new Error(
+        "no [data-testid='company-lifecycle'] on the company header — the id moved, or the control did",
+      );
     }
     expect(box.height).toBeGreaterThanOrEqual(32);
   });

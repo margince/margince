@@ -24,11 +24,16 @@ var (
 	// ai_model_rate) have no delete surface at all — a past-dated row prices
 	// historical rollups and must never disappear — so no role holds delete.
 	writeNoDelete = grant{Create: true, Read: true, Update: true}
-	// createRead is the posture of a record nobody edits: a forecast reading is
-	// derived, and a current call SUPERSEDES rather than being rewritten, so
-	// neither update nor delete has a surface to gate. A grant for a verb the
-	// product does not offer reads as an oversight the next author has to
-	// research.
+	// createRead is the posture of a record nobody edits: it is recorded, and a
+	// later one supersedes it rather than replacing it in place, so neither
+	// update nor delete has a surface to gate. A grant for a verb the product does not offer reads as an oversight
+	// the next author has to research.
+	//
+	// It used to name `forecast` as the example, and that stopped being true
+	// when assurance findings gained an answer: the READING is still derived
+	// and superseded, but answering a finding is an update on the same object.
+	// The example is gone rather than corrected, because an example that has
+	// to be re-checked against the product is what made this wrong.
 	createRead = grant{Create: true, Read: true}
 	// none is the zero grant, named so a role's override map says WHY a line is
 	// there. Inside a `map[string]grant` the literal simplifies to a bare `{}`,

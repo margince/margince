@@ -1,3 +1,3 @@
 module example.margince.dev/ext/crm-hello
 
-go 1.27.0
+go 1.27.1
