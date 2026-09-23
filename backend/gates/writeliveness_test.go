@@ -128,6 +128,7 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
+	"internal/modules/capture:adoptStoredOriginal": "it reaches an archived row ON PURPOSE, and the archived row is the whole point: a message hidden by a noise verdict and redacted has its original destroyed, and when the provider re-delivers it the new original is named by nothing. A liveness filter would leave exactly that row unnamed — the one case where an unnamed original holds content a purge has already destroyed, and no sweep can reach it again",
 	// ERASURE AND RETENTION MUST WRITE ARCHIVED ROWS. This is the family that
 	// makes a row-level trigger impossible, and the reason each entry gives is
 	// the specific destruction it performs rather than a restatement of that

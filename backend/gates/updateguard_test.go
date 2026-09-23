@@ -119,6 +119,7 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/capture:adoptStoredOriginal":   "the predicate IS the compare-and-set: `raw_capture_id IS NULL` writes the reference only where none stands, so a concurrent capture that named the original first wins and this one lands on nothing. Both outcomes are correct and neither is distinguishable from the other by anything a caller could act on — the row was read under its visibility probe one statement earlier, so zero rows affected means an incumbent, never a missing row. A lock here would serialise every redelivery against live capture for a write that cannot lose anything",
 	"internal/modules/contacts:touchRevertedContact": "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE from the top of its transaction — LockRow with IncludeArchived, because the contact may be archived — so the guard is the caller's lock rather than a second one here; re-taking it would be the liveness refusal this function exists to avoid",
 	// Both hold the row FOR UPDATE before this UPDATE runs, through
 	// lockActivityForWrite (retentionhold.go) rather than a direct

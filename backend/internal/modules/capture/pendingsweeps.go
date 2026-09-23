@@ -227,6 +227,13 @@ func (s *PendingStore) NoiseMailToHide(ctx context.Context, limit int) ([]ids.UU
 // the two writes, and self-healing if a re-sync ever re-inserts an original for
 // a message that was already redacted.
 //
+// The surviving original is asked for as `raw_capture_id IS NOT NULL`, the same
+// reference PurgeRawCaptureTx destroys by, and it stays content-keyed because
+// the column is ON DELETE SET NULL: the purge that destroys the row empties the
+// reference to it in the same statement. Asked as the (source_system, source_id)
+// pair instead, this predicate would offer a channel record the purge below
+// cannot place, every tick, forever.
+//
 // Content-keyed, not flag-keyed, throughout: a one-shot marker on the ledger row
 // would redact whatever that sender had written by the time it fired and retain
 // everything afterwards.
@@ -252,9 +259,7 @@ func (s *PendingStore) NoiseMailToRedact(ctx context.Context, window time.Durati
 		AND a.bulk_mail_attested
 		AND a.archived_at IS NOT NULL AND a.archived_at <= now() - `+quoteInterval(window)+`
 		AND (a.subject IS NOT NULL OR a.body IS NOT NULL OR a.raw IS NOT NULL
-		     OR EXISTS (
-		       SELECT 1 FROM raw_capture r
-		        WHERE r.source_system = a.source_system AND r.source_id = a.source_id))`, limit)
+		     OR a.raw_capture_id IS NOT NULL)`, limit)
 }
 
 // NoiseMailForTx is NoiseMailToHide for ONE address on the caller's transaction

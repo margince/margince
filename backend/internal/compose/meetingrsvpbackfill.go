@@ -131,8 +131,7 @@ func selectMeetingRSVPCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]r
 		                   WHERE other.provider = c.provider AND other.id <> c.id)))
 		          LIMIT 1), '')
 		  FROM activity a
-		  JOIN raw_capture rc
-		    ON rc.source_system = a.source_system AND rc.source_id = a.source_id
+		  JOIN raw_capture rc ON rc.id = a.raw_capture_id
 		 WHERE a.archived_at IS NULL AND a.restricted_at IS NULL
 		   AND a.kind = 'meeting'
 		   AND split_part(a.captured_by, ':', 2) = ANY($2)

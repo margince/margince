@@ -36,19 +36,18 @@ func replayCtx(e *integration.Env) context.Context {
 }
 
 // seedReplayableMail records an activity and the stored original behind it, the
-// way capture would have.
+// way capture would have — the activity NAMING the original, which is the
+// reference the pass follows and the only thing that makes the original
+// reachable from the row.
 func seedReplayableMail(t *testing.T, e *integration.Env, sourceID, raw string) ids.UUID {
 	t.Helper()
 	owner := integration.OwnerConn(t)
-	id := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source_system, source_id, source, captured_by)
+	original := integration.SeedIDRow(t, owner, `
+		INSERT INTO raw_capture (id, source_system, source_id, payload)
+		VALUES ($1, 'gmail', $2, to_jsonb($3::text))`, sourceID, raw)
+	return integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source_system, source_id, source, captured_by, raw_capture_id)
 		VALUES ($1, 'email', 'Q3 terms', '2026-08-01T09:00:00Z', 'inbound',
-		        'gmail', '`+sourceID+`', 'gmail:`+sourceID+`', 'connector:gmail')`)
-	if _, err := owner.Exec(context.Background(), `
-		INSERT INTO raw_capture (source_system, source_id, payload)
-		VALUES ('gmail', $1, to_jsonb($2::text))`, sourceID, raw); err != nil {
-		t.Fatalf("seeding the stored original: %v", err)
-	}
-	return id
+		        'gmail', $2, 'gmail:' || $2, 'connector:gmail', $3)`, sourceID, original)
 }
 
 // replayOutcome reads back what the pass recorded about one activity.

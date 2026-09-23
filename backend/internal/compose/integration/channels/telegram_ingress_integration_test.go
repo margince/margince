@@ -513,9 +513,19 @@ func TestARedeliveredUpdateKeepsTheSameOriginal(t *testing.T) {
 	}
 
 	// The cursor never advanced, so Telegram sends the identical batch again.
+	// It enqueues nothing — River's by-args uniqueness converges the second
+	// poll onto the first job — so the replay has to be reached the way
+	// AC-TG-4 reaches it: by putting that same job back on the queue, which is
+	// the at-least-once delivery River itself can perform.
 	c.rewindPollCursor(t, 0)
 	c.api.hold(u.body(t))
 	c.pollNow(t, sub, u.updateID+1)
+	if _, err := c.Owner.Exec(context.Background(), `
+		UPDATE river_job SET state = 'available', finalized_at = NULL, attempt = 0
+		 WHERE kind = $1 AND args->>'connection_id' = $2`,
+		compose.TelegramIngestArgs{}.Kind(), c.conn.ID.String()); err != nil {
+		t.Fatalf("returning the ingest job to the queue: %v", err)
+	}
 	awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
 
 	if second := c.rawCaptureIDOfActivity(t, u); first != second {

@@ -419,6 +419,9 @@ func (s *Sink) upsertActivity(
 		}
 		return ids.ActivityID{}, false, err
 	}
+	if err := adoptStoredOriginal(ctx, tx, id, rec.RawCaptureID); err != nil {
+		return ids.ActivityID{}, false, err
+	}
 	return id, false, nil
 }
 

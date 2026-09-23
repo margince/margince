@@ -91,16 +91,20 @@ func slimMessage(pdf []byte) []byte {
 
 // seedSlimOriginal writes one provider original the way the sink does: the
 // payload is a JSON string, which is rawCapturePayload's spelling for text that
-// is valid UTF-8 and NUL-free.
-func seedSlimOriginal(ctx context.Context, tx pgx.Tx, sourceID string, raw []byte) error {
+// is valid UTF-8 and NUL-free. It answers with the id, because an original is
+// reachable from the record it became only by being NAMED.
+func seedSlimOriginal(ctx context.Context, tx pgx.Tx, sourceID string, raw []byte) (ids.UUID, error) {
 	payload, err := json.Marshal(string(raw))
 	if err != nil {
-		return err
+		return ids.Nil, err
 	}
-	_, err = tx.Exec(ctx, `
+	var id ids.UUID
+	if err := tx.QueryRow(ctx, `
 		INSERT INTO raw_capture (source_system, source_id, payload)
-		VALUES ('email', $1, $2)`, sourceID, payload)
-	return err
+		VALUES ('email', $1, $2) RETURNING id`, sourceID, payload).Scan(&id); err != nil {
+		return ids.Nil, err
+	}
+	return id, nil
 }
 
 // seedSlimAttachment writes the row the sweep's join finds. entity_type is the
@@ -146,7 +150,7 @@ func TestTheSweepSlimsOnlyWhatItCanProve(t *testing.T) {
 	}
 
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if err := seedSlimOriginal(ctx, tx, provable, slimMessage(provablePDF)); err != nil {
+		if _, err := seedSlimOriginal(ctx, tx, provable, slimMessage(provablePDF)); err != nil {
 			return err
 		}
 		if err := seedSlimAttachment(ctx, tx, provable, key,
@@ -156,7 +160,8 @@ func TestTheSweepSlimsOnlyWhatItCanProve(t *testing.T) {
 		// The unstaged message: an original with a part, and NO attachment row,
 		// which is the posture of every message captured before an object store
 		// was wired. Its bytes are the only copy in existence.
-		return seedSlimOriginal(ctx, tx, unstaged, slimMessage(unstagedPDF))
+		_, err := seedSlimOriginal(ctx, tx, unstaged, slimMessage(unstagedPDF))
+		return err
 	}); err != nil {
 		t.Fatalf("seeding: %v", err)
 	}
@@ -209,7 +214,7 @@ func TestTheSweepConsidersEachOriginalOnce(t *testing.T) {
 		t.Fatalf("staging: %v", err)
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if err := seedSlimOriginal(ctx, tx, sourceID, slimMessage(pdf)); err != nil {
+		if _, err := seedSlimOriginal(ctx, tx, sourceID, slimMessage(pdf)); err != nil {
 			return err
 		}
 		return seedSlimAttachment(ctx, tx, sourceID, key, int64(len(pdf)), slimDigest(pdf))
@@ -250,7 +255,7 @@ func TestTheSweepRemovesNothingWithoutAnObjectStore(t *testing.T) {
 	original := slimMessage(pdf)
 
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if err := seedSlimOriginal(ctx, tx, sourceID, original); err != nil {
+		if _, err := seedSlimOriginal(ctx, tx, sourceID, original); err != nil {
 			return err
 		}
 		// The attachment row exists and names a key, which is exactly the trap:
@@ -304,7 +309,7 @@ func TestASlimmedOriginalRestoresToWhatTheProviderSent(t *testing.T) {
 		t.Fatalf("staging: %v", err)
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if err := seedSlimOriginal(ctx, tx, sourceID, original); err != nil {
+		if _, err := seedSlimOriginal(ctx, tx, sourceID, original); err != nil {
 			return err
 		}
 		return seedSlimAttachment(ctx, tx, sourceID, key, int64(len(pdf)), slimDigest(pdf))
@@ -382,18 +387,19 @@ func TestTheExportRestoresASlimmedOriginal(t *testing.T) {
 			 VALUES ($1, $2, 'manual', 'human:seed')`, contact, subject); err != nil {
 			return err
 		}
-		if err := seedSlimOriginal(ctx, tx, sourceID, original); err != nil {
+		stored, err := seedSlimOriginal(ctx, tx, sourceID, original)
+		if err != nil {
 			return err
 		}
 		if err := seedSlimAttachment(ctx, tx, sourceID, key,
 			int64(len(pdf)), slimDigest(pdf)); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `
+		_, err = tx.Exec(ctx, `
 			INSERT INTO activity (kind, subject, occurred_at, source, captured_by,
-			                      source_system, source_id, audience)
+			                      source_system, source_id, audience, raw_capture_id)
 			VALUES ('email', 'Quarterly figures', now(), 'capture', 'connector:test',
-			        'email', $1, 'workspace')`, sourceID)
+			        'email', $1, 'workspace', $2)`, sourceID, stored)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding: %v", err)

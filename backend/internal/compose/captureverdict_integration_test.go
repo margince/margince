@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -181,6 +182,63 @@ func TestVerdictNoiseHidesNowAndRedactsOnlyAfterTheUndoWindow(t *testing.T) {
 	}
 }
 
+// A record whose text is already destroyed is offered again only while a stored
+// original NAMES it, because that reference is the only thing the purge can act
+// on. Offered on the (source_system, source_id) pair instead, a record captured
+// before the reference existed would be selected on every tick and destroyed on
+// none: the purge places nothing, reports nothing destroyed, and the sweep comes
+// back to the same row forever.
+func TestOnlyARecordThatNamesItsOriginalIsOfferedForRedaction(t *testing.T) {
+	e := integration.Setup(t)
+	activityID := seedBulkCapturedMail(t, e, "blast@bulk.example", "🚀 growth hacks")
+	dispositionID := seedPendingDisposition(t, e, "blast@bulk.example", "bulk.example", activityID)
+
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+	backdateArchive(t, e, activityID)
+	// The text destroyed and the original still standing: the crash-resumable
+	// state, and the one where the stored original is the only thing left for
+	// the predicate to answer about.
+	execAsAdmin(t, e, `UPDATE activity SET subject = NULL, body = NULL, raw = NULL WHERE id = $1`, activityID)
+
+	store := capture.NewPendingStore(InstallationDB(e.Pool))
+	offered, err := store.NoiseMailToRedact(e.Admin(), capture.NoiseUndoWindow, 10)
+	if err != nil {
+		t.Fatalf("listing the mail still to redact: %v", err)
+	}
+	if !slices.Contains(offered, activityID) {
+		t.Fatal("a record whose original is still held was not offered, so the rest of this asserts nothing")
+	}
+
+	// The shape of every row captured before the reference existed: the pair
+	// still matches, and nothing names the original.
+	execAsAdmin(t, e, `UPDATE activity SET raw_capture_id = NULL WHERE id = $1`, activityID)
+
+	offered, err = store.NoiseMailToRedact(e.Admin(), capture.NoiseUndoWindow, 10)
+	if err != nil {
+		t.Fatalf("listing the mail still to redact: %v", err)
+	}
+	if slices.Contains(offered, activityID) {
+		t.Fatal("a record naming no original was offered for redaction: the purge cannot place it, " +
+			"so the sweep would select the same row on every tick and destroy it on none")
+	}
+}
+
+// execAsAdmin runs one statement on the installation's own transaction, for a
+// fixture that has to reach a column no writer would set.
+func execAsAdmin(t *testing.T, e *integration.Env, sql string, args ...any) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), sql, args...)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+}
+
 // Below the floor twice is terminally `unsure`: nothing is created, nothing is
 // hidden, and a human is offered the decision instead.
 func TestVerdictBelowTheFloorAbstainsAndAsksAHuman(t *testing.T) {
@@ -261,21 +319,22 @@ func seedMail(t *testing.T, e *integration.Env, from, subject string, bulkAttest
 	t.Helper()
 	id := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity (id, kind, subject, body, raw, direction, source_system, source_id, source, captured_by, counterparty_email, bulk_mail_attested)
-			VALUES ($1, 'email', $2, 'the message body', '{"headers":"…"}'::jsonb, 'inbound',
-			        'gmail', $3, 'gmail:'||$3, 'connector:gmail', $4, $5)`,
-			id, subject, "vrd-"+id.String(), from, bulkAttested)
-		if err != nil {
+		// The provider original, exactly as capture writes it — stored first and
+		// NAMED by the activity, which is the reference the redaction follows.
+		// Without it the redaction test asserts zero raw_capture rows where zero
+		// always existed, a test that cannot fail.
+		var original ids.UUID
+		if err := tx.QueryRow(context.Background(), `
+			INSERT INTO raw_capture (source_system, source_id, payload)
+			VALUES ('gmail', $1, '{"headers":"…","body":"the message body"}'::jsonb)
+			RETURNING id`, "vrd-"+id.String()).Scan(&original); err != nil {
 			return err
 		}
-		// The provider original, exactly as capture writes it. Without this the
-		// redaction test asserts zero raw_capture rows where zero always
-		// existed — a test that cannot fail.
-		_, err = tx.Exec(context.Background(), `
-			INSERT INTO raw_capture (source_system, source_id, payload)
-			VALUES ('gmail', $1, '{"headers":"…","body":"the message body"}'::jsonb)`,
-			"vrd-"+id.String())
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, subject, body, raw, direction, source_system, source_id, source, captured_by, counterparty_email, bulk_mail_attested, raw_capture_id)
+			VALUES ($1, 'email', $2, 'the message body', '{"headers":"…"}'::jsonb, 'inbound',
+			        'gmail', $3, 'gmail:'||$3, 'connector:gmail', $4, $5, $6)`,
+			id, subject, "vrd-"+id.String(), from, bulkAttested, original)
 		return err
 	})
 	if err != nil {
@@ -467,8 +526,7 @@ func TestEachSenderIsJudgedOnItsOwnMessage(t *testing.T) {
 func rawCaptureRows(t *testing.T, e *integration.Env, activityID ids.UUID) int {
 	t.Helper()
 	return countIn(t, e, `
-		SELECT count(*) FROM raw_capture r JOIN activity a
-		    ON a.source_system = r.source_system AND a.source_id = r.source_id
+		SELECT count(*) FROM raw_capture r JOIN activity a ON r.id = a.raw_capture_id
 		 WHERE a.id = $1`, activityID)
 }
 

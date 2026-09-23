@@ -255,6 +255,71 @@ func TestACapturedMailNamesItsStoredOriginal(t *testing.T) {
 	}
 }
 
+// A message whose original was destroyed and whose provider later re-delivers
+// it names the original it got back.
+//
+// This is the sweep's self-healing property, and it is the reference that has
+// to carry it: the redaction destroys what an activity NAMES, so an original
+// re-inserted under a new id and named by nothing would stand forever holding
+// the content the purge had just destroyed. The activity row itself is never
+// re-created — its natural key is the tombstone — so nothing but the replay
+// path can name what came back.
+func TestARedeliveryAfterARedactionNamesTheOriginalItGotBack(t *testing.T) {
+	e := integration.SetupSearch(t)
+	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
+
+	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
+	registry.Register(&mailFake{linkTo: contactID})
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	connID, err := registry.Connect(grantCtx, "graph", connector.Auth("token"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := registry.SyncOnce(grantCtx, connID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Destroyed through the real purge, which is what empties the reference as
+	// it goes: a hand-written DELETE would prove the adoption against a state
+	// the redaction never actually leaves.
+	activity := storedOriginalHolder(t, e)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return capturemod.NewPendingStore(e.DB()).PurgeRawCaptureTx(context.Background(), tx, []ids.UUID{activity})
+	}); err != nil {
+		t.Fatalf("destroying the stored original: %v", err)
+	}
+
+	if err := registry.SyncOnce(grantCtx, connID); err != nil {
+		t.Fatal(err)
+	}
+
+	var payload string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT r.payload->>'sync' FROM activity a JOIN raw_capture r ON r.id = a.raw_capture_id
+			 WHERE a.id = $1`, activity).Scan(&payload)
+	}); err != nil {
+		t.Fatalf("the re-delivered original is named by nothing, so no sweep can ever destroy it again: %v", err)
+	}
+	if payload != "2" {
+		t.Fatalf("the activity names the original from sync %q, want the re-delivered one", payload)
+	}
+}
+
+// storedOriginalHolder is the captured activity that names an original — the
+// row a purge is asked about.
+func storedOriginalHolder(t *testing.T, e *integration.SearchEnv) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT id FROM activity WHERE raw_capture_id IS NOT NULL`).Scan(&id)
+	}); err != nil {
+		t.Fatalf("reading the captured activity back: %v", err)
+	}
+	return id
+}
+
 func TestCaptureScopeIntersectionRefusesOverScopedConnector(t *testing.T) {
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))

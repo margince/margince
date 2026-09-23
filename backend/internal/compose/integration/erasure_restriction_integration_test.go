@@ -704,19 +704,21 @@ func pinnedMailWithAnOriginal(t *testing.T, e *Env) (activity ids.UUID, sourceID
 	activity, sourceID = ids.NewV7(), "supplier-"+ids.NewV7().String()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity (id, kind, subject, body, counterparty_email, occurred_at,
-			                      source, source_system, source_id, captured_by)
-			VALUES ($1, 'email', 'Lieferschein 88-2026', 'Delivery note attached.', 'supplier@parts.test',
-			        now() - interval '30 days', 'capture_email', 'email', $2, 'human:x')`,
-			activity, sourceID); err != nil {
+		// The verbatim original first: the record NAMES it, which is the only
+		// way an erasure reaches the original behind a message.
+		var stored ids.UUID
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO raw_capture (source_system, source_id, payload)
+			VALUES ('email', $1, $2::jsonb) RETURNING id`,
+			sourceID, `{"subject":"Lieferschein 88-2026","body":"Delivery note attached."}`).Scan(&stored); err != nil {
 			return err
 		}
-		// The verbatim original, joined on the pair every erasure here keeps.
 		_, err := tx.Exec(ctx, `
-			INSERT INTO raw_capture (source_system, source_id, payload)
-			VALUES ('email', $1, $2::jsonb)`,
-			sourceID, `{"subject":"Lieferschein 88-2026","body":"Delivery note attached."}`)
+			INSERT INTO activity (id, kind, subject, body, counterparty_email, occurred_at,
+			                      source, source_system, source_id, captured_by, raw_capture_id)
+			VALUES ($1, 'email', 'Lieferschein 88-2026', 'Delivery note attached.', 'supplier@parts.test',
+			        now() - interval '30 days', 'capture_email', 'email', $2, 'human:x', $3)`,
+			activity, sourceID, stored)
 		return err
 	}); err != nil {
 		t.Fatal(err)

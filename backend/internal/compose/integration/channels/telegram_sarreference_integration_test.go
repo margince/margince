@@ -78,8 +78,8 @@ func telegramMembershipRaw(t *testing.T, updateID, chatID int64, username, statu
 
 // TestAnOriginalNoRecordVouchesForStaysWithheld is the withholding side: a
 // my_chat_member update is captured under the same channel identity as an
-// earlier open message, but classification (design §4.2 D9) turns it away
-// before Normalize ever runs, so it never becomes an activity — the shape an
+// earlier open message, but telegram.ParseMembership consumes it before
+// Normalize ever runs, so it never becomes an activity — the shape an
 // internal-only drop or an activity erased ahead of its original both leave
 // behind too. Its raw_capture row is still listed, because Art. 15 owes the
 // fact that an original is held, and its payload stays withheld because

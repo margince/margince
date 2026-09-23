@@ -77,6 +77,32 @@ func storeRawCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRec
 	return id, nil
 }
 
+// adoptStoredOriginal names the original behind an activity that names none.
+//
+// A replay usually has nothing to adopt: the original is still on file, the
+// insert above conflicts, and the id read back is the one the activity already
+// carries. The case this exists for is the one where it is NOT — a message
+// whose original was destroyed by a redaction and whose provider later
+// re-delivers it. The row is re-inserted under a new id, the activity's
+// reference was emptied when the purge destroyed the row it pointed at, and
+// without this the re-delivered original is named by nothing: the redaction
+// sweep destroys what an activity NAMES, so it would stand forever holding the
+// content that was just destroyed.
+//
+// Never over an incumbent: the first connector to deliver a message supplied
+// the bytes on file, which is the same rule storeRawCapture states above.
+func adoptStoredOriginal(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, rawCaptureID ids.UUID) error {
+	if rawCaptureID == ids.Nil {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE activity SET raw_capture_id = $2
+		 WHERE id = $1 AND raw_capture_id IS NULL`, activityID, rawCaptureID); err != nil {
+		return fmt.Errorf("capture: naming the re-delivered original: %w", err)
+	}
+	return nil
+}
+
 // RawCaptureBase64Encoding names the envelope rawCapturePayload uses for a
 // provider original that jsonb cannot hold as text. It is exported so the one
 // reader that unwraps a stored original reads the name rather than repeating

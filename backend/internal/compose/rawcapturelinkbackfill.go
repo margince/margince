@@ -8,10 +8,11 @@ package compose
 //
 // raw_capture_id replaced a (source_system, source_id) correlation two writers
 // spelled two ways: the mail sink stores the domain natural key, the channel
-// poll stores the provider's redelivery key. Every purge, export and
-// retention selector now follows the column alone, and every row captured
-// before it existed carries it NULL — invisible to all three the moment they
-// stop falling back to the pair. This pass closes that window once.
+// poll stores the provider's redelivery key. Every purge, export, retention
+// selector and stored-original backfill now follows the column alone, and
+// every row captured before it existed carries it NULL — invisible to all of
+// them the moment they stop falling back to the pair. This pass closes that
+// window once, and runs FIRST in its job for that reason.
 //
 // It is the ONE place in the tree allowed to reconstruct BOTH key spellings,
 // and that is sound only because it runs once over rows already written:

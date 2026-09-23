@@ -84,8 +84,7 @@ func selectNameRecoveryCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.source_system, rc.payload
 		  FROM activity a
-		  JOIN raw_capture rc
-		    ON rc.source_system = a.source_system AND rc.source_id = a.source_id
+		  JOIN raw_capture rc ON rc.id = a.raw_capture_id
 		 WHERE a.archived_at IS NULL
 		   AND a.source_system IN ($1, $2)
 		   AND EXISTS (

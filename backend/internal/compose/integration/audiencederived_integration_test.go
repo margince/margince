@@ -210,21 +210,26 @@ func TestASubjectAccessExportWithholdsARawOriginalNothingVouchesFor(t *testing.T
 
 	// Three originals, one per case, each carrying the subject's address so all
 	// three are pulled into the package by the same substring match.
-	seedRaw := func(sourceID string) {
+	seedRaw := func(sourceID string) ids.UUID {
 		t.Helper()
+		id := ids.NewV7()
 		if _, err := owner.Exec(ctx, `
 			INSERT INTO raw_capture (id, source_system, source_id, payload, received_at)
 			VALUES ($1, 'gmail', $2, jsonb_build_object('raw', 'To: '||$3::text||' — the whole message'), now())`,
-			ids.NewV7(), sourceID, email); err != nil {
+			id, sourceID, email); err != nil {
 			t.Fatal(err)
 		}
+		return id
 	}
-	seedActivity := func(sourceID, audience string) {
+	// Naming the original is what a capture does, and it is what the disclosure
+	// gate reads: the audience answer belongs to the record, and an original no
+	// record names has nobody to answer for it.
+	seedActivity := func(sourceID, audience string, original ids.UUID) {
 		t.Helper()
 		if _, err := owner.Exec(ctx, `
-			INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, source_system, source_id, captured_by, audience)
-			VALUES ($1, 'email', $2, $3, now(), 'inbound', 'gmail', 'gmail', $4, 'connector:gmail:`+e.Rep1.String()+`', $5)`,
-			ids.NewV7(), heldMailSubject, heldMailBody, sourceID, audience); err != nil {
+			INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, source_system, source_id, captured_by, audience, raw_capture_id)
+			VALUES ($1, 'email', $2, $3, now(), 'inbound', 'gmail', 'gmail', $4, 'connector:gmail:`+e.Rep1.String()+`', $5, $6)`,
+			ids.NewV7(), heldMailSubject, heldMailBody, sourceID, audience, original); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -234,10 +239,8 @@ func TestASubjectAccessExportWithholdsARawOriginalNothingVouchesFor(t *testing.T
 	// than at an assertion about the audience.
 	run := ids.NewV7().String()
 	open, limited, orphan := "msg-open-"+run, "msg-limited-"+run, "msg-orphan-"+run
-	seedRaw(open)
-	seedActivity(open, "workspace")
-	seedRaw(limited)
-	seedActivity(limited, "participants")
+	seedActivity(open, "workspace", seedRaw(open))
+	seedActivity(limited, "participants", seedRaw(limited))
 	// The orphan: an original with no activity at all.
 	seedRaw(orphan)
 
