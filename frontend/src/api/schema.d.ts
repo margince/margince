@@ -32872,7 +32872,7 @@ export interface components {
             body: string;
             /** @description Only with a document. Marks the thread as one the seller still owes an answer on. */
             required_change?: boolean;
-            /** @description Provenance. Defaults to `ui` on the public edge. */
+            /** @description Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for a person writing through this product. */
             source?: string;
         };
         PostDealRoomCommentRequest: {
