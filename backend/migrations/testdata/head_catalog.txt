@@ -3,6 +3,7 @@ public.activity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/marg
 public.activity.activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
 public.activity.activity_audience_check CHECK ((audience = ANY (ARRAY['workspace'::text, 'participants'::text, 'selected'::text])))
 public.activity.activity_capture_label_check CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'noise'::text]))))
+public.activity.activity_capture_label_stamped CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))
 public.activity.activity_channel_provider_fkey FOREIGN KEY (channel_provider) REFERENCES channel_provider(provider)
 public.activity.activity_direction_check CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound'::text, 'outbound'::text]))))
 public.activity.activity_done_at CHECK (((is_done = false) OR (done_at IS NOT NULL)))
@@ -15,6 +16,7 @@ public.activity.activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WIT
 public.activity.activity_meeting_status_check CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text]))))
 public.activity.activity_message_has_provider CHECK (((kind = 'message'::text) = (channel_provider IS NOT NULL)))
 public.activity.activity_no_company_meeting_on_rekind CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()
+public.activity.activity_not_derived_from_itself CHECK (((source_activity_id IS NULL) OR (source_activity_id <> id)))
 public.activity.activity_origin_check CHECK ((origin = ANY (ARRAY['human'::text, 'agent'::text, 'system_remediation'::text, 'system_notice'::text])))
 public.activity.activity_owed_verdict_check CHECK (((owed_verdict IS NULL) OR (owed_verdict = ANY (ARRAY['asks_us'::text, 'informs_us'::text]))))
 public.activity.activity_owed_verdict_ruleset_shape CHECK (((owed_verdict_ruleset IS NULL) OR (owed_verdict IS NOT NULL)))
@@ -54,7 +56,7 @@ public.activity.direction text gen=- def=-
 public.activity.done_at timestamp with time zone gen=- def=-
 public.activity.due_at timestamp with time zone gen=- def=-
 public.activity.duration_seconds integer gen=- def=-
-public.activity.has_calendar_part boolean gen=- def=-
+public.activity.has_calendar_part boolean NOT NULL gen=- def=false
 public.activity.host_user_id uuid gen=- def=-
 public.activity.id uuid NOT NULL gen=- def=uuidv7()
 public.activity.is_done boolean NOT NULL gen=- def=false
@@ -3826,7 +3828,6 @@ public.idempotency_key_pkey CREATE UNIQUE INDEX idempotency_key_pkey ON public.i
 public.idx_aam_subject CREATE INDEX idx_aam_subject ON public.activity_audience_member USING btree (subject_type, subject_id)
 public.idx_activity_channel_thread CREATE INDEX idx_activity_channel_thread ON public.activity USING btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)
 public.idx_activity_counterparty_email CREATE INDEX idx_activity_counterparty_email ON public.activity USING btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)
-public.idx_activity_counterparty_outbound_attested CREATE INDEX idx_activity_counterparty_outbound_attested ON public.activity USING btree (counterparty_email) WHERE ((counterparty_email IS NOT NULL) AND counterparty_outbound_attested)
 public.idx_activity_direction CREATE INDEX idx_activity_direction ON public.activity USING btree (direction, occurred_at DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))
 public.idx_activity_kind CREATE INDEX idx_activity_kind ON public.activity USING btree (kind, occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_activity_labeled CREATE INDEX idx_activity_labeled ON public.activity USING btree (capture_labeled_at) WHERE (capture_labeled_at IS NOT NULL)

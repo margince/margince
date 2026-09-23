@@ -184,11 +184,16 @@ func (e *estEnv) insertCall(t *testing.T, c callRow) {
 
 // insertLabeledActivity seeds one activity stamped with capture_labeled_at in
 // the window — classify's exact observed-units denominator.
+//
+// The label rides with the stamp because the two are one fact
+// (activity_capture_label_stamped): the denominator counts the stamp, but an
+// activity carrying one and no label is a shape no writer produces, so seeding
+// it would put this fixture outside what it is a fixture for.
 func (e *estEnv) insertLabeledActivity(t *testing.T, ws ids.UUID) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO activity (kind, source, captured_by, capture_labeled_at)
-		VALUES ('email', 'gmail', 'system', $1)`, inWindow); err != nil {
+		INSERT INTO activity (kind, source, captured_by, capture_label, capture_labeled_at)
+		VALUES ('email', 'gmail', 'system', 'noise', $1)`, inWindow); err != nil {
 		t.Fatal(err)
 	}
 }
