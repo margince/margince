@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -177,6 +178,20 @@ type NormalizedRecord struct {
 	Source     string // "<system>:<id>" — REQUIRED
 	CapturedBy string // "connector:<name>" — REQUIRED
 	Raw        []byte // re-parseable original → raw jsonb, off the hot path
+
+	// StoredOriginal names the raw_capture row this record was read from.
+	//
+	// A connector that persisted the original ITSELF — a poll that has to
+	// store the update before it can queue the work — fills it, and hands over
+	// no Raw. Every other lane leaves it zero and the sink fills it from the
+	// row it stores, so by the time the activity is written it is set wherever
+	// an original exists at all.
+	//
+	// It is durable because the two writers of raw_capture key it differently:
+	// the sink by the domain natural key, a connector's own store by the
+	// provider's REDELIVERY key. Those agree for mail and for nothing else, so
+	// a purge that matched on them found a channel message's original never.
+	StoredOriginal ids.UUID
 
 	// What this record is known by to EVERY door, as distinct from the natural
 	// key, which is only what THIS provider called it. Empty when the provider

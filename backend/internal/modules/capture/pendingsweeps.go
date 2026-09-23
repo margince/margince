@@ -307,12 +307,29 @@ func (s *PendingStore) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activit
 	if len(activityIDs) == 0 {
 		return nil
 	}
+	// TWO ARMS, because raw_capture has two writers and they key differently.
+	//
+	// The stored LINK is the exact one: the ingest that created the activity
+	// knew which original it read and now says so. Everything captured since
+	// that column landed is destroyed by this arm, whatever lane it came
+	// through.
+	//
+	// The NATURAL-KEY join is for the rows written before it. It holds only
+	// where the two writers' keys agree, which is mail alone — the channel
+	// sink stores the provider's redelivery key, not the domain natural key —
+	// so it is a backstop for deployed history and never the primary answer.
+	// It cannot simply be dropped: an installation upgrading today has years of
+	// originals whose activity carries no link, and a purge that skipped them
+	// would leave exactly the verbatim payloads this sweep exists to destroy.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM raw_capture r
 		 USING activity a
 		 WHERE a.id = ANY($1)
-		   AND r.source_system = a.source_system AND r.source_id = a.source_id`, activityIDs); err != nil {
-		return fmt.Errorf("capture: purging the redacted mail's provider originals: %w", err)
+		   AND (r.id = a.raw_capture_id
+		        OR (a.raw_capture_id IS NULL
+		            AND r.source_system = a.source_system AND r.source_id = a.source_id))`,
+		activityIDs); err != nil {
+		return fmt.Errorf("capture: purging the redacted message's provider originals: %w", err)
 	}
 	return nil
 }
