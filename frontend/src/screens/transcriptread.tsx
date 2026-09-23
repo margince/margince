@@ -16,11 +16,12 @@ import {
   Skeleton,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
 import { AutonomyDot } from "../design-system/trust";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 
 type Activity = components["schemas"]["Activity"];
 type TranscriptReadReport = components["schemas"]["TranscriptReadReport"];
@@ -238,11 +239,7 @@ function TranscriptReadPanel({
     return <Skeleton width="60%" />;
   }
   if (reportQuery.isError) {
-    return (
-      <p style={{ color: "var(--dangerText)" }}>
-        {problemMessageOf(reportQuery.error, t)}
-      </p>
-    );
+    return <ErrorLine error={reportQuery.error} />;
   }
 
   const report = reportQuery.data;
@@ -360,16 +357,8 @@ export function TranscriptReadCard({
       {/* A 404 is "never read" and resolves to null; anything else means we do
           not KNOW whether this transcript has been read. Saying so beats an
           empty card, which reads as a confident "not yet". */}
-      {latest.isError && (
-        <p style={{ color: "var(--dangerText)" }}>
-          {problemMessageOf(latest.error, t)}
-        </p>
-      )}
-      {start.isError && (
-        <p style={{ color: "var(--dangerText)" }}>
-          {problemMessageOf(start.error, t)}
-        </p>
-      )}
+      <ErrorLine error={latest.error} />
+      <ErrorLine error={start.error} />
       {shownReadId && (
         <TranscriptReadPanel activityId={activityId} readId={shownReadId} />
       )}

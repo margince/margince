@@ -6,13 +6,13 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
 import {
   type EmploymentActions,
   searchCompanyCandidates,
@@ -168,11 +168,7 @@ export function AddEmploymentModal({
           onChange={(event) => setIsCurrent(event.target.checked)}
         />
       </div>
-      {create.isError && (
-        <p role="alert" style={{ color: "var(--dangerText)" }}>
-          {problemMessageOf(create.error, t)}
-        </p>
-      )}
+      <ErrorLine error={create.error} />
       <div className="actions">
         <Button onClick={close} disabled={create.isPending}>
           {t("create.cancel")}

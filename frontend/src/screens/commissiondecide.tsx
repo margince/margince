@@ -7,16 +7,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  isVersionSkew,
-  ProblemError,
-  problemMessageOf,
-  throwProblem,
-} from "./common";
+import { isVersionSkew, ProblemError, throwProblem } from "./common";
 
 // Moving one commission entry through the ledger's lifecycle.
 //
@@ -240,16 +236,11 @@ export function CommissionDecision({
             </Field>
           </div>
         )}
-        {mutation.isError && (
-          // role="alert" so a refused decision is announced: the dialog stays
-          // open either way, and without this the only difference between "it
-          // failed" and "it is still working" is a line of red text.
-          <p role="alert" style={{ color: "var(--dangerText)" }}>
-            {mutation.error instanceof ProblemError &&
-            isVersionSkew(mutation.error.problem)
-              ? t("edit.versionSkew")
-              : problemMessageOf(mutation.error, t)}
-          </p>
+        {mutation.error instanceof ProblemError &&
+        isVersionSkew(mutation.error.problem) ? (
+          <ErrorLine>{t("edit.versionSkew")}</ErrorLine>
+        ) : (
+          <ErrorLine error={mutation.error} />
         )}
         <div className="actions">
           <Button onClick={() => setOpen(false)} disabled={mutation.isPending}>

@@ -12,10 +12,6 @@
   flex-wrap: wrap;
 }
 
-.purpose-form-error {
-  color: var(--dangerText);
-}
-
 /* The queue inside its stacked row: the facet bar, the rows and the pager are
  * one block, so they stack in the row's full width instead of the row's flex
  * line putting them side by side. */

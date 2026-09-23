@@ -14,13 +14,14 @@ import type { components } from "../api/schema";
 import { watchStartedAiRun } from "../app/ai-activity";
 import { navigate } from "../app/router";
 import { Badge, Button, Skeleton } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { AutonomyDot } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { factsKey } from "./companyfactspanel";
 import { type ConfiguredStopReason, stopIsConfigured } from "./sitereadkind";
 
@@ -246,11 +247,7 @@ function SiteReadPanel({
     return <Skeleton width="60%" />;
   }
   if (reportQuery.isError) {
-    return (
-      <p style={{ color: "var(--dangerText)" }}>
-        {problemMessageOf(reportQuery.error, t)}
-      </p>
-    );
+    return <ErrorLine error={reportQuery.error} />;
   }
 
   const report = reportQuery.data;
@@ -442,11 +439,7 @@ export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
             says nothing is written until a contact accepts it. Drawn only while
             the panel is still an offer — see `offering`. */}
         {offering && <p className="t-sub">{t("deepread.sub")}</p>}
-        {start.isError && (
-          <p style={{ color: "var(--dangerText)" }}>
-            {problemMessageOf(start.error, t)}
-          </p>
-        )}
+        <ErrorLine error={start.error} />
         {shownReadId && (
           <SiteReadPanel companyId={companyId} readId={shownReadId} />
         )}

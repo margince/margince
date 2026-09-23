@@ -20,6 +20,7 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
@@ -688,13 +689,11 @@ export function RecordFormBody({
         );
       })}
       {error && (
-        // role="alert" so a refused submit reaches a reader whose focus never
+        // Announced, so a refused submit reaches a reader whose focus never
         // left the form: nothing moves when this appears, and the server's
         // reason is the only thing that says why the dialog is still open. The
         // edit dialog renders this same body, so both carry it.
-        <p role="alert" style={{ color: "var(--dangerText)" }}>
-          {error}
-        </p>
+        <ErrorLine>{error}</ErrorLine>
       )}
       {existing && resolveExisting && (
         <Button

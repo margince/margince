@@ -15,11 +15,12 @@ import {
   type BoardRecord,
   PipelineBoard,
 } from "../design-system/composed";
+import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import {
   LEAD_STATUS_COUNTS_KEY,
   leadTerminalKey,
@@ -382,11 +383,7 @@ export function LeadBoard({
 
   return (
     <>
-      {move.isError && (
-        <p style={{ color: "var(--dangerText)" }}>
-          {problemMessageOf(move.error, t)}
-        </p>
-      )}
+      <ErrorLine error={move.error} />
       {rows.length > 0 && live.length === 0 && (
         <p>{t("lead.boardTerminalOnly")}</p>
       )}
@@ -395,14 +392,10 @@ export function LeadBoard({
           both read as fact — "nobody was ever disqualified" is a very
           different statement from "we could not ask". */}
       {counts.isError && (
-        <p style={{ color: "var(--dangerText)" }}>
-          {t("lead.boardCountsUnavailable")}
-        </p>
+        <ErrorLine>{t("lead.boardCountsUnavailable")}</ErrorLine>
       )}
       {terminalRows.isError && (
-        <p style={{ color: "var(--dangerText)" }}>
-          {t("lead.boardTerminalRowsUnavailable")}
-        </p>
+        <ErrorLine>{t("lead.boardTerminalRowsUnavailable")}</ErrorLine>
       )}
       <PipelineBoard
         variant="plain"

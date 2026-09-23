@@ -22,6 +22,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Checkbox, Field } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
@@ -161,15 +162,7 @@ export function DirectSendModal({
       {/* THE SERVER'S OWN WORDS, verbatim. Paraphrasing here would record the
           director as having read the server's caution while showing them
           ours. */}
-      {review.warning && (
-        <p
-          className="t-body"
-          role="alert"
-          style={{ color: "var(--dangerText)" }}
-        >
-          {review.warning.text}
-        </p>
-      )}
+      {review.warning && <ErrorLine>{review.warning.text}</ErrorLine>}
       <Field label={t("directSend.reasonCodeLabel")}>
         {(control) => (
           <Select

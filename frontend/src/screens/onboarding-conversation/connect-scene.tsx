@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { Badge, Button, Disclosure, Field } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { Row } from "../../design-system/stack";
@@ -770,11 +771,7 @@ function LinkedinPanel({
           {t("ob.conv.linkedin.skip")}
         </button>
       </div>
-      {error !== null && (
-        <p role="alert" className="t-sub t-danger">
-          {error}
-        </p>
-      )}
+      {error !== null && <ErrorLine>{error}</ErrorLine>}
       <p className="t-sub">{t("ob.conv.linkedin.importLater")}</p>
     </div>
   );

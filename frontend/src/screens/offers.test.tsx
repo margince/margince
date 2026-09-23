@@ -601,9 +601,11 @@ describe("render PDF action (OP-12)", () => {
     await waitFor(() => expect(calls).toHaveLength(1));
     const unavailable = await screen.findByTestId("pdf-unavailable");
     expect(unavailable).toBeTruthy();
-    // Calm, informational copy — not the red error-banner path every other
-    // action's mutation.isError branch renders.
-    expect(unavailable.style.color).not.toBe("var(--dangerText)");
+    // Calm, informational copy — not the ErrorLine every other action's
+    // failure renders.
+    expect(unavailable.getAttribute("role")).toBeNull();
+    expect(unavailable.classList.contains("t-danger")).toBe(false);
+    expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByText("blobstore not wired")).toBeNull();
     expect(screen.queryByTestId("pdf-link")).toBeNull();
   });

@@ -5,6 +5,7 @@
 // the engine says no" should find the words and the button in one place rather
 // than in a 2700-line composer.
 
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import type { Refusal } from "./compose";
 import { DirectSendAction } from "./directsendaction";
@@ -29,13 +30,11 @@ export function SendRefusal({
   const t = useT();
   if (refusal === "consent") {
     return (
-      <div className="compose-refusal" role="alert">
+      <div className="compose-refusal">
         <p className="t-body">
           <strong>{t("compose.consentBlockedTitle")}</strong>
         </p>
-        <p className="t-body" style={{ color: "var(--dangerText)" }}>
-          {t("compose.consentBlocked")}
-        </p>
+        <ErrorLine>{t("compose.consentBlocked")}</ErrorLine>
         {/* WHAT THE SERVER SAYS THIS REP MAY DO, before the link to the
             contact page. That link is the older answer and a weaker one: the
             engine refused on a judgement about this message, and there is

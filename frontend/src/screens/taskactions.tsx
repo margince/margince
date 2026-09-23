@@ -26,6 +26,7 @@ import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
+import { ErrorLine } from "../design-system/errorline";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -342,9 +343,7 @@ export function TaskDetailModal({
       </div>
       <div className="drawer-body">
         {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
-        {query.isError && (
-          <p className="form-error">{problemMessageOf(query.error, t)}</p>
-        )}
+        <ErrorLine error={query.error} />
         {task && (
           <div className="form-stack">
             {task.body && <p className="t-body">{task.body}</p>}
@@ -450,9 +449,7 @@ function SourceActivity({
         {meeting?.subject ?? t("tasks.source")}
       </Heading>
       {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
-      {query.isError && (
-        <p className="form-error">{problemMessageOf(query.error, t)}</p>
-      )}
+      <ErrorLine error={query.error} />
       {meeting && (
         <div className="form-stack">
           <p className="t-caption">

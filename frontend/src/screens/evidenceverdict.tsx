@@ -5,6 +5,7 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
 import { Button, TextInput } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
@@ -252,11 +253,7 @@ export function EvidenceVerdict({
         </Button>
         {/* The draft survives a failed save: the field above still holds what
             was typed, and the refusal names why. */}
-        {reason && (
-          <span role="alert" className="form-error">
-            {reason}
-          </span>
-        )}
+{reason && <ErrorLine>{reason}</ErrorLine>}
       </span>
     );
   }
@@ -278,11 +275,7 @@ export function EvidenceVerdict({
       >
         {t("evidence.correct")}
       </Button>
-      {reason && (
-        <span role="alert" className="form-error">
-          {reason}
-        </span>
-      )}
+{reason && <ErrorLine>{reason}</ErrorLine>}
     </span>
   );
 }

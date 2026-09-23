@@ -2,6 +2,7 @@ import { Sparkles } from "lucide-react";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
 import { Button, Field, TextInput } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { useCompany360 } from "./company360";
@@ -250,14 +251,7 @@ export function DraftOffer({
             : t("compose.draftUnsupportedHere")}
         </p>
       )}
-      {/* The failure appears without any navigation, so it is announced rather
-          than merely coloured: a rep who cannot see the line has to be told
-          the draft did not land, on the same terms the send refusals are. */}
-      {!unavailable && draft.error && (
-        <p role="alert" style={{ color: "var(--dangerText)" }}>
-          {draft.error}
-        </p>
-      )}
+      {!unavailable && draft.error && <ErrorLine>{draft.error}</ErrorLine>}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
@@ -11,7 +12,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { RefusalLine, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { searchCompanyCandidates } from "./contactemployers";
 import { invalidateRecord } from "./recordwritekeys";
 
@@ -91,7 +92,7 @@ export function ImportedEmploymentHistory({
         </p>
       ))}
       {reading.isPending && <p>{t("employment.importLoading")}</p>}
-      {reading.isError && <RefusalLine error={reading.error} />}
+      <ErrorLine error={reading.error} />
       {canEdit && outstanding.some((item) => item.state === "pending") && (
         <Button
           disabled={apply.isPending}
@@ -194,7 +195,7 @@ export function ImportedEmploymentHistory({
               </p>
             ),
         )}
-      {apply.isError && !resolving && <RefusalLine error={apply.error} />}
+      {!resolving && <ErrorLine error={apply.error} />}
       {resolving && (
         <EmploymentMatchModal
           key={resolving.key}
@@ -304,7 +305,7 @@ function EmploymentMatchModal({
           }))}
           disabled={pending}
         />
-        {error != null && <RefusalLine error={error} />}
+        <ErrorLine error={error} />
         <Button
           disabled={
             pending ||

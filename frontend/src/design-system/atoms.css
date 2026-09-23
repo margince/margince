@@ -1275,8 +1275,13 @@
   gap: var(--gapActions);
 }
 
-.form-error {
-  color: var(--dangerText);
+/* An ErrorLine that carries a verb: the sentence and its button on one line,
+ * wrapping under a narrow column rather than overflowing it. */
+.error-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
 }
 
 /* A CARD'S TRAILING ACTION ROW: the verbs under a card's body, with the air

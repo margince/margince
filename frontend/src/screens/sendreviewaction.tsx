@@ -14,6 +14,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
 import type { SendReview } from "./sendreview";
@@ -88,15 +89,7 @@ export function SendReviewActions({
           ? t("compose.reviewRequesting")
           : t("compose.reviewRequest")}
       </Button>
-      {ask.isError && (
-        <p
-          className="t-body"
-          style={{ color: "var(--dangerText)" }}
-          role="alert"
-        >
-          {t("compose.reviewRequestFailed")}
-        </p>
-      )}
+      {ask.isError && <ErrorLine>{t("compose.reviewRequestFailed")}</ErrorLine>}
     </div>
   );
 }

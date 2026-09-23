@@ -15,6 +15,7 @@ import {
 } from "../design-system/atoms";
 import { Callout, type CalloutTone } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
 import { formatDateAbbrev } from "../format/format";
@@ -236,9 +237,7 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
           </Button>
         ) : null}
       </OverflowMenu>
-      {move.isError ? (
-        <p className="t-danger">{problemMessageOf(move.error, t)}</p>
-      ) : null}
+      <ErrorLine error={move.error} />
       <ConfirmModal
         open={closing}
         onClose={() => setClosing(false)}

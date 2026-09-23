@@ -15,6 +15,7 @@ import {
   DecisionStatusChip,
   type DecisionStatusLabels,
 } from "../design-system/decisioncard";
+import { ErrorLine } from "../design-system/errorline";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { formatCountdown, useNow } from "../format/now";
@@ -81,19 +82,8 @@ export function useDecisionSink(): {
   const [alreadyDecided, setAlreadyDecided] = useState(false);
   const onAlreadyDecided = useCallback(() => setAlreadyDecided(true), []);
   const decidedNote = alreadyDecided ? (
-    <Card
-      as="div"
-      inset
-      style={{
-        marginTop: "var(--space-3)",
-        display: "flex",
-        gap: "var(--space-2)",
-        alignItems: "center",
-      }}
-    >
-      <p style={{ color: "var(--dangerText)", flex: 1 }}>
-        {t("decision.alreadyDecided")}
-      </p>
+    <Card as="div" inset className="approval-decided">
+      <ErrorLine>{t("decision.alreadyDecided")}</ErrorLine>
       <Button onClick={() => setAlreadyDecided(false)}>
         {t("decision.dismiss")}
       </Button>

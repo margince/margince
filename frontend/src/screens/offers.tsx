@@ -8,6 +8,7 @@ import { navigate } from "../app/router";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -305,11 +306,7 @@ function EditOfferHeaderModal({
           )}
         </Field>
       </div>
-      {errorMessage && (
-        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>
-          {errorMessage}
-        </p>
-      )}
+      {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
       <div className="actions">
         <Button onClick={onClose}>{t("deals.cancel")}</Button>
         <Button
@@ -799,13 +796,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             {t("offer.addLine")}
           </Button>
         </div>
-        {errorMessage && (
-          <p
-            style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
-          >
-            {errorMessage}
-          </p>
-        )}
+        {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
       </PanelBody>
     </Panel>
   );
@@ -1070,11 +1061,7 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       >
         <RefreshCw aria-hidden /> {t("offer.regenerate")}
       </Button>
-      {errorMessage && (
-        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-1)" }}>
-          {errorMessage}
-        </p>
-      )}
+      {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
     </>
   );
 }
@@ -1262,9 +1249,7 @@ function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
           {unavailable && (
             <p data-testid="pdf-unavailable">{t("offer.pdfUnavailable")}</p>
           )}
-          {errorMessage && (
-            <p style={{ color: "var(--dangerText)" }}>{errorMessage}</p>
-          )}
+          {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
         </PanelBody>
       )}
     </Panel>

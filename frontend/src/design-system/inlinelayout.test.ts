@@ -85,27 +85,26 @@ const BASELINE = new Map<string, number>([
   ["frontend/src/screens/ai.tsx", 4],
   ["frontend/src/screens/aiexport.tsx", 1],
   ["frontend/src/screens/analytics.tsx", 4],
-  ["frontend/src/screens/approvaleditor.tsx", 3],
-  ["frontend/src/screens/approvalrow.tsx", 5],
+  ["frontend/src/screens/approvaleditor.tsx", 1],
   ["frontend/src/screens/archive.tsx", 2],
   ["frontend/src/screens/automationdetail.tsx", 1],
   ["frontend/src/screens/automations.datefield.tsx", 1],
   ["frontend/src/screens/billingcontactmodal.tsx", 1],
   ["frontend/src/screens/book.tsx", 24],
-  ["frontend/src/screens/client.tsx", 7],
+  ["frontend/src/screens/client.tsx", 6],
   ["frontend/src/screens/commissiondecide.tsx", 3],
   ["frontend/src/screens/common.tsx", 2],
   ["frontend/src/screens/companies.tsx", 5],
   ["frontend/src/screens/companydeepread.tsx", 13],
   ["frontend/src/screens/companyreject.tsx", 2],
   ["frontend/src/screens/contact360.tsx", 16],
-  ["frontend/src/screens/contactcorrections.tsx", 21],
+  ["frontend/src/screens/contactcorrections.tsx", 20],
   ["frontend/src/screens/create.tsx", 2],
   ["frontend/src/screens/deal360/confirmadvance.tsx", 1],
   ["frontend/src/screens/deal360/dealactions.tsx", 4],
   ["frontend/src/screens/deal360/dealbrief.tsx", 2],
   ["frontend/src/screens/deal360/outcomereviewmodal.tsx", 1],
-  ["frontend/src/screens/deals.tsx", 5],
+  ["frontend/src/screens/deals.tsx", 3],
   ["frontend/src/screens/edit.tsx", 1],
   ["frontend/src/screens/employmentedit.tsx", 1],
   ["frontend/src/screens/employmentimport.tsx", 1],
@@ -119,7 +118,7 @@ const BASELINE = new Map<string, number>([
   ["frontend/src/screens/oauthconsent.tsx", 9],
   ["frontend/src/screens/offerlinebilling.tsx", 1],
   ["frontend/src/screens/offerlinerates.tsx", 2],
-  ["frontend/src/screens/offers.tsx", 22],
+  ["frontend/src/screens/offers.tsx", 19],
   ["frontend/src/screens/onboarding-company-form.tsx", 5],
   ["frontend/src/screens/onboarding-conversation/connect-scene.tsx", 3],
   ["frontend/src/screens/partnercommissions.tsx", 3],
@@ -141,7 +140,7 @@ const BASELINE = new Map<string, number>([
  * What the whole tree carries, so a rise is ONE reviewable number rather than
  * fifty-odd entries a reader has to diff against each other.
  */
-const TOTAL = 274;
+const TOTAL = 260;
 
 /**
  * The two trees held at ZERO rather than baselined, by taking no entry at all:

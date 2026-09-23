@@ -10,6 +10,7 @@ import {
 import { useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
 import { BusyMark } from "./atoms";
+import { ErrorLine } from "./errorline";
 import "./inlinechoice.css";
 import { Select, type SelectOption } from "./select";
 
@@ -221,11 +222,7 @@ export function InlineChoice({
         }}
       />
       {saving && <BusyMark />}
-      {failure && (
-        <span id={errorId} role="alert" className="form-error">
-          {failure}
-        </span>
-      )}
+      {failure && <ErrorLine id={errorId}>{failure}</ErrorLine>}
     </span>
   );
 }
