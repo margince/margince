@@ -152,23 +152,36 @@ export function useUrlParams(): [UrlParams, (next: UrlParams) => void] {
   return [params, replaceParams];
 }
 
-// ASK_PARAM is the dial that opens the Ask dialog, and these two are the only
-// writers of it. It lives here rather than beside the dialog because the
-// palette opens it and the shell reads it, and a dial spelled in three places
-// is three chances to spell it differently.
+// The two dials the Ask dialog rides on, and these are their only writers. They
+// live here rather than beside the dialog because the palette opens it and the
+// shell reads it, and a dial spelled in three places is three chances to spell
+// it differently.
+//
+// TWO, not one carrying the question, because `parseParams` drops a dial with an
+// empty value — a rule worth keeping, since a filter set to nothing is not a
+// filter — and "open with an empty box" is exactly that shape. So presence is
+// its own dial and the question is another, which also keeps a reader who asks
+// the literal question "1" from colliding with a sentinel.
 export const ASK_PARAM = "ask";
+export const ASK_QUESTION_PARAM = "askq";
 
 // openAsk opens the dialog over whatever address the reader is on, carrying the
 // question when there is one. The address is REPLACED rather than pushed: Back
 // belongs to the page they were reading, not to a dialog they can close.
 export function openAsk(question: string): void {
   const dials = new Map(currentParams());
-  dials.set(ASK_PARAM, question);
+  dials.set(ASK_PARAM, "1");
+  if (question === "") {
+    dials.delete(ASK_QUESTION_PARAM);
+  } else {
+    dials.set(ASK_QUESTION_PARAM, question);
+  }
   replaceParams(dials);
 }
 
 export function closeAsk(): void {
   const dials = new Map(currentParams());
   dials.delete(ASK_PARAM);
+  dials.delete(ASK_QUESTION_PARAM);
   replaceParams(dials);
 }

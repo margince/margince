@@ -167,7 +167,17 @@ export function AskMarginceModal({
   const cited = openCite === null ? undefined : claims[openCite];
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId} size="split">
+    // The house two-column dialog, and it is a RIGHT-SIDE drawer: `split`
+    // centred has no second column to hold and falls back to the roomy box,
+    // which this content overflowed. The drawer is what the design system
+    // offers for an answer beside the document it came from.
+    <Modal
+      open={open}
+      onClose={onClose}
+      labelledBy={titleId}
+      size="split"
+      placement="right"
+    >
       <div className="ask-modal">
         <header className="ask-modal-head">
           <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>

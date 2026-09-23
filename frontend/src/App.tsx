@@ -36,7 +36,12 @@ import {
 } from "./app/router";
 import { Shell, useRoute } from "./app/shell";
 import { UnsavedGuard } from "./app/unsaved";
-import { ASK_PARAM, closeAsk, useUrlParams } from "./app/urlstate";
+import {
+  ASK_PARAM,
+  ASK_QUESTION_PARAM,
+  closeAsk,
+  useUrlParams,
+} from "./app/urlstate";
 import {
   Card,
   EmptyState,
@@ -856,8 +861,8 @@ function AuthedApp({
   // The dial, not a piece of state: a reader can send a colleague a link that
   // opens the dialog on the question they asked, and a reload keeps it.
   const [dials] = useUrlParams();
-  const askedQuestion = dials.get(ASK_PARAM);
-  const askOpen = askedQuestion !== undefined;
+  const askOpen = dials.get(ASK_PARAM) !== undefined;
+  const askedQuestion = dials.get(ASK_QUESTION_PARAM);
   const commands = useBuiltinCommands();
   usePaletteHotkey(useCallback(() => setPaletteOpen((open) => !open), []));
 

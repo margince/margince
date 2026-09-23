@@ -172,7 +172,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     await userEvent.type(screen.getByRole("searchbox"), "zzz nothing matches");
     await userEvent.click(screen.getByText("Ask your documents"));
     // The screen the reader was on is still the screen they are on.
-    expect(window.location.hash).toBe("#/deals?ask=zzz+nothing+matches");
+    // Two dials: presence opens it, the question rides beside it. An empty
+    // dial does not survive parseParams, so "open with an empty box" needs a
+    // dial of its own rather than an empty value.
+    expect(window.location.hash).toBe("#/deals?ask=1&askq=zzz+nothing+matches");
     // And nowhere else. The address is the whole carrier, so there is no
     // second copy for a reader's next tab to inherit.
     expect(sessionStorage.length).toBe(0);

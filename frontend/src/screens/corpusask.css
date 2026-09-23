@@ -3,16 +3,14 @@
  * sentence that sent them — a stacked layout scrolled the answer away the
  * moment they pressed a number. */
 
-/* ONE size, whatever it holds. The document pane arrives when a reader presses
- * a citation, and a dialog that grew to fit it moved the sentence they were
- * reading out from under them — the pane is the point of pressing, so its
- * arrival must change nothing but the pane. */
+/* The drawer owns the geometry; this fills it. Setting a width here is what
+ * made the content wider than the box that holds it, so the document pane fell
+ * off the edge and the set fell out of the head. */
 .ask-modal {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  width: min(72rem, 92vw);
-  height: min(44rem, 86vh);
+  height: 100%;
 }
 
 .ask-modal-head {
