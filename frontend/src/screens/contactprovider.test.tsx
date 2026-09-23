@@ -59,6 +59,19 @@ function neverRun(): Profile {
   };
 }
 
+// A contact whose lookup COMPLETED and retained nothing free to show — the
+// shape every priced-category case below is about. The section state and the
+// run are ONE fact: a profile reading completed with no run on the record is
+// one no server sends, and a fixture that fabricates it lets a screen reading
+// the state stand in for a screen reading the history.
+function completedKeepingNothing(): Profile {
+  return {
+    ...neverRun(),
+    state: "completed",
+    latest_run: completedProviderRun,
+  };
+}
+
 function mount(profile: Profile, run: () => Response) {
   const posted: unknown[] = [];
   installFetchStub({
@@ -196,6 +209,58 @@ describe("a contact whose data was already bought", () => {
       await screen.findByText(providerCompletedProfile.emails[0].value),
     ).toBeDefined();
     expect(screen.queryByText(en["provider.profile.emptyTitle"])).toBeNull();
+  });
+});
+
+// The two wordings make a claim about this contact's HISTORY — was the provider
+// ever asked about them — and the section's folded state answers a different
+// question: the connection's condition ahead of the run. Reading the wording
+// off that state is wrong in both directions, and both directions are here,
+// because a reader told the opposite of the truth is worst on an impaired
+// connection — exactly when somebody is working out why a lookup found nothing.
+describe("the lookup button's wording follows the contact's run history", () => {
+  it("offers a first lookup over a contact no run ever touched, whatever the connection says", async () => {
+    // An impaired connection gives every one of its contacts a state that is
+    // not never_run. Nothing was looked up; nothing was bought.
+    mount({ ...neverRun(), state: "invalid_credentials" }, queuedRun);
+
+    expect(
+      await screen.findByRole("button", { name: /Look this contact up/ }),
+    ).toBeDefined();
+    expect(screen.queryByRole("button", { name: /Check again/ })).toBeNull();
+  });
+
+  it("offers a re-check over a contact whose only run was cancelled and kept nothing", async () => {
+    // A cancelled latest run folds back to never_run and retains no values, so
+    // the state and the values agree on "first lookup" and both are wrong: the
+    // run is on the record.
+    mount(
+      {
+        ...neverRun(),
+        latest_run: { ...completedProviderRun, state: "cancelled" },
+      },
+      queuedRun,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /Check again/ }),
+    ).toBeDefined();
+    expect(
+      screen.queryByRole("button", { name: /Look this contact up/ }),
+    ).toBeNull();
+  });
+
+  it("offers a re-check over a merged record whose runs came from the other side", async () => {
+    // After a merge the survivor's claims are relinked from runs that were
+    // never its own, which is what contributing_runs carries.
+    mount(
+      { ...neverRun(), contributing_runs: [completedProviderRun] },
+      queuedRun,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /Check again/ }),
+    ).toBeDefined();
   });
 });
 
@@ -525,7 +590,7 @@ describe("the details that cost credits", () => {
       <StoryProviders>
         <ContactProviderSection
           contactId="p-1"
-          profiles={[{ ...neverRun(), state: "completed" }]}
+          profiles={[completedKeepingNothing()]}
         />
       </StoryProviders>,
     );
@@ -537,7 +602,7 @@ describe("the details that cost credits", () => {
   });
 
   it("offers each priced detail with its price on the button", async () => {
-    mountWithCatalog({ ...neverRun(), state: "completed" }, queuedRun);
+    mountWithCatalog(completedKeepingNothing(), queuedRun);
 
     // The price is ON the button: the decision is what to spend, and a button
     // that hid its cost would ask somebody to agree to a number they cannot see.
@@ -566,7 +631,7 @@ describe("the details that cost credits", () => {
   it("buys only the detail whose button was pressed", async () => {
     const user = userEvent.setup();
     const posted = mountWithCatalog(
-      { ...neverRun(), state: "completed" },
+      completedKeepingNothing(),
       queuedRun,
     );
 
@@ -589,7 +654,7 @@ describe("the details that cost credits", () => {
   it("buys the email with the mobile, because the provider will not look for one without it", async () => {
     const user = userEvent.setup();
     const posted = mountWithCatalog(
-      { ...neverRun(), state: "completed" },
+      completedKeepingNothing(),
       queuedRun,
     );
 
@@ -720,7 +785,7 @@ describe("the details that cost credits", () => {
   });
 
   it("says nothing about re-buying when neither half is held", async () => {
-    mountWithCatalog({ ...neverRun(), state: "completed" }, queuedRun);
+    mountWithCatalog(completedKeepingNothing(), queuedRun);
 
     // The note is the exception, not the furniture. A line about re-buying on
     // every button would train the reader to skip it, which is exactly when
@@ -768,7 +833,7 @@ describe("the details that cost credits", () => {
       <StoryProviders>
         <ContactProviderSection
           contactId="p-1"
-          profiles={[{ ...neverRun(), state: "completed" }]}
+          profiles={[completedKeepingNothing()]}
         />
       </StoryProviders>,
     );
@@ -790,7 +855,7 @@ describe("the details that cost credits", () => {
   // for the email pool all the same when the mobile press makes it look again.
   it("names the re-buy for a work address that came from the record", async () => {
     mountWithCatalog(
-      { ...neverRun(), state: "completed" },
+      completedKeepingNothing(),
       queuedRun,
       undefined,
       {
@@ -826,7 +891,7 @@ describe("the details that cost credits", () => {
 
   it("still offers the work email when the record holds only a personal one", async () => {
     mountWithCatalog(
-      { ...neverRun(), state: "completed" },
+      completedKeepingNothing(),
       queuedRun,
       undefined,
       {
@@ -858,7 +923,7 @@ describe("the details that cost credits", () => {
   // re-buy — the same answer the provider's unclassified address gets.
   it("treats an address the record files as other as neither purchase", async () => {
     mountWithCatalog(
-      { ...neverRun(), state: "completed" },
+      completedKeepingNothing(),
       queuedRun,
       undefined,
       {
@@ -886,7 +951,7 @@ describe("the details that cost credits", () => {
   // the record is one the mobile press pays for again.
   it("offers no mobile purchase for a number the record already holds", async () => {
     mountWithCatalog(
-      { ...neverRun(), state: "completed" },
+      completedKeepingNothing(),
       queuedRun,
       undefined,
       {
@@ -943,7 +1008,7 @@ describe("the details that cost credits", () => {
   it("sends the trigger alongside a fallback the provider only issues after it", async () => {
     const user = userEvent.setup();
     const posted = mountWithCatalog(
-      { ...neverRun(), state: "completed" },
+      completedKeepingNothing(),
       queuedRun,
       // The fallback switched on and the mobile off, so the row under test is
       // the cascade rather than the prerequisite beside it.
@@ -970,7 +1035,7 @@ describe("the details that cost credits", () => {
   it("names the free categories when the plain lookup button is pressed", async () => {
     const user = userEvent.setup();
     const posted = mountWithCatalog(
-      { ...neverRun(), state: "completed" },
+      completedKeepingNothing(),
       queuedRun,
     );
 
