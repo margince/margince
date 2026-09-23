@@ -890,3 +890,109 @@ func TestAnOwnersSharedThreadIsNotReopenedByTheRepair(t *testing.T) {
 		t.Fatalf("a message from a party the owner's decision predates is %q, want participants", got)
 	}
 }
+
+// TestAThreadWithNothingToReadIsNotJudgedOnAnEmptyPrompt is the third route to
+// a blank prompt, and the one no erasure or hold is involved in: a message that
+// arrived with no subject, no body and nothing attached.
+//
+// It matters more than a wasted call. The answer is recorded against the
+// thread, and the opening kind stamps every other held message from the same
+// sender on it — so a verdict reached on no correspondence at all publishes
+// correspondence.
+// Whitespace is the second case because the prompt caps the text it carries
+// rather than trimming it: a subject of one space reaches the model as blank as
+// a missing one, and a body that is a single newline is what a mail parser
+// leaves behind for a message typed with nothing in it.
+func TestAThreadWithNothingToReadIsNotJudgedOnAnEmptyPrompt(t *testing.T) {
+	e := integration.Setup(t)
+	for _, message := range []struct {
+		says    string
+		key     string
+		subject string
+		body    string
+	}{
+		{"nothing at all", "thread-blank", "", ""},
+		{"only whitespace", "thread-whitespace", "   ", "\n\t \r\n"},
+	} {
+		t.Run(message.says, func(t *testing.T) {
+			activityID := seedHeldThreadMail(t, e, message.key, "kunde@example.test", "Angebot")
+			threadID := seedThreadQuestion(t, e, message.key, activityID)
+			setMessageText(t, e, activityID, message.subject, message.body)
+
+			store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
+			claimed, err := store.ClaimDue(e.Admin(), 10)
+			if err != nil {
+				t.Fatalf("claiming due threads: %v", err)
+			}
+			for _, c := range claimed {
+				if c.ID == threadID {
+					t.Fatalf("a thread whose message says %s was claimed, and its prompt would carry no text", message.says)
+				}
+			}
+
+			// And it ends, rather than sitting pending for a message that is
+			// already there. A claim and a retirement reading the question
+			// differently would leave it neither asked nor answered.
+			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				_, err := tx.Exec(context.Background(),
+					`UPDATE capture_thread_verdict SET updated_at = now() - interval '1 hour' WHERE id = $1`,
+					threadID)
+				return err
+			}); err != nil {
+				t.Fatalf("ageing the row past the fill-in grace: %v", err)
+			}
+			if _, err := store.RetireExhausted(e.Admin(), "unreadable"); err != nil {
+				t.Fatalf("retiring: %v", err)
+			}
+			if got := threadStatus(t, e, threadID); got != "unsure" {
+				t.Fatalf("thread status = %q, want unsure: a question nothing can answer must reach a terminal state", got)
+			}
+		})
+	}
+}
+
+// TestAThreadWhoseOnlyContentIsAnAttachmentIsStillClaimed is the admit case for
+// the refusal above: the prompt carries attachment filenames, so a message that
+// says nothing in itself but arrives carrying "Kuendigung.pdf" is a question
+// worth asking. A guard reading "empty subject and body" alone would refuse it.
+func TestAThreadWhoseOnlyContentIsAnAttachmentIsStillClaimed(t *testing.T) {
+	e := integration.Setup(t)
+	activityID := seedHeldThreadMail(t, e, "thread-attachment-only", "kunde@example.test", "Angebot")
+	threadID := seedThreadQuestion(t, e, "thread-attachment-only", activityID)
+	setMessageText(t, e, activityID, "", "")
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO attachment (entity_type, entity_id, filename, storage_key, source, captured_by)
+			VALUES ('activity', $1, 'Kuendigung.pdf', 'test/kuendigung.pdf', 'gmail', 'connector:gmail')`,
+			activityID)
+		return err
+	}); err != nil {
+		t.Fatalf("attaching a file to the message: %v", err)
+	}
+
+	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
+	claimed, err := store.ClaimDue(e.Admin(), 10)
+	if err != nil {
+		t.Fatalf("claiming due threads: %v", err)
+	}
+	for _, c := range claimed {
+		if c.ID == threadID {
+			return
+		}
+	}
+	t.Fatal("a thread whose message carries an attachment name was not claimed")
+}
+
+// setMessageText writes what the mail says, so a test can seed the mail that
+// arrived saying nothing and the mail that arrived saying only whitespace
+// through the same column the capture sink writes.
+func setMessageText(t *testing.T, e *integration.Env, activityID ids.UUID, subject, body string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET subject = $2, body = $3 WHERE id = $1`, activityID, subject, body)
+		return err
+	}); err != nil {
+		t.Fatalf("setting the message text: %v", err)
+	}
+}

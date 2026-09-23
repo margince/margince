@@ -33,10 +33,42 @@ import (
 // same kind of giving up.
 const ThreadVerdictMaxAttempts = PendingMaxAttempts
 
-// ReasonThreadUnreadable retires a question whose message nothing can read —
-// erased while the question stood, or placed under a statutory hold since. It
+// ReasonThreadUnreadable retires a question whose message nothing can read. It
 // is not an exhaustion: such a row can have spent no attempts at all.
-const ReasonThreadUnreadable = "the message the question was about is no longer readable"
+const ReasonThreadUnreadable = "the message the question was about has nothing to read"
+
+// threadHasSomethingToRead is the ONE definition of a question worth asking:
+// the message it is about still exists, is not under a hold, and carries text
+// or an attachment name the prompt can put in front of the model.
+//
+// ClaimDue admits a row only while it holds and RetireExhausted ends a row only
+// once it does not, so the two read it from here rather than each spelling it.
+// Two spellings drift into a gap — a row neither claimable nor retirable, which
+// nothing surfaces because a question nobody asks looks exactly like one nobody
+// has got to yet.
+//
+// A message with neither subject nor body nor attachment renders an empty
+// prompt, and an answer to that is about no correspondence at all. The opening
+// kind is the one that publishes, so an empty prompt must never reach the
+// model: the verdict it earns stamps the thread's other messages from the same
+// sender too.
+//
+// Whitespace is not content, and the prompt caps the text rather than trimming
+// it, so a subject of one space would otherwise reach the model as the same
+// blank question a missing one does. The trim set is the whitespace a mail
+// parser leaves behind — a blank subject header, a body that is one newline.
+//
+// Held by: TestTheThreadQuestionsReadableRuleHasOneSpelling
+// (backend/gates/threadquestioncontent_test.go)
+const threadHasSomethingToRead = `EXISTS (
+	    SELECT 1 FROM activity a
+	     WHERE a.id = capture_thread_verdict.first_activity_id
+	       AND a.restricted_at IS NULL
+	       AND (btrim(coalesce(a.subject, ''), E' \t\n\r\f\v') <> ''
+	         OR btrim(coalesce(a.body, ''), E' \t\n\r\f\v') <> ''
+	         OR EXISTS (SELECT 1 FROM attachment at
+	                     WHERE at.entity_type = 'activity' AND at.entity_id = a.id
+	                       AND at.archived_at IS NULL)))`
 
 // threadVerdictLease is how long a claimed thread stays off other workers'
 // scans, matching the sender ledger's for the same reason.
@@ -155,9 +187,7 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 			      AND next_attempt_at IS NOT NULL AND next_attempt_at <= now()
 			      AND (claimed_until IS NULL OR claimed_until <= now())
 			      AND attempts < $3
-			      AND EXISTS (SELECT 1 FROM activity a
-			                   WHERE a.id = first_activity_id
-			                     AND a.restricted_at IS NULL)
+			      AND `+threadHasSomethingToRead+`
 			      AND EXISTS (SELECT 1 FROM capture_connection c
 			                   WHERE c.user_id = capture_thread_verdict.user_id
 			                     AND c.archived_at IS NULL
@@ -306,10 +336,7 @@ func (s *ThreadVerdictStore) RetireExhausted(ctx context.Context, reason string)
 			   -- would answer a question the mailbox had just re-asked. The
 			   -- grace is on updated_at, which every write to this row touches.
 			   AND updated_at < now() - interval '1 minute'
-			   AND (attempts >= $2 OR NOT EXISTS (
-			         SELECT 1 FROM activity a
-			          WHERE a.id = capture_thread_verdict.first_activity_id
-			            AND a.restricted_at IS NULL))`,
+			   AND (attempts >= $2 OR NOT `+threadHasSomethingToRead+`)`,
 			reason, ThreadVerdictMaxAttempts, ReasonThreadUnreadable)
 		if err != nil {
 			return err

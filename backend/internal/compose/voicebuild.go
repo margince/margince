@@ -240,14 +240,9 @@ func evaluatedPredecessorVersion(predecessor *ai.VoiceProfileVersion) int {
 	return predecessor.ProfileVersion
 }
 
-// deferralDeadline honors the router's exact budget-window boundary when the
-// error carries one; the fixed fallback serves only a bare sentinel.
+// deferralDeadline is when a build deferred for budget resumes.
 func (w *voiceBuildWorker) deferralDeadline(err error) time.Time {
-	var deferral *ai.BudgetDeferralError
-	if errors.As(err, &deferral) && deferral.NextAttemptAt.After(w.now()) {
-		return deferral.NextAttemptAt
-	}
-	return w.now().Add(voiceBuildDeferral)
+	return budgetWindowAt(err, w.now(), voiceBuildDeferral)
 }
 
 // run drives extract → evaluate → activate on a claimed build. Every

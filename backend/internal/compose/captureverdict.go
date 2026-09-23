@@ -150,7 +150,8 @@ type verdictPayload struct {
 
 // RunWorkspace drains up to maxVerdicts deferred dispositions in the workspace
 // already bound in ctx. A budget stop ends the pass cleanly: what was decided
-// is committed, and the rest stays claimable for the next cycle.
+// is committed, and the rest goes back to the queue for the window the router
+// named.
 //
 // The cap is per workspace, not per pass: a shared counter lets one large
 // backlog consume the whole budget and starve every workspace after it.
@@ -169,16 +170,17 @@ func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdict
 			if len(batch) == 0 {
 				return nil
 			}
-			n, err := e.judgeClaimed(wsCtx, batch, budget)
+			n, unreached, err := e.judgeClaimed(wsCtx, batch, budget)
 			resolved += n
 			if errors.Is(err, ai.ErrBudgetDeferred) {
-				// Every row this pass never reached is refunded: no model saw
-				// them, and with only PendingMaxAttempts to spend, charging for
-				// a budget stop would let two quiet cycles exhaust an address's
-				// allowance without a verdict ever being attempted on its
-				// merits — an infrastructure condition turned into a per-sender
-				// terminal answer nobody asked for.
-				e.releaseBatch(wsCtx, batch)
+				// Every row left claimed is refunded: no answer came back for
+				// any of them, and with only PendingMaxAttempts to spend,
+				// charging for a budget stop would let two quiet cycles
+				// exhaust an address's allowance without a verdict ever being
+				// attempted on its merits — an infrastructure condition turned
+				// into a per-sender terminal answer nobody asked for.
+				e.releaseBatch(wsCtx, unreached,
+					untilBudgetWindow(err, verdictRetryBackoff))
 				e.log.InfoContext(wsCtx, "counterparty verdict: budget exhausted, stopping the pass", "resolved", resolved)
 				return nil
 			}
@@ -201,39 +203,35 @@ func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdict
 // when the victim's id was legitimately in the request. The extra calls land on
 // the cheapest rung of a background task, which is the right price for a
 // decision that creates or destroys records.
+//
+// It returns the rows still claimed when it stopped, the one that HIT a budget
+// stop among them: no answer came back for any of those, so ONE writer refunds
+// them all. The confidentiality engine's judgeClaimed holds the same invariant
+// over its own row type and store; budgetWindowAt is the part the two share.
 func (e *CounterpartyVerdictEngine) judgeClaimed(
 	ctx context.Context, claimed []capture.PendingCounterparty, budget *reAskBudget,
-) (int, error) {
+) (int, []capture.PendingCounterparty, error) {
 	applied := 0
-	for _, row := range claimed {
+	for i, row := range claimed {
 		n, err := e.judgeOne(ctx, row, budget)
-		if err != nil {
-			// WHY it failed decides whether the row pays for it, and the cause
-			// has to be read BEFORE the deferral — a Defer clears claimed_by, so
-			// a refund attempted afterwards matches nothing and is lost in
-			// silence.
-			//
-			// A budget stop never reached a model: refunded, or two quiet cycles
-			// would exhaust an address's allowance and retire a genuine sender
-			// to `unsure` for no reason but the workspace running out of budget.
-			// Any other fault is a property of this message, which an outsider
-			// writes, so it is charged — otherwise content crafted to break the
-			// answer would be re-judged forever at one paid call a time.
-			outOfBudget := errors.Is(err, ai.ErrBudgetDeferred)
-			if deferErr := e.pending.Defer(ctx, row, verdictRetryBackoff,
-				"the verdict could not be completed", outOfBudget); deferErr != nil {
-				return applied, deferErr
-			}
-			if outOfBudget {
-				return applied, err
-			}
-			e.log.WarnContext(ctx, "counterparty verdict: judging a sender failed",
-				"disposition", row.ID.String(), "err", err)
+		if err == nil {
+			applied += n
 			continue
 		}
-		applied += n
+		if errors.Is(err, ai.ErrBudgetDeferred) {
+			return applied, claimed[i:], err
+		}
+		// Any other fault is a property of this message, which an outsider
+		// writes, so it is charged — otherwise content crafted to break the
+		// answer would be re-judged forever at one paid call a time.
+		if deferErr := e.pending.Defer(ctx, row, verdictRetryBackoff,
+			"the verdict could not be completed", false); deferErr != nil {
+			return applied, nil, deferErr
+		}
+		e.log.WarnContext(ctx, "counterparty verdict: judging a sender failed",
+			"disposition", row.ID.String(), "err", err)
 	}
-	return applied, nil
+	return applied, nil, nil
 }
 
 // judgeOne asks about ONE sender and applies what comes back, if it clears the
@@ -347,22 +345,21 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	return 1, nil
 }
 
-// releaseBatch returns claimed rows to the queue when the pass stops before
-// reaching them — so the attempt is always refunded here: by definition no model
-// saw these. The row that CAUSED the stop was already deferred by judgeClaimed,
-// and its claim is spent, so this pass over it is a deliberate no-op rather than
-// a second refund. Best
-// effort by nature: the lease expiry is the backstop that makes this an
-// optimization rather than a correctness requirement, so a release that itself
-// fails is logged and the row waits out its lease.
+// releaseBatch returns the rows still claimed at a budget stop to the queue — so
+// the attempt is always refunded here: by definition none of these reached an
+// answer. Best effort by nature: the lease expiry is the backstop that makes
+// this an optimization rather than a correctness requirement, so a release that
+// itself fails is logged and the row waits out its lease.
 //
 // The stored reason is fixed rather than the error's text: disposition_reason is
 // read back by operators and by the review queue, and a provider's raw message
 // is exactly the kind of internal detail that must not travel there. The cause
 // reaches the log instead, where it belongs.
-func (e *CounterpartyVerdictEngine) releaseBatch(ctx context.Context, batch []capture.PendingCounterparty) {
-	for _, row := range batch {
-		if err := e.pending.Defer(ctx, row, verdictRetryBackoff, "the pass stopped before reaching this sender", true); err != nil {
+func (e *CounterpartyVerdictEngine) releaseBatch(
+	ctx context.Context, unreached []capture.PendingCounterparty, backoff time.Duration,
+) {
+	for _, row := range unreached {
+		if err := e.pending.Defer(ctx, row, backoff, "the workspace was out of model budget", true); err != nil {
 			e.log.WarnContext(ctx, "counterparty verdict: releasing a claimed row failed",
 				"disposition", row.ID.String(), "err", err)
 		}

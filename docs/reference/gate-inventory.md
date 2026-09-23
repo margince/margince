@@ -457,6 +457,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `reviewoutcome_test.go` | H2 | Every way a held message can settle closes its review. |
 | `rolemailboxonelist_test.go` | H2 | One role-mailbox list, held by a test rather than by a comment. |
 | `signatureeligibilityonespelling_test.go` | H2 | One spelling of "may this message be mined for this contact's signature", held by a test rather than by a comment. |
+| `threadquestioncontent_test.go` | H2 | One spelling of "has this message anything to read", held by a test rather than by a comment. |
 | `uniquenessclaims_test.go` | H1 | A comment that says a declaration is the ONLY one of its kind is not decoration. |
 
 ## Budget

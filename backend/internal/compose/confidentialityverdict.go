@@ -98,7 +98,7 @@ func (e *ConfidentialityVerdictEngine) workspaceCtx(ctx context.Context) context
 
 // RunWorkspace drains up to maxVerdicts threads in the workspace already bound
 // in ctx. A budget stop ends the pass cleanly: what was decided is committed,
-// and the rest stays claimable for the next cycle.
+// and the rest goes back to the queue for the window the router named.
 func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerdicts int) error {
 	if !e.CanJudge() {
 		// No model bound. Every thread stays held, which is the answer this
@@ -123,14 +123,15 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 		if len(batch) == 0 {
 			return nil
 		}
-		n, err := e.judgeClaimed(wsCtx, batch)
+		n, unreached, err := e.judgeClaimed(wsCtx, batch)
 		resolved += n
 		if errors.Is(err, ai.ErrBudgetDeferred) {
-			// Every thread this pass never reached is refunded: no model saw
-			// them, and charging for a budget stop would let two quiet cycles
+			// Every thread left claimed is refunded: no answer came back for
+			// any of them, and charging for a budget stop would let two cycles
 			// exhaust a thread's allowance and retire it to `unsure` — an
 			// infrastructure condition turned into a per-thread terminal answer.
-			e.releaseBatch(wsCtx, batch)
+			e.releaseBatch(wsCtx, unreached,
+				untilBudgetWindow(err, confidentialityRetryBackoff))
 			e.log.InfoContext(wsCtx, "confidentiality verdict: budget exhausted, stopping the pass", "resolved", resolved)
 			return nil
 		}
@@ -144,31 +145,37 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 // judgeClaimed judges each claimed thread on its OWN model call, and applies
 // each answer on its own transaction. The transaction IS the checkpoint, so a
 // budget stop or a crash keeps whatever was already decided.
-func (e *ConfidentialityVerdictEngine) judgeClaimed(ctx context.Context, claimed []capture.PendingThread) (int, error) {
+//
+// It returns the threads still claimed when it stopped, the one that HIT a
+// budget stop among them: no answer came back for any of those, so ONE writer
+// refunds them all. The counterparty engine's judgeClaimed holds the same
+// invariant over its own row type and store; budgetWindowAt is what they share.
+func (e *ConfidentialityVerdictEngine) judgeClaimed(
+	ctx context.Context, claimed []capture.PendingThread,
+) (int, []capture.PendingThread, error) {
 	applied := 0
-	for _, row := range claimed {
+	for i, row := range claimed {
 		n, err := e.judgeOne(ctx, row)
-		applied += n
-		if err != nil {
-			outOfBudget := errors.Is(err, ai.ErrBudgetDeferred)
-			if deferErr := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
-				"the confidentiality verdict could not be completed", outOfBudget); deferErr != nil {
-				return applied, deferErr
-			}
-			if outOfBudget {
-				return applied, err
-			}
-			// Any other fault is a property of THIS thread, whose text an
-			// outsider writes, so the attempt is charged: refunding it would
-			// make the attempt bound unreachable on exactly the path it exists
-			// for, and a message crafted to break the answer would be re-judged
-			// forever at one paid call a time.
-			e.log.WarnContext(ctx, "confidentiality verdict: judging a thread failed",
-				"thread", row.ID.String(), "err", err)
+		if err == nil {
+			applied += n
 			continue
 		}
+		if errors.Is(err, ai.ErrBudgetDeferred) {
+			return applied, claimed[i:], err
+		}
+		// Any other fault is a property of THIS thread, whose text an outsider
+		// writes, so the attempt is charged: refunding it would make the
+		// attempt bound unreachable on exactly the path it exists for, and a
+		// message crafted to break the answer would be re-judged forever at one
+		// paid call a time.
+		if deferErr := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
+			"the confidentiality verdict could not be completed", false); deferErr != nil {
+			return applied, nil, deferErr
+		}
+		e.log.WarnContext(ctx, "confidentiality verdict: judging a thread failed",
+			"thread", row.ID.String(), "err", err)
 	}
-	return applied, nil
+	return applied, nil, nil
 }
 
 // judgeOne asks about ONE thread and applies what comes back.
@@ -333,11 +340,16 @@ func recomputeJudgedMessageTx(ctx context.Context, tx pgx.Tx, row capture.Pendin
 	return activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](row.ActivityID))
 }
 
-// releaseBatch hands a whole claimed batch back after a budget stop, so no
-// thread is charged for a pass that never reached a model.
-func (e *ConfidentialityVerdictEngine) releaseBatch(ctx context.Context, batch []capture.PendingThread) {
-	for _, row := range batch {
-		if err := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
+// releaseBatch hands the threads still claimed at a budget stop back, so no
+// thread is charged for a pass that reached no answer for it. Best effort by
+// nature: the lease expiry is the backstop that makes this an optimization
+// rather than a correctness requirement, so a release that itself fails is
+// logged and the thread waits out its lease.
+func (e *ConfidentialityVerdictEngine) releaseBatch(
+	ctx context.Context, unreached []capture.PendingThread, backoff time.Duration,
+) {
+	for _, row := range unreached {
+		if err := e.threads.Defer(ctx, row, backoff,
 			"the workspace was out of model budget", true); err != nil {
 			e.log.WarnContext(ctx, "confidentiality verdict: releasing a claimed thread failed",
 				"thread", row.ID.String(), "err", err)
