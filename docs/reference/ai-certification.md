@@ -29,7 +29,7 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | … best state `partial` | 0 |
 | … best state `stale` | 6 |
 | … `absent` on every binding | 1 |
-| Scenarios in the corpus | 169 |
+| Scenarios in the corpus | 170 |
 | Committed records | 76 |
 | Bindings measured | 10 |
 
@@ -101,7 +101,7 @@ Which model to run each site on, and what that choice rests on.
 | [`cold_start/company_message`](#cold_startcompany_message) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
 | [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
 | [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 2 | 3 |
-| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | - | - | - | `stale` | 4 | 3 |
+| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | - | - | - | `stale` | 5 | 3 |
 | [`deal_health/deal_status`](#deal_healthdeal_status) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 3 | 2 |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.5-flash · eu_hosted` | `certified` | 1.00 | `current` | 4 | 1 |
 | [`draft_reply/account`](#draft_replyaccount) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
@@ -531,11 +531,12 @@ Records (3):
 
 Scope a run of it can claim: `full_invocation`.
 
-Scenarios (4):
+Scenarios (5):
 
 | Scenario | Expects | Case |
 |---|---|---|
 | `corpus_ask_answers_only_from_the_passage_that_says_it` | `accepted` | [corpus_ask_answers_from_the_passages_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_from_the_passages_01.yaml) |
+| `corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present` | `accepted` | [corpus_ask_answers_when_the_passage_is_present_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_when_the_passage_is_present_01.yaml) |
 | `corpus_ask_returns_nothing_when_the_only_passage_does_not_answer` | `accepted` | [corpus_ask_abstains_when_uncovered_02.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_02.yaml) |
 | `corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question` | `accepted` | [corpus_ask_abstains_when_uncovered_03.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_03.yaml) |
 | `corpus_ask_returns_nothing_when_the_passages_do_not_answer` | `accepted` | [corpus_ask_abstains_when_uncovered_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_01.yaml) |
@@ -544,9 +545,9 @@ Records (3):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/4 | `certified` | 9 | 9 | 1.00 | 1084ms | 1265ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/4 | `certified` | 9 | 9 | 1.00 | 3506ms | 8218ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `stale` | 0/4 | `supported_degraded` | 9 | 8 | 0.89 | 1030ms | 2714ms | 8 | 0 | 1 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/5 | `certified` | 9 | 9 | 1.00 | 1084ms | 1265ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/5 | `certified` | 9 | 9 | 1.00 | 3506ms | 8218ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `stale` | 0/5 | `supported_degraded` | 9 | 8 | 0.89 | 1030ms | 2714ms | 8 | 0 | 1 | 0 |
 
 ### `deal_health`
 

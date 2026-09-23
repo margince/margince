@@ -5,7 +5,7 @@
     "sites_best_partial": 0,
     "sites_best_stale": 6,
     "sites_absent": 1,
-    "scenarios": 169,
+    "scenarios": 170,
     "records": 76,
     "bindings": 10
   },
@@ -1735,6 +1735,11 @@
           "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_from_the_passages_01.yaml"
         },
         {
+          "name": "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_when_the_passage_is_present_01.yaml"
+        },
+        {
           "name": "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_02.yaml"
@@ -1760,7 +1765,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 4,
+          "scenarios_total": 5,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -1799,7 +1804,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 4,
+          "scenarios_total": 5,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -1829,7 +1834,7 @@
           "state": "stale",
           "band": "supported_degraded",
           "scenarios_measured": 0,
-          "scenarios_total": 4,
+          "scenarios_total": 5,
           "runs": 9,
           "passed": 8,
           "reliability": 0.8888888888888888,

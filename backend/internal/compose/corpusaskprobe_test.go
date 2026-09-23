@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -200,5 +201,175 @@ func TestTheRankingRendersTheFixtureTheSiteDecodes(t *testing.T) {
 		if p.Label == "" {
 			t.Errorf("passage %d has no label, and an expectation names passages by label", i)
 		}
+	}
+}
+
+// fixedVectorEmbedder answers exactly what it was built with, whatever it was
+// asked. The subject of the tests below is a lane that answers the WRONG thing,
+// so its reply must not be derived from the request.
+type fixedVectorEmbedder struct {
+	vectors [][]float32
+	// dims is what the lane CLAIMS it answered at, which a misbehaving one
+	// reports independently of the vectors it actually sent.
+	dims int
+}
+
+func (e fixedVectorEmbedder) EmbedIdentity() (string, int) { return "fake/fixed@4", e.dims }
+
+func (e fixedVectorEmbedder) Embed(context.Context, model.EmbedRequest) (model.Embeddings, error) {
+	return model.Embeddings{Vectors: e.vectors, Dims: e.dims}, nil
+}
+
+// A lane that answered a different number of vectors, or vectors of another
+// width, has not embedded these inputs. Ranking against whatever it did send
+// ranks noise, so the run stops and says what came back.
+func TestAnEmbedLaneAnsweringTheWrongShapeIsRefused(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		embedder fixedVectorEmbedder
+	}{
+		{"one vector for two inputs", fixedVectorEmbedder{vectors: [][]float32{{1, 0, 0, 0}}, dims: 4}},
+		{"vectors of another width", fixedVectorEmbedder{vectors: [][]float32{{1, 0}, {0, 1}}, dims: 2}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := embedInputs(t.Context(), tc.embedder, []string{"first", "second"}, 4)
+			if err == nil {
+				t.Fatal("a lane that did not embed these inputs was accepted, so the ranking would have been noise")
+			}
+			// The operator has to see what came back against what was needed,
+			// or the only way to read the failure is to add a print.
+			if !strings.Contains(err.Error(), "need 2×4") {
+				t.Errorf("the refusal does not say what was needed: %v", err)
+			}
+		})
+	}
+}
+
+// A zero question vector is refused for the reason the knowledge store refuses
+// one: every cosine against it is NaN, and a ranking sorted on NaN puts
+// arbitrary passages at the top of an answer.
+func TestAZeroQuestionVectorIsRefusedRatherThanRanked(t *testing.T) {
+	zero := fixedVectorEmbedder{vectors: [][]float32{{0, 0, 0, 0}}, dims: 4}
+	_, err := embedQuestion(t.Context(), "how can I create a project", zero, 4)
+	if err == nil {
+		t.Fatal("a zero question vector was accepted, and every similarity against it is NaN")
+	}
+	if !strings.Contains(err.Error(), "zero vector") {
+		t.Errorf("the refusal does not name what came back: %v", err)
+	}
+}
+
+// An unreadable cache is a refusal, not a silent re-embed: quietly paying to
+// embed a whole handbook again because a file was truncated is a bill nobody
+// asked for, and the message says the one thing that fixes it.
+func TestATruncatedVectorCacheIsRefusedRatherThanPaidAround(t *testing.T) {
+	dir := t.TempDir()
+	cache := newVectorCache(dir, "fake/count@4")
+	if err := os.MkdirAll(filepath.Dir(cache.path), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cache.path, []byte(`{"abc":[0.1,`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	corpus, err := handbookChunks("records.md")
+	if err != nil {
+		t.Fatalf("chunking: %v", err)
+	}
+	embedder := &countingEmbedder{dims: 4}
+	if _, err := embedChunks(t.Context(), corpus, embedder, cache, 4); err == nil {
+		t.Fatal("a truncated cache was read as empty, so the whole handbook would have been re-embedded in silence")
+	} else if !strings.Contains(err.Error(), "delete it and re-run") {
+		t.Errorf("the refusal does not say how to recover: %v", err)
+	}
+	if embedder.inputs != 0 {
+		t.Errorf("%d chunks were embedded before the cache was found unreadable", embedder.inputs)
+	}
+}
+
+// The whole probe over a bound embed lane: the handbook this binary ships,
+// chunked by the production chunker, embedded through the product's own embed
+// seam and ranked the way Store.Retrieve would — with no database and no
+// network, because the binding is the offline fake.
+func TestTheProbeRanksTheShippedHandbookOverABoundEmbedLane(t *testing.T) {
+	dir := t.TempDir()
+	probe := CorpusProbe{
+		ModelSpec: "fake:fake-embed", Question: "how can I create a project",
+		Page: "records.md", WorkDir: dir, Floor: 0,
+	}
+	result, err := ProbeCorpusRetrieval(t.Context(), probe)
+	if err != nil {
+		t.Fatalf("probing: %v", err)
+	}
+	// The banner and the identity both name the binding, because a ranking read
+	// without knowing which embedder produced it says nothing.
+	if !strings.Contains(result.Banner, "fake:fake-embed") {
+		t.Errorf("banner = %q, want it to name the binding", result.Banner)
+	}
+	if !strings.HasPrefix(result.EmbedIdentity, "fake/fake-embed@") {
+		t.Errorf("embed identity = %q, want the bound lane's own", result.EmbedIdentity)
+	}
+	// Embedded is the WHOLE corpus, not the ranked slice: an empty ranking means
+	// opposite things at ten embedded passages and at four hundred.
+	corpus, err := handbookChunks("records.md")
+	if err != nil {
+		t.Fatalf("chunking: %v", err)
+	}
+	if result.Embedded != len(corpus) {
+		t.Errorf("embedded %d passages, want the page's %d chunks", result.Embedded, len(corpus))
+	}
+	if len(result.Passages) != CorpusProbeLimit {
+		t.Fatalf("ranked %d passages, want the site's own limit of %d", len(result.Passages), CorpusProbeLimit)
+	}
+	for i, p := range result.Passages {
+		if p.DocumentName != "records.md" || p.Text == "" {
+			t.Errorf("passage %d is %+v, want a named passage of the page asked for", i, p)
+		}
+		if p.StartLine < 1 {
+			t.Errorf("passage %d carries no start line, so a citation from it could not be followed", i)
+		}
+		if i > 0 && p.Similarity > result.Passages[i-1].Similarity {
+			t.Errorf("passage %d ranks above the one before it (%.4f > %.4f)", i, p.Similarity, result.Passages[i-1].Similarity)
+		}
+	}
+	if len(result.Fixture) == 0 {
+		t.Fatal("a ranking that cleared the floor produced no fixture, so there is nothing for `run` to be pointed at")
+	}
+
+	// The cache is the second half of the claim: a re-run over unchanged prose
+	// pays for the question alone. It is asserted through the file, because the
+	// bound lane counts nothing this test can read.
+	cached, err := os.ReadFile(newVectorCache(dir, result.EmbedIdentity).path)
+	if err != nil {
+		t.Fatalf("the run left no vector cache under its work directory: %v", err)
+	}
+	var vectors map[string][]float32
+	if err := json.Unmarshal(cached, &vectors); err != nil {
+		t.Fatalf("the cache is not readable back: %v", err)
+	}
+	if len(vectors) != len(corpus) {
+		t.Errorf("the cache holds %d vectors for %d chunks", len(vectors), len(corpus))
+	}
+}
+
+// Nothing clearing the floor is a finding, not a failure: production would not
+// ask the lane at all, so there is no run to hand a fixture to.
+func TestAFloorNothingClearsProducesNoFixture(t *testing.T) {
+	result, err := ProbeCorpusRetrieval(t.Context(), CorpusProbe{
+		ModelSpec: "fake:fake-embed", Question: "how can I create a project",
+		Page: "records.md", WorkDir: t.TempDir(), Floor: 1.1,
+	})
+	if err != nil {
+		t.Fatalf("an empty ranking is a result, not an error: %v", err)
+	}
+	if len(result.Passages) != 0 {
+		t.Fatalf("%d passages cleared a floor above every cosine", len(result.Passages))
+	}
+	if result.Fixture != nil {
+		t.Error("a fixture was written for a question production would never ask the lane about")
+	}
+	// And the corpus is still reported, which is what makes the empty ranking
+	// readable at all.
+	if result.Embedded == 0 {
+		t.Error("nothing was embedded, so the empty ranking says nothing about the question")
 	}
 }

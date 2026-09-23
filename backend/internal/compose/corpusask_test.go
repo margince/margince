@@ -17,6 +17,8 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
@@ -642,5 +644,174 @@ func TestAReplyWithoutAClaimsKeyIsReAsked(t *testing.T) {
 	}
 	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered {
 		t.Fatalf("outcome = %q, want answered from the second reply", answer.Outcome)
+	}
+}
+
+// corpusAnswered renders a reply that DECLARES the passages answer the question
+// and carries a summary asserting it — the shape whose claims are worth taking
+// away, because the sentence survives them.
+func corpusAnswered(summary string, claims ...askedClaim) string {
+	covered := coverageAnswers
+	out, err := json.Marshal(askedAnswer{Coverage: &covered, Summary: summary, Claims: &claims})
+	if err != nil {
+		panic(err)
+	}
+	return string(out)
+}
+
+// The two not_covered answers are not the same answer, and the difference is
+// the summary.
+//
+// A DECLARED refusal keeps its sentence: the model read the passages, said they
+// do not answer the question, and that sentence is the only thing telling the
+// reader what the documents cover instead.
+//
+// An answer whose claims all failed the quote check loses it: the sentence
+// asserts an answer, every piece of evidence meant to hold it up is gone, and
+// nothing else on the page ever checked it. Printing it would put a fabrication
+// on screen under the one outcome a reader is entitled to trust.
+//
+// Both arms live in one test on purpose — conflating them is the defect, so a
+// test that cannot tell them apart would not have caught it.
+func TestOnlyADeclaredRefusalKeepsItsSentence(t *testing.T) {
+	passages := askPassages()
+	const refusalSentence = "These documents do not cover that."
+	for _, tc := range []struct {
+		name        string
+		reply       string
+		wantSummary string
+	}{
+		{
+			name:        "the model declared it cannot answer",
+			reply:       corpusRefusal(),
+			wantSummary: refusalSentence,
+		},
+		{
+			name: "the model declared an answer and grounded none of it",
+			reply: corpusAnswered("Messages are kept for 30 days.", askedClaim{
+				Text:  "Messages are kept for 30 days.",
+				ID:    passages[0].ChunkID.String(),
+				Quote: "kept for 30 days",
+			}),
+			wantSummary: "",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lane := &fixedLane{text: tc.reply}
+			answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept",
+				passages, string(textlang.English), corpusQuietLog())
+
+			if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered {
+				t.Fatalf("outcome = %q, want not_covered", answer.Outcome)
+			}
+			if answer.Claims != nil {
+				t.Errorf("a not_covered answer carries claims: %+v", answer.Claims)
+			}
+			// The model DID read the passages either way, and the reader is
+			// told so: a refusal it wrote is not the degrade of a missing lane.
+			if answer.GeneratedBy != crmcontracts.WrittenByModel {
+				t.Errorf("generated_by = %q, want model", answer.GeneratedBy)
+			}
+			switch {
+			case tc.wantSummary == "" && answer.Summary != nil:
+				t.Errorf("the summary survived its evidence: %q", *answer.Summary)
+			case tc.wantSummary != "" && answer.Summary == nil:
+				t.Error("the refusal lost the one sentence that says what these documents do cover")
+			case tc.wantSummary != "" && *answer.Summary != tc.wantSummary:
+				t.Errorf("summary = %q, want %q", *answer.Summary, tc.wantSummary)
+			}
+		})
+	}
+}
+
+// A grounded answer keeps its summary, so the drop above is the ungrounded case
+// and not the summary never arriving at all.
+func TestAGroundedAnswerKeepsItsSummary(t *testing.T) {
+	passages := askPassages()
+	lane := &fixedLane{text: corpusAnswered("Messages are kept for 400 days. [1]", askedClaim{
+		Text:  "Messages are kept for 400 days.",
+		ID:    passages[0].ChunkID.String(),
+		Quote: "kept for 400 days",
+	})}
+	answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept",
+		passages, string(textlang.English), corpusQuietLog())
+
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered {
+		t.Fatalf("outcome = %q, want answered", answer.Outcome)
+	}
+	if answer.Summary == nil || *answer.Summary != "Messages are kept for 400 days. [1]" {
+		t.Fatalf("summary = %v, want the sentence the model wrote", answer.Summary)
+	}
+}
+
+// A failed lane says WHY in the log, and the reason is all it says: the reply it
+// would otherwise carry quotes a third party's uploaded document.
+func TestAFailedLaneLogsTheReasonAndNotTheReply(t *testing.T) {
+	var logged strings.Builder
+	log := slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	passages := askPassages()
+	answer := AnswerCorpus(t.Context(), &fixedLane{err: errors.New("the lane timed out")}, answeredState(),
+		"how long are messages kept", passages, string(textlang.English), log)
+
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeUnreviewed {
+		t.Fatalf("outcome = %q, want unreviewed", answer.Outcome)
+	}
+	line := logged.String()
+	// Without this line a declared degrade is indistinguishable from a lane
+	// nobody wired: the outcome reads the same either way.
+	if !strings.Contains(line, "the lane timed out") {
+		t.Errorf("the log does not carry the reason the lane fell back:\n%s", line)
+	}
+	if strings.Contains(line, askedPassageText) {
+		t.Errorf("the log carries the uploaded document's own words:\n%s", line)
+	}
+}
+
+// The embedder an installation with no embed lane gets names no binding, which
+// is what makes Retrieve answer retrieval_unavailable — a statement about the
+// installation, never about the question.
+func TestAnInstallationWithNoEmbedLaneNamesNoBinding(t *testing.T) {
+	identity, dims := unboundEmbedder{}.EmbedIdentity()
+	if identity != "" || dims != 0 {
+		t.Fatalf("EmbedIdentity() = %q, %d; want the empty identity retrieval refuses on", identity, dims)
+	}
+	// And it never invents a vector: a plausible one would be ranked against
+	// the corpus and answer from nonsense instead of failing.
+	vectors, err := unboundEmbedder{}.Embed(t.Context(), model.EmbedRequest{Inputs: []string{"anything"}})
+	if err == nil {
+		t.Fatalf("the unbound embedder answered %v instead of refusing", vectors)
+	}
+	if len(vectors.Vectors) != 0 {
+		t.Errorf("the refusal came with %d vector(s)", len(vectors.Vectors))
+	}
+}
+
+// Until WithCorpusAsk runs, the endpoint says so rather than searching: an
+// installation that composed no retrieval cannot answer, and pretending to
+// would be worse. After it runs, the same endpoint is the engine's.
+func TestTheAskEndpointIsAnsweredOnlyOnceWithCorpusAskHasRun(t *testing.T) {
+	id := crmcontracts.Id(ids.NewV7())
+	ask := func(s *Server) *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodPost, "/v1/corpora/"+id.String()+"/ask", strings.NewReader("{"))
+		r.Header.Set("Content-Type", "application/json")
+		s.knowledgeHandlers.AskCorpus(w, r, id)
+		return w
+	}
+
+	var bare Server
+	if code := ask(&bare).Code; code != http.StatusNotImplemented {
+		t.Fatalf("an unwired ask answered %d, want 501", code)
+	}
+
+	var wired Server
+	// A nil embedder is the installation with no embed lane, and the option
+	// must substitute the unbound one rather than leave a nil to be called.
+	WithCorpusAsk(nil, nil, corpusQuietLog())(&wired, nil)
+	// A body the decoder refuses, so the wiring is proved without a database:
+	// anything the store would answer needs one, and the decoder's refusal can
+	// only come from the engine's own handler.
+	if code := ask(&wired).Code; code != http.StatusUnprocessableEntity {
+		t.Fatalf("the wired ask answered %d for an unreadable body, want the engine's own 422", code)
 	}
 }

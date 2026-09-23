@@ -551,8 +551,19 @@ describe("AskMarginceModal", () => {
     ).toBeNull();
 
     await userEvent.setup().click(screen.getByRole("button", { name: "Ask" }));
+    // Longer than the default second, and measured rather than guessed: this is
+    // the only assertion in the file that waits on a press, a fetch and a render
+    // together, and under coverage instrumentation that chain runs past 1000ms.
+    // It is waiting for something that does arrive — the same assertion passes
+    // uninstrumented every time — so the budget is the thing that was wrong.
     expect(
-      await screen.findByText("Captured messages are kept for 400 days."),
+      await screen.findByText(
+        "Captured messages are kept for 400 days.",
+        undefined,
+        {
+          timeout: 5000,
+        },
+      ),
     ).toBeTruthy();
     expect(backend.asked).toHaveLength(1);
   });
