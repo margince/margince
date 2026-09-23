@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -333,3 +334,5 @@ func (r *uuidRows) Conn() *pgx.Conn                              { return nil }
 func (r *uuidRows) Values() ([]any, error) { panic("uuidRows: Values not implemented") }
 
 func (r *uuidRows) RawValues() [][]byte { panic("uuidRows: RawValues not implemented") }
+
+func (r *uuidRows) TypeMap() *pgtype.Map { panic("uuidRows: TypeMap not implemented") }
