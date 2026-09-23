@@ -396,18 +396,7 @@ async function draftFromLead({
     params: { path: { id: entityId } },
     body: intent.trim() ? { intent: intent.trim() } : {},
   });
-  if (response.status === 501) {
-    return { available: false as const, reason: "no_model" as const };
-  }
-  if (!response.ok || !data) {
-    throwProblem(error || { title: t("compose.actionFailed") });
-  }
-  return {
-    available: true as const,
-    draft: data,
-    reasoning: data.reasoning,
-    scope: data.scope,
-  };
+  return draftAnswer(response, error, data, t);
 }
 
 // The contact-started draft: the composer's "Write email" on a contact.
@@ -429,6 +418,42 @@ async function draftFromLead({
  * and both routes have to agree about that, which is why this is one function
  * rather than the same two lines twice.
  */
+/**
+ * What a draft route makes of its answer.
+ *
+ * `501` is the deployment saying it has no model lane — a fact about the stack
+ * rather than a failure this page can act on, and the one answer the rep is
+ * told about in those words.
+ *
+ * Success is a real 2xx WITH a draft body, never merely the absence of an
+ * error: openapi-fetch reports a falsy `error` and undefined `data` for a
+ * bodiless non-2xx (a gateway 502/503/504), which would otherwise fall through
+ * as a fabricated draft and crash the fill on undefined fields.
+ *
+ * Shared because three routes reading one answer their own way is how the
+ * contact page came to report "the model is not configured" on a stack that
+ * was answering every other AI call on the same screen.
+ */
+function draftAnswer(
+  response: Response,
+  error: unknown,
+  data: DraftedPayload | undefined,
+  t: ReturnType<typeof useT>,
+): DraftResult {
+  if (response.status === 501) {
+    return { available: false as const, reason: "no_model" as const };
+  }
+  if (!response.ok || !data) {
+    throwProblem(error || { title: t("compose.actionFailed") });
+  }
+  return {
+    available: true as const,
+    draft: data,
+    reasoning: data.reasoning,
+    scope: data.scope,
+  };
+}
+
 function steering(intent: string, rewriteOf: string) {
   return {
     ...(intent.trim() ? { intent: intent.trim() } : {}),
@@ -459,18 +484,7 @@ async function draftFromContact({
       },
     },
   );
-  if (response.status === 501) {
-    return { available: false as const, reason: "no_model" as const };
-  }
-  if (!response.ok || !data) {
-    throwProblem(error || { title: t("compose.actionFailed") });
-  }
-  return {
-    available: true as const,
-    draft: data,
-    reasoning: data.reasoning,
-    scope: data.scope,
-  };
+  return draftAnswer(response, error, data, t);
 }
 
 // The account-started draft (ADR-0087/A132). It grounds itself in the account
@@ -541,18 +555,7 @@ async function draftFromAccount({
       },
     },
   );
-  if (response.status === 501) {
-    return { available: false as const, reason: "no_model" as const };
-  }
-  if (!response.ok || !data) {
-    throwProblem(error || { title: t("compose.actionFailed") });
-  }
-  return {
-    available: true as const,
-    draft: data,
-    reasoning: data.reasoning,
-    scope: data.scope,
-  };
+  return draftAnswer(response, error, data, t);
 }
 
 // What either drafting path answers.
@@ -571,6 +574,16 @@ async function draftFromAccount({
 // missing provider that was never missing: the contact page simply made no
 // request at all.
 export type DraftUnavailable = "no_model" | "unsupported_origin";
+
+// What a draft route's 2xx body carries, as the fill reads it. The two shapes
+// are not the same — only the account draft answers `reasoning` and `scope` —
+// so both are optional here rather than intersecting the contract types, which
+// would make every optional field of one optional on both and stop the fill
+// noticing when a required field went missing.
+type DraftedPayload = Extract<DraftResult, { available: true }>["draft"] & {
+  reasoning?: components["schemas"]["AccountDraftReason"][];
+  scope?: ProjectScope;
+};
 
 type DraftResult =
   | { available: false; reason: DraftUnavailable }
