@@ -425,6 +425,22 @@ else
   label="dev '$slug'"
   db="margince_dev_${slug}"
 fi
+
+# Under the machine-global root, not the worktree's own .tmp/ — the same reason
+# the claim registry moved there. The pids land in the SAME file claim_stack
+# reserved, so a sweep from any worktree can see this stack; while these were two
+# different files the reservation carried ports and no pids, and the sweep read a
+# directory only this worktree could see.
+rundir="$(dev_state_dir "$slug")"
+log="${rundir}/dev.log"
+state="${rundir}/env"
+
+# Set HERE, above every reader, rather than beside the boot that uses `log`: the
+# takedown paths run first and stack_victims reads `state`. Left with the boot,
+# that read was unbound — under `set -u` the subshell died, the collector printed
+# nothing, and the takedown reported success having killed nothing. The boot then
+# failed on a port its own restart was supposed to have freed.
+
 # The bucket is a DEFAULT like the other three: the per-worktree name keeps two
 # stacks off each other's objects, and an engineer pointing the endpoint at a
 # real store names the bucket there too. Nothing here has to create it —
@@ -446,6 +462,90 @@ DEV_API_PORT_OFFSET=10000
 # developer's browser among them — and this sweep kills what it is given.
 port_listeners() { # port
   lsof -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null || true
+}
+
+# with_database and stack_server_pids sit HERE, above the takedown that calls
+# them through stack_victims, and not beside the boot code that also uses them.
+# Below it they were simply not defined yet when a restart ran: bash reported
+# "command not found", the collector lost both its DSN arm and its command-line
+# arm, and the takedown killed only what a port could name. The worker binds no
+# port — which is the survivor this whole path exists for.
+
+# with_database DSN NAME — the same connection, pointed at a different database.
+#
+# The database segment is REPLACED, never inherited. DEV_SLUG owns the name
+# ($db above), and a stack that took the name from a supplied DSN would sit on
+# slug-derived ports in front of the BASE database — two stacks that look
+# isolated quietly sharing one.
+#
+# A query string is carried over rather than dropped with the rest of the
+# suffix. That was harmless while these were dev-only variables nobody wrote
+# that way; MARGINCE_DSN is what a DEPLOYMENT fills in, where `?sslmode=require`
+# is ordinary, and silently dropping it would quietly downgrade the connection.
+#
+# A DSN that is not a URL is refused rather than rewritten. libpq also accepts
+# `host=… dbname=…`, and there is no correct way to swap a database segment that
+# is not there — building something malformed from it would fail later, further
+# from the cause. Nothing here echoes the DSN: it carries a password.
+with_database() { # dsn name
+  local dsn="$1" name="$2" query="" scheme rest
+  case "$dsn" in
+    *\?*) query="?${dsn#*\?}"; dsn="${dsn%%\?*}" ;;
+  esac
+  # Both spellings libpq itself accepts, and only those. A `mysql://` DSN would
+  # otherwise be rewritten to point at this stack's database and then fail at the
+  # client, which is the same "fails later, further from the cause" this function
+  # refuses the key/value form to avoid.
+  case "$dsn" in
+    postgres://*|postgresql://*) scheme="${dsn%%://*}://"; rest="${dsn#*://}" ;;
+    *)
+      echo "FAIL: the DSN must be a postgres:// or postgresql:// URL so this stack can point it at ${name}; neither another scheme nor libpq's 'host=… dbname=…' form can be redirected here. Set OWNER_DSN/APP_DSN (or MARGINCE_OWNER_DSN/MARGINCE_DSN) to one." >&2
+      return 1 ;;
+  esac
+  # Everything from the first slash on is whatever database that DSN named; the
+  # authority (credentials, host, port) is the part this stack reuses.
+  rest="${rest%%/*}"
+  printf '%s%s/%s%s' "$scheme" "$rest" "$name" "$query"
+}
+
+# stack_server_pids names THIS stack's api and worker wherever they came from —
+# including a run whose pid the state file no longer holds.
+#
+# The state file records one BACKEND_PID/WORKER_PID and every `make dev`
+# overwrites it, so a worker that outlived its own start is invisible to the
+# only thing that would kill it. The api is caught anyway, by its port; a worker
+# binds none, so nothing looked for it and they accumulated — four against one
+# database, three of them stale builds. They share a River leader election, and
+# the leader is what inserts the periodic jobs: an old leader renewing its lease
+# schedules only the job kinds ITS binary knows, so a job kind added since is
+# never enqueued at all. Every other lane keeps running, which is what makes a
+# stale worker read as a broken feature rather than as a process nobody stopped.
+#
+# Matched on the DSN, and on the Redis address when the caller knows it. The
+# database name is already one-to-one with the slug — `margince` for the primary
+# worktree, `margince_dev_<slug>` for a linked one — so the DSN alone names a
+# stack. The Redis address narrows it further and is passed whenever a record
+# supplies it.
+#
+# It is OMITTED rather than guessed when there is no record. A stack whose state
+# file is gone has no claim to read, and the registry's fallback for "no claim"
+# is logical database 0 — the PRIMARY stack's. Passing that would ask for a
+# linked worktree's database on the primary's Redis database, match nothing, and
+# clean up nothing, silently: the same shape of miss this function exists to
+# close.
+# The DSN match ends at a WORD BOUNDARY, never mid-value. `margince` is a prefix
+# of every `margince_dev_<slug>`, so a substring test run from the primary
+# worktree matches every linked worktree's servers — and the primary is the one
+# whose cleanup would then kill all of them at once.
+stack_server_pids() { # dsn [redis_addr]
+  local pid cmd
+  for pid in $(pgrep -f 'bin/(api|worker)|exe/(api|worker)' 2>/dev/null || true); do
+    [[ "$pid" == "$$" ]] && continue
+    cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
+    [[ "$cmd" == *"--dsn $1 "* || "$cmd" == *"--dsn $1" ]] || continue
+    [[ -n "${2:-}" && "$cmd" != *"--redis $2 "* && "$cmd" != *"--redis $2" ]] && continue
+    echo "$pid"
+  done
 }
 
 # The Redis instance serves 80 logical databases in three blocks that must not
@@ -673,43 +773,6 @@ if [[ "$cmd" == "up" ]]; then
 fi
 REDIS_ADDR="localhost:${REDIS_PORT}/${redis_db}"
 
-# with_database DSN NAME — the same connection, pointed at a different database.
-#
-# The database segment is REPLACED, never inherited. DEV_SLUG owns the name
-# ($db above), and a stack that took the name from a supplied DSN would sit on
-# slug-derived ports in front of the BASE database — two stacks that look
-# isolated quietly sharing one.
-#
-# A query string is carried over rather than dropped with the rest of the
-# suffix. That was harmless while these were dev-only variables nobody wrote
-# that way; MARGINCE_DSN is what a DEPLOYMENT fills in, where `?sslmode=require`
-# is ordinary, and silently dropping it would quietly downgrade the connection.
-#
-# A DSN that is not a URL is refused rather than rewritten. libpq also accepts
-# `host=… dbname=…`, and there is no correct way to swap a database segment that
-# is not there — building something malformed from it would fail later, further
-# from the cause. Nothing here echoes the DSN: it carries a password.
-with_database() { # dsn name
-  local dsn="$1" name="$2" query="" scheme rest
-  case "$dsn" in
-    *\?*) query="?${dsn#*\?}"; dsn="${dsn%%\?*}" ;;
-  esac
-  # Both spellings libpq itself accepts, and only those. A `mysql://` DSN would
-  # otherwise be rewritten to point at this stack's database and then fail at the
-  # client, which is the same "fails later, further from the cause" this function
-  # refuses the key/value form to avoid.
-  case "$dsn" in
-    postgres://*|postgresql://*) scheme="${dsn%%://*}://"; rest="${dsn#*://}" ;;
-    *)
-      echo "FAIL: the DSN must be a postgres:// or postgresql:// URL so this stack can point it at ${name}; neither another scheme nor libpq's 'host=… dbname=…' form can be redirected here. Set OWNER_DSN/APP_DSN (or MARGINCE_OWNER_DSN/MARGINCE_DSN) to one." >&2
-      return 1 ;;
-  esac
-  # Everything from the first slash on is whatever database that DSN named; the
-  # authority (credentials, host, port) is the part this stack reuses.
-  rest="${rest%%/*}"
-  printf '%s%s/%s%s' "$scheme" "$rest" "$name" "$query"
-}
-
 dev_owner_url="$(with_database "$OWNER_DSN" "$db")"
 dev_app_url="$(with_database "$APP_DSN" "$db")"
 
@@ -759,15 +822,6 @@ dsn_port() { # dsn
   *) printf '5432\n' ;;
   esac
 }
-
-# Under the machine-global root, not the worktree's own .tmp/ — the same reason
-# the claim registry moved there. The pids land in the SAME file claim_stack
-# reserved, so a sweep from any worktree can see this stack; while these were two
-# different files the reservation carried ports and no pids, and the sweep read a
-# directory only this worktree could see.
-rundir="$(dev_state_dir "$slug")"
-log="${rundir}/dev.log"
-state="${rundir}/env"
 
 # Tag every line with the process that wrote it. api, worker and Vite all append
 # to one log, and once their output interleaves there is no way to recover which
@@ -887,46 +941,6 @@ margince_server_pids() {
     [[ "$pid" == "$$" ]] && continue
     cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
     [[ "$cmd" == *margince* ]] && echo "$pid"
-  done
-}
-
-# stack_server_pids names THIS stack's api and worker wherever they came from —
-# including a run whose pid the state file no longer holds.
-#
-# The state file records one BACKEND_PID/WORKER_PID and every `make dev`
-# overwrites it, so a worker that outlived its own start is invisible to the
-# only thing that would kill it. The api is caught anyway, by its port; a worker
-# binds none, so nothing looked for it and they accumulated — four against one
-# database, three of them stale builds. They share a River leader election, and
-# the leader is what inserts the periodic jobs: an old leader renewing its lease
-# schedules only the job kinds ITS binary knows, so a job kind added since is
-# never enqueued at all. Every other lane keeps running, which is what makes a
-# stale worker read as a broken feature rather than as a process nobody stopped.
-#
-# Matched on the DSN, and on the Redis address when the caller knows it. The
-# database name is already one-to-one with the slug — `margince` for the primary
-# worktree, `margince_dev_<slug>` for a linked one — so the DSN alone names a
-# stack. The Redis address narrows it further and is passed whenever a record
-# supplies it.
-#
-# It is OMITTED rather than guessed when there is no record. A stack whose state
-# file is gone has no claim to read, and the registry's fallback for "no claim"
-# is logical database 0 — the PRIMARY stack's. Passing that would ask for a
-# linked worktree's database on the primary's Redis database, match nothing, and
-# clean up nothing, silently: the same shape of miss this function exists to
-# close.
-# The DSN match ends at a WORD BOUNDARY, never mid-value. `margince` is a prefix
-# of every `margince_dev_<slug>`, so a substring test run from the primary
-# worktree matches every linked worktree's servers — and the primary is the one
-# whose cleanup would then kill all of them at once.
-stack_server_pids() { # dsn [redis_addr]
-  local pid cmd
-  for pid in $(pgrep -f 'bin/(api|worker)|exe/(api|worker)' 2>/dev/null || true); do
-    [[ "$pid" == "$$" ]] && continue
-    cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
-    [[ "$cmd" == *"--dsn $1 "* || "$cmd" == *"--dsn $1" ]] || continue
-    [[ -n "${2:-}" && "$cmd" != *"--redis $2 "* && "$cmd" != *"--redis $2" ]] && continue
-    echo "$pid"
   done
 }
 
