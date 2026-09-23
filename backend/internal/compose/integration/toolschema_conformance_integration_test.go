@@ -612,22 +612,55 @@ func annotatable(t *testing.T, run briefs.BriefRun) (item, evidence ids.UUID) {
 func snapshotBriefRun(ctx context.Context, t *testing.T, e *Env) briefs.BriefRun {
 	t.Helper()
 	engine := briefs.NewBriefEngine(e.Pool, contacts.NewStore(e.DB()))
-	// The reader's own instant, because brief_run is keyed by LOCAL DAY and
-	// read_brief asks for today's: briefseam.go reads `LatestRun(ctx,
-	// time.Now().UTC())`, which resolves a calendar day and matches
-	// `WHERE user_id = $1 AND local_day = $2`. A run stamped with any other day
-	// is a run that read cannot see, so a fixed instant here does not freeze
-	// what the lane certifies — it dates the fixture, and the sweep certifies a
-	// not-found from the morning after.
+	// BOTH days the read can ask for, because this fixture does not get to know
+	// which one it will be.
 	//
-	// Sharing the clock is what keeps the two ends honest; nothing here rests on
-	// WHICH day it is, only that one run exists under the day the read will ask
-	// for. The two agree by asking the same question, not by holding one answer
-	// between them — so a reader that moves to an injected clock leaves this
-	// behind, silently and the same way. Follow it here when it does.
-	run, err := engine.SnapshotRun(ctx, time.Now().UTC())
+	// brief_run is keyed by LOCAL DAY and read_brief asks for the day of ITS
+	// OWN instant — `LatestRun(ctx, time.Now().UTC())` in briefseam.go, matched
+	// as `WHERE user_id = $1 AND local_day = $2`. A run stamped under any other
+	// day is a run that read cannot see, so a fixture reading the clock once
+	// and a read reading it again are two answers to one question: a sweep that
+	// starts at 23:59:59 UTC seeds yesterday and certifies a not-found.
+	//
+	// Matching the spelling — calling time.Now().UTC() here too — is agreement
+	// by coincidence, and it is the version this replaces. Seeding both days
+	// needs no agreement at all: whichever of the two the read names, a run is
+	// under it. The answer returned is the day the fixture started in, which is
+	// the one the read finds in every case but the crossing.
+	now := time.Now().UTC()
+	run, err := engine.SnapshotRun(ctx, now)
 	if err != nil {
 		t.Fatalf("assembling a brief run for the acting rep: %v", err)
 	}
+	if _, err := engine.SnapshotRun(ctx, now.AddDate(0, 0, 1)); err != nil {
+		t.Fatalf("assembling the following day's brief run for the acting rep: %v", err)
+	}
 	return run
+}
+
+// The fixture above covers BOTH days the conformance read can name, and this
+// is what says so.
+//
+// Without it the coupling is back to a comment asking the next reader to
+// remember: snapshotBriefRun reads the clock once, read_brief reads it again,
+// and the two disagree for one minute in every fourteen hundred and forty. The
+// sweep then certifies a not-found — not a schema failure, an empty answer that
+// looks like one — on a schedule nobody chose.
+//
+// It asserts the property rather than the call count, so a later fixture that
+// covers the crossing some other way keeps it.
+func TestTheBriefFixtureCoversBothDaysTheReadCanAskFor(t *testing.T) {
+	e := Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
+	snapshotBriefRun(ctx, t, e)
+
+	engine := briefs.NewBriefEngine(e.Pool, contacts.NewStore(e.DB()))
+	now := time.Now().UTC()
+	for _, when := range []time.Time{now, now.AddDate(0, 0, 1)} {
+		if _, err := engine.LatestRun(ctx, when); err != nil {
+			t.Errorf("no brief run under %s: a conformance sweep whose read lands on that day "+
+				"certifies a not-found instead of an answer, and only on the days the clock "+
+				"happens to cross", when.Format("2006-01-02"))
+		}
+	}
 }
