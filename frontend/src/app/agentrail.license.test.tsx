@@ -85,8 +85,11 @@ function renderRail() {
 const coreState = (container: HTMLElement) =>
   container.querySelector(".arblock")?.getAttribute("data-core-state");
 
-async function openPanel(state: LicenseEntitlement["state"]) {
-  stubApi(state);
+async function openPanel(
+  state: LicenseEntitlement["state"],
+  running: readonly unknown[] = [],
+) {
+  stubApi(state, running);
   const user = userEvent.setup();
   const { container } = renderRail();
   const trigger = container.querySelector(".arhit");
@@ -125,16 +128,22 @@ describe("the licence pill leads to the seats settings page", () => {
 });
 
 describe("the licence stays out of the orb and its line", () => {
+  // The pill is waited on first, so the refusal has provably been read before
+  // the orb is: a working orb before the licence answered would prove nothing.
   it("a refused licence does not outrank a live run: the rail reads the run", async () => {
-    stubApi("rejected", [
+    const { opened, container } = await openPanel("rejected", [
       {
         id: "019f7e65-fbf7-7114-b114-40af4af63a01",
         kind: "morning_brief",
         state: "running",
-        started_at: new Date(Date.now() - 60_000).toISOString(),
+        started_at: "2026-08-01T08:59:00Z",
       },
     ]);
-    const { container } = renderRail();
+    await waitFor(() =>
+      expect(opened.querySelector("a.arwarning")?.textContent).toBe(
+        "License refused",
+      ),
+    );
     await waitFor(
       () => {
         expect(coreState(container)).toBe("working");

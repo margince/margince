@@ -27,9 +27,19 @@ const WIDTHS = [
   { name: "390px", size: { width: 390, height: 844 } },
 ];
 
-async function open(page: Page, route: string, options: MockApiOptions) {
+// `answered` names the read the banner keys on, for a case asserting absence:
+// an absence asserted before that read answered is true of every state, so the
+// wait is armed before the navigation that sends it.
+async function open(
+  page: Page,
+  route: string,
+  options: MockApiOptions,
+  answered?: RegExp,
+) {
   await mockApi(page, options);
+  const read = answered && page.waitForResponse(answered);
   await page.goto(route);
+  await read;
   // The page itself, before the banner: a shell that failed to render would
   // otherwise report an absent banner as the state under test.
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
@@ -74,9 +84,12 @@ test.describe("the reindex advisory", () => {
   // spec measuring a shell no installation in this state has.
   test("is absent while the index matches the model", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await open(page, "#/settings/knowledge", {
-      embedReindex: "current",
-    });
+    await open(
+      page,
+      "#/settings/knowledge",
+      { embedReindex: "current" },
+      /\/embeddings\/reindex\/status/,
+    );
     await expect(page.locator(BANNER)).toHaveCount(0);
   });
 
@@ -115,8 +128,8 @@ test.describe("the reindex advisory", () => {
   });
 });
 
-// The licence left the agent rail for this chrome: a refusal is still true in an
-// hour, and while it held the rail's one line no run in flight could be named.
+// A refused licence stands here and not on the rail's live line: it is still
+// true in an hour, and the line is for what the agent is doing now.
 test.describe("the licence advisory", () => {
   const ROUTE = "#/deals";
 
@@ -150,7 +163,7 @@ test.describe("the licence advisory", () => {
   for (const license of ["valid", "absent"] as const) {
     test(`is absent while the licence is ${license}`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
-      await open(page, ROUTE, { license });
+      await open(page, ROUTE, { license }, /\/installation\/license/);
       await expect(page.locator(BANNER)).toHaveCount(0);
     });
   }
@@ -164,7 +177,12 @@ test.describe("the licence advisory", () => {
     const banner = page.locator(BANNER);
     await expect(banner).toContainText(de["shell.license.refused"]);
     await expect(
-      banner.getByRole("link", { name: de["licensebanner.link"] }),
+      banner.getByRole("link", {
+        name: de["licensebanner.link"].replace(
+          "{tab}",
+          de["settings.tab.seats"],
+        ),
+      }),
       "the advisory offers no way to the screen that resolves it",
     ).toHaveAttribute("href", /#\/settings\/seats$/);
     await expect(

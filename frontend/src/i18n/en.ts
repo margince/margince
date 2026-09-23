@@ -7972,7 +7972,7 @@ export const en = {
 
   "licensebanner.body":
     "This installation's license token was checked and refused.",
-  "licensebanner.link": "Open Seats & license",
+  "licensebanner.link": "Open {tab}",
 
   "aicalls.title": "AI call trace",
   "aicalls.withheld":

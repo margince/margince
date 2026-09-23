@@ -106,7 +106,7 @@ const RECAP_ROWS = 5;
  */
 const AI_SETTINGS_HREF = routeHash(settingsHref("usage"));
 /** Where a licence key is entered: the seats section of settings. */
-const LICENSE_SETTINGS_HREF = "#/settings/seats";
+const LICENSE_SETTINGS_HREF = routeHash(settingsHref("seats"));
 
 /**
  * The state in a word, under the agent's name.
@@ -952,7 +952,8 @@ function barLine(
  * source that stopped answering are different repairs, and both outrank a run
  * that broke — an agent that cannot run at all is not a failed run, it is no
  * runs. Amber always has an occurrence behind it, a broken run or a stalled
- * one, so the generic word stands in only for a kind with no sentence.
+ * one, and causeLine gives every kind a sentence, so amber's fallback is the
+ * same last resort the red branch keeps.
  */
 function faultLine(
   state: "error" | "warning",
@@ -961,7 +962,7 @@ function faultLine(
   t: Translator,
 ): SpokenLine {
   if (state === "warning") {
-    return agentLine ?? plain(t("agent.state.warning"));
+    return agentLine ?? plain(t("agent.line.runStopped"));
   }
   if (signals.ai === "unconfigured") {
     return plain(t("agent.fact.noModel"));

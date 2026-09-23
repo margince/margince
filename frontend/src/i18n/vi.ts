@@ -7697,7 +7697,7 @@ export const vi = {
 
   "licensebanner.body":
     "Token giấy phép của bản cài đặt này đã được kiểm tra và bị từ chối.",
-  "licensebanner.link": "Mở Giấy phép & chỗ ngồi",
+  "licensebanner.link": "Mở {tab}",
 
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":

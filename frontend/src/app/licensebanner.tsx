@@ -27,7 +27,7 @@ export function LicenseBanner() {
         title={t("shell.license.refused")}
         actions={
           <a href={routeHash(settingsHref("seats"))}>
-            {t("licensebanner.link")}
+            {t("licensebanner.link", { tab: t("settings.tab.seats") })}
           </a>
         }
       >

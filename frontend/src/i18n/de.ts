@@ -7786,7 +7786,7 @@ export const de = {
 
   "licensebanner.body":
     "Das Lizenz-Token dieser Installation wurde geprüft und abgelehnt.",
-  "licensebanner.link": "Lizenzen & Plätze öffnen",
+  "licensebanner.link": "{tab} öffnen",
 
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":

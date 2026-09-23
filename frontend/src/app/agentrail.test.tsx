@@ -47,9 +47,9 @@ import { stubPhoneViewport } from "./testing/shellharness";
 //
 // The state derivation is load-bearing enough to earn cases of its own: red is
 // for the tool not being reachable at all (no model bound, or a source it
-// cannot get to), amber is for a run that stalled, and a transient
-// tool failure colours nothing — that precision is the whole point of moving
-// off the eight-state vocabulary.
+// cannot get to), amber is for a run that stalled or settled degraded, and a
+// transient tool failure colours nothing — that precision is the whole point of
+// moving off the eight-state vocabulary.
 
 type Connector = components["schemas"]["CaptureConnection"];
 type Candidate = components["schemas"]["DedupeCandidate"];
@@ -952,6 +952,7 @@ describe("AgentRail", () => {
     });
 
   const BRIEF_RUNNING = "I'm writing your morning brief.";
+  const BRIEF_FAILED = "I couldn't finish your morning brief.";
 
   const runLines = () =>
     [...panel().querySelectorAll(".arrunline")].map((el) => el.textContent);
@@ -1175,9 +1176,7 @@ describe("AgentRail", () => {
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("error"),
     );
-    expect(container.querySelector(".arline")?.textContent).not.toBe(
-      BRIEF_RUNNING,
-    );
+    expect(container.querySelector(".arline")?.textContent).toBe(BRIEF_FAILED);
   });
 
   // Opening the panel acknowledges EVERY fault the read reported, at once.
