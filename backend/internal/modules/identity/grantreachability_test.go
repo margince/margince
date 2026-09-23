@@ -12,9 +12,11 @@ package identity
 // the door refuses, which is exactly what a door is supposed to do, and the
 // refusal is indistinguishable from a correct one.
 //
-// That is not hypothetical: `assurance.Store.Resolve` requires
-// `forecast.update`, which no seeded role holds, including admin. The whole
-// answering half of the input-check review shipped unreachable.
+// That is not hypothetical, and it is what this gate was written for:
+// `assurance.Store.Resolve` requires `forecast.update`, which no seeded role
+// held — admin included. It was the ONLY unheld pair across the resolvable
+// call sites, which is why the gate could be armed with one waiver rather than
+// a backlog. It is held now.
 //
 // ## Why this reads source rather than calling the handlers
 //
@@ -53,19 +55,10 @@ import (
 // seeded policy hands to no role at all. Each one is a feature that cannot be
 // reached on any installation, so an entry here is an outage with a reason,
 // never a style waiver.
-var grantedToNobody = gatekit.Waive(map[string]string{
-	// The seeded policy gives `forecast` the createRead posture on the belief
-	// that "a forecast reading is derived, and a current call SUPERSEDES rather
-	// than being rewritten" — true of the readings, and not true of an
-	// input-check finding, which is answered in place by a named contact.
-	//
-	// Which seats may answer one is a product call and not this gate's to make:
-	// it decides whether every reader of the forecast may resolve a finding or
-	// only the seats that already create one. Tracked as the open question on
-	// the ticket this gate was written for. The entry stands until that lands,
-	// and it is the reason the gate could be armed today rather than after it.
-	"forecast.update": "no seeded role holds it, so the input-check answering path is unreachable on every installation; which seats may answer a finding is an open product decision, not a policy typo",
-})
+// EMPTY, which is the state this gate is meant to reach. Its one entry —
+// `forecast.update` — was what let it be armed before the product decision it
+// waited on had been taken. That decision landed.
+var grantedToNobody = gatekit.Waive(map[string]string{})
 
 // dynamicObjectCeiling is how many `auth.Require` call sites name an object
 // this scan cannot resolve — a runtime value rather than a literal or a
