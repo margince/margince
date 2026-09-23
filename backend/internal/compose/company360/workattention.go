@@ -67,12 +67,10 @@ type overdueTask struct {
 // project silently missing its commitment reads as a project with nothing
 // outstanding — which is the one thing this card must never say by accident.
 //
-// A THIRD does not reach it yet: an overdue task or a claim whose EVIDENCE
-// activity falls outside the caller's activity row scope is dropped by
-// auth.ActivityContentClause inside the queries below, which report only
-// their rows and not what they filtered. Such a row reads as a piece of work
-// with nothing outstanding. Closing it means those queries reporting their
-// own drops, the same way the contact scope already does.
+// The THIRD is an overdue task outside the caller's activity row scope. The
+// task query projects auth.ActivityContentClause as a column instead of
+// filtering on it, so it reports what it could not show as well as what it
+// could — the same way the contact scope already does.
 func (a *assembly) readWorkAttention() error {
 	dealIDs, projects := attentionTargets(a.out)
 	if len(dealIDs) == 0 && len(projects) == 0 {
@@ -98,11 +96,11 @@ func (a *assembly) decorateWorkAttention(dealIDs []ids.UUID, projects []ids.Proj
 	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
 		return false, err
 	}
-	dealTasks, err := overdueTasksBy(a.ctx, a.tx, a.companyID, "deal_id", dealIDs, a.now)
+	dealTasks, dealsComplete, err := overdueTasksBy(a.ctx, a.tx, a.companyID, "deal_id", dealIDs, a.now)
 	if err != nil {
 		return false, err
 	}
-	projectTasks, err := overdueTasksBy(a.ctx, a.tx, a.companyID, "project_id", projectUUIDs(projects), a.now)
+	projectTasks, projectsComplete, err := overdueTasksBy(a.ctx, a.tx, a.companyID, "project_id", projectUUIDs(projects), a.now)
 	if err != nil {
 		return false, err
 	}
@@ -127,7 +125,7 @@ func (a *assembly) decorateWorkAttention(dealIDs []ids.UUID, projects []ids.Proj
 			row.Attention = attention
 		}
 	}
-	return complete, nil
+	return complete && dealsComplete && projectsComplete, nil
 }
 
 // attentionTargets is what the page has in flight: the open deals and the
@@ -181,10 +179,10 @@ func projectUUIDs(projects []ids.ProjectID) []ids.UUID {
 func overdueTasksBy(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	linkColumn string, keys []ids.UUID, now time.Time,
-) (map[ids.UUID]overdueTask, error) {
+) (map[ids.UUID]overdueTask, bool, error) {
 	out := map[ids.UUID]overdueTask{}
 	if len(keys) == 0 {
-		return out, nil
+		return out, true, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -193,44 +191,73 @@ func overdueTasksBy(
 	nowPos := arg(now)
 	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if activityScope == "" {
 		activityScope = scopeAll
 	}
-	// DISTINCT ON needs its key first in ORDER BY, and the activity id breaks
-	// the tie so two tasks due the same day do not swap places between two
-	// reads of the same page.
+	// THE SCOPE IS A COLUMN, not a filter, and that is the whole of what lets
+	// this read say what it could not see. Filtered, a piece of work whose only
+	// overdue task is out of the caller's activity row scope came back with no
+	// attention at all — identical to a piece of work with nothing
+	// outstanding, which is the one thing this card must never say by accident.
+	//
+	// bool_or over the PARTITION sees every row for the key, including the ones
+	// DISTINCT ON is about to discard, because a window function is computed
+	// before DISTINCT ON chooses. So `dropped` answers for the whole set while
+	// the row kept is still one row.
+	//
+	// coalesce, because a NULL is not a permission. A three-valued clause
+	// read as a filter simply drops its NULLs; read as a column it would scan
+	// into a bool and fail, or — worse — make bool_or skip the row and report
+	// a complete answer over one it could not decide.
+	//
+	// DISTINCT ON needs its key first in ORDER BY. Visibility comes next, so
+	// the row kept is the earliest VISIBLE task wherever one exists; the
+	// activity id breaks the tie so two tasks due the same day do not swap
+	// places between two reads of the same page. When every task for a key is
+	// withheld the kept row is a withheld one, which is why `visible` is
+	// scanned and not assumed — its subject and assignee are read but never
+	// hung on the card.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT DISTINCT ON (l.%[1]s)
-		       l.%[1]s, coalesce(a.subject, ''), coalesce(u.display_name, ''), a.due_at
+		       l.%[1]s, coalesce(a.subject, ''), coalesce(u.display_name, ''), a.due_at,
+		       coalesce((%[5]s), false) AS visible,
+		       bool_or(NOT coalesce((%[5]s), false)) OVER (PARTITION BY l.%[1]s) AS dropped
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.%[1]s = ANY($%[2]d)
 		  LEFT JOIN app_user u ON u.id = a.assignee_id
 		         AND `+identity.LiveMemberSQL("u")+`
 		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
 		   AND a.due_at IS NOT NULL AND a.due_at < $%[4]d
-		   AND (%[5]s) AND %[6]s
-		 ORDER BY l.%[1]s, a.due_at, a.id`,
+		   AND %[6]s
+		 ORDER BY l.%[1]s, coalesce((%[5]s), false) DESC, a.due_at, a.id`,
 		linkColumn, keysPos, companyPos, nowPos, activityScope,
 		activities.CompanyLinkedActivityExists(companyPos)), args...)
 	if err != nil {
-		return nil, fmt.Errorf("read the account's overdue tasks: %w", err)
+		return nil, false, fmt.Errorf("read the account's overdue tasks: %w", err)
 	}
 	defer rows.Close()
 
+	complete := true
 	for rows.Next() {
 		var key ids.UUID
 		var task overdueTask
-		if err := rows.Scan(&key, &task.Subject, &task.Who, &task.DueAt); err != nil {
-			return nil, fmt.Errorf("scan an overdue task: %w", err)
+		var visible, dropped bool
+		if err := rows.Scan(&key, &task.Subject, &task.Who, &task.DueAt, &visible, &dropped); err != nil {
+			return nil, false, fmt.Errorf("scan an overdue task: %w", err)
 		}
-		out[key] = task
+		if dropped {
+			complete = false
+		}
+		if visible {
+			out[key] = task
+		}
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read the account's overdue tasks: %w", err)
+		return nil, false, fmt.Errorf("read the account's overdue tasks: %w", err)
 	}
-	return out, nil
+	return out, complete, nil
 }
 
 // taskAttention is the overdue task as the card's one fact, or nothing when
