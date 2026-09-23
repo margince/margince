@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -39,6 +40,7 @@ type relinkThreadArgs struct {
 type relinkThread struct {
 	relinker ActivityRelinker
 	p        datasource.SystemOfRecordProvider
+	language baselanguage.Resolver
 }
 
 func (t relinkThread) Spec() mcp.ToolSpec {
@@ -71,7 +73,7 @@ func (t relinkThread) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewRelinkThreadCall(t.p, RelinkThreadCommand{
+	return StageSubject(ctx, NewRelinkThreadCall(t.p, t.language, RelinkThreadCommand{
 		ThreadKey: args.ThreadKey, EntityType: args.EntityType, EntityID: args.EntityID,
 	}))
 }
@@ -100,6 +102,7 @@ type relinkActivitiesArgs struct {
 type relinkActivities struct {
 	relinker ActivityRelinker
 	p        datasource.SystemOfRecordProvider
+	language baselanguage.Resolver
 }
 
 func (t relinkActivities) Spec() mcp.ToolSpec {
@@ -127,7 +130,7 @@ func (t relinkActivities) StageInfo(ctx context.Context, in json.RawMessage) (St
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewRelinkActivitiesCall(t.p, RelinkActivitiesCommand{
+	return StageSubject(ctx, NewRelinkActivitiesCall(t.p, t.language, RelinkActivitiesCommand{
 		ActivityIDs: args.ActivityIDs, EntityType: args.EntityType, EntityID: args.EntityID,
 	}))
 }

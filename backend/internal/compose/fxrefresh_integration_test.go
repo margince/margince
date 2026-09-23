@@ -54,6 +54,7 @@ func fxRefreshWith(e *integration.Env, reply string, bootstrap []string) fxRefre
 		brain:               fixedBrain{json: reply},
 		url:                 "https://rates.test/latest",
 		bootstrapCurrencies: bootstrap,
+		pool:                e.Pool,
 		log:                 quietLog(),
 	}
 }

@@ -133,6 +133,8 @@ type modelCostRefresh struct {
 	fetcher pageFetcher
 	brain   completer
 	sources []pricingSource
+	// pool reads the installation's base language the proposals are written in.
+	pool *pgxpool.Pool
 	// bound maps a provider to the model ids this deployment's routing binds on
 	// it. A structured catalog is narrowed to that provider's own bindings —
 	// nil (nothing wired) keeps every model, which is what a deployment with no
@@ -159,6 +161,7 @@ func (m modelCostRefresh) run(ctx context.Context) error {
 	}
 
 	ws := storekit.MustWorkspace(ctx)
+	said := approvalSummaryCopyOver(ctx, m.pool)
 	staged := 0
 	var srcErrs []error
 	for _, src := range m.sources {
@@ -177,11 +180,15 @@ func (m modelCostRefresh) run(ctx context.Context) error {
 			continue
 		}
 		for _, em := range models {
-			changed, prop, ok := diffModel(em, currentByKey)
+			prop, ok := diffModel(em, currentByKey)
 			if !ok {
 				continue
 			}
-			summary := fmt.Sprintf("%s/%s input %s (was %s)", em.Provider, em.ModelID, prop.InputUsd, changed)
+			prior := said.modelRateNew
+			if prop.ExpectedPrior != nil {
+				prior = prop.ExpectedPrior.InputUsd
+			}
+			summary := fmt.Sprintf(said.modelRateChanged, em.Provider, em.ModelID, prop.InputUsd, prior)
 			identity, err := json.Marshal(map[string]string{"provider": em.Provider, "model_id": em.ModelID})
 			if err != nil {
 				return fmt.Errorf("model refresh: identity %s/%s: %w", em.Provider, em.ModelID, err)
@@ -354,13 +361,14 @@ func acceptRateRows(models []extractedModel, provider string) []extractedModel {
 // alias another model's entry and attach the wrong expected prior.
 type modelIdentity struct{ provider, modelID string }
 
-// diffModel returns (currentInputForSummary, proposal, changed?) — changed is
-// true when the extracted model is new or any of its four µUSD buckets differ
-// from the sheet. An extracted price that fails validation drops the model.
-func diffModel(em extractedModel, current map[modelIdentity]ai.ModelRateRow) (string, aiModelRateProposal, bool) {
+// diffModel returns (proposal, changed?) — changed is true when the extracted
+// model is new or any of its four µUSD buckets differ from the sheet. The
+// proposal's ExpectedPrior is nil exactly when the sheet lacks the model. An
+// extracted price that fails validation drops the model.
+func diffModel(em extractedModel, current map[modelIdentity]ai.ModelRateRow) (aiModelRateProposal, bool) {
 	newMicro, ok := allMicro(em)
 	if !ok {
-		return "", aiModelRateProposal{}, false
+		return aiModelRateProposal{}, false
 	}
 	prop := aiModelRateProposal{
 		Provider: em.Provider, ModelID: em.ModelID,
@@ -369,20 +377,20 @@ func diffModel(em extractedModel, current map[modelIdentity]ai.ModelRateRow) (st
 	}
 	cur, found := current[modelIdentity{em.Provider, em.ModelID}]
 	if !found {
-		return "(new)", prop, true
+		return prop, true
 	}
 	curMicro, ok := allMicro(extractedModel{
 		InputUsd: cur.InputUsd, OutputUsd: cur.OutputUsd,
 		CacheReadUsd: cur.CacheReadUsd, CacheWriteUsd: cur.CacheWriteUsd,
 	})
 	if ok && newMicro == curMicro {
-		return "", aiModelRateProposal{}, false // unchanged
+		return aiModelRateProposal{}, false // unchanged
 	}
 	prop.ExpectedPrior = &aiModelRatePrior{
 		InputUsd: cur.InputUsd, OutputUsd: cur.OutputUsd,
 		CacheReadUsd: cur.CacheReadUsd, CacheWriteUsd: cur.CacheWriteUsd,
 	}
-	return cur.InputUsd, prop, true
+	return prop, true
 }
 
 type microBuckets struct{ in, out, cr, cw int64 }
@@ -453,6 +461,7 @@ func newModelCostRefreshWorker(pool *pgxpool.Pool, brain completer, sources []pr
 		fetcher: webread.New(),
 		brain:   brain,
 		sources: sources,
+		pool:    pool,
 		bound:   bound,
 		log:     log,
 	}}

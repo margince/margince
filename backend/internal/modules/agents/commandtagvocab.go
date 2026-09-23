@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
 // MergeTagsCommand is one vocabulary fold, whichever door asked for it: the
@@ -34,11 +35,14 @@ type MergeTagsCommand struct {
 // NewMergeTagsCall binds one fold to the resolver that answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewMergeTagsCall(tags Tags, cmd MergeTagsCommand) GovernedCall {
-	return bind[MergeTagsCommand](&mergeTagsResolver{tags: tags}, cmd)
+func NewMergeTagsCall(tags Tags, language baselanguage.Resolver, cmd MergeTagsCommand) GovernedCall {
+	return bind[MergeTagsCommand](&mergeTagsResolver{tags: tags, language: language}, cmd)
 }
 
-type mergeTagsResolver struct{ tags Tags }
+type mergeTagsResolver struct {
+	tags     Tags
+	language baselanguage.Resolver
+}
 
 // Subject names the SOURCE tag as the target — the row the merge destroys —
 // and the SURVIVOR as the co-target.
@@ -75,7 +79,7 @@ func (r *mergeTagsResolver) Subject(ctx context.Context, cmd MergeTagsCommand) (
 		TargetID:     cmd.SourceID,
 		CoTargetType: tagRecordType,
 		CoTargetID:   cmd.TargetID,
-		Summary: fmt.Sprintf("Fold tag %q into %q, releasing the name %q",
+		Summary: fmt.Sprintf(summaryIn(ctx, r.language).mergeTags,
 			source.Name, target.Name, source.Name),
 	}, nil
 }

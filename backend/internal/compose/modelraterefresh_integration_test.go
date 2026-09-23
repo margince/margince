@@ -64,6 +64,7 @@ func TestModelCostRefreshStagesChangedAndDropsUngrounded(t *testing.T) {
 		fetcher: fakeFetcher{text: "some pricing page text"},
 		brain:   fakeBrain{text: extraction},
 		sources: []pricingSource{{Provider: "anthropic", URL: "https://prices.test/pricing"}},
+		pool:    e.Pool,
 		log:     quietLog(),
 	}
 	wctx := rateRefreshWorkerCtx(context.Background(), e.WS, e.Rep1.String())
@@ -108,6 +109,7 @@ func runModelRefresh(t *testing.T, e *integration.Env, extraction string) {
 		fetcher: fakeFetcher{text: "pricing page text"},
 		brain:   fakeBrain{text: extraction},
 		sources: []pricingSource{{Provider: "acme", URL: "https://prices.test/pricing"}},
+		pool:    e.Pool,
 		log:     quietLog(),
 	}
 	if err := m.run(rateRefreshWorkerCtx(context.Background(), e.WS, e.Rep1.String())); err != nil {

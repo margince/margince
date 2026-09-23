@@ -17,11 +17,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -46,6 +48,8 @@ type scrapeEngine struct {
 	extract   evidenceExtractor
 	contacts  *contacts.Store
 	approvals *approvals.Service
+	// pool reads the installation's base language the card is written in.
+	pool *pgxpool.Pool
 }
 
 // Propose resolves the URL to read (override, else the company's domain — both
@@ -113,7 +117,7 @@ func (e *scrapeEngine) Propose(ctx context.Context, companyID ids.UUID, override
 		DiffHash:       hex.EncodeToString(digest[:]),
 		TargetType:     enrichTargetType,
 		TargetID:       companyID,
-		Summary:        "Enrichment of " + rawURL,
+		Summary:        fmt.Sprintf(approvalSummaryCopyOver(ctx, e.pool).enrichmentOf, rawURL),
 	})
 	if err != nil {
 		return crmcontracts.EnrichmentProposal{}, err

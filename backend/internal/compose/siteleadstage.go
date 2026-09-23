@@ -72,9 +72,10 @@ func (w *siteDeepReadWorker) stageSiteLeadsInTx(ctx context.Context, tx pgx.Tx, 
 	if err := w.approvals.LockPendingGroupInTx(ctx, tx, *claim.CompanyID, siteLeadProposalKind); err != nil {
 		return nil, err
 	}
+	said := approvalSummaryCopyIn(ctx, tx)
 	var proposalIDs []ids.UUID
 	for _, contact := range found {
-		approvalID, staged, err := w.stageSiteLead(ctx, tx, readID, claim, contact, bundleID)
+		approvalID, staged, err := w.stageSiteLead(ctx, tx, said, readID, claim, contact, bundleID)
 		if err != nil {
 			return nil, fmt.Errorf("staging the %s lead: %w", contact.Name, err)
 		}
@@ -92,7 +93,7 @@ func (w *siteDeepReadWorker) stageSiteLeadsInTx(ctx context.Context, tx pgx.Tx, 
 // knows is not a decision: they reached us by email long before a crawler
 // read their name off the about page, and re-proposing them spends the
 // queue on a confirmation that would land on the row that is already there.
-func (w *siteDeepReadWorker) stageSiteLead(ctx context.Context, tx pgx.Tx, readID ids.UUID, claim contacts.SiteReadClaim, contact siteContact, bundleID ids.UUID) (ids.ApprovalID, bool, error) {
+func (w *siteDeepReadWorker) stageSiteLead(ctx context.Context, tx pgx.Tx, said approvalSummaryCopy, readID ids.UUID, claim contacts.SiteReadClaim, contact siteContact, bundleID ids.UUID) (ids.ApprovalID, bool, error) {
 	if claim.CompanyID == nil {
 		return ids.ApprovalID{}, false, errors.New("site deep read: an unbound onboarding draft cannot stage a lead proposal")
 	}
@@ -121,7 +122,7 @@ func (w *siteDeepReadWorker) stageSiteLead(ctx context.Context, tx pgx.Tx, readI
 			"read", readID.String(), "url", contact.SourceURL)
 		return ids.ApprovalID{}, false, nil
 	}
-	in, err := siteLeadStageInput(readID, *claim.CompanyID, claim.SeedURL, contact, bundleID)
+	in, err := siteLeadStageInput(said, readID, *claim.CompanyID, claim.SeedURL, contact, bundleID)
 	if err != nil {
 		return ids.ApprovalID{}, false, err
 	}
@@ -192,7 +193,7 @@ func (w *siteDeepReadWorker) probeCtx(ctx context.Context) (context.Context, err
 // second would expire the first's still-undecided approval. The natural key
 // normalizes the name and carries the published email, so it separates exactly
 // the contacts the accept path keeps separate.
-func siteLeadStageInput(readID, companyID ids.UUID, seedURL string, contact siteContact, bundleID ids.UUID) (approvals.StageInput, error) {
+func siteLeadStageInput(said approvalSummaryCopy, readID, companyID ids.UUID, seedURL string, contact siteContact, bundleID ids.UUID) (approvals.StageInput, error) {
 	naturalKey := siteLeadSourceID(companyID, contact.Name, contact.PublishedEmail)
 	proposedChange, err := json.Marshal(siteLeadProposal{
 		CompanyID:       companyID,
@@ -222,7 +223,7 @@ func siteLeadStageInput(readID, companyID ids.UUID, seedURL string, contact site
 		Identity:       identity,
 		JoinPending:    true,
 		BundleID:       bundleID,
-		Summary:        fmt.Sprintf("Found on %s: %s — %s", siteLeadHost(seedURL), contact.Name, contact.Role),
+		Summary:        fmt.Sprintf(said.siteLeadFound, siteLeadHost(seedURL), contact.Name, contact.Role),
 	}, nil
 }
 

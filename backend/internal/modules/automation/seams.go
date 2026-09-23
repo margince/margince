@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -166,6 +167,9 @@ type Executors struct {
 	Comms     Comms
 	Notifier  Notifier // the durable notice transport — see Notifier's doc
 	Claims    EffectClaims
+	// Language is the installation's base language every staged summary is
+	// written in; nil writes English.
+	Language baselanguage.Resolver
 }
 
 // EntityAnchor is one ActivityScan candidate: an entity whose most recent

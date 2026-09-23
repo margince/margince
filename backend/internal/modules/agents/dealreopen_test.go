@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -205,7 +206,7 @@ func TestTheApprovalSummaryNamesTheMoveItActuallyIs(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			stages.semantics[current] = tc.source
 			stages.semantics[target] = tc.target
-			got := dealMoveSummary(context.Background(), stages, record(current), tc.target)
+			got := dealMoveSummary(context.Background(), summaryByLang[textlang.English], stages, record(current), tc.target)
 			if !strings.Contains(got, tc.want) {
 				t.Errorf("summary = %q, want it to name the act (%q)", got, tc.want)
 			}
@@ -214,13 +215,13 @@ func TestTheApprovalSummaryNamesTheMoveItActuallyIs(t *testing.T) {
 	// The table above leaves the map on its last case, so the reopen is set up
 	// again explicitly rather than inherited from whichever ran last.
 	stages.semantics[current], stages.semantics[target] = "won", "open"
-	if got := dealMoveSummary(context.Background(), stages, record(current), "open"); !strings.Contains(got, "close date") {
+	if got := dealMoveSummary(context.Background(), summaryByLang[textlang.English], stages, record(current), "open"); !strings.Contains(got, "close date") {
 		t.Errorf("summary = %q, want a reopen to say what approving costs", got)
 	}
 	// A stage it cannot resolve degrades to naming the destination rather than
 	// failing — the approval is already the safe answer.
 	blank := datasource.Record{Fields: []byte(`{"name":"Acme renewal"}`)}
-	if got := dealMoveSummary(context.Background(), stages, blank, "open"); !strings.HasPrefix(got, "Move deal") {
+	if got := dealMoveSummary(context.Background(), summaryByLang[textlang.English], stages, blank, "open"); !strings.HasPrefix(got, "Move deal") {
 		t.Errorf("summary = %q, want the destination named when the source cannot be read", got)
 	}
 }

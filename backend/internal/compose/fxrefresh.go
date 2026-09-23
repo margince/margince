@@ -76,7 +76,9 @@ type fxRefresh struct {
 	// the sheet is empty (there is nothing tracked to derive symbols from).
 	// Empty ⇒ an empty sheet stays a no-op (never a fabricated rate).
 	bootstrapCurrencies []string
-	log                 *slog.Logger
+	// pool reads the installation's base language the proposals are written in.
+	pool *pgxpool.Pool
+	log  *slog.Logger
 }
 
 func (f fxRefresh) run(ctx context.Context) error {
@@ -120,6 +122,7 @@ func (f fxRefresh) run(ctx context.Context) error {
 	fetched := f.collect(base, pairs, trackedCurrencySet(symbols))
 
 	ws := storekit.MustWorkspace(ctx)
+	said := approvalSummaryCopyOver(ctx, f.pool)
 	staged := 0
 	for cur, newRate := range fetched {
 		prior := priorRate[cur]
@@ -128,9 +131,9 @@ func (f fxRefresh) run(ctx context.Context) error {
 		}
 		was := prior
 		if was == "" {
-			was = "none in force today"
+			was = said.fxNoRateInForce
 		}
-		summary := fmt.Sprintf("%s → %s %s (was %s)", cur, base, newRate, was)
+		summary := fmt.Sprintf(said.fxRateChanged, cur, base, newRate, was)
 		identity, err := json.Marshal(map[string]string{"from_currency": cur})
 		if err != nil {
 			return fmt.Errorf("fx refresh: identity %s: %w", cur, err)
@@ -314,6 +317,7 @@ func newFxRefreshWorker(pool *pgxpool.Pool, brain completer, url string, bootstr
 		brain:               brain,
 		url:                 url,
 		bootstrapCurrencies: bootstrapCurrencies,
+		pool:                pool,
 		log:                 log,
 	}}
 }

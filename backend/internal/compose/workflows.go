@@ -68,6 +68,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		// is finally a true sentence rather than a skipped run.
 		Notifier: noticesNotifier{store: notices.NewStore(db)},
 		Claims:   automation.NewEffectClaims(db),
+		Language: installationLanguage(db.Pool()),
 	}
 	for _, handler := range automation.StarterWorkflows(ex) {
 		engine.RegisterWorkflow(handler)

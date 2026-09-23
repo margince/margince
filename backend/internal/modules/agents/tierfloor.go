@@ -120,8 +120,9 @@ func (r *Registry) tightened(t mcp.Tool, spec mcp.ToolSpec, args json.RawMessage
 const summaryFieldLimit = 8
 
 // describeGenericWrite is the one line the inbox shows for a create or an update
-// staged through a generic verb — the act, the record type, and which fields the
-// call sets, sorted so two renderings of one call read alike.
+// staged through a generic verb — head names the act and the record type, and
+// the rest which fields the call sets, sorted so two renderings of one call read
+// alike.
 //
 // It names the fields rather than their values. The sibling 🟡 tools render
 // values because their arguments ARE the effect a human weighs — who a mail
@@ -129,8 +130,7 @@ const summaryFieldLimit = 8
 // staged row carries the whole of them in proposed_change, which the inbox shows
 // beside this line; repeating them here would truncate exactly the long text a
 // reader would then have to open proposed_change to see anyway.
-func describeGenericWrite(act, recordType string, fields json.RawMessage) string {
-	head := fmt.Sprintf("%s a %s", act, recordType)
+func describeGenericWrite(said summaryCopy, head string, fields json.RawMessage) string {
 	var patch map[string]json.RawMessage
 	if json.Unmarshal(fields, &patch) != nil || len(patch) == 0 {
 		return head
@@ -142,7 +142,7 @@ func describeGenericWrite(act, recordType string, fields json.RawMessage) string
 	sort.Strings(names)
 	if len(names) > summaryFieldLimit {
 		names = append(names[:summaryFieldLimit],
-			fmt.Sprintf("+%d more", len(names)-summaryFieldLimit))
+			fmt.Sprintf(said.moreFields, len(names)-summaryFieldLimit))
 	}
-	return head + ", setting " + strings.Join(names, ", ")
+	return head + fmt.Sprintf(said.settingFields, strings.Join(names, ", "))
 }

@@ -17,7 +17,12 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
+
+// inEnglish is the set the English-reading cases below are pinned against.
+var inEnglish = approvalSummaryCopyFor(textlang.English)
 
 // summaryRequest is the request shape restSummary reads. `params` are the
 // routed values in the order the pattern declares them — chi keeps that order,
@@ -44,7 +49,7 @@ func TestANestedCreateNamesTheRecordItHangsOff(t *testing.T) {
 	req := summaryRequest("POST", "/v1/deal-rooms/room-1/threads/thread-9/comments",
 		[2]string{"id", "room-1"}, [2]string{"threadId", "thread-9"})
 
-	got := restSummary(pol, req, []byte(`{"body":"Sounds good"}`))
+	got := restSummary(inEnglish, pol, req, []byte(`{"body":"Sounds good"}`))
 	if !strings.Contains(got, "under=thread-9") {
 		t.Errorf("summary %q does not name the thread the comment attaches to", got)
 	}
@@ -56,7 +61,7 @@ func TestANestedCreateNamesTheRecordItHangsOff(t *testing.T) {
 // A flat create has no parent, and inventing one would be worse than silence.
 func TestAFlatCreateNamesNoParent(t *testing.T) {
 	pol := agentPolicy{Op: "createCustomField", Tool: "create_record", RecordType: recordTypeCustomField}
-	got := restSummary(pol, summaryRequest("POST", "/v1/custom-fields"), []byte(`{"key":"industry"}`))
+	got := restSummary(inEnglish, pol, summaryRequest("POST", "/v1/custom-fields"), []byte(`{"key":"industry"}`))
 	if strings.Contains(got, "under=") {
 		t.Errorf("summary %q claims a parent a top-level create does not have", got)
 	}
@@ -64,7 +69,7 @@ func TestAFlatCreateNamesNoParent(t *testing.T) {
 
 func TestRestSummaryNamesTheValuesTheCallWouldWrite(t *testing.T) {
 	pol := agentPolicy{Op: "updateDeal", Tool: "update_record", RecordType: recordTypeDeal}
-	got := restSummary(pol, summaryRequest("PATCH", "/v1/deals/018f2a10-0000-7000-8000-00000000000a"),
+	got := restSummary(inEnglish, pol, summaryRequest("PATCH", "/v1/deals/018f2a10-0000-7000-8000-00000000000a"),
 		[]byte(`{"amount_minor":100,"currency":"EUR","expected_close_date":"2027-06-30"}`))
 
 	for _, want := range []string{
@@ -84,7 +89,7 @@ func TestRestSummaryNamesTheValuesTheCallWouldWrite(t *testing.T) {
 // and the operationId is the contract's word rather than theirs.
 func TestRestSummaryLeadsWithTheActRatherThanTheRoute(t *testing.T) {
 	pol := agentPolicy{Op: "updateDeal", Tool: "update_record", RecordType: recordTypeDeal}
-	got := restSummary(pol, summaryRequest("PATCH", "/v1/deals/018f2a10-0000-7000-8000-00000000000a"),
+	got := restSummary(inEnglish, pol, summaryRequest("PATCH", "/v1/deals/018f2a10-0000-7000-8000-00000000000a"),
 		[]byte(`{"amount_minor":100}`))
 
 	if !strings.HasPrefix(got, "Update record deal") {
@@ -100,7 +105,7 @@ func TestRestSummaryLeadsWithTheActRatherThanTheRoute(t *testing.T) {
 // A verb that already names its own record does not say it twice.
 func TestRestSummaryDoesNotRepeatTheRecordTheVerbNames(t *testing.T) {
 	pol := agentPolicy{Op: "sendEmail", Tool: "send_email", RecordType: recordTypeActivity}
-	got := restSummary(pol, summaryRequest("POST", "/v1/activities/018f2a10-0000-7000-8000-00000000beef/send-email"), nil)
+	got := restSummary(inEnglish, pol, summaryRequest("POST", "/v1/activities/018f2a10-0000-7000-8000-00000000beef/send-email"), nil)
 	if got != "Send email" {
 		t.Errorf("summary is %q, want a sentence that names the act once", got)
 	}
@@ -109,7 +114,7 @@ func TestRestSummaryDoesNotRepeatTheRecordTheVerbNames(t *testing.T) {
 // A route the contract gives no verb has nothing better to say than what it is.
 func TestRestSummaryFallsBackToTheRouteWhenNoVerbIsDeclared(t *testing.T) {
 	pol := agentPolicy{Op: "someInternalThing"}
-	got := restSummary(pol, summaryRequest("POST", "/v1/internal/thing"), nil)
+	got := restSummary(inEnglish, pol, summaryRequest("POST", "/v1/internal/thing"), nil)
 	if !strings.Contains(got, "someInternalThing") || !strings.Contains(got, "/v1/internal/thing") {
 		t.Errorf("summary %q drops the only identification an undeclared route has", got)
 	}
@@ -119,7 +124,7 @@ func TestRestSummaryFallsBackToTheRouteWhenNoVerbIsDeclared(t *testing.T) {
 // fields to name, and the operation IS the whole change.
 func TestRestSummaryOfABodylessActionNamesTheOperation(t *testing.T) {
 	pol := agentPolicy{Op: "sendOffer", Tool: "send_offer", RecordType: recordTypeOffer}
-	got := restSummary(pol, summaryRequest("POST", "/v1/offers/018f2a10-0000-7000-8000-00000000beef/send"), nil)
+	got := restSummary(inEnglish, pol, summaryRequest("POST", "/v1/offers/018f2a10-0000-7000-8000-00000000beef/send"), nil)
 	if !strings.Contains(got, "Send offer") {
 		t.Errorf("summary %q does not name the act", got)
 	}
@@ -144,7 +149,7 @@ func TestRestSummaryBoundsAWidePatch(t *testing.T) {
 	}
 	b.WriteString("}")
 
-	got := restSummary(agentPolicy{Op: "updateContact", Tool: "update_record", RecordType: recordTypeContact}, summaryRequest("PATCH", "/v1/contacts/x"), []byte(b.String()))
+	got := restSummary(inEnglish, agentPolicy{Op: "updateContact", Tool: "update_record", RecordType: recordTypeContact}, summaryRequest("PATCH", "/v1/contacts/x"), []byte(b.String()))
 	if !strings.Contains(got, "more") {
 		t.Errorf("a 30-field patch was not bounded: %q", got)
 	}
@@ -155,7 +160,7 @@ func TestRestSummaryBoundsAWidePatch(t *testing.T) {
 
 // A single long value cannot crowd out the fields after it.
 func TestRestSummaryBoundsOneLongValue(t *testing.T) {
-	got := restSummary(agentPolicy{Op: "updateContact", Tool: "update_record", RecordType: recordTypeContact}, summaryRequest("PATCH", "/v1/contacts/x"),
+	got := restSummary(inEnglish, agentPolicy{Op: "updateContact", Tool: "update_record", RecordType: recordTypeContact}, summaryRequest("PATCH", "/v1/contacts/x"),
 		[]byte(`{"notes":"`+strings.Repeat("a", 500)+`","title":"CEO"}`))
 	if !strings.Contains(got, "title=CEO") {
 		t.Errorf("a long value crowded out the field after it: %q", got)
@@ -168,7 +173,7 @@ func TestRestSummaryBoundsOneLongValue(t *testing.T) {
 // Nested structure is named and counted rather than expanded — the summary
 // answers "what shape", the envelope answers "what exactly".
 func TestRestSummaryCountsNestedStructure(t *testing.T) {
-	got := restSummary(agentPolicy{Op: "createOffer", Tool: "create_record", RecordType: recordTypeOffer}, summaryRequest("POST", "/v1/deals/x/offers"),
+	got := restSummary(inEnglish, agentPolicy{Op: "createOffer", Tool: "create_record", RecordType: recordTypeOffer}, summaryRequest("POST", "/v1/deals/x/offers"),
 		[]byte(`{"currency":"EUR","line_items":[{"description":"Pilot"},{"description":"Support"}]}`))
 	if !strings.Contains(got, "line_items=[2]") {
 		t.Errorf("summary %q does not count the nested line items", got)
@@ -181,11 +186,11 @@ func TestRestSummaryCountsNestedStructure(t *testing.T) {
 // renders `owner_id=` for both — which reads like nothing is happening on the
 // one that hands the record to nobody.
 func TestRestSummaryDistinguishesNullFromEmpty(t *testing.T) {
-	cleared := restSummary(agentPolicy{Op: "updateDeal", Tool: "update_record", RecordType: recordTypeDeal}, summaryRequest("PATCH", "/v1/deals/x"), []byte(`{"owner_id":null}`))
+	cleared := restSummary(inEnglish, agentPolicy{Op: "updateDeal", Tool: "update_record", RecordType: recordTypeDeal}, summaryRequest("PATCH", "/v1/deals/x"), []byte(`{"owner_id":null}`))
 	if !strings.Contains(cleared, "owner_id=null") {
 		t.Errorf("summary %q does not show that owner_id is being CLEARED", cleared)
 	}
-	emptied := restSummary(agentPolicy{Op: "updateDeal", Tool: "update_record", RecordType: recordTypeDeal}, summaryRequest("PATCH", "/v1/deals/x"), []byte(`{"owner_id":""}`))
+	emptied := restSummary(inEnglish, agentPolicy{Op: "updateDeal", Tool: "update_record", RecordType: recordTypeDeal}, summaryRequest("PATCH", "/v1/deals/x"), []byte(`{"owner_id":""}`))
 	if strings.Contains(emptied, "owner_id=null") {
 		t.Errorf("summary %q reports an empty string as a clear", emptied)
 	}
@@ -203,9 +208,27 @@ func TestRestSummaryDistinguishesNullFromEmpty(t *testing.T) {
 // acts asks somebody to approve a thing they cannot identify.
 //
 // Derived from the policy table rather than listed, so a contract change that
-// creates a new collision fails here instead of reaching a card.
+// creates a new collision fails here instead of reaching a card. Asked of every
+// shipped language, because a translation can collapse two headlines the
+// English kept apart.
 func TestNoTwoStageableActsShareAHeadline(t *testing.T) {
-	byPhrase := map[string][]string{}
+	for _, lang := range textlang.Shipped {
+		said := approvalSummaryCopyFor(lang)
+		byPhrase := map[string][]string{}
+		for _, pol := range agentPolicies {
+			if pol.Access != accessTool || pol.Tier == tierAutoExecute {
+				continue
+			}
+			phrase := actPhrase(said, pol, "POST", "/v1/x")
+			byPhrase[phrase] = append(byPhrase[phrase], pol.Op)
+		}
+		for phrase, ops := range byPhrase {
+			if len(ops) > 1 {
+				sort.Strings(ops)
+				t.Errorf("%s: %q is the headline for %v — a reader cannot tell which they are approving", lang, phrase, ops)
+			}
+		}
+	}
 	// A verb covering several stageable operations must name each of them, or
 	// the ones it does not name collapse together. Checking only for identical
 	// phrases is not enough: naming ONE of a colliding pair separates them
@@ -216,8 +239,6 @@ func TestNoTwoStageableActsShareAHeadline(t *testing.T) {
 		if pol.Access != accessTool || pol.Tier == tierAutoExecute {
 			continue
 		}
-		phrase := actPhrase(pol, "POST", "/v1/x")
-		byPhrase[phrase] = append(byPhrase[phrase], pol.Op)
 		// Keyed by verb AND record, because the generic verbs already separate
 		// two acts that differ only by what they act on: "Create record custom
 		// field" and "Create record webhook subscription" are distinct without
@@ -228,12 +249,6 @@ func TestNoTwoStageableActsShareAHeadline(t *testing.T) {
 			byVerb[act] = map[string]bool{}
 		}
 		byVerb[act][pol.Op] = true
-	}
-	for phrase, ops := range byPhrase {
-		if len(ops) > 1 {
-			sort.Strings(ops)
-			t.Errorf("%q is the headline for %v — a reader cannot tell which they are approving", phrase, ops)
-		}
 	}
 	for act, ops := range byVerb {
 		if len(ops) < 2 {
@@ -249,17 +264,20 @@ func TestNoTwoStageableActsShareAHeadline(t *testing.T) {
 
 // Every headline a human can meet is words, never a wire identifier.
 func TestEveryStageableActReadsAsWords(t *testing.T) {
-	for key, pol := range agentPolicies {
-		if pol.Access != accessTool || pol.Tier == tierAutoExecute {
-			continue
-		}
-		phrase := actPhrase(pol, "POST", "/v1/x")
-		if phrase == "" {
-			t.Errorf("%s: staged calls render an empty headline", key)
-			continue
-		}
-		if strings.Contains(phrase, "_") {
-			t.Errorf("%s: %q still carries a wire identifier", key, phrase)
+	for _, lang := range textlang.Shipped {
+		said := approvalSummaryCopyFor(lang)
+		for key, pol := range agentPolicies {
+			if pol.Access != accessTool || pol.Tier == tierAutoExecute {
+				continue
+			}
+			phrase := actPhrase(said, pol, "POST", "/v1/x")
+			if phrase == "" {
+				t.Errorf("%s %s: staged calls render an empty headline", lang, key)
+				continue
+			}
+			if strings.Contains(phrase, "_") {
+				t.Errorf("%s %s: %q still carries a wire identifier", lang, key, phrase)
+			}
 		}
 	}
 }

@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // A commit starts only from awaiting_approval, which is how the mandatory dry
@@ -180,7 +181,7 @@ func (r recordingImports) ProfileSource(
 // their estate without telling them what it does. They would be clicking yes
 // on a number they never saw.
 func TestTheApprovalSaysWhatTheImportWillDo(t *testing.T) {
-	got := describeImport("company", crmcontracts.ImportRunReport{
+	got := describeImport(summaryByLang[textlang.English], "company", crmcontracts.ImportRunReport{
 		RowsRead: 453,
 		Disposition: crmcontracts.ImportRunDisposition{
 			Created: 412, Updated: 38, Unchanged: 3,
@@ -197,7 +198,7 @@ func TestTheApprovalSaysWhatTheImportWillDo(t *testing.T) {
 // The unusable count is never quietly dropped: it is the least flattering
 // number in the report and the one a contact most needs before saying yes.
 func TestACleanImportSaysNothingAboutUnusableRows(t *testing.T) {
-	got := describeImport("lead", crmcontracts.ImportRunReport{
+	got := describeImport(summaryByLang[textlang.English], "lead", crmcontracts.ImportRunReport{
 		RowsRead:    12,
 		Disposition: crmcontracts.ImportRunDisposition{Created: 12},
 	})

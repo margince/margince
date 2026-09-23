@@ -244,6 +244,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// never sees the api's options.
 		WithFileKeeper(capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
 		WithStager(mergeStager{svc: approvals.NewService(InstallationDB(pool))}).
+		WithBaseLanguage(installationLanguage(pool)).
 		// The ADR-0063 auto-create pipeline: every captured mail ensures
 		// its counterparty exists, through the contacts module's ONE dedupe
 		// chokepoint — composed here so capture never imports contacts. The

@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -69,6 +70,9 @@ type Sink struct {
 	meetingIdentityKey  MeetingIdentityKeyer
 	resolveIdentity     IdentityResolver
 	claimIdentity       IdentityClaimer
+	// language is the installation's base language a staged merge's summary is
+	// written in; nil writes English.
+	language baselanguage.Resolver
 }
 
 // fieldSourceSystem / fieldSourceID are the shared system_log detail keys for
@@ -272,7 +276,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			TargetType:     "lead",
 			TargetID:       dedupeHit.UUID,
 			ProposedChange: dedupeFields,
-			Summary:        fmt.Sprintf("Captured %s/%s duplicates an existing lead", rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID),
+			Summary:        s.duplicateLeadSummary(ctx, rec.NaturalKey),
 		}); err != nil {
 			return datasource.EntityRef{}, fmt.Errorf("capture: staging the dedupe merge: %w", err)
 		}

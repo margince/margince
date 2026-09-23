@@ -33,6 +33,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -99,7 +100,8 @@ type archiveArgs struct {
 }
 
 type archiveRecord struct {
-	p datasource.SystemOfRecordProvider
+	p        datasource.SystemOfRecordProvider
+	language baselanguage.Resolver
 }
 
 func (t archiveRecord) Spec() mcp.ToolSpec {
@@ -154,7 +156,7 @@ func (t archiveRecord) StageInfo(ctx context.Context, in json.RawMessage) (Stage
 	if err := refuseUnarchivableType(ctx, t.p, args.RecordType); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewArchiveCall(t.p, ArchiveCommand(args)))
+	return StageSubject(ctx, NewArchiveCall(t.p, t.language, ArchiveCommand(args)))
 }
 
 // refuseUnarchivableType holds the verb to the types the seam actually routes,
@@ -217,6 +219,7 @@ type promoteArgs struct {
 type promoteLead struct {
 	p        datasource.SystemOfRecordProvider
 	promoter LeadPromoter
+	language baselanguage.Resolver
 }
 
 func (t promoteLead) Spec() mcp.ToolSpec {
@@ -245,7 +248,7 @@ func (t promoteLead) StageInfo(ctx context.Context, in json.RawMessage) (StageIn
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewPromoteLeadCall(t.p, PromoteLeadCommand{
+	return StageSubject(ctx, NewPromoteLeadCall(t.p, t.language, PromoteLeadCommand{
 		LeadID:  args.LeadID,
 		Trigger: args.Trigger,
 	}))
@@ -308,7 +311,8 @@ func mergeableTypeNames() []string {
 }
 
 type mergeRecords struct {
-	p datasource.SystemOfRecordProvider
+	p        datasource.SystemOfRecordProvider
+	language baselanguage.Resolver
 }
 
 func (t mergeRecords) Spec() mcp.ToolSpec {
@@ -341,7 +345,7 @@ func (t mergeRecords) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewMergeCall(t.p, MergeCommand(args)))
+	return StageSubject(ctx, NewMergeCall(t.p, t.language, MergeCommand(args)))
 }
 
 func (t mergeRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

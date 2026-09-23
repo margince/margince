@@ -172,7 +172,7 @@ func RegisterTagTools(r *Registry, tags Tags) {
 	r.Register(removeTag{tags: tags})
 	r.Register(createTag{tags: tags})
 	r.Register(updateTag{tags: tags})
-	r.Register(mergeTags{tags: tags})
+	r.Register(mergeTags{tags: tags, language: r.language})
 }
 
 // taggingSchema is apply's and remove's argument shape, spelled once: they name

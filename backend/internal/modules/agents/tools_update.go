@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -32,7 +33,8 @@ type updateRecord struct {
 	// staging receives the per-field precedence split's 🟡 residue. Nil is
 	// the no-approvals composition: a conflicting patch is then refused
 	// outright rather than staged, never applied.
-	staging Approvals
+	staging  Approvals
+	language baselanguage.Resolver
 }
 
 type updateRecordArgs struct {
@@ -95,7 +97,7 @@ func (t updateRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	// deliberately does not carry if_version (command.go's own doc comment
 	// says why), so its shape no longer matches updateRecordArgs' and a
 	// conversion would not compile.
-	return StageSubject(ctx, NewPatchCall(t.p, PatchCommand{
+	return StageSubject(ctx, NewPatchCall(t.p, t.language, PatchCommand{
 		RecordType: args.RecordType, ID: args.ID, Fields: args.Fields,
 	}))
 }
@@ -220,8 +222,9 @@ func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs,
 	// Composed once and answered twice: the human's card and the caller's
 	// refusal describe one staged change, and a second wording of it would let
 	// the contact and the agent wait on two different descriptions.
-	summary := fmt.Sprintf("Update %s %s: overwrite human-edited %s",
-		args.RecordType, recordLabel(rec), strings.Join(split.Conflicts, ", "))
+	said := summaryIn(ctx, t.language)
+	summary := fmt.Sprintf(said.overwriteHuman,
+		said.noun(args.RecordType), recordLabel(rec), strings.Join(split.Conflicts, ", "))
 	id, alreadyApproved, err := t.staging.StageCall(ctx, StageRequest{
 		Tool:           "update_record",
 		ProposedChange: canonical,

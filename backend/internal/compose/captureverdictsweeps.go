@@ -63,8 +63,12 @@ func (e *CounterpartyVerdictEngine) StageReviewsWorkspace(ctx context.Context, m
 		if err != nil {
 			return err
 		}
+		if len(rows) == 0 {
+			return nil
+		}
+		said := approvalSummaryCopyOver(wsCtx, e.pool)
 		for _, row := range rows {
-			proposalID, err := stageCounterpartyReview(wsCtx, e.approvals, row)
+			proposalID, err := stageCounterpartyReview(wsCtx, e.approvals, said, row)
 			if err != nil {
 				e.log.WarnContext(wsCtx, "counterparty verdict: staging a review offer failed",
 					"disposition", row.ID.String(), "err", err)

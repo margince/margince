@@ -83,7 +83,7 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 			"send_email",
 			oneRecord(datasource.EntityActivity, id, `{"kind":"email"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewSendEmailCall(p, SendEmailCommand{ActivityID: id, To: []string{"a@example.test"}})
+				return NewSendEmailCall(p, nil, SendEmailCommand{ActivityID: id, To: []string{"a@example.test"}})
 			},
 		},
 		{
@@ -91,28 +91,28 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 			oneRecord(datasource.EntityActivity, id, `{"kind":"message","channel_provider":"telegram"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
 				return NewSendMessageCall(p, channelProviderSet{"telegram": true},
-					SendMessageCommand{ActivityID: id, Body: "hello"})
+					nil, SendMessageCommand{ActivityID: id, Body: "hello"})
 			},
 		},
 		{
 			"promote_lead",
 			oneRecord(datasource.EntityLead, id, `{"full_name":"Ada"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewPromoteLeadCall(p, PromoteLeadCommand{LeadID: id, Trigger: "inbound_reply"})
+				return NewPromoteLeadCall(p, nil, PromoteLeadCommand{LeadID: id, Trigger: "inbound_reply"})
 			},
 		},
 		{
 			"disqualify_lead",
 			oneRecord(datasource.EntityLead, id, `{"full_name":"Ada"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewDisqualifyLeadCall(p, DisqualifyLeadCommand{LeadID: id})
+				return NewDisqualifyLeadCall(p, nil, DisqualifyLeadCommand{LeadID: id})
 			},
 		},
 		{
 			"advance_project_phase",
 			oneRecord(datasource.EntityProject, id, `{"name":"Rollout"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewAdvanceProjectPhaseCall(p, AdvanceProjectPhaseCommand{ProjectID: id, ToPhase: "pursuing"})
+				return NewAdvanceProjectPhaseCall(p, nil, AdvanceProjectPhaseCommand{ProjectID: id, ToPhase: "pursuing"})
 			},
 		},
 		{
@@ -120,28 +120,28 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 			oneRecord(datasource.EntityDeal, id, `{"name":"Acme","stage_id":"`+stage.String()+`"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
 				return NewAdvanceDealCall(p, fixedStages{semantic: stageSemanticOpen},
-					AdvanceDealCommand{DealID: id, ToStageID: stage})
+					nil, AdvanceDealCommand{DealID: id, ToStageID: stage})
 			},
 		},
 		{
 			"enrich",
 			oneRecord(datasource.EntityCompany, id, `{"name":"Acme"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewEnrichCall(p, EnrichCommand{CompanyID: id, Depth: EnrichDepthPage})
+				return NewEnrichCall(p, nil, EnrichCommand{CompanyID: id, Depth: EnrichDepthPage})
 			},
 		},
 		{
 			"draft_email",
 			oneRecord(datasource.EntityActivity, id, `{"kind":"email"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewDraftEmailCall(p, DraftEmailCommand{ActivityID: id})
+				return NewDraftEmailCall(p, nil, DraftEmailCommand{ActivityID: id})
 			},
 		},
 		{
 			"relink_activity",
 			oneRecord(datasource.EntityActivity, id, `{"kind":"email"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewRelinkActivityCall(p, RelinkActivityCommand{
+				return NewRelinkActivityCall(p, nil, RelinkActivityCommand{
 					ActivityID: id, EntityType: "deal", EntityID: ids.NewV7(),
 				})
 			},
@@ -152,7 +152,7 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 			"relink_activities",
 			oneRecord(datasource.EntityProject, id, `{"name":"Rollout"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewRelinkActivitiesCall(p, RelinkActivitiesCommand{
+				return NewRelinkActivitiesCall(p, nil, RelinkActivitiesCommand{
 					ActivityIDs: []ids.UUID{ids.NewV7(), ids.NewV7()}, EntityType: "project", EntityID: id,
 				})
 			},
@@ -189,36 +189,36 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 	}{
 		{
 			"a mail send with no addressee",
-			NewSendEmailCall(oneRecord(datasource.EntityActivity, id, `{}`, 1), SendEmailCommand{ActivityID: id}),
+			NewSendEmailCall(oneRecord(datasource.EntityActivity, id, `{}`, 1), nil, SendEmailCommand{ActivityID: id}),
 			"`to`",
 		},
 		{
 			"a channel reply with a whitespace-only body",
 			NewSendMessageCall(oneRecord(datasource.EntityActivity, id, `{"kind":"message","channel_provider":"telegram"}`, 1),
-				channelProviderSet{"telegram": true}, SendMessageCommand{ActivityID: id, Body: "   "}),
+				channelProviderSet{"telegram": true}, nil, SendMessageCommand{ActivityID: id, Body: "   "}),
 			"empty or whitespace-only",
 		},
 		{
 			"a channel reply on an anchor that is not a channel conversation",
 			NewSendMessageCall(oneRecord(datasource.EntityActivity, id, `{"kind":"email"}`, 1),
-				channelProviderSet{"telegram": true}, SendMessageCommand{ActivityID: id, Body: "hello"}),
+				channelProviderSet{"telegram": true}, nil, SendMessageCommand{ActivityID: id, Body: "hello"}),
 			"not a messaging-channel conversation",
 		},
 		{
 			"an account-started send with no addressee",
-			NewSendCompanyEmailCall(oneRecord(datasource.EntityCompany, other, `{}`, 1),
+			NewSendCompanyEmailCall(oneRecord(datasource.EntityCompany, other, `{}`, 1), nil,
 				SendCompanyEmailCommand{Links: []RecordLink{link}}),
 			"`to`",
 		},
 		{
 			"an account-started send filed under nothing",
-			NewSendCompanyEmailCall(oneRecord(datasource.EntityCompany, other, `{}`, 1),
+			NewSendCompanyEmailCall(oneRecord(datasource.EntityCompany, other, `{}`, 1), nil,
 				SendCompanyEmailCommand{To: []string{"a@example.test"}}),
 			"`links`",
 		},
 		{
 			"a booking whose end does not follow its start",
-			NewBookMeetingCall(oneRecord(datasource.EntityCompany, other, `{}`, 1), BookMeetingCommand{
+			NewBookMeetingCall(oneRecord(datasource.EntityCompany, other, `{}`, 1), nil, BookMeetingCommand{
 				Start: time.Date(2026, 8, 10, 9, 30, 0, 0, time.UTC),
 				End:   time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC),
 				Links: []RecordLink{link},
@@ -227,7 +227,7 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 		},
 		{
 			"a booking attached to nothing",
-			NewBookMeetingCall(oneRecord(datasource.EntityCompany, other, `{}`, 1), BookMeetingCommand{
+			NewBookMeetingCall(oneRecord(datasource.EntityCompany, other, `{}`, 1), nil, BookMeetingCommand{
 				Start: time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC),
 				End:   time.Date(2026, 8, 10, 9, 30, 0, 0, time.UTC),
 			}),
@@ -235,7 +235,7 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 		},
 		{
 			"a booking over the per-call link cap",
-			NewBookMeetingCall(oneRecord(datasource.EntityCompany, other, `{}`, 1), BookMeetingCommand{
+			NewBookMeetingCall(oneRecord(datasource.EntityCompany, other, `{}`, 1), nil, BookMeetingCommand{
 				Start: time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC),
 				End:   time.Date(2026, 8, 10, 9, 30, 0, 0, time.UTC),
 				Links: distinctLinks(maxRecordLinks + 1),
@@ -245,7 +245,7 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 		{
 			"a promotion on a trigger that is not genuine engagement",
 			NewPromoteLeadCall(oneRecord(datasource.EntityLead, id, `{}`, 1),
-				PromoteLeadCommand{LeadID: id, Trigger: "cold_outbound_no_reply"}),
+				nil, PromoteLeadCommand{LeadID: id, Trigger: "cold_outbound_no_reply"}),
 			"not genuine engagement",
 		},
 		{
@@ -254,49 +254,49 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 			// release one — not after, on the retry that carries their approval.
 			"a demotion that says why nothing",
 			NewDemoteLeadCall(oneRecord(datasource.EntityLead, id, `{}`, 1),
-				DemoteLeadCommand{LeadID: id, Reason: "   "}),
+				nil, DemoteLeadCommand{LeadID: id, Reason: "   "}),
 			"a demotion states why",
 		},
 		{
 			"a phase outside the ladder",
 			NewAdvanceProjectPhaseCall(oneRecord(datasource.EntityProject, id, `{}`, 1),
-				AdvanceProjectPhaseCommand{ProjectID: id, ToPhase: "shipped"}),
+				nil, AdvanceProjectPhaseCommand{ProjectID: id, ToPhase: "shipped"}),
 			"is not a project phase",
 		},
 		{
 			"a closure with no reason",
 			NewAdvanceProjectPhaseCall(oneRecord(datasource.EntityProject, id, `{}`, 1),
-				AdvanceProjectPhaseCommand{ProjectID: id, ToPhase: projectPhaseClosed}),
+				nil, AdvanceProjectPhaseCommand{ProjectID: id, ToPhase: projectPhaseClosed}),
 			"reason is required",
 		},
 		{
 			"a merge of a record into itself",
 			NewMergeCall(oneRecord(datasource.EntityContact, id, `{}`, 1),
-				MergeCommand{RecordType: "contact", SourceID: id, TargetID: id}),
+				nil, MergeCommand{RecordType: "contact", SourceID: id, TargetID: id}),
 			"must differ",
 		},
 		{
 			"a merge of a type with no merge verb",
 			NewMergeCall(oneRecord(datasource.EntityDeal, id, `{}`, 1),
-				MergeCommand{RecordType: "deal", SourceID: id, TargetID: other}),
+				nil, MergeCommand{RecordType: "deal", SourceID: id, TargetID: other}),
 			"cannot be merged",
 		},
 		{
 			"an enrich of a target that is not an absolute http(s) URL",
 			NewEnrichCall(oneRecord(datasource.EntityCompany, id, `{}`, 1),
-				EnrichCommand{CompanyID: id, URL: "acme.test/about", Depth: EnrichDepthPage}),
+				nil, EnrichCommand{CompanyID: id, URL: "acme.test/about", Depth: EnrichDepthPage}),
 			"absolute http(s) URL",
 		},
 		{
 			"a relink onto a type that is not a link target",
 			NewRelinkActivityCall(oneRecord(datasource.EntityActivity, id, `{}`, 1),
-				RelinkActivityCommand{ActivityID: id, EntityType: "invoice", EntityID: other}),
+				nil, RelinkActivityCommand{ActivityID: id, EntityType: "invoice", EntityID: other}),
 			"is not a link target",
 		},
 		{
 			"a named-set relink with no ids",
 			NewRelinkActivitiesCall(oneRecord(datasource.EntityProject, other, `{}`, 1),
-				RelinkActivitiesCommand{EntityType: "project", EntityID: other}),
+				nil, RelinkActivitiesCommand{EntityType: "project", EntityID: other}),
 			"between 1 and 500",
 		},
 		{
@@ -305,7 +305,7 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 			// moved. The refusal sends the caller to relink_activities.
 			"a thread relink onto a destination that needs a human",
 			NewRelinkThreadCall(oneRecord(datasource.EntityProject, other, `{}`, 1),
-				RelinkThreadCommand{ThreadKey: "thread:x", EntityType: "project", EntityID: other}),
+				nil, RelinkThreadCommand{ThreadKey: "thread:x", EntityType: "project", EntityID: other}),
 			"relink_activities",
 		},
 	}
@@ -349,7 +349,7 @@ func TestAMergeStagesTheSurvivorAndNamesBothHalves(t *testing.T) {
 		survivorRef: nativeRecord(datasource.Record{Ref: survivorRef, Fields: json.RawMessage(`{"full_name":"Ada New"}`), Version: 7}),
 	}}
 
-	info, err := StageSubject(context.Background(), NewMergeCall(p, MergeCommand{
+	info, err := StageSubject(context.Background(), NewMergeCall(p, nil, MergeCommand{
 		RecordType: "contact", SourceID: source, TargetID: survivor,
 	}))
 	if err != nil {
@@ -396,7 +396,7 @@ func TestAMergeRefusesEitherHalfHeldElsewhere(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			_, err := StageSubject(context.Background(), NewMergeCall(
 				&tallyingProvider{records: records},
-				MergeCommand{RecordType: "contact", SourceID: c.source, TargetID: c.target}))
+				nil, MergeCommand{RecordType: "contact", SourceID: c.source, TargetID: c.target}))
 			if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 				t.Fatalf("err = %v, want ErrUnsupportedBySoR", err)
 			}
@@ -425,7 +425,7 @@ func TestTheTwoEnrichDepthsAreDistinctCommandsWithDistinctSummaries(t *testing.T
 	summaries := map[EnrichDepth]string{}
 	for _, cmd := range []EnrichCommand{page, site} {
 		info, err := StageSubject(context.Background(),
-			NewEnrichCall(oneRecord(datasource.EntityCompany, company, `{"name":"Acme"}`, 1), cmd))
+			NewEnrichCall(oneRecord(datasource.EntityCompany, company, `{"name":"Acme"}`, 1), nil, cmd))
 		if err != nil {
 			t.Fatalf("staging depth %q answered %v", cmd.Depth, err)
 		}
@@ -449,7 +449,7 @@ func TestTheTwoEnrichDepthsAreDistinctCommandsWithDistinctSummaries(t *testing.T
 // scope by its type — so a type with no id is the shape a create stages, and
 // neither is what a report run is.
 func TestTheCommandsThatNameNoRowStageNoTarget(t *testing.T) {
-	report, err := StageSubject(context.Background(), NewRunReportCall(RunReportCommand{Report: "deals-by-stage"}))
+	report, err := StageSubject(context.Background(), NewRunReportCall(nil, RunReportCommand{Report: "deals-by-stage"}))
 	if err != nil {
 		t.Fatalf("staging a report run answered %v", err)
 	}
@@ -463,7 +463,7 @@ func TestTheCommandsThatNameNoRowStageNoTarget(t *testing.T) {
 	}
 
 	logged, err := StageSubject(context.Background(),
-		NewLogActivityCall(LogActivityCommand{Fields: json.RawMessage(`{"kind":"note","body":"hi"}`)}))
+		NewLogActivityCall(nil, LogActivityCommand{Fields: json.RawMessage(`{"kind":"note","body":"hi"}`)}))
 	if err != nil {
 		t.Fatalf("staging a logged activity answered %v", err)
 	}
@@ -630,7 +630,7 @@ func TestBookingAnotherHostStagesOnlyForAnAdmin(t *testing.T) {
 	self, host, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	window := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
 	call := func(hostID *ids.UUID) GovernedCall {
-		return NewBookMeetingCall(oneRecord(datasource.EntityCompany, company, `{}`, 1), BookMeetingCommand{
+		return NewBookMeetingCall(oneRecord(datasource.EntityCompany, company, `{}`, 1), nil, BookMeetingCommand{
 			HostUserID: hostID, Start: window, End: window.Add(30 * time.Minute),
 			Links: []RecordLink{{EntityType: "company", EntityID: company}},
 		})
@@ -734,19 +734,19 @@ func TestADecisionStagesNoTargetAndSaysWhichWayItGoes(t *testing.T) {
 		mustSay string
 	}{
 		{
-			"approve one", NewDecideApprovalCall(DecideApprovalCommand{ApprovalID: approval, Approve: true}),
+			"approve one", NewDecideApprovalCall(nil, DecideApprovalCommand{ApprovalID: approval, Approve: true}),
 			"Approve", approval.String(),
 		},
 		{
-			"reject one", NewDecideApprovalCall(DecideApprovalCommand{ApprovalID: approval}),
+			"reject one", NewDecideApprovalCall(nil, DecideApprovalCommand{ApprovalID: approval}),
 			"Reject", approval.String(),
 		},
 		{
-			"approve an act", NewDecideBundleCall(DecideBundleCommand{BundleID: bundle, Approve: true}),
+			"approve an act", NewDecideBundleCall(nil, DecideBundleCommand{BundleID: bundle, Approve: true}),
 			"Approve", bundle.String(),
 		},
 		{
-			"reject an act", NewDecideBundleCall(DecideBundleCommand{BundleID: bundle}),
+			"reject an act", NewDecideBundleCall(nil, DecideBundleCommand{BundleID: bundle}),
 			"Reject", bundle.String(),
 		},
 	}

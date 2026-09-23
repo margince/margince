@@ -278,7 +278,7 @@ func (p *CompanyNamePromoter) stageCompanyNameReview(ctx context.Context, cand c
 		Identity:       identity,
 		TargetType:     companyNameTargetType,
 		TargetID:       cand.CompanyID.UUID,
-		Summary:        "Rename " + cand.DisplayName + " to " + verdict.Name + "?",
+		Summary:        fmt.Sprintf(approvalSummaryCopyOver(ctx, p.pool).companyRename, cand.DisplayName, verdict.Name),
 		JoinPending:    true,
 	})
 	return err

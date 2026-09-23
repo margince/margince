@@ -13,6 +13,7 @@ package agents
 import (
 	"context"
 	"fmt"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
 // RunReportCommand is one report run, whichever door asked for it. The report
@@ -26,11 +27,13 @@ type RunReportCommand struct {
 // It holds no dependency: a report names no record at all.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewRunReportCall(cmd RunReportCommand) GovernedCall {
-	return bind[RunReportCommand](runReportResolver{}, cmd)
+func NewRunReportCall(language baselanguage.Resolver, cmd RunReportCommand) GovernedCall {
+	return bind[RunReportCommand](runReportResolver{language: language}, cmd)
 }
 
-type runReportResolver struct{}
+type runReportResolver struct {
+	language baselanguage.Resolver
+}
 
 // Subject names NO record, and that is the honest answer rather than a gap: a
 // report is an aggregate over rows the caller's own scope already bounds, so
@@ -38,8 +41,8 @@ type runReportResolver struct{}
 // it does supply is the KEY — the one thing that says which aggregate is being
 // released — where the route walk it replaces could only offer an empty target
 // with no name attached.
-func (runReportResolver) Subject(_ context.Context, cmd RunReportCommand) (StageInfo, error) {
-	return StageInfo{Summary: fmt.Sprintf("Run report %s", cmd.Report)}, nil
+func (r runReportResolver) Subject(ctx context.Context, cmd RunReportCommand) (StageInfo, error) {
+	return StageInfo{Summary: fmt.Sprintf(summaryIn(ctx, r.language).runReport, cmd.Report)}, nil
 }
 
 // Guards stands down: the report key's vocabulary is the engine's catalog,
@@ -66,19 +69,21 @@ type ComposeReportCommand struct {
 // for it. It holds no dependency: a report names no record at all.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewComposeReportCall(cmd ComposeReportCommand) GovernedCall {
-	return bind[ComposeReportCommand](composeReportResolver{}, cmd)
+func NewComposeReportCall(language baselanguage.Resolver, cmd ComposeReportCommand) GovernedCall {
+	return bind[ComposeReportCommand](composeReportResolver{language: language}, cmd)
 }
 
-type composeReportResolver struct{}
+type composeReportResolver struct {
+	language baselanguage.Resolver
+}
 
 // Subject names NO record, for the reason a report run names none: the document
 // is an arrangement of aggregates over rows the caller's own scope already
 // bounds, and there is no row an approval could bind to or be probed against.
 // What it supplies instead is the SIZE — the one thing that says how much is
 // being released — where a route walk could offer only an empty target.
-func (composeReportResolver) Subject(_ context.Context, cmd ComposeReportCommand) (StageInfo, error) {
-	return StageInfo{Summary: fmt.Sprintf("Compose a report of %d block(s)", cmd.Blocks)}, nil
+func (r composeReportResolver) Subject(ctx context.Context, cmd ComposeReportCommand) (StageInfo, error) {
+	return StageInfo{Summary: fmt.Sprintf(summaryIn(ctx, r.language).composeReport, cmd.Blocks)}, nil
 }
 
 // Guards stands down: what a document may contain is the block grammar's, which
@@ -100,17 +105,20 @@ type AnalyticsQueryCommand struct {
 // for it. It holds no dependency: an aggregate names no record at all.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewAnalyticsQueryCall(cmd AnalyticsQueryCommand) GovernedCall {
-	return bind[AnalyticsQueryCommand](analyticsQueryResolver{}, cmd)
+func NewAnalyticsQueryCall(language baselanguage.Resolver, cmd AnalyticsQueryCommand) GovernedCall {
+	return bind[AnalyticsQueryCommand](analyticsQueryResolver{language: language}, cmd)
 }
 
-type analyticsQueryResolver struct{}
+type analyticsQueryResolver struct {
+	language baselanguage.Resolver
+}
 
 // Subject names NO record, for runReportResolver's reason: an aggregate over
 // rows the caller's own scope bounds has no row an approval could bind to.
 // The population name is the one fact that says what is being released.
-func (analyticsQueryResolver) Subject(_ context.Context, cmd AnalyticsQueryCommand) (StageInfo, error) {
-	return StageInfo{Summary: fmt.Sprintf("Run an analytics query over %s", cmd.Entity)}, nil
+func (r analyticsQueryResolver) Subject(ctx context.Context, cmd AnalyticsQueryCommand) (StageInfo, error) {
+	said := summaryIn(ctx, r.language)
+	return StageInfo{Summary: fmt.Sprintf(said.analyticsQuery, said.noun(cmd.Entity))}, nil
 }
 
 // Guards stands down, for runReportResolver's reason: the vocabulary is the

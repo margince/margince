@@ -8,11 +8,25 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
+
+// installationLanguage is the base-language port every module that writes an
+// approval summary holds. identity.BaseLanguageForPrompt already opens the
+// workspace transaction, logs a failed read and answers English for it.
+func installationLanguage(pool *pgxpool.Pool) baselanguage.Resolver {
+	return func(ctx context.Context) textlang.Lang {
+		return textlang.Lang(identity.BaseLanguageForPrompt(ctx, pool))
+	}
+}
 
 // approvalsAdapter maps the tool surface's staging/redemption dependency
 // onto the approvals module.

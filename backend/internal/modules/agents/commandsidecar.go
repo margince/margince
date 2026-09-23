@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -40,14 +41,16 @@ type ConfirmFactCommand struct {
 // writes through.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewConfirmFactCall(records datasource.SystemOfRecordProvider, cmd ConfirmFactCommand) GovernedCall {
+func NewConfirmFactCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd ConfirmFactCommand) GovernedCall {
 	return bind[ConfirmFactCommand](confirmFactResolver{
-		target: routedRecordTarget{records: records, recordType: companySidecarRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: companySidecarRecordType},
 	}, cmd)
 }
 
 type confirmFactResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject names the COMPANY the approval binds to — a fact has no row
@@ -57,11 +60,11 @@ type confirmFactResolver struct {
 // restSummary; no tool reaches this command at all — agentgatestaging.go).
 // It reads nothing: unlike archiveResolver's, there is no per-record label
 // to compose (routedRecordTarget's own doc says why).
-func (r confirmFactResolver) Subject(_ context.Context, cmd ConfirmFactCommand) (StageInfo, error) {
+func (r confirmFactResolver) Subject(ctx context.Context, cmd ConfirmFactCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Confirm fact %s on company %s", cmd.FactKey, cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).confirmFact, cmd.FactKey, cmd.ID),
 	}, nil
 }
 
@@ -91,22 +94,24 @@ type UpdateFactCommand struct {
 // for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewUpdateFactCall(records datasource.SystemOfRecordProvider, cmd UpdateFactCommand) GovernedCall {
+func NewUpdateFactCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd UpdateFactCommand) GovernedCall {
 	return bind[UpdateFactCommand](updateFactResolver{
-		target: routedRecordTarget{records: records, recordType: companySidecarRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: companySidecarRecordType},
 	}, cmd)
 }
 
 type updateFactResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject, Guards: the same shape as confirmFactResolver's.
-func (r updateFactResolver) Subject(_ context.Context, cmd UpdateFactCommand) (StageInfo, error) {
+func (r updateFactResolver) Subject(ctx context.Context, cmd UpdateFactCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Update fact %s on company %s", cmd.FactKey, cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).updateFact, cmd.FactKey, cmd.ID),
 	}, nil
 }
 
@@ -126,21 +131,23 @@ type CreateFactCommand struct {
 // NewCreateFactCall binds one hand-stated fact to the resolver that answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewCreateFactCall(records datasource.SystemOfRecordProvider, cmd CreateFactCommand) GovernedCall {
+func NewCreateFactCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd CreateFactCommand) GovernedCall {
 	return bind[CreateFactCommand](createFactResolver{
-		target: routedRecordTarget{records: records, recordType: companySidecarRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: companySidecarRecordType},
 	}, cmd)
 }
 
 type createFactResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
-func (r createFactResolver) Subject(_ context.Context, cmd CreateFactCommand) (StageInfo, error) {
+func (r createFactResolver) Subject(ctx context.Context, cmd CreateFactCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("State a fact on company %s", cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).createFact, cmd.ID),
 	}, nil
 }
 
@@ -159,21 +166,23 @@ type DeleteFactCommand struct {
 // NewDeleteFactCall binds one fact removal to the resolver that answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewDeleteFactCall(records datasource.SystemOfRecordProvider, cmd DeleteFactCommand) GovernedCall {
+func NewDeleteFactCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd DeleteFactCommand) GovernedCall {
 	return bind[DeleteFactCommand](deleteFactResolver{
-		target: routedRecordTarget{records: records, recordType: companySidecarRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: companySidecarRecordType},
 	}, cmd)
 }
 
 type deleteFactResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
-func (r deleteFactResolver) Subject(_ context.Context, cmd DeleteFactCommand) (StageInfo, error) {
+func (r deleteFactResolver) Subject(ctx context.Context, cmd DeleteFactCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Remove fact %s from company %s", cmd.FactKey, cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).deleteFact, cmd.FactKey, cmd.ID),
 	}, nil
 }
 
@@ -193,23 +202,25 @@ type ConfirmProfileFieldCommand struct {
 // resolver that answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewConfirmProfileFieldCall(records datasource.SystemOfRecordProvider, cmd ConfirmProfileFieldCommand) GovernedCall {
+func NewConfirmProfileFieldCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd ConfirmProfileFieldCommand) GovernedCall {
 	return bind[ConfirmProfileFieldCommand](confirmProfileFieldResolver{
-		target: routedRecordTarget{records: records, recordType: companySidecarRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: companySidecarRecordType},
 	}, cmd)
 }
 
 type confirmProfileFieldResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject, Guards: the same shape as confirmFactResolver's, naming Field
 // instead of FactKey as the summary's operand.
-func (r confirmProfileFieldResolver) Subject(_ context.Context, cmd ConfirmProfileFieldCommand) (StageInfo, error) {
+func (r confirmProfileFieldResolver) Subject(ctx context.Context, cmd ConfirmProfileFieldCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Confirm profile field %s on company %s", cmd.Field, cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).confirmProfileField, cmd.Field, cmd.ID),
 	}, nil
 }
 
@@ -230,21 +241,23 @@ type UpdateProfileFieldCommand struct {
 // resolver that answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewUpdateProfileFieldCall(records datasource.SystemOfRecordProvider, cmd UpdateProfileFieldCommand) GovernedCall {
+func NewUpdateProfileFieldCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd UpdateProfileFieldCommand) GovernedCall {
 	return bind[UpdateProfileFieldCommand](updateProfileFieldResolver{
-		target: routedRecordTarget{records: records, recordType: companySidecarRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: companySidecarRecordType},
 	}, cmd)
 }
 
 type updateProfileFieldResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
-func (r updateProfileFieldResolver) Subject(_ context.Context, cmd UpdateProfileFieldCommand) (StageInfo, error) {
+func (r updateProfileFieldResolver) Subject(ctx context.Context, cmd UpdateProfileFieldCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Update profile field %s on company %s", cmd.Field, cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).updateProfileField, cmd.Field, cmd.ID),
 	}, nil
 }
 
