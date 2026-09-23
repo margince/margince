@@ -10,6 +10,7 @@ package deals
 
 import (
 	"context"
+	"maps"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -51,12 +52,26 @@ var dealMaskableFields = map[string]func(*crmcontracts.Deal){
 	// mask because the reader needs the same thing from them: a null they can
 	// tell from an empty field. Which rows they are withheld ON is a different
 	// question, answered per row by unreadableReferences.
-	filterCompanyID: func(d *crmcontracts.Deal) { d.CompanyId = nil },
-	filterProjectID: func(d *crmcontracts.Deal) { d.ProjectId = nil },
-	// The attribution describes the partner it travels with, so a withheld
-	// partner takes it along: "sourced" beside a null partner would disclose
-	// that SOME partner brought the deal to a reader who may not know which.
-	filterPartnerCompanyID: func(d *crmcontracts.Deal) { d.PartnerCompanyId, d.PartnerAttribution = nil, nil },
+	filterCompanyID:        func(d *crmcontracts.Deal) { d.CompanyId = nil },
+	filterProjectID:        func(d *crmcontracts.Deal) { d.ProjectId = nil },
+	filterPartnerCompanyID: func(d *crmcontracts.Deal) { d.PartnerCompanyId = nil },
+}
+
+// dealWithholds is what a NAME in masked_fields means on a deal, a wider
+// question than what an administrator may CONFIGURE: the catalog above, plus
+// what auth's closure takes along with one of its fields. A name with no func
+// here is dropped by the pass — the value goes out and nothing says it was
+// withheld — so the closure and this map move together.
+var dealWithholds = dealWithholdsWithConsequences()
+
+// dealWithholdsWithConsequences widens the catalog by the attribution, which
+// describes the partner it travels with: "sourced" beside a null partner
+// discloses that SOME partner brought the deal. It is not offered for
+// configuration, because one fact behind two switches is how the leak returns.
+func dealWithholdsWithConsequences() map[string]func(*crmcontracts.Deal) {
+	withholds := maps.Clone(dealMaskableFields)
+	withholds[filterPartnerAttribution] = func(d *crmcontracts.Deal) { d.PartnerAttribution = nil }
+	return withholds
 }
 
 // finishDealPage is what every page of deals goes through before it leaves the
@@ -102,7 +117,7 @@ func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error 
 	if err != nil {
 		return err
 	}
-	return auth.ApplyFieldMasks(ctx, tx, maskObject, deals, dealID, dealMaskableFields,
+	return auth.ApplyFieldMasks(ctx, tx, maskObject, deals, dealID, dealWithholds,
 		func(d *crmcontracts.Deal, names []string) { d.MaskedFields = &names },
 		extra, writable)
 }
@@ -165,10 +180,10 @@ func unreadableReferences(ctx context.Context, tx pgx.Tx, deals []crmcontracts.D
 
 // refuseMaskedSort refuses a sort over a column the caller's role masks on any
 // row, through the refusal every list offering a maskable order shares. The
-// deal's own contribution is which of its columns a mask can name.
+// deal's own contribution is which of its columns can be withheld at all.
 func refuseMaskedSort(ctx context.Context, sort *string) error {
 	return auth.RefuseMaskedSort(ctx, maskObject, sort, func(field string) bool {
-		_, maskable := dealMaskableFields[field]
-		return maskable
+		_, withholdable := dealWithholds[field]
+		return withholdable
 	})
 }

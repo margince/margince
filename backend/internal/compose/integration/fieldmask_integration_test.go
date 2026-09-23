@@ -6,12 +6,14 @@
 package integration
 
 import (
+	"context"
 	"errors"
 	"slices"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -139,4 +141,89 @@ func TestARevokedUpdateVerbMasksTheRepsOwnMoney(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertMoneyWithheld(t, got)
+}
+
+// maskedDealSeat is a rep whose role withholds one deal column on every row.
+// Row scope stays team: a reader of every row is withheld nothing, so a fixture
+// on that scope would assert nothing.
+func maskedDealSeat(t *testing.T, e *Env, field string) context.Context {
+	t.Helper()
+	perms := AccountRepPerms
+	perms.FieldMasks = []principal.FieldMask{
+		{Object: "deal", Field: field, Condition: principal.MaskAlways},
+	}
+	return e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+}
+
+// seedPartneredDeal is one deal with a partner the reader can open, so what
+// withholds the pair is the ROLE and never the partner's own visibility.
+func seedPartneredDeal(t *testing.T, e *Env) (ids.DealID, ids.CompanyID) {
+	t.Helper()
+	pipeline, open, _ := DealFixture(t, e)
+	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Northgate rollout", pipeline, open, &e.Rep1))
+	partner := companyIDOf(e.SeedPartnerCompany(t, "Northgate Partners", nil, nil))
+	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{PartnerCompanyID: &partner}); err != nil {
+		t.Fatalf("linking the deal to its partner: %v", err)
+	}
+	return deal, partner
+}
+
+// A role mask on the partner withholds what the partner DID as well, and names
+// it: "sourced" beside a null partner tells the reader that some partner
+// brought the deal, which is the fact the mask was set to withhold.
+func TestAMaskedPartnerTakesTheAttributionWithIt(t *testing.T) {
+	e := Setup(t)
+	deal, _ := seedPartneredDeal(t, e)
+	rep := maskedDealSeat(t, e, "partner_company_id")
+
+	got, err := e.Deals.GetDeal(rep, deal, 0)
+	if err != nil {
+		t.Fatalf("a rep reading a deal whose partner their role withholds: %v", err)
+	}
+	if got.PartnerCompanyId != nil || got.PartnerAttribution != nil {
+		t.Errorf("the deal named partner %v attribution %v, want both withheld",
+			got.PartnerCompanyId, got.PartnerAttribution)
+	}
+	assertMaskNames(t, got, "partner_company_id", "partner_attribution")
+
+	// The other direction: an unmasked seat reads the pair whole, or the
+	// assertion above would hold against a read that withholds it from everybody.
+	full, err := e.Deals.GetDeal(e.Admin(), deal, 0)
+	if err != nil || full.PartnerCompanyId == nil || full.PartnerAttribution == nil {
+		t.Errorf("the admin's read = partner %v attribution %v (%v), want the pair",
+			full.PartnerCompanyId, full.PartnerAttribution, err)
+	}
+}
+
+// Narrowing by a column is reading it. The target here is one this reader can
+// open, so every other arm of the filter answers, and what comes back is the
+// binding the projection just declined to name — so the list refuses instead.
+// An empty page would be just as safe and would teach the caller the value.
+func TestTheDealListRefusesAFilterOverAColumnTheRoleWithholds(t *testing.T) {
+	e := Setup(t)
+	deal, partner := seedPartneredDeal(t, e)
+	rep := maskedDealSeat(t, e, "partner_company_id")
+
+	var refused *values.ParseError
+	_, _, err := e.Deals.ListDeals(rep, deals.ListDealsInput{PartnerCompanyID: &partner})
+	if !errors.As(err, &refused) || refused.Code != auth.CodeFieldMasked {
+		t.Errorf("filtering by a withheld column → %v, want the %s refusal, never a page", err, auth.CodeFieldMasked)
+	}
+	// The attribution is refused with the partner it describes: it is withheld
+	// as a consequence, and a filter over it recovers the same fact.
+	sourced := "sourced"
+	_, _, err = e.Deals.ListDeals(rep, deals.ListDealsInput{PartnerAttribution: &sourced})
+	if !errors.As(err, &refused) || refused.Code != auth.CodeFieldMasked {
+		t.Errorf("filtering by what the withheld partner did → %v, want the %s refusal", err, auth.CodeFieldMasked)
+	}
+	// The same filter for a seat whose role withholds nothing still narrows, or
+	// the refusal above would have closed the oracle by breaking the feature.
+	page, _, err := e.Deals.ListDeals(e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms),
+		deals.ListDealsInput{PartnerCompanyID: &partner})
+	if err != nil {
+		t.Fatalf("an unmasked seat filtering by the same partner: %v", err)
+	}
+	if len(page) != 1 || ids.UUID(page[0].Id) != deal.UUID {
+		t.Errorf("the unmasked filter returned %d deal(s), want the one on that partner", len(page))
+	}
 }

@@ -65,7 +65,8 @@ func (w *withheldNames) add(fields ...string) {
 
 // maskedNamesPerRow collects what each row of the page withholds, before
 // anything is nulled: the role's masks, answered against this row's write
-// authority, and whatever the module's own pass adds.
+// authority, and whatever the module's own pass adds — each through the same
+// group closure, since a field gives its group away whoever withheld it.
 // A supplied map never widens what goes out: the lift lives in MaskedFields,
 // which refuses it on an object whose rows cannot answer write authority, so
 // the two lists are equal there and the map decides nothing.
@@ -95,7 +96,9 @@ func maskedNamesPerRow[T any](ctx context.Context, tx pgx.Tx, object string,
 			names[i].add(outsideAuthority...)
 		}
 		if extra != nil {
-			names[i].add(extra(i)...)
+			for _, field := range extra(i) {
+				names[i].add(withheldWith(object, field)...)
+			}
 		}
 	}
 	return names, nil

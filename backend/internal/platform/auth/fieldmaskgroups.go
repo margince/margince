@@ -51,6 +51,9 @@ var maskGroups = map[maskSubject][]maskSubject{
 	// currency that would otherwise still read as a priced deal.
 	{maskObjDeal, maskFieldAmountMinor}: {{maskObjDeal, "expected_arr_minor"}, {maskObjDeal, maskFieldCurrency}},
 	{maskObjDeal, "expected_arr_minor"}: {{maskObjDeal, maskFieldAmountMinor}, {maskObjDeal, maskFieldCurrency}},
+	// What a partner DID is a claim about the partner: "sourced" beside a
+	// withheld partner tells a reader that some partner brought the deal.
+	{maskObjDeal, "partner_company_id"}: {{maskObjDeal, "partner_attribution"}},
 	// A commission entry says the tier three ways: frozen at accrual, as the
 	// rate it became (tier2_20 is 2000bps), and as the amount over the basis it
 	// produced that rate from. None of the three is a member an administrator
@@ -73,6 +76,21 @@ var maskGroups = map[maskSubject][]maskSubject{
 func withheldSubjects(object, field string) []maskSubject {
 	own := maskSubject{object, field}
 	return append([]maskSubject{own}, maskGroups[own]...)
+}
+
+// withheldWith is the closure of one withheld field as names on the SAME
+// record: the field, and whatever standing beside it would give it back. The
+// group answers what disclosure a name costs, not why the field went, so a
+// caller withholding for a reason of its own closes it the same way. A member
+// on another object is that record's own read to answer, under its own object.
+func withheldWith(object, field string) []string {
+	var names []string
+	for _, s := range withheldSubjects(object, field) {
+		if s.object == object {
+			names = append(names, s.field)
+		}
+	}
+	return names
 }
 
 // masksWithholding answers which of this principal's configured masks withhold

@@ -360,7 +360,14 @@ func uuidOfFilter[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
 // An empty scope clause means a caller who reads every row of that table;
 // there is nothing to narrow and the EXISTS would only confirm what the
 // composite foreign key already guarantees.
+//
+// A role that WITHHOLDS the column is the other half, and it is refused rather
+// than narrowed: the target is one this caller could open, so every arm here
+// would answer, and the answer is the reference masked_fields declined to name.
 func referenceFilterClause(ctx context.Context, column, table string, id ids.UUID, arg func(any) int) (string, error) {
+	if err := auth.RefuseMaskedFilter(ctx, maskObject, column); err != nil {
+		return "", err
+	}
 	pos := arg(id)
 	scope, err := auth.ScopeClauseFor(ctx, table, "ref", arg)
 	if err != nil {
@@ -385,6 +392,11 @@ func referenceFilterClause(ctx context.Context, column, table string, id ids.UUI
 // caller could open.
 func partnerAttributionFilterClause(ctx context.Context, attribution string, arg func(any) int) (string, error) {
 	if err := validPartnerAttribution(attribution); err != nil {
+		return "", err
+	}
+	// The claim travels with the partner, so a role withholding one withholds
+	// both, and this arm answers for the rows a mask already declined to name.
+	if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerAttribution); err != nil {
 		return "", err
 	}
 	clause := storekit.SQLf("partner_attribution = $%d", arg(attribution))

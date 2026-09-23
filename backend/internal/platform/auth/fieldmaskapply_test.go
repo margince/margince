@@ -22,14 +22,16 @@ import (
 // here because platform owns no contract type and must not learn one: what
 // ApplyFieldMasks knows about a row is the accessors its caller hands over.
 type pricedRow struct {
-	id        ids.UUID
-	amount    *int64
-	arr       *int64
-	unitPrice *int64
-	currency  *string
-	companyID *ids.UUID
-	masked    []string
-	writable  bool
+	id          ids.UUID
+	amount      *int64
+	arr         *int64
+	unitPrice   *int64
+	currency    *string
+	companyID   *ids.UUID
+	partnerID   *ids.UUID
+	attribution *string
+	masked      []string
+	writable    bool
 }
 
 func rowID(r pricedRow) ids.UUID { return r.id }
@@ -39,20 +41,24 @@ func setMasked(r *pricedRow, names []string) { r.masked = names }
 // pricedWithholds is the registry a module hands over: one deliberate act per
 // field. project_id is deliberately absent — it is the name nothing withholds.
 var pricedWithholds = map[string]func(*pricedRow){
-	"amount_minor":       func(r *pricedRow) { r.amount = nil },
-	"expected_arr_minor": func(r *pricedRow) { r.arr = nil },
-	"unit_price_minor":   func(r *pricedRow) { r.unitPrice = nil },
-	"currency":           func(r *pricedRow) { r.currency = nil },
-	"company_id":         func(r *pricedRow) { r.companyID = nil },
+	"amount_minor":        func(r *pricedRow) { r.amount = nil },
+	"expected_arr_minor":  func(r *pricedRow) { r.arr = nil },
+	"unit_price_minor":    func(r *pricedRow) { r.unitPrice = nil },
+	"currency":            func(r *pricedRow) { r.currency = nil },
+	"company_id":          func(r *pricedRow) { r.companyID = nil },
+	"partner_company_id":  func(r *pricedRow) { r.partnerID = nil },
+	"partner_attribution": func(r *pricedRow) { r.attribution = nil },
 }
 
 func pricedPage(rowIDs ...ids.UUID) []pricedRow {
 	page := make([]pricedRow, 0, len(rowIDs))
 	for _, id := range rowIDs {
-		amount, arr, price, currency, company := int64(1200), int64(400), int64(99), "EUR", ids.NewV7()
+		amount, arr, price, currency := int64(1200), int64(400), int64(99), "EUR"
+		company, partner, attribution := ids.NewV7(), ids.NewV7(), "sourced"
 		page = append(page, pricedRow{
 			id: id, amount: &amount, arr: &arr, unitPrice: &price,
 			currency: &currency, companyID: &company,
+			partnerID: &partner, attribution: &attribution,
 		})
 	}
 	return page
@@ -205,6 +211,33 @@ func TestANameWithNoWithholdFuncIsDroppedRatherThanReported(t *testing.T) {
 	}
 	if row.amount == nil {
 		t.Error("a currency mask dragged the amount along; the group is directed, not symmetric")
+	}
+}
+
+// A name the MODULE collected carries the group with it, like a configured
+// mask does. The reason a field is withheld does not change what giving it
+// back would disclose: a deal pointing at a partner this reader cannot open
+// withholds the partner, and "sourced" left standing beside the null says some
+// partner brought the deal.
+func TestANameTheModuleCollectedWithholdsItsGroupToo(t *testing.T) {
+	t.Parallel()
+	ctx := maskedActor()
+	page := pricedPage(ids.NewV7())
+	tx := &writableRowsTx{}
+
+	err := auth.ApplyFieldMasks(ctx, tx, "deal", page, rowID, pricedWithholds, setMasked,
+		func(int) []string { return []string{"partner_company_id"} }, nil)
+	if err != nil {
+		t.Fatalf("ApplyFieldMasks: %v", err)
+	}
+	row := page[0]
+	if row.attribution != nil {
+		t.Errorf("attribution = %q beside a withheld partner", *row.attribution)
+	}
+	want := []string{"partner_company_id", "partner_attribution"}
+	if !slices.Equal(row.masked, want) {
+		t.Errorf("masked_fields = %v, want %v — a field nulled and not named reads as one nobody filled in",
+			row.masked, want)
 	}
 }
 
