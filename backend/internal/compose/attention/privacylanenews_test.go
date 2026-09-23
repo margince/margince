@@ -11,7 +11,7 @@ package attention
 // That silence is the whole subject here, because it is the one place this
 // surface deliberately declines to report a hole in the day. It has to be no
 // wider than its reason: a privacy admin whose seat is mis-set — a missing
-// contact grant, a non-human principal on a queue that admits only people —
+// contact grant, a non-human principal on a queue that admits no machine —
 // gets the SAME refusal from the lane, and for them it is news. Swallowing it
 // leaves them reading a clean page over a case queue they cannot open.
 

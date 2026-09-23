@@ -158,7 +158,7 @@ func unavailable(ctx context.Context, day crmcontracts.Attention) []crmcontracts
 		//
 		// A reader who DOES hold the grant and was still refused hit something
 		// else — the notice lane's separate contact:read gate, or a non-human
-		// principal on a queue that admits only people — and that is real news
+		// principal on a queue that admits no machine — and that is real news
 		// about a mis-set seat, which is why only the role case is suppressed.
 		if privacyByRole && (lane == laneDSR || lane == laneNoticeCase) {
 			continue
