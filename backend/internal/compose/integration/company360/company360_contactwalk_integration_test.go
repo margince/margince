@@ -25,6 +25,7 @@ package company360
 // see; the ordering follows from it.
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -139,4 +141,65 @@ func computedAtOf(t *testing.T, rows []crmcontracts.CompanyContact) time.Time {
 		t.Fatal("the row reports no computed_at, so the walk's instant is not on the wire")
 	}
 	return at.UTC()
+}
+
+// A cursor naming an instant no page was served from is refused.
+//
+// THE TOKEN IS UNSIGNED. storekit.EncodeOpaque is base64 over JSON, and that
+// package's own note says a well-formed token is not yet a valid position — the
+// caller checks the fields before trusting them. Reading `as_of` therefore means
+// reading a client-controlled instant, so the two readings that name no walk are
+// refused rather than honoured: zero, because a token this service minted always
+// carries one, and the future, because no page has been served from there.
+//
+// Written because the guard was claimed and not held. The code says it and the
+// pull request says it; neither is a test, and a refusal nothing exercises is a
+// sentence rather than a control.
+func TestAForgedWalkInstantIsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	clock := &movableClock{at: company360Clock}
+	svc := company360ServiceAt(e, clock)
+
+	company := e.SeedCompany(t, "Brandt GmbH", nil)
+	contact := e.SeedContact(t, "Ute Sommer", nil)
+	employ(t, e, contact, company, "Fleet")
+
+	limit := 1
+	for name, forged := range map[string]contactCursorForTest{
+		"an instant in the future": {Sort: "recommended", ID: contact, AsOf: company360Clock.AddDate(0, 0, 1)},
+		"no instant at all":        {Sort: "recommended", ID: contact},
+	} {
+		t.Run(name, func(t *testing.T) {
+			token := forgeCursor(t, forged)
+			_, err := svc.ContactPage(ctx, ids.CompanyID{UUID: company},
+				company360svc.ContactListQuery{Limit: &limit, Cursor: &token})
+			var malformed *storekit.MalformedCursorError
+			if !errors.As(err, &malformed) {
+				t.Errorf("a cursor carrying %s answered %v, want a malformed-cursor refusal — the "+
+					"token is unsigned, so an instant nobody was served from is a client's "+
+					"invention rather than a position to resume from", name, err)
+			}
+		})
+	}
+}
+
+// contactCursorForTest is the token's shape, spelled here because the writer's
+// own type is unexported. The JSON keys are what bind the two: a rename on
+// either side makes this forge a token the reader does not recognise, which
+// answers malformed for the wrong reason — so the keys are asserted by the
+// round trip in the case above rather than assumed.
+type contactCursorForTest struct {
+	Sort string    `json:"s"`
+	ID   ids.UUID  `json:"i"`
+	AsOf time.Time `json:"a"`
+}
+
+func forgeCursor(t *testing.T, pos contactCursorForTest) string {
+	t.Helper()
+	token, err := storekit.EncodeOpaque(pos)
+	if err != nil {
+		t.Fatalf("forging a cursor: %v", err)
+	}
+	return token
 }
