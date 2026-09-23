@@ -77,7 +77,7 @@ var managerObjects = grid(crud, map[string]grant{
 	objDataCoverage:         none,
 	objEmbeddingReindex:     none,
 	"finance":               readOnly,
-	objForecast:             createRead,
+	objForecast:             writeNoDelete,
 	objFxRate:               none,
 	objImportRun:            none,
 	objInstallationSettings: readOnly,
@@ -141,7 +141,11 @@ var defaults = map[string]Document{
 	// (RD-AC-7); license is issued rather than edited; capture_trace is written
 	// by the pipeline and swept by its own job; the rate sheets and
 	// capture_settings are append-forward because a past-dated row prices a
-	// historical rollup; forecast supersedes rather than being rewritten.
+	// historical rollup. forecast carries no DELETE for the same reason — a
+	// call that was made is a thing that happened, and a current one
+	// supersedes it rather than erasing it — but it does carry update: an
+	// assurance finding is ANSWERED on the forecast object, which is a write
+	// surface the reading itself does not have.
 	"admin": {
 		Objects: grid(crud, map[string]grant{
 			objAiModelRate:          writeNoDelete,
@@ -152,7 +156,7 @@ var defaults = map[string]Document{
 			objComputedField:        readOnly,
 			objDataCoverage:         readOnly,
 			objEmbeddingReindex:     readUpdate,
-			objForecast:             createRead,
+			objForecast:             writeNoDelete,
 			objFxRate:               writeNoDelete,
 			objInstallationSettings: readUpdate,
 			objIntroduction:         writeNoDelete,
@@ -230,7 +234,16 @@ var defaults = map[string]Document{
 	// property, admin included.
 	"rep": {
 		Objects: grid(readOnly, map[string]grant{
-			"activity":          writeNoDelete,
+			"activity": writeNoDelete,
+			// A rep ANSWERS an assurance finding, and is usually the only one
+			// who can: the finding is about the quality of an input, and the
+			// seat that knows why a deal's numbers look the way they do is
+			// the one that entered them. Row scope already bounds what they
+			// reach, so this widens what they may say about their own work
+			// rather than what they can see. Making every finding a
+			// supervisory errand would route the question away from the only
+			// seat that can answer it.
+			objForecast:         readUpdate,
 			objAiModelRate:      none,
 			objAiRouting:        none,
 			objAiBudget:         none,
@@ -335,7 +348,7 @@ var defaults = map[string]Document{
 			objComputedField:        readOnly,
 			objDataCoverage:         readOnly,
 			objEmbeddingReindex:     readUpdate,
-			objForecast:             createRead,
+			objForecast:             writeNoDelete,
 			objFxRate:               writeNoDelete,
 			objInstallationSettings: readUpdate,
 			objIntroduction:         writeNoDelete,

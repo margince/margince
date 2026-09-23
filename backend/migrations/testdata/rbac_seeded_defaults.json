@@ -155,7 +155,7 @@
         "create": true,
         "delete": false,
         "read": true,
-        "update": false
+        "update": true
       },
       "fx_rate": {
         "create": true,
@@ -508,7 +508,7 @@
         "create": true,
         "delete": false,
         "read": true,
-        "update": false
+        "update": true
       },
       "fx_rate": {
         "create": false,
@@ -861,7 +861,7 @@
         "create": true,
         "delete": false,
         "read": true,
-        "update": false
+        "update": true
       },
       "fx_rate": {
         "create": false,
@@ -1214,7 +1214,7 @@
         "create": true,
         "delete": false,
         "read": true,
-        "update": false
+        "update": true
       },
       "fx_rate": {
         "create": true,
@@ -1920,7 +1920,7 @@
         "create": false,
         "delete": false,
         "read": true,
-        "update": false
+        "update": true
       },
       "fx_rate": {
         "create": false,
