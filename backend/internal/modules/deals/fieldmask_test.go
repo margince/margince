@@ -7,7 +7,9 @@ import (
 	"context"
 	"errors"
 	"maps"
+	"regexp"
 	"slices"
+	"strings"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -78,35 +80,19 @@ func TestAWithheldPartnerNullsItsOwnColumnAlone(t *testing.T) {
 	}
 }
 
-// maskFilterOperands is one operand per filter these cases narrow by, so each
-// narrows by something real rather than by a zero value.
-//
-// gatekit:fixture the value each filter narrows by — test input, not a cost.
-var maskFilterOperands = map[string]string{
-	filterCompanyID:          ids.NewV7().String(),
-	filterProjectID:          ids.NewV7().String(),
-	filterPartnerCompanyID:   ids.NewV7().String(),
-	filterPartnerAttribution: "sourced",
-	filterOwnerID:            ids.NewV7().String(),
-}
-
 // A filter is a reading of the column it narrows by: a caller who may not read
 // which company a deal is on learns it from which rows come back. So the list
-// refuses a filter naming a withheld field, in the words a sort over the same
-// column is refused in — an empty page would be just as safe and would teach
-// the caller the value.
-//
-// The subject is DERIVED: every filter this module offers over a field it can
-// withhold. A filter added over a maskable column joins the census with no
-// second edit.
+// refuses a filter narrowing by a withheld field, in the words a sort over the
+// same column is refused in — an empty page would be just as safe and would
+// teach the caller the value.
 func TestTheDealListRefusesAFilterOverAWithheldField(t *testing.T) {
 	t.Parallel()
-	over := withheldDealFilters()
+	over := withheldDealFilters(t)
 	if len(over) == 0 {
-		t.Fatal("no filter of this list names a field the deal can withhold, so the loop below asserts nothing")
+		t.Fatal("no filter of this list reads a field the deal can withhold, so the loop below asserts nothing")
 	}
 	for _, name := range over {
-		err := filterDeals(t, dealSeatMasking(maskableDealFields()...), name)
+		_, err := filterDeals(t, dealSeatMasking(maskableDealFields()...), name)
 		var refused *values.ParseError
 		if !errors.As(err, &refused) || refused.Code != auth.CodeFieldMasked {
 			t.Errorf("narrowing by %s under a role that withholds it → %v, want the masked-field refusal", name, err)
@@ -114,18 +100,44 @@ func TestTheDealListRefusesAFilterOverAWithheldField(t *testing.T) {
 	}
 }
 
-// The other direction, twice over, or the refusal above could be a list that
-// refuses every filter there is: the same filters for a seat whose role
-// withholds nothing, and a filter no mask names for a seat carrying them all.
+// The other direction, or the refusal above could be a list that refuses every
+// filter there is: a filter reading nothing a mask reaches, under a seat
+// carrying every deal mask. The census renders every filter for a seat that
+// withholds nothing, so that direction is asserted where it is derived.
 func TestTheDealListRefusesOnlyWhatTheRoleWithholds(t *testing.T) {
 	t.Parallel()
-	for _, name := range withheldDealFilters() {
-		if err := filterDeals(t, dealSeatMasking(), name); err != nil {
-			t.Errorf("narrowing by %s for a seat that reads it: %v", name, err)
+	if _, err := filterDeals(t, dealSeatMasking(maskableDealFields()...), filterOwnerID); err != nil {
+		t.Errorf("narrowing by owner_id, which no mask names, under every deal mask there is: %v", err)
+	}
+}
+
+// The census reads SQL because a filter is free to be named for the question it
+// asks rather than for the column that answers it. One such filter has to be in
+// reach, or a census matching names against the withhold registry would sweep
+// the same corpus and nothing here could tell the two apart.
+func TestTheDealFilterCensusReachesAFilterNamedForItsQuestion(t *testing.T) {
+	t.Parallel()
+	for _, name := range withheldDealFilters(t) {
+		if _, named := dealWithholds[name]; !named {
+			return
 		}
 	}
-	if err := filterDeals(t, dealSeatMasking(maskableDealFields()...), filterOwnerID); err != nil {
-		t.Errorf("narrowing by owner_id, which no mask names, under every deal mask there is: %v", err)
+	t.Fatal("every filter reading a withheld column is also named after one, so this census proves " +
+		"nothing a name match would not, and the filter named for its question is the one that leaks")
+}
+
+// The census matches the names a mask spells against rendered SQL, which holds
+// only while the wire and the column still coincide. A withheld field the
+// deal's own select list does not carry is one withheldDealColumns can no
+// longer find in a clause, and the corpus shrinks with nothing failing.
+func TestEveryWithheldDealFieldIsTheColumnTheSQLNames(t *testing.T) {
+	t.Parallel()
+	selected := regexp.MustCompile(`[a-z_]+`).FindAllString(dealColumns, -1)
+	for _, field := range slices.Sorted(maps.Keys(dealWithholds)) {
+		if !slices.Contains(selected, field) {
+			t.Errorf("a mask withholds %s and the deal selects no such column: the filter census reads "+
+				"clauses for this name and would stop recognising the filters that narrow by it", field)
+		}
 	}
 }
 
@@ -134,33 +146,48 @@ func maskableDealFields() []string {
 	return slices.Collect(maps.Keys(dealMaskableFields))
 }
 
-// withheldDealFilters is the census both directions walk: the filters this
-// list offers over a field the deal can withhold.
-func withheldDealFilters() []string {
+// withheldDealColumns matches any column a deal mask withholds. Whole words, so
+// partner_company_id is not read as a mention of company_id.
+var withheldDealColumns = regexp.MustCompile(
+	`\b(` + strings.Join(slices.Sorted(maps.Keys(dealWithholds)), "|") + `)\b`)
+
+// withheldDealFilters is the census both directions walk: the filters whose SQL
+// reads a column the deal can withhold.
+//
+// The clause is the subject, never the filter's name. partner_sourced narrows
+// partner_company_id under a name of its own, so a census matching names
+// against the withhold registry walks past the one filter whose name hides what
+// it reads and reports PASS over the smaller corpus.
+func withheldDealFilters(t *testing.T) []string {
+	t.Helper()
 	var over []string
 	for _, name := range dealListFilters.Names() {
-		if _, withholdable := dealWithholds[name]; withholdable {
+		clauses, err := filterDeals(t, dealSeatMasking(), name)
+		if err != nil {
+			t.Fatalf("narrowing by %s for a seat that withholds nothing: %v", name, err)
+		}
+		if slices.ContainsFunc(clauses, withheldDealColumns.MatchString) {
 			over = append(over, name)
 		}
 	}
 	return over
 }
 
-// filterDeals narrows a deal list by one filter as this seat, and answers what
-// the store made of it. It goes through the real filter bindings, so the
-// operand is parsed the way a request's is.
-func filterDeals(t *testing.T, p principal.Principal, name string) error {
+// filterDeals narrows a deal list by one filter as this seat, and answers the
+// clauses the store made of it. It goes through the real filter bindings, so
+// the operand is parsed the way a request's is.
+func filterDeals(t *testing.T, p principal.Principal, name string) ([]string, error) {
 	t.Helper()
-	operand, known := maskFilterOperands[name]
+	operand, known := dealFilterOperands[name]
 	if !known {
 		t.Fatalf("the %q filter has no operand here, so nothing this case asks narrows anything", name)
 	}
-	var in ListDealsInput
+	// Archived rows stay in, so every clause returned is the filter's own.
+	in := ListDealsInput{IncludeArchived: true}
 	if err := dealListFilters.Apply(&in, map[string]string{name: operand}); err != nil {
 		t.Fatalf("applying %s=%s: %v", name, operand, err)
 	}
 	var args []any
-	_, err := appendDealFilters(principal.WithActor(context.Background(), p), nil, in,
+	return appendDealFilters(principal.WithActor(context.Background(), p), nil, in,
 		func(v any) int { args = append(args, v); return len(args) })
-	return err
 }

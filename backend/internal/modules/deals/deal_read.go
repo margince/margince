@@ -297,6 +297,11 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		where = append(where, clause)
 	}
 	if in.PartnerSourced != nil {
+		// Whether a partner is named at all is a reading of partner_company_id,
+		// and the page's membership is the answer the mask declined to give.
+		if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerSourced, filterPartnerCompanyID); err != nil {
+			return nil, err
+		}
 		if *in.PartnerSourced {
 			where = append(where, PartnerSourcedSQL(""))
 		} else {
@@ -365,7 +370,7 @@ func uuidOfFilter[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
 // than narrowed: the target is one this caller could open, so every arm here
 // would answer, and the answer is the reference masked_fields declined to name.
 func referenceFilterClause(ctx context.Context, column, table string, id ids.UUID, arg func(any) int) (string, error) {
-	if err := auth.RefuseMaskedFilter(ctx, maskObject, column); err != nil {
+	if err := auth.RefuseMaskedFilter(ctx, maskObject, column, column); err != nil {
 		return "", err
 	}
 	pos := arg(id)
@@ -396,7 +401,7 @@ func partnerAttributionFilterClause(ctx context.Context, attribution string, arg
 	}
 	// The claim travels with the partner, so a role withholding one withholds
 	// both, and this arm answers for the rows a mask already declined to name.
-	if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerAttribution); err != nil {
+	if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerAttribution, filterPartnerAttribution); err != nil {
 		return "", err
 	}
 	clause := storekit.SQLf("partner_attribution = $%d", arg(attribution))

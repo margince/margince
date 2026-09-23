@@ -216,6 +216,14 @@ func TestTheDealListRefusesAFilterOverAColumnTheRoleWithholds(t *testing.T) {
 	if !errors.As(err, &refused) || refused.Code != auth.CodeFieldMasked {
 		t.Errorf("filtering by what the withheld partner did → %v, want the %s refusal", err, auth.CodeFieldMasked)
 	}
+	// Attribution PRESENCE asks the same question under a name of its own, and
+	// the page's membership answers it: these are the deals that name a partner.
+	partnered := true
+	_, _, err = e.Deals.ListDeals(rep, deals.ListDealsInput{PartnerSourced: &partnered})
+	if !errors.As(err, &refused) || refused.Code != auth.CodeFieldMasked {
+		t.Errorf("filtering by whether a withheld partner is named → %v, want the %s refusal",
+			err, auth.CodeFieldMasked)
+	}
 	// The same filter for a seat whose role withholds nothing still narrows, or
 	// the refusal above would have closed the oracle by breaking the feature.
 	page, _, err := e.Deals.ListDeals(e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms),

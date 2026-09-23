@@ -31,7 +31,7 @@ func RefuseMaskedSort(ctx context.Context, object string, sort *string, maskable
 	if !maskable(field) {
 		return nil
 	}
-	return refuseMaskedKey(ctx, object, field, "sort", "sort")
+	return refuseMaskedKey(ctx, object, "sort", field, "sort")
 }
 
 // RefuseMaskedFilter refuses a filter narrowing by a column this caller's role
@@ -39,15 +39,18 @@ func RefuseMaskedSort(ctx context.Context, object string, sort *string, maskable
 // narrowed for real hands the column over through its membership, and an empty
 // one would be just as safe while teaching the caller the value.
 //
-// The refused parameter is the field itself, because a list names a filter
-// after the column it narrows.
-func RefuseMaskedFilter(ctx context.Context, object, field string) error {
-	return refuseMaskedKey(ctx, object, field, field, "filter")
+// parameter is what the caller sent, field the column it reads. They coincide
+// wherever a list names a filter after its column; a filter named for the
+// question it asks — partner_sourced, over partner_company_id — narrows a
+// masked column all the same, so the refusal points at the parameter while
+// naming the column that closed it.
+func RefuseMaskedFilter(ctx context.Context, object, parameter, field string) error {
+	return refuseMaskedKey(ctx, object, parameter, field, "filter")
 }
 
 // refuseMaskedKey is the refusal both keys owe: one question of the role and
 // one wording, so a client that handles it on a sort handles it on a filter.
-func refuseMaskedKey(ctx context.Context, object, field, parameter, verb string) error {
+func refuseMaskedKey(ctx context.Context, object, parameter, field, verb string) error {
 	masked, err := MasksAnyRowOf(ctx, object, field)
 	if err != nil || !masked {
 		return err
