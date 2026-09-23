@@ -58,9 +58,14 @@ type RunResult struct {
 	Ungraded bool `json:"ungraded,omitempty"`
 }
 
-// judgeScores is the scores a judge actually gave, which is what a median and a
-// minimum may be taken over.
-func judgeScores(rs []RunResult) []int {
+// judgeMedianAndMin answers the median and minimum of the scores a judge
+// actually gave, and whether any were given.
+//
+// ONE reader for both the verdict and the record, because the guard is the whole
+// point: a task whose every run was cut off has an empty score set, and
+// indexing it is a panic. Written as two functions it was exactly that — the
+// verdict got the empty check and buildRecord, its sibling, did not.
+func judgeMedianAndMin(rs []RunResult) (median, minimum int, graded bool) {
 	scores := make([]int, 0, len(rs))
 	for _, r := range rs {
 		if r.Ungraded {
@@ -68,7 +73,11 @@ func judgeScores(rs []RunResult) []int {
 		}
 		scores = append(scores, r.Score)
 	}
-	return scores
+	if len(scores) == 0 {
+		return 0, 0, false
+	}
+	slices.Sort(scores)
+	return scores[len(scores)/2], scores[0], true
 }
 
 // Verdict folds N runs of one scenario into a certification outcome per
@@ -100,17 +109,14 @@ func Verdict(rs []RunResult, b Bands) (verdict string, reliability float64) {
 	}
 	reliability = float64(passed) / float64(n)
 
-	scores := judgeScores(rs)
-	slices.Sort(scores)
 	// Every run ungraded leaves no opinion to band on. The mechanical grade
 	// still decides pass/fail, and the judge's half of the bands cannot be met
 	// by a score nobody gave — so the verdict falls to not-supported rather
 	// than certifying on an empty median.
-	if len(scores) == 0 {
+	median, minScore, graded := judgeMedianAndMin(rs)
+	if !graded {
 		return VerdictNotSupported, reliability
 	}
-	median := scores[len(scores)/2]
-	minScore := scores[0]
 
 	if passed == n && median >= b.CertifiedMin && minScore >= b.Floor {
 		return VerdictCertified, reliability

@@ -20,10 +20,7 @@ import (
 // from this same constant — one source for the reasoning-headroom ceiling.
 const ReasoningOutputMaxTokens = 8192
 
-// Unfence is kernel/modelreply.Unfence, re-exported.
-//
-// The reduction moved to shared/kernel so the agents module could reach it too
-// (a module may not import a sibling). The name stays here because it is spelled
-// at every model-reply parser in this tier, and re-pointing those reads as churn
-// rather than as the change this was.
+// Unfence is kernel/modelreply.Unfence, re-exported: the reduction lives in
+// shared/kernel because the agents module may not import this one, and the name
+// stays here because every model-reply parser in this tier spells it.
 func Unfence(text string) string { return modelreply.Unfence(text) }

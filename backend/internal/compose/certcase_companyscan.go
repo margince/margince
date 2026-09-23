@@ -197,6 +197,10 @@ func (c *companyScanCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			cited[evidence.EntityId.String()] = true
 		}
 	}
+	// Every expected label, exactly — no alternatives. This site's scenario
+	// accepts one of two true findings on purpose: the prompt asks for the one
+	// that most needs a contact FIRST, so which finding the scan picked is the
+	// thing measured, and accepting either would delete the measurement.
 	missing := uncitedExpectations(c.expected, c.label, cited)
 	if len(missing) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: "never cited: " + strings.Join(missing, ", ")}

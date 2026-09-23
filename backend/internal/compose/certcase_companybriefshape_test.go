@@ -104,7 +104,14 @@ func TestACompanyBriefSentenceAboutTheAccountItselfSurvives(t *testing.T) {
 		`{"text":"They make automotive parts.","nature":"fact",` +
 		`"evidence":[{"entity_type":"company","entity_id":"` + account[1] + `"}]}]}]}`
 
-	if got := prepared.Evaluate(aitasks.Trace{Output: sectioned}); got.Result == aitasks.OutcomeAbstained {
-		t.Errorf("a sentence citing the account by the id the summary supplied was dropped: %s", got.Detail)
+	// The POSITIVE outcome, not "anything but abstained": a parse failure is
+	// OutcomeInvalid, which is the neighbouring bug this file exists to catch
+	// and would otherwise pass here. The scenario expects stalled_retrofit
+	// cited, which this reply does not, so a wrong answer is the correct verdict
+	// — what matters is that the account sentence SURVIVED to be judged.
+	got := prepared.Evaluate(aitasks.Trace{Output: sectioned})
+	if got.Result != aitasks.OutcomeWrongAnswer {
+		t.Errorf("Evaluate = %q (%s), want %q — the account sentence should survive grounding and "+
+			"then miss the record the scenario names", got.Result, got.Detail, aitasks.OutcomeWrongAnswer)
 	}
 }

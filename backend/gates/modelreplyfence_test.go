@@ -14,13 +14,9 @@ package gates
 // says so outright: "one reduction defines what every downstream shape check
 // and gate parses — the callers must not each invent their own trim."
 //
-// That claim went false. Six model-reply parsers reached production reading
-// their reply with a bare json.Unmarshal or a strings.TrimSpace, so a fencing
-// model lost those sites entirely: the parser reported malformed JSON and the
-// caller dropped to its deterministic floor, which reads to an operator exactly
-// like a weak model. It surfaced as two `invalid` verdicts in a certification
-// run — the cheapest possible place to find it, and only because the candidate
-// happened to fence where the incumbent bindings do not.
+// A parser that reads its reply raw refuses a correct answer and drops its
+// caller to the deterministic floor, which reads to an operator exactly like a
+// weak model. Six did.
 //
 // Two halves, because either alone fails short:
 //
@@ -79,20 +75,12 @@ func errText(err error) string {
 
 // modelReplyParsers are the model-reply parsers this gate can drive directly.
 //
-// NOT the whole set, and the difference matters: runner.parseStep is unexported
-// in another package, so nothing here can call it. The complete set is the
-// census's business, and it covers what this table cannot.
+// NOT the whole set: runner.parseStep is unexported in another package, so the
+// census covers it and TestAStepSurvivesTheManners drives it. Said out loud
+// because "not in the table" is otherwise indistinguishable from "not covered".
 //
-// The replies are minimal and deliberately NOT grounded in any Input: this gate
-// is about the fence and nothing else, so each row is driven with a zero Input
-// and both calls are refused for the same grounding reason. What may not differ
-// is that reason.
-//
-// The agent loop's runner.parseStep is absent from this table and NOT from the
-// census: it is unexported in another package, so nothing here can call it. Its
-// behaviour half is TestAStepSurvivesTheManners, beside the parser. Said out
-// loud because "not in the table" is otherwise indistinguishable from "not
-// covered", which is the reading that lets a site go unchecked.
+// Each row is driven with a zero Input, so both calls are refused for the same
+// grounding reason. What may not differ is that reason.
 func modelReplyParsers() []replyParser {
 	return []replyParser{
 		{
@@ -146,7 +134,7 @@ func modelReplyParsers() []replyParser {
 	}
 }
 
-// fencedRepliesReadTheSameAsPlainOnes is the behaviour half.
+// The behaviour half: a fence changes nothing a site reads.
 //
 // Held by: TestAFenceNeverChangesWhatASiteReads (backend/gates/modelreplyfence_test.go) — this test.
 func TestAFenceNeverChangesWhatASiteReads(t *testing.T) {
@@ -258,9 +246,11 @@ func modelReplyUnmarshalSites(t *testing.T) map[string]bool {
 				// reply reduces everything it decodes, and a genuine unrelated
 				// decode is a waiver with a reason rather than a silent gap.
 				name := pkg + "." + fn.Name.Name
-				// OR, not assignment: one function may unmarshal twice (a
-				// re-ask path), and a single reduced site does not clear the
-				// other. Any un-reduced read is a finding.
+				// OR, not assignment: one function may decode twice — a raw
+				// read with a reduced retry — and a reduced second site does
+				// not clear the first. Any un-reduced read is a finding, which
+				// assignedFrom holds by refusing to resolve a name that is
+				// written more than once.
 				sites[name] = sites[name] || !reducesThroughUnfence(decoded, assigned)
 				return true
 			})
@@ -322,23 +312,57 @@ func decoderSources(body *ast.BlockStmt) map[string]ast.Expr {
 // assignedFrom maps each name assigned a single value in body to that value, so
 // a check can follow `cleaned := modelreply.Unfence(text)` to the call that
 // reduced it.
+// A name assigned MORE THAN ONCE resolves to nothing, so a body that reduces
+// only on its second write is a finding rather than a clearance.
+//
+// This walk has no flow, so last-write-wins would clear the first read from the
+// second assignment. The shape that costs is ordinary — a raw fast path with a
+// reduced retry:
+//
+//	body := reply
+//	if err := json.Unmarshal([]byte(body), &out); err != nil { // unreduced
+//	    body = modelreply.Unfence(reply)
+//	    json.Unmarshal([]byte(body), &out)
+//	}
+//
+// Dropping the name reports BOTH reads, which is the honest direction: the
+// first one really is unreduced.
 func assignedFrom(body *ast.BlockStmt) map[string]ast.Expr {
 	out := map[string]ast.Expr{}
+	reassigned := map[string]bool{}
 	ast.Inspect(body, func(n ast.Node) bool {
 		assign, isAssign := n.(*ast.AssignStmt)
 		if !isAssign || len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
 			return true
 		}
-		if name, isIdent := assign.Lhs[0].(*ast.Ident); isIdent {
-			out[name.Name] = assign.Rhs[0]
+		name, isIdent := assign.Lhs[0].(*ast.Ident)
+		if !isIdent {
+			return true
 		}
+		if _, already := out[name.Name]; already {
+			reassigned[name.Name] = true
+			return true
+		}
+		out[name.Name] = assign.Rhs[0]
 		return true
 	})
+	for name := range reassigned {
+		delete(out, name)
+	}
 	return out
 }
 
-// reducesThroughUnfence reports whether what a decode reads came through the
-// reduction, following assignments a bounded number of hops.
+// reductions are kernel/modelreply's entry points, either of which routes a
+// model reply through the fence handling.
+//
+// TWO, because the step channel needs the stricter one: Unfence resolves an
+// ambiguous reply by size, SoleDocument refuses it. A census that knew only the
+// first would report the loop's own parser as unreduced for having chosen the
+// safer reduction.
+var reductions = []string{"Unfence", "SoleDocument"}
+
+// reducesThroughUnfence reports whether what a decode reads came through one of
+// the reductions, following assignments a bounded number of hops.
 //
 // BOUNDED rather than exhaustive, and the direction of the error is the point:
 // a chain longer than this reports the site as unreduced, which is a finding a
@@ -350,8 +374,10 @@ func reducesThroughUnfence(expr ast.Expr, assigned map[string]ast.Expr) bool {
 	for range hops {
 		var next []ast.Expr
 		for _, e := range frontier {
-			if expressionMentions(e, "Unfence") {
-				return true
+			for _, reduction := range reductions {
+				if expressionMentions(e, reduction) {
+					return true
+				}
 			}
 			ast.Inspect(e, func(n ast.Node) bool {
 				if name, isIdent := n.(*ast.Ident); isIdent {
@@ -510,11 +536,7 @@ func TestTheCensusSeesEveryKnownModelReplyParser(t *testing.T) {
 				parserRow.pkgFunc, parserRow.site)
 		}
 	}
-	if len(seen) < len(modelReplyParsers()) {
-		t.Errorf("the census found %d model-reply parser(s) and the table names %d; "+
-			"a census that can find fewer than the known set has already failed short",
-			len(seen), len(modelReplyParsers()))
-	}
+
 	// Said out loud so the number is not mistaken for a ceiling: the tree has
 	// more correct parsers than the table has broken ones, and the census should
 	// be seeing those too.
@@ -526,5 +548,58 @@ func TestTheCensusSeesEveryKnownModelReplyParser(t *testing.T) {
 		}
 		slices.Sort(names)
 		t.Log(strings.Join(names, "\n"))
+	}
+}
+
+// The census reports a raw read that a later reduction "fixes".
+//
+// The walk has no flow, so a name reduced on its SECOND write would otherwise
+// clear the first, unreduced read from it — a raw fast path with a reduced
+// retry, which is the ordinary shape this defect takes rather than a contrived
+// one. Planted here because AGENTS.md asks what shape a census cannot see and
+// says to plant that case; this one it could not see until assignedFrom stopped
+// resolving a twice-written name.
+func TestTheCensusReportsARawReadARetryLaterReduces(t *testing.T) {
+	t.Parallel()
+	const src = `package p
+
+import "encoding/json"
+
+func ParseSomething(reply string) error {
+	body := reply
+	var out map[string]any
+	if err := json.Unmarshal([]byte(body), &out); err == nil {
+		return nil
+	}
+	body = Unfence(reply)
+	return json.Unmarshal([]byte(body), &out)
+}
+`
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "p.go", src, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parsing the planted source: %v", err)
+	}
+	fn, _ := file.Decls[1].(*ast.FuncDecl)
+	if fn == nil {
+		t.Fatal("the planted source has no function to read")
+	}
+
+	sources := decoderSources(fn.Body)
+	assigned := assignedFrom(fn.Body)
+	var unreduced int
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		call, isCall := n.(*ast.CallExpr)
+		if !isCall {
+			return true
+		}
+		if decoded, decodes := decodedExpr(call, sources); decodes && !reducesThroughUnfence(decoded, assigned) {
+			unreduced++
+		}
+		return true
+	})
+	if unreduced == 0 {
+		t.Error("the census cleared a function whose FIRST decode reads the reply raw — " +
+			"a reduction on the same name's second write must not clear the first read")
 	}
 }

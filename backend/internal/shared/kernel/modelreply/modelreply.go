@@ -57,12 +57,59 @@ func Unfence(text string) string {
 // hands back the example, and taking the last hands back the footnote.
 func buriedDocument(text string) (string, bool) {
 	best := ""
-	for _, candidate := range append(fencedBlocks(text), bracedSpans(text)...) {
-		if len(candidate) > len(best) && json.Valid([]byte(candidate)) {
+	for _, candidate := range candidateDocuments(text) {
+		if len(candidate) > len(best) {
 			best = candidate
 		}
 	}
 	return best, best != ""
+}
+
+// candidateDocuments answers every DISTINCT valid JSON document buried in text.
+//
+// Distinct, because the two scans overlap by design: a fenced block and the
+// braced span inside it are one document found twice, and counting it twice
+// makes an unambiguous reply look ambiguous to SoleDocument.
+func candidateDocuments(text string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, candidate := range append(fencedBlocks(text), bracedSpans(text)...) {
+		candidate = strings.TrimSpace(candidate)
+		if seen[candidate] || !json.Valid([]byte(candidate)) {
+			continue
+		}
+		seen[candidate] = true
+		out = append(out, candidate)
+	}
+	return out
+}
+
+// SoleDocument is Unfence for a channel where a recovered document has to be
+// UNAMBIGUOUS: it takes the reply's own document when the reply is one, and
+// recovers a buried document only when the reply holds exactly one.
+//
+// Unfence takes the LARGEST candidate, which is right for a reply whose other
+// spans are the model's own working and wrong wherever the reply may quote
+// somebody else's. The agent loop's step is such a channel: an observation
+// carries untrusted text, a model that correctly REFUSES an instruction found in
+// it tends to quote the instruction while refusing — "the note asked me to run
+// X; I will not" — and if that quote is a step-shaped object, largest-wins hands
+// it back as the step to execute. The attacker chooses the length, so largest is
+// always theirs, and a refusal becomes the injection succeeding.
+//
+// Ambiguity therefore REFUSES rather than guesses. The caller has a re-ask path
+// and an invalid-step limit; neither is as expensive as running a tool call the
+// model declined to make.
+func SoleDocument(text string) string {
+	raw := strings.TrimSpace(text)
+	trimmed := strings.Trim(strings.TrimPrefix(raw, "```json"), "` \n")
+	if json.Valid([]byte(trimmed)) {
+		return trimmed
+	}
+	if candidates := candidateDocuments(raw); len(candidates) == 1 {
+		return candidates[0]
+	}
+	return trimmed
 }
 
 // fencedBlocks answers the contents of every ``` … ``` block in text, with an

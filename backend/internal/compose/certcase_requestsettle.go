@@ -55,15 +55,14 @@ type settleFixtureMessage struct {
 type settleExpectation struct {
 	Verdict string `json:"verdict"`
 	// RemainingNames is a phrase the still_owed answer has to contain, lowered
+	// before comparison.
 	//
-	// Several renderings may be separated by "|" and any one of them satisfies
-	// it. The thing owed has more than one honest name: an Angebot asked for in
-	// a German thread comes back as "Angebot für die zweite Charge schicken",
-	// as "Send offer for the second batch", and as "Send the quote" — all three
-	// name it, and a single-token check called two of them wrong. The phrase is
-	// OUR note to ourselves and the models write it in the thread's language as
-	// readily as the installation's, so pinning one token pins a language too.
-	// before comparison. Empty asserts nothing about the wording — the verdict
+	// Several renderings may be separated by "|", and any one satisfies it: the
+	// thing owed has more than one honest name, and a single token pinned a
+	// language with it — this phrase is our own note to ourselves, and the
+	// models write it in the thread's language as readily as the installation's.
+	//
+	// Empty asserts nothing about the wording — the verdict
 	// alone is the claim — which is what a settled or unsure case wants.
 	RemainingNames string `json:"remaining_names,omitempty"`
 }

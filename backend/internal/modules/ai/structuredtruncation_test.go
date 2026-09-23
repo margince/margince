@@ -6,20 +6,15 @@ package ai
 // A completion cut off at the output ceiling is not a malformed answer, and the
 // retry policy must not treat it as one.
 //
-// model.Response.FinishReason was added for exactly this and never read: "a
-// caller that validates a schema needs to be able to tell 'the model wrote
-// something invalid' from 'the model was cut off mid-sentence'." Nothing told
-// them apart, so a truncated reply took the schema-invalid path — the model was
-// fed back a complaint about its JSON, spent both remaining attempts running
-// away again, and the caller was finally handed "not valid JSON: unexpected end
-// of JSON input".
+// model.Response.FinishReason exists to tell "the model wrote something
+// invalid" from "the model was cut off mid-sentence". Nothing read it, so a
+// truncated reply took the schema-invalid path and was fed back a complaint
+// about its JSON — which it cannot act on — and spent both remaining attempts
+// running away again.
 //
-// Found certifying an open-weight candidate: 5 of 46 draft_reply turns ran to
-// the 8192-token ceiling where a normal answer is 166-297 tokens, and every one
-// reported itself as a JSON fault. The adapters already disagreed about it —
-// the Gemini wire refuses a non-STOP finish reason outright while the
-// OpenAI-compatible wire returns the truncated body as a success — so the same
-// failure had two faces depending on the binding.
+// Measured: 5 of 46 draft_reply turns ran to the 8192-token ceiling where a
+// normal answer is 166-297 tokens, and every one reported itself as a JSON
+// fault.
 
 import (
 	"strings"

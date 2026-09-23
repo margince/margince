@@ -295,7 +295,17 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	if pooled.Truncated {
 		log.WarnContext(ctx, "aicert: the candidate was cut off at the output ceiling, so this run is not sent to the judge",
 			"task", string(task), "scenario", sc.Name, "site", sc.Site, "outcome", evaluated.Result)
-		return ungradedRun(output, evaluated.Result, outcomeAsExpected && capsOK, pooled, aitasks.ScopeOf(factory)), nil
+		// NOT a pass, whatever the validator made of the fragment. An answer
+		// that did not finish is not a correct answer, and a run that counted
+		// toward reliability while withholding its score would raise a
+		// certified median above what the binding earned — the model is the
+		// only actor, so that is a number flattering itself.
+		out := candidateSideRun(candidateSide{
+			output: output, outcome: evaluated.Result, passed: false,
+			scope: aitasks.ScopeOf(factory), pooled: pooled,
+		})
+		out.Ungraded = true
+		return out, nil
 	}
 
 	judgeMark := judgeRec.mark()
@@ -313,39 +323,50 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	}
 	traceCalls(ctx, trace, "judge", task, sc, run, attempt, judgeCalls, log)
 
-	graded := ungradedRun(output, evaluated.Result, outcomeAsExpected && capsOK, pooled, aitasks.ScopeOf(factory))
-	graded.Ungraded = false
+	graded := candidateSideRun(candidateSide{
+		output: output, outcome: evaluated.Result, passed: outcomeAsExpected && capsOK,
+		scope: aitasks.ScopeOf(factory), pooled: pooled,
+	})
 	graded.Score = score
 	graded.JudgeServedModel = judgeServedModel
 	graded.JudgeDegraded = judgeDegraded
 	return graded, nil
 }
 
-// ungradedRun is one run's outcome with everything the CANDIDATE side knows and
-// nothing the judge does — the shape a truncated run keeps, and the shape a
-// scored one is built from before its score is set.
+// candidateSideRun is one run's outcome with everything the CANDIDATE side
+// knows and nothing the judge does. The graded path adds the score and the
+// grader's identity; the truncated path adds neither and marks itself Ungraded.
 //
-// One builder for both rather than two: the ungraded path started as a copy of
-// the scored one, and a copy is where a field added to the record later reaches
-// the judged runs and misses the cut-off ones.
-func ungradedRun(output, outcome string, passed bool, pooled runCalls, scope string) runOutcome {
+// One builder for both rather than two, because a second copy is where a field
+// added to the record later reaches the judged runs and misses the cut-off ones.
+func candidateSideRun(in candidateSide) runOutcome {
 	return runOutcome{
 		RunResult: RunResult{
-			Output:           output,
-			Outcome:          outcome,
-			LatencyMS:        pooled.LatencyMS,
-			TokensIn:         pooled.TokensIn,
-			TokensOut:        pooled.TokensOut,
-			CachedTokens:     pooled.CachedTokens,
-			CacheWriteTokens: pooled.CacheWriteTokens,
-			HardPass:         passed,
-			Ungraded:         true,
+			Output:           in.output,
+			Outcome:          in.outcome,
+			LatencyMS:        in.pooled.LatencyMS,
+			TokensIn:         in.pooled.TokensIn,
+			TokensOut:        in.pooled.TokensOut,
+			CachedTokens:     in.pooled.CachedTokens,
+			CacheWriteTokens: in.pooled.CacheWriteTokens,
+			HardPass:         in.passed,
 		},
-		Provider:             pooled.Provider,
-		ServedModel:          pooled.ServedModel,
-		ServedIdentitySource: pooled.ServedIdentitySource,
-		CertifiedScope:       scope,
+		Provider:             in.pooled.Provider,
+		ServedModel:          in.pooled.ServedModel,
+		ServedIdentitySource: in.pooled.ServedIdentitySource,
+		CertifiedScope:       in.scope,
 	}
+}
+
+// candidateSide names what candidateSideRun reads, so two adjacent strings
+// cannot be handed over transposed — the hazard buildRecord's own doc argues
+// against for the same reason.
+type candidateSide struct {
+	output  string
+	outcome string
+	passed  bool
+	scope   string
+	pooled  runCalls
 }
 
 // driveCandidate runs the prepared case over the candidate router and returns
@@ -414,82 +435,4 @@ func (c routedCompleter) Complete(ctx context.Context, req model.Request) (model
 		return model.Response{}, fmt.Errorf("aicert: %s: %w", c.task, err)
 	}
 	return resp, nil
-}
-
-// runCalls is every logical call one run made, folded into the single
-// accounting a RunResult keeps.
-//
-// Each field folds the way its own meaning demands, and none of them is the
-// last call's value:
-//
-//   - Degraded is true when ANY call was served on a budget-degraded route. A
-//     demoted first attempt followed by a healthy retry is still a demoted
-//     answer inside a certified run, and §5 voids the record for it.
-//   - The four token buckets and the latency SUM: they are what the run spent,
-//     and a run that spent it over three calls spent it.
-//   - Provider/ServedModel/ServedIdentitySource are the FIRST call's, which is
-//     the whole run's whenever servedUniformly says so. A caller that certifies
-//     a (provider, model) heading asks that question; the judge, whose score is
-//     whichever attempt parsed, does not.
-type runCalls struct {
-	Calls    []ai.Call
-	Degraded bool
-	// Truncated says a call in this run stopped at the output ceiling rather
-	// than at the end of its answer. OR-ed across the run like Degraded, and
-	// for its reason: one cut-off attempt leaves the run without an answer to
-	// score, whichever attempt it was.
-	Truncated                                   bool
-	Provider, ServedModel, ServedIdentitySource string
-	TokensIn, TokensOut                         int
-	CachedTokens, CacheWriteTokens              int
-	ReasoningTokens                             int
-	LatencyMS                                   int64
-}
-
-// poolRunCalls folds one run's calls into that accounting. A run with no call
-// at all is refused rather than folded to zeroes: a scored run that made no
-// model call is a harness fault, and zeroes would report it as a free, instant,
-// healthy one.
-func poolRunCalls(calls []ai.Call) (runCalls, error) {
-	if len(calls) == 0 {
-		return runCalls{}, fmt.Errorf("no model call was recorded, so there is nothing to score")
-	}
-	first := calls[0]
-	pooled := runCalls{
-		Calls:                calls,
-		Provider:             first.Provider,
-		ServedModel:          first.ServedModel,
-		ServedIdentitySource: first.ServedIdentitySource,
-	}
-	for _, c := range calls {
-		pooled.Degraded = pooled.Degraded || c.Degraded
-		pooled.Truncated = pooled.Truncated || c.FinishReason == model.FinishReasonLength
-		pooled.TokensIn += c.TokensIn
-		pooled.TokensOut += c.TokensOut
-		pooled.CachedTokens += c.CachedTokens
-		pooled.CacheWriteTokens += c.CacheWriteTokens
-		pooled.ReasoningTokens += c.ReasoningTokens
-		pooled.LatencyMS += c.LatencyMS
-	}
-	return pooled, nil
-}
-
-// servedUniformly reports whether one model answered the whole run, naming both
-// identities when one did not.
-//
-// A mid-run ladder fallback is the same defect as a mid-SET one: a record that
-// pooled it would report an answer partly produced by one model and partly by
-// another under a single (provider, model) heading, and nothing in the record
-// would ever show it. The fix is a re-run once the ladder is stable, not an
-// edit, so the message names what to compare rather than what to change.
-func (r runCalls) servedUniformly() error {
-	for i, c := range r.Calls {
-		if c.Provider != r.Provider || c.ServedModel != r.ServedModel {
-			return fmt.Errorf(
-				"call %d of %d was served by %s:%s, but call 1 was served by %s:%s — refusing to certify one run answered by two models",
-				i+1, len(r.Calls), c.Provider, c.ServedModel, r.Provider, r.ServedModel,
-			)
-		}
-	}
-	return nil
 }

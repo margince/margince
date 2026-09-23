@@ -39,9 +39,9 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 	results := acc.allResults
 	// Only what a judge graded: a run skipped for truncation carries Score 0
 	// because nobody scored it, and averaging that in reports the absence as a
-	// verdict.
-	scores := judgeScores(results)
-	sort.Ints(scores)
+	// verdict. An all-ungraded task leaves both numbers at zero beside a
+	// not_supported verdict, which is what Verdict reaches for the same reason.
+	judgeP50, judgeMin, _ := judgeMedianAndMin(results)
 
 	sortedLatencies := append([]int64(nil), acc.latencies...)
 	sort.Slice(sortedLatencies, func(i, j int) bool { return sortedLatencies[i] < sortedLatencies[j] })
@@ -82,8 +82,8 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 		CertifiedScope:       acc.certifiedScope,
 		ContextApplied:       certLaneAppliesCompanyContext,
 		ContextScopes:        declaredCompanyContextScopes(task),
-		JudgeScoreP50:        scores[len(scores)/2],
-		JudgeScoreMin:        scores[0],
+		JudgeScoreP50:        judgeP50,
+		JudgeScoreMin:        judgeMin,
 		LatencyP50:           percentile(sortedLatencies, 0.50),
 		LatencyP95:           percentile(sortedLatencies, 0.95),
 		MeanTokens:           meanTokens,

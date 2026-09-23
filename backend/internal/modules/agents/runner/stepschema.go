@@ -13,21 +13,18 @@ import "encoding/json"
 // schema-constrained decoding enforces the shape at GENERATION rather than
 // leaving parseStep to refuse it afterwards.
 //
-// This matters where a reduction of the reply cannot help. A model answering in
-// its own tool-call channel emits that channel's syntax as literal text, and it
-// is not JSON to recover — `{q: "Anna Weber"}` has unquoted keys — so the only
-// place the wrong shape can be prevented is before it is generated.
+// A model answering in its own tool-call channel emits that channel's syntax as
+// literal text, which is not JSON to recover, so the only place the wrong shape
+// can be prevented is before it is generated.
 //
 // HAND-WRITTEN, against shared/schema's own instruction to compose instead —
 // and the exception is measured, not preferred. That package builds Properties
 // from a Go map, and encoding/json sorts a map's keys, so it can only ever emit
 // args, final, tool. Property ORDER is load-bearing under grammar-constrained
-// decoding: converted to the builder, agent_loop fell from 0.78 to 0.18 on one
-// binding and 0.53 to 0.31 on another, and the trace says why — of 42 tool
-// calls in the failing run, NONE carried args ({"tool":"whats_slipping_this_week"})
-// and several folded them into the tool name ({"tool":"list_pipelines { }"}).
-// Removing the field descriptions did not recover it; the order is what the
-// model follows.
+// decoding: converted to the builder, agent_loop fell 0.78→0.18 on one binding
+// and 0.53→0.31 on another, and no tool call in the failing run carried args at
+// all. Removing the field descriptions did not recover it; the order is what
+// the model follows.
 //
 // So this stays a string until the builder can express an order. Do not
 // "fix" it back without re-certifying agent_loop on two bindings.

@@ -118,16 +118,17 @@ func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Re
 // one — the caller then has the choice between "your model misbehaved" and
 // "you have no model", which is the difference between a retry and a setting.
 func rejected(task Task, info RouteInfo, finalErr error, wasTruncated bool) error {
-	err := fmt.Errorf("%w: %s after retry and escalation: %w", ErrOutputRejected, task, finalErr)
+	// The truncation is said BEFORE the validator's complaint, because the
+	// complaint is a consequence: a document cut mid-value is invalid for a
+	// reason that has nothing to do with how it was written. An operator reading
+	// this is owed the output ceiling and not the schema — and the task, which
+	// an earlier spelling of this branch dropped by rebuilding the error.
+	reason := "after retry and escalation"
 	if wasTruncated {
-		// Said before the validator's complaint, because the complaint is a
-		// consequence: a document cut mid-value is invalid for a reason that has
-		// nothing to do with how it was written. An operator reading this is
-		// owed the output ceiling and not the schema.
-		err = fmt.Errorf("%w: the last answer was cut off at the output limit rather than "+
-			"finishing, so what the validator refused was an incomplete document: %w",
-			ErrOutputRejected, finalErr)
+		reason = "after retry and escalation, and the last answer was cut off at the output " +
+			"limit rather than finishing, so what the validator refused was an incomplete document"
 	}
+	err := fmt.Errorf("%w: %s %s: %w", ErrOutputRejected, task, reason, finalErr)
 	if info.Provider == ProviderFake {
 		return fmt.Errorf("%w: %w", ErrUnconfiguredModel, err)
 	}
@@ -155,31 +156,10 @@ func (r *Router) forgetCached(ctx context.Context, task Task, req model.Request)
 	r.cache.forget(key)
 }
 
-// withValidatorFeedback appends the failed output and its validation
-// error as conversation turns, so the retry is a correction, not a
-// blind re-roll. The changed messages also miss the result cache — a
-// retry can never be served the cached invalid answer.
-// Both echoed turns are DATA and go inside the request's boundary. The failed
-// output is the model repeating text a sender steered, and the validator's
-// message quotes tokens out of it, so appending either in the clear would put
-// captured text back in the instruction region — while the system prompt still
-// says the markers are the ONLY boundary. That is the hole the fence exists to
-// close, reached on the repair path instead of the first attempt, and it
-// compounds: attempt 3 escalates to a STRONGER model carrying the same turns.
-//
-// A prompt that declares NO boundary was shown no untrusted data, so its failed
-// output is not attacker-steered and goes back plainly. The quarantine is for
-// the prompts that named a fence, which are exactly the ones that read captured
-// text. A prompt that declares a boundary this package could not have minted is
-// neither of those: it claims to carry untrusted data behind a marker nothing
-// guarantees, so the echo is dropped rather than sent under a false protection.
 // truncationFeedback is what a cut-off attempt is told instead of a complaint
-// about its shape.
-//
-// Actionable where the schema complaint is not: a model whose JSON was
-// well-formed until the ceiling cut it cannot act on "your JSON is invalid", and
-// can act on "you ran out of room". Without this the remaining attempts are
-// spent reproducing the same runaway.
+// about its shape. Actionable where the schema complaint is not: a model whose
+// JSON was well-formed until the ceiling cut it can act on "you ran out of
+// room" and cannot act on "your JSON is invalid".
 const truncationFeedback = "Your previous answer was cut off because it reached the output limit " +
 	"before it finished. Answer the same question again, but much more briefly — " +
 	"the shortest complete answer that satisfies the schema."
@@ -212,6 +192,25 @@ func feedbackFor(req model.Request, resp model.Response, cause error) model.Requ
 	return withValidatorFeedback(req, resp.Text, cause)
 }
 
+// withValidatorFeedback appends the failed output and its validation
+// error as conversation turns, so the retry is a correction, not a
+// blind re-roll. The changed messages also miss the result cache — a
+// retry can never be served the cached invalid answer.
+//
+// Both echoed turns are DATA and go inside the request's boundary. The failed
+// output is the model repeating text a sender steered, and the validator's
+// message quotes tokens out of it, so appending either in the clear would put
+// captured text back in the instruction region — while the system prompt still
+// says the markers are the ONLY boundary. That is the hole the fence exists to
+// close, reached on the repair path instead of the first attempt, and it
+// compounds: attempt 3 escalates to a STRONGER model carrying the same turns.
+//
+// A prompt that declares NO boundary was shown no untrusted data, so its failed
+// output is not attacker-steered and goes back plainly. The quarantine is for
+// the prompts that named a fence, which are exactly the ones that read captured
+// text. A prompt that declares a boundary this package could not have minted is
+// neither of those: it claims to carry untrusted data behind a marker nothing
+// guarantees, so the echo is dropped rather than sent under a false protection.
 func withValidatorFeedback(req model.Request, failedText string, cause error) model.Request {
 	out := req
 	fence, boundary := feedbackFence(out)

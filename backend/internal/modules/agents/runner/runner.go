@@ -402,11 +402,11 @@ type modelStep struct {
 }
 
 func parseStep(text string) (modelStep, error) {
-	// Models under JSON-only instructions still wrap habitually — a fence, a
-	// tag, a sentence either side. kernel/modelreply is the one reduction that
-	// reads past all of it, and the trim this used to hand-roll reached only a
-	// fence at the very edges of the reply.
-	cleaned := modelreply.Unfence(text)
+	// SoleDocument, not Unfence: this channel executes what it reads, so a
+	// reply holding two candidate documents is refused rather than resolved by
+	// size. See modelreply.SoleDocument — largest-wins hands back an injected
+	// step that the model quoted while refusing it.
+	cleaned := modelreply.SoleDocument(text)
 
 	var step modelStep
 	dec := json.NewDecoder(strings.NewReader(cleaned))

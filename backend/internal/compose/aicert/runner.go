@@ -393,10 +393,16 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 	acc.cacheWriteTokensTotal += outcome.CacheWriteTokens
 	acc.provider, acc.servedModel, acc.identitySource = outcome.Provider, outcome.ServedModel, outcome.ServedIdentitySource
 	acc.identitySet = true
-	acc.judgeServedModel = outcome.JudgeServedModel
 	acc.certifiedScope = aitasks.NarrowerScope(acc.certifiedScope, outcome.CertifiedScope)
-	if !selfJudged(outcome.ServedModel, outcome.JudgeServedModel) {
-		acc.selfJudgedEveryRun = false
+	// A run no judge saw says nothing about the judge. Capturing its empty
+	// identity would let one truncated run at the END of a set erase the grader
+	// from the record, and its empty ServedModel would read as not-self-judged
+	// for a run nobody judged at all.
+	if !outcome.Ungraded {
+		acc.judgeServedModel = outcome.JudgeServedModel
+		if !selfJudged(outcome.ServedModel, outcome.JudgeServedModel) {
+			acc.selfJudgedEveryRun = false
+		}
 	}
 	if outcome.HardPass {
 		acc.passed++

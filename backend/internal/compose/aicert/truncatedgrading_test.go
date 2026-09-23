@@ -80,31 +80,36 @@ func TestTruncationAnywhereInARunCounts(t *testing.T) {
 func TestAnUngradedRunIsLeftOutOfTheJudgesNumbers(t *testing.T) {
 	t.Parallel()
 	graded := func(score int) RunResult { return RunResult{HardPass: true, Score: score} }
-	cutOff := RunResult{HardPass: true, Ungraded: true}
+	cutOff := RunResult{Ungraded: true}
 
-	scores := judgeScores([]RunResult{graded(90), cutOff, graded(100)})
-	if len(scores) != 2 {
-		t.Fatalf("judgeScores kept %d of 3 runs, want the 2 a judge graded: %v", len(scores), scores)
+	median, minimum, graded2 := judgeMedianAndMin([]RunResult{graded(90), cutOff, graded(100)})
+	if !graded2 {
+		t.Fatal("two graded runs reported as ungraded")
 	}
-	for _, s := range scores {
-		if s == 0 {
-			t.Error("an ungraded run's zero reached the judge's numbers")
-		}
+	if minimum == 0 {
+		t.Error("an ungraded run's zero reached the judge's minimum")
+	}
+	if median != 100 && median != 90 {
+		t.Errorf("median = %d, want one of the two scores a judge gave", median)
 	}
 }
 
-// And it still counts as a run: reliability is mechanical and says so.
-func TestAnUngradedRunStillCountsTowardReliability(t *testing.T) {
+// A cut-off run counts as a RUN and never as a pass.
+//
+// Both halves matter. It has to count, or a binding that truncates half its
+// answers reports a denominator it did not earn. And it must not pass: a run
+// that contributed to reliability while withholding its score would lift a
+// certified median above what the binding earned, and the model is the only
+// actor in that arithmetic.
+func TestACutOffRunCountsAsARunAndNeverAsAPass(t *testing.T) {
 	t.Parallel()
-	bands := Bands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}
-
 	_, reliability := Verdict([]RunResult{
 		{HardPass: true, Score: 100},
-		{HardPass: true, Ungraded: true},
-		{HardPass: false, Score: 20},
-	}, bands)
+		{HardPass: false, Ungraded: true},
+		{HardPass: true, Score: 90},
+	}, Bands{CertifiedMin: 70, DegradedMin: 50, Floor: 40})
 	if reliability != 2.0/3.0 {
-		t.Errorf("reliability = %v, want 2/3 — the ungraded run passed its validator and must count", reliability)
+		t.Errorf("reliability = %v, want 2/3 — the cut-off run is one of three runs", reliability)
 	}
 }
 
@@ -112,15 +117,23 @@ func TestAnUngradedRunStillCountsTowardReliability(t *testing.T) {
 // verdict is not certified on a median nobody produced.
 func TestATaskWhoseEveryRunWasCutOffIsNotCertified(t *testing.T) {
 	t.Parallel()
-	verdict, reliability := Verdict([]RunResult{
-		{HardPass: true, Ungraded: true},
-		{HardPass: true, Ungraded: true},
-		{HardPass: true, Ungraded: true},
-	}, Bands{CertifiedMin: 70, DegradedMin: 50, Floor: 40})
+	runs := []RunResult{
+		{HardPass: false, Ungraded: true},
+		{HardPass: false, Ungraded: true},
+		{HardPass: false, Ungraded: true},
+	}
+	bands := Bands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}
+
+	verdict, _ := Verdict(runs, bands)
 	if verdict != VerdictNotSupported {
 		t.Errorf("verdict = %q, want %q — no judge saw any of these runs", verdict, VerdictNotSupported)
 	}
-	if reliability != 1.0 {
-		t.Errorf("reliability = %v, want 1.0 — they all passed their validator", reliability)
+	// And the RECORD's own percentiles, which read the same set through the
+	// same helper. Indexing an empty score set here was a panic, and it was a
+	// panic because the guard had been added to Verdict and not to its sibling.
+	median, minimum, graded := judgeMedianAndMin(runs)
+	if graded || median != 0 || minimum != 0 {
+		t.Errorf("judgeMedianAndMin = (%d, %d, %v), want (0, 0, false) for an all-ungraded task",
+			median, minimum, graded)
 	}
 }
