@@ -63,9 +63,12 @@ func (s *Store) writeFact(
 		// Never creates: a fact is addressed by `<field>:<value_key>`, a key a
 		// machine derives from what it read, so there is no vocabulary a contact
 		// could originate one from. An absent fact stays not-found.
-		readBefore: func(ctx context.Context, tx pgx.Tx) (evidenceRow, bool, error) {
-			row, err := readFactRow(ctx, tx, companyID, factKey)
-			return row, false, err
+		locate: func(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
+			id, err := factRowID(ctx, tx, companyID, factKey)
+			return id, false, err
+		},
+		readLocked: func(ctx context.Context, tx pgx.Tx, id ids.UUID) (evidenceRow, error) {
+			return readFactRowLocked(ctx, tx, companyID, id)
 		},
 		readAfter: func(ctx context.Context, tx pgx.Tx) (crmcontracts.CompanyFact, error) {
 			return readFactWire(ctx, tx, companyID, factKey)
@@ -104,22 +107,50 @@ func errMalformedFactKey() error {
 	}
 }
 
-func readFactRow(
+// factRowID names the row a write is about, and nothing else about it.
+//
+// Only the id, because a value read here would be read BEFORE the lock: the row
+// can change between this statement and the patch, and a before-image taken
+// from it would describe a state the write never replaced. What this resolves
+// is the row's ADDRESS — uq_company_fact makes (category, field, value_key)
+// unique and the vocabulary gives each field one category — and the one race
+// left is the row being deleted, which the lock answers with not-found.
+func factRowID(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, factKey string,
-) (evidenceRow, error) {
-	var r evidenceRow
+) (ids.UUID, error) {
 	field, valueKey, ok := splitFactKey(factKey)
 	if !ok {
-		return r, errMalformedFactKey()
+		return ids.UUID{}, errMalformedFactKey()
 	}
-	var category string
+	var id ids.UUID
+	err := tx.QueryRow(ctx,
+		`SELECT id FROM company_fact WHERE company_id = $1 AND field = $2 AND value_key = $3`,
+		companyID, field, valueKey).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return ids.UUID{}, fmt.Errorf("locate company fact: %w", err)
+	}
+	return id, nil
+}
+
+// readFactRowLocked reads the machine's whole claim, under the lock the writer
+// already holds on this row. By id, because the lock is by id: looking the row
+// up again by its address would be reading a row the lock does not name.
+func readFactRowLocked(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, id ids.UUID,
+) (evidenceRow, error) {
+	r := evidenceRow{ID: id}
+	var category, field, valueKey string
 	err := tx.QueryRow(ctx, `
-		SELECT id, category, value, source, evidence_snippet, source_url, confidence, verified_at, verified_by, captured_by
+		SELECT version, category, field, value_key, value, source,
+		       evidence_snippet, source_url, confidence, verified_at, verified_by, captured_by
 		  FROM company_fact
-		 WHERE company_id = $1 AND field = $2 AND value_key = $3`,
-		companyID, field, valueKey,
-	).Scan(&r.ID, &category, &r.Value, &r.Source, &r.EvidenceSnippet, &r.SourceURL, &r.Confidence,
-		&r.VerifiedAt, &r.VerifiedBy, &r.CapturedBy)
+		 WHERE id = $1`,
+		id,
+	).Scan(&r.Version, &category, &field, &valueKey, &r.Value, &r.Source,
+		&r.EvidenceSnippet, &r.SourceURL, &r.Confidence, &r.VerifiedAt, &r.VerifiedBy, &r.CapturedBy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return r, apperrors.ErrNotFound
 	}
