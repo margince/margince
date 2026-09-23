@@ -58,10 +58,13 @@ const (
 	// every response read (respReadTimeout, 30s in the pinned beta.8) and
 	// CLEARS it afterwards — readResponse defers setReadTimeout(0), which is
 	// SetReadDeadline(time.Time{}). So the read half of what is armed here is
-	// overridden by the first read and gone after it, and the phase as a whole
-	// is bounded by nothing: a server answering every command inside 30s can
-	// keep a pull alive indefinitely. Bounding the phase needs a timer this
-	// package does not have — filed rather than fixed here.
+	// overridden by the first read and gone after it, and it bounds only the
+	// exchanges before that.
+	//
+	// The PHASE is bounded by abortAfter, which closes the connection on the
+	// same duration. A deadline cannot do it — the client clears whatever is
+	// armed — and without it a server answering every command inside its own
+	// 30s keeps a pull alive indefinitely.
 	//
 	// The client owning these deadlines is also why nothing else may set one:
 	// it reads on ONE goroutine, and a read deadline firing closes the
@@ -107,6 +110,12 @@ type Connector struct {
 	// outbound mail they name. Nil keeps the old behaviour: the report is
 	// dropped with the rest of the delivery-system mail.
 	bounces connector.BounceSink
+
+	// phaseBound is how long a select+fetch phase may run before the
+	// connection is closed under it. Zero is the shipped pullDeadline; it is
+	// overridable so the bound can be asked about without a test waiting out
+	// ninety seconds.
+	phaseBound time.Duration
 }
 
 // WithBounceSink returns a copy that records delivery reports instead of
