@@ -878,6 +878,15 @@ jobs:
         with:
           name: fe-coverage
           path: frontend/coverage
+      # The unit screens' own report, from the fe-quality job — the only one that
+      # runs their lane. Guarded on the same producer as the core report above:
+      # a frontend lane that did not succeed produced neither.
+      - name: Download the unit screens' coverage
+        if: ${{ env.SONAR_TOKEN != '' && needs.frontend.result == 'success' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: fe-coverage-ext
+          path: frontend/coverage-ext
       # A merge_group run publishes as `main`, and that is not a fiction: the
       # queue builds `main + the queued entries`, which is byte-for-byte the tree
       # main becomes when the batch merges. Measuring it here is the same

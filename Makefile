@@ -368,7 +368,13 @@ fe-test-ext: composition
 	@# --frozen-lockfile, which is the property this whole change buys.
 	cd build/composition-frontend/workspace && pnpm install --no-frozen-lockfile
 	cd frontend && pnpm build && \
-		MARGINCE_COMPOSITION_FRONTEND=../build/composition/frontend pnpm test:ext
+		MARGINCE_COMPOSITION_FRONTEND=../build/composition/frontend pnpm test:ext \
+		$(if $(FE_COVERAGE),--coverage.enabled)
+	@# The same acceptance test the core report gets, on the report that is
+	@# about to be uploaded beside it. An lcov whose records name paths the
+	@# scanner cannot resolve is dropped SILENTLY — the scan succeeds and the
+	@# tier reads as untested, which is the failure this lane was added to stop.
+	$(if $(FE_COVERAGE),frontend/scripts/check-lcov-paths.sh frontend/coverage-ext/lcov.info)
 
 ## ds-purity — design-system token purity (no raw hex/rgb outside tokens.css).
 ds-purity:
