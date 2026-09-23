@@ -166,13 +166,13 @@ nothing for a role whose deal cell reads ----.
 
 ### Hiding individual fields
 
-A role can withhold single fields from the records it may otherwise read. The
-server enforces it on every path that returns the value: the record reads, the
-exports and the filter preview, the report aggregates, the structured query —
-which refuses a predicate as it refuses a sort, since filtering by a value is
-reading it — and the audit history, which withholds a field in both the before
-and after images. A mask also takes the fields its own would be recoverable
-from, so a currency never travels beside a withheld amount.
+A role can withhold single fields from the records it may otherwise read.
+platform/auth is where that is decided, so no read has to remember to ask on
+its own: the record reads, the filtered export and its preview, the aggregates,
+the structured query — which refuses a predicate as it refuses a sort, since
+filtering by a value is reading it — and the audit history, which withholds a
+field in both the before and after images. A mask also takes the fields its own
+would be recoverable from, so a currency never travels beside a withheld amount.
 
 What an operator may configure is narrower than what a mask withholds, and the
 catalog in migrations/testdata/maskable_fields.txt is the list. A commission
