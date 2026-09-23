@@ -4342,8 +4342,8 @@ public.lead.promoted_contact_id uuid gen=- def=-
 public.lead.qualified_deal_id uuid gen=- def=-
 public.lead.raw jsonb gen=- def=-
 public.lead.routed_at timestamp with time zone gen=- def=-
-public.lead.score integer NOT NULL gen=- def=0
-public.lead.score_computed integer gen=- def=-
+public.lead.score smallint NOT NULL gen=- def=0
+public.lead.score_computed smallint gen=- def=-
 public.lead.score_override_reason text gen=- def=-
 public.lead.search_tsv tsvector gen=s def=(((((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(full_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(full_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(company_name, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(company_name, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(title, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(title, ''::text))), 'B'::"char"))
 public.lead.sla_breached_at timestamp with time zone gen=- def=-
@@ -4357,7 +4357,6 @@ public.lead.status_set_by text gen=- def=-
 public.lead.title text gen=- def=-
 public.lead.trg_lead_updated CREATE TRIGGER trg_lead_updated BEFORE UPDATE ON public.lead FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.lead.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.lead.uq_lead_ws_id UNIQUE (id)
 public.lead.version bigint NOT NULL gen=- def=1
 public.lead_disqualify_reason acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead_disqualify_reason.active boolean NOT NULL gen=- def=true
@@ -6129,7 +6128,6 @@ public.uq_lead_email_dedupe CREATE UNIQUE INDEX uq_lead_email_dedupe ON public.l
 public.uq_lead_manual_signal_live CREATE UNIQUE INDEX uq_lead_manual_signal_live ON public.lead_manual_signal USING btree (lead_id, factor) WHERE (superseded_at IS NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key)
-public.uq_lead_ws_id CREATE UNIQUE INDEX uq_lead_ws_id ON public.lead USING btree (id)
 public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, COALESCE(normalized_company, ''::text), COALESCE(connected_on, '1970-01-01'::date)) WHERE (provider_member_ref IS NULL)
 public.uq_linkedin_connection_provider CREATE UNIQUE INDEX uq_linkedin_connection_provider ON public.linkedin_connection USING btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)
 public.uq_notice_dedupe CREATE UNIQUE INDEX uq_notice_dedupe ON public.notice USING btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL)
