@@ -55,6 +55,9 @@ func decodeRequest(w http.ResponseWriter, r *http.Request) (Request, bool) {
 	if body.Intent != nil {
 		req.Intent = *body.Intent
 	}
+	if body.RewriteOf != nil {
+		req.RewriteOf = *body.RewriteOf
+	}
 	if body.ProjectId != nil {
 		// A null project_id is "the contact in general", which is ordinary. A
 		// present-but-zero one is a client bug, and answering "not part of

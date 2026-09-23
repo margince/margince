@@ -33,6 +33,9 @@ type Input struct {
 	// one field they typed, and the one field not fenced.
 	Intent string `json:"intent,omitempty"`
 
+	// RewriteOf is the contact surface's field, for the same reason.
+	RewriteOf string `json:"rewrite_of,omitempty"`
+
 	// Envelope is the correspondence this draft is written into: its language,
 	// how long it has been silent, the current time and who is signing it.
 	// Server-derived, never read out of the counterparty's own text.
@@ -198,6 +201,7 @@ func FromView(
 	}
 	in := Input{
 		Intent:     strings.TrimSpace(req.Intent),
+		RewriteOf:  strings.TrimSpace(req.RewriteOf),
 		Envelope:   req.Envelope,
 		Company:    view.Company.DisplayName,
 		Recipient:  recipientOf(contact),

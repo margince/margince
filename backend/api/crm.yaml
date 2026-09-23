@@ -1530,6 +1530,23 @@ paths:
                     drops out — and the project's name, key, phase and target end date are facts
                     the draft may use. Must be a live project the caller can read; an invisible
                     or archived one is `404`, the same answer a direct read gives.
+                rewrite_of:
+                  type: [string, 'null']
+                  maxLength: 20000
+                  description: >-
+                    The draft the composer is CURRENTLY showing, when the call is a rewrite
+                    rather than a first draft. Without it an `intent` of "make it shorter"
+                    generates a second grounded draft from the same record and the composer
+                    swaps it in — a different email rather than a shorter one, and any edits
+                    the rep had made are gone.
+
+                    Sent by the client because the server stores no draft to resolve: this
+                    endpoint writes no record, so there is nothing on file to name. It is
+                    UNTRUSTED like every other input but `intent` — it may hold text a
+                    contact wrote, pasted in — and is fenced the same way.
+
+                    Absent or empty is a first draft, which is the behaviour every caller
+                    had before this field existed.
       responses:
         '200':
           description: The draft, and what it was written from.
@@ -3665,6 +3682,13 @@ paths:
                     Optional steering in the caller's own words ("shorter", "warmer", "ask for
                     Tuesday"). The one input that is NOT untrusted — the caller typed it — and
                     so the only one outside the fence.
+                rewrite_of:
+                  type: [string, 'null']
+                  maxLength: 20000
+                  description: >-
+                    The draft the composer is CURRENTLY showing, when the call is a rewrite
+                    rather than a first draft. The contact-side mirror carries the same field
+                    for the same reason — see `POST /contacts/{id}/draft-email`.
       responses:
         '200':
           description: The draft, and what it was written from.

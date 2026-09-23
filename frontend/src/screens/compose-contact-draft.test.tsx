@@ -181,6 +181,76 @@ describe("drafting to a contact", () => {
     expect(call?.body).toEqual({ intent: "kurz halten" });
   });
 
+  // A rewrite verb has to carry the draft it is a rewrite OF. Without it the
+  // server generates a second grounded draft from the same record and the
+  // composer swaps it in over the first: a different email rather than a
+  // shorter one, and whatever the rep had edited is gone with it.
+  it("sends the draft on screen when the reader asks for a rewrite", async () => {
+    const sent = stubRoutes({
+      "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
+    });
+    render(
+      <ComposeModal
+        intent="Follow up on our discussion"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
+    );
+    await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
+
+    await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
+
+    await waitFor(() => {
+      const calls = sent.filter(
+        (c) => c.key === "POST /contacts/c-1/draft-email",
+      );
+      expect(calls.length).toBe(2);
+    });
+    const rewrite = sent.filter(
+      (c) => c.key === "POST /contacts/c-1/draft-email",
+    )[1];
+    expect(rewrite.body).toEqual({
+      intent: "Say the same thing in fewer words.",
+      rewrite_of: CONTACT_DRAFT.body,
+    });
+  });
+
+  // The other direction, so `rewrite_of` cannot simply be sent always: a FIRST
+  // draft has nothing to rewrite, and a body sent with one would ask the model
+  // to revise an empty composer.
+  it("sends nothing to rewrite on a first draft", async () => {
+    const sent = stubRoutes({
+      "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
+    });
+    render(
+      <ComposeModal
+        intent="Follow up on our discussion"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
+    );
+    await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
+
+    const first = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
+    expect(first?.body).toEqual({ intent: "Follow up on our discussion" });
+  });
+
   it("discloses a model-written draft", async () => {
     stubRoutes({
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),

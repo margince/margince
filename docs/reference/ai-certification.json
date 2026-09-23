@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 46,
-    "sites_best_current": 46,
+    "sites_best_current": 44,
     "sites_best_partial": 0,
-    "sites_best_stale": 0,
+    "sites_best_stale": 2,
     "sites_absent": 0,
     "scenarios": 170,
     "records": 136,
@@ -521,7 +521,7 @@
             "env": "eu_hosted"
           },
           "band": "not_supported",
-          "state": "current"
+          "state": "stale"
         },
         {
           "task": "enrich",
@@ -1231,7 +1231,7 @@
             "env": "eu_hosted"
           },
           "band": "not_supported",
-          "state": "current"
+          "state": "stale"
         },
         {
           "task": "enrich",
@@ -1439,9 +1439,9 @@
         "env": "eu_hosted"
       },
       "sites": 40,
-      "sites_current": 38,
+      "sites_current": 36,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 4,
       "runs": 459,
       "passed": 409,
       "reliability": 0.8910675381263616,
@@ -1539,9 +1539,9 @@
         "env": "cloud_frontier"
       },
       "sites": 39,
-      "sites_current": 39,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 0,
+      "sites_stale": 2,
       "runs": 357,
       "passed": 294,
       "reliability": 0.8235294117647058,
@@ -1579,9 +1579,9 @@
         "env": "eu_hosted"
       },
       "sites": 33,
-      "sites_current": 33,
+      "sites_current": 31,
       "sites_partial": 0,
-      "sites_stale": 0,
+      "sites_stale": 2,
       "runs": 309,
       "passed": 191,
       "reliability": 0.6181229773462783,
@@ -1719,9 +1719,9 @@
         "env": "eu_hosted"
       },
       "sites": 40,
-      "sites_current": 40,
+      "sites_current": 38,
       "sites_partial": 0,
-      "sites_stale": 0,
+      "sites_stale": 2,
       "runs": 456,
       "passed": 360,
       "reliability": 0.7894736842105263,
@@ -4131,17 +4131,8 @@
         "proof",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "account_first_touch_with_a_deal_in_flight",
@@ -4156,9 +4147,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -4171,7 +4162,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "account_first_touch_with_a_deal_in_flight"
+            ]
+          }
         },
         {
           "binding": {
@@ -4241,9 +4237,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -4256,7 +4252,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "account_first_touch_with_a_deal_in_flight"
+            ]
+          }
         },
         {
           "binding": {
@@ -4264,9 +4265,9 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 1,
@@ -4279,7 +4280,12 @@
             "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "account_first_touch_with_a_deal_in_flight"
+            ]
+          }
         },
         {
           "binding": {
@@ -4287,9 +4293,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -4302,7 +4308,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "account_first_touch_with_a_deal_in_flight"
+            ]
+          }
         }
       ]
     },
@@ -4317,17 +4328,8 @@
         "proof",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
-          "env": "eu_hosted"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "contact_first_touch_in_german",
@@ -4342,9 +4344,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -4357,7 +4359,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_first_touch_in_german"
+            ]
+          }
         },
         {
           "binding": {
@@ -4427,9 +4434,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -4442,7 +4449,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_first_touch_in_german"
+            ]
+          }
         },
         {
           "binding": {
@@ -4450,9 +4462,9 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 2,
@@ -4465,7 +4477,12 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_first_touch_in_german"
+            ]
+          }
         },
         {
           "binding": {
@@ -4473,9 +4490,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -4488,7 +4505,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_first_touch_in_german"
+            ]
+          }
         }
       ]
     },

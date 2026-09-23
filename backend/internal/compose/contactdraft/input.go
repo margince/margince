@@ -55,6 +55,11 @@ type Input struct {
 	// one field they typed, and the one field not fenced.
 	Intent string `json:"intent,omitempty"`
 
+	// RewriteOf is the draft on the composer's screen; empty is a first draft.
+	// FENCED, unlike Intent: the rep may have typed it and may equally have
+	// pasted a paragraph a contact sent them, and the field cannot tell.
+	RewriteOf string `json:"rewrite_of,omitempty"`
+
 	// Envelope is the correspondence this draft is written into: its language,
 	// how long it has been silent, the current time and who is signing it.
 	// Server-derived, never read out of the counterparty's own text.

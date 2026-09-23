@@ -25,6 +25,7 @@ import (
 func FromView(view crmcontracts.Contact360, req Request) Input {
 	in := Input{
 		Intent:          strings.TrimSpace(req.Intent),
+		RewriteOf:       strings.TrimSpace(req.RewriteOf),
 		Envelope:        req.Envelope,
 		Recipient:       recipientOf(view),
 		SectionsOmitted: omittedNames(view.SectionsOmitted),
