@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { AskFromAddress } from "./app/askfromaddress";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
 import { DateFormatsProvider } from "./app/dateformats";
 import {
@@ -36,12 +37,6 @@ import {
 } from "./app/router";
 import { Shell, useRoute } from "./app/shell";
 import { UnsavedGuard } from "./app/unsaved";
-import {
-  ASK_PARAM,
-  ASK_QUESTION_PARAM,
-  closeAsk,
-  useUrlParams,
-} from "./app/urlstate";
 import {
   Card,
   EmptyState,
@@ -101,9 +96,6 @@ function routed<T>(factory: () => Promise<T>): () => Promise<T> {
   return factory;
 }
 
-const AskMarginceModal = lazy(() =>
-  import("./screens/corpusask").then((m) => ({ default: m.AskMarginceModal })),
-);
 const BookingScreen = lazy(
   routed(() =>
     import("./screens/book").then((m) => ({ default: m.BookingScreen })),
@@ -858,11 +850,6 @@ function AuthedApp({
   }, [authed, company.isSuccess, described, progress.unfinished, route.screen]);
 
   const [paletteOpen, setPaletteOpen] = useState(false);
-  // The dial, not a piece of state: a reader can send a colleague a link that
-  // opens the dialog on the question they asked, and a reload keeps it.
-  const [dials] = useUrlParams();
-  const askOpen = dials.get(ASK_PARAM) !== undefined;
-  const askedQuestion = dials.get(ASK_QUESTION_PARAM);
   const commands = useBuiltinCommands();
   usePaletteHotkey(useCallback(() => setPaletteOpen((open) => !open), []));
 
@@ -953,20 +940,8 @@ function AuthedApp({
           onClose={() => setPaletteOpen(false)}
           commands={commands}
         />
-        {/* Asking lives OVER whatever the reader was doing, so it is mounted
-            beside the palette rather than on a screen: the question occurs in
-            the middle of other work, and the answer sends them back to it.
-            The dial is what opens it, so a reader can carry an ask in a link
-            and a reload does not lose the question they just typed. */}
-        {askOpen ? (
-          <Suspense fallback={null}>
-            <AskMarginceModal
-              open
-              carriedQuestion={askedQuestion}
-              onClose={closeAsk}
-            />
-          </Suspense>
-        ) : null}
+        {/* Over whatever the reader was doing, not on a screen of its own. */}
+        <AskFromAddress />
       </RecordZoneProvider>
     </DateFormatsProvider>
   );
