@@ -1,0 +1,45 @@
+/* The offer 360's own spacing and the widths of its line-item editors. */
+
+.offers-edit-title {
+  margin-bottom: var(--space-3);
+}
+
+.offers-diff-summary {
+  margin-top: var(--space-2);
+}
+
+.offers-line-description {
+  width: 180px;
+}
+
+.offers-line-unit {
+  width: 70px;
+}
+
+.offers-line-quantity,
+.offers-line-price {
+  width: 90px;
+}
+
+.offers-new-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.offers-new-line-product {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.offers-product-field {
+  min-width: 220px;
+}
+
+.offers-add-line {
+  margin-top: var(--space-6);
+}
