@@ -475,7 +475,7 @@ func TestTheNameKeyArmAdmitsEveryGoEqualPair(t *testing.T) {
 			var admitted bool
 			if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 				return tx.QueryRow(ctx,
-					`SELECT `+contactNameKeySQL("$1")+` = `+contactNameKeySQL("$2"),
+					`SELECT `+exactNameKeySQL("$1")+` = `+exactNameKeySQL("$2"),
 					tc.incumbent, tc.second).Scan(&admitted)
 			}); err != nil {
 				t.Fatalf("ask the arm about %q and %q: %v", tc.incumbent, tc.second, err)
