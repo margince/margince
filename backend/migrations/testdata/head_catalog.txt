@@ -5233,21 +5233,21 @@ public.record_role_key_key CREATE UNIQUE INDEX record_role_key_key ON public.rec
 public.record_role_pkey CREATE UNIQUE INDEX record_role_pkey ON public.record_role USING btree (id)
 public.refresh_last_activity_for_link(cid uuid, did uuid, oid uuid) secdef=false cfg=- acl=- 
 DECLARE
-  reached uuid;
+  reached record;
 BEGIN
-  PERFORM move_last_activity('contact', cid);
-  PERFORM move_last_activity('deal', did);
-  -- Ordered by id: two writers reaching the same accounts lock them in the
-  -- same order, so they queue rather than deadlock.
   FOR reached IN
-     SELECT x FROM (
-       SELECT oid AS x WHERE oid IS NOT NULL
-       UNION SELECT d.company_id FROM deal d WHERE d.id = did AND d.company_id IS NOT NULL
-       UNION SELECT r.company_id FROM relationship r
-              WHERE r.contact_id = cid AND r.kind = 'employment' AND r.ended_at IS NULL AND r.archived_at IS NULL
-     ) reach ORDER BY x
+     SELECT kind, id FROM (
+       SELECT 'contact' AS kind, cid AS id WHERE cid IS NOT NULL
+       UNION SELECT 'deal', did WHERE did IS NOT NULL
+       UNION SELECT 'company', oid WHERE oid IS NOT NULL
+       UNION SELECT 'company', d.company_id FROM deal d
+              WHERE d.id = did AND d.company_id IS NOT NULL
+       UNION SELECT 'company', r.company_id FROM relationship r
+              WHERE r.contact_id = cid AND r.kind = 'employment'
+                AND r.ended_at IS NULL AND r.archived_at IS NULL
+     ) reach ORDER BY kind, id
   LOOP
-    PERFORM move_last_activity('company', reached);
+    PERFORM move_last_activity(reached.kind::regclass, reached.id);
   END LOOP;
 END;
 
@@ -6020,9 +6020,16 @@ public.transcript_read.transcript_read_status CHECK ((status = ANY (ARRAY['queue
 public.transcript_read.transcript_read_terminal_shape CHECK ((((status = ANY (ARRAY['done'::text, 'failed'::text])) AND (finished_at IS NOT NULL)) OR ((status = ANY (ARRAY['queued'::text, 'running'::text])) AND (finished_at IS NULL))))
 public.transcript_read_pkey CREATE UNIQUE INDEX transcript_read_pkey ON public.transcript_read USING btree (id)
 public.trg_activity_last_activity() secdef=false cfg=- acl=- 
+DECLARE
+  l record;
 BEGIN
-  PERFORM refresh_last_activity_for_link(l.contact_id, l.deal_id, l.company_id)
-     FROM activity_link l WHERE l.activity_id = NEW.id;
+  FOR l IN
+     SELECT contact_id, deal_id, company_id FROM activity_link
+      WHERE activity_id = NEW.id
+      ORDER BY contact_id, deal_id, company_id
+  LOOP
+    PERFORM refresh_last_activity_for_link(l.contact_id, l.deal_id, l.company_id);
+  END LOOP;
   RETURN NULL;
 END;
 
