@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -199,9 +200,7 @@ function BackfillSetup({
         preview={previewData}
       />
       <p className="t-caption">{t("backfill.extendNote")}</p>
-      {previewErrorMessage && (
-        <p className="backfill-error">{previewErrorMessage}</p>
-      )}
+      {previewErrorMessage && <ErrorLine>{previewErrorMessage}</ErrorLine>}
       <EstimateCard
         preview={previewData}
         window={window}

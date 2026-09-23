@@ -1785,6 +1785,7 @@ function ResetDataCard() {
           </p>
         )}
         {summary?.drain_timed_out && (
+          // ds:ignore a warning in --warningText, not a refusal
           <p className="settings-danger-warning" role="alert">
             {t("settings.resetDataDrainWarning")}
           </p>
@@ -2189,6 +2190,7 @@ function AuditLogEntries({
     return (
       <EmptyState>
         <p>{t("common.error")}</p>
+        {/* ds:ignore the cause under an EmptyState's headline */}
         <p className="audit-error-cause">{problemMessageOf(query.error, t)}</p>
         <Button onClick={() => query.refetch()}>{t("common.retry")}</Button>
       </EmptyState>

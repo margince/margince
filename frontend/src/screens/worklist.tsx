@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
@@ -514,9 +515,9 @@ function WorklistBody({
                       unpressed one does. Saying so is what tells the reader
                       the backlog is still there and worth asking for again. */}
                       {moreFailed && (
-                        <span className="co-part-error" role="alert">
+                        <ErrorLine inline>
                           {t("worklist.more.failed")}
-                        </span>
+                        </ErrorLine>
                       )}
                     </div>
                   )}

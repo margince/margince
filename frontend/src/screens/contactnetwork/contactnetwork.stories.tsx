@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { meFixture } from "../../app/mefixture";
 import {
@@ -561,4 +562,29 @@ export const ObservedPeersNoWrite: Story = {
         ],
       }),
     ),
+};
+
+const GRAPH_REFUSED =
+  "The contact graph is being rebuilt. Try again in a minute.";
+
+// The graph read failed. The server's own sentence is what a reader acts on,
+// so it is said as the failure line and not folded into a generic empty state.
+export const GraphFailed: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute(READS_AND_ASKS),
+      [`GET /contacts/${CONTACT}/graph`]: () =>
+        jsonResponse({ title: "unavailable", detail: GRAPH_REFUSED }, 503),
+      [`GET /contacts/${CONTACT}/intro-requests`]: () => jsonResponse([]),
+    });
+    return (
+      <StoryProviders>
+        <ContactNetworkTab contactId={CONTACT} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const alert = await within(canvasElement).findByRole("alert");
+    await expect(alert).toHaveTextContent(GRAPH_REFUSED);
+  },
 };

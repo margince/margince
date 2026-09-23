@@ -226,6 +226,7 @@ export function OnboardingGate({
       </form>
 
       {invalid ? (
+        // ds:ignore a bordered banner box, not a line
         <p className="ob-gate-alert" id="ob-gate-invalid" role="alert">
           {t("ob.gate.invalidUrl")}
         </p>

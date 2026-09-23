@@ -14,6 +14,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
@@ -42,7 +43,7 @@ import { ForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { ShareViewButton } from "./analytics.share";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
 import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
@@ -911,7 +912,7 @@ function ExplainPanel({
           )}
           {query.isError && (
             <>
-              <p>{problemMessageOf(query.error, t)}</p>
+              <ErrorLine error={query.error} />
               <div className="card-actions">
                 <Button onClick={() => query.refetch()}>
                   {t("common.retry")}

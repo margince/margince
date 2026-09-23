@@ -24,7 +24,10 @@ import {
 //             `t-danger` or `form-error` token. `field-error` is Field's own
 //             slot and is not this line.
 //   message — an intrinsic element whose only child is one
-//             `{problemMessageOf(…)}`: a failure said outside ErrorLine.
+//             `{problemMessageOf(…)}`: a failure said outside ErrorLine. A
+//             composite owns its own announcement, so a line inside an
+//             element carrying `role="alert"`, `role="status"` or `aria-live`
+//             is its cause, not a line; the arm reads the one standing alone.
 //   alert   — an intrinsic element carrying `role="alert"` around a LINE:
 //             text and expressions only, no element child. A composite — a
 //             heading, a glyph, a verb inside the region — is another thing.
@@ -34,12 +37,7 @@ import {
 // marks a figure or a glyph, so the message line is caught by what it SAYS
 // (message) and how it announces (alert) rather than by its colour.
 //
-// `inline`, `class` and `name` are held at zero. `message` and `alert` are a
-// CENSUS that only falls: BASELINE pins how many such lines each file carried
-// when the gate was armed, a line both arms read counts once, and a new file
-// or a higher count fails. A file under its entry fails too, until the entry
-// is lowered in the same change. The standing entries are the sweep a
-// follow-up issue tracks; this directory takes no entry at all.
+// Every arm is held at zero, in every file, wherever the spelling reappears.
 //
 // The waiver is `ds:ignore <reason>` in a comment on the finding's line or the
 // line above it; a marker with no reason does not waive, and is a finding.
@@ -159,20 +157,48 @@ function isIntrinsic(element: Opening): boolean {
   );
 }
 
+/**
+ * The literal an attribute is set to: `undefined` when the element does not
+ * carry it, `null` when it does but the value is computed.
+ */
+function literalOf(element: Opening, name: string): string | null | undefined {
+  const attribute = element.attributes.properties.find(
+    (property) =>
+      ts.isJsxAttribute(property) && property.name.getText() === name,
+  );
+  if (!attribute || !ts.isJsxAttribute(attribute)) {
+    return undefined;
+  }
+  const value = attribute.initializer;
+  const literal = value && ts.isJsxExpression(value) ? value.expression : value;
+  return literal !== undefined && ts.isStringLiteralLike(literal)
+    ? literal.text
+    : null;
+}
+
 function carriesAlert(element: Opening): boolean {
-  return element.attributes.properties.some((property) => {
-    if (!ts.isJsxAttribute(property) || property.name.getText() !== "role") {
-      return false;
+  return literalOf(element, "role") === "alert";
+}
+
+/** An element, intrinsic or component, that makes its contents a live region. */
+function announces(element: Opening): boolean {
+  const role = literalOf(element, "role");
+  const live = literalOf(element, "aria-live");
+  return (
+    role === "alert" ||
+    role === "status" ||
+    (live !== undefined && live !== "off")
+  );
+}
+
+/** Whether a JSX element above this one already owns the announcement. */
+function insideAnnouncer(element: ts.JsxElement): boolean {
+  for (let at = element.parent; !ts.isSourceFile(at); at = at.parent) {
+    if (ts.isJsxElement(at) && announces(at.openingElement)) {
+      return true;
     }
-    const value = property.initializer;
-    const literal =
-      value && ts.isJsxExpression(value) ? value.expression : value;
-    return (
-      literal !== undefined &&
-      ts.isStringLiteralLike(literal) &&
-      literal.text === "alert"
-    );
-  });
+  }
+  return false;
 }
 
 /** A line: something to read, and no element inside it. */
@@ -293,7 +319,8 @@ function findingsIn(
     if (
       ts.isJsxElement(node) &&
       isIntrinsic(node.openingElement) &&
-      saysOnlyAProblem(node, names)
+      saysOnlyAProblem(node, names) &&
+      !insideAnnouncer(node)
     ) {
       push(
         "message",
@@ -327,133 +354,13 @@ function findingsIn(
   return out;
 }
 
-/**
- * The message and alert lines standing when the gate was armed, per file.
- * EXACT in both directions, the way `inlinelayout.test.ts` holds its count.
- */
-const BASELINE = new Map<string, number>([
-  ["extensions/openchannel/frontend/endpointcard.tsx", 3],
-  ["frontend/src/screens/analytics.tsx", 1],
-  ["frontend/src/screens/auth.tsx", 1],
-  ["frontend/src/screens/automations.tsx", 3],
-  ["frontend/src/screens/backfill.tsx", 1],
-  ["frontend/src/screens/book.tsx", 2],
-  ["frontend/src/screens/brief.decisions.tsx", 1],
-  ["frontend/src/screens/capture-senders.tsx", 1],
-  ["frontend/src/screens/common.tsx", 1],
-  ["frontend/src/screens/companycontacts/introrequest.tsx", 1],
-  ["frontend/src/screens/companydossier.tsx", 1],
-  ["frontend/src/screens/companygrowthfit.tsx", 1],
-  ["frontend/src/screens/companyvatmark.tsx", 1],
-  ["frontend/src/screens/composehead.tsx", 1],
-  ["frontend/src/screens/connect-posture.tsx", 1],
-  ["frontend/src/screens/contactemploymentrow.tsx", 1],
-  ["frontend/src/screens/contactnetwork/edgedetail.tsx", 1],
-  ["frontend/src/screens/contactnetwork/index.tsx", 1],
-  ["frontend/src/screens/emailaccesseditor.tsx", 1],
-  ["frontend/src/screens/employmentimport.tsx", 1],
-  ["frontend/src/screens/filterexport.tsx", 1],
-  ["frontend/src/screens/imap-connect-form.tsx", 1],
-  ["frontend/src/screens/installation-setup.tsx", 1],
-  ["frontend/src/screens/leads.tsx", 1],
-  ["frontend/src/screens/leadsignals.tsx", 1],
-  ["frontend/src/screens/leadvocab.tsx", 1],
-  ["frontend/src/screens/listquery.tsx", 1],
-  ["frontend/src/screens/noticecases.tsx", 2],
-  ["frontend/src/screens/onboarding-backread.tsx", 5],
-  ["frontend/src/screens/onboarding-connect-panels.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/basis-act.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/company-act.tsx", 2],
-  ["frontend/src/screens/onboarding-conversation/connect-act.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/team-act.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/voice-act.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/voice-scenes.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/way-onward.tsx", 1],
-  ["frontend/src/screens/onboarding-gate.tsx", 1],
-  ["frontend/src/screens/onboarding-read.tsx", 1],
-  ["frontend/src/screens/privacy.corrections.tsx", 2],
-  ["frontend/src/screens/privacy.tsx", 2],
-  ["frontend/src/screens/rate-refresh.tsx", 1],
-  ["frontend/src/screens/restrictedrecords.tsx", 1],
-  ["frontend/src/screens/retention.tsx", 3],
-  ["frontend/src/screens/retentionpolicyform.tsx", 1],
-  ["frontend/src/screens/settings.exitcriteria.tsx", 1],
-  ["frontend/src/screens/settings.tsx", 2],
-  ["frontend/src/screens/setupclaim.tsx", 1],
-  ["frontend/src/screens/taskactions.tsx", 1],
-  ["frontend/src/screens/voice-dna.tsx", 4],
-  ["frontend/src/screens/voice-versions.tsx", 2],
-  ["frontend/src/screens/worklist.plan.tsx", 1],
-  ["frontend/src/screens/worklist.tsx", 1],
-]);
-
-/** What the census carries across the tree, so a rise is one number. */
-const TOTAL = 73;
-
-/** The tier that publishes the alternative takes no entry. */
-const HELD_AT_ZERO = /^frontend\/src\/design-system\//;
-
 type Located = Finding & { where: string; waiver: Waiver };
-
-const censusArms: readonly Arm[] = ["message", "alert"];
-
-/** Each census line once, however many of the census arms read it. */
-function standingLines(found: readonly Located[]): Located[] {
-  const seen = new Map<string, Located>();
-  for (const finding of found) {
-    const key = `${finding.where}:${finding.line}`;
-    if (censusArms.includes(finding.arm) && !seen.has(key)) {
-      seen.set(key, finding);
-    }
-  }
-  return [...seen.values()];
-}
-
-function countsByFile(lines: readonly Located[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const line of lines) {
-    counts.set(line.where, (counts.get(line.where) ?? 0) + 1);
-  }
-  return counts;
-}
 
 function shown(finding: Located): string {
   return `${finding.where}:${finding.line}  ${finding.says} — ${advice}`;
 }
 
-/** Every line in a file over its entry, named; a file with none is over at 0. */
-function overBaseline(
-  lines: readonly Located[],
-  baseline: ReadonlyMap<string, number>,
-): string[] {
-  return [...countsByFile(lines)]
-    .filter(([where, count]) => count > (baseline.get(where) ?? 0))
-    .flatMap(([where]) => {
-      const entry = baseline.get(where);
-      const why =
-        entry === undefined ? "not in BASELINE" : `over its entry of ${entry}`;
-      return lines
-        .filter((line) => line.where === where)
-        .map((line) => `${shown(line)} (${why})`);
-    });
-}
-
-function behindBaseline(
-  lines: readonly Located[],
-  baseline: ReadonlyMap<string, number>,
-): string[] {
-  const counts = countsByFile(lines);
-  return [...baseline]
-    .filter(([where, allowed]) => (counts.get(where) ?? 0) < allowed)
-    .map(([where, allowed]) => {
-      const count = counts.get(where) ?? 0;
-      return count === 0
-        ? `${where}: carries none — remove the entry`
-        : `${where}: carries ${count}, not ${allowed} — lower the entry to ${count}`;
-    });
-}
-
-function census() {
+function spellings() {
   const all: Located[] = modules().flatMap((where) =>
     findingsIn(sourceFileAt(join(repoRoot, where)), where).map((finding) => ({
       where,
@@ -467,13 +374,14 @@ function census() {
     inline: of("inline"),
     class: of("class"),
     name: of("name"),
-    standing: standingLines(open),
+    message: of("message"),
+    alert: of("alert"),
     bare: all.filter((finding) => finding.waiver === "bare").map(shown),
   };
 }
 
 describe("a failure line under a control has one spelling", () => {
-  const found = census();
+  const found = spellings();
 
   it("reads a corpus and an owner that are not empty", () => {
     expect(modules().length).toBeGreaterThan(400);
@@ -507,29 +415,18 @@ describe("a failure line under a control has one spelling", () => {
     ).toEqual([]);
   });
 
-  it("carries the census total it is pinned at", () => {
-    expect(found.standing.length).toBe(TOTAL);
-  });
-
-  it("carries no message or alert line over its file's entry", () => {
-    const over = overBaseline(found.standing, BASELINE);
+  it("finds no problem message said alone outside ErrorLine", () => {
     expect(
-      over,
-      "each of these says a failure outside ErrorLine or announces a line by " +
-        "hand; it is ErrorLine (standing when it is not news)\n",
+      found.message,
+      "each of these says a failure outside ErrorLine\n",
     ).toEqual([]);
   });
 
-  it("keeps no census entry above what the tree carries", () => {
-    const behind = behindBaseline(found.standing, BASELINE);
-    expect(behind, behind.join("\n")).toEqual([]);
-  });
-
-  it("baselines nothing in this directory", () => {
-    const refused = [...BASELINE.keys()].filter((where) =>
-      HELD_AT_ZERO.test(where),
-    );
-    expect(refused, "the design system takes no census entry\n").toEqual([]);
+  it("finds no hand-rolled alerting line", () => {
+    expect(
+      found.alert,
+      "each of these announces a line by hand; it is ErrorLine (standing when it is not news)\n",
+    ).toEqual([]);
   });
 
   it("finds no RefusalLine", () => {
@@ -628,6 +525,21 @@ describe("a failure line under a control has one spelling", () => {
       );
     });
 
+    it("does not read a cause under a composite's own announcement", () => {
+      const cause = "<p>{problemMessageOf(e, t)}</p>";
+      expect(read(`<div role="alert"><h3>Failed</h3>${cause}</div>`)).toEqual(
+        [],
+      );
+      expect(read(`<Card role="status"><p>x</p>${cause}</Card>`)).toEqual([]);
+      expect(read(`<div aria-live="polite">${cause}</div>`)).toEqual([]);
+      expect(read(`<div><h3>Failed</h3>${cause}</div>`)).toEqual([
+        "message none: <p> says a failure message outside ErrorLine",
+      ]);
+      expect(read(`<div aria-live="off">${cause}</div>`)).toEqual([
+        "message none: <p> says a failure message outside ErrorLine",
+      ]);
+    });
+
     it("reads an alerting line, however the role and the words are written", () => {
       expect(read('<p role="alert">{t("x")}</p>')).toEqual([
         "alert none: <p> hand-rolls an alerting line",
@@ -688,21 +600,10 @@ describe("a failure line under a control has one spelling", () => {
         "inline reasoned: style colours the text var(--dangerText)",
       ]);
     });
-    it("fails a fresh file's one message line as not in BASELINE, and counts a doubly-read line once", () => {
-      const where = "frontend/src/screens/fresh.tsx";
-      const lines = standingLines(
-        findingsIn(
-          parseSource(where, '<p role="alert">{problemMessageOf(e, t)}</p>'),
-          where,
-        ).map((finding) => ({ where, ...finding })),
-      );
-      expect(lines).toHaveLength(1);
-      expect(overBaseline(lines, BASELINE)).toEqual([
-        `${where}:1  <p> says a failure message outside ErrorLine — ${advice} (not in BASELINE)`,
-      ]);
-      expect(overBaseline(lines, new Map([[where, 1]]))).toEqual([]);
-      expect(behindBaseline([], new Map([[where, 1]]))).toEqual([
-        `${where}: carries none — remove the entry`,
+    it("reads an announced problem message on both arms", () => {
+      expect(read('<p role="alert">{problemMessageOf(e, t)}</p>')).toEqual([
+        "message none: <p> says a failure message outside ErrorLine",
+        "alert none: <p> hand-rolls an alerting line",
       ]);
     });
   });

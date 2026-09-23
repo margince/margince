@@ -20,6 +20,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
@@ -222,7 +223,7 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
     return <span>{t("lead.scoreLoading")}</span>;
   }
   if (explain.isError) {
-    return <span>{problemMessageOf(explain.error, t)}</span>;
+    return <ErrorLine error={explain.error} />;
   }
   const current = explain.data?.current;
   if (!explain.data?.explained || !current) {

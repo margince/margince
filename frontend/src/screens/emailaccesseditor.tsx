@@ -27,6 +27,7 @@ import { Badge, Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { emailDetailKey } from "../design-system/emaildetail";
+import { ErrorLine } from "../design-system/errorline";
 import { VisibilityLine } from "../design-system/visibility";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -225,11 +226,7 @@ function ThreadContribution({
           {t("compose.threadStillHeld").replace("{count}", String(held))}
         </span>
       )}
-      {mutation.isError && (
-        <span className="emailaccess__error">
-          {problemMessageOf(mutation.error, t)}
-        </span>
-      )}
+      <ErrorLine inline error={mutation.error} />
     </span>
   );
 }

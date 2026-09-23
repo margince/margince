@@ -51,6 +51,7 @@ function ConnectWarn({ title, body }: { title: string; body: string }) {
       </span>
       <div>
         <div className="rft">{title}</div>
+        {/* ds:ignore the body under the read-failure banner's title */}
         <p className="rfp">{body}</p>
       </div>
     </div>

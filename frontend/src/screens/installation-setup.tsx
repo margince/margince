@@ -7,6 +7,7 @@ import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { ComboBox } from "../design-system/combobox";
+import { ErrorLine } from "../design-system/errorline";
 import { OffsiteLink } from "../design-system/offsitelink";
 import {
   OnboardingStage,
@@ -829,9 +830,9 @@ function StepNeeds({
     return null;
   }
   return (
-    <p className="ob-stage-note" role="alert">
+    <ErrorLine inline>
       {t("firstRun.stillNeeded", { fields: missing.join(", ") })}
-    </p>
+    </ErrorLine>
   );
 }
 

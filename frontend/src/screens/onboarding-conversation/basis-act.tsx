@@ -7,10 +7,11 @@ import type { components } from "../../api/schema";
 import { useCanWrite } from "../../app/capability";
 import { useInstallationSettings } from "../../app/uploadlimit";
 import { Field, TextInput } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
-import { problemFieldErrorsOf, problemMessageOf, QueryGate } from "../common";
+import { problemFieldErrorsOf, QueryGate } from "../common";
 import {
   currencyNote,
   useUpdateInstallationSettings,
@@ -185,9 +186,7 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
           stillNeeded={(why) => why.join(" ")}
           note={
             update.isError && refused.size === 0 ? (
-              <p className="ob-stage-note" role="alert">
-                {problemMessageOf(update.error, t)}
-              </p>
+              <ErrorLine inline error={update.error} />
             ) : undefined
           }
           onGo={() => void leave()}

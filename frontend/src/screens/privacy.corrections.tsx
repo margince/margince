@@ -12,6 +12,7 @@ import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Button, EmptyState, Textarea } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -119,19 +120,11 @@ export function ConfirmSubmissionsPanel() {
     <Panel title={t("privacy.corrections")}>
       <PanelBody>
         <PanelIntro>{t("privacy.correctionsSub")}</PanelIntro>
-        {failure ? (
-          <p className="dsr-error" role="alert">
-            {failure}
-          </p>
-        ) : null}
+        {failure ? <ErrorLine>{failure}</ErrorLine> : null}
         {/* A FAILED READ IS NOT AN EMPTY QUEUE. Coercing an undefined answer
             to [] told the reviewer nothing was waiting when the read had in
             fact failed, which is the one wrong thing a work queue can say. */}
-        {query.isError ? (
-          <p className="dsr-error" role="alert">
-            {problemMessageOf(query.error, t)}
-          </p>
-        ) : null}
+        <ErrorLine error={query.error} />
         {!query.isError && rows.length === 0 ? (
           <EmptyState title={t("privacy.correctionsEmpty")}>
             {t("privacy.correctionsEmptySub")}

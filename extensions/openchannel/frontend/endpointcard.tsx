@@ -9,6 +9,7 @@ import {
   Badge,
   Button,
   Callout,
+  ErrorLine,
   type Fact,
   FactList,
   Field,
@@ -115,7 +116,7 @@ function AbsentEndpoint({ canOpen }: Readonly<{ canOpen: boolean }>) {
         </Row>
       ) : null}
       {open.isError ? (
-        <p role="alert">{t("extOpenchannel.endpoint.openFailed")}</p>
+        <ErrorLine>{t("extOpenchannel.endpoint.openFailed")}</ErrorLine>
       ) : null}
     </Stack>
   );
@@ -280,7 +281,7 @@ function PauseResume({ enabled }: Readonly<{ enabled: boolean }>) {
         </Button>
       </Row>
       {setEnabled.isError ? (
-        <p role="alert">{t("extOpenchannel.endpoint.enabledFailed")}</p>
+        <ErrorLine>{t("extOpenchannel.endpoint.enabledFailed")}</ErrorLine>
       ) : null}
     </Stack>
   );
@@ -336,7 +337,7 @@ function OutboundUrlForm({
         </Button>
       </Row>
       {register.isError ? (
-        <p role="alert">{t("extOpenchannel.outbound.registerFailed")}</p>
+        <ErrorLine>{t("extOpenchannel.outbound.registerFailed")}</ErrorLine>
       ) : null}
     </>
   );

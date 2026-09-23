@@ -948,6 +948,7 @@ export function ListTable<Row>({
   const problem = isError ? (
     <>
       <p>{t("common.error")}</p>
+      {/* ds:ignore the cause under a headline with its own Retry, a composite */}
       <p style={{ marginTop: "var(--space-1)" }}>
         {problemMessageOf(error, t)}
       </p>

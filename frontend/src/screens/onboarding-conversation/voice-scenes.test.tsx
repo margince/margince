@@ -267,7 +267,7 @@ describe("the collect scene's corpus floor meter", () => {
       screen.getByRole("button", { name: "Build my voice profile" }),
     );
     expect(onBuild).not.toHaveBeenCalled();
-    expect(document.querySelector(".ob-stage-note")?.textContent).toContain(
+    expect((await screen.findByRole("alert")).textContent).toContain(
       `${VOICE_MIN_WORDS}`,
     );
     expect(

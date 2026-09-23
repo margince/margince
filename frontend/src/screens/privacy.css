@@ -69,10 +69,6 @@
   flex-wrap: wrap;
 }
 
-.dsr-error {
-  color: var(--dangerText);
-}
-
 /* The typed-ERASE field, one gap-step below the modal's lead paragraph —
  * every other labelled field in the app opens with this much breathing room. */
 .dsr-erase-field {

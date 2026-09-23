@@ -1,6 +1,7 @@
 import type { ChangeEvent, Dispatch, RefObject } from "react";
 import { useRef } from "react";
 import type { components } from "../../api/schema";
+import { ErrorLine } from "../../design-system/errorline";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -125,9 +126,9 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
           is no rail thread left to ring. */}
       <div className={dragOver ? "ob-conv-dragover" : undefined}>{scene}</div>
       {corpus.failure && (
-        <p className="ob-conv-notice" role="alert">
+        <ErrorLine>
           {t(corpus.failure.i18nKey, corpus.failure.params)}
-        </p>
+        </ErrorLine>
       )}
     </ConversationWorkbench>
   );

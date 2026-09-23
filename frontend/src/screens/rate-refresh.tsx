@@ -4,8 +4,9 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import "./rates.css";
 
 /** The two sheets this product re-reads from their sources. */
@@ -65,11 +66,7 @@ export function RefreshFromSources({ path }: Readonly<{ path: RefreshPath }>) {
       {/* The failure is spoken, and the retry is the button it sits beside —
           which stays enabled, so the reader does not need a second control that
           would do the same thing. */}
-      {refresh.isError ? (
-        <span className="rates-error" role="alert">
-          {problemMessageOf(refresh.error, t)}
-        </span>
-      ) : null}
+      <ErrorLine error={refresh.error} inline />
     </span>
   );
 }

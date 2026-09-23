@@ -87,9 +87,9 @@ export function ImportedEmploymentHistory({
   return (
     <div className="form-stack">
       {reading.data?.warnings?.map((warning) => (
-        <p role="alert" key={warning}>
+        <ErrorLine standing key={warning}>
           {warning}
-        </p>
+        </ErrorLine>
       ))}
       {reading.isPending && <p>{t("employment.importLoading")}</p>}
       <ErrorLine error={reading.error} />

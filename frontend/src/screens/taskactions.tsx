@@ -23,7 +23,7 @@ import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
@@ -147,11 +147,7 @@ export function TaskCompleteCheck({
           update.mutate({ id: activityId, version, body: { is_done: true } })
         }
       />
-      {failed && (
-        <span className="co-part-error" role="alert">
-          {problemMessageOf(update.error, t)}
-        </span>
-      )}
+      {failed && <ErrorLine error={update.error} inline />}
     </>
   );
 }

@@ -14,9 +14,9 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useCanWrite } from "../../app/capability";
 import { Badge, Button, Card } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { problemMessageOf } from "../common";
 import { ReceiptList } from "./receipts";
 
 type Graph = components["schemas"]["ContactGraph"];
@@ -134,7 +134,7 @@ function RecordWorksWith({
   return (
     <p className="pn-suggest">
       {record.isError ? (
-        <span role="alert">{problemMessageOf(record.error, t)}</span>
+        <ErrorLine inline error={record.error} />
       ) : (
         <Button
           disabled={record.isPending}

@@ -11,6 +11,7 @@ import {
   OverflowMenu,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
@@ -279,11 +280,7 @@ function AutomationEditor({
         onSubmit={onSubmit}
         onCancel={onClose}
       />
-      {refusal !== null && (
-        <p className="auto-error" role="alert">
-          {refusal}
-        </p>
-      )}
+      {refusal !== null && <ErrorLine>{refusal}</ErrorLine>}
     </Modal>
   );
 }
@@ -443,11 +440,7 @@ export function AutomationRow({
       {/* A refused flip moves nothing on screen — so this line is the only
           report that it did not land, and it has to be spoken. The edit
           dialog's own refusal stays inside it, and so does the delete's. */}
-      {refused === "status" && (
-        <p className="auto-error" role="alert">
-          {refusal}
-        </p>
-      )}
+      {refused === "status" && <ErrorLine>{refusal}</ErrorLine>}
     </li>
   );
 }
@@ -612,11 +605,7 @@ export function AutomationsAdmin() {
           {/* The refusal stays where the reader is: the dialog is still open
               over the card, so a line underneath it would report the failure
               behind the thing covering it. */}
-          {create.isError && (
-            <p className="auto-error" role="alert">
-              {problemMessageOf(create.error, t)}
-            </p>
-          )}
+          <ErrorLine error={create.error} />
         </Modal>
       </PanelBody>
     </Panel>
