@@ -68,7 +68,7 @@ function settled(minutesAgo: number, over: Readonly<Record<string, unknown>>) {
 }
 
 // The two objects the section actually asks about: `license` gates the posture
-// the orb reads (`useLicensePosture`) and `automation:update` gates the runtime
+// the panel's pill reads (`useLicensePosture`) and `automation:update` gates the runtime
 // row's `/ai/calls`. Granting exactly these rather than a blanket allow is what
 // keeps a story named for an INSTALLATION posture from also quietly documenting
 // an authority one — every story below is about what the installation answers,
@@ -368,10 +368,12 @@ export const RunStalled: Story = {
   render: story({ ...HEALTHY, running: [occurrence({ state: "stalled" })] }),
 };
 
-/** Warning: no licence bound. The orb goes amber and the line names the fault
- *  rather than raising it as a hard failure. */
-export const Warning: Story = {
-  render: story({ ...HEALTHY, licenseState: "absent" }),
+/** A refused licence: the panel's runtime strip carries the pill that leads to
+ *  the seats page, and the orb rests, because a standing condition does not
+ *  take the live line. */
+export const LicenceRefused: Story = {
+  render: story({ ...HEALTHY, licenseState: "rejected" }),
+  play: openThePanel,
 };
 
 /** Error: a mailbox the agent cannot reach — the token expired and capture is
@@ -537,13 +539,13 @@ export const PanelOpenPhone: Story = {
 };
 
 /**
- * A seat the licence is none of: the orb reports the installation's HEALTH and
- * stays neutral about its commercial standing.
+ * A seat the licence is none of: the panel reports the installation's HEALTH
+ * and stays neutral about its commercial standing.
  *
  * The distinction this story exists for is that a withheld licence must not
- * read as a fault. A rep's seat cannot see the entitlement, and an orb that
- * went amber about it on every screen they opened would be a permission
- * boundary drawn as a broken installation — so `useLicensePosture` answers
+ * read as a fault. A rep's seat cannot see the entitlement, and a pill about it
+ * in every panel they opened would be a permission boundary drawn as a broken
+ * installation — so `useLicensePosture` answers
  * "nothing to report" rather than "something is wrong", and this is the story
  * that would fail if that ever changed.
  */

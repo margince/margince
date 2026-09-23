@@ -87,10 +87,10 @@ export const Unlicensed: Story = {
 };
 
 // Asked and told no, which is NOT the state above: a token was presented and
-// rejected, so there is a repair behind it, and this card is the one place that
-// says so — the orb stopped carrying it because an unlicensed installation wore
-// permanent amber and the colour stopped meaning anything. Warn rather than
-// info, and neither interrupts: over-the-grant owns the only alert here.
+// rejected, so there is a repair behind it, and this card is where it is made;
+// the shell banner and the agent panel's pill name it and link here. Warn
+// rather than info, and neither interrupts: over-the-grant owns the only alert
+// here.
 export const LicenseRefused: Story = {
   render: story({
     state: "rejected",

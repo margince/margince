@@ -380,19 +380,14 @@ export const CompanyMarksAtBothWidths: Story = {
 };
 
 /**
- * The entitlement the foot reports, in the shapes it reports it in.
+ * The foot with an entitlement read behind it.
  *
- * Four postures, and the copy says which: a cap to count against, a license that
- * caps nothing, no license at all, and one the installation refused. Only the
- * first two are worth a frame — "No license" and "License refused" are the same
- * geometry as the third with different words in it, and a picture of the same row
- * twice is noise. What differs and therefore earns a frame is the INK: `pressing`
- * turns the row to the warning token when there is something to act on rather
- * than merely know.
+ * The foot is the agent and draws no licence posture: a refused licence is the
+ * shell banner's, and absent or refused is the agent panel's pill. These frames
+ * stub a live entitlement so a posture that reached the rail would show here.
  *
  * `checked_at` is a fixed instant rather than `new Date()`: a fixture that reads
- * the clock makes a capture that differs from the last one for no reason, and the
- * row never prints it anyway.
+ * the clock makes a capture that differs from the last one for no reason.
  */
 type LicenseEntitlement = components["schemas"]["LicenseEntitlement"];
 
@@ -416,11 +411,7 @@ const OVER_CAP: LicenseEntitlement = {
 
 /**
  * The session a frame about the foot needs: `license:read`, and the entitlement
- * itself.
- *
- * Both halves, because either one alone renders NOTHING and the two absences look
- * identical on screen — the row is gone for a principal who may not read it and
- * gone again while the read is in flight.
+ * itself. Both halves, because without either the read is never answered.
  */
 function stubEntitlement(entitlement: LicenseEntitlement) {
   stubSession(
@@ -430,31 +421,12 @@ function stubEntitlement(entitlement: LicenseEntitlement) {
 }
 
 /**
- * Seats used against seats granted, at the foot of both panels.
+ * A licence within its seat cap, under both panel states side by side.
  *
- * The foot is where a tool puts what the installation is entitled to, and seats
- * are the one number about it that changes under contacts while they work: an
- * invitation spends one, and the refusal when the last is gone arrives in the
- * middle of adding a colleague.
- *
- * Rendered in both states side by side because the row has two geometries and
- * only one of them is a reading. Expanded it takes the destinations' own metrics
- * to the pixel — 34px, the same 9px icon-to-label gap, the same 14px inset — and
- * says it is a different KIND of row in its ink rather than by standing on a
- * second grid. Collapsed it keeps 44px like every other row at that width, drops
- * to the glyph, and carries the reading in a tooltip on hover and on keyboard
- * focus.
- *
- * ONE half of that is not what this frame photographs, and the reason is worth
- * more than the frame. The collapsed panel's rows are 44px, so its intrinsic
- * height is 774px — and `.rail.collapsed` sets `overflow: visible` so the
- * collapsed tooltips can escape its 56px box, which means it neither scrolls nor
- * clips. In a window shorter than that the foot is simply BELOW the bottom of the
- * viewport with nothing to scroll, and `fe-uat` captures at 720px. So the right
- * half of this frame shows the destinations and no foot at all. The expanded
- * panel is unaffected (34px rows, and it does scroll); read the collapsed foot in
- * Storybook in a window taller than 775px, and treat the shortfall as a note
- * against the panel rather than against the frame.
+ * `.rail.collapsed` sets `overflow: visible` so its tooltips can escape the 56px
+ * box, so the collapsed panel neither scrolls nor clips: in a window shorter
+ * than its 44px rows add up to, its foot sits below the viewport. The expanded
+ * panel scrolls; read the collapsed foot in a window tall enough to hold it.
  */
 export const RailEntitlement: Story = {
   name: "the foot — seats used against granted",
@@ -478,14 +450,8 @@ export const RailEntitlement: Story = {
 };
 
 /**
- * Over the cap, which is the state the row changes colour for.
- *
- * Reported, never enforced: the installation keeps working, nothing on this row
- * blocks anybody, and what to DO about it is on the settings tab the row leads
- * to. The warning ink is the whole of the escalation the chrome is allowed — the
- * same treatment a license in grace or due for renewal gets, because all four are
- * one question ("does somebody need to act on this?") and a chrome row is the
- * wrong place to spell out which.
+ * Over the seat cap. Reported, never enforced, and reported on the settings
+ * card rather than in the rail: the foot draws nothing different here.
  */
 export const RailEntitlementPressing: Story = {
   name: "the foot — over the seat cap",
@@ -502,15 +468,9 @@ export const RailEntitlementPressing: Story = {
 };
 
 /**
- * A principal without `license:read`, where the row is absent SILENTLY.
- *
- * Not a refusal, and not a row saying the reading is unavailable: a fact that is
- * none of somebody's work is not a fact being withheld from them, and a permission
- * boundary drawn at the foot of every screen they open would be. The request is
- * never made either — the grant is read from the session the shell already holds.
- *
- * This frame is also the one that shows what is LEFT when the row goes, which is
- * the rule the foot's own chrome is drawn by rather than a state to admire.
+ * A principal without `license:read`. The entitlement is never requested — the
+ * grant is read from the session the shell already holds — and nothing says it
+ * is missing: a fact that is none of somebody's work is not being withheld.
  */
 export const RailEntitlementWithoutTheGrant: Story = {
   name: "the foot — no license:read",

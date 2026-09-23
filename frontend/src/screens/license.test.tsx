@@ -229,12 +229,10 @@ describe("LicenseCard", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  // This card is the one place the licence gap is stated. The orb used to carry
-  // it and no longer does — an unlicensed installation wore permanent amber, so
-  // the colour stopped meaning "a fault that can wait" — and a sub-line above a
-  // seat meter that reads fine is not somewhere an operator looks. These two
-  // cases hold that the fact is still said, and that the two absences are not
-  // said as one thing.
+  // This card is where the licence gap is repaired, so it states the gap itself
+  // rather than leaving it to the shell banner and the agent panel's pill. These
+  // two cases hold that the fact is said, and that the two absences are not said
+  // as one thing.
   it("says an installation with no license has none, and what that costs", async () => {
     vi.stubGlobal(
       "fetch",

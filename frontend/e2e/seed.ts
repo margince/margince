@@ -1042,6 +1042,14 @@ export type MockApiOptions = Readonly<{
   // raises the shell's standing advisory — the one banner the sweep had never
   // rendered, because nothing mocked the read it keys on.
   embedReindex?: "current" | "needed";
+  // What the installation's licence resolved to. "valid" (the default) is the
+  // seat-count world the Seats page is swept in; "absent" is every dev and demo
+  // stack, and "rejected" is the refusal that raises the shell's licence banner.
+  license?: "valid" | "absent" | "rejected";
+  // One run in flight on the agent feed. Without it the catch-all answers the
+  // feed with no `running` arm, so the rail is at rest in every spec and its
+  // live line — the one a standing condition must not take — is never drawn.
+  agentRunning?: true;
 }>;
 
 export async function mockApi(
@@ -2543,7 +2551,33 @@ export async function mockApi(
       return json(knowledgeCorpora);
     }
     if (path === "/installation/license") {
+      // Neither refusal nor absence verifies a grant, so both drop the seat cap
+      // the way the server does rather than report a ceiling nothing set.
+      if (options?.license === "absent" || options?.license === "rejected") {
+        return json({
+          state: options.license,
+          seats_used: installationLicense.seats_used,
+          over_limit: false,
+          checked_at: installationLicense.checked_at,
+        });
+      }
       return json(installationLicense);
+    }
+    if (path === "/me/ai-activity" && options?.agentRunning) {
+      return json({
+        as_of: new Date().toISOString(),
+        running: [
+          {
+            id: "019f7e65-fbf7-7114-b114-40af4af63a01",
+            kind: "morning_brief",
+            state: "running",
+            // Relative, because the rail ages a run by its start.
+            started_at: new Date(Date.now() - 60_000).toISOString(),
+          },
+        ],
+        recent: [],
+        faults: [],
+      });
     }
     if (path === "/ai/routing" && method === "GET") {
       return json(aiRouting);

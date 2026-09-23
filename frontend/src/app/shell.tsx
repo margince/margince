@@ -24,6 +24,7 @@ import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
+import { LicenseBanner } from "./licensebanner";
 import {
   entryLabel,
   MOBILE_PRIMARY,
@@ -220,8 +221,8 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
 }
 
 // WCAG 2.4.1, Bypass Blocks. Every page in the product puts the same block ahead
-// of its content — up to twelve navigation rows and the entitlement row in the
-// sidebar, then the strip's collapse control, trail, search, system-of-record
+// of its content — up to twelve navigation rows and the agent in the sidebar,
+// then the strip's collapse control, trail, search, system-of-record
 // chip, approvals bell and account menu — and without this a keyboard reader
 // walked all of it again on every page they opened.
 //
@@ -467,17 +468,14 @@ export function WorkspaceRail({
         <div className="grow" />
         {/* The sidebar's foot is the agent. It is the one thing in the chrome
             that reports rather than navigates, and it never claims the current
-            page. What the installation is ENTITLED to used to sit here as its
-            own grey row, and it now reaches a reader through the Core instead: a
-            licence fault turns the orb amber, which is a thing somebody notices.
-            It keeps the foot on a drilled-in level, REDUCED rather than removed
-            (app/agentrail.css): the agent belongs to the whole session, so an
-            amber orb has to survive a reader walking into settings — but the
+            page. It does not carry the licence: the banner over the page states
+            a refused one and the agent panel's pill an absent or refused one.
+            On a drilled-in level it is REDUCED rather than removed
+            (app/agentrail.css): the agent belongs to the whole session, but the
             column it stands under there is one section's own pages, and the ball
-            at rail size would lead a list it is not about. Same block, same
-            Core, smaller. It still goes at phone width, where there is no column
-            to have a foot: the bar's centre cell above is where the agent stands
-            there, and two of these would be two Cores. */}
+            at rail size would lead a list it is not about. It goes at phone
+            width, where there is no column to have a foot: the bar's centre cell
+            above is where the agent stands there, and two would be two Cores. */}
         {!phone && (
           <div className="railagent">
             <AgentRail route={route} />
@@ -971,6 +969,7 @@ export function Shell({
             railless; these advisories belong only here. */}
           <EconomyBanner />
           <EmbedReindexBanner />
+          <LicenseBanner />
           {/* The import's gauge, floating bottom-centre of this column for as
             long as mail is arriving. Inside `.main` rather than beside the
             edge below, because it is positioned against the content column

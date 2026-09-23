@@ -7970,6 +7970,10 @@ export const en = {
   "aibanner.link": "Manage allowance",
   "aibanner.dismiss": "Dismiss",
 
+  "licensebanner.body":
+    "This installation's license token was checked and refused.",
+  "licensebanner.link": "Open {tab}",
+
   "aicalls.title": "AI call trace",
   "aicalls.withheld":
     "Only an operator can read the per-call trace. It records every model call the installation made, so it is not shown more widely.",

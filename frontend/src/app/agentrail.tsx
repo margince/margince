@@ -106,7 +106,7 @@ const RECAP_ROWS = 5;
  */
 const AI_SETTINGS_HREF = routeHash(settingsHref("usage"));
 /** Where a licence key is entered: the seats section of settings. */
-const LICENSE_SETTINGS_HREF = "#/settings/seats";
+const LICENSE_SETTINGS_HREF = routeHash(settingsHref("seats"));
 
 /**
  * The state in a word, under the agent's name.
@@ -783,15 +783,19 @@ function usePanelFrame(
  *
  * The order is severity, and it starts with the faults that stop the agent
  * running AT ALL, because an agent with no model bound is not a broken run, it
- * is no runs. Under those, a run that actually broke. Under that, the licence.
+ * is no runs. Under those, a run that actually broke, then one that stalled.
  * Only then the agent's own live work, and at the bottom, rest.
+ *
+ * The licence is not in the order. The line answers what the agent is doing
+ * right now; a licence posture is a standing condition of the installation,
+ * still true in an hour, and letting it take the live line would hide every
+ * run behind it. It has its own persistent chrome (`LicenseBanner`).
  *
  * It answers the CAUSE alongside the state, and the two travel together for one
  * reason: the sentence the block carries is the cause's own, so a caller that
  * re-derived the cause by its own reading could caption a colour with a run that
- * did not produce it. A licensing amber over an installation whose agent is
- * mid-brief is exactly that case, and it is not hypothetical: a workspace in
- * grace keeps running its agent.
+ * did not produce it: an unread failure over a second run still in flight
+ * must read as the failure, not the run.
  */
 type Reading = Readonly<{
   state: MarginceCoreState;
@@ -813,9 +817,8 @@ function derive(
   if (signals.ai === "unconfigured" || signals.offline.length > 0) {
     return { state: "error", cause: null, register: "agent" };
   }
-  // A run that broke, and that this reader has not been shown yet. It outranks
-  // the licence because it is a thing that HAPPENED rather than a standing
-  // condition, and it clears by being read rather than by being repaired.
+  // A run that broke, and that this reader has not been shown yet. It clears by
+  // being read rather than by being repaired.
   if (fault !== null) {
     return { state: fault.severity, cause: fault.item, register: "agent" };
   }
@@ -828,18 +831,6 @@ function derive(
   const stalled = server.running.find((item) => item.state === "stalled");
   if (stalled) {
     return { state: "warning", cause: stalled, register: "agent" };
-  }
-  // REFUSED only, and it stays amber rather than escalating, because escalating
-  // would make the chrome a sales surface.
-  //
-  // An installation that never had a licence is deliberately not a fault: every
-  // demo and every fresh dev stack is in that state, and an orb that is amber
-  // for all of them has stopped being a signal. Asked and refused is different,
-  // because there is a repair behind it. The missing licence is stated once
-  // where an operator goes looking for it, on the licence card in settings,
-  // rather than spending the chrome's only ambient warning on it.
-  if (signals.license === "refused") {
-    return { state: "warning", cause: null, register: "agent" };
   }
   // The agent's own live work, and which half of the lifecycle it is in comes
   // from the KIND of work rather than from how far along it is: evidence
@@ -916,8 +907,8 @@ function causeLine(
  * this state, in the reader's own locale: the run that broke, the one past its
  * lease, or the one running now. It leads wherever it exists, because a state is
  * a colour and a named run is an answer. It is null only for a state no
- * occurrence caused (a licence, an unbound model) or for a kind this build
- * writes no sentence for.
+ * occurrence caused (an unbound model, an unreachable source) or for a kind this
+ * build writes no sentence for.
  */
 function barLine(
   state: MarginceCoreState,
@@ -960,9 +951,9 @@ function barLine(
  * the ranking is the whole content: a deployment with no model bound and a
  * source that stopped answering are different repairs, and both outrank a run
  * that broke — an agent that cannot run at all is not a failed run, it is no
- * runs. Amber with no occurrence behind it is the licence, and it is the only
- * way to reach that: derive() ranks a broken run and a stalled one above it,
- * and both carry a sentence of their own.
+ * runs. Amber always has an occurrence behind it, a broken run or a stalled
+ * one, and causeLine gives every kind a sentence, so amber's fallback is the
+ * same last resort the red branch keeps.
  */
 function faultLine(
   state: "error" | "warning",
@@ -971,7 +962,7 @@ function faultLine(
   t: Translator,
 ): SpokenLine {
   if (state === "warning") {
-    return agentLine ?? plain(signals.licenseLine);
+    return agentLine ?? plain(t("agent.line.runStopped"));
   }
   if (signals.ai === "unconfigured") {
     return plain(t("agent.fact.noModel"));
