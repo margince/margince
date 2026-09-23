@@ -420,6 +420,22 @@ async function draftFromLead({
 // Answers the same `{available, draft}` shape as the three beside it, so the
 // fill cannot tell the origins apart and they cannot drift into different
 // clobber rules.
+/**
+ * What the caller is asking FOR, on either route: their own words, and the
+ * draft those words are about when there is one.
+ *
+ * Omitted rather than sent empty. The server reads an absent `rewrite_of` as a
+ * first draft, so a blank string would ask it to revise an empty composer —
+ * and both routes have to agree about that, which is why this is one function
+ * rather than the same two lines twice.
+ */
+function steering(intent: string, rewriteOf: string) {
+  return {
+    ...(intent.trim() ? { intent: intent.trim() } : {}),
+    ...(rewriteOf.trim() ? { rewrite_of: rewriteOf.trim() } : {}),
+  };
+}
+
 async function draftFromContact({
   entityId,
   projectId,
@@ -439,8 +455,7 @@ async function draftFromContact({
       params: { path: { id: entityId } },
       body: {
         ...(projectId ? { project_id: projectId } : {}),
-        ...(intent.trim() ? { intent: intent.trim() } : {}),
-        ...(rewriteOf.trim() ? { rewrite_of: rewriteOf.trim() } : {}),
+        ...steering(intent, rewriteOf),
       },
     },
   );
@@ -522,8 +537,7 @@ async function draftFromAccount({
         // the draft in the 360 SCOPED to it, so the other projects'
         // correspondence never reaches the model.
         ...(projectId ? { project_id: projectId } : {}),
-        ...(intent.trim() ? { intent: intent.trim() } : {}),
-        ...(rewriteOf.trim() ? { rewrite_of: rewriteOf.trim() } : {}),
+        ...steering(intent, rewriteOf),
       },
     },
   );
