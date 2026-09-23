@@ -373,3 +373,88 @@ func stampCommercialCorrespondence(t *testing.T, e *integration.Env, activityID 
 		t.Fatalf("stamping commercial correspondence: %v", err)
 	}
 }
+
+// seedRequestAgainstLawyer puts one purgeable message from a lawyer's address
+// on the seat's own connection, a contact carrying that address, and a request
+// against that contact in the given state — the whole fixture both cases below
+// need, differing only in the state.
+//
+// The contact is what makes the request reach correspondence at all: a request
+// names a subject, and the subject's addresses are what match a counterparty.
+func seedRequestAgainstLawyer(t *testing.T, e *integration.Env, status, resolution string) ids.UUID {
+	t.Helper()
+	const address = "anwalt@kanzlei.example"
+	evidence := seedPurgeableMail(t, e, address, "Mandat", e.Rep1)
+	subject := e.SeedContact(t, "Der Mandant", nil)
+	owner := integration.OwnerConn(t)
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO contact_email (id, contact_id, email, email_type, is_primary, source, captured_by)
+		VALUES ($1, $2, $3, 'work', true, 'manual', 'human:x')`,
+		ids.NewV7(), subject, address); err != nil {
+		t.Fatalf("seeding the subject's address: %v", err)
+	}
+	// due_at is NOT NULL on every request; a finished one also owes a
+	// resolution, which its own CHECK enforces.
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO data_subject_request (id, kind, status, subject_ref, contact_id, due_at, resolution)
+		VALUES ($1, 'erasure', $2, $3::text, $3::uuid, now() + interval '30 days', $4)`,
+		ids.NewV7(), status, subject, nullIfEmpty(resolution)); err != nil {
+		t.Fatalf("seeding the %s request: %v", status, err)
+	}
+	return evidence
+}
+
+// nullIfEmpty writes SQL NULL for a resolution an open request must not carry.
+func nullIfEmpty(resolution string) *string {
+	if resolution == "" {
+		return nil
+	}
+	return &resolution
+}
+
+// A message a data-subject request has not finished with survives an owner's
+// purge, and the count says so.
+//
+// `restricted_at` is written when an erasure EXECUTES or a controller pins a
+// record by hand. A request sitting at `open` marks nothing on the activity —
+// so a seat could purge its own exclusion rule and destroy exactly the
+// correspondence a pending request was about to assemble, with `skipped`
+// reporting zero and nothing anywhere saying what had happened.
+//
+// The case is the one the filing describes: a subject files against their
+// lawyer's address, the request waits for an assignee, and the seat purges its
+// own rule for that domain in the meantime.
+func TestAPurgeSkipsAMessageAnOpenRequestIsAbout(t *testing.T) {
+	e := integration.Setup(t)
+	evidence := seedRequestAgainstLawyer(t, e, "open", "")
+
+	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindDomain, "kanzlei.example")
+	outcome := runPurge(t, e, e.Rep1, rule, false)
+	if outcome.Skipped != 1 || outcome.Destroyed != 0 {
+		t.Fatalf("skipped=%d destroyed=%d, want 1 and 0 — the assignee opens a request with no "+
+			"records to act on, and the count that would have told somebody reports zero",
+			outcome.Skipped, outcome.Destroyed)
+	}
+	if body := activityBody(t, e, evidence); body == "" {
+		t.Fatal("the correspondence an open request is about was destroyed")
+	}
+}
+
+// And a request nobody is waiting on does not shield anything.
+//
+// Its own case because the arm above is an EXISTS over a whole table: a
+// predicate that matched any request at all would freeze every purge on every
+// address the installation has ever had a case about, permanently, and would
+// look identical to a working shield from the test above.
+func TestAPurgeIsNotShieldedByAFinishedRequest(t *testing.T) {
+	e := integration.Setup(t)
+	seedRequestAgainstLawyer(t, e, "fulfilled", "done")
+
+	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindDomain, "kanzlei.example")
+	outcome := runPurge(t, e, e.Rep1, rule, false)
+	if outcome.Destroyed != 1 || outcome.Skipped != 0 {
+		t.Fatalf("destroyed=%d skipped=%d, want 1 and 0 — a closed case shields nothing, and a "+
+			"shield that never lifts is an owner's rule that never works again",
+			outcome.Destroyed, outcome.Skipped)
+	}
+}

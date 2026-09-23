@@ -188,28 +188,8 @@ func SelectPersonalPurgeTx(
 	if err != nil {
 		return subject, fmt.Errorf("capture: selecting personal mail whose window has closed: %w", err)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var id ids.UUID
-		var withheld bool
-		var importers int
-		if err := rows.Scan(&id, &withheld, &importers); err != nil {
-			return subject, fmt.Errorf("capture: selecting personal mail whose window has closed: %w", err)
-		}
-		switch {
-		case withheld:
-			subject.Restricted = append(subject.Restricted, id)
-		case importers > 1:
-			// A colleague imported it too. Their claim is not this seat's to
-			// destroy, and a message two mailboxes received is by that fact
-			// less likely to be the private correspondence this purge is for.
-			subject.SharedImports = append(subject.SharedImports, id)
-		default:
-			subject.SoleImports = append(subject.SoleImports, id)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return subject, fmt.Errorf("capture: selecting personal mail whose window has closed: %w", err)
+	if err := collectPurgeRows(rows, &subject, "selecting personal mail whose window has closed"); err != nil {
+		return subject, err
 	}
 	return subject, nil
 }
