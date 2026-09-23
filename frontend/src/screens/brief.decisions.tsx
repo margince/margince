@@ -31,11 +31,8 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  approvalKindLabel,
-  resolveDisplay,
-  stagedDayFormatter,
-} from "./approvalkind";
+import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
+import { approvalKindLabel } from "./approvalkind";
 import { commitTray } from "./brief.decisions.commit";
 import { problemMessageOf, provenanceOf, useViewerId } from "./common";
 import { worklistLaneHref } from "./worklist.header";

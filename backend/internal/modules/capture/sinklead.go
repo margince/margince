@@ -213,9 +213,64 @@ func (s *Sink) findLeadCollision(ctx context.Context, tx pgx.Tx, rec connector.N
 		}
 		return nil, nil, err
 	}
-	captured, err := json.Marshal(fields)
+	current, err := incumbentLeadFields(ctx, tx, existing)
+	if err != nil {
+		return nil, nil, err
+	}
+	current.LeadFields = fields
+	captured, err := json.Marshal(current)
 	if err != nil {
 		return nil, nil, err
 	}
 	return &existing, captured, nil
+}
+
+// leadCollisionPayload is what the card carries: the fields the message knew,
+// and what the incumbent lead already holds for the ones a fold could fill.
+//
+// The captured half is LeadFields embedded, so it keeps that struct's own
+// tagless spelling — those keys are on disk in every pending row, and the
+// accept folds from them (compose decodes them by Go field name).
+//
+// The current half exists because the rule is that an occupied field keeps
+// what it has. Without it the approver is shown four captured values with no
+// way to tell which of them accepting will silently drop, and a card whose
+// answer is invisible is the reason this one was worth a human's time and was
+// not getting it.
+type leadCollisionPayload struct {
+	LeadFields
+	CurrentFullName    string `json:"current_full_name"`
+	CurrentCompanyName string `json:"current_company_name"`
+	CurrentTitle       string `json:"current_title"`
+}
+
+// incumbentLeadFields reads the collided-with lead's own values for the fields
+// a fold could fill.
+//
+// Frozen at staging time, like the target label beside it: the lead can change
+// before anyone opens the inbox, and the accept re-decides under a row lock
+// against whatever is true then (contacts.FillEmptyLeadFieldsTx). So the card
+// states what was true when it was written, which is what every staged diff in
+// this product claims and no more.
+//
+// The email is deliberately not among them. It is the address the collision was
+// found ON, so the incumbent necessarily has one and the fold never touches it.
+func incumbentLeadFields(ctx context.Context, tx pgx.Tx, id ids.LeadID) (leadCollisionPayload, error) {
+	// The OBJECT gate, here rather than inherited from the caller.
+	//
+	// captureLead returns on the collision path BEFORE it reaches upsertLead,
+	// which is where the create grant is asked — so this branch passes through
+	// no lead object gate at all, and EnsureVisible below answers only the row
+	// question. A read is what this does, so read is what it asks.
+	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
+		return leadCollisionPayload{}, err
+	}
+	var current leadCollisionPayload
+	if err := tx.QueryRow(ctx,
+		`SELECT coalesce(full_name, ''), coalesce(company_name, ''), coalesce(title, '')
+		   FROM lead WHERE id = $1`, id).
+		Scan(&current.CurrentFullName, &current.CurrentCompanyName, &current.CurrentTitle); err != nil {
+		return leadCollisionPayload{}, fmt.Errorf("capture: reading the collided-with lead: %w", err)
+	}
+	return current, nil
 }

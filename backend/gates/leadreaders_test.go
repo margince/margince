@@ -84,9 +84,9 @@ var lifecycleLeadReads = gatekit.Waive(map[string]string{
 	"internal/modules/privacy/retentionselectors.go":                        "the retention selectors themselves, including `lead/unconverted`: they select the IDS a retention rule is due to act on, under the system principal on the sweep's schedule. No lead column reaches any caller — the output is a delete or scrub bound — and a selector that respected a caller's grants would under-delete, which is the defect the sweep exists to prevent",
 })
 
-// calleeGatedLeadReads: a private helper inside the module that OWNS the lead
-// object, whose every caller asks the object gate at the store entry point
-// above it.
+// calleeGatedLeadReads: a private helper whose every caller asks the object
+// gate at the entry point above it — usually, but not only, inside the module
+// that OWNS the lead object.
 //
 // A verdict of its own rather than folded into lifecycle, which is where
 // edgereaders_test.go puts the same shape. The edge's helpers are cascades and
