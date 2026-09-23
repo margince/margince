@@ -386,6 +386,44 @@ describe("work the rail cannot name", () => {
     expect(runningSection(opened)?.querySelector(".arempty")).toBeNull();
   });
 
+  it("captions the background work beside a stalled row", async () => {
+    const opened = await openPanel({
+      running: [
+        {
+          id: "run-stalled",
+          kind: "morning_brief",
+          state: "stalled",
+          started_at: new Date(NOW - 60_000).toISOString(),
+        },
+      ],
+      liveTotal: 1,
+    });
+    await waitFor(() =>
+      expect(opened.querySelectorAll(".arrun")).toHaveLength(1),
+    );
+    expect(runningSection(opened)?.querySelector(".arempty")?.textContent).toBe(
+      en["agent.panel.unnamedLive"],
+    );
+  });
+
+  it("keeps the caption out while a named row is live", async () => {
+    const opened = await openPanel({
+      running: [
+        {
+          id: "run-live",
+          kind: "morning_brief",
+          state: "running",
+          started_at: new Date(NOW - 60_000).toISOString(),
+        },
+      ],
+      liveTotal: 2,
+    });
+    await waitFor(() =>
+      expect(opened.querySelectorAll(".arrun")).toHaveLength(1),
+    );
+    expect(runningSection(opened)?.querySelector(".arempty")).toBeNull();
+  });
+
   it("rests when the total is zero and nothing is listed", async () => {
     const opened = await openPanel({
       liveTotal: 0,

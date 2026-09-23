@@ -386,8 +386,8 @@ function RuntimeFacts({
  * A kind or state the copy map has no line for draws NOTHING — not a fallback
  * sentence, not the message key. A surface that answers an unknown run with an
  * invented sentence is one a reader cannot trust about the runs it DOES name.
- * When that empties the section it is absent, unless the live total holds work
- * beyond the rows: one caption then admits it, offering nothing to read.
+ * An emptied section is absent. Work the live total holds beyond the rows gets
+ * one caption, unless a listed row is live: a stalled one is outside its lease.
  */
 function RunSection({
   items,
@@ -401,24 +401,24 @@ function RunSection({
     const line = speak(item, t);
     return line === null ? [] : [{ item, line }];
   });
-  if (said.length === 0) {
-    return unnamed ? (
-      <PanelSection title={t(heading)}>
-        <p className="arempty t-caption">{t("agent.panel.unnamedLive")}</p>
-      </PanelSection>
-    ) : null;
-  }
+  const namesLive = said.some(({ item }) => item.state !== "stalled");
+  if (said.length === 0 && !unnamed) return null;
   return (
     <PanelSection title={t(heading)}>
-      <ul className="arruns">
-        {said.map(({ item, line }) => (
-          <li className="arbox arrun" key={item.id}>
-            <span className="arrunline">
-              <RailLine line={line} />
-            </span>
-          </li>
-        ))}
-      </ul>
+      {said.length > 0 && (
+        <ul className="arruns">
+          {said.map(({ item, line }) => (
+            <li className="arbox arrun" key={item.id}>
+              <span className="arrunline">
+                <RailLine line={line} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {unnamed && !namesLive && (
+        <p className="arempty t-caption">{t("agent.panel.unnamedLive")}</p>
+      )}
     </PanelSection>
   );
 }
