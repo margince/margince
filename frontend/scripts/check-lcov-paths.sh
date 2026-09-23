@@ -39,8 +39,12 @@ FIRST_MISSING=""
 while IFS= read -r rel; do
   TOTAL=$((TOTAL + 1))
   if [[ -f "$REPO_ROOT/$rel" ]]; then
+    # TWO product trees, because two lanes write a report: `fe-unit` measures
+    # frontend/src, and `fe-test-ext` measures the screens each unit ships. A
+    # check that knew only the first would pass the unit report over a file list
+    # containing no product code at all.
     case "$rel" in
-      frontend/src/*) PRODUCT=$((PRODUCT + 1)) ;;
+      frontend/src/* | extensions/*/frontend/*) PRODUCT=$((PRODUCT + 1)) ;;
     esac
   else
     MISSING=$((MISSING + 1))
@@ -67,9 +71,9 @@ if [[ "$MISSING" -gt 0 ]]; then
 fi
 
 if [[ "$PRODUCT" -eq 0 ]]; then
-  echo "FAIL: no record under frontend/src — the product code is outside the report" >&2
+  echo "FAIL: no record under frontend/src or extensions/*/frontend — the product code is outside the report" >&2
   echo "      ($TOTAL records, all of them config or tooling files)" >&2
   exit 1
 fi
 
-echo "PASS — every path resolves from the repo root, $PRODUCT of them under frontend/src"
+echo "PASS — every path resolves from the repo root, $PRODUCT of them product code"
