@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // sendAccepted is what a send answers with: the delivery path took it. It is
@@ -84,12 +85,22 @@ var _ automation.Comms = commsAdapter{}
 // message captured before the domain was registered — has nobody outside the
 // company to answer, and an automation must not compose one for a human to
 // wave through.
+// A thread with nobody outside the company to answer is DECLINED rather than
+// failed: nothing went wrong, a redelivery meets the same record, and the
+// engine records a decline as a skip and a failure as a broken run. Translated
+// here because automation may not import activities, and this seam is the one
+// place that sees both vocabularies.
 func (c commsAdapter) ReplyAddress(ctx context.Context, anchor ids.UUID) (string, error) {
 	own, err := c.own.Colleagues(ctx)
 	if err != nil {
 		return "", fmt.Errorf("compose: reading who counts as a colleague: %w", err)
 	}
-	return c.store.ReplyAddressFor(ctx, ids.From[ids.ActivityKind](anchor), own.Covers)
+	to, err := c.store.ReplyAddressFor(ctx, ids.From[ids.ActivityKind](anchor), own.Covers)
+	var noAddress *activities.NoReplyAddressError
+	if errors.As(err, &noAddress) {
+		return "", workflow.DeclinedBecause(noAddress)
+	}
+	return to, err
 }
 
 func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent string) (string, string, error) {
