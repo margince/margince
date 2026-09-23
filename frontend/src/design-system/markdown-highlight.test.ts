@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { collapseSpace } from "./markdown-highlight";
+import { collapseSpace, markQuote } from "./markdown-highlight";
+import type { Block } from "./markdown-parse";
 
 // The server locates a claim's quote under `claims.CollapseSpace`, which folds
 // on Go's `unicode.IsSpace`. This has to fold the SAME set or a quote carrying
@@ -38,5 +39,38 @@ describe("the viewer folds the whitespace the server folds", () => {
     expect(collapseSpace("\ufeffMessages are kept")).toBe(
       "\ufeffMessages are kept",
     );
+  });
+});
+
+// The needle and the HAYSTACK are two separate collapse sites — one builds the
+// quote, the other walks the document — and a set fixed at only one of them is
+// not fixed. `collapseSpace` alone cannot see that: these go through
+// `markQuote`, which is where both sides meet.
+describe("a quote marks the document whichever side folds the character", () => {
+  const paragraph = (text: string): Block[] => [
+    {
+      kind: "paragraph",
+      line: 1,
+      endLine: 1,
+      run: { nodes: [{ kind: "text", text }] },
+    },
+  ];
+
+  it("marks across a U+0085 NEL sitting in the document", () => {
+    expect(
+      markQuote(
+        paragraph("Messages are kept for\u0085400 days."),
+        "kept for 400 days",
+      ),
+    ).toBe(true);
+  });
+
+  it("marks a quote whose document opens with a BOM", () => {
+    expect(
+      markQuote(
+        paragraph("\ufeffMessages are kept for 400 days."),
+        "\ufeffMessages are kept",
+      ),
+    ).toBe(true);
   });
 });

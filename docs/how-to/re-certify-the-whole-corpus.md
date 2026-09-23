@@ -72,8 +72,12 @@ make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
 > in this page until its non-batch endpoint disappeared, and the failure is not
 > obvious from the message: the task's own calls are made and BILLED, then every
 > run fails judging with `No endpoints found`, three attempts each, and no
-> record is written. Curl the provider's model list first — a judge that is gone
-> costs a sweep's worth of calls to discover.
+> record is written. Check the ENDPOINTS rather than the model list: a broker
+> keeps its catalogue and its per-model availability apart, so a slug stays
+> listed after the last host behind it has gone. For OpenRouter that is
+> `GET /api/v1/models/<slug>/endpoints`, and an empty list — or nothing but
+> `:batch` — is the same outage as a missing slug. Confirm it against a model
+> you know works, because one 404 says nothing about a model on its own.
 
 `TRACE=`/`RESUME=` must be **absolute**. The default the Makefile computes is,
 and for a reason a relative one silently gets wrong: a Go test runs with its

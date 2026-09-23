@@ -6973,7 +6973,7 @@ export const de = {
   "corpusAsk.noGrantTitle":
     "Du kannst die Dokumente dieses Unternehmens nicht öffnen",
   "corpusAsk.noGrant":
-    "Fragen liest einen Dokumentensatz, für den du keine Freigabe hast. Eine Administratorin kann dir Zugriff geben.",
+    "Beim Fragen durchsuchen wir einen Dokumentensatz, für den du keine Freigabe hast. Eine Administratorin kann dir Zugriff geben.",
   "corpusAsk.noSetsTitle": "Kein Dokumentensatz zum Fragen",
   "corpusAsk.noSets":
     "Dieses Unternehmen hat noch keine Dokumente abgelegt, es gibt also nichts zu durchsuchen.",

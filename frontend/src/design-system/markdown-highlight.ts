@@ -29,8 +29,19 @@ import type { Block, Inline, Run } from "./markdown-parse";
  * A literal class, because `backend/gates/frontendcollapsespace_test.go` reads
  * it and compares it against `unicode.IsSpace` itself — in both directions.
  */
-const SERVER_SPACE =
-  /[\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/;
+const SERVER_SPACE_CHAR =
+  /[\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/;
+
+/**
+ * The same set as a RUN, derived rather than written twice.
+ *
+ * Both collapse sites in this file have to fold the identical set — one builds
+ * the needle, the other walks the haystack — and a second literal is how they
+ * came apart the first time: the class was fixed here and `locateCollapsed`
+ * went on splitting with `\s`, so a quote around U+0085 or U+FEFF matched on
+ * neither side and the mark quietly became a line band.
+ */
+const SERVER_SPACE = new RegExp(`${SERVER_SPACE_CHAR.source}+`);
 
 /**
  * Fold every run of whitespace into one space, and trim.
@@ -146,8 +157,8 @@ function locateCollapsed(
   let i = 0;
   while (i < raw.length) {
     const from = i;
-    if (/\s/.test(raw[i])) {
-      while (i < raw.length && /\s/.test(raw[i])) i++;
+    if (SERVER_SPACE_CHAR.test(raw[i])) {
+      while (i < raw.length && SERVER_SPACE_CHAR.test(raw[i])) i++;
       // A leading or trailing run collapses to nothing, which is what trimming
       // means; only a run BETWEEN two words becomes the single space.
       if (collapsed.length === 0 || i === raw.length) continue;

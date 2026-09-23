@@ -44,7 +44,7 @@ const frontendCollapseSpace = "../frontend/src/design-system/markdown-highlight.
 // U+2000-U+200A, and eleven separate escapes there would be a line nobody
 // checks.
 var (
-	collapseClass = regexp.MustCompile(`(?s)const SERVER_SPACE\s*=\s*/\[(.*?)\]\+/`)
+	collapseClass = regexp.MustCompile(`(?s)const SERVER_SPACE_CHAR\s*=\s*/\[(.*?)\]/`)
 	classAtom     = regexp.MustCompile(`\\u([0-9a-fA-F]{4})-\\u([0-9a-fA-F]{4})|\\u([0-9a-fA-F]{4})|\\([tnvfr])| `)
 )
 
@@ -58,7 +58,7 @@ func TestTheViewerFoldsTheSameWhitespaceTheServerDoes(t *testing.T) {
 	}
 	found := collapseClass.FindSubmatch(source)
 	if found == nil {
-		t.Fatalf("%s no longer declares SERVER_SPACE as a character class — this gate is reading a shape that is gone, and a gate that reads nothing agrees with everything", frontendCollapseSpace)
+		t.Fatalf("%s no longer declares SERVER_SPACE_CHAR as a character class — this gate is reading a shape that is gone, and a gate that reads nothing agrees with everything", frontendCollapseSpace)
 	}
 
 	inTS := map[rune]bool{}
