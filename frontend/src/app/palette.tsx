@@ -122,6 +122,16 @@ export function useBuiltinCommands(): Command[] {
     }));
     const actions: Command[] = [
       {
+        // Asking with NOTHING typed yet. The "Ask AI: <query>" row below only
+        // appears once there is a query to carry, and a reader who came to the
+        // palette to ask has not written the question yet — before this, the
+        // only way in was to type something and have it asked at them.
+        id: "action:ask",
+        label: t("corpusAsk.title"),
+        keywords: ["ask", "margince", "documents", "handbook"],
+        type: "action",
+      },
+      {
         id: "action:new-deal",
         label: t("action.newDeal"),
         type: "action",
@@ -285,8 +295,8 @@ export function CommandPalette({
 
   const run = (command: Command) => {
     onClose();
-    if (command.id === "ask-ai") {
-      openAsk(query.trim());
+    if (command.id === "ask-ai" || command.id === "action:ask") {
+      openAsk(command.id === "ask-ai" ? query.trim() : "");
       return;
     }
     if (command.route) {
