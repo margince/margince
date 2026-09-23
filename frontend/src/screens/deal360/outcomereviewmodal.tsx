@@ -6,9 +6,9 @@ import {
   Modal,
   Textarea,
 } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
-import { RefusalLine } from "../common";
 import {
   type ReviewTemplate,
   useCreateOutcomeReview,
@@ -217,7 +217,7 @@ export function OutcomeReviewModal({
             />
           )}
         </Field>
-        {create.isError && <RefusalLine error={create.error} />}
+        <ErrorLine error={create.error} />
         <div className="actions">
           <Button variant="ghost" onClick={close} disabled={create.isPending}>
             {t("deals.cancel")}

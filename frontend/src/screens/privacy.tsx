@@ -67,6 +67,7 @@ import {
 import { ErasureRefusals } from "./privacy.notices";
 import "./privacy.css";
 import { isOption } from "../app/options";
+import { ErrorLine } from "../design-system/errorline";
 
 type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
 type CreateDataSubjectRequest =
@@ -184,11 +185,7 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
           dismissCreateError();
         }}
       />
-      {create.isError && (
-        <p className="purpose-form-error">
-          {problemMessageOf(create.error, t)}
-        </p>
-      )}
+      <ErrorLine error={create.error} />
       <Button
         variant="primary"
         disabled={!key.trim() || !label.trim() || create.isPending}

@@ -43,6 +43,7 @@ import {
   PipelineBoard,
 } from "../design-system/composed";
 import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { IconAction } from "../design-system/iconaction";
 import { IdentityLine } from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
@@ -80,7 +81,6 @@ import { usePendingApprovals } from "./approvals.queries";
 import { toBoardDeal } from "./boarddeal";
 import {
   LoadMoreButton,
-  problemMessageOf,
   provenanceOf,
   QueryGate,
   throwProblem,
@@ -2407,11 +2407,7 @@ export function DealsScreen({
         })}
         views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
       />
-      {advance.isError && (
-        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>
-          {problemMessageOf(advance.error, t)}
-        </p>
-      )}
+      <ErrorLine error={advance.error} />
       <ConfirmAdvanceModal
         pending={pending}
         onClose={() => setPending(null)}
@@ -3300,16 +3296,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   zone={recordZone}
                   onClose={() => setOpenEmail(null)}
                 />
-                {advance.isError && (
-                  <p
-                    style={{
-                      color: "var(--dangerText)",
-                      marginTop: "var(--space-2)",
-                    }}
-                  >
-                    {problemMessageOf(advance.error, t)}
-                  </p>
-                )}
+                <ErrorLine error={advance.error} />
                 <ConfirmAdvanceModal
                   pending={pending}
                   onClose={() => setPending(null)}

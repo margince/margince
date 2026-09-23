@@ -13,6 +13,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -21,7 +22,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Wordmark } from "./auth";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 
 // The buyer's page around its documents: the ground and the product's mark,
 // the screens a dead or lapsed link lands on, the hero the seller wrote, and
@@ -126,9 +127,7 @@ export function LinkRequest() {
         <Mail aria-hidden />
         {t("buyer.requestLink")}
       </Button>
-      {request.isError ? (
-        <p className="t-danger">{problemMessageOf(request.error, t)}</p>
-      ) : null}
+      <ErrorLine error={request.error} />
     </form>
   );
 }

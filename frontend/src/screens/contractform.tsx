@@ -3,12 +3,12 @@ import { useEffect, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { FileDropzoneControl } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { uploadAttachment } from "./attachmentupload";
-import { RefusalLine } from "./common";
 import { ContractCustomFields } from "./contractcustomfields";
 import { useSeededCustomFields } from "./contractcustomseed";
 import { paperState, useContractPaper } from "./contractpaper";
@@ -259,7 +259,7 @@ export function ContractForm({
         onPick={setFile}
       />
 
-      {save.error && <RefusalLine error={save.error} />}
+      <ErrorLine error={save.error} />
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>

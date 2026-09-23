@@ -10,10 +10,12 @@ import {
   SegmentedControl,
   TextInput,
 } from "../design-system/atoms";
+import { Row } from "../design-system/stack";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import "./book.css";
 
 // Booking page shell (B-EP09.14): rail-less (a test asserts no rail),
 // duration toggle, live availability, and HONEST degradation when the
@@ -124,14 +126,7 @@ function SessionBookingScreen() {
   return (
     <div className="wrap narrow">
       <SectionHeader title={t("book.title")} />
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-2)",
-          alignItems: "center",
-          marginBottom: "var(--space-3)",
-        }}
-      >
+      <div className="book-controls">
         <SegmentedControl
           options={DURATIONS}
           value={duration}
@@ -156,14 +151,14 @@ function SessionBookingScreen() {
         </Field>
       </div>
       {recognized && (
-        <p style={{ marginBottom: "var(--space-3)" }}>
+        <p className="book-welcome">
           {t("book.welcomeBack", { name: recognized })}
         </p>
       )}
       {book.isSuccess ? (
         <Card as="div" role="status">
           <p>{t("book.confirmed")}</p>
-          <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
+          <p className="t-caption book-card-line">
             {book.data.occurred_at &&
               formatDateTime(book.data.occurred_at, locale, viewerZone())}
           </p>
@@ -174,9 +169,7 @@ function SessionBookingScreen() {
               client never hears about a meeting and nobody finds out until
               they do not turn up. */}
           {book.variables?.attendee !== "" && (
-            <p style={{ marginTop: "var(--space-1)" }}>
-              {t("book.tellThemYourself")}
-            </p>
+            <p className="book-card-line">{t("book.tellThemYourself")}</p>
           )}
         </Card>
       ) : (
@@ -186,13 +179,7 @@ function SessionBookingScreen() {
           empty={(data) => data.slots.length === 0}
         >
           {(data) => (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "var(--space-2)",
-              }}
-            >
+            <Row gap="2">
               {data.slots.slice(0, 12).map((slot) => (
                 <Button
                   key={slot.start}
@@ -204,21 +191,14 @@ function SessionBookingScreen() {
                   {formatDateTime(slot.start, locale, viewerZone())}
                 </Button>
               ))}
-            </div>
+            </Row>
           )}
         </QueryGate>
       )}
       {book.isError && (
-        <Card
-          as="div"
-          inset
-          role="status"
-          style={{ marginTop: "var(--space-3)" }}
-        >
+        <Card as="div" inset role="status" className="book-failure">
           <p>{t("book.failed")}</p>
-          <p style={{ marginTop: "var(--space-1)" }}>
-            {problemMessageOf(book.error, t)}
-          </p>
+          <p className="book-card-line">{problemMessageOf(book.error, t)}</p>
         </Card>
       )}
     </div>
@@ -292,15 +272,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
   return (
     <div className="wrap narrow">
       <SectionHeader title={t("book.title")} />
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-2)",
-          alignItems: "center",
-          flexWrap: "wrap",
-          marginBottom: "var(--space-3)",
-        }}
-      >
+      <div className="book-controls book-public-controls">
         <SegmentedControl
           options={DURATIONS}
           value={duration}
@@ -331,7 +303,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
           )}
         </Field>
       </div>
-      <div style={{ marginBottom: "var(--space-3)" }}>
+      <div className="book-consent">
         <Checkbox
           checked={consented}
           onChange={(event) => setConsented(event.target.checked)}
@@ -341,7 +313,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
       {book.isSuccess ? (
         <Card as="div" role="status">
           <p>{t("book.confirmed")}</p>
-          <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
+          <p className="t-caption book-card-line">
             {formatDateTime(book.data.start, locale, viewerZone())}
           </p>
         </Card>
@@ -352,13 +324,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
           empty={(data) => data.slots.length === 0}
         >
           {(data) => (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "var(--space-2)",
-              }}
-            >
+            <Row gap="2">
               {data.slots.slice(0, 12).map((slot) => (
                 <Button
                   key={slot.start}
@@ -368,21 +334,14 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
                   {formatDateTime(slot.start, locale, viewerZone())}
                 </Button>
               ))}
-            </div>
+            </Row>
           )}
         </QueryGate>
       )}
       {book.isError && (
-        <Card
-          as="div"
-          inset
-          role="status"
-          style={{ marginTop: "var(--space-3)" }}
-        >
+        <Card as="div" inset role="status" className="book-failure">
           <p>{t("book.failed")}</p>
-          <p style={{ marginTop: "var(--space-1)" }}>
-            {problemMessageOf(book.error, t)}
-          </p>
+          <p className="book-card-line">{problemMessageOf(book.error, t)}</p>
         </Card>
       )}
     </div>

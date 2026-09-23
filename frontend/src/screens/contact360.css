@@ -942,3 +942,40 @@
   align-items: center;
   gap: var(--space-2);
 }
+
+/* A line of prose in a panel body: the panel's plate already spaces it. */
+.pe-panel-text {
+  margin: 0;
+}
+.pe-thin-remediation {
+  margin: var(--space-2) 0 0;
+}
+.pe-consent-blocked {
+  margin: var(--space-1) 0 0;
+}
+
+/* What happened to the relationship, under the line that says who is warmest. */
+.pe-changes {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.pe-career {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+.pe-career-item {
+  margin-top: var(--space-1);
+}
+
+.pe-network {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pe-network-item {
+  padding: var(--space-2) 0;
+}

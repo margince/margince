@@ -15,6 +15,7 @@ import {
   SegmentedControl,
 } from "../design-system/atoms";
 import type { TimelineEntry } from "../design-system/composed";
+import { Row } from "../design-system/stack";
 import {
   EvidenceChip,
   PassportChip,
@@ -40,6 +41,7 @@ import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
 import type { HistoryValueCtx } from "./historyvalues";
 import "./history.css";
+import "./historyfields.css";
 
 // The per-field old→new diff view (B-EP09.x): every field-change row the
 // audit spine projects for one record, grouped by field and narrowable by
@@ -243,7 +245,7 @@ export function FieldHistoryTimeline({
     body = (
       <EmptyState>
         <p>{t("history.filterEmpty")}</p>
-        <Button onClick={clearFilters} style={{ marginTop: "var(--space-3)" }}>
+        <Button onClick={clearFilters} className="historyfields-clear">
           {t("history.clearFilter")}
         </Button>
       </EmptyState>
@@ -273,17 +275,8 @@ export function FieldHistoryTimeline({
   };
 
   return (
-    <Card style={{ marginBottom: "var(--space-4)" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "var(--space-3)",
-          marginBottom: "var(--space-3)",
-        }}
-      >
+    <Card className="historyfields-card">
+      <div className="historyfields-toolbar">
         <SegmentedControl
           options={ACTOR_FACETS}
           value={actorFacet}
@@ -291,9 +284,7 @@ export function FieldHistoryTimeline({
           labels={actorLabels}
         />
         {fieldOptions.length > 0 && (
-          <div
-            style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}
-          >
+          <Row gap="2">
             <Button
               variant={fieldFilter === undefined ? "primary" : "ghost"}
               onClick={() => setFieldFilter(undefined)}
@@ -309,7 +300,7 @@ export function FieldHistoryTimeline({
                 {historyFieldLabel(field, t)}
               </Button>
             ))}
-          </div>
+          </Row>
         )}
       </div>
       <QueryStates query={query} pendingLabel={t("history.allFields")}>

@@ -8,6 +8,7 @@ import { navigate } from "../app/router";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -33,6 +34,7 @@ import {
 import { NewLineRates } from "./offerlinerates";
 import { OfferTotalsPanel } from "./offerrecurring";
 import { searchProductCandidates } from "./products";
+import "./offers.css";
 
 // The offer 360: header, read-only totals, and a draft-only header edit whose
 // surface is its own because buyer_company_id needs the shared RecordPicker and
@@ -192,12 +194,7 @@ function EditOfferHeaderModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 offers-edit-title">
         {t("offer.edit")}
       </Heading>
       <div className="form-stack">
@@ -305,11 +302,7 @@ function EditOfferHeaderModal({
           )}
         </Field>
       </div>
-      {errorMessage && (
-        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>
-          {errorMessage}
-        </p>
-      )}
+      {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
       <div className="actions">
         <Button onClick={onClose}>{t("deals.cancel")}</Button>
         <Button
@@ -353,7 +346,7 @@ function DescriptionCell({
   return (
     <TextInput
       data-testid={`line-description-${line.id}`}
-      style={{ width: 180 }}
+      className="offers-line-description"
       value={value}
       onChange={(event) => setValue(event.target.value)}
       onBlur={() => {
@@ -376,7 +369,7 @@ function UnitCell({
   return (
     <TextInput
       data-testid={`line-unit-${line.id}`}
-      style={{ width: 70 }}
+      className="offers-line-unit"
       value={value}
       onChange={(event) => setValue(event.target.value)}
       onBlur={() => {
@@ -444,7 +437,7 @@ function UnitPriceCell({
   return (
     <MoneyInput
       data-testid={`line-unit-price-${line.id}`}
-      style={{ width: 90 }}
+      className="offers-line-price"
       currency={currency}
       valueMinor={minor}
       onChangeMinor={setMinor}
@@ -674,21 +667,13 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           being written. */}
       <PanelBody>
         <span className="t-label">{t("offer.addLine")}</span>
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            flexWrap: "wrap",
-            alignItems: "flex-end",
-            marginTop: "var(--space-2)",
-          }}
-        >
+        <div className="offers-new-line">
           <Field label={t("offer.description")}>
             {(control) => (
               <TextInput
                 {...control}
                 data-testid="new-line-description"
-                style={{ width: 180 }}
+                className="offers-line-description"
                 value={newLine.description}
                 onChange={(event) =>
                   setNewLine((prev) => ({
@@ -704,7 +689,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
               <TextInput
                 {...control}
                 data-testid="new-line-unit"
-                style={{ width: 70 }}
+                className="offers-line-unit"
                 value={newLine.unit}
                 onChange={(event) =>
                   setNewLine((prev) => ({ ...prev, unit: event.target.value }))
@@ -719,8 +704,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                 data-testid="new-line-quantity"
                 type="number"
                 step="0.001"
-                className="input"
-                style={{ width: 90 }}
+                className="input offers-line-quantity"
                 value={newLine.quantity}
                 onChange={(event) =>
                   setNewLine((prev) => ({
@@ -748,15 +732,8 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           <NewLineRates value={newLine} onChange={setNewLine} />
           <OfferLineBillingFields value={billing} onChange={setBilling} />
         </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            alignItems: "flex-start",
-            marginTop: "var(--space-3)",
-          }}
-        >
-          <div className="field" style={{ minWidth: 220 }}>
+        <div className="offers-new-line-product">
+          <div className="field offers-product-field">
             <span className="t-label">{t("offer.pickProduct")}</span>
             <RecordPicker
               label={t("offer.pickProduct")}
@@ -774,7 +751,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             variant="primary"
             data-testid="add-line"
             disabled={addMutation.isPending}
-            style={{ marginTop: "var(--space-6)" }}
+            className="offers-add-line"
             onClick={() =>
               addMutation.mutate({
                 product_id: product?.id ?? undefined,
@@ -799,13 +776,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             {t("offer.addLine")}
           </Button>
         </div>
-        {errorMessage && (
-          <p
-            style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
-          >
-            {errorMessage}
-          </p>
-        )}
+        {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
       </PanelBody>
     </Panel>
   );
@@ -1070,11 +1041,7 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       >
         <RefreshCw aria-hidden /> {t("offer.regenerate")}
       </Button>
-      {errorMessage && (
-        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-1)" }}>
-          {errorMessage}
-        </p>
-      )}
+      {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
     </>
   );
 }
@@ -1124,10 +1091,7 @@ function AiDisclosureBanner({ offer }: Readonly<{ offer: Offer }>) {
       <PanelBody>
         {offer.ai_disclosure && <p className="t-body">{offer.ai_disclosure}</p>}
         {diff && (
-          <div
-            data-testid="offer-diff-summary"
-            style={{ marginTop: "var(--space-2)" }}
-          >
+          <div data-testid="offer-diff-summary" className="offers-diff-summary">
             {added.length > 0 && (
               <div>
                 <p className="t-label">
@@ -1262,9 +1226,7 @@ function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
           {unavailable && (
             <p data-testid="pdf-unavailable">{t("offer.pdfUnavailable")}</p>
           )}
-          {errorMessage && (
-            <p style={{ color: "var(--dangerText)" }}>{errorMessage}</p>
-          )}
+          {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
         </PanelBody>
       )}
     </Panel>

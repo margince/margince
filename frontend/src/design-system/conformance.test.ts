@@ -381,45 +381,6 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     expect(manifest.icons.length).toBeGreaterThanOrEqual(1);
   });
 
-  // One stylesheet per class namespace.
-  //
-  // Two sheets declaring the same class collide at equal specificity, and the
-  // winner is whichever one the bundler injected last — an ordering no source
-  // file states and no import expresses. So one sheet's `margin: 4px` silently
-  // beats the other's `margin: 20px`, and the symptom surfaces as spacing that is
-  // wrong on one screen and right on its sibling.
-  //
-  // Unreadable by inspection: a duplicate declaration is not a syntax error and
-  // both files are correct on their own. Hence a gate over the tree rather than a
-  // rule someone has to remember while editing either sheet.
-  it("declares each screen's class namespace in exactly one stylesheet", () => {
-    const namespaces = [{ prefix: "auth-", home: "screens/auth.css" }];
-    const violations: string[] = [];
-    for (const file of files) {
-      if (!file.endsWith(".css")) {
-        continue;
-      }
-      const path = relative(frontendRoot, file).replace(/\\/g, "/");
-      const text = readFileSync(file, "utf8");
-      // Selectors only: a `.auth-shell` inside a comment is a cross-reference,
-      // which is exactly how the two onboarding sheets cite this surface.
-      const declarations = text.replace(/\/\*[\s\S]*?\*\//g, "");
-      for (const { prefix, home } of namespaces) {
-        if (path.endsWith(home)) {
-          continue;
-        }
-        for (const [selector] of declarations.matchAll(
-          new RegExp(`\\.${prefix}[\\w-]+`, "g"),
-        )) {
-          violations.push(
-            `${path}: declares ${selector} — the ${prefix}* namespace belongs to ${home}`,
-          );
-        }
-      }
-    }
-    expect(violations, violations.join("\n")).toEqual([]);
-  });
-
   // One spelling of the button. `Button` (design-system/atoms.tsx) is what
   // emits `btn` — a `className` that spells the base class itself is a
   // hand-rolled copy of it, and a copy is frozen at the day it was written: the

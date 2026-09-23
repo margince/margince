@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
 import { Button, SearchField } from "./atoms";
+import { ErrorLine } from "./errorline";
 
 // The shared debounced search→candidate-list→pick pattern: this used to live
 // duplicated, near-identically, inline in MergeAction (screens/merge.tsx) and
@@ -161,9 +162,7 @@ export function RecordPicker({
         onChange={(event) => setTerm(event.target.value)}
       />
       {searchFailure !== null && (
-        <p style={{ color: "var(--dangerText)" }}>
-          {problemMessageOf(searchFailure.cause, t)}
-        </p>
+        <ErrorLine>{problemMessageOf(searchFailure.cause, t)}</ErrorLine>
       )}
       {/* The current selection stays visible on its own line, independent of
           the search results — a picked record used to vanish the moment its

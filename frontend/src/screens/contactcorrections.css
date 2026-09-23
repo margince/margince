@@ -1,0 +1,31 @@
+/* Spacing and sizing for the enriched-fields panel on the contact page. */
+
+.corrections-fields {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.corrections-claim {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The draft sits beside its label on one line, so it keeps its intrinsic
+   width rather than the atom's full-width one. */
+.corrections-claim .input {
+  width: auto;
+}
+
+.corrections-note {
+  margin: var(--space-1) 0 0;
+}
+
+.corrections-verbs {
+  display: flex;
+  gap: var(--gapActions);
+  align-items: center;
+  flex: none;
+}

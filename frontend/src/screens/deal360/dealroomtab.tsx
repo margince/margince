@@ -28,6 +28,7 @@ import {
   TextInput,
 } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
@@ -201,11 +202,7 @@ export function RoomText({
               >
                 {t("access.save")}
               </Button>
-              {save.isError ? (
-                <span className="t-danger">
-                  {problemMessageOf(save.error, t)}
-                </span>
-              ) : null}
+              <ErrorLine inline error={save.error} />
             </div>
           )}
         </div>
@@ -351,9 +348,7 @@ export function ViewAsBuyerButton({ room }: Readonly<{ room: DealRoom }>) {
         <ExternalLink aria-hidden />
         {t("roompage.viewAsBuyer")}
       </Button>
-      {preview.isError ? (
-        <span className="t-danger">{problemMessageOf(preview.error, t)}</span>
-      ) : null}
+      <ErrorLine inline error={preview.error} />
     </>
   );
 }

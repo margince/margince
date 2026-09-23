@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
 import { DirectSendModal } from "./directsendmodal";
@@ -96,15 +97,7 @@ export function DirectSendAction({
       >
         {t("directSend.open")}
       </Button>
-      {opened.isError && (
-        <p
-          className="t-body"
-          style={{ color: "var(--dangerText)" }}
-          role="alert"
-        >
-          {t("directSend.couldNotOpen")}
-        </p>
-      )}
+      {opened.isError && <ErrorLine>{t("directSend.couldNotOpen")}</ErrorLine>}
       {/* MOUNTED ONLY WITH THE REVIEW IN HAND. A modal opened over a pending
           fetch would show its acknowledgement and its confirm button before the
           warning those exist to be read against had arrived. */}

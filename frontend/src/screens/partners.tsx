@@ -14,12 +14,13 @@ import {
   SectionHeader,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { FieldGuard } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import {
   type ListPage,
@@ -343,11 +344,7 @@ function PartnerForm({
           />
         )}
       </Field>
-      {mutation.isError && (
-        <p style={{ color: "var(--dangerText)" }}>
-          {problemMessageOf(mutation.error, t)}
-        </p>
-      )}
+      <ErrorLine error={mutation.error} />
       <div
         style={{
           display: "flex",

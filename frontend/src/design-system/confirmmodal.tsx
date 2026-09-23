@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useId } from "react";
 import { useT } from "../i18n";
 import { Button, Modal } from "./atoms";
+import { ErrorLine } from "./errorline";
 import { Heading } from "./heading";
 import { AutonomyDot } from "./trust";
 import "./confirmmodal.css";
@@ -112,13 +113,7 @@ export function ConfirmModal({
         {title}
       </Heading>
       {children}
-      {error && (
-        // role="alert" (assertive live region) so a screen reader announces the
-        // mutation failure when it appears — e.g. a rejected reset confirmation.
-        <p role="alert" style={{ color: "var(--dangerText)" }}>
-          {error}
-        </p>
-      )}
+      {error && <ErrorLine>{error}</ErrorLine>}
       <div className="actions">
         {actionsLead && <span className="actions-lead">{actionsLead}</span>}
         {/* Cancel is `disabled`, not `pending`, and the difference is real: it

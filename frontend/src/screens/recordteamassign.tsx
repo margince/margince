@@ -8,6 +8,7 @@ import {
 } from "react";
 import { api } from "../api/client";
 import { Button, Field, Modal, SegmentedControl } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
@@ -15,7 +16,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { RefusalLine, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import {
   type AssignmentRecordType,
   type AssignmentSubjectKind,
@@ -211,7 +212,7 @@ export function RecordTeamAssign({
           )}
         </Field>
         <p className="t-caption">{t("assignments.noAccessNote")}</p>
-        {write.isError && <RefusalLine error={write.error} />}
+        <ErrorLine error={write.error} />
         <div className="actions">
           <Button variant="ghost" onClick={close} disabled={write.isPending}>
             {t("deals.cancel")}

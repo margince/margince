@@ -1,11 +1,11 @@
 import { X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { RefusalLine } from "./common";
 import {
   type AssignmentRecordType,
   type RecordAssignment,
@@ -84,7 +84,7 @@ export function RecordTeam({
             so without this a responsibility that is still standing looks
             exactly like one that ended — and the next thing the reader does,
             they do believing it is gone. */}
-        {archive.isError && <RefusalLine error={archive.error} />}
+        <ErrorLine error={archive.error} />
         {isPending || isError || rows.length === 0 ? (
           <SurfaceState
             state={isPending ? "loading" : isError ? "failed" : "empty"}

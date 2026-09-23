@@ -5,11 +5,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { Button, Field } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import "./dealroomdocuments.css";
 
 // The seller's verbs on a Deal Room's documents: which of the deal's files the
@@ -146,9 +147,7 @@ export function AddDocument({
         onClose={() => setUploading(false)}
       />
       <p className="t-caption">{t("room.editorial")}</p>
-      {add.isError ? (
-        <p className="t-danger">{problemMessageOf(add.error, t)}</p>
-      ) : null}
+      <ErrorLine error={add.error} />
     </>
   );
 }

@@ -16,11 +16,12 @@ import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import { Badge, Button, EmptyState, Modal } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem } from "./common";
 import { EditAction } from "./edit";
 import { EntityRef } from "./entityref";
 import { KIND_LABELS } from "./relationshipkinds";
@@ -339,11 +340,7 @@ export function RelationshipRows({
         <p style={{ marginBottom: "var(--space-4)" }}>
           {t("rel.removeConfirm")}
         </p>
-        {remove.isError && (
-          <p style={{ color: "var(--dangerText)" }}>
-            {problemMessageOf(remove.error, t)}
-          </p>
-        )}
+        <ErrorLine error={remove.error} />
         <div
           style={{
             display: "flex",

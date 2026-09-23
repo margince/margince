@@ -28,6 +28,7 @@ import { VisibilityLine } from "../design-system/visibility";
 import { useT } from "../i18n";
 import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
 import "./recordaccess.css";
+import { ErrorLine } from "../design-system/errorline";
 
 // The shape both records share, which is all this component reads. Spelled
 // structurally rather than as `Contact | Company`: the two differ in every
@@ -180,11 +181,11 @@ export function RecordAccess({
         {description}
       </span>
       {setVisibility.isError && (
-        <span role="alert" className="form-error">
+        <ErrorLine inline>
           {isVersionSkewOf(setVisibility.error)
             ? t("edit.versionSkew")
             : problemMessageOf(setVisibility.error, t)}
-        </span>
+        </ErrorLine>
       )}
     </section>
   );

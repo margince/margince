@@ -6,6 +6,7 @@ import { navigate } from "../app/router";
 import { Button, Field } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import {
   liveProjects,
   type PickableProject,
@@ -1023,9 +1024,7 @@ function MailSendNotices({
   return (
     <>
       {sharedUnsubscribeAhead(to, cc, context) && (
-        <p style={{ color: "var(--dangerText)" }}>
-          {t("compose.multiRecipientWarning")}
-        </p>
+        <ErrorLine standing>{t("compose.multiRecipientWarning")}</ErrorLine>
       )}
     </>
   );
@@ -2623,13 +2622,9 @@ export function ComposeModal({
             )}
             {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
             {/* The rejection failed, and the rep has to be told: the judgment is
-            still open and the words on screen are still the ones it names.
-            Announced rather than merely coloured, on the same terms as every
-            other failure in this drawer. */}
+            still open and the words on screen are still the ones it names. */}
             {discardControl?.error && (
-              <p role="alert" style={{ color: "var(--dangerText)" }}>
-                {discardControl.error}
-              </p>
+              <ErrorLine>{discardControl.error}</ErrorLine>
             )}
             <SendRefusal
               refusal={refusal}

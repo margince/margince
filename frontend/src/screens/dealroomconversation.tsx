@@ -3,8 +3,9 @@ import { Trash2 } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { QueryStates, throwProblem } from "./common";
 import {
   AddDocument,
   DOCUMENT_GROUPS,
@@ -40,9 +41,7 @@ function RemoveButton({
       >
         <Trash2 aria-hidden />
       </Button>
-      {remove.isError ? (
-        <p className="t-danger">{problemMessageOf(remove.error, t)}</p>
-      ) : null}
+      <ErrorLine error={remove.error} />
     </>
   );
 }

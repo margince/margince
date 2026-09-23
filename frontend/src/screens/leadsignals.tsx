@@ -9,6 +9,7 @@ import {
   Field,
   Textarea,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -361,11 +362,7 @@ export function LeadManualSignals({
               </Field>
             </div>
           </Disclosure>
-          {(set.isError || clear.isError) && (
-            <span className="form-error">
-              {problemMessageOf(set.isError ? set.error : clear.error, t)}
-            </span>
-          )}
+          <ErrorLine error={set.isError ? set.error : clear.error} />
           <div className="form-actions">
             <Button
               variant="primary"
