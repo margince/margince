@@ -12,7 +12,12 @@ import {
 import { FIRST_PAGE } from "../api/client";
 import { navigate, type Route, routeHash, useHash } from "../app/router";
 import { useScrollMemory } from "../app/scrollmemory";
-import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
+import {
+  currentParams,
+  GLOBAL_DIALS,
+  type UrlParams,
+  useUrlParams,
+} from "../app/urlstate";
 import { Button } from "../design-system/atoms";
 import {
   type ListChip,
@@ -99,8 +104,17 @@ function scoped(scope: string | undefined, name: string): string {
   return scope ? `${scope}.${name}` : name;
 }
 
-/** Is `key` a dial of the list at `scope`, rather than another list's? */
+/**
+ * Is `key` a dial of the list at `scope`, rather than another list's?
+ *
+ * A GLOBAL dial is nobody's: it belongs to something standing over the page —
+ * see `GLOBAL_DIALS` — so it is neither read as this list's filter nor
+ * overwritten when this list rewrites its own dials.
+ */
 function ownedBy(key: string, scope: string | undefined): boolean {
+  if (GLOBAL_DIALS.has(key)) {
+    return false;
+  }
   return scope ? key.startsWith(`${scope}.`) : !key.includes(".");
 }
 

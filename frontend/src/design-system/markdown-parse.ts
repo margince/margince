@@ -409,12 +409,20 @@ const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const SAFE_SCHEME = /^(https?|mailto):/i;
 
 /**
- * The href allowlist. `http`, `https` and `mailto` are navigable; a
- * schemeless reference — the handbook's own `capture.md#filing` — is too,
- * because it carries no scheme to be dangerous with. Everything else is
- * refused: `javascript:`, `data:`, `vbscript:`, and any scheme invented after
- * this was written, because the test is what the list ADMITS rather than what
- * it has heard of.
+ * The href allowlist: `http`, `https` and `mailto`, and nothing else —
+ * `javascript:`, `data:`, `vbscript:`, and any scheme invented after this was
+ * written, because the test is what the list ADMITS rather than what it has
+ * heard of.
+ *
+ * A SCHEMELESS reference is refused too, which is not a safety judgement but a
+ * destination one. The handbook links its own pages (`capture.md#filing`), and
+ * this app has no resolver for a corpus-relative path: the shell routes by
+ * hash and the Ask dialog rides on hash dials, so `#filing` would swap the
+ * address for a not-found route and take the dialog down with it, while
+ * `capture.md#filing` resolves against the app's own path and leaves the SPA
+ * on a full load. Either way the reader loses both the answer and the document
+ * they were checking it against. The label survives; give this a resolver and
+ * the reference can become a link again.
  *
  * Whitespace and control characters come out BEFORE the scheme is read. A
  * browser ignores them when it resolves a URL, so `java\nscript:alert(1)` is a
@@ -428,14 +436,12 @@ function safeHref(raw: string): string | null {
   // biome-ignore lint/suspicious/noControlCharactersInRegex: see just above
   const href = raw.replace(/[\u0000-\u0020\u007F]/g, "");
   if (href === "") return null;
-  // A schemeless reference is the handbook's own `capture.md#filing`, and it is
-  // admitted — but NOT one that starts with two separators. The WHATWG parser
-  // treats a backslash as a slash for a special scheme, so `\\evil.example`,
-  // `/\evil.example` and `\/evil.example` all resolve to another ORIGIN while
-  // reading as a relative path — and, being "not external", would have been
-  // drawn without even the new-tab that marks a link as leaving.
-  if (!HAS_SCHEME.test(href)) {
-    return /^[/\\][/\\]/.test(href) || href.startsWith("\\") ? null : href;
-  }
+  // Schemeless goes with the rest: see above. This also closes the protocol
+  // -relative shape for good — the WHATWG parser reads a backslash as a slash
+  // for a special scheme, so `\\evil.example`, `/\evil.example` and
+  // `\/evil.example` all resolve to another ORIGIN while reading as a relative
+  // path, and "not external" would have drawn them without even the new-tab
+  // that marks a link as leaving.
+  if (!HAS_SCHEME.test(href)) return null;
   return SAFE_SCHEME.test(href) ? href : null;
 }

@@ -109,7 +109,10 @@ export function AnswerView({
       {showSummary ? null : (
         <ul className="ask-bare-claims">
           {claims.map((claim, at) => (
-            <li key={claim.chunk_id}>
+            // Position is identity: one immutable answer's claims, in order,
+            // and two of them can be quoted from the SAME chunk.
+            // biome-ignore lint/suspicious/noArrayIndexKey: positional by nature
+            <li key={at}>
               {claim.text ? <span>{claim.text} </span> : null}
               <CiteButton
                 at={at}
@@ -161,7 +164,7 @@ function Summary({
     if (claim) {
       parts.push(
         <CiteButton
-          key={`${claim.chunk_id}-${at}`}
+          key={`c${cut}`}
           at={at}
           claim={claim}
           active={openCite === at}
@@ -189,15 +192,21 @@ function CiteButton({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const number = formatNumber(at + 1, locale);
   // The document and the line ride in the accessible name rather than only in a
   // tooltip: the number alone says nothing about where it goes, and a reader on
   // a screen reader gets no hover.
+  //
+  // The VISIBLE number opens that name, which is WCAG 2.5.3: a voice-control
+  // user says "click 1" and the control has to answer to what it shows. A name
+  // that began at the document left the only label they can see out of it.
   const where = claim.line
     ? t("corpusAsk.citeAtLine", {
+        number,
         document: claim.document_name,
         line: formatNumber(claim.line, locale),
       })
-    : t("corpusAsk.citeInDocument", { document: claim.document_name });
+    : t("corpusAsk.citeInDocument", { number, document: claim.document_name });
   return (
     <button
       type="button"
@@ -207,7 +216,7 @@ function CiteButton({
       title={where}
       onClick={() => onOpenCite(active ? null : at)}
     >
-      {formatNumber(at + 1, locale)}
+      {number}
     </button>
   );
 }

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   ASK_PARAM,
   ASK_QUESTION_PARAM,
@@ -28,13 +28,26 @@ export function AskFromAddress() {
   const [dials] = useUrlParams();
   // Presence opens it; the question rides beside it. Two dials because an empty
   // one does not survive the address — see urlstate.
-  if (dials.get(ASK_PARAM) === undefined) {
+  const open = dials.get(ASK_PARAM) !== undefined;
+  // Mounted for the rest of the session once it has been opened, so closing is
+  // `open={false}` and not an unmount. `Modal` animates its exit through
+  // `usePresence`, which needs the element to outlive the flag by the length of
+  // the transition; pulled out from under it, the panel vanished in one frame.
+  // The dialog's own `!open` effect runs on the same edge and is what lets a
+  // reopen with the SAME carried question fill the box again.
+  const [everOpened, setEverOpened] = useState(false);
+  useEffect(() => {
+    if (open) {
+      setEverOpened(true);
+    }
+  }, [open]);
+  if (!(open || everOpened)) {
     return null;
   }
   return (
     <Suspense fallback={null}>
       <AskMarginceModal
-        open
+        open={open}
         carriedQuestion={dials.get(ASK_QUESTION_PARAM)}
         onClose={closeAsk}
       />

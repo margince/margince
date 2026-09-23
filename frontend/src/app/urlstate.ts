@@ -165,6 +165,25 @@ export function useUrlParams(): [UrlParams, (next: UrlParams) => void] {
 export const ASK_PARAM = "ask";
 export const ASK_QUESTION_PARAM = "askq";
 
+/**
+ * The dials that belong to no screen, held out of every list's parameter space.
+ *
+ * A list's codec reads every address key it does not recognise as a wire
+ * filter, which is what lets a screen add a chip with no code there. These two
+ * are not a screen's at all: the dialog stands OVER whatever list the reader
+ * was on, so left in that space they went out on the request
+ * (`GET /contacts?ask=1` really did), counted as a narrowing on screen, and
+ * were wiped by "clear filters" — which closed the dialog mid-question.
+ *
+ * Named here beside their writers rather than in the codec, so that a third
+ * global dial is added in one place and the list layer never learns what any
+ * of them mean.
+ */
+export const GLOBAL_DIALS: ReadonlySet<string> = new Set([
+  ASK_PARAM,
+  ASK_QUESTION_PARAM,
+]);
+
 // openAsk opens the dialog over whatever address the reader is on, carrying the
 // question when there is one. The address is REPLACED rather than pushed: Back
 // belongs to the page they were reading, not to a dialog they can close.

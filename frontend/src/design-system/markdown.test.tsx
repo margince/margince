@@ -130,18 +130,25 @@ describe("a link is only a link when its scheme is one we allow", () => {
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
-  it("renders a mailto link and a relative one in place", () => {
-    render(
-      <Markdown source="[write](mailto:a@example.com) or [read](capture.md#filing)" />,
-    );
-    expect(screen.getByRole("link", { name: "write" })).toHaveAttribute(
-      "href",
-      "mailto:a@example.com",
-    );
-    const relative = screen.getByRole("link", { name: "read" });
-    expect(relative).toHaveAttribute("href", "capture.md#filing");
-    expect(relative).not.toHaveAttribute("target");
+  it("renders a mailto link in place", () => {
+    render(<Markdown source="[write](mailto:a@example.com)" />);
+    const link = screen.getByRole("link", { name: "write" });
+    expect(link).toHaveAttribute("href", "mailto:a@example.com");
+    expect(link).not.toHaveAttribute("target");
   });
+
+  // The handbook links its own pages, and this app has no resolver for one:
+  // `#filing` swaps the address for a not-found route and takes the Ask dialog
+  // down with it, `capture.md#filing` leaves the SPA on a full load. Either way
+  // the reader loses the answer AND the document they were checking.
+  it.each(["capture.md#filing", "#filing", "../records.md"])(
+    "leaves %s as its label, because nothing here can resolve it",
+    (href) => {
+      render(<Markdown source={`[read](${href})`} />);
+      expect(screen.queryByRole("link")).toBeNull();
+      expect(screen.getByText("read")).toBeInTheDocument();
+    },
+  );
 
   // The defect this primitive exists to make impossible: a corpus document is
   // customer-uploaded, so its hrefs are an attacker's text.

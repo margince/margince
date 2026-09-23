@@ -169,6 +169,9 @@ const render = (ui: ReactNode, locale: Locale = "en") => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // The key tests spy on console.error, and a spy left standing is the next
+  // test's silence.
+  vi.restoreAllMocks();
 });
 
 type User = ReturnType<typeof userEvent.setup>;
@@ -206,7 +209,7 @@ describe("AskMarginceModal", () => {
     // a bare "1" tells a reader nothing, and a reader on a screen reader gets
     // no tooltip to fall back on.
     expect(
-      screen.getByRole("button", { name: "operating.md, line 14" }),
+      screen.getByRole("button", { name: "1: operating.md, line 14" }),
     ).toBeTruthy();
     // And the whole surface says who wrote the sentence, because a paragraph
     // presented without that is read as the workspace's own words.
@@ -262,8 +265,65 @@ describe("AskMarginceModal", () => {
     expect(written.textContent).not.toContain("[2]");
     expect(within(written).getAllByRole("button")).toHaveLength(1);
     expect(
-      within(written).getByRole("button", { name: "operating.md, line 14" }),
+      within(written).getByRole("button", { name: "1: operating.md, line 14" }),
     ).toBeTruthy();
+  });
+
+  // Two things in one answer can share a claim's identity: a sentence may cite
+  // the same claim twice, and two claims may be quoted from ONE chunk. Keyed on
+  // that identity, React saw duplicate siblings — which it warns about, and
+  // which on a re-render lets it reuse the wrong element and leave the pressed
+  // state sitting on a citation the reader did not press.
+  it("draws every citation when one claim is cited twice", async () => {
+    const user = userEvent.setup();
+    const warned: unknown[] = [];
+    vi.spyOn(console, "error").mockImplementation((...args) =>
+      warned.push(args[0]),
+    );
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ASKER, {
+        reply: answer({
+          summary: "Kept for 400 days. [1] Four hundred, to be exact. [1]",
+          claims: [KEPT],
+        }),
+      }).fetchMock,
+    );
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
+
+    const written = await screen.findByText(/Four hundred, to be exact/);
+    expect(within(written).getAllByRole("button")).toHaveLength(2);
+    expect(warned.join(" ")).not.toContain("same key");
+  });
+
+  it("draws both claims when they were quoted from one chunk", async () => {
+    const user = userEvent.setup();
+    const warned: unknown[] = [];
+    vi.spyOn(console, "error").mockImplementation((...args) =>
+      warned.push(args[0]),
+    );
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ASKER, {
+        reply: answer({
+          // No summary, so the claims stand on their own as a list — which is
+          // the other place the identity was the key.
+          summary: "",
+          claims: [KEPT, { ...KEPT, line: 15, quote: "kept for 400 days" }],
+        }),
+      }).fetchMock,
+    );
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
+
+    expect(
+      await screen.findByRole("button", { name: "1: operating.md, line 14" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "2: operating.md, line 15" }),
+    ).toBeTruthy();
+    expect(warned.join(" ")).not.toContain("same key");
   });
 
   it("opens the cited document beside the answer, and closes it again", async () => {
@@ -287,7 +347,7 @@ describe("AskMarginceModal", () => {
     expect(documentPaneIsOpen()).toBe(false);
 
     await user.click(
-      await screen.findByRole("button", { name: "operating.md, line 14" }),
+      await screen.findByRole("button", { name: "1: operating.md, line 14" }),
     );
     // The document itself, with the quoted span marked where it was written —
     // which is the part that lets the reader judge whether the sentence is a
@@ -303,7 +363,7 @@ describe("AskMarginceModal", () => {
 
     // A second citation opens ITS document, not the first one again.
     await user.click(
-      screen.getByRole("button", { name: "retention.md, line 6" }),
+      screen.getByRole("button", { name: "2: retention.md, line 6" }),
     );
     expect(
       await within(documentPane()).findByText("retention.md"),
@@ -312,7 +372,7 @@ describe("AskMarginceModal", () => {
 
     // And pressing the open one again gives the reader the width back.
     await user.click(
-      screen.getByRole("button", { name: "retention.md, line 6" }),
+      screen.getByRole("button", { name: "2: retention.md, line 6" }),
     );
     await waitFor(() => expect(documentPaneIsOpen()).toBe(false));
   });
@@ -347,7 +407,7 @@ describe("AskMarginceModal", () => {
       ).toBeNull(),
     );
     expect(
-      screen.queryByRole("button", { name: "operating.md, line 14" }),
+      screen.queryByRole("button", { name: "1: operating.md, line 14" }),
     ).toBeNull();
   });
 
@@ -373,7 +433,7 @@ describe("AskMarginceModal", () => {
       await screen.findByText(/Captured messages are kept for 400 days/),
     ).toBeTruthy();
     await user.click(
-      screen.getByRole("button", { name: "operating.md, line 14" }),
+      screen.getByRole("button", { name: "1: operating.md, line 14" }),
     );
     expect(
       await within(documentPane()).findByText("operating.md"),
@@ -510,7 +570,7 @@ describe("AskMarginceModal", () => {
     // And the passage is still reachable: the search did find it, and throwing
     // it away would throw away the only thing the ask produced.
     await user.click(
-      screen.getByRole("button", { name: "operating.md, line 14" }),
+      screen.getByRole("button", { name: "1: operating.md, line 14" }),
     );
     await waitFor(() =>
       expect(documentPane().querySelector("mark")?.textContent).toContain(
@@ -616,7 +676,7 @@ describe("AskMarginceModal", () => {
     await askAbout(user, "when are messages purged");
 
     await user.click(
-      await screen.findByRole("button", { name: "retention.md, line 6" }),
+      await screen.findByRole("button", { name: "1: retention.md, line 6" }),
     );
     expect(
       await within(documentPane()).findByText(/would not open/i),

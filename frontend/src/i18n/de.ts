@@ -6977,8 +6977,8 @@ export const de = {
   "corpusAsk.noSetsTitle": "Kein Dokumentensatz zum Fragen",
   "corpusAsk.noSets":
     "Dieses Unternehmen hat noch keine Dokumente abgelegt, es gibt also nichts zu durchsuchen.",
-  "corpusAsk.citeAtLine": "{document}, Zeile {line}",
-  "corpusAsk.citeInDocument": "in {document}",
+  "corpusAsk.citeAtLine": "{number}: {document}, Zeile {line}",
+  "corpusAsk.citeInDocument": "{number}: in {document}",
   "corpusAsk.documentLoading": "Dokument wird geöffnet…",
   "corpusAsk.documentFailedTitle": "Dieses Dokument ließ sich nicht öffnen",
   "corpusAsk.documentFailed":

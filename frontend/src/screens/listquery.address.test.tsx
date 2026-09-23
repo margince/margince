@@ -64,6 +64,17 @@ describe("an address a reader was sent", () => {
     expect(shown("per=banana").perPage).toBe(OPENING.perPage);
   });
 
+  it("reads no filter from a dial that belongs to no screen", () => {
+    // The Ask dialog stands OVER the list, and its dials ride in the same
+    // address. Read as filters they went out on the request, showed as a
+    // narrowing the reader could not see the chip for, and were cleared by
+    // "clear filters" — which closed the dialog mid-question. The same
+    // predicate keeps a list's own write from erasing them.
+    const query = shown("q=acme&ask=1&askq=how+do+I+create+a+project");
+    expect(query.filters).toEqual({});
+    expect(query.q).toBe("acme");
+  });
+
   it("keeps a filter the screen has never heard of rather than dropping it", () => {
     // A link made by a newer release, or hand-edited. Dropping the parameter
     // would show a list that quietly disagrees with the address it is at; the

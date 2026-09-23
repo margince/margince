@@ -6907,8 +6907,8 @@ export const vi = {
   "corpusAsk.noSetsTitle": "Chưa có bộ tài liệu nào để hỏi",
   "corpusAsk.noSets":
     "Công ty này chưa lưu tài liệu nào nên không có gì để tìm.",
-  "corpusAsk.citeAtLine": "{document}, dòng {line}",
-  "corpusAsk.citeInDocument": "trong {document}",
+  "corpusAsk.citeAtLine": "{number}: {document}, dòng {line}",
+  "corpusAsk.citeInDocument": "{number}: trong {document}",
   "corpusAsk.documentLoading": "Đang mở tài liệu…",
   "corpusAsk.documentFailedTitle": "Không mở được tài liệu đó",
   "corpusAsk.documentFailed":

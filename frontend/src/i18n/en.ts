@@ -7190,8 +7190,8 @@ export const en = {
   "corpusAsk.noSetsTitle": "No document set to ask",
   "corpusAsk.noSets":
     "This company has filed no documents yet, so there is nothing to search.",
-  "corpusAsk.citeAtLine": "{document}, line {line}",
-  "corpusAsk.citeInDocument": "in {document}",
+  "corpusAsk.citeAtLine": "{number}: {document}, line {line}",
+  "corpusAsk.citeInDocument": "{number}: in {document}",
   "corpusAsk.documentLoading": "Opening the document…",
   "corpusAsk.documentFailedTitle": "That document would not open",
   "corpusAsk.documentFailed":
