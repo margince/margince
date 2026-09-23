@@ -132,18 +132,31 @@ function ProviderPanel({
   // query settles as an error, which is a different fact and has its own
   // refusal to show.
   const catalogPending = connections.isPending;
-  // Nobody has looked this contact up yet, so the panel has no values to show
-  // and the small header button is the only way to change that. An empty plate
-  // that names the action instead: the reader came here to buy data, and a
-  // blank card with a quiet button in its corner is how they miss that they
-  // can.
+  // The panel has no values to show, so the small header button is the only way
+  // to change that. An empty plate that names the action instead: the reader
+  // came here to buy data, and a blank card with a quiet button in its corner
+  // is how they miss that they can.
   //
   // Asked of the VALUES rather than of the state alone, because never_run is
   // also what a cancelled run reads as, and a merge cancels the losing side's
   // queued run while relinking the claims both sides paid for. Such a profile
   // says never_run and carries purchases, and a plate reading "nothing bought"
   // over somebody's bought mobile number invites paying for it twice.
-  const firstRun = profile.state === "never_run" && !hasValues(profile);
+  const nothingToShow = profile.state === "never_run" && !hasValues(profile);
+  // Whether the provider was ever asked about THIS contact, which is what the
+  // button's two wordings claim and a different question from the one above.
+  // The folded section state cannot answer it, in either direction: it reports
+  // the CONNECTION's condition ahead of the run, so invalid_credentials reads
+  // as a lookup over a contact nobody ever looked up, and a cancelled latest
+  // run folds back to never_run over one that was. Run history answers it
+  // directly, and the record already carries it — latest_run for the ordinary
+  // case, contributing_runs for a merged record whose runs came from the other
+  // side. Values with neither mean a retained purchase whose run rows aged
+  // out, and a purchase is a lookup that happened.
+  const lookedUp =
+    profile.latest_run != null ||
+    (profile.contributing_runs?.length ?? 0) > 0 ||
+    hasValues(profile);
   // Whether a lookup is happening RIGHT NOW, which the section's own state
   // cannot answer: it reports the connection's condition ahead of the run, so
   // a live run under a connection that last failed reads as provider_error.
@@ -195,7 +208,7 @@ function ProviderPanel({
         </Badge>
       }
       actions={
-        firstRun ? undefined : (
+        nothingToShow ? undefined : (
           <EnrichNow
             contactId={contactId}
             profile={profile}
@@ -203,11 +216,9 @@ function ProviderPanel({
             free={free}
             catalogPending={catalogPending}
             running={running}
-            // This contact has already been looked up, so the press is a
-            // RE-CHECK: same free details, asked again because a job may have
-            // changed. The empty-state twin below is the first lookup and says
-            // so instead.
-            recheck
+            // Same free details either way; only the wording differs, and it
+            // reports whether this contact has a lookup behind it.
+            recheck={lookedUp}
           />
         )
       }
@@ -219,7 +230,7 @@ function ProviderPanel({
         />
         {/* Above the values, because it is a caveat about what is under it. */}
         {running && <LookupRunning asking={asking} provider={name} />}
-        {firstRun ? (
+        {nothingToShow ? (
           <EmptyState
             title={t("provider.profile.emptyTitle")}
             action={
@@ -230,6 +241,7 @@ function ProviderPanel({
                 free={free}
                 catalogPending={catalogPending}
                 running={running}
+                recheck={lookedUp}
               />
             }
           >
