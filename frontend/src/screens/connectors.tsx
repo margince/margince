@@ -13,6 +13,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
@@ -544,8 +545,10 @@ function ConnectorFacts({ conn }: Readonly<{ conn: CaptureConnection }>) {
           : t("connectors.polled")}
       </span>
       {(conn.status === "error" || conn.status === "reauth_required") && (
-        <span className="connector-fact connector-error">
-          {t(errorClassKey(conn.last_sync_error_class))}
+        <span className="connector-fact">
+          <ErrorLine inline standing>
+            {t(errorClassKey(conn.last_sync_error_class))}
+          </ErrorLine>
         </span>
       )}
       {/* Named here rather than at send time: the composer's 422 arrives

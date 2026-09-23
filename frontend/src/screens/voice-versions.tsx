@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Card, Disclosure } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { formatDate, formatNumber, identifierNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
@@ -202,7 +203,7 @@ function CandidateBanner({
         </>
       )}
       <p className="t-caption">{t("voice.candidate.applyHint")}</p>
-      {error && <p role="alert">{error}</p>}
+      {error && <ErrorLine>{error}</ErrorLine>}
       {canEdit && (
         <div className="vdna-candidate-acts">
           <Button
@@ -458,7 +459,7 @@ function VersionRow({
           <RotateCcw aria-hidden />
         </button>
       )}
-      {error && <span role="alert">{error}</span>}
+      {error && <ErrorLine inline>{error}</ErrorLine>}
     </li>
   );
 }

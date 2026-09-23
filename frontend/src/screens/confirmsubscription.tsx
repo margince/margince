@@ -22,6 +22,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Card } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
@@ -150,11 +151,7 @@ export function SubscriptionConfirmBody({
         <Button onClick={onConfirm} disabled={submitting}>
           {t("confirm.subscription.confirm")}
         </Button>
-        {error && (
-          <p className="confirm-error" role="status">
-            {error}
-          </p>
-        )}
+        {error && <ErrorLine>{error}</ErrorLine>}
       </Card>
     </div>
   );

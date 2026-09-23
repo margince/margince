@@ -6,6 +6,7 @@ import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -187,9 +188,9 @@ export function ImapMailboxForm({
   const actions = (
     <>
       {attempted && missing.length > 0 && (
-        <p className="ob-stage-note" role="alert">
+        <ErrorLine inline>
           {t("connectors.imapStillNeeded", { fields: missing.join(", ") })}
-        </p>
+        </ErrorLine>
       )}
       <Button type="button" onClick={onDismiss} disabled={connect.isPending}>
         {dismissLabel}

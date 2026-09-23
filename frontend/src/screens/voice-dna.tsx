@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Badge, Button, Disclosure, Textarea } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
   type SettingControlProps,
@@ -398,7 +399,7 @@ function PersonalityEditor({
           >
             {t("settings.voice.savePreferences")}
           </Button>
-          {error && <span role="alert">{error}</span>}
+          {error && <ErrorLine inline>{error}</ErrorLine>}
         </div>
       )}
     </div>
@@ -477,7 +478,7 @@ function CorpusManifest({
           </div>
         )}
       </QueryGate>
-      {error && <p role="alert">{error}</p>}
+      {error && <ErrorLine>{error}</ErrorLine>}
     </div>
   );
 }
@@ -587,12 +588,12 @@ function SourceRow({
         {!source.included && ` · ${t("settings.voice.excluded")}`}
       </span>
       {armed && drops && (
-        <span role="alert">
+        <ErrorLine inline>
           {t("settings.voice.bandDrop", {
             from: bandLabel(t, summary.quality_band),
             to: bandLabel(t, bandAfter),
           })}
-        </span>
+        </ErrorLine>
       )}
       {canEdit && (
         <button
@@ -800,7 +801,7 @@ function BuildControls({
             <p className="t-caption" role="status">
               {buildStatusLine(t, build.isPending, outcome)}
             </p>
-            {error && <p role="alert">{error}</p>}
+            {error && <ErrorLine>{error}</ErrorLine>}
           </div>
         ) : null
       }

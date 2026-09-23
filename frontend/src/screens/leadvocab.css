@@ -106,9 +106,3 @@
   flex-direction: column;
   gap: var(--space-1);
 }
-
-/* The ink and the size are `.field-error`'s, from the catalog; what is left
-   here is the margin a paragraph in a flex column must not keep. */
-.lead-handling-error {
-  margin: 0;
-}

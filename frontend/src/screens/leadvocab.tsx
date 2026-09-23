@@ -6,6 +6,7 @@ import { isOption } from "../app/options";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
@@ -863,20 +864,7 @@ export function LeadHandlingCard() {
                           }
                         }}
                       />
-                      {targetError !== null && (
-                        // `.field-error` is the catalog's spelling of "why
-                        // this value was refused" — same ink, same size, same
-                        // `role="alert"` as the one `Field` renders, so a
-                        // refusal in a row reads exactly like a refusal in a
-                        // form.
-                        <p
-                          className="field-error lead-handling-error"
-                          id={targetErrorId}
-                          role="alert"
-                        >
-                          {targetError}
-                        </p>
-                      )}
+                      <ErrorLine id={targetErrorId}>{targetError}</ErrorLine>
                     </div>
                   )}
                 />

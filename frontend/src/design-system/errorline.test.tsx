@@ -32,6 +32,16 @@ describe("ErrorLine", () => {
     expect(container.innerHTML).toBe("");
   });
 
+  it("draws nothing for an empty string, as an error or as the sentence", () => {
+    const { container } = inEnglish(
+      <>
+        <ErrorLine error="" />
+        <ErrorLine>{""}</ErrorLine>
+      </>,
+    );
+    expect(container.innerHTML).toBe("");
+  });
+
   it("announces a thrown problem in the reader's words, in the danger ink", () => {
     inEnglish(
       <ErrorLine error={new ProblemError({ detail: "email taken" })} />,

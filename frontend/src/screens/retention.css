@@ -14,7 +14,8 @@
   gap: var(--space-1);
 }
 
-.retention-posture > .retention-error {
+/* A wrapped refusal keeps the answer column's right edge on every line. */
+.retention-posture > .t-danger {
   text-align: right;
 }
 
@@ -44,10 +45,6 @@
   flex-wrap: wrap;
 }
 
-.retention-error {
-  color: var(--dangerText);
-}
-
 /* The pin form in the row under the restricted-records table: an id and the
    verb that submits it on one line, wrapping rather than overflowing — the row
    owns the naming and the hint, so nothing here draws a label. */
@@ -70,8 +67,6 @@
 
 /* A malformed id takes the whole next line: squeezed between the field and the
    button it is about, the refusal reads as a third control. */
-.restricted-pin-error {
+.restricted-pin > .t-danger {
   flex-basis: 100%;
-  margin: 0;
-  color: var(--dangerText);
 }

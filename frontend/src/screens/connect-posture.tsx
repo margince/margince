@@ -152,6 +152,7 @@ export function ConnectPostureStep({
           : ` ${t("connectors.mailPosture.sharedNeedsAdmin")}`}
       </p>
       {save.isError && (
+        // ds:ignore a bordered banner box shared with the read-failure banners, not a line
         <p className="readfail warning" role="alert">
           {problemMessageOf(save.error, t)}
         </p>

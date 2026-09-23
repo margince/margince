@@ -373,6 +373,7 @@ function SecretRevealModal({
           available before a copy — abandoning a subscription must be possible —
           but the caution says in words what it costs. */}
       {!copy.copied && (
+        // ds:ignore a caution, not a refusal
         <p className="webhook-secret-caution">
           {t("webhooks.secret.leaveWarning")}
         </p>

@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import { progressFraction } from "../app/capture-progress";
 import { Badge, Button } from "../design-system/atoms";
 import { CountUp } from "../design-system/countup";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { formatDuration, formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -168,10 +169,10 @@ export function RunView({
         staleForMs={stale ? agoMs : null}
       />
       {run.state === "error" && (
-        <p className="backfill-error">
+        <ErrorLine>
           {t("backfill.errorNote")}
           {run.last_error_class ? ` (${run.last_error_class})` : ""}
-        </p>
+        </ErrorLine>
       )}
       <div className="backfill-foot">
         {live ? (
@@ -182,7 +183,7 @@ export function RunView({
           <Button onClick={onRestart}>{t("backfill.restart")}</Button>
         )}
       </div>
-      {live && cancelError && <p className="backfill-error">{cancelError}</p>}
+      {live && cancelError && <ErrorLine>{cancelError}</ErrorLine>}
       {run.state === "cancelled" && <p>{t("backfill.cancelledNote")}</p>}
     </div>
   );

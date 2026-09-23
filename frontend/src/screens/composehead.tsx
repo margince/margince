@@ -11,6 +11,7 @@ import { Mail, MessageSquare } from "lucide-react";
 import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { TokenInput, type TokenSuggestion } from "../design-system/tokeninput";
 import { useT } from "../i18n";
@@ -28,11 +29,7 @@ export function FieldNeed({
   if (!show) {
     return null;
   }
-  return (
-    <p className="compose-need" role="alert">
-      {need}
-    </p>
-  );
+  return <ErrorLine>{need}</ErrorLine>;
 }
 
 /**

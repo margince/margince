@@ -229,11 +229,6 @@
   margin-top: var(--space-6);
 }
 
-.brief-error {
-  color: var(--dangerText);
-  margin: 0;
-}
-
 /* ── The follow-through ────────────────────────────────────────────────────
  * The panels of the work column, in the order the day decides, and beside
  * them the context rail. The gap between blocks is wider than the gap between

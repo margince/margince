@@ -3,11 +3,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { SentenceList, WrittenBy } from "./record360";
 
 type Dossier = components["schemas"]["CompanyDossier"];
@@ -181,9 +182,7 @@ export function DossierPanel({
             leadWithJudgement
           />
         )}
-        {rewrite.error && (
-          <p className="co-part-error">{problemMessageOf(rewrite.error, t)}</p>
-        )}
+        <ErrorLine error={rewrite.error} />
       </PanelBody>
     </Panel>
   );

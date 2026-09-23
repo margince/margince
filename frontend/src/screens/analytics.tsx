@@ -14,6 +14,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
@@ -42,7 +43,7 @@ import { ForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { ShareViewButton } from "./analytics.share";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
 import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
@@ -875,8 +876,6 @@ function ExplainPanel({
   query,
   baseCurrency,
 }: Readonly<{
-  // The toggle above points `aria-controls` here, so the card has to carry the
-  // id the toggle was given rather than mint one of its own.
   id: string;
   url: string | null;
   query: UseQueryResult<Derivation>;
@@ -911,7 +910,7 @@ function ExplainPanel({
           )}
           {query.isError && (
             <>
-              <p>{problemMessageOf(query.error, t)}</p>
+              <ErrorLine error={query.error} />
               <div className="card-actions">
                 <Button onClick={() => query.refetch()}>
                   {t("common.retry")}
@@ -922,9 +921,9 @@ function ExplainPanel({
           {/* A link minted before the handle carried an instant — an old one,
               or one a reader saved. The figures below were recomputed at a NEW
               moment, so a rate sheet effective in between makes them disagree
-              with the number they explain. This is opened by someone already
-              doubting a figure, and a detail that quietly reconciles to
-              something else reads as proof rather than as a discrepancy. */}
+              with the number they explain. A reader already doubting a figure
+              takes a detail that quietly reconciles to something else as
+              proof rather than as a discrepancy. */}
           {query.data?.as_of_pinned === false && (
             <p className="surfacestate-stale">{t("explain.mayHaveMoved")}</p>
           )}

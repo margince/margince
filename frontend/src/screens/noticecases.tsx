@@ -19,6 +19,7 @@ import {
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -260,10 +261,8 @@ export function NoticeCasesCard() {
               modal can be dismissed while its submit is still in flight, and
               an error that only rendered there would leave the reader
               believing a duty was excused when it was not. */}
-          {assign.isError ? <p>{problemMessageOf(assign.error, t)}</p> : null}
-          {excuse.isError && excusing === null ? (
-            <p>{problemMessageOf(excuse.error, t)}</p>
-          ) : null}
+          <ErrorLine error={assign.error} />
+          {excusing === null && <ErrorLine error={excuse.error} />}
         </CardBoundary>
         <ExcuseModal
           // Keyed by the case, so opening a second duty MOUNTS a fresh form

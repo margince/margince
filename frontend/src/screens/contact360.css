@@ -690,13 +690,6 @@
   flex: 1;
 }
 
-/* A refusal the rep has to act on — a consent gate, an unsendable mailbox —
-   sits beside the control that produced it rather than replacing the drawer. */
-.pe-send-error {
-  margin: var(--space-2) 0 0;
-  color: var(--dangerText);
-}
-
 /* "Why this draft": the reasoning is a SIBLING of the body, never part of it.
    A body that explained itself is a body the rep has to edit before sending. */
 .pe-why {

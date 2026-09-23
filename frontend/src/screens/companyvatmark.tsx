@@ -7,12 +7,13 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Popover } from "../design-system/popover";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import "./companyvatmark.css";
 
 type VatCheck = components["schemas"]["CompanyVatCheck"];
@@ -479,9 +480,7 @@ function AskTheRegister({
           both would hear the fact twice, so the description is short ("Asking
           the register") and this carries what happens next. */}
       {ask.waiting && <p role="status">{t("co.vat.asking")}</p>}
-      {ask.error !== null && (
-        <p role="status">{problemMessageOf(ask.error, t)}</p>
-      )}
+      <ErrorLine inline error={ask.error} />
     </div>
   );
 }

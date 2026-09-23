@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -1094,25 +1095,24 @@ export function CompanyAct({
         />
       }
       {/* The list of what still wants an answer is NOT here: the deck IS that
-          list, met one card at a time and counted in its own tray. Printing it
-          again underneath was the same outstanding work said twice, in a flat
-          order the reader was not being walked through. A failure that needs a
-          retry has no such home, so those stay. */}
+          list, met one card at a time and counted in its own tray, and a list
+          underneath says the same work twice in an order nobody walks. A
+          failure that needs a retry has no such home, so those stay. */}
       {startRead.isError && (
-        <p className="ob-conv-notice" role="alert">
+        <ErrorLine>
           {t("ob.gate.startFailed", {
             detail: safeStartError(startRead.error, t),
           })}
-        </p>
+        </ErrorLine>
       )}
       {clarify.failure && (
-        <p className="ob-conv-notice" role="alert">
+        <ErrorLine>
           {clarify.failure.kind === "request"
             ? t("ob.conv.clarify.applyFailed", {
                 detail: clarify.failure.detail,
               })
             : t("ob.conv.clarify.applyMissing")}
-        </p>
+        </ErrorLine>
       )}
     </ConversationWorkbench>
   );

@@ -9,6 +9,7 @@ import {
   Skeleton,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -304,7 +305,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </details>
 
       {submit.error && (
-        <p className="confirm-error">{explainPublicError(submit.error, t)}</p>
+        <ErrorLine>{explainPublicError(submit.error, t)}</ErrorLine>
       )}
 
       <div className="confirm-actions">

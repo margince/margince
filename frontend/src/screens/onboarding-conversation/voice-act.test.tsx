@@ -562,14 +562,12 @@ describe("the conversational voice act", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /Build my voice profile/ }),
     );
-    expect(document.querySelector(".ob-stage-note")?.textContent).toContain(
-      "800",
-    );
+    expect((await screen.findByRole("alert")).textContent).toContain("800");
 
     await uploadFile("two.md", "Second document.");
     // At the floor the reason is gone with the block it named.
     await waitFor(() => {
-      expect(document.querySelector(".ob-stage-note")).toBeNull();
+      expect(screen.queryByRole("alert")).toBeNull();
     });
     expect(screen.queryByText("500 of 800 words")).toBeNull();
   });

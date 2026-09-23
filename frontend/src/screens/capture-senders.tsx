@@ -5,13 +5,14 @@ import type { components } from "../api/schema";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem } from "./common";
 
 // What the classifier decided about each sender this mailbox brought in, and
 // the seat's own answer where they gave one.
@@ -199,9 +200,7 @@ export function CaptureSendersCard() {
                     },
                   ]}
                 />
-                {setDecision.isError && (
-                  <p role="alert">{problemMessageOf(setDecision.error, t)}</p>
-                )}
+                <ErrorLine error={setDecision.error} />
               </>
             )
           }

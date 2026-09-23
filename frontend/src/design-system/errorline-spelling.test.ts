@@ -8,38 +8,48 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
   extensionFrontendFiles,
+  extensionLayers,
+  filesMatching,
   filesUnder,
   parseSource,
   sourceFileAt,
 } from "../../scripts/lib/source-tree";
+import { rulesIn } from "../testing/css";
 
 // A failure said on one line under a control has one spelling, and it is
 // `ErrorLine`. A copy drifts on its own — one keeps the ink and loses the
 // announcement, the next the other way round — until a refusal reads like a
-// caption. Five arms, one per shape of the copy:
+// caption. Six arms, one per shape of the copy:
 //
 //   inline  — a JSX `style` object whose `color` is the literal
 //             `var(--dangerText)`.
 //   class   — a `className` on any element whose literal text carries the
 //             `t-danger` or `form-error` token. `field-error` is Field's own
 //             slot and is not this line.
+//   sheet   — a `className` carrying a screen class whose every rule sets
+//             only the danger ink and margins: `.x-error` is `t-danger`
+//             under another name. The list is derived from the screen and
+//             extension sheets, because a named list is a second copy of them
+//             that misses the next one a screen writes. A design-system sheet
+//             owns the ink: its tone classes are a primitive's closed set.
 //   message — an intrinsic element whose only child is one
-//             `{problemMessageOf(…)}`: a failure said outside ErrorLine.
+//             `{problemMessageOf(…)}`: a failure said outside ErrorLine. Only
+//             an alert owns its cause: a line inside an element, intrinsic or
+//             component, carrying a literal `role="alert"` is read out with
+//             it. A status or a polite region inserted with its text is often
+//             never announced, so a cause under one is still a line. A
+//             computed role (a danger `Callout`) does not skip, so a cause
+//             inside one takes a waiver.
 //   alert   — an intrinsic element carrying `role="alert"` around a LINE:
 //             text and expressions only, no element child. A composite — a
 //             heading, a glyph, a verb inside the region — is another thing.
 //   name    — any identifier `RefusalLine` outside an import.
 //
-// Stylesheets are not read: `color: var(--dangerText)` in a screen sheet also
-// marks a figure or a glyph, so the message line is caught by what it SAYS
-// (message) and how it announces (alert) rather than by its colour.
+// The message and alert arms read a line by what it SAYS and how it announces;
+// the sheet arm reads a class whose whole rule is the ink. A figure or a glyph
+// drawn in the ink is not a line, and carries a reasoned `ds:ignore`.
 //
-// `inline`, `class` and `name` are held at zero. `message` and `alert` are a
-// CENSUS that only falls: BASELINE pins how many such lines each file carried
-// when the gate was armed, a line both arms read counts once, and a new file
-// or a higher count fails. A file under its entry fails too, until the entry
-// is lowered in the same change. The standing entries are the sweep a
-// follow-up issue tracks; this directory takes no entry at all.
+// Every arm is held at zero, in every file, wherever the spelling reappears.
 //
 // The waiver is `ds:ignore <reason>` in a comment on the finding's line or the
 // line above it; a marker with no reason does not waive, and is a finding.
@@ -84,7 +94,7 @@ function modules(): string[] {
     );
 }
 
-type Arm = "inline" | "class" | "message" | "alert" | "name";
+type Arm = "inline" | "class" | "sheet" | "message" | "alert" | "name";
 
 type Finding = { arm: Arm; line: number; says: string };
 
@@ -139,15 +149,77 @@ function inlineDanger(attribute: ts.JsxAttribute): boolean {
   );
 }
 
+function classTokens(attribute: ts.JsxAttribute): string[] {
+  return attribute.initializer
+    ? fragmentsOf(attribute.initializer).flatMap((fragment) =>
+        fragment.split(/\s+/),
+      )
+    : [];
+}
+
+function tagOf(attribute: ts.JsxAttribute): string {
+  return attribute.parent.parent.tagName.getText();
+}
+
 function dangerClassOn(attribute: ts.JsxAttribute): string | undefined {
-  const tag = attribute.parent.parent.tagName.getText();
-  if (!attribute.initializer) {
-    return undefined;
+  const token = classTokens(attribute).find((name) => dangerClass.test(name));
+  return token ? `<${tagOf(attribute)}> carries the ${token} class` : undefined;
+}
+
+function sheetClassOn(
+  attribute: ts.JsxAttribute,
+  sheetClasses: ReadonlySet<string>,
+): string | undefined {
+  const token = classTokens(attribute).find((name) => sheetClasses.has(name));
+  return token
+    ? `<${tagOf(attribute)}> carries .${token}, a rule that only sets the danger ink`
+    : undefined;
+}
+
+const dangerInk = /^color\s*:\s*var\(--dangerText\b[^)]*\)\s*(!important)?$/;
+
+const margin = /^margin(-[a-z]+)*\s*:/;
+
+type Sheet = { where: string; text: string };
+
+const designSystemSheet = /^frontend\/src\/design-system\//;
+
+/**
+ * The classes a sheet spells as the danger line: every rule whose selector is
+ * that class alone sets the danger ink and margins, and nothing else. One rule
+ * that also draws a border or a layout makes the class something else.
+ */
+function dangerOnlyClasses(sheets: readonly Sheet[]): Set<string> {
+  const inked = new Set<string>();
+  const other = new Set<string>();
+  const spelledBy = sheets.filter(
+    ({ where }) => !designSystemSheet.test(where),
+  );
+  for (const rule of spelledBy.flatMap(({ text }) => rulesIn(text))) {
+    if (rule.parents.length > 0) {
+      continue;
+    }
+    const declarations = rule.body
+      .split(";")
+      .map((declaration) => declaration.trim())
+      .filter((declaration) => declaration.length > 0);
+    for (const selector of rule.selector.split(",")) {
+      const alone = /^\.([\w-]+)$/.exec(selector.trim());
+      if (!alone || dangerClass.test(alone[1]) || alone[1] === "field-error") {
+        continue;
+      }
+      // A margin-only rule, a breakpoint's spacing say, leaves the class as it was.
+      if (declarations.every((declaration) => margin.test(declaration))) {
+        continue;
+      }
+      const onlyInk = declarations.every(
+        (declaration) =>
+          dangerInk.test(declaration) || margin.test(declaration),
+      );
+      (onlyInk ? inked : other).add(alone[1]);
+    }
   }
-  const token = fragmentsOf(attribute.initializer)
-    .flatMap((fragment) => fragment.split(/\s+/))
-    .find((name) => dangerClass.test(name));
-  return token ? `<${tag}> carries the ${token} class` : undefined;
+  return new Set([...inked].filter((name) => !other.has(name)));
 }
 
 type Opening = ts.JsxOpeningElement | ts.JsxSelfClosingElement;
@@ -173,6 +245,16 @@ function carriesAlert(element: Opening): boolean {
       literal.text === "alert"
     );
   });
+}
+
+/** Whether a JSX element above this one is an alert, which owns its cause. */
+function insideAlert(element: ts.JsxElement): boolean {
+  for (let at = element.parent; !ts.isSourceFile(at); at = at.parent) {
+    if (ts.isJsxElement(at) && carriesAlert(at.openingElement)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** A line: something to read, and no element inside it. */
@@ -270,6 +352,7 @@ function insideImport(node: ts.Node): boolean {
 function findingsIn(
   source: ts.SourceFile,
   where: string,
+  sheetClasses: ReadonlySet<string> = new Set(),
 ): (Finding & { waiver: Waiver })[] {
   const lines = source.text.split("\n");
   const out: (Finding & { waiver: Waiver })[] = [];
@@ -289,11 +372,16 @@ function findingsIn(
       if (classed) {
         push("class", node, classed);
       }
+      const sheeted = name === "className" && sheetClassOn(node, sheetClasses);
+      if (sheeted) {
+        push("sheet", node, sheeted);
+      }
     }
     if (
       ts.isJsxElement(node) &&
       isIntrinsic(node.openingElement) &&
-      saysOnlyAProblem(node, names)
+      saysOnlyAProblem(node, names) &&
+      !insideAlert(node)
     ) {
       push(
         "message",
@@ -327,138 +415,35 @@ function findingsIn(
   return out;
 }
 
-/**
- * The message and alert lines standing when the gate was armed, per file.
- * EXACT in both directions, the way `inlinelayout.test.ts` holds its count.
- */
-const BASELINE = new Map<string, number>([
-  ["extensions/openchannel/frontend/endpointcard.tsx", 3],
-  ["frontend/src/screens/analytics.tsx", 1],
-  ["frontend/src/screens/auth.tsx", 1],
-  ["frontend/src/screens/automations.tsx", 3],
-  ["frontend/src/screens/backfill.tsx", 1],
-  ["frontend/src/screens/book.tsx", 2],
-  ["frontend/src/screens/brief.decisions.tsx", 1],
-  ["frontend/src/screens/capture-senders.tsx", 1],
-  ["frontend/src/screens/common.tsx", 1],
-  ["frontend/src/screens/companycontacts/introrequest.tsx", 1],
-  ["frontend/src/screens/companydossier.tsx", 1],
-  ["frontend/src/screens/companygrowthfit.tsx", 1],
-  ["frontend/src/screens/companyvatmark.tsx", 1],
-  ["frontend/src/screens/composehead.tsx", 1],
-  ["frontend/src/screens/connect-posture.tsx", 1],
-  ["frontend/src/screens/contactemploymentrow.tsx", 1],
-  ["frontend/src/screens/contactnetwork/edgedetail.tsx", 1],
-  ["frontend/src/screens/contactnetwork/index.tsx", 1],
-  ["frontend/src/screens/emailaccesseditor.tsx", 1],
-  ["frontend/src/screens/employmentimport.tsx", 1],
-  ["frontend/src/screens/filterexport.tsx", 1],
-  ["frontend/src/screens/imap-connect-form.tsx", 1],
-  ["frontend/src/screens/installation-setup.tsx", 1],
-  ["frontend/src/screens/leads.tsx", 1],
-  ["frontend/src/screens/leadsignals.tsx", 1],
-  ["frontend/src/screens/leadvocab.tsx", 1],
-  ["frontend/src/screens/listquery.tsx", 1],
-  ["frontend/src/screens/noticecases.tsx", 2],
-  ["frontend/src/screens/onboarding-backread.tsx", 5],
-  ["frontend/src/screens/onboarding-connect-panels.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/basis-act.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/company-act.tsx", 2],
-  ["frontend/src/screens/onboarding-conversation/connect-act.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/team-act.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/voice-act.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/voice-scenes.tsx", 1],
-  ["frontend/src/screens/onboarding-conversation/way-onward.tsx", 1],
-  ["frontend/src/screens/onboarding-gate.tsx", 1],
-  ["frontend/src/screens/onboarding-read.tsx", 1],
-  ["frontend/src/screens/privacy.corrections.tsx", 2],
-  ["frontend/src/screens/privacy.tsx", 2],
-  ["frontend/src/screens/rate-refresh.tsx", 1],
-  ["frontend/src/screens/restrictedrecords.tsx", 1],
-  ["frontend/src/screens/retention.tsx", 3],
-  ["frontend/src/screens/retentionpolicyform.tsx", 1],
-  ["frontend/src/screens/settings.exitcriteria.tsx", 1],
-  ["frontend/src/screens/settings.tsx", 2],
-  ["frontend/src/screens/setupclaim.tsx", 1],
-  ["frontend/src/screens/taskactions.tsx", 1],
-  ["frontend/src/screens/voice-dna.tsx", 4],
-  ["frontend/src/screens/voice-versions.tsx", 2],
-  ["frontend/src/screens/worklist.plan.tsx", 1],
-  ["frontend/src/screens/worklist.tsx", 1],
-]);
-
-/** What the census carries across the tree, so a rise is one number. */
-const TOTAL = 73;
-
-/** The tier that publishes the alternative takes no entry. */
-const HELD_AT_ZERO = /^frontend\/src\/design-system\//;
-
 type Located = Finding & { where: string; waiver: Waiver };
-
-const censusArms: readonly Arm[] = ["message", "alert"];
-
-/** Each census line once, however many of the census arms read it. */
-function standingLines(found: readonly Located[]): Located[] {
-  const seen = new Map<string, Located>();
-  for (const finding of found) {
-    const key = `${finding.where}:${finding.line}`;
-    if (censusArms.includes(finding.arm) && !seen.has(key)) {
-      seen.set(key, finding);
-    }
-  }
-  return [...seen.values()];
-}
-
-function countsByFile(lines: readonly Located[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const line of lines) {
-    counts.set(line.where, (counts.get(line.where) ?? 0) + 1);
-  }
-  return counts;
-}
 
 function shown(finding: Located): string {
   return `${finding.where}:${finding.line}  ${finding.says} — ${advice}`;
 }
 
-/** Every line in a file over its entry, named; a file with none is over at 0. */
-function overBaseline(
-  lines: readonly Located[],
-  baseline: ReadonlyMap<string, number>,
-): string[] {
-  return [...countsByFile(lines)]
-    .filter(([where, count]) => count > (baseline.get(where) ?? 0))
-    .flatMap(([where]) => {
-      const entry = baseline.get(where);
-      const why =
-        entry === undefined ? "not in BASELINE" : `over its entry of ${entry}`;
-      return lines
-        .filter((line) => line.where === where)
-        .map((line) => `${shown(line)} (${why})`);
-    });
+/** Every stylesheet, core and extension tier alike. */
+function sheets(): Sheet[] {
+  return filesMatching(sourceRoot, /\.css$/)
+    .concat(
+      extensionLayers(extensionsRoot).flatMap((layer) =>
+        filesMatching(layer, /\.css$/),
+      ),
+    )
+    .map((path) => ({
+      where: fromRepo(path),
+      text: readFileSync(path, "utf8"),
+    }));
 }
 
-function behindBaseline(
-  lines: readonly Located[],
-  baseline: ReadonlyMap<string, number>,
-): string[] {
-  const counts = countsByFile(lines);
-  return [...baseline]
-    .filter(([where, allowed]) => (counts.get(where) ?? 0) < allowed)
-    .map(([where, allowed]) => {
-      const count = counts.get(where) ?? 0;
-      return count === 0
-        ? `${where}: carries none — remove the entry`
-        : `${where}: carries ${count}, not ${allowed} — lower the entry to ${count}`;
-    });
-}
-
-function census() {
+function spellings() {
+  const sheetClasses = dangerOnlyClasses(sheets());
   const all: Located[] = modules().flatMap((where) =>
-    findingsIn(sourceFileAt(join(repoRoot, where)), where).map((finding) => ({
-      where,
-      ...finding,
-    })),
+    findingsIn(sourceFileAt(join(repoRoot, where)), where, sheetClasses).map(
+      (finding) => ({
+        where,
+        ...finding,
+      }),
+    ),
   );
   const open = all.filter((finding) => finding.waiver !== "reasoned");
   const of = (arm: Arm) =>
@@ -466,17 +451,20 @@ function census() {
   return {
     inline: of("inline"),
     class: of("class"),
+    sheet: of("sheet"),
     name: of("name"),
-    standing: standingLines(open),
+    message: of("message"),
+    alert: of("alert"),
     bare: all.filter((finding) => finding.waiver === "bare").map(shown),
   };
 }
 
 describe("a failure line under a control has one spelling", () => {
-  const found = census();
+  const found = spellings();
 
   it("reads a corpus and an owner that are not empty", () => {
     expect(modules().length).toBeGreaterThan(400);
+    expect(sheets().length).toBeGreaterThan(100);
     const home = findingsIn(
       sourceFileAt(join(repoRoot, homeModule)),
       homeModule,
@@ -507,29 +495,25 @@ describe("a failure line under a control has one spelling", () => {
     ).toEqual([]);
   });
 
-  it("carries the census total it is pinned at", () => {
-    expect(found.standing.length).toBe(TOTAL);
-  });
-
-  it("carries no message or alert line over its file's entry", () => {
-    const over = overBaseline(found.standing, BASELINE);
+  it("finds no screen class that is only the danger ink", () => {
     expect(
-      over,
-      "each of these says a failure outside ErrorLine or announces a line by " +
-        "hand; it is ErrorLine (standing when it is not news)\n",
+      found.sheet,
+      "each of these wears a class whose whole rule is the danger ink\n",
     ).toEqual([]);
   });
 
-  it("keeps no census entry above what the tree carries", () => {
-    const behind = behindBaseline(found.standing, BASELINE);
-    expect(behind, behind.join("\n")).toEqual([]);
+  it("finds no problem message said alone outside ErrorLine", () => {
+    expect(
+      found.message,
+      "each of these says a failure outside ErrorLine\n",
+    ).toEqual([]);
   });
 
-  it("baselines nothing in this directory", () => {
-    const refused = [...BASELINE.keys()].filter((where) =>
-      HELD_AT_ZERO.test(where),
-    );
-    expect(refused, "the design system takes no census entry\n").toEqual([]);
+  it("finds no hand-rolled alerting line", () => {
+    expect(
+      found.alert,
+      "each of these announces a line by hand; it is ErrorLine (standing when it is not news)\n",
+    ).toEqual([]);
   });
 
   it("finds no RefusalLine", () => {
@@ -544,10 +528,18 @@ describe("a failure line under a control has one spelling", () => {
   });
 
   describe("the detector", () => {
-    const read = (text: string, where = "frontend/src/screens/x.tsx") =>
-      findingsIn(parseSource(where, text), where).map(
-        ({ arm, says, waiver }) => `${arm} ${waiver}: ${says}`,
-      );
+    const read = (
+      text: string,
+      where = "frontend/src/screens/x.tsx",
+      sheet = "",
+    ) =>
+      findingsIn(
+        parseSource(where, text),
+        where,
+        dangerOnlyClasses([
+          { where: "frontend/src/screens/x.css", text: sheet },
+        ]),
+      ).map(({ arm, says, waiver }) => `${arm} ${waiver}: ${says}`);
 
     it("reads an inline danger colour, and not another colour", () => {
       expect(
@@ -583,6 +575,56 @@ describe("a failure line under a control has one spelling", () => {
       expect(read('<Text className="t-danger">x</Text>')).toEqual([
         "class none: <Text> carries the t-danger class",
       ]);
+    });
+
+    it("reads a class a sheet spells as the danger ink, and not a box", () => {
+      const line = '<p className="t-sub x-error">x</p>';
+      expect(
+        read(
+          line,
+          undefined,
+          ".x-error { color: var(--dangerText); margin-top: 4px; }",
+        ),
+      ).toEqual([
+        "sheet none: <p> carries .x-error, a rule that only sets the danger ink",
+      ]);
+      expect(
+        read(
+          line,
+          undefined,
+          ".x-error { color: var(--dangerText); border: 1px solid; }",
+        ),
+      ).toEqual([]);
+      expect(
+        read(
+          line,
+          undefined,
+          ".x-error { color: var(--dangerText); }\n.x-error { display: flex; }",
+        ),
+      ).toEqual([]);
+      const derives = [
+        ".x-error { color: var(--dangerText) !important; }",
+        ".x-error { color : var(--dangerText, #b00); }",
+        ".x-error { color: var(--dangerText); }\n@media (max-width: 720px) { .x-error { margin-top: 0; } }",
+      ];
+      for (const sheet of derives) {
+        expect(read(line, undefined, sheet), sheet).toHaveLength(1);
+      }
+      expect(
+        read(line, undefined, ".row > .x-error { color: var(--dangerText); }"),
+      ).toEqual([]);
+      expect(
+        dangerOnlyClasses([
+          {
+            where: "frontend/src/screens/x.css",
+            text: ".t-danger { color: var(--dangerText); }\n.x-gap { margin: 0; }",
+          },
+          {
+            where: "frontend/src/design-system/x.css",
+            text: ".x-danger { color: var(--dangerText); }",
+          },
+        ]),
+      ).toEqual(new Set());
     });
 
     it("does not read Field's slot or a longer class", () => {
@@ -626,6 +668,19 @@ describe("a failure line under a control has one spelling", () => {
       expect(read("<ErrorLine>{problemMessageOf(e, t)}</ErrorLine>")).toEqual(
         [],
       );
+    });
+
+    it("does not read a cause under an alert, and reads it under anything else", () => {
+      const cause = "<p>{problemMessageOf(e, t)}</p>";
+      const said = "message none: <p> says a failure message outside ErrorLine";
+      expect(read(`<div role="alert"><h3>Failed</h3>${cause}</div>`)).toEqual(
+        [],
+      );
+      expect(read(`<Card role="status">${cause}</Card>`)).toEqual([said]);
+      expect(
+        read(`<div aria-live="polite"><AssistantBubble />${cause}</div>`),
+      ).toEqual([said]);
+      expect(read(`<div><h3>Failed</h3>${cause}</div>`)).toEqual([said]);
     });
 
     it("reads an alerting line, however the role and the words are written", () => {
@@ -688,21 +743,10 @@ describe("a failure line under a control has one spelling", () => {
         "inline reasoned: style colours the text var(--dangerText)",
       ]);
     });
-    it("fails a fresh file's one message line as not in BASELINE, and counts a doubly-read line once", () => {
-      const where = "frontend/src/screens/fresh.tsx";
-      const lines = standingLines(
-        findingsIn(
-          parseSource(where, '<p role="alert">{problemMessageOf(e, t)}</p>'),
-          where,
-        ).map((finding) => ({ where, ...finding })),
-      );
-      expect(lines).toHaveLength(1);
-      expect(overBaseline(lines, BASELINE)).toEqual([
-        `${where}:1  <p> says a failure message outside ErrorLine — ${advice} (not in BASELINE)`,
-      ]);
-      expect(overBaseline(lines, new Map([[where, 1]]))).toEqual([]);
-      expect(behindBaseline([], new Map([[where, 1]]))).toEqual([
-        `${where}: carries none — remove the entry`,
+    it("reads an announced problem message on both arms", () => {
+      expect(read('<p role="alert">{problemMessageOf(e, t)}</p>')).toEqual([
+        "message none: <p> says a failure message outside ErrorLine",
+        "alert none: <p> hand-rolls an alerting line",
       ]);
     });
   });

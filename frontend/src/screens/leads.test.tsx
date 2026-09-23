@@ -509,14 +509,13 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<LeadScreen id="l-1" />);
     await userEvent.click(await screen.findByTestId("lead-qualify"));
-    await userEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", {
-        name: /^Qualify/,
-      }),
-    );
+    const dialog = within(screen.getByRole("dialog"));
+    await userEvent.click(dialog.getByRole("button", { name: /^Qualify/ }));
     // The refusal is shown where the reader is; the page re-reads the lead
     // and its outcome card then says what it became.
-    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect((await dialog.findByRole("alert")).textContent).toContain(
+      "already promoted",
+    );
   });
 
   it("the board moves a lead between the two live statuses, with If-Match", async () => {

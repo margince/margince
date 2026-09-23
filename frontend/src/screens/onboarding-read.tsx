@@ -16,6 +16,7 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Card } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import { MarginceWorkbench } from "../design-system/margince-workbench";
@@ -30,7 +31,7 @@ import {
   usePlural,
   useT,
 } from "../i18n";
-import { coldFieldLabel, problemMessageOf, throwProblem } from "./common";
+import { coldFieldLabel, throwProblem } from "./common";
 import { onboardingLocale } from "./onboarding-conversation/onboarding-locale";
 
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
@@ -361,11 +362,7 @@ function WebsiteWorkbench(
               </p>
             </AssistantBubble>
           )}
-          {conversation.send.isError && (
-            <p className="mw-send-error" role="alert">
-              {problemMessageOf(conversation.send.error, t)}
-            </p>
-          )}
+          <ErrorLine error={conversation.send.error} />
         </div>
 
         {props.mode && (
@@ -647,7 +644,7 @@ function WebsiteStatusMessage({
       <>
         <Heading size="large">{t("ob.failTitle")}</Heading>
         <p>{t("ob.coreFailedBody")}</p>
-        <p className="mw-error-detail">{error}</p>
+        <ErrorLine>{error}</ErrorLine>
         <button type="button" className="ob-core-link" onClick={onManual}>
           {t("ob.continueManual")}
         </button>

@@ -66,10 +66,6 @@
   flex-wrap: wrap;
 }
 
-.confirm-error {
-  color: var(--dangerText);
-}
-
 /* The receipt block on the done state: the references a subject quotes when
    asking after a request. Set apart from the thank-you above it, because it is
    the part they may need to copy down. */
