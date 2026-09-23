@@ -539,9 +539,18 @@ func TestACardCannotDateItselfIntoTheFuture(t *testing.T) {
 		t.Fatalf("outcomes = %+v, want one updated", results)
 	}
 
-	// An ordinary statement made now must still win, which it cannot if the
-	// card's own date was taken at face value.
-	if !fillFromSignature(ctx, t, e, contactID, SignatureField{
+	// An ordinary statement made AFTERWARDS must still win, which it cannot if
+	// the card's own date was taken at face value.
+	//
+	// Explicitly later, not "now". The refused card falls back to the import
+	// transaction's own `now()`, and a statement dated from the Go clock is
+	// only reliably after that by a margin — the two are different clocks read
+	// at different moments, and the supersede rule compares them. What this
+	// test is for is that 2099 does not win; that a simultaneous statement wins
+	// is not a promise the product makes, and asserting it made the verdict
+	// depend on how busy the lane was.
+	statedAfterwards := time.Now().Add(time.Minute)
+	if !fillFromSignatureObserved(ctx, t, e, contactID, statedAfterwards, SignatureField{
 		Name: fieldTitle, Value: "Head of Present", Evidence: "Head of Present", Confidence: 0.9,
 	}) {
 		t.Fatal("the signature wrote nothing — a future-dated card is outranking a statement made now")

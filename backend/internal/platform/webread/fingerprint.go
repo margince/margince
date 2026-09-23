@@ -190,7 +190,7 @@ func absoluteAttr(raw string, base *url.URL) (string, bool) {
 		return "", false
 	}
 	resolved := base.ResolveReference(ref)
-	if resolved.Scheme != "http" && resolved.Scheme != "https" {
+	if !isWebScheme(resolved.Scheme) {
 		return "", false
 	}
 	resolved.Fragment = ""

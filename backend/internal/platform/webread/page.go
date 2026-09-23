@@ -423,7 +423,7 @@ func resolveLink(base *url.URL, href string) (string, bool) {
 		return "", false
 	}
 	abs := base.ResolveReference(ref)
-	if (abs.Scheme != "http" && abs.Scheme != "https") || abs.Host == "" {
+	if !isWebScheme(abs.Scheme) || abs.Host == "" {
 		return "", false
 	}
 	abs.Fragment = ""

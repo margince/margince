@@ -255,7 +255,6 @@ const (
 // visible company), inserts the deal with its first stage-history
 // row, and runs the write shape — all inside the caller's transaction.
 func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInput, born bornDeal, active []fieldcatalog.Column) (crmcontracts.Deal, error) {
-
 	if err := ensureOpenBirthStage(ctx, tx, in.StageID, in.PipelineID); err != nil {
 		return crmcontracts.Deal{}, err
 	}
