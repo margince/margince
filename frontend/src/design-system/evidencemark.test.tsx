@@ -11,6 +11,17 @@ import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { EvidenceMark } from "./evidencemark";
 
+// EVERY ASSERTION AFTER AN INTERACTION IS AWAITED, and the reason is the
+// component rather than the test runner. The panel settles against a
+// hover-intent poll on the REAL clock — a 25ms tick with a 260ms ceiling, the
+// one the last case here already documents — so its open state is not a
+// function of the click alone. `await userEvent.click` guarantees the events
+// were dispatched, never that React has re-rendered and that poll has settled,
+// and an immediate assertion reads the DOM in between. On a loaded machine that
+// gap is wide enough to observe: this file failed a full run on
+// `aria-expanded` still being "false" one line after the click that opens it
+// (issue 2661).
+//
 // The one provenance affordance. What it has to get right:
 //
 //   - a value a CONTACT typed carries no mark, or the underline stops meaning
@@ -45,8 +56,10 @@ describe("evidence mark", () => {
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
     await userEvent.click(trigger);
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    const panel = screen.getByRole("region", {
+    await waitFor(() => {
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    });
+    const panel = await screen.findByRole("region", {
       name: /Where "Fleet retrofits without downtime" came from/,
     });
     expect(panel.textContent).toContain("We retrofit fleets without downtime");
@@ -78,10 +91,12 @@ describe("evidence mark", () => {
 
     const trigger = screen.getByRole("button", { name: /1998/ });
     await userEvent.click(trigger);
-    expect(screen.getByRole("region")).toBeTruthy();
+    await screen.findByRole("region");
 
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("region")).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByRole("region")).toBeNull();
+    });
     // Escape must not drop the reader at the top of the document.
     expect(document.activeElement).toBe(trigger);
   });
@@ -94,6 +109,10 @@ describe("evidence mark", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /1998/ }));
+    // The PANEL FIRST, then the absence inside it. Asserting the link is gone
+    // straight after the click passes just as well over a panel that never
+    // opened, which is the one outcome this case must not read as success.
+    await screen.findByRole("region");
     expect(screen.queryByText("Full history")).toBeNull();
   });
 
