@@ -183,6 +183,12 @@ const RENDER_TEST_MS = SETTLE_MS + SLOWEST_MEASURED_TEST_MS;
 // so raising either moves this with it.
 const WRITE_TEST_MS = SETTLE_MS + RENDER_TEST_MS;
 
+// A case that holds the refetch open waits a THIRD time — the render, the
+// write, and the release — so it carries three waiters' budgets. Derived from
+// the same constants for the reason the two above are: raising the settle
+// moves all three together rather than leaving one behind.
+const HELD_REFETCH_TEST_MS = SETTLE_MS + WRITE_TEST_MS;
+
 // The card sits on the Settings → Integrations entry, whose predicate opens for
 // all five roles, and the reads behind it are granted to all five. The writes
 // are not: connecting spends money and destroying the data is irreversible, and
@@ -513,6 +519,85 @@ describe("ProviderCard write posture", () => {
       expect(request.headers.get("If-Match")).toBe("4");
     },
     WRITE_TEST_MS,
+  );
+
+  // A switch that went idle before its refetch landed let the next press send
+  // the OLD map under the OLD version, and the server refused it with a
+  // conflict the admin had no way to account for. The press has to stay busy
+  // until the card holds what the write produced.
+  it(
+    "holds the priced switch busy until the connections refetch lands",
+    async () => {
+      const user = userEvent.setup();
+      // The refetch is held open, which is the window this is about: the PATCH
+      // has answered and the card has not yet been told what it now holds.
+      let releaseRefetch = () => {};
+      const held = new Promise<void>((resolve) => {
+        releaseRefetch = resolve;
+      });
+      let patched = false;
+      const fetch = vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : undefined;
+        const path = new URL(String(request ? request.url : input)).pathname;
+        if (request?.method === "PATCH") {
+          patched = true;
+          return new Response(JSON.stringify(CONNECTION), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (patched && path === "/v1/provider-connections") {
+          await held;
+        }
+        return new Response(
+          JSON.stringify(routeBody(path, ME_OPERATOR, CONNECTION)),
+          {
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      });
+      vi.stubGlobal("fetch", fetch);
+      render(
+        <Providers>
+          <ProviderCard />
+        </Providers>,
+      );
+      await screen.findByRole(
+        "heading",
+        { name: CONNECTION.provider },
+        { timeout: SETTLE_MS },
+      );
+
+      const buyEmail = screen.getByRole("switch", {
+        name: "Allow buying work email",
+      });
+      await user.click(buyEmail);
+
+      // Still busy: the PATCH has answered and the card has not been told what
+      // it holds, so a second press here would write the stale map under the
+      // stale version. aria-busy rather than `disabled`, because the control
+      // stays focusable while it waits — it is working, not forbidden.
+      await waitFor(
+        () =>
+          expect(
+            screen
+              .getByRole("switch", { name: "Allow buying work email" })
+              .getAttribute("aria-busy"),
+          ).toBe("true"),
+        { timeout: SETTLE_MS },
+      );
+
+      releaseRefetch();
+      await waitFor(
+        () =>
+          expect(
+            screen
+              .getByRole("switch", { name: "Allow buying work email" })
+              .getAttribute("aria-busy"),
+          ).toBeNull(),
+        { timeout: SETTLE_MS },
+      );
+    },
+    HELD_REFETCH_TEST_MS,
   );
 
   it(
