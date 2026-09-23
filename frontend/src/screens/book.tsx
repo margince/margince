@@ -10,11 +10,12 @@ import {
   SegmentedControl,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Row } from "../design-system/stack";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem } from "./common";
 import "./book.css";
 
 // Booking page shell (B-EP09.14): rail-less (a test asserts no rail),
@@ -198,7 +199,7 @@ function SessionBookingScreen() {
       {book.isError && (
         <Card as="div" inset role="status" className="book-failure">
           <p>{t("book.failed")}</p>
-          <p className="book-card-line">{problemMessageOf(book.error, t)}</p>
+          <ErrorLine error={book.error} />
         </Card>
       )}
     </div>
@@ -341,7 +342,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
       {book.isError && (
         <Card as="div" inset role="status" className="book-failure">
           <p>{t("book.failed")}</p>
-          <p className="book-card-line">{problemMessageOf(book.error, t)}</p>
+          <ErrorLine error={book.error} />
         </Card>
       )}
     </div>

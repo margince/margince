@@ -263,6 +263,7 @@ function providersDetail(
     }
     return (
       <>
+        {/* ds:ignore a count label in the danger ink, not a message */}
         {broken && <span className="ai-settings-missing">{broken}</span>}
         {said && <span>{said}</span>}
       </>
@@ -276,6 +277,7 @@ function providersDetail(
   );
   return (
     <span>
+      {/* ds:ignore a count label in the danger ink, not a message */}
       {broken && <span className="ai-settings-missing">{broken}</span>}
       {broken ? " · " : null}
       {called}

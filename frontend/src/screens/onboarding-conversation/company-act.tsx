@@ -1095,10 +1095,9 @@ export function CompanyAct({
         />
       }
       {/* The list of what still wants an answer is NOT here: the deck IS that
-          list, met one card at a time and counted in its own tray. Printing it
-          again underneath was the same outstanding work said twice, in a flat
-          order the reader was not being walked through. A failure that needs a
-          retry has no such home, so those stay. */}
+          list, met one card at a time and counted in its own tray, and a list
+          underneath says the same work twice in an order nobody walks. A
+          failure that needs a retry has no such home, so those stay. */}
       {startRead.isError && (
         <ErrorLine>
           {t("ob.gate.startFailed", {

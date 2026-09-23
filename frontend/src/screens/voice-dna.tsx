@@ -588,7 +588,7 @@ function SourceRow({
         {!source.included && ` · ${t("settings.voice.excluded")}`}
       </span>
       {armed && drops && (
-        <ErrorLine inline standing>
+        <ErrorLine inline>
           {t("settings.voice.bandDrop", {
             from: bandLabel(t, summary.quality_band),
             to: bandLabel(t, bandAfter),

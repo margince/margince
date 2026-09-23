@@ -209,9 +209,9 @@ function BackfillSetup({
         onStart={onStart}
       />
       {startErrorMessage && (
-        <p className="backfill-error">
+        <ErrorLine>
           {narrowing ? t("backfill.narrowingNote") : startErrorMessage}
-        </p>
+        </ErrorLine>
       )}
       {/* The one button on this panel that is not a Button — a bare <button>
           carrying a class from a sheet this file never imported, so on Settings

@@ -644,7 +644,7 @@ function WebsiteStatusMessage({
       <>
         <Heading size="large">{t("ob.failTitle")}</Heading>
         <p>{t("ob.coreFailedBody")}</p>
-        <p className="mw-error-detail">{error}</p>
+        <ErrorLine>{error}</ErrorLine>
         <button type="button" className="ob-core-link" onClick={onManual}>
           {t("ob.continueManual")}
         </button>

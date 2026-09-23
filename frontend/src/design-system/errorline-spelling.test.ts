@@ -8,26 +8,36 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
   extensionFrontendFiles,
+  extensionLayers,
+  filesMatching,
   filesUnder,
   parseSource,
   sourceFileAt,
 } from "../../scripts/lib/source-tree";
+import { rulesIn } from "../testing/css";
 
 // A failure said on one line under a control has one spelling, and it is
 // `ErrorLine`. A copy drifts on its own — one keeps the ink and loses the
 // announcement, the next the other way round — until a refusal reads like a
-// caption. Five arms, one per shape of the copy:
+// caption. Six arms, one per shape of the copy:
 //
 //   inline  — a JSX `style` object whose `color` is the literal
 //             `var(--dangerText)`.
 //   class   — a `className` on any element whose literal text carries the
 //             `t-danger` or `form-error` token. `field-error` is Field's own
 //             slot and is not this line.
+//   sheet   — a `className` carrying a screen class whose every rule sets
+//             only the danger ink and margins: `.share-error` is `t-danger`
+//             under another name. The list is derived from the screen and
+//             extension sheets, because a named list is a second copy of them
+//             that misses the next one a screen writes. A design-system sheet
+//             owns the ink: its tone classes are a primitive's closed set.
 //   message — an intrinsic element whose only child is one
-//             `{problemMessageOf(…)}`: a failure said outside ErrorLine. A
-//             composite owns its own announcement, so a line inside an
-//             element carrying `role="alert"`, `role="status"` or `aria-live`
-//             is its cause, not a line; the arm reads the one standing alone.
+//             `{problemMessageOf(…)}`: a failure said outside ErrorLine. Only
+//             an alert owns its cause: a line inside an element, intrinsic or
+//             component, carrying a literal `role="alert"` is read out with
+//             it. A status or a polite region inserted with its text is often
+//             never announced, so a cause under one is still a line.
 //   alert   — an intrinsic element carrying `role="alert"` around a LINE:
 //             text and expressions only, no element child. A composite — a
 //             heading, a glyph, a verb inside the region — is another thing.
@@ -82,7 +92,7 @@ function modules(): string[] {
     );
 }
 
-type Arm = "inline" | "class" | "message" | "alert" | "name";
+type Arm = "inline" | "class" | "sheet" | "message" | "alert" | "name";
 
 type Finding = { arm: Arm; line: number; says: string };
 
@@ -137,15 +147,76 @@ function inlineDanger(attribute: ts.JsxAttribute): boolean {
   );
 }
 
+function classTokens(attribute: ts.JsxAttribute): string[] {
+  return attribute.initializer
+    ? fragmentsOf(attribute.initializer).flatMap((fragment) =>
+        fragment.split(/\s+/),
+      )
+    : [];
+}
+
+function tagOf(attribute: ts.JsxAttribute): string {
+  return attribute.parent.parent.tagName.getText();
+}
+
 function dangerClassOn(attribute: ts.JsxAttribute): string | undefined {
-  const tag = attribute.parent.parent.tagName.getText();
-  if (!attribute.initializer) {
-    return undefined;
+  const token = classTokens(attribute).find((name) => dangerClass.test(name));
+  return token ? `<${tagOf(attribute)}> carries the ${token} class` : undefined;
+}
+
+function sheetClassOn(
+  attribute: ts.JsxAttribute,
+  sheetClasses: ReadonlySet<string>,
+): string | undefined {
+  const token = classTokens(attribute).find((name) => sheetClasses.has(name));
+  return token
+    ? `<${tagOf(attribute)}> carries .${token}, a rule that only sets the danger ink`
+    : undefined;
+}
+
+/** A declaration that leaves a line a line: the danger ink, or a margin. */
+function inkOrMargin(declaration: string): boolean {
+  return (
+    /^color:\s*var\(--dangerText\)$/.test(declaration) ||
+    /^margin(-[a-z]+)*:/.test(declaration)
+  );
+}
+
+type Sheet = { where: string; text: string };
+
+const designSystemSheet = /^frontend\/src\/design-system\//;
+
+/**
+ * The classes a sheet spells as the danger line: every rule whose selector is
+ * that class alone sets the danger ink and margins, and nothing else. One rule
+ * that also draws a border or a layout makes the class something else.
+ */
+function dangerOnlyClasses(sheets: readonly Sheet[]): Set<string> {
+  const inked = new Set<string>();
+  const other = new Set<string>();
+  const spelledBy = sheets.filter(
+    ({ where }) => !designSystemSheet.test(where),
+  );
+  for (const rule of spelledBy.flatMap(({ text }) => rulesIn(text))) {
+    if (rule.parents.length > 0) {
+      continue;
+    }
+    const declarations = rule.body
+      .split(";")
+      .map((declaration) => declaration.trim())
+      .filter((declaration) => declaration.length > 0);
+    for (const selector of rule.selector.split(",")) {
+      const alone = /^\.([\w-]+)$/.exec(selector.trim());
+      if (!alone || dangerClass.test(alone[1]) || alone[1] === "field-error") {
+        continue;
+      }
+      const onlyInk =
+        declarations.every(inkOrMargin) &&
+        declarations.some((declaration) => declaration.startsWith("color"));
+      (onlyInk ? inked : other).add(alone[1]);
+    }
   }
-  const token = fragmentsOf(attribute.initializer)
-    .flatMap((fragment) => fragment.split(/\s+/))
-    .find((name) => dangerClass.test(name));
-  return token ? `<${tag}> carries the ${token} class` : undefined;
+  return new Set([...inked].filter((name) => !other.has(name)));
 }
 
 type Opening = ts.JsxOpeningElement | ts.JsxSelfClosingElement;
@@ -157,44 +228,26 @@ function isIntrinsic(element: Opening): boolean {
   );
 }
 
-/**
- * The literal an attribute is set to: `undefined` when the element does not
- * carry it, `null` when it does but the value is computed.
- */
-function literalOf(element: Opening, name: string): string | null | undefined {
-  const attribute = element.attributes.properties.find(
-    (property) =>
-      ts.isJsxAttribute(property) && property.name.getText() === name,
-  );
-  if (!attribute || !ts.isJsxAttribute(attribute)) {
-    return undefined;
-  }
-  const value = attribute.initializer;
-  const literal = value && ts.isJsxExpression(value) ? value.expression : value;
-  return literal !== undefined && ts.isStringLiteralLike(literal)
-    ? literal.text
-    : null;
-}
-
 function carriesAlert(element: Opening): boolean {
-  return literalOf(element, "role") === "alert";
+  return element.attributes.properties.some((property) => {
+    if (!ts.isJsxAttribute(property) || property.name.getText() !== "role") {
+      return false;
+    }
+    const value = property.initializer;
+    const literal =
+      value && ts.isJsxExpression(value) ? value.expression : value;
+    return (
+      literal !== undefined &&
+      ts.isStringLiteralLike(literal) &&
+      literal.text === "alert"
+    );
+  });
 }
 
-/** An element, intrinsic or component, that makes its contents a live region. */
-function announces(element: Opening): boolean {
-  const role = literalOf(element, "role");
-  const live = literalOf(element, "aria-live");
-  return (
-    role === "alert" ||
-    role === "status" ||
-    (live !== undefined && live !== "off")
-  );
-}
-
-/** Whether a JSX element above this one already owns the announcement. */
-function insideAnnouncer(element: ts.JsxElement): boolean {
+/** Whether a JSX element above this one is an alert, which owns its cause. */
+function insideAlert(element: ts.JsxElement): boolean {
   for (let at = element.parent; !ts.isSourceFile(at); at = at.parent) {
-    if (ts.isJsxElement(at) && announces(at.openingElement)) {
+    if (ts.isJsxElement(at) && carriesAlert(at.openingElement)) {
       return true;
     }
   }
@@ -296,6 +349,7 @@ function insideImport(node: ts.Node): boolean {
 function findingsIn(
   source: ts.SourceFile,
   where: string,
+  sheetClasses: ReadonlySet<string> = new Set(),
 ): (Finding & { waiver: Waiver })[] {
   const lines = source.text.split("\n");
   const out: (Finding & { waiver: Waiver })[] = [];
@@ -315,12 +369,16 @@ function findingsIn(
       if (classed) {
         push("class", node, classed);
       }
+      const sheeted = name === "className" && sheetClassOn(node, sheetClasses);
+      if (sheeted) {
+        push("sheet", node, sheeted);
+      }
     }
     if (
       ts.isJsxElement(node) &&
       isIntrinsic(node.openingElement) &&
       saysOnlyAProblem(node, names) &&
-      !insideAnnouncer(node)
+      !insideAlert(node)
     ) {
       push(
         "message",
@@ -360,12 +418,29 @@ function shown(finding: Located): string {
   return `${finding.where}:${finding.line}  ${finding.says} — ${advice}`;
 }
 
+/** Every stylesheet, core and extension tier alike. */
+function sheets(): Sheet[] {
+  return filesMatching(sourceRoot, /\.css$/)
+    .concat(
+      extensionLayers(extensionsRoot).flatMap((layer) =>
+        filesMatching(layer, /\.css$/),
+      ),
+    )
+    .map((path) => ({
+      where: fromRepo(path),
+      text: readFileSync(path, "utf8"),
+    }));
+}
+
 function spellings() {
+  const sheetClasses = dangerOnlyClasses(sheets());
   const all: Located[] = modules().flatMap((where) =>
-    findingsIn(sourceFileAt(join(repoRoot, where)), where).map((finding) => ({
-      where,
-      ...finding,
-    })),
+    findingsIn(sourceFileAt(join(repoRoot, where)), where, sheetClasses).map(
+      (finding) => ({
+        where,
+        ...finding,
+      }),
+    ),
   );
   const open = all.filter((finding) => finding.waiver !== "reasoned");
   const of = (arm: Arm) =>
@@ -373,6 +448,7 @@ function spellings() {
   return {
     inline: of("inline"),
     class: of("class"),
+    sheet: of("sheet"),
     name: of("name"),
     message: of("message"),
     alert: of("alert"),
@@ -385,6 +461,7 @@ describe("a failure line under a control has one spelling", () => {
 
   it("reads a corpus and an owner that are not empty", () => {
     expect(modules().length).toBeGreaterThan(400);
+    expect(sheets().length).toBeGreaterThan(100);
     const home = findingsIn(
       sourceFileAt(join(repoRoot, homeModule)),
       homeModule,
@@ -415,6 +492,13 @@ describe("a failure line under a control has one spelling", () => {
     ).toEqual([]);
   });
 
+  it("finds no screen class that is only the danger ink", () => {
+    expect(
+      found.sheet,
+      "each of these wears a class whose whole rule is the danger ink\n",
+    ).toEqual([]);
+  });
+
   it("finds no problem message said alone outside ErrorLine", () => {
     expect(
       found.message,
@@ -441,10 +525,18 @@ describe("a failure line under a control has one spelling", () => {
   });
 
   describe("the detector", () => {
-    const read = (text: string, where = "frontend/src/screens/x.tsx") =>
-      findingsIn(parseSource(where, text), where).map(
-        ({ arm, says, waiver }) => `${arm} ${waiver}: ${says}`,
-      );
+    const read = (
+      text: string,
+      where = "frontend/src/screens/x.tsx",
+      sheet = "",
+    ) =>
+      findingsIn(
+        parseSource(where, text),
+        where,
+        dangerOnlyClasses([
+          { where: "frontend/src/screens/x.css", text: sheet },
+        ]),
+      ).map(({ arm, says, waiver }) => `${arm} ${waiver}: ${says}`);
 
     it("reads an inline danger colour, and not another colour", () => {
       expect(
@@ -480,6 +572,48 @@ describe("a failure line under a control has one spelling", () => {
       expect(read('<Text className="t-danger">x</Text>')).toEqual([
         "class none: <Text> carries the t-danger class",
       ]);
+    });
+
+    it("reads a class a sheet spells as the danger ink, and not a box", () => {
+      const line = '<p className="t-sub x-error">x</p>';
+      expect(
+        read(
+          line,
+          undefined,
+          ".x-error { color: var(--dangerText); margin-top: 4px; }",
+        ),
+      ).toEqual([
+        "sheet none: <p> carries .x-error, a rule that only sets the danger ink",
+      ]);
+      expect(
+        read(
+          line,
+          undefined,
+          ".x-error { color: var(--dangerText); border: 1px solid; }",
+        ),
+      ).toEqual([]);
+      expect(
+        read(
+          line,
+          undefined,
+          ".x-error { color: var(--dangerText); }\n.x-error { display: flex; }",
+        ),
+      ).toEqual([]);
+      expect(
+        read(line, undefined, ".row > .x-error { color: var(--dangerText); }"),
+      ).toEqual([]);
+      expect(
+        dangerOnlyClasses([
+          {
+            where: "frontend/src/screens/x.css",
+            text: ".t-danger { color: var(--dangerText); }\n.x-gap { margin: 0; }",
+          },
+          {
+            where: "frontend/src/design-system/x.css",
+            text: ".x-danger { color: var(--dangerText); }",
+          },
+        ]),
+      ).toEqual(new Set());
     });
 
     it("does not read Field's slot or a longer class", () => {
@@ -525,19 +659,17 @@ describe("a failure line under a control has one spelling", () => {
       );
     });
 
-    it("does not read a cause under a composite's own announcement", () => {
+    it("does not read a cause under an alert, and reads it under anything else", () => {
       const cause = "<p>{problemMessageOf(e, t)}</p>";
+      const said = "message none: <p> says a failure message outside ErrorLine";
       expect(read(`<div role="alert"><h3>Failed</h3>${cause}</div>`)).toEqual(
         [],
       );
-      expect(read(`<Card role="status"><p>x</p>${cause}</Card>`)).toEqual([]);
-      expect(read(`<div aria-live="polite">${cause}</div>`)).toEqual([]);
-      expect(read(`<div><h3>Failed</h3>${cause}</div>`)).toEqual([
-        "message none: <p> says a failure message outside ErrorLine",
-      ]);
-      expect(read(`<div aria-live="off">${cause}</div>`)).toEqual([
-        "message none: <p> says a failure message outside ErrorLine",
-      ]);
+      expect(read(`<Card role="status">${cause}</Card>`)).toEqual([said]);
+      expect(
+        read(`<div aria-live="polite"><AssistantBubble />${cause}</div>`),
+      ).toEqual([said]);
+      expect(read(`<div><h3>Failed</h3>${cause}</div>`)).toEqual([said]);
     });
 
     it("reads an alerting line, however the role and the words are written", () => {

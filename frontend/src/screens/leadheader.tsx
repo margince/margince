@@ -12,6 +12,7 @@ import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
 import { ContactLink } from "../design-system/contactlink";
+import { ErrorLine } from "../design-system/errorline";
 import { IdentityLine } from "../design-system/identityline";
 import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { Select } from "../design-system/select";
@@ -132,7 +133,7 @@ function AssigneePicker({
   if (roster.isError) {
     return (
       <div className="lead-line">
-        <span className="share-error">{t("share.rosterErrorUsers")}</span>
+        <ErrorLine inline>{t("share.rosterErrorUsers")}</ErrorLine>
         <Button onClick={() => roster.refetch()}>{t("common.retry")}</Button>
       </div>
     );

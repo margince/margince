@@ -23,6 +23,7 @@ import {
   Textarea,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { formatDate, formatNumber, identifierNumber } from "../format/format";
@@ -365,13 +366,13 @@ function RosterPicker({
   if (usersQuery.isError || teamsQuery.isError) {
     return (
       <div data-testid="share-roster-error">
-        <p className="share-error">
+        <ErrorLine>
           {usersQuery.isError && teamsQuery.isError
             ? t("share.rosterErrorBoth")
             : usersQuery.isError
               ? t("share.rosterErrorUsers")
               : t("share.rosterErrorTeams")}
-        </p>
+        </ErrorLine>
         <Button
           style={{ marginTop: "var(--space-2)" }}
           onClick={() => {
@@ -832,9 +833,7 @@ function ShareScreenBody({
             </p>
           )}
 
-          {grantErrorMessage && (
-            <p className="share-error">{grantErrorMessage}</p>
-          )}
+          {grantErrorMessage && <ErrorLine>{grantErrorMessage}</ErrorLine>}
         </PanelBody>
       </Panel>
 

@@ -119,11 +119,6 @@
   flex-wrap: wrap;
 }
 
-.share-error {
-  color: var(--dangerText);
-  margin-top: 8px;
-}
-
 .share-reason {
   width: 100%;
   resize: vertical;

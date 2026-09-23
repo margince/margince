@@ -41,10 +41,9 @@ const PERMANENT_FAILURE_BODY: Record<string, MessageKey | undefined> = {
 // The honest-failure banner the connect panels share.
 function ConnectWarn({ title, body }: { title: string; body: string }) {
   return (
-    // The measure and the centring belong to the stylesheet with the rest of
-    // the banner: as an inline `margin` shorthand they also reset the top
-    // margin the banner declares for itself, so the one block on the surface
-    // that says something went wrong was the one with nothing above it.
+    // The measure and the centring belong to the stylesheet: an inline `margin`
+    // shorthand also resets the banner's own top margin, leaving the one block
+    // that says something went wrong with nothing above it.
     <div className="readfail warning ob-connect-warning">
       <span className="rfi">
         <Circle aria-hidden />

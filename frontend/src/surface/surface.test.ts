@@ -49,8 +49,8 @@ describe("the published frontend surface", () => {
       // server-backed dials a caller owes state to.
       "DataTable",
       "EmptyState",
-      // ErrorLine: a unit saying a write failed had only a bare `<p>`, with no
-      // danger ink and no announcement. See the note beside its export.
+      // ErrorLine: a unit saying a write failed has otherwise only a bare `<p>`,
+      // with no danger ink and no announcement. See the note beside its export.
       "ErrorLine",
       // FactList: a unit screen had no other way to draw a label→value pair,
       // because no extension ships a stylesheet — so both connector screens

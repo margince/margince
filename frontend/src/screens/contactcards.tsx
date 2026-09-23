@@ -372,6 +372,7 @@ function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
     const { days, late } = daysPast(dueMs, nowMs);
     if (late) {
       return (
+        // ds:ignore an overdue marker in the danger ink, not a message
         <span className="pe-loop-due pe-loop-overdue">
           {days > 0
             ? plural("contact.loops.overdue", days, {

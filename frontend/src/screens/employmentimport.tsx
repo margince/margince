@@ -86,6 +86,7 @@ export function ImportedEmploymentHistory({
   }
   return (
     <div className="form-stack">
+      {/* A read's warnings are a fact of that read, not news. */}
       {reading.data?.warnings?.map((warning) => (
         <ErrorLine standing key={warning}>
           {warning}

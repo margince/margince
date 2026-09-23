@@ -364,6 +364,7 @@ export function RestrictedRecordsCard() {
                     <Button type="submit" disabled={!pinIdIsWellFormed}>
                       {t("restricted.pin.submit")}
                     </Button>
+                    {/* Re-announced on each keystroke, it would drown the field being typed. */}
                     {pinIdIsMalformed && (
                       <ErrorLine id={pinErrorId} standing>
                         {t("restricted.pin.idMalformed")}

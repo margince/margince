@@ -46,9 +46,3 @@
    * otherwise nudge the row on each edit. */
   font-variant-numeric: tabular-nums;
 }
-
-/* Asked and refused. The reason and the retry are in the results card, the only
- * row wide enough for both. */
-.filters-count-failed {
-  color: var(--dangerText);
-}

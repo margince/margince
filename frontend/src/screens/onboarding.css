@@ -882,9 +882,6 @@
   background: var(--ai);
   animation: ob-core-live 1.4s ease-in-out infinite;
 }
-.mw-error-detail {
-  color: var(--dangerText);
-}
 .mw-citations {
   display: flex;
   flex-wrap: wrap;
