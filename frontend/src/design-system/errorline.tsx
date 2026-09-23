@@ -35,10 +35,9 @@ export function ErrorLine({
   standing,
 }: ErrorLineProps) {
   const t = useT();
-  const message =
-    error === undefined || error === null
-      ? children
-      : problemMessageOf(error, t);
+  // A `false` error is a guard's short-circuit (`isError && error`), not a failure.
+  const absent = error === undefined || error === null || error === false;
+  const message = absent ? children : problemMessageOf(error, t);
   if (message === undefined || message === null || message === false) {
     return null;
   }

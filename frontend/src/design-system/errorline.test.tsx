@@ -27,6 +27,11 @@ describe("ErrorLine", () => {
     expect(container.innerHTML).toBe("");
   });
 
+  it("draws nothing for a guard's false, so `isError && error` goes in straight", () => {
+    const { container } = inEnglish(<ErrorLine error={false} />);
+    expect(container.innerHTML).toBe("");
+  });
+
   it("announces a thrown problem in the reader's words, in the danger ink", () => {
     inEnglish(
       <ErrorLine error={new ProblemError({ detail: "email taken" })} />,
