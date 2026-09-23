@@ -198,13 +198,18 @@ func between(src, from, to string) string {
 	return rest
 }
 
-// sortedKeys is the set's keys in a stable order.
+// sortedKeys is a map's keys in a stable order.
 //
-// It really does sort now. Both callers put the result in a FAILURE MESSAGE,
-// and map iteration order is randomised per run — so the same finding read
-// differently every time, which is how somebody comparing two runs concludes
-// the tree moved when only the map did.
-func sortedKeys(set map[string]bool) []string {
+// Every caller puts the result in a FAILURE MESSAGE, and Go randomises map
+// iteration per run — so without this the same finding reads differently every
+// time, and somebody comparing two runs of one tree concludes the tree moved
+// when only the map did.
+//
+// Generic in the VALUE because the callers disagree about it and agree about
+// this: a set of names, a name→route mapping, a name→version pin. One helper
+// rather than one per value type, so a caller with a new one reaches for this
+// instead of adding a fourth spelling of "sort a map's keys".
+func sortedKeys[V any](set map[string]V) []string {
 	out := make([]string, 0, len(set))
 	for k := range set {
 		out = append(out, k)

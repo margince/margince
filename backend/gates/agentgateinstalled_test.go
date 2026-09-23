@@ -23,8 +23,12 @@ package gates
 //
 // That is the shape of a single point of failure with no alarm on it, which is
 // what this test is. It asserts the wiring and nothing else — whether the gate
-// then decides correctly is agentgateredeem_test.go's subject, and what the
-// table contains is held by `make drift` regenerating it from the contract.
+// then decides correctly is agentgateredeem_test.go's subject, and that the
+// table carries every operation the contract annotates is
+// humanonlyenforcement_test.go's. Not `make drift`, which regenerates the table
+// and diffs it: that proves the committed file is current, and a generator that
+// stopped carrying the annotation would emit a smaller table the diff would
+// accept.
 //
 // The session middleware one file over has belowtheauthgate_test.go asking the
 // same shape of question about the same file. Two gates rather than one because
