@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { EmptyState } from "../design-system/atoms";
 import {
@@ -7,6 +8,7 @@ import {
   type MarkdownHighlightOutcome,
 } from "../design-system/markdown";
 import { useT } from "../i18n";
+import { throwProblem } from "./common";
 
 // The document half of the ask dialog: the file a citation points at, with the
 // quoted passage marked in it.
@@ -18,21 +20,23 @@ import { useT } from "../i18n";
 
 type Claim = components["schemas"]["KnowledgeClaim"];
 
-// The document's own bytes, as the answer's citation points at them. Fetched
-// through the browser rather than the generated client because the endpoint
-// serves a FILE — the client decodes JSON, and a markdown page is not.
+// The document's own bytes, as the answer's citation points at them.
 function useDocumentText(documentId: string | undefined) {
   return useQuery({
     enabled: documentId !== undefined,
     queryKey: ["knowledge-document-text", documentId],
     queryFn: async () => {
-      const answer = await fetch(`/v1/knowledge/documents/${documentId}`, {
-        credentials: "same-origin",
+      const { data, error } = await api.GET("/knowledge/documents/{id}", {
+        params: { path: { id: documentId ?? "" } },
+        // The body is the document, not a document to parse: this endpoint
+        // serves the file's own bytes, and JSON.parse over a markdown page
+        // would throw on the first heading.
+        parseAs: "text",
       });
-      if (!answer.ok) {
-        throw new Error(String(answer.status));
+      if (error !== undefined || data === undefined) {
+        throwProblem(error);
       }
-      return answer.text();
+      return data;
     },
   });
 }

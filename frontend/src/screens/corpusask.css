@@ -97,8 +97,8 @@
   background: var(--aiLight);
   border: 1px solid var(--aiMed);
   border-radius: var(--r-sm);
-  padding: 2px 5px;
-  margin-inline: 2px;
+  padding: 2px 5px; /* ds:ignore a citation interrupts a SENTENCE, so its box is sized to the line and not to the layout scale — the smallest step, 4px, makes the marker taller than the text it sits in and opens the line */
+  margin-inline: 2px; /* ds:ignore optical against the word before it, not a spacing relationship between two blocks */
   cursor: pointer;
   vertical-align: 2px;
 }
