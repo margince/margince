@@ -533,7 +533,6 @@ export const en = {
   "palette.aria": "Command palette",
   "palette.placeholder": "Find everything or get answers from Margince",
   "palette.empty": "No matches.",
-  "palette.askAi": "Ask AI: \u201c{query}\u201d",
   "palette.typeScreen": "Screen",
   "palette.typeAction": "Action",
   "palette.typeRecord": "Record",
@@ -7173,8 +7172,8 @@ export const en = {
   "corpusAsk.whichSet": "Which set",
   "corpusAsk.question": "Your question",
   "corpusAsk.submit": "Ask",
-  "corpusAsk.byModel": "Written from the passages below",
-  "corpusAsk.byPassages": "The passages themselves — nobody wrote a summary",
+  "corpusAsk.byModel": "Written by Margince from your documents",
+  "corpusAsk.byPassages": "The passages themselves — nobody wrote an answer",
   "corpusAsk.notReady":
     "This set is not finished being read yet — {embedded} of {total} passages are searchable. Nothing is wrong with your question; try again shortly.",
   "corpusAsk.retrievalUnavailable":

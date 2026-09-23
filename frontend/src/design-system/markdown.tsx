@@ -10,6 +10,7 @@ import {
   type Inline,
   type MarkdownHighlight,
   type MarkdownHighlightOutcome,
+  parseInline,
   type Run,
   readMarkdown,
 } from "./markdown-parse";
@@ -57,6 +58,31 @@ export type { MarkdownHighlight, MarkdownHighlightOutcome };
  * has to be told, and a viewer that silently showed an unmarked document would
  * read as one where the citation was simply wrong.
  */
+/**
+ * One line of markdown, rendered inline: bold, italic, code and links, with no
+ * block of its own.
+ *
+ * It exists because a written ANSWER is markdown too. The model that quotes a
+ * handbook writes in the handbook's idiom, so its sentence arrives carrying
+ * "**Settings → Data model → Pipelines**" — which, printed as text, shows a
+ * reader the asterisks and tells them the product cannot read its own writer.
+ * Same parser and same renderer as the document beside it, so the two cannot
+ * come to disagree about what a star means, and same closed element list, so a
+ * sentence is no more able to inject markup than a document is.
+ */
+export function InlineMarkdown({ text }: Readonly<{ text: string }>) {
+  return (
+    <>
+      {parseInline(text).map((node, at) => (
+        // The index IS the identity: these are the nodes of one immutable
+        // sentence, in order, and nothing reorders or removes one.
+        // biome-ignore lint/suspicious/noArrayIndexKey: positional by nature
+        <Fragment key={at}>{renderInline(node)}</Fragment>
+      ))}
+    </>
+  );
+}
+
 export function Markdown({
   source,
   highlight,

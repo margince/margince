@@ -20,6 +20,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
+import { InlineMarkdown } from "../design-system/markdown";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -374,7 +375,9 @@ function Summary({
     if (found.index === undefined) {
       continue;
     }
-    parts.push(summary.slice(cut, found.index));
+    parts.push(
+      <InlineMarkdown key={`t${cut}`} text={summary.slice(cut, found.index)} />,
+    );
     cut = found.index + found[0].length;
     if (claim) {
       parts.push(
@@ -388,7 +391,7 @@ function Summary({
       );
     }
   }
-  parts.push(summary.slice(cut));
+  parts.push(<InlineMarkdown key={`t${cut}`} text={summary.slice(cut)} />);
   return <>{parts}</>;
 }
 

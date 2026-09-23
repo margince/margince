@@ -303,7 +303,7 @@ const STRONG = /^(\*\*|__)([\s\S]+?)\1/;
 const EM = /^([*_])([^\s*_][\s\S]*?)\1/;
 const ESCAPABLE = /^[\\`*_{}[\]()#+\-.!|>~]$/;
 
-function parseInline(text: string): Inline[] {
+export function parseInline(text: string): Inline[] {
   const nodes: Inline[] = [];
   let plain = "";
   const flush = (): void => {

@@ -519,7 +519,6 @@ export const de = {
   "palette.aria": "Befehlspalette",
   "palette.placeholder": "Alles finden oder Antworten aus Margince erhalten",
   "palette.empty": "Keine Treffer.",
-  "palette.askAi": "KI fragen: „{query}“",
   "palette.typeScreen": "Ansicht",
   "palette.typeAction": "Aktion",
   "palette.typeRecord": "Datensatz",
@@ -6958,9 +6957,9 @@ export const de = {
   "corpusAsk.whichSet": "Welche Sammlung",
   "corpusAsk.question": "Deine Frage",
   "corpusAsk.submit": "Fragen",
-  "corpusAsk.byModel": "Aus den Textstellen unten geschrieben",
+  "corpusAsk.byModel": "Von Margince aus deinen Dokumenten geschrieben",
   "corpusAsk.byPassages":
-    "Die Textstellen selbst — niemand hat eine Zusammenfassung geschrieben",
+    "Die Passagen selbst — niemand hat eine Antwort geschrieben",
   "corpusAsk.notReady":
     "Diese Sammlung ist noch nicht fertig eingelesen: {embedded} von {total} Abschnitten sind durchsuchbar. An deiner Frage liegt es nicht; versuche es gleich noch einmal.",
   "corpusAsk.retrievalUnavailable":

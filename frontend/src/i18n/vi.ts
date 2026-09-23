@@ -525,7 +525,6 @@ export const vi = {
   "palette.aria": "Bảng lệnh",
   "palette.placeholder": "Tìm mọi thứ hoặc nhận câu trả lời từ Margince",
   "palette.empty": "Không có kết quả.",
-  "palette.askAi": "Hỏi AI: “{query}”",
   "palette.typeScreen": "Màn hình",
   "palette.typeAction": "Hành động",
   "palette.typeRecord": "Bản ghi",
@@ -6890,8 +6889,8 @@ export const vi = {
   "corpusAsk.whichSet": "Bộ nào",
   "corpusAsk.question": "Câu hỏi của bạn",
   "corpusAsk.submit": "Hỏi",
-  "corpusAsk.byModel": "Được viết từ các đoạn bên dưới",
-  "corpusAsk.byPassages": "Chính các đoạn văn — không ai viết bản tóm tắt",
+  "corpusAsk.byModel": "Margince viết từ tài liệu của bạn",
+  "corpusAsk.byPassages": "Chính các đoạn trích — không ai viết câu trả lời",
   "corpusAsk.notReady":
     "Bộ này chưa đọc xong — {embedded} trên {total} đoạn có thể tìm kiếm. Câu hỏi của bạn không có gì sai; hãy thử lại sau ít phút.",
   "corpusAsk.retrievalUnavailable":
