@@ -474,3 +474,99 @@ func TestErasingTheLiveRecordAlsoClearsAnArchivedDuplicatesBinding(t *testing.T)
 		t.Error("the erased account is not suppressed")
 	}
 }
+
+// A Telegram original whose activity is OPEN hands back its payload, and one
+// whose activity is held does not.
+//
+// This is the case that separates the two keys. raw_capture stores Telegram's
+// REDELIVERY key (`bot:update_id`) while the activity read from it carries
+// `bot:chat_id:message_id`, so a correlation on (source_system, source_id)
+// matched neither way round and every Telegram payload was withheld — the
+// subject's own open chat, on the surface that exists to hand it to them. Mail
+// is the case where the two keys agree, which is exactly why a mail-shaped test
+// could not see this.
+func TestSARDisclosesAnOpenTelegramPayloadAndWithholdsAHeldOne(t *testing.T) {
+	e := integration.Setup(t)
+	subject := e.SeedContact(t, "Nadia Open-Chat", nil)
+	seedChannelIdentity(t, e, subject, "40404", "nadia")
+
+	open := seedLinkedTelegramMessage(t, e, "tg-open", 11, "40404", "open message", "workspace")
+	held := seedLinkedTelegramMessage(t, e, "tg-held", 12, "40404", "held message", "participants")
+
+	payloads := sarPayloadsBySourceID(t, e, subject)
+	if payloads[open] == nil {
+		t.Error("the subject's OWN open Telegram message was withheld from their export: " +
+			"the raw original and the activity read from it were correlated on two keys that " +
+			"mean different things, so they never matched")
+	}
+	if payloads[held] != nil {
+		t.Error("a held Telegram message's provider original was handed over: the payload carries " +
+			"the full text whatever the activity row discloses, so an original whose activity is " +
+			"limited has not been released")
+	}
+}
+
+// An original that produced BOTH an open activity and a held one is withheld.
+//
+// The payload is the provider's, not an activity's: it carries the full text
+// and every header regardless of what any one row says. Disclosing on "some
+// activity from this original is open" would hand over the held one's content
+// along with it, which is the disclosure the positive test was written to
+// avoid and not one it could see while the keys never matched.
+func TestSARWithholdsAnOriginalWhoseSiblingActivityIsHeld(t *testing.T) {
+	e := integration.Setup(t)
+	subject := e.SeedContact(t, "Nadia Mixed", nil)
+	seedChannelIdentity(t, e, subject, "40404", "nadia")
+
+	mixed := seedLinkedTelegramMessage(t, e, "tg-mixed", 13, "40404", "first half", "workspace")
+	// A SECOND activity read from the same original, held.
+	e.WsExec(t, `
+		INSERT INTO activity (kind, channel_provider, subject, body, direction, source_system, source_id, source,
+		                      captured_by, audience, audience_reason, raw_capture_id)
+		SELECT 'message', 'telegram', 'second half', 'second half', 'inbound', 'telegram', $1, 'telegram:'||$1,
+		       'connector:telegram', 'participants', 'pending_verdict', rc.id
+		  FROM raw_capture rc WHERE rc.source_system = 'telegram' AND rc.source_id = $2`,
+		"tg-mixed-sibling", mixed)
+
+	if payloads := sarPayloadsBySourceID(t, e, subject); payloads[mixed] != nil {
+		t.Error("an original that produced a held activity as well as an open one was handed over " +
+			"in full — the held one's content went with it")
+	}
+}
+
+// seedLinkedTelegramMessage plants one Telegram original AND the activity read
+// from it, linked the way the sink links them, and answers the original's
+// source_id.
+//
+// The two carry DIFFERENT source_ids on purpose: that is what production does,
+// and a fixture that gave them the same one would agree with the correlation
+// this test exists to refuse.
+func seedLinkedTelegramMessage(t *testing.T, e *integration.Env, rawSourceID string, messageID int64, senderID, text, audience string) string {
+	t.Helper()
+	seedTelegramMessageRaw(t, e, rawSourceID, messageID, senderID, text)
+	e.WsExec(t, `
+		INSERT INTO activity (kind, channel_provider, subject, body, direction, source_system, source_id, source,
+		                      captured_by, audience, audience_reason, raw_capture_id)
+		SELECT 'message', 'telegram', $3::text, $3::text, 'inbound', 'telegram',
+		       'bot:555:'||$2::bigint::text, 'telegram:bot:555:'||$2::bigint::text,
+		       'connector:telegram', $4::text, 'pending_verdict', rc.id
+		  FROM raw_capture rc WHERE rc.source_system = 'telegram' AND rc.source_id = $1`,
+		rawSourceID, messageID, text, audience)
+	return rawSourceID
+}
+
+// sarPayloadsBySourceID assembles the subject's export and indexes the raw
+// section by the original's source_id, so a case can ask what was handed back
+// for one row without unpacking the whole package.
+func sarPayloadsBySourceID(t *testing.T, e *integration.Env, subject ids.UUID) map[string]any {
+	t.Helper()
+	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), integration.ContactIDOf(subject))
+	if err != nil {
+		t.Fatalf("AssembleSAR: %v", err)
+	}
+	out := map[string]any{}
+	for _, row := range pkg.RawCapture {
+		out[row["source_id"].(string)] = row["payload"]
+	}
+	return out
+}

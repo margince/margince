@@ -183,6 +183,24 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 	}
 }
 
+// sarRawCaptureLink correlates one raw_capture row to the activities read from
+// it, and is spelled once because the clause below asks it four times — twice
+// to decide disclosure and twice to withhold the payload on the same answer.
+// Four copies of a disclosure predicate is four chances for one of them to
+// drift, on the surface where a drift is a disclosure.
+//
+// The link column first, the natural key only where there is no link: the two
+// mean different things for every provider but mail, and reading the key on a
+// linked row would judge it by a redelivery id.
+//
+// Held by: TestTheSARRawCaptureCorrelationIsSpelledOnce
+// (backend/gates/sarrawcapturelink_test.go), which cuts this declaration out
+// of the file and fails on anything left that still correlates the two tables.
+const sarRawCaptureLink = `(a.raw_capture_id = rc.id
+		         OR (a.raw_capture_id IS NULL
+		             AND a.source_system = rc.source_system
+		             AND a.source_id = rc.source_id))`
+
 // sarConsentSections gather the per-purpose consent state and the proof log
 // behind it — what the subject agreed to, and every change of mind on record.
 func sarConsentSections(pkg *SARPackage) []sarSection {
@@ -340,30 +358,44 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// surviving row to speak for it would be disclosed in full. Absence is
 		// not consent: an original nothing vouches for stays withheld.
 		//
-		// The join key is exact for MAIL and only for mail. capture/sinkraw.go
-		// stores the original under rec.NaturalKey.SourceID — the same key the
-		// activity row carries — so an email's original and its activity always
-		// correlate. Telegram does not: capture.InsertRawCaptureTx stores
-		// `bot:update_id` (the provider's redelivery key) while the activity's
-		// natural key is `bot:chat_id:message_id`, so the two never match and a
-		// Telegram original is withheld here whatever its activity says.
+		// The correlation is activity.raw_capture_id, the column the activity
+		// writer stamps with the original it was read from.
 		//
-		// Withholding is the right side to be wrong on, and it is not the end of
-		// the subject's Art. 15 access: the row is still listed, the Activities
-		// section above carries the message itself under its own audience test,
-		// and a release names the mailbox to ask. Disclosing instead would hand
-		// over an entire chat because two keys happened not to match. Making
-		// them correlate is a change to what Telegram stores, not a predicate to
-		// widen here.
+		// It replaces a (source_system, source_id) join that was exact for MAIL
+		// and only for mail. capture/sinkraw.go stores an email's original
+		// under rec.NaturalKey.SourceID — the same key the activity carries —
+		// so the two always correlated. Telegram never did:
+		// capture.InsertRawCaptureTx stores `bot:update_id`, the provider's
+		// REDELIVERY key, while the activity's natural key is
+		// `bot:chat_id:message_id`. Two different things, documented as two
+		// different things, and so a Telegram original was withheld here
+		// whatever its activity said — every open chat in the workspace,
+		// falsely, on a surface whose whole job is to hand the subject what is
+		// held about them.
+		//
+		// The key arm stays for rows written before the column existed, where
+		// it is still the only answer available and still exact for the mail it
+		// was exact for. It is read only when raw_capture_id IS NULL, so a
+		// linked row cannot be judged by a key that means something else.
+		//
+		// EVERY linked activity must be open, not merely one. The payload is
+		// the provider original: it carries the full text and every header
+		// regardless of what any one activity row discloses, so an original
+		// that produced both an open message and a held one is an original
+		// whose content the held one has not released. The positive EXISTS
+		// stays beside that — absence is not consent, and an original with no
+		// surviving activity to speak for it reads as permission under a bare
+		// NOT EXISTS.
 		{&pkg.RawCapture, `SELECT rc.source_system, rc.source_id, rc.received_at,
-		       EXISTS (SELECT 1 FROM activity a
-		                WHERE a.source_system = rc.source_system
-		                  AND a.source_id = rc.source_id
-		                  AND a.audience = 'workspace') AS content_disclosed,
+		       (EXISTS (SELECT 1 FROM activity a
+		                 WHERE ` + sarRawCaptureLink + ` AND a.audience = 'workspace')
+		        AND NOT EXISTS (SELECT 1 FROM activity a
+		                         WHERE ` + sarRawCaptureLink + ` AND a.audience <> 'workspace')
+		       ) AS content_disclosed,
 		       CASE WHEN EXISTS (SELECT 1 FROM activity a
-		                          WHERE a.source_system = rc.source_system
-		                            AND a.source_id = rc.source_id
-		                            AND a.audience = 'workspace')
+		                          WHERE ` + sarRawCaptureLink + ` AND a.audience = 'workspace')
+		             AND NOT EXISTS (SELECT 1 FROM activity a
+		                              WHERE ` + sarRawCaptureLink + ` AND a.audience <> 'workspace')
 		            THEN rc.payload END AS payload
 		   FROM raw_capture rc
 		   WHERE EXISTS (SELECT 1 FROM contact_email pe WHERE pe.contact_id = $1
