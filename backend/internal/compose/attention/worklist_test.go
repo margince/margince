@@ -230,14 +230,14 @@ func TestTheMiddleOfTheDayReachesAFigure(t *testing.T) {
 }
 
 // A lane the reader may not see is NAMED, so a clear-looking day cannot be a
-// day nobody looked at. The DSR lane is the one exception: it is withheld by
-// role from every rep permanently, and saying so on every page forever would
-// drown the warning this list exists to give.
-func TestAWithheldLaneIsNamedButTheRoleWithheldPrivacyLaneIsNot(t *testing.T) {
-	omitted := []crmcontracts.AttentionLanesOmitted{"capture_health", "dsr"}
+// day nobody looked at. The two privacy lanes are the exception for a seat
+// holding no privacy_request grant: they are withheld from it permanently, and
+// saying so on every page forever would drown the warning this list gives.
+func TestAWithheldLaneIsNamedButTheRoleWithheldPrivacyLanesAreNot(t *testing.T) {
+	omitted := []crmcontracts.AttentionLanesOmitted{"capture_health", laneDSR, laneNoticeCase}
 	day := crmcontracts.Attention{AsOf: rankInstant, LanesOmitted: &omitted}
 
-	got := unavailable(day)
+	got := unavailable(pageReader(), day)
 
 	if len(got) != 1 {
 		t.Fatalf("named %d sources, wanted only the mailbox one", len(got))
@@ -250,7 +250,7 @@ func TestAWithheldLaneIsNamedButTheRoleWithheldPrivacyLaneIsNot(t *testing.T) {
 // A day with nothing withheld says nothing was withheld — as an empty list, not
 // a null a client has to guess about.
 func TestADayWithNothingWithheldNamesNothing(t *testing.T) {
-	got := unavailable(crmcontracts.Attention{AsOf: rankInstant})
+	got := unavailable(pageReader(), crmcontracts.Attention{AsOf: rankInstant})
 
 	if got == nil {
 		t.Fatal("sent null where the contract promised a list")
