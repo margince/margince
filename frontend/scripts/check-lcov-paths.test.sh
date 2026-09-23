@@ -90,6 +90,21 @@ expect_refusal "a report holding no frontend/src file" \
   "$(write_report tooling-only.info "frontend/vite.config.ts")" \
   "no record under frontend/src"
 
+# A suite measuring ITSELF. Every path resolves and every one sits under a
+# product tree, so the arm that names those trees would count them — while the
+# scanner files them as tests and receives no product coverage. It is the same
+# defect as the tooling-only case arriving through the tree the check trusts.
+expect_refusal "a report holding only test files" \
+  "$(write_report tests-only.info \
+    "frontend/src/screens/contactprovider.test.tsx" \
+    "extensions/openchannel/frontend/screen.test.tsx")" \
+  "no record under frontend/src"
+
+# The unit tier's product screens, which is what that lane is for. Named here so
+# the case above cannot be satisfied by refusing everything under extensions/.
+expect_accepted "a report holding a unit's product screen" \
+  "$(write_report unit-product.info "extensions/openchannel/frontend/endpointcard.tsx")"
+
 # An empty report is what a failed instrumentation run leaves behind, and it is
 # indistinguishable downstream from a suite that covers nothing.
 : >"$TMP/empty.info"
@@ -105,4 +120,4 @@ if [[ "$FAILURES" -ne 0 ]]; then
   exit 1
 fi
 
-echo "PASS — check-lcov-paths.sh holds on all 7 cases"
+echo "PASS — check-lcov-paths.sh holds on all 9 cases"
