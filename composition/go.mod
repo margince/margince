@@ -8,7 +8,7 @@
 // appears, instead of silently resolving unverified.
 module github.com/margince/margince/composition
 
-go 1.27.0
+go 1.27.1
 
 require github.com/margince/margince/backend v0.0.0
 
