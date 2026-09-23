@@ -62,15 +62,33 @@ func buriedDocument(text string) (string, bool) {
 	return best, best != ""
 }
 
-// candidateDocuments answers every DISTINCT valid JSON document buried in text.
+// candidateDocuments answers every DISTINCT valid JSON document buried in text,
+// whether fenced or floating in a sentence.
 //
 // Distinct, because the two scans overlap by design: a fenced block and the
 // braced span inside it are one document found twice, and counting it twice
-// makes an unambiguous reply look ambiguous to SoleDocument.
+// makes an unambiguous reply look ambiguous to a caller counting candidates.
 func candidateDocuments(text string) []string {
+	return validDocuments(append(fencedBlocks(text), bracedSpans(text)...))
+}
+
+// fencedDocuments answers the distinct valid JSON documents text FENCES, and
+// ignores any floating in prose.
+//
+// The narrower scan, for SoleDocument. A fence is the model emitting its
+// answer; a brace span in a sentence is the model quoting something — and on a
+// channel that executes what it reads, those two cannot be treated alike.
+func fencedDocuments(text string) []string {
+	return validDocuments(fencedBlocks(text))
+}
+
+// validDocuments filters candidate spans to the distinct ones that are JSON,
+// so both scans above agree on what counts as a document rather than each
+// deciding.
+func validDocuments(candidates []string) []string {
 	var out []string
 	seen := map[string]bool{}
-	for _, candidate := range append(fencedBlocks(text), bracedSpans(text)...) {
+	for _, candidate := range candidates {
 		candidate = strings.TrimSpace(candidate)
 		if seen[candidate] || !json.Valid([]byte(candidate)) {
 			continue
@@ -97,14 +115,22 @@ func candidateDocuments(text string) []string {
 // Ambiguity therefore REFUSES rather than guesses. The caller has a re-ask path
 // and an invalid-step limit; neither is as expensive as running a tool call the
 // model declined to make.
+//
+// And counting candidates is not enough on its own, because the attacker does
+// not need two. A model refusing correctly quotes the instruction and emits no
+// step of its own, which leaves the INJECTED object as the SOLE candidate —
+// "the only document in the reply" is then the one thing the model declined to
+// do. So prose is not a channel this reads a document out of at all: the reply
+// is either a document itself, or it FENCES one. An inline brace span is a
+// quotation, and is left where it lies.
 func SoleDocument(text string) string {
 	raw := strings.TrimSpace(text)
 	trimmed := strings.Trim(strings.TrimPrefix(raw, "```json"), "` \n")
 	if json.Valid([]byte(trimmed)) {
 		return trimmed
 	}
-	if candidates := candidateDocuments(raw); len(candidates) == 1 {
-		return candidates[0]
+	if fenced := fencedDocuments(raw); len(fenced) == 1 {
+		return fenced[0]
 	}
 	return trimmed
 }
