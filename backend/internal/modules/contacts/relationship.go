@@ -42,7 +42,7 @@ func relationshipAnchor(kind string) (object, column string) {
 	switch kind {
 	case employmentKind, worksWithKind:
 		return anchorContact, "contact_id"
-	case "deal_stakeholder":
+	case dealStakeholderKind:
 		return anchorDeal, "deal_id"
 	case ProjectStakeholderKind, ProjectCompanyKind:
 		return projectObjectName, "project_id"
@@ -165,10 +165,18 @@ func ensureRelationshipAnchorWritable(
 // an anchor whatever the kind, and stating it per-kind is what let
 // project_stakeholder through the same door this paragraph closed.
 var relationshipKinds = map[string]bool{
-	employmentKind: true, "deal_stakeholder": true, ProjectStakeholderKind: true,
+	employmentKind: true, dealStakeholderKind: true, ProjectStakeholderKind: true,
 	"partner_of": true, "referred_by": true, "co_sell_with": true,
 	worksWithKind: true, BillingContactKind: true,
 }
+
+// dealStakeholderKind is the seat a contact holds on a deal.
+//
+// Named like its five siblings rather than spelled as a literal at each site:
+// four of them already carry a constant, and the one that did not was the one
+// the shape table pushed past goconst's threshold. A vocabulary half in
+// constants and half in literals is one a rename can miss.
+const dealStakeholderKind = "deal_stakeholder"
 
 // worksWithKind is the one contact↔contact kind: two external contacts a rep
 // asserts work together. Undirected in fact — contact_id and
