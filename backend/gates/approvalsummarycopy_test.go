@@ -41,7 +41,7 @@ package gates
 // outside internal/; and anything more than approvalSummaryHops hops away.
 // Nor a field another module fills and compose forwards: the selector reads as
 // forwarded, so the writing module's own census holds that sentence (deals:
-// TestEveryShippedLanguageWritesItsOwnSentences).
+// TestEveryShippedLanguageWritesItsOwnDealSentences).
 
 import (
 	"fmt"
