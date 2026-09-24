@@ -89,7 +89,7 @@ describe("WorkingHoursCard", () => {
     // The sentence is the whole difference between "nobody has chosen" and
     // "somebody chose this": a reader who cannot tell them apart does not know
     // whether the hours below are theirs.
-    expect(await screen.findByText(/have not chosen yet/i)).not.toBeNull();
+    expect(await screen.findByText(/Not set yet/i)).not.toBeNull();
   });
 
   // A body that LOST the reading. The field is contract-required, so this is a
@@ -108,7 +108,7 @@ describe("WorkingHoursCard", () => {
     );
     render(<WorkingHoursCard />);
 
-    expect(await screen.findByText(/could not be loaded/i)).not.toBeNull();
+    expect(await screen.findByText(/Some data did not load/i)).not.toBeNull();
     expect(screen.queryByRole("button", { name: /save/i })).toBeNull();
   });
 
@@ -117,7 +117,7 @@ describe("WorkingHoursCard", () => {
     render(<WorkingHoursCard />);
 
     await screen.findByRole("button", { name: /save/i });
-    expect(screen.queryByText(/have not chosen yet/i)).toBeNull();
+    expect(screen.queryByText(/Not set yet/i)).toBeNull();
   });
 
   it("writes the days ascending, whatever order they were ticked in", async () => {
@@ -151,9 +151,7 @@ describe("WorkingHoursCard", () => {
       screen.getByRole("button", { name: /save working hours/i }),
     );
 
-    expect(
-      await screen.findByText(/bookable for less of the week/i),
-    ).not.toBeNull();
+    expect(await screen.findByText(/Fewer bookable hours/i)).not.toBeNull();
   });
 
   it("says nothing of the kind when the week did not narrow", async () => {
@@ -170,6 +168,6 @@ describe("WorkingHoursCard", () => {
     await waitFor(() => expect(backend.writes()).toHaveLength(1));
     // A warning that fires on every save is one a reader learns to skip, and
     // then it is not there on the save it was written for.
-    expect(screen.queryByText(/bookable for less of the week/i)).toBeNull();
+    expect(screen.queryByText(/Fewer bookable hours/i)).toBeNull();
   });
 });

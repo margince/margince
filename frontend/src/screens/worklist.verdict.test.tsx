@@ -106,7 +106,7 @@ describe("the standing beside the step", () => {
     );
     renderWorklist();
 
-    expect(await screen.findByText(/Read /)).toBeTruthy();
+    expect(await screen.findByText(/^As of /)).toBeTruthy();
   });
 
   it("says nothing about when a reading with no instant was taken", async () => {
@@ -120,6 +120,6 @@ describe("the standing beside the step", () => {
     renderWorklist();
 
     expect(await screen.findByText("Quiet since June.")).toBeTruthy();
-    expect(screen.queryByText(/Read /)).toBeNull();
+    expect(screen.queryByText(/^As of /)).toBeNull();
   });
 });

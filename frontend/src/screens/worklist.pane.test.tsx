@@ -62,14 +62,18 @@ describe("what the selected row is about", () => {
     expect(screen.getByText("Last outbound")).toBeTruthy();
 
     // And it is still a control: pressing the rank puts the row down.
-    await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Show details for/ }),
+    );
     await waitFor(() => {
       expect(screen.queryByText("Last inbound")).toBeNull();
     });
 
     // And picks it up again, so the press is a toggle rather than a one-way
     // dismissal the reader cannot undo.
-    await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Show details for/ }),
+    );
     await screen.findByText("Last inbound");
   });
 
@@ -103,7 +107,9 @@ describe("what the selected row is about", () => {
 
     // The row drew — this is not a test that the page failed to render.
     await screen.findByText("Northstar renewal");
-    expect(screen.queryByRole("button", { name: /^Show what/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Show details for/ }),
+    ).toBeNull();
   });
 
   // The other half of the same rule. Without this case, "no rank button" would
@@ -137,13 +143,15 @@ describe("what the selected row is about", () => {
     // And the rank is a real control, not a pressed state over a pane that was
     // going to be there anyway: pressing it takes the aside away.
     await userEvent.click(
-      await screen.findByRole("button", { name: /^Show what/ }),
+      await screen.findByRole("button", { name: /^Show details for/ }),
     );
     await waitFor(() => {
       expect(screen.queryByRole("complementary")).toBeNull();
     });
 
-    await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Show details for/ }),
+    );
     await waitFor(() => {
       expect(screen.getByRole("complementary")).toBeTruthy();
     });
@@ -189,7 +197,7 @@ describe("what the selected row is about", () => {
     });
     // Re-render through the filter, which refetches: the row is gone, and the
     // pane goes with it rather than outliving the row it describes.
-    await userEvent.click(screen.getByRole("button", { name: /Decisions/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Approvals/ }));
     await waitFor(() => {
       expect(screen.queryByText("Last inbound")).toBeNull();
     });

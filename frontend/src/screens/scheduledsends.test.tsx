@@ -258,10 +258,8 @@ it.each(["Etc/GMT-1", "Etc/GMT+5", "GMT", "+01:00"])(
 it("pins a move to the version the row was drawn from", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
-  await user.click(
-    await screen.findByRole("button", { name: "Reschedule" }),
-  );
-  const picker = screen.getByLabelText(/New moment for/);
+  await user.click(await screen.findByRole("button", { name: "Reschedule" }));
+  const picker = screen.getByLabelText(/New time for/);
   // Seeded from the send's own moment, so a rep who opens the control and saves
   // without touching it does not move the message.
   expect((picker as HTMLInputElement).value).toMatch(
@@ -269,7 +267,7 @@ it("pins a move to the version the row was drawn from", async () => {
   );
   await user.clear(picker);
   await user.type(picker, "2026-09-02T08:30");
-  await user.click(screen.getByRole("button", { name: "Move it" }));
+  await user.click(screen.getByRole("button", { name: "Reschedule" }));
   const patch = calls.find((call) => call.method === "PATCH");
   expect(patch?.ifMatch).toBe("3");
   expect(patch?.body).toEqual({
@@ -281,12 +279,10 @@ it("pins a move to the version the row was drawn from", async () => {
 it("refuses to move a message to nowhere", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
-  await user.click(
-    await screen.findByRole("button", { name: "Reschedule" }),
-  );
-  await user.clear(screen.getByLabelText(/New moment for/));
+  await user.click(await screen.findByRole("button", { name: "Reschedule" }));
+  await user.clear(screen.getByLabelText(/New time for/));
   expect(
-    screen.getByRole("button", { name: "Move it" }).hasAttribute("disabled"),
+    screen.getByRole("button", { name: "Reschedule" }).hasAttribute("disabled"),
   ).toBe(true);
   expect(calls.some((call) => call.method === "PATCH")).toBe(false);
 });
@@ -304,7 +300,7 @@ it("takes the message back on confirm", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
   await user.click(await screen.findByRole("button", { name: "Withdraw" }));
-  await user.click(screen.getByRole("button", { name: "Withdraw it" }));
+  await user.click(screen.getByRole("button", { name: "Withdraw message" }));
   const cancel = calls.find((call) => call.method === "POST");
   expect(cancel?.path).toBe(`/v1/scheduled-sends/${WAITING.id}/cancel`);
 });
@@ -312,11 +308,9 @@ it("takes the message back on confirm", async () => {
 it("tells the reader to read the list again when the row is not the row on the server", async () => {
   const user = userEvent.setup();
   mountRefusing([WAITING], "PATCH");
-  await user.click(
-    await screen.findByRole("button", { name: "Reschedule" }),
-  );
-  await user.click(screen.getByRole("button", { name: "Move it" }));
-  expect(await screen.findByText(/This list is out of date/)).toBeTruthy();
+  await user.click(await screen.findByRole("button", { name: "Reschedule" }));
+  await user.click(screen.getByRole("button", { name: "Reschedule" }));
+  expect(await screen.findByText(/List out of date/)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Reload" })).toBeTruthy();
   // The raw server detail is the one thing that must not reach the reader: it
   // names a row version, which says nothing about what to do next.
@@ -325,9 +319,7 @@ it("tells the reader to read the list again when the row is not the row on the s
 
 it("says nothing is scheduled with one sentence, not three", async () => {
   mount([]);
-  expect(
-    await screen.findByText("No scheduled messages yet."),
-  ).toBeTruthy();
+  expect(await screen.findByText("No scheduled messages yet.")).toBeTruthy();
   expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
 });
 
@@ -349,9 +341,7 @@ it("names who decided against a held message, and that nobody may lift it", asyn
     }),
   );
 
-  expect(
-    await screen.findByText(/asked not to receive marketing/i),
-  ).toBeInTheDocument();
+  expect(await screen.findByText(/objected to marketing/i)).toBeInTheDocument();
   // Asked against the thread the message will join, about the addressee it
   // names: the same question the fire will ask.
   const asked = calls.find((call) => call.path.endsWith(":preview"));

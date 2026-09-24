@@ -213,9 +213,7 @@ describe("the record's chronology", () => {
       expect(screen.getByText("This section did not load.")).toBeTruthy(),
     );
     expect(
-      screen.queryByText(
-        "No field has changed since this record was created.",
-      ),
+      screen.queryByText("No field has changed since this record was created."),
     ).toBeNull();
   });
 
@@ -229,7 +227,9 @@ describe("the record's chronology", () => {
     // can only order rows it can prove are in order, so what it drops is not
     // "older activities" but older entries of either kind.
     await waitFor(() =>
-      expect(screen.getByText(/Older entries are not shown here/)).toBeTruthy(),
+      expect(
+        screen.getByText(/Older entries are not shown because/),
+      ).toBeTruthy(),
     );
 
     await user.click(screen.getByRole("button", { name: "Activities" }));
@@ -237,9 +237,7 @@ describe("the record's chronology", () => {
     // On the activities cut the same fact has a narrower and more useful
     // sentence, because there is only one feed to be cut.
     expect(
-      screen.getByText(
-        "Only the most recent activities are shown.",
-      ),
+      screen.getByText("Only the most recent activities are shown."),
     ).toBeTruthy();
   });
 
@@ -248,7 +246,9 @@ describe("the record's chronology", () => {
       <ContactTimelineTab contactId="p-1" view={viewWith(false)} />,
     );
 
-    expect(screen.queryByText(/more activities here than fit/)).toBeNull();
+    expect(
+      screen.queryByText(/Only the most recent activities are shown/),
+    ).toBeNull();
   });
 });
 

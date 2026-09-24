@@ -130,7 +130,7 @@ describe("the tag vocabulary card", () => {
     expect(
       await screen.findByText(en["tagAdmin.nearMatchTitle"]),
     ).toBeInTheDocument();
-    expect(screen.getByText(/apply that one instead/i)).toBeInTheDocument();
+    expect(screen.getByText(/apply the existing tag/i)).toBeInTheDocument();
   });
 
   // An admin picks a tag's colour BY the colour. A list of tone words is what
@@ -244,6 +244,8 @@ describe("the tag vocabulary card", () => {
     // The heading is the claim and the body is what it costs, so the released
     // name is asserted on the notice as a whole rather than on its heading.
     const warning = await screen.findByText(en["tagAdmin.mergeWarningTitle"]);
-    expect(warning.closest(".callout")?.textContent).toContain("released");
+    expect(warning.closest(".callout")?.textContent).toContain(
+      "becomes available again",
+    );
   });
 });

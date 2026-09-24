@@ -284,7 +284,7 @@ describe("leaving a note on somebody's queue", () => {
     );
 
     expect(
-      await screen.findByText("You may not coach Lena Fischer."),
+      await screen.findByText("You cannot add a note for Lena Fischer."),
     ).toBeTruthy();
     expect(completionMark(container)).toBeNull();
   });

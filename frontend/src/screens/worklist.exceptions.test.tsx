@@ -4,7 +4,7 @@
 /** @vitest-environment happy-dom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -18,6 +18,19 @@ afterEach(() => {
 });
 
 // What a lead is shown, and the two things the panel must not do.
+
+// The condition column can say "Unassigned" too, so an owner claim reads the
+// owner column of the subject's own row.
+async function ownerCellOf(subject: string): Promise<HTMLElement> {
+  const row = (await screen.findByText(subject)).closest("tr");
+  if (row === null) throw new Error(`${subject} is not in a table row`);
+  const column = screen
+    .getAllByRole("columnheader")
+    .findIndex(
+      (header) => header.textContent === en["worklist.exceptions.owner"],
+    );
+  return within(row).getAllByRole("cell")[column];
+}
 
 describe("what needs the lead", () => {
   it("names the basis each row was judged against", async () => {
@@ -65,8 +78,9 @@ describe("what needs the lead", () => {
 
     renderPanel();
 
-    await screen.findByText("Acme expansion");
-    expect(screen.getByText(en["worklist.exceptions.nobody"])).toBeTruthy();
+    expect((await ownerCellOf("Acme expansion")).textContent).toBe(
+      en["worklist.exceptions.nobody"],
+    );
   });
 
   it("AC-WORKLIST-MGR-04: admits a bounded page is not a clear team", async () => {
@@ -149,7 +163,7 @@ describe("what needs the lead", () => {
 
     renderPanel();
 
-    expect(await screen.findByText(/Could not be loaded/)).toBeTruthy();
+    expect(await screen.findByText(/Some data did not load/)).toBeTruthy();
     expect(screen.queryByText(en["worklist.exceptions.empty"])).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
   });
@@ -237,9 +251,7 @@ describe("the page answers what before who", () => {
       }),
     );
     renderWorklist();
-    await userEvent.click(
-      await screen.findByRole("button", { name: "My team" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Team" }));
 
     const exceptions = await screen.findByText(en["worklist.exceptions.title"]);
     const board = await screen.findByText(en["worklist.board.title"]);
@@ -362,7 +374,8 @@ describe("an owner the reader cannot name is not nobody", () => {
     });
     renderPanel();
 
-    await screen.findByText(/An untaken lead/);
-    expect(screen.getByText(en["worklist.exceptions.nobody"])).toBeTruthy();
+    expect((await ownerCellOf("An untaken lead")).textContent).toBe(
+      en["worklist.exceptions.nobody"],
+    );
   });
 });

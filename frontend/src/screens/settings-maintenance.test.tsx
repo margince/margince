@@ -112,7 +112,7 @@ describe("ResetDataCard (danger zone)", () => {
     // page of its own now, so an unarmed installation has no such destination —
     // the address reaches the boundary and nothing about resetting appears.
     expect(
-      await screen.findByText(/this settings page is not yours to open/i),
+      await screen.findByText(/no access to this settings page/i),
     ).toBeTruthy();
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
@@ -129,7 +129,7 @@ describe("ResetDataCard (danger zone)", () => {
     // they were sent is left in the bar. Waited on the boundary's own words
     // rather than on an absence, which is also true mid-load.
     expect(
-      await screen.findByText(/this settings page is not yours to open/i),
+      await screen.findByText(/no access to this settings page/i),
     ).toBeTruthy();
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
@@ -171,7 +171,7 @@ describe("ResetDataCard (danger zone)", () => {
     // reaches the boundary — asserted through its own words rather than through
     // an absence that is also true mid-load.
     expect(
-      await screen.findByText(/this settings page is not yours to open/i),
+      await screen.findByText(/no access to this settings page/i),
     ).toBeTruthy();
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
@@ -196,7 +196,7 @@ describe("ResetDataCard (danger zone)", () => {
     // The company name is shown so the admin can copy it into the input.
     expect(within(dialog).getByText("Acme Inc")).toBeTruthy();
     const confirmButton = within(dialog).getByRole("button", {
-      name: /reset everything/i,
+      name: /reset all data/i,
     });
     expect(confirmButton).toHaveProperty("disabled", true);
 
@@ -232,7 +232,7 @@ describe("ResetDataCard (danger zone)", () => {
     const input = within(dialog).getByRole("textbox");
     await user.type(input, "Wrong Name");
     await user.click(
-      within(dialog).getByRole("button", { name: /reset everything/i }),
+      within(dialog).getByRole("button", { name: /reset all data/i }),
     );
     expect(
       await screen.findByText(
@@ -278,7 +278,7 @@ describe("ResetDataCard (danger zone)", () => {
     const input = within(dialog).getByRole("textbox");
     await user.type(input, companyName);
     await user.click(
-      within(dialog).getByRole("button", { name: /reset everything/i }),
+      within(dialog).getByRole("button", { name: /reset all data/i }),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   }
@@ -305,7 +305,7 @@ describe("ResetDataCard (danger zone)", () => {
     await confirmReset(user, "Acme Inc");
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /background job was still running/,
+      /background job was running when the reset began/,
     );
   });
 
@@ -387,7 +387,7 @@ describe("ResetDataCard (danger zone)", () => {
     const input = within(dialog).getByRole("textbox");
     await user.type(input, "Acme Inc");
     await user.click(
-      within(dialog).getByRole("button", { name: /reset everything/i }),
+      within(dialog).getByRole("button", { name: /reset all data/i }),
     );
 
     expect(

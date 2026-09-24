@@ -16,7 +16,7 @@ const task = {
 
 it("addresses the assigned reader while preserving the stored promise", () => {
   expect(readerTask(task, viewer, t).title).toBe(
-    "You need to prepare two options.",
+    "Your task: prepare two options.",
   );
   expect(task.title).toBe("Dana Weiss will prepare two options.");
 });

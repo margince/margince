@@ -190,7 +190,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     // row used to leave out.
     expect(screen.getByText("Best samples")).toBeTruthy();
     expect(screen.getByText("Why add samples")).toBeTruthy();
-    expect(screen.getByText(/800 words minimum/)).toBeTruthy();
+    expect(screen.getByText(/at least 800 words/)).toBeTruthy();
     // No paste box: files are the one way in here.
     expect(screen.queryByRole("textbox")).toBeNull();
   });
@@ -210,7 +210,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     // so its appearance is the proof the card left the dead end. Before any
     // build it is named for the first build, not a rebuild.
     expect(
-      await screen.findByRole("button", { name: /Build my Voice DNA/ }),
+      await screen.findByRole("button", { name: /Build Voice DNA/ }),
     ).toBeTruthy();
     expect(calls.filter((c) => c === "POST /voice-profiles")).toHaveLength(1);
     expect(calls).toContain("POST /voice-profiles/vp-1/sources");
@@ -224,9 +224,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     stubApi({ voice_profile: ["read"] });
     render(<VoiceDnaCard />);
     expect(
-      await screen.findByText(
-        /you do not have permission to change your Voice DNA/i,
-      ),
+      await screen.findByText(/Your role cannot change Voice DNA/i),
     ).toBeTruthy();
     expect(screen.queryByLabelText("First writing sample")).toBeNull();
     expect(document.querySelector('input[type="file"]')).toBeNull();
@@ -372,7 +370,7 @@ describe("a build that fails", () => {
   async function pressRebuild() {
     render(<VoiceDnaCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /Build my Voice DNA/ }),
+      await screen.findByRole("button", { name: /Build Voice DNA/ }),
     );
   }
 
@@ -430,7 +428,7 @@ describe("a build that fails", () => {
 
     await pressRebuild();
 
-    const running = await screen.findByText(/Building your voice now/);
+    const running = await screen.findByText(/Building voice\./);
     expect(running).toBeTruthy();
     // The wait outlives this page, and a reader who does not know that sits
     // and watches it.
@@ -438,7 +436,7 @@ describe("a build that fails", () => {
 
     // The button is not natively disabled — that would drop it out of the tab
     // order mid-wait — but it announces itself busy and takes no second press.
-    const button = screen.getByRole("button", { name: /Build my Voice DNA/ });
+    const button = screen.getByRole("button", { name: /Build Voice DNA/ });
     expect(button.getAttribute("aria-busy")).toBe("true");
     expect(button.hasAttribute("disabled")).toBe(false);
 
@@ -483,7 +481,7 @@ describe("a build that fails", () => {
     expect(await screen.findByText(detail)).toBeTruthy();
     // The old catch-all is gone, so a reader is never told to retry something
     // that cannot succeed until somebody raises a spending limit.
-    expect(screen.queryByText(/The build didn't finish/)).toBeNull();
+    expect(screen.queryByText(/Build did not finish/)).toBeNull();
   });
 
   // An older server, or an outcome the server had nothing to add about, still
@@ -519,7 +517,7 @@ describe("a build that fails", () => {
 
     await pressRebuild();
 
-    expect(await screen.findByText(/The build didn't finish/)).toBeTruthy();
+    expect(await screen.findByText(/Build did not finish/)).toBeTruthy();
   });
 
   it("shows the server's own cause when the server composed one", async () => {
@@ -562,7 +560,7 @@ describe("what the build button is called", () => {
     stubWith({ ...PROFILE, maturity: "provisional" });
     render(<VoiceDnaCard />);
     expect(
-      await screen.findByRole("button", { name: /Build my Voice DNA/ }),
+      await screen.findByRole("button", { name: /Build Voice DNA/ }),
     ).toBeTruthy();
   });
 

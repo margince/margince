@@ -135,7 +135,7 @@ afterEach(() => {
 // whole act ("Invite a member") and the dialog's submit the bare one
 // ("Invite"), which is what keeps the two tellable apart.
 async function openInvite() {
-  await userEvent.click(screen.getByRole("button", { name: /invite a user/i }));
+  await userEvent.click(screen.getByRole("button", { name: /invite user/i }));
   return screen.findByRole("dialog");
 }
 
@@ -236,14 +236,8 @@ describe("admin-issued set-password link", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     await openInvite();
-    await userEvent.type(
-      screen.getByLabelText(/new user's email/i),
-      "newbie@acme.test",
-    );
-    await userEvent.type(
-      screen.getByLabelText(/new user's full name/i),
-      "New Bie",
-    );
+    await userEvent.type(screen.getByLabelText(/^Email/), "newbie@acme.test");
+    await userEvent.type(screen.getByLabelText(/^Full name/), "New Bie");
     await userEvent.click(screen.getByRole("button", { name: /^invite$/i }));
 
     // Without this the admin walks away from a successful invite holding
@@ -265,20 +259,14 @@ describe("admin-issued set-password link", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     await openInvite();
-    await userEvent.type(
-      screen.getByLabelText(/new user's email/i),
-      "newbie@acme.test",
-    );
-    await userEvent.type(
-      screen.getByLabelText(/new user's full name/i),
-      "New Bie",
-    );
+    await userEvent.type(screen.getByLabelText(/^Email/), "newbie@acme.test");
+    await userEvent.type(screen.getByLabelText(/^Full name/), "New Bie");
     await userEvent.click(screen.getByRole("button", { name: /^invite$/i }));
 
     // The member exists but has no way in. Reporting a clean success here is
     // the exact silent failure this feature was built to remove.
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
   });
 
   it("reports a copy failure instead of throwing where the clipboard API is absent", async () => {
@@ -294,10 +282,8 @@ describe("admin-issued set-password link", () => {
     await userEvent.click(screen.getByRole("button", { name: /copy link/i }));
     // The admin is told to copy by hand rather than left with a dead button:
     // the heading says the copy did not happen, the body says what to do.
-    expect(
-      await screen.findByText(/this browser refused the clipboard/i),
-    ).toBeTruthy();
-    expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
+    expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
+    expect(screen.getByText(/copy it manually/i)).toBeTruthy();
   });
 
   it("recovers from a transport failure instead of hanging on pending", async () => {
@@ -339,8 +325,10 @@ describe("admin-issued set-password link", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     await clickLinkAction();
-    expect(await screen.findByText(/could not reach the server/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy();
+    expect(
+      await screen.findByText(/server could not be reached/i),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
     expect(screen.queryByText(/creating the link/i)).toBeNull();
   });
 
@@ -408,7 +396,7 @@ describe("admin-issued set-password link", () => {
     // The stale failure lands now. It must change nothing.
     releaseFirst();
     await waitFor(() => expect(call).toBe(2));
-    expect(screen.queryByText(/could not reach the server/i)).toBeNull();
+    expect(screen.queryByText(/server could not be reached/i)).toBeNull();
     expect(
       screen.getByLabelText<HTMLInputElement>("Set-password link").value,
     ).toBe(LINK_URL);
@@ -426,7 +414,7 @@ describe("admin-issued set-password link", () => {
     // The failure is announced, and the way out is offered. Silently closing
     // here would leave an account nobody can sign into and no visible sign of it.
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
     expect(screen.queryByLabelText("Set-password link")).toBeNull();
   });
 });

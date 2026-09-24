@@ -39,7 +39,7 @@ describe("comparisonText", () => {
       theirs: { kind: "days", days: 30 },
     };
     expect(comparisonText(comparison, t, "en", zone)).toBe(
-      "Above the next: 12 against 30.",
+      "Ranked above the next item: 12 compared with 30.",
     );
   });
 

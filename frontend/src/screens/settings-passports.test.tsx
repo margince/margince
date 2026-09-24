@@ -140,7 +140,7 @@ describe("PassportCard — minting", () => {
 
     // Five choices that belong together ARE a group, and the group has a name.
     const group = within(dialog).getByRole("group", {
-      name: /what this agent may do/i,
+      name: /agent permissions/i,
     });
     expect(within(group).getAllByRole("checkbox")).toHaveLength(5);
   });
@@ -150,7 +150,7 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openDrawer(user);
     const group = within(dialog).getByRole("group", {
-      name: /what this agent may do/i,
+      name: /agent permissions/i,
     });
 
     // read and draft are on by default; clearing both leaves a credential that
@@ -168,7 +168,7 @@ describe("PassportCard — minting", () => {
     const describedBy = submit.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
     expect(document.getElementById(describedBy ?? "")?.textContent).toMatch(
-      /at least one/i,
+      /select at least 1 permission/i,
     );
   });
 

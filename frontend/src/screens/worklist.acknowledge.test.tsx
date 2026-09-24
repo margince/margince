@@ -137,7 +137,7 @@ describe("settling a notice", () => {
     renderWorklist();
 
     await screen.findByText("A deal you own changed stage");
-    await user.click(screen.getByRole("button", { name: "Got it" }));
+    await user.click(screen.getByRole("button", { name: "Acknowledge" }));
 
     await waitFor(() => {
       expect(screen.queryByText("A deal you own changed stage")).toBeNull();
@@ -151,7 +151,7 @@ describe("settling a notice", () => {
     renderWorklist();
 
     await screen.findByText("A deal you own changed stage");
-    await user.click(screen.getByRole("button", { name: "Got it" }));
+    await user.click(screen.getByRole("button", { name: "Acknowledge" }));
 
     expect(
       await screen.findByText("Item was not marked as seen. Retry."),

@@ -103,7 +103,7 @@ describe("whose move a conversation is waiting on", () => {
     expect(
       row &&
         Array.from(row.querySelectorAll(".badge")).map((b) => b.textContent),
-    ).toContain("Your move");
+    ).toContain("Needs reply");
   });
 
   it("marks the thread that ended on our word as waiting on them", () => {
@@ -196,7 +196,7 @@ describe("a withheld newest message", () => {
   // that reason, so leaving the thread's chip drawing made the two disagree
   // about one row, with the unsuppressed one winning on screen.
   it("claims no move on a conversation it will not show", () => {
-    // The same two-message thread the case above marks "Your move", with the
+    // The same two-message thread the case above marks "Needs reply", with the
     // newest message withheld — so the ONE thing varying is whether the reader
     // may read what they are being told to answer.
     draw([
@@ -225,7 +225,7 @@ describe("a withheld newest message", () => {
     const badges =
       row &&
       Array.from(row.querySelectorAll(".badge")).map((b) => b.textContent);
-    expect(badges).not.toContain("Your move");
+    expect(badges).not.toContain("Needs reply");
     // And not the other verdict either: a withheld row claims no move in
     // either direction, rather than quietly reporting the opposite one.
     expect(badges).not.toContain("Awaiting reply");

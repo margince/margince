@@ -67,9 +67,7 @@ describe("the settings access boundary", () => {
     expect(
       await screen.findByRole("link", { name: labelOf("account") }),
     ).toBeTruthy();
-    expect(
-      screen.getByText(/this settings page is not yours to open/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/no access to this settings page/i)).toBeTruthy();
     // Account's own content is what the fallback used to show here.
     expect(screen.queryByText("test@example.test")).toBeNull();
     // And the address is untouched, which is the whole affordance: the reader
@@ -91,13 +89,11 @@ describe("the settings access boundary", () => {
       <SettingsScreen route={{ screen: "settings", id: "no-such-page" }} />,
     );
 
-    expect(
-      await screen.findByText(/no settings page has this address/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/settings page not found/i)).toBeTruthy();
     // Not the denial: an admin holding every grant is refused nothing, and
     // telling them the page is "not theirs" would send them asking for a grant
     // that would not help.
-    expect(screen.queryByText(/not yours to open/i)).toBeNull();
+    expect(screen.queryByText(/no access to this settings page/i)).toBeNull();
   });
 
   it("opens the page for a reader who does hold the grant", async () => {
@@ -110,7 +106,7 @@ describe("the settings access boundary", () => {
     render(<SettingsScreen route={settingsHref("audit")} />);
 
     await waitFor(() =>
-      expect(screen.queryByText(/not yours to open/i)).toBeNull(),
+      expect(screen.queryByText(/no access to this settings page/i)).toBeNull(),
     );
     expect(
       screen.getByText(translate("en", "settings.tab.audit")),
