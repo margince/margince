@@ -146,6 +146,17 @@ func entryUnder(ctx context.Context, tx pgx.Tx, idPos int, scope string, args []
 	if scope != "" {
 		where += " AND " + scope
 	}
+	// The mask narrows the row SCOPE rather than the rendering, so a caller who
+	// may not read what priced this entry is answered not-found by the same
+	// shape that hides another team's row. It binds onto the args slice the
+	// scope above shares, after it.
+	masked, err := maskExcludedClause(ctx, func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		return crmcontracts.CommissionEntry{}, err
+	}
+	if masked != "" {
+		where += " AND " + masked
+	}
 	e, err := scanEntry(tx.QueryRow(ctx,
 		`SELECT `+commissionColumns+` FROM commission_entry WHERE `+where, args...))
 	if errors.Is(err, pgx.ErrNoRows) {

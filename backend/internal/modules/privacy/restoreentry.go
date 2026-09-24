@@ -51,7 +51,13 @@ func ReadRestoreOf(ctx context.Context, db *database.DB, entityType string, enti
 		if err != nil {
 			return err
 		}
-		entry = recordHistoryEntry(row, defaultFieldMasks[entityType])
+		// The history read's mask too: this line IS a history line, and a
+		// reversal is the one a reader looks at hardest.
+		mask, err := maskForRecord(ctx, tx, entityType, entityID)
+		if err != nil {
+			return err
+		}
+		entry = recordHistoryEntry(row, mask)
 		return nil
 	})
 	if err != nil {

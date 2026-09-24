@@ -6,6 +6,7 @@
 package gates
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -13,29 +14,196 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// dealAmountColumn is a deal's money however a statement names it.
+// maskableCatalog is what this build can withhold, one "<object> <field>" per
+// line — the owner of this census's subject, and the only place it is named.
+const maskableCatalog = "migrations/testdata/maskable_fields.txt"
+
+// dealBaseAmount is the deal's money in its converted column, and no catalog
+// entry: an administrator configures the FIELD, and this is its second column.
+const dealBaseAmount = "amount_minor_base"
+
+// notMoneyFields names the maskable deal fields this census does NOT read, and
+// says which reads answer for each instead.
 //
-// Three spellings, and each was learned from a way the figure could have left
-// this census's sight:
+// A field the catalog gains is money until this register says otherwise, so the
+// default is over-recognition. That direction costs a declaration; the other one
+// is a census that reads a narrower tree and reports PASS with no assertion left
+// to notice, which is the one way it may not fail.
+var notMoneyFields = gatekit.Waive(map[string]string{
+	"company_id":         "which account a deal hangs off, a pointer rather than a figure. It reaches a reader through the company the deal is listed under, so the read that has to withhold it is the one serving that name — and the same foreign key sits on a dozen other tables, which this census's compound subject cannot tell apart from the deal's own",
+	"currency":           "the unit the money is quoted in. It never travels alone: auth's mask groups take the currency out with the amount, so a statement rendering the figure through the mask has already dropped it, and one that names the currency beside no figure discloses nothing about the size of the deal",
+	"partner_company_id": "which partner is credited on the deal. The margin that makes the credit worth withholding is the partner's own field on its own object, and the pointer is a join key here in the same way company_id is",
+	"project_id":         "which delivery the deal rolls up to, a pointer the filing and lock paths follow rather than a figure a surface prints. A reader who may not see the project does not reach it through this column: the project's own reads carry that gate",
+})
+
+// dealMaskedColumns is a deal's money however a statement names it.
 //
-//   - `amount_minor`, the column and the field a mask names.
-//   - `amount_minor_base`, the SAME money converted. A mask on the field has to
-//     withhold both or the base column is the way around it, so a census that
-//     saw only the first would read green over the total that discloses it.
+// DERIVED from the catalog rather than restated here, because a gate that
+// spells out part of its subject has become a second copy of it — and a money
+// pair added to the catalog widens this census with no second edit.
 //
-// Not a third for the report engine's late-bound token, and that is a decision
-// about the ENGINE rather than about this pattern: the project report binds a
-// mask CLAUSE beside the column rather than a rendering that replaces it,
-// precisely so the figure keeps spelling itself in the statement this census
-// reads. A token standing in for the whole expression would have taken the
-// project report out of sight on the day it was first guarded.
-var dealAmountColumn = regexp.MustCompile(`(?i)\b(amount_minor_base|amount_minor)\b`)
+// dealBaseAmount is the arm the catalog cannot give, and it is the SAME money
+// converted. A mask on the field has to withhold both or the base column is the
+// way around it, so a census reading the catalog spelling alone would read
+// green over the total that discloses it.
+//
+// No arm for the report engine's late-bound token, and that is a decision about
+// the ENGINE rather than about this pattern: the project report binds a mask
+// CLAUSE beside the column rather than a rendering that replaces it, precisely
+// so the figure keeps spelling itself in the statement this census reads. A
+// token standing in for the whole expression would have taken the project
+// report out of sight on the day it was first guarded.
+func dealMaskedColumns(t testing.TB) *regexp.Regexp {
+	t.Helper()
+	columns, err := maskedColumnsIn(maskableCatalog, maskGate.object,
+		func(field string) bool { return notMoneyFields.Waived(t, field) })
+	if err != nil {
+		t.Fatalf("deriving this census's subject: %v", err)
+	}
+	notMoneyFields.AssertAllMatched(t)
+	return columns
+}
+
+// maskedColumnsIn compiles the object's money columns out of the catalog, over
+// every field answeredElsewhere does not claim.
+//
+// It refuses rather than narrows. A catalog that is absent, unreadable, spelt
+// in a way catalogPair cannot read, or naming this object nowhere would
+// otherwise leave a pattern short of the columns it names, and the census would
+// sweep the same tree and report PASS over every one it dropped.
+func maskedColumnsIn(catalog, object string, answeredElsewhere func(string) bool) (*regexp.Regexp, error) {
+	body, err := os.ReadFile(catalog)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", catalog, err)
+	}
+	columns := []string{dealBaseAmount}
+	for number, line := range strings.Split(string(body), "\n") {
+		named, field, lineErr := catalogPair(line)
+		if lineErr != nil {
+			return nil, fmt.Errorf("%s line %d: %w", catalog, number+1, lineErr)
+		}
+		if named == object && !answeredElsewhere(field) {
+			columns = append(columns, field)
+		}
+	}
+	if len(columns) == 1 {
+		return nil, fmt.Errorf("%s offers no %s field this census reads, leaving %s the whole of the subject",
+			catalog, object, dealBaseAmount)
+	}
+	sort.Strings(columns)
+	return regexp.MustCompile(`(?i)\b(` + strings.Join(columns, "|") + `)\b`), nil
+}
+
+// catalogName is a column or object as the catalog may spell one.
+var catalogName = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+
+// catalogPair reads one catalog line, empty names for a blank or a comment.
+//
+// A line it cannot read is an ERROR and never a line it skips, which is the
+// whole reason it is a function. A tab between the pair, or a note after it,
+// would otherwise leave an arm no statement can match — and the count above
+// cannot notice, because the converted column seeds the list and keeps it from
+// ever being short. The census would then sweep a narrower tree and report PASS
+// with nothing to say so. Refusing a name outright also keeps a regexp
+// metacharacter out of an alternation this compiles.
+func catalogPair(line string) (object, field string, err error) {
+	parts := strings.Fields(line)
+	if len(parts) == 0 || strings.HasPrefix(parts[0], "#") {
+		return "", "", nil
+	}
+	if len(parts) != 2 || !catalogName.MatchString(parts[0]) || !catalogName.MatchString(parts[1]) {
+		return "", "", fmt.Errorf("%q is not an \"<object> <field>\" pair of identifiers", strings.TrimSpace(line))
+	}
+	return parts[0], parts[1], nil
+}
+
+// TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead holds the one
+// direction this census may not fail in, and the widening that pays for it.
+//
+// A subject taken from a catalog that came back absent, empty, about some other
+// object, or spelt in a way the parse drops would sweep exactly the same tree
+// and report PASS over every column nobody masked, leaving no assertion to
+// notice — so the derivation refuses instead. The admitting cases are here
+// beside the refusals because a derivation that refused everything would
+// satisfy them on its own and take the census with it, and because a field the
+// catalog gains has to land in the subject without a second edit.
+func TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	catalogHolding := func(name, body string) string {
+		written := filepath.Join(dir, name)
+		if err := os.WriteFile(written, []byte(body), 0o600); err != nil {
+			t.Fatalf("writing the catalog fixture: %v", err)
+		}
+		return written
+	}
+	const answeredElsewhere = "currency"
+	for _, c := range []struct {
+		name      string
+		catalog   string
+		subjects  []string
+		strangers []string
+	}{
+		{name: "a catalog that is not there", catalog: filepath.Join(dir, "absent.txt")},
+		{name: "a catalog of comments alone", catalog: catalogHolding("comments.txt", "# what this build can withhold\n\n")},
+		{name: "a catalog naming only another object", catalog: catalogHolding("other.txt", "partner margin_tier\n")},
+		{name: "a catalog whose only deal field is answered elsewhere", catalog: catalogHolding("elsewhere.txt", "deal "+answeredElsewhere+"\n")},
+		// A line carrying anything past the pair. A cut on the first space read
+		// these as a field with a passenger — an arm matching no statement,
+		// while the count stayed long enough for the refusal above to pass.
+		{name: "a pair carrying a note", catalog: catalogHolding("note.txt", "deal amount_minor # the headline figure\n")},
+		{name: "a field that is not an identifier", catalog: catalogHolding("punctuated.txt", "deal amount.minor\n")},
+		{
+			name:      "the object's money, the converted column, and a pair the catalog has just gained",
+			catalog:   catalogHolding("deal.txt", "# a comment\ndeal amount_minor\ndeal "+answeredElsewhere+"\ndeal retainer_minor\npartner margin_tier\n"),
+			subjects:  []string{"d.amount_minor", "sum(d.amount_minor_base)", "d.retainer_minor"},
+			strangers: []string{"d." + answeredElsewhere, "p.margin_tier", "d.stage_id"},
+		},
+		// Whitespace between the pair is read rather than refused, which is the
+		// safe half of the same rule: a tab dropped the pair where a cut on the
+		// first space was the parse, and dropping it is what the census cannot
+		// survive. Refusing here would be honest and reading it is better.
+		{
+			name:      "a pair the catalog separates with a tab or pads with spaces",
+			catalog:   catalogHolding("spaced.txt", "deal\tamount_minor\n   deal   expected_arr_minor   \n\n"),
+			subjects:  []string{"d.amount_minor", "sum(d.amount_minor_base)", "d.expected_arr_minor"},
+			strangers: []string{"d.stage_id"},
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			columns, err := maskedColumnsIn(c.catalog, "deal",
+				func(field string) bool { return field == answeredElsewhere })
+			if len(c.subjects) == 0 {
+				if err == nil {
+					t.Fatalf("this catalog compiled to %s rather than being refused — a subject that "+
+						"narrows without saying so reads the same as a tree with nothing to mask", columns)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("deriving the subject: %v", err)
+			}
+			for _, statement := range c.subjects {
+				if !columns.MatchString(statement) {
+					t.Errorf("%q is outside the derived subject, so this census would never read it", statement)
+				}
+			}
+			for _, statement := range c.strangers {
+				if columns.MatchString(statement) {
+					t.Errorf("%q is inside the derived subject, which costs a declaration saying it is not", statement)
+				}
+			}
+		})
+	}
+}
 
 // WHAT THIS CENSUS CANNOT SEE, and why the thing it cannot see is covered
 // anyway.
@@ -57,10 +225,33 @@ var dealAmountColumn = regexp.MustCompile(`(?i)\b(amount_minor_base|amount_minor
 // statement anywhere outside `internal`. Without it, a reader placed in cmd/,
 // pkg/ or an extension unit would not fail this census — it would be one this
 // census never reads, and it would go on answering PASS.
+//
+// And it reads a mask's PRESENCE rather than its placement: a declaration
+// rendering one somewhere in its body reads as gated even where the aggregate
+// beside it folds the raw column. Telling those apart needs a statement's shape
+// and not its text, so what holds it is an integration test per surface —
+// company360's deals band and the project header each have one.
+//
+// The compound subject also wants both halves in ONE declaration, and the deal's
+// own single read splits them: deals/deal_singleread.go names every column in
+// the `dealColumns` var and the table in readDeal's own literal, so neither
+// declaration is a site and the file is not in this census. The deal read and
+// the deal list are covered instead by deals/fieldmask.go — auth.ApplyFieldMasks
+// over dealWithholds, at the wire boundary rather than in the statement — which
+// is a whole-record pass with its own tests. So inMaskOwner below says the
+// module is reachable, not that its most direct reads are the ones reached.
 
 var dealTableRead = gatekit.TableReadPattern("deal")
 
-// maskOwner is the module that OWNS the deal object and the mask.
+// maskOwner is the module that OWNS the deal object and the mask, and the one
+// place this census may not stop reaching.
+//
+// It was exempt WHOLESALE once, on the reading that the owner of a mask applies
+// it. What that bought was a project-header total summing every deal filed
+// under a project with no mask on it at all — an aggregate the census could not
+// see because of where it lived, while every sibling total outside the module
+// was guarded. Owning the mask is the reason to read the module closely, not a
+// reason to skip it: this is where a statement reaches the column most directly.
 const maskOwner = "internal/modules/deals/"
 
 // The seeds are LISTED rather than derived from platform/auth's Mask* surface,
@@ -72,9 +263,10 @@ const maskOwner = "internal/modules/deals/"
 // A mask spelling is the WHOLE admission here, so objectGateSatisfies stays
 // off and auth.Require(ctx, "deal", …) vouches for nothing — the field's own
 // comment says why the object half cannot answer this question.
+// No literal: this census reads the gate for its admission alone, and its
+// subject is compiled per run from the catalog rather than pinned to a field.
 var maskGate = objectGate{
-	object:  "deal",
-	literal: dealAmountColumn,
+	object: "deal",
 	gateSeeds: []string{
 		"MaskedColumnSQL", "MaskedExpressionSQL", "MaskExcludedClause",
 		"MaskedFields", "MasksAnyRowOf", "maskedRowSelects",
@@ -93,10 +285,27 @@ var lifecycleMaskedAmountReads = gatekit.Waive(map[string]string{
 	"internal/modules/privacy/sarsections.go:sarRecordSections": "the deal rows AS the Art. 15 export: what the installation holds about the data subject, assembled under the system principal on a request a human already authorised. A field mask narrows what a COLLEAGUE may read about a record; applying one here would make the subject's own answer incomplete, which is the defect the export exists to prevent",
 })
 
-// calleeGatedMaskedAmountReads: the statement carries the mask, but the
-// spelling that applies it is bound elsewhere.
+// calleeGatedMaskedAmountReads: the declaration's own body holds no mask
+// spelling, and what applies it sits elsewhere — bound into the statement after
+// this file hands it over, or run across the rows once they are read.
 var calleeGatedMaskedAmountReads = gatekit.Waive(map[string]string{
-	"internal/compose/reportprojects.go": "the project report's won-deal money total. It sums d.amount_minor_base under a FILTER on reportDealMaskToken, which reportsql.go binds from auth.MaskExcludedClause beside the row-scope token next to it — so the statement here is a template and the mask is resolved at bind time. The engine's own mask pass cannot cover this one: it asks the masks on the SPEC's entity, and the spec is projects while the sum is over deals",
+	"internal/compose/reportprojects.go":            "the project report's won-deal money total. It sums d.amount_minor_base under a FILTER on reportDealMaskToken, which reportsql.go binds from auth.MaskExcludedClause beside the row-scope token next to it — so the statement here is a template and the mask is resolved at bind time. The engine's own mask pass cannot cover this one: it asks the masks on the SPEC's entity, and the spec is projects while the sum is over deals",
+	"internal/modules/deals/dealfigures.go:Figures": "the Worklist's batched card read. It selects d.amount_minor bare and maskFigures, the declaration above it in the same file, withholds the figure afterwards in Go — auth.MaskedFields over auth.WritableSubset — because a card carries no masked_fields list for a rendered NULL to explain itself in. The mask is a whole-row decision here rather than a rendering, which is the one shape this census reads as ungated",
+})
+
+// writePreimageMaskedAmountReads: the statement reads the deal's own figures
+// inside a WRITE — for the patch's pre-image, or for the decision whether to
+// assign the column at all — rather than to answer a reader.
+//
+// The verdict is about the STATEMENT and reaches no further. What each of these
+// records lands in an audit image, and whether a trail serving that image
+// withholds the right columns is that trail's own read to answer; this register
+// does not vouch for it, and a reason here that claimed to would be a mitigation
+// nobody can check from the statement it is written beside.
+var writePreimageMaskedAmountReads = gatekit.Waive(map[string]string{
+	"internal/modules/deals/basecurrencyfreezewrite.go:frozenBaseBefore": "the frozen base amount a re-price or a reopen is about to overwrite. amount_minor_base is an internal column on no contract, so the writer has no pre-image to hand over and reads the row for one; recording nil instead would write \"there was no converted amount\" into the audit diff of every reopen, which is the row a reversal reads to put the old figure back",
+	"internal/modules/deals/forecasthistory.go:recordForecastMovement":   "INSERT INTO deal_forecast_history … SELECT FROM deal: the deal's state copied into its forecast trail, in the write's own transaction and after the patch landed. The statement answers a row count and no figure. Nothing in this tree READS that table yet, so the obligation belongs to whoever writes the first such read rather than to somebody who has already met it",
+	"internal/modules/deals/offer_dealsync.go:syncDealAmountFromOffer":   "the deal's current price under a row lock, so an accepted offer's gross can be compared against it and the audit diff can name what it replaced. The comparison is what keeps an accept re-pricing at the figure already held out of the forecast trail. The pre-image it reads reaches only that diff: the money the function returns in p.After() is the offer's own gross, which its caller supplied",
 })
 
 // ruledMaskedAmountReads: a read the product has ruled may print the figure
@@ -113,8 +322,8 @@ var deferredMaskedAmountReads = gatekit.Waive(map[string]string{})
 //
 // The compound subject keeps most of these out — forecast_call,
 // finance_payment and commission_entry each carry their own amount_minor and
-// never mention the deal table — but a statement that reads a FROZEN figure and
-// joins the deal for its name matches both halves. A frozen contribution is not
+// never spell the deal table in their source — but a statement that reads a
+// FROZEN figure and joins the deal for its name matches both halves. A frozen contribution is not
 // the deal's current amount: it is what the snapshot recorded, governed by the
 // recipient clause the share was minted with.
 var notTheDealAmount = gatekit.Waive(map[string]string{
@@ -126,6 +335,7 @@ var maskVerdicts = []namedVerdict{
 	{"predicate", predicateMaskedAmountReads},
 	{"lifecycle", lifecycleMaskedAmountReads},
 	{"callee-gated", calleeGatedMaskedAmountReads},
+	{"write-preimage", writePreimageMaskedAmountReads},
 	{"not-the-amount", notTheDealAmount},
 	{"ruled", ruledMaskedAmountReads},
 	{"deferred", deferredMaskedAmountReads},
@@ -135,11 +345,11 @@ const wantMinimumMaskedAmountSites = 10
 
 // maskedAmountScope is built around the derived builder set, so the sweep and
 // the site extraction ask one question rather than two that can drift.
-func maskedAmountScope(builders map[string]bool) gatekit.Scope {
+func maskedAmountScope(columns *regexp.Regexp, builders map[string]bool) gatekit.Scope {
 	return gatekit.Scope{
 		Roots: []string{"internal"},
 		Subject: func(filePath string, file *ast.File) bool {
-			return readsADealAmount(filePath, file, builders)
+			return readsADealAmount(filePath, file, columns, builders)
 		},
 		Exempt: gatekit.Waive(map[string]string{}),
 	}
@@ -149,22 +359,28 @@ func maskedAmountScope(builders map[string]bool) gatekit.Scope {
 //
 // `amount_minor` is not a rare column name: forecast_call, finance_payment,
 // commission_entry and the forecast snapshot each carry one, and a mask on
-// deal.amount_minor says nothing about any of them. A pattern matching the
+// deal.amount_minor says nothing about most of them. A pattern matching the
 // column alone found forty reads that were not about a deal at all, which
 // would have cost forty declarations saying so — noise that buries the signal
 // this census exists to carry.
+//
+// Most, not all: a commission entry's basis IS the deal's amount, copied at
+// accrual, and the ledger reads it under a mask arm resolved on the deal row
+// (commissions/entryfieldmask.go). That one is held by its own test rather than
+// by this census, which cannot see it — the reach is a runtime clause, not a
+// FROM clause this scan could match.
 //
 // So a file is a subject when it holds a DECLARATION whose SQL both reads the
 // deal table and names an amount column. Per declaration rather than per
 // literal, because this tree routinely composes one statement from several
 // constants, and a literal-level test would stop seeing a read the moment
 // somebody moved its FROM clause into a fragment.
-func readsADealAmount(filePath string, file *ast.File, builders map[string]bool) bool {
-	if strings.HasPrefix(filePath, maskOwner) || strings.HasSuffix(filePath, "_gen.go") {
+func readsADealAmount(filePath string, file *ast.File, columns *regexp.Regexp, builders map[string]bool) bool {
+	if strings.HasSuffix(filePath, "_gen.go") {
 		return false
 	}
 	for _, decl := range file.Decls {
-		if len(dealAmountReadsIn(decl, builders)) > 0 {
+		if len(dealAmountReadsIn(decl, columns, builders)) > 0 {
 			return true
 		}
 	}
@@ -200,7 +416,7 @@ var sqlFragmentMarker = regexp.MustCompile(`(?i)\b(SELECT|CASE|WHEN|COALESCE|SUM
 // where it is declared and called where it is composed, and the two are
 // routinely different modules — that separation is the whole reason the census
 // cannot see the read.
-func dealAmountBuilderNames(t testing.TB) map[string]bool {
+func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]bool {
 	t.Helper()
 	names := map[string]bool{}
 	fset := token.NewFileSet()
@@ -214,7 +430,7 @@ func dealAmountBuilderNames(t testing.TB) map[string]bool {
 			return parseErr
 		}
 		for _, decl := range file.Decls {
-			if name, isBuilder := builderName(decl); isBuilder {
+			if name, isBuilder := builderName(decl, columns); isBuilder {
 				names[name] = true
 			}
 		}
@@ -233,7 +449,7 @@ func dealAmountBuilderNames(t testing.TB) map[string]bool {
 // builderName reports the declaration's name when it renders a deal amount as
 // SQL. The two halves of that question are asked here and nowhere else, so a
 // reader changing what counts as a builder changes it in one place.
-func builderName(decl ast.Decl) (string, bool) {
+func builderName(decl ast.Decl, columns *regexp.Regexp) (string, bool) {
 	fn, isFunc := decl.(*ast.FuncDecl)
 	if !isFunc || fn.Type.Results == nil || len(fn.Type.Results.List) != 1 {
 		return "", false
@@ -248,7 +464,7 @@ func builderName(decl ast.Decl) (string, bool) {
 	// ".amount_minor IS NULL"` names the column in one piece and the keyword in
 	// another, and a per-literal reading sees neither whole.
 	for _, statement := range gatekit.SQLStatementsOf(fn) {
-		if dealAmountColumn.MatchString(statement) && sqlFragmentMarker.MatchString(statement) {
+		if columns.MatchString(statement) && sqlFragmentMarker.MatchString(statement) {
 			return fn.Name.Name, true
 		}
 	}
@@ -256,8 +472,8 @@ func builderName(decl ast.Decl) (string, bool) {
 }
 
 // dealAmountReadsIn is the site extraction the subject predicate above states.
-func dealAmountReadsIn(decl ast.Decl, builders map[string]bool) []gatekit.TableRead {
-	amounts := gatekit.DeclReads(decl, dealAmountColumn)
+func dealAmountReadsIn(decl ast.Decl, columns *regexp.Regexp, builders map[string]bool) []gatekit.TableRead {
+	amounts := gatekit.DeclReads(decl, columns)
 	if len(amounts) == 0 {
 		amounts = builtAmountsIn(decl, builders)
 	}
@@ -299,6 +515,7 @@ func builtAmountsIn(decl ast.Decl, builders map[string]bool) []gatekit.TableRead
 // error's Error() a money read and bury the ones that are.
 func TestTheBuilderDerivationReadsFragmentsAndNotProse(t *testing.T) {
 	t.Parallel()
+	columns := dealMaskedColumns(t)
 	for _, c := range []struct {
 		name    string
 		source  string
@@ -343,7 +560,7 @@ func TestTheBuilderDerivationReadsFragmentsAndNotProse(t *testing.T) {
 			if len(file.Decls) != 1 {
 				t.Fatalf("the fixture must hold exactly one declaration, it holds %d", len(file.Decls))
 			}
-			name, isBuilder := builderName(file.Decls[0])
+			name, isBuilder := builderName(file.Decls[0], columns)
 			if isBuilder != c.builder {
 				t.Fatalf("builderName = (%q, %v), want a builder: %v", name, isBuilder, c.builder)
 			}
@@ -356,16 +573,20 @@ func TestTheBuilderDerivationReadsFragmentsAndNotProse(t *testing.T) {
 
 func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	t.Parallel()
-	builders := dealAmountBuilderNames(t)
-	files := maskedAmountScope(builders).Files(t)
+	columns := dealMaskedColumns(t)
+	builders := dealAmountBuilderNames(t, columns)
+	files := maskedAmountScope(columns, builders).Files(t)
 	gated := maskGate.gatedFunctionsByPackage(t, files)
 	consts := constantTable{}
 
-	var satisfied int
+	var satisfied, inMaskOwner int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
+		if strings.HasPrefix(parsed.Path, maskOwner) {
+			inMaskOwner++
+		}
 		for _, decl := range parsed.File.Decls {
-			reads := dealAmountReadsIn(decl, builders)
+			reads := dealAmountReadsIn(decl, columns, builders)
 			if len(reads) == 0 {
 				continue
 			}
@@ -410,7 +631,8 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 					"  Either render the column through auth.MaskedColumnSQL, filter the rows with "+
 					"auth.MaskExcludedClause, or declare it in predicateMaskedAmountReads / "+
 					"lifecycleMaskedAmountReads / calleeGatedMaskedAmountReads / "+
-					"ruledMaskedAmountReads with the reason it needs neither.\n"+
+					"writePreimageMaskedAmountReads / ruledMaskedAmountReads with the reason "+
+					"it needs neither.\n"+
 					"  The read: %s", subject, gatekit.FirstLineOf(reads[0].SQL))
 			}
 		}
@@ -420,14 +642,22 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 			"stopped recognising this tree's SQL would report exactly this, and it reads the same "+
 			"as a tree where every figure is guarded", satisfied, wantMinimumMaskedAmountSites)
 	}
-	t.Logf("deal-amount reads: %d masked, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED",
-		satisfied, len(predicateMaskedAmountReads.Subjects()), len(lifecycleMaskedAmountReads.Subjects()),
-		len(calleeGatedMaskedAmountReads.Subjects()), len(ruledMaskedAmountReads.Subjects()),
-		len(deferredMaskedAmountReads.Subjects()))
+	if inMaskOwner == 0 {
+		t.Errorf("no file under %s is in this census, though the module owns the deal, the column "+
+			"and the mask. That module was exempt wholesale once and an unguarded project-header "+
+			"total lived inside it the whole time: a subject that stops reaching the owner sweeps "+
+			"a smaller tree and reports PASS with nothing left to notice", maskOwner)
+	}
+	t.Logf("deal-amount reads: %d masked (%d files in the mask owner), %d predicate, %d lifecycle, "+
+		"%d callee-gated, %d write-preimage, %d ruled, %d DEFERRED",
+		satisfied, inMaskOwner, len(predicateMaskedAmountReads.Subjects()), len(lifecycleMaskedAmountReads.Subjects()),
+		len(calleeGatedMaskedAmountReads.Subjects()), len(writePreimageMaskedAmountReads.Subjects()),
+		len(ruledMaskedAmountReads.Subjects()), len(deferredMaskedAmountReads.Subjects()))
 
 	predicateMaskedAmountReads.AssertAllMatched(t)
 	lifecycleMaskedAmountReads.AssertAllMatched(t)
 	calleeGatedMaskedAmountReads.AssertAllMatched(t)
+	writePreimageMaskedAmountReads.AssertAllMatched(t)
 	notTheDealAmount.AssertAllMatched(t)
 	ruledMaskedAmountReads.AssertAllMatched(t)
 	deferredMaskedAmountReads.AssertAllMatched(t)

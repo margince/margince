@@ -281,10 +281,10 @@ func TestRecordHistoryEntryMasksBothPayloadSidesByOmission(t *testing.T) {
 		}
 	}
 
-	// The default mask is empty: the payload passes through whole.
-	entry = recordHistoryEntry(row, defaultFieldMasks["contact"])
+	// An unmasked reader: the payload passes through whole.
+	entry = recordHistoryEntry(row, nil)
 	if entry.Before["iban"] != "DE01" || entry.After["iban"] != "DE02" {
-		t.Errorf("empty default mask must pass the payload through: before %v after %v", entry.Before, entry.After)
+		t.Errorf("an empty mask must pass the payload through: before %v after %v", entry.Before, entry.After)
 	}
 }
 
@@ -303,7 +303,7 @@ func TestAnEdgeEntryCarriesNoRecordFieldImages(t *testing.T) {
 		},
 	}
 
-	entry := recordHistoryEntry(row, defaultFieldMasks["contact"])
+	entry := recordHistoryEntry(row, nil)
 	if entry.Before != nil || entry.After != nil {
 		t.Errorf("an edge entry carries before=%v after=%v; those are the LINK's columns, and on the "+
 			"record's own entry they read as fields the record never had", entry.Before, entry.After)

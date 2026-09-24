@@ -100,6 +100,15 @@ func listPredicates(ctx context.Context, in ListInput, arg func(any) int) ([]str
 	if scope != "" {
 		where = append(where, scope)
 	}
+	// A page is where a withheld figure is cheapest to harvest, so the mask
+	// narrows it exactly as the single read is narrowed.
+	masked, err := maskExcludedClause(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	if masked != "" {
+		where = append(where, masked)
+	}
 	if in.PartnerCompanyID != nil {
 		where = append(where, storekit.SQLf("partner_company_id = $%d", arg(*in.PartnerCompanyID)))
 	}
@@ -150,6 +159,15 @@ func summaryTx(ctx context.Context, tx pgx.Tx) (crmcontracts.CommissionSummaryRe
 	where := unboundedScope
 	if scope != "" {
 		where = scope
+	}
+	// A total over amounts the caller may not read discloses them as surely as
+	// the column would: one partner with one entry sums to that entry.
+	masked, err := maskExcludedClause(ctx, arg)
+	if err != nil {
+		return crmcontracts.CommissionSummaryResponse{}, err
+	}
+	if masked != "" {
+		where += " AND " + masked
 	}
 
 	rows, err := tx.Query(ctx, storekit.SQLf(

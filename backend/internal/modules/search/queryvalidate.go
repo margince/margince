@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
@@ -279,14 +280,24 @@ func checkPredicates(vocab TargetVocabulary, path string, clauses []Predicate, i
 func checkPredicate(vocab TargetVocabulary, at string, clause Predicate, into *ValidatedPlan) (apperrors.FieldRefusal, bool) {
 	field, ok := vocab.Field(clause.Field)
 	if !ok {
-		// The wording here is the ONE a caller sees for both an invented
-		// field and a real field they may not read (SEARCH-AC-16). Nothing
-		// about it may vary with which of the two it was, or vocabulary
-		// probing becomes field discovery.
+		// One wording for an invented field and for a real one on a record
+		// type the caller cannot read AT ALL, where the field's EXISTENCE is
+		// the secret (SEARCH-AC-16): vary it and vocabulary probing becomes
+		// field discovery. A field they read but have masked is a different
+		// case and refuses below.
 		return apperrors.FieldRefusal{
 			Field: at + ".field", Code: classify(clause.Field, CodeUnknownField),
 			Message: "the query plan cannot name " + quote(clause.Field) + " on " + quote(vocab.Target) +
 				"; read margince://schema/query for the fields available to you",
+		}, true
+	}
+	if field.Masked {
+		// Its own words, because the record is readable and its masked_fields
+		// already names this column — see CodeUnknownField for why that is not
+		// the case AC-16's identical wording protects.
+		return apperrors.FieldRefusal{
+			Field: at + ".field", Code: auth.CodeFieldMasked,
+			Message: "filter by " + field.Name + " is not available: your role does not read it on every " + vocab.Target,
 		}, true
 	}
 	if !fieldAdmitsOp(field, clause.Op) {

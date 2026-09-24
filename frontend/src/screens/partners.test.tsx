@@ -142,6 +142,49 @@ describe("PartnerTab — existing partner", () => {
   });
 });
 
+describe("PartnerTab — the margin tier", () => {
+  function stubPartner(body: Record<string, unknown>) {
+    stubFetch(async (url, method) => {
+      if (url.includes("/companies/o-1/partner") && method === "GET") {
+        return jsonResponse(body);
+      }
+      throw new Error(`unexpected request ${method} ${url}`);
+    });
+  }
+
+  it("names the tier a reader may see", async () => {
+    stubPartner(partner);
+
+    render(<PartnerTab companyId="o-1" />);
+
+    expect(await screen.findByText("Active Collab (20%)")).toBeTruthy();
+    expect(screen.queryByLabelText("Masked value")).toBeNull();
+  });
+
+  it("reads a withheld tier as withheld, never as a partner with no tier", async () => {
+    stubPartner({
+      ...partner,
+      margin_tier: null,
+      masked_fields: ["margin_tier"],
+    });
+
+    render(<PartnerTab companyId="o-1" />);
+
+    expect(await screen.findByText("Margin tier")).toBeTruthy();
+    expect(screen.getByLabelText("Masked value")).toBeTruthy();
+  });
+
+  it("omits the row for a partner who agreed no tier", async () => {
+    stubPartner({ ...partner, margin_tier: null });
+
+    render(<PartnerTab companyId="o-1" />);
+
+    await screen.findByText("Renew certification");
+    expect(screen.queryByText("Margin tier")).toBeNull();
+    expect(screen.queryByLabelText("Masked value")).toBeNull();
+  });
+});
+
 // The columns picker also offers a "Partner role"/"Certification status"
 // checkbox (one per column, sharing the column header text), so a plain name
 // match is ambiguous — each click is scoped to the filter menu, which names

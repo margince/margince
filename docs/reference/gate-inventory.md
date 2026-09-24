@@ -73,6 +73,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendlaneparity_test.go` | H3 | The frontend gate is spelled once as `make check-fe` and run by CI as three parallel jobs. |
 | `frontendlinkedinhosts_test.go` | H3 | Which hosts count as LinkedIn is decided on both sides of the wire, and the two answers are deliberately different sizes. |
 | `frontendmailproviders_test.go` | H3 | Which capture providers are a MAILBOX is answered on both sides of the wire, and the two answers must be the same three names. |
+| `frontendmaskedfields_test.go` | H3 | A field the server can withhold is drawn as WITHHELD, or the screen states something false. |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the SAME table, or the integer they exchange means two different amounts. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
 | `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails SILENTLY when it falls short. |
@@ -237,8 +238,10 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in exactly one place, and that place spends the token that earns it. |
 | `maillanguagereader_test.go` | H2 | One reader of the installation's base language. |
 | `makefilepaths_test.go` | H1 | Every config file the Makefiles name is a config file that exists. |
-| `maskedamountreaders_test.go` | H2 | dealAmountColumn is a deal's money however a statement names it. |
+| `maskablefieldobjects_test.go` | H2 | Every object the maskable-field catalog offers is an object some module actually withholds on. |
+| `maskedamountreaders_test.go` | H2 | maskableCatalog is what this build can withhold, one "\<object> \<field>" per line — the owner of this census's subject, and the only place it is named. |
 | `maskedamountroots_test.go` | H2 | What the deal-amount census's ROOTS are worth. |
+| `maskfacetcoverage_test.go` | H2 | Every object the maskable-field catalog offers is one some record's HISTORY withholds too. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on EVERY surface that can reach it, not just the one it was written for. |
 | `meetinghistorywriters_test.go` | H2 | Every statement that writes activity.meeting\_status also records the transition. |
 | `messagingruleapplied_test.go` | H2 | Every obligation a messaging pack declares is one the engine applies, or one this file records as not yet applied and says why. |
@@ -407,6 +410,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `keyvaultonceperrole_test.go` | H2 | A role resolves its key vault ONCE. |
 | `lanepoolbudget_test.go` | H2 | Every pool the integration lane opens is inside the lane's budget. |
 | `logsecrets_test.go` | H2 | A credential reaches a log field only on the failure of the channel that was supposed to carry it. |
+| `maskclosurecrossings_test.go` | H2 | A fact withheld on another record as a CONSEQUENCE may not also be offered for configuration. |
+| `maskconditionanswerable_test.go` | H2 | A mask is conditioned only where the condition can be ANSWERED. |
 | `mergegateclockbounds_test.go` | H2 | No test in the merge gate decides anything by reading a stopwatch. |
 | `metriclabelescaping_test.go` | H2 | A label VALUE in the hand-rolled exposition is escaped by httpserver.Label, never by %q. |
 | `migrationvalidatesplit_test.go` | H2 | A constraint is validated in a migration of its OWN, or the two-step buys nothing. |

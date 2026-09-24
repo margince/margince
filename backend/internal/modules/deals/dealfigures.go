@@ -41,15 +41,16 @@ import (
 // disclose what a row would not. A read that skipped it would print on the
 // Worklist the number the record page refuses to show.
 //
-// The money pair goes together. A withheld amount takes its currency with it,
-// because a currency alone says a deal is priced and in what units, which is
-// half of what the mask was hiding.
+// Not auth.ApplyFieldMasks: a card is not a wire record. It carries no id of
+// its own and no masked_fields, so the shared pass would take this map apart
+// and rebuild it to state a list of names there is nowhere to put. What is
+// shared is the question — MaskedFields answers it once, group closed — and
+// this spends the answer on the columns a card carries.
 //
-// Unlike a Deal on the wire, DealFigures carries no masked_fields list, so a
-// withheld amount is indistinguishable from an unpriced deal. That is the same
-// answer the card already gives for a deal with no amount, and it is the safe
-// direction: it says less rather than claiming a figure is absent when it is
-// merely withheld.
+// A withheld figure is therefore indistinguishable from an unpriced deal. That
+// is the same answer the card already gives for a deal with no amount, and it
+// is the safe direction: it says less rather than claiming a figure is absent
+// when it is merely withheld.
 func maskFigures(ctx context.Context, tx pgx.Tx, figures map[ids.UUID]DealFigures) error {
 	p, err := storekit.Actor(ctx)
 	if err != nil {
@@ -57,7 +58,7 @@ func maskFigures(ctx context.Context, tx pgx.Tx, figures map[ids.UUID]DealFigure
 	}
 	// Cheap exit for the common case — no mask on deals at all, which is how
 	// every installation ships until an operator authors one.
-	if len(auth.MaskedFields(p, "deal", false)) == 0 {
+	if len(auth.MaskedFields(p, maskObject, false)) == 0 {
 		return nil
 	}
 	dealIDs := make([]ids.UUID, 0, len(figures))
@@ -69,10 +70,9 @@ func maskFigures(ctx context.Context, tx pgx.Tx, figures map[ids.UUID]DealFigure
 		return err
 	}
 	for id, row := range figures {
-		for _, field := range auth.MaskedFields(p, "deal", writable[id]) {
-			if field == dealAmountField {
-				row.AmountMinor = nil
-				row.Currency = ""
+		for _, field := range auth.MaskedFields(p, maskObject, writable[id]) {
+			if withhold, carried := dealFigureWithholds[field]; carried {
+				withhold(&row)
 			}
 		}
 		figures[id] = row
@@ -80,9 +80,22 @@ func maskFigures(ctx context.Context, tx pgx.Tx, figures map[ids.UUID]DealFigure
 	return nil
 }
 
-// dealAmountField is the masked field this read can actually withhold. The
-// others in dealMaskableFields name columns it does not select.
-const dealAmountField = "amount_minor"
+// The deal's money as a mask NAMES it, which is the wire vocabulary and not
+// the column one: renaming a column would not rename an installation's stored
+// mask.
+const (
+	dealAmountField   = "amount_minor"
+	dealCurrencyField = "currency"
+)
+
+// dealFigureWithholds is how a CARD withholds each field it carries — the
+// deal's own registry asked of a different row shape. A name absent here is a
+// column this read does not select, and the census beside it is what holds
+// that true rather than a claim in this comment.
+var dealFigureWithholds = map[string]func(*DealFigures){
+	dealAmountField:   func(f *DealFigures) { f.AmountMinor = nil },
+	dealCurrencyField: func(f *DealFigures) { f.Currency = "" },
+}
 
 // DealFigures is one deal's commercial face: what it is worth, when it was
 // meant to land, and who answers for it.

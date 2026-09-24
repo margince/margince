@@ -44,8 +44,17 @@ const (
 	// naming a TABLE lands here, since the target set is closed.
 	CodeUnknownTarget = "unknown_target"
 	// CodeUnknownField: not a field this caller may name on this target.
-	// A field the caller cannot read is reported with this code and this
-	// wording, identical to an invented one (SEARCH-AC-16).
+	// A field on a record type the caller cannot read AT ALL takes this code
+	// and an invented field's exact wording, because there the field's
+	// existence is the secret (SEARCH-AC-16).
+	//
+	// A MASKED field is the other case and refuses as auth.CodeFieldMasked in
+	// its own words: it sits on a record the caller reads, whose masked_fields
+	// already names the withheld column, so naming it discloses nothing the
+	// wire does not — and saying so is what lets an agent report "withheld"
+	// instead of concluding the product holds no such data. The two cannot
+	// collide: an unreadable record type is CodeUnknownTarget before any
+	// predicate is looked at.
 	CodeUnknownField = "unknown_field"
 	// CodeUnknownOperator: not an operator the field's type admits.
 	CodeUnknownOperator = "unknown_operator"

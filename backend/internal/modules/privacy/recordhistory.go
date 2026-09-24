@@ -224,7 +224,6 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 		}
 		cursor, useCursor = c, true
 	}
-	mask := defaultFieldMasks[f.EntityType]
 
 	page := RecordHistoryPage{Entries: []RecordHistoryEntry{}}
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
@@ -238,6 +237,10 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 		}
 		if visErr != nil {
 			return visErr
+		}
+		mask, err := maskForRecord(ctx, tx, f.EntityType, f.EntityID)
+		if err != nil {
+			return err
 		}
 		boundary, err := latestScrubTombstone(ctx, tx, f.EntityType, f.EntityID)
 		if err != nil {

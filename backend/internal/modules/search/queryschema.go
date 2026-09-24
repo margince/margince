@@ -148,6 +148,11 @@ type querySchemaField struct {
 	Name string   `json:"name"`
 	Kind string   `json:"kind"`
 	Ops  []string `json:"ops"`
+	// Masked says the caller's role withholds the field, so a plan naming it
+	// is refused. Published rather than dropped, for the reason
+	// VocabularyDocument gives one record type up: a client told only "no"
+	// concludes the workspace holds no such data.
+	Masked bool `json:"masked,omitempty"`
 }
 
 // querySchemaRelation is one published hop. Its members are named explicitly
@@ -209,7 +214,9 @@ func querySchemaTargetOf(target TargetVocabulary) querySchemaTarget {
 		Relations: make([]querySchemaRelation, 0, len(target.Relations)),
 	}
 	for _, f := range target.Fields {
-		out.Fields = append(out.Fields, querySchemaField{Name: f.Name, Kind: string(f.Kind), Ops: f.Ops})
+		out.Fields = append(out.Fields, querySchemaField{
+			Name: f.Name, Kind: string(f.Kind), Ops: publishedOps(f), Masked: f.Masked,
+		})
 	}
 	for _, r := range target.Relations {
 		// Named member by member rather than converted from Relation, so what
@@ -219,6 +226,16 @@ func querySchemaTargetOf(target TargetVocabulary) querySchemaTarget {
 		out.Relations = append(out.Relations, querySchemaRelation{Name: r.Name, Target: r.Target, Via: r.Via})
 	}
 	return out
+}
+
+// publishedOps answers the operators a caller may actually use on the field: a
+// withheld one admits none, so the document never names a comparison the
+// validator is certain to refuse. Empty rather than absent, like Targets above.
+func publishedOps(f Field) []string {
+	if f.Masked {
+		return []string{}
+	}
+	return f.Ops
 }
 
 var _ mcp.ResourceProvider = (*QuerySchemaResource)(nil)

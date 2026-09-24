@@ -88,7 +88,13 @@ func TestADealDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
 	if got.PartnerCompanyId != nil {
 		t.Errorf("partner_company_id = %v, want withheld", got.PartnerCompanyId)
 	}
-	assertMaskNames(t, got, "company_id", "partner_company_id")
+	// What the partner DID travels with the partner: "sourced" beside a null
+	// partner says some partner brought the deal, and a null nothing names says
+	// none did.
+	if got.PartnerAttribution != nil {
+		t.Errorf("partner_attribution = %v, want withheld with the partner it describes", got.PartnerAttribution)
+	}
+	assertMaskNames(t, got, "company_id", "partner_company_id", "partner_attribution")
 
 	// A project is read by every seat HOLDING THE OBJECT GRANT, and this rep
 	// holds no project grant at all (AccountRepPerms). Row scope is not the
@@ -152,10 +158,11 @@ func TestTheDealListWithholdsTheSameReferencesAsTheGet(t *testing.T) {
 		seen[ids.UUID(d.Id)] = true
 		switch ids.UUID(d.Id) {
 		case fx.hiddenRefs.UUID:
-			if d.CompanyId != nil || d.PartnerCompanyId != nil {
-				t.Errorf("the list handed out a private company: company %v partner %v", d.CompanyId, d.PartnerCompanyId)
+			if d.CompanyId != nil || d.PartnerCompanyId != nil || d.PartnerAttribution != nil {
+				t.Errorf("the list handed out a private company: company %v partner %v attribution %v",
+					d.CompanyId, d.PartnerCompanyId, d.PartnerAttribution)
 			}
-			assertMaskNames(t, d, "company_id", "partner_company_id")
+			assertMaskNames(t, d, "company_id", "partner_company_id", "partner_attribution")
 		case fx.hiddenProj.UUID:
 			// This rep holds no project.read grant, so the page withholds the
 			// id for the same reason the single-row read does — the list is
@@ -247,11 +254,11 @@ func TestEveryDealMutationResponseWithholdsTheSameReferences(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s: %v", tc.name, err)
 			}
-			if got.CompanyId != nil || got.PartnerCompanyId != nil {
-				t.Errorf("%s handed back company %v partner %v, want both withheld",
-					tc.name, got.CompanyId, got.PartnerCompanyId)
+			if got.CompanyId != nil || got.PartnerCompanyId != nil || got.PartnerAttribution != nil {
+				t.Errorf("%s handed back company %v partner %v attribution %v, want all withheld",
+					tc.name, got.CompanyId, got.PartnerCompanyId, got.PartnerAttribution)
 			}
-			assertMaskNames(t, got, "company_id", "partner_company_id")
+			assertMaskNames(t, got, "company_id", "partner_company_id", "partner_attribution")
 		})
 	}
 }

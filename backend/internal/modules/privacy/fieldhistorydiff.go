@@ -19,14 +19,12 @@ import (
 // reader. The reads that find the rows, page them and stop at an erasure
 // tombstone live in fieldhistory.go — this file never touches the database.
 
-// entityFieldMask names fields whose history is withheld for an entity
-// type, exactly as the live value would be withheld — hiding history and
-// value is one motion, never two mechanisms. Empty until field-level
-// masking ships; the transform applies it to both sides before diffing
-// so a masked field can never leak through an old_value.
+// entityFieldMask names fields whose history is withheld for ONE record,
+// exactly as the live value would be withheld — hiding history and value is one
+// motion, never two mechanisms. maskForRecord resolves it from the caller's
+// role; the transform applies it to both sides before diffing, so a masked
+// field can never leak through an old_value.
 type entityFieldMask map[string]struct{}
-
-var defaultFieldMasks = map[string]entityFieldMask{}
 
 // writerBookkeepingKeys names keys an audit image carries that are not fields
 // OF the record: the writing pipeline's own state — which draft it applied

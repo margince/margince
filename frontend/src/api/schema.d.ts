@@ -23637,6 +23637,12 @@ export interface components {
          *     quarter, and the deal amount that can be corrected after the close, would
          *     otherwise make the same entry answer a different question each time it is read.
          *     Carries no owner — visibility is inherited from the deal.
+         *
+         *     An entry carries no `masked_fields`, because no column of one can be withheld on
+         *     its own: the rate IS the partner's margin tier and the amount over the basis is
+         *     that rate again. A role whose field mask withholds `partner.margin_tier` therefore
+         *     reads no entry at all — the list omits it, the single read answers 404, and the
+         *     summary leaves it out of the totals.
          */
         CommissionEntry: {
             /** Format: uuid */
@@ -31009,6 +31015,8 @@ export interface components {
              * @description The company this partner record extends (PK = FK).
              */
             company_id: string;
+            /** @description The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. */
+            readonly masked_fields?: string[];
             /**
              * @description Functional role (ADR-0034); implementation + dev are Margince's turf.
              * @enum {string}

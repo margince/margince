@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -20,6 +21,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -289,11 +291,24 @@ func TestACreateBodyCarriesItsPartnerThroughToTheStore(t *testing.T) {
 	}
 }
 
+// A withheld partner takes its attribution with it AND names it: "sourced"
+// beside a null partner discloses that some partner sourced the deal, and a
+// null nothing names reads as a deal no partner sourced at all.
 func TestAWithheldPartnerTakesItsAttributionWithIt(t *testing.T) {
 	d := dealNamingPartner(attributionSourced)
 
-	withheldFields{filterPartnerCompanyID}.applyTo(&d)
+	names := auth.MaskedFields(dealSeatMasking(filterPartnerCompanyID), maskObject, false)
 
+	if !slices.Contains(names, partnerAttributionField) {
+		t.Errorf("a mask on the partner withholds %v, want the attribution among them", names)
+	}
+	for _, field := range names {
+		withhold, known := dealWithholds[field]
+		if !known {
+			t.Fatalf("%s is withheld and this module cannot null it", field)
+		}
+		withhold(&d)
+	}
 	if d.PartnerAttribution != nil {
 		t.Errorf("attribution = %q survived a withheld partner — it discloses that SOME partner sourced the deal", *d.PartnerAttribution)
 	}
