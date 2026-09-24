@@ -20,7 +20,8 @@ ollama pull bge-m3           # only if you exercise search/retrieval (embeddings
 `mistral` follows the extraction JSON schema more reliably than `gemma3`; pull
 it too (`ollama pull mistral`) if enrich grounding is weak.
 
-For Gemma 4, pull `gemma4:12b` and bind it with
+For Gemma 4, pull `gemma4:12b` (what we measured, and what not to pull instead:
+[ollama-self-hosting.md](../reference/ollama-self-hosting.md)) and bind it with
 [`config/presets/gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
 Gemma 4 reasons before it answers, which Ollama turns on by default, so the
 adapter sends `think: false` on every chat call unless the request asks for

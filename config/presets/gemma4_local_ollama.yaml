@@ -34,7 +34,7 @@
 #                    tier this product can lean on.
 #   12b   12 tok/s   8.3GB resident at a 12K window, all on the GPU. Passed
 #                    every capture_classify run.
-#   26b   10 tok/s   MoE, ~4B active per token, but 18GB of weights: 35% of it
+#   26b   10 tok/s   MoE, ~4B active per token, but 18GB of weights: 65% of it
 #                    ran on the CPU at the same window and a load took 21s.
 #                    Bind `premium` and `frontier` to it on a machine with
 #                    32GB or more; on 24GB it is slower than 12b, not better.
