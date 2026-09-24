@@ -31,7 +31,7 @@ import (
 )
 
 // defaultRepeats is Repeats' fallback when a caller (the env-driven CLI
-// lane) leaves it unset. Odd, per Verdict's median requirement.
+// lane) leaves it unset. Odd, per Verdict's run-count requirement.
 const defaultRepeats = 3
 
 // corpusVersionV1 is this generation's fixed corpus-format stamp: the
@@ -73,6 +73,10 @@ type RunnerConfig struct {
 	// file's binding while MODEL= moved only the candidate — so deleting the file
 	// without naming a judge would have collapsed the two silently.
 	JudgeBinding ai.ProviderConfig // MARGINCE_AICERT_JUDGE_MODEL + _JUDGE_BASE_URL
+	// JudgeFallback grades the tasks whose candidate IS JudgeBinding, so one
+	// pinned judge does not strand the tasks a preset leads with that model.
+	// Optional; the zero value refuses those tasks instead. See judgeFor.
+	JudgeFallback ai.ProviderConfig // MARGINCE_AICERT_JUDGE_FALLBACK_MODEL + _JUDGE_FALLBACK_BASE_URL
 	// Profile is the environment class each record is filed under — it is part of
 	// a record's identity (its path and its sort key), not a label, so a run says
 	// which one it measured rather than inheriting it from a file.
@@ -118,8 +122,8 @@ type RunnerConfig struct {
 // before a single paid call is made.
 //
 // Both bindings are required because there is no routing file left to fall back
-// on, and they must DIFFER because a model grading itself passes by
-// construction. The old file made the second point structurally — the judge rode
+// on, and the judge that grades the candidate must differ from it (judgeFor)
+// because a model grading itself passes by construction. The old file made the second point structurally — the judge rode
 // the file while MODEL= moved only the candidate — so with the file gone it has
 // to be checked outright rather than assumed.
 func validateBindings(cfg RunnerConfig, log *slog.Logger) error {
@@ -139,10 +143,8 @@ func validateBindings(cfg RunnerConfig, log *slog.Logger) error {
 		return errors.New("no judge binding — set MARGINCE_AICERT_JUDGE_MODEL=provider:model; " +
 			"the judge is a SECOND model on purpose, and the run has no file to inherit one from")
 	}
-	if cfg.Binding.Provider == cfg.JudgeBinding.Provider && cfg.Binding.Model == cfg.JudgeBinding.Model {
-		return fmt.Errorf("candidate and judge are both %s:%s — a model grading itself is certified "+
-			"by construction; name a different MARGINCE_AICERT_JUDGE_MODEL",
-			cfg.Binding.Provider, cfg.Binding.Model)
+	if _, err := cfg.judgeFor(cfg.Binding); err != nil {
+		return fmt.Errorf("the candidate %s:%s is every judge on offer: %w", cfg.Binding.Provider, cfg.Binding.Model, err)
 	}
 	if !cfg.Profile.Valid() {
 		return fmt.Errorf("MARGINCE_AICERT_PROFILE=%q is not an environment class; a record is filed "+
@@ -212,7 +214,7 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	// cannot be loaded or compacted costs nothing to find out about.
 	var journal *runJournal
 	if cfg.ResumeDir != "" {
-		journal, err = openRunJournal(ctx, cfg.ResumeDir, cfg.JudgeBinding, cfg.recordProfile(), nowFunc(), log)
+		journal, err = openRunJournal(ctx, cfg.ResumeDir, cfg.recordProfile(), nowFunc(), log)
 		if err != nil {
 			return nil, fmt.Errorf("aicert: runner: %w", err)
 		}
@@ -226,21 +228,13 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	var records []Record
 	var runErrs []error
 	for _, task := range sortedTasks(byTask) {
-		binding := cfg.Binding
-		if cfg.Routing != nil {
-			resolved, rung, ok := resolveBinding(*cfg.Routing, task)
-			if !ok {
-				// Not fatal to the whole run: another task's rung may be bound
-				// perfectly well, and one unbound tier must not cost every record.
-				runErrs = append(runErrs, fmt.Errorf("aicert: task %s: no rung of its ladder %v is bound in the supplied routing, so there is no model to certify it against — and production could not serve it either",
-					task, ai.TaskLadder(task)))
-				continue
-			}
-			binding = resolved
-			log.InfoContext(ctx, "aicert: routed", "task", string(task), "tier", string(rung), "model", resolved.Model)
+		binding, judge, err := taskBindings(ctx, cfg, task, log)
+		if err != nil {
+			runErrs = append(runErrs, err)
+			continue
 		}
-		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, binding, cfg.JudgeBinding, cfg.recordProfile(), repeats, log,
-			&certifyHooks{trace: trace, journal: journal.forTask(task, binding)})
+		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, binding, judge, cfg.recordProfile(), repeats, log,
+			&certifyHooks{trace: trace, journal: journal.forTask(task, binding, judge)})
 		if err != nil {
 			log.ErrorContext(ctx, "aicert: task certification failed — no record written", "task", string(task), "err", err)
 			runErrs = append(runErrs, fmt.Errorf("task %s: %w", task, err))
@@ -328,15 +322,15 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	}
 
 	acc := &taskAccumulation{selfJudgedEveryRun: true}
-	taskVerdict := VerdictCertified // folded down to the worst scenario verdict below
-
+	sets := make([]ScenarioRuns, 0, len(scenarios))
 	for _, sc := range scenarios {
-		scenarioVerdict, err := runScenario(ctx, task, sc, scenarioStamps[sc.Name], census, repeats, candidateRouter, candidateRec, judgeRouter, judgeRec, log, acc, trace, journal)
+		results, err := runScenario(ctx, task, sc, scenarioStamps[sc.Name], census, repeats, candidateRouter, candidateRec, judgeRouter, judgeRec, log, acc, trace, journal)
 		if err != nil {
 			return Record{}, err
 		}
-		taskVerdict = worstVerdict(taskVerdict, scenarioVerdict)
+		sets = append(sets, ScenarioRuns{Runs: results, Bands: sc.Expect.Bands})
 	}
+	taskVerdict, _ := Verdict(sets...)
 
 	return buildRecord(task, taskVerdict, acc, profile, promptVersion), nil
 }
@@ -439,22 +433,6 @@ func ensureWorkspace(ctx context.Context) context.Context {
 		return ctx
 	}
 	return principal.WithWorkspaceID(ctx, ids.NewV7())
-}
-
-// verdictRank orders the three §5 verdicts worst-to-best so a
-// multi-scenario task can fold down to its worst scenario outcome.
-var verdictRank = map[string]int{
-	VerdictNotSupported:      0,
-	VerdictSupportedDegraded: 1,
-	VerdictCertified:         2,
-}
-
-// worstVerdict returns whichever of a, b ranks lower (less certified).
-func worstVerdict(a, b string) string {
-	if verdictRank[a] <= verdictRank[b] {
-		return a
-	}
-	return b
 }
 
 // buildRecord, seedRateFor, and percentile live in record.go alongside the

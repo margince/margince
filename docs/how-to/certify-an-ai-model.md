@@ -40,13 +40,13 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    binding — that is the `ai.routing` setting, this lane opens no database, and
    `ROUTING=` reads what a fresh install would be *seeded* with.
 
-   `JUDGE=provider:model` is the second model that grades the answers, **always
-   required and never resolved from the routing**: `cert_judge` is itself a task
-   and leads at `premium`, so a config binding a model there would make the
-   grader collide with every `premium`-led candidate. A judge equal to any
-   resolved candidate is refused — a model grading itself is certified by
-   construction — and every resolved task is checked up front rather than failing
-   midway through a paid corpus.
+   `JUDGE=provider:model` is the second model that grades the answers, pinned to
+   `gemini:gemini-3.5-flash` so every record is graded alike (a judge swap flips
+   verdicts on its own), and **never resolved from the routing**. A model never
+   grades itself: a task whose candidate is the judge — a Gemini preset's
+   `premium` rung — is graded by `JUDGE_FALLBACK=` (`gemini:gemini-3.1-flash-lite`)
+   instead. A task that is both, or any collision under `JUDGE_FALLBACK=`, is
+   refused for every resolved task up front, before the first paid call.
 
    For an OpenAI-wire broker — one OpenRouter key reaching every open-weight
    model — add the endpoint, which `openai_compatible` fails closed without:
@@ -187,15 +187,14 @@ Four states, and they never collapse into each other:
 - **`current`** — every scenario this site ships was measured, and each one's
   stamp is the one this build computes, so the band describes the request this
   build actually sends. A stamp covers the scenario, the request the site's own
-  code builds from it, and the request sent to the grader that scored it.
+  code builds from it, and how a run is graded (the grader's request and rule).
 - **`partial`** — everything the record measured is still current, and the corpus
   has since grown cases it has never seen. Explicitly **not** stale: the record is
   wrong about nothing, merely incomplete, and clearing it costs the new scenarios
   rather than the whole task.
 - **`stale`** — a scenario the record *did* measure has changed since, or the code
-  that turns it into a prompt did, or the grader's own prompt did. The band is a
-  claim about requests no longer sent, or scores a grader no longer produces;
-  re-certify that task.
+  that turns it into a prompt did, or how a run is graded did. The band describes
+  requests or grading this build no longer uses; re-certify that task.
 - **`absent`** — nothing has ever been measured. The columns are dashes rather
   than zeroes, because a zero is a result and this is not one.
 
@@ -311,20 +310,21 @@ every whole run before the cut. One run owns a directory at a time — parallel
 
 Each run either **HardPasses** — the site's own production validator accepted
 the reply, the reply is the answer the scenario expects, and the run stayed
-inside the scenario's token/latency caps — or fails. The judge scores the
-answer 0–100 against the scenario's rubric. `N` runs of one scenario fold into a verdict
-against the scenario's score bands (spec §5):
+inside its token/latency caps — or fails. The judge scores the answer 0–100
+against the rubric. One rule gives a scenario's row and the task's record their
+verdict; `N` is all runs, `n` one scenario's, each held to its own bands:
 
 | Verdict | Rule |
 |---|---|
-| `certified` | **every** run HardPasses ∧ median score ≥ `certified_min` ∧ min score ≥ `floor` |
-| `supported_degraded` | ≥ ⌈2N/3⌉ runs HardPass ∧ median score ≥ `degraded_min` |
-| `not_supported` | otherwise |
+| `certified` | ≥ 95% of all `N` runs HardPass ∧ every scenario HardPasses ≥ ⌈2n/3⌉ of its `n` ∧ every scenario's median score ≥ its `certified_min` and min score ≥ its `floor` |
+| `supported_degraded` | ≥ ⌈2N/3⌉ of all runs HardPass ∧ every scenario's median score ≥ its `degraded_min` |
+| `not_supported` | otherwise, including any scenario no judge scored |
 
-**reliability** is the fraction of runs that HardPassed (0–1), reported for every
-verdict — the number to trend over time. A run whose served-model identity is not
-uniform (a fallback to another model, between runs or between the calls of one
-run) **voids** the record: you cannot certify a moving target.
+A pass **rate**, so the bar does not rise with the corpus (at 99% per run, 57 of
+57 happens barely half the time); the per-scenario majority keeps one case that
+always fails from hiding in the pool. **reliability** is the fraction of runs that
+HardPassed (0–1), the number to trend. A run whose served model is not uniform (a
+fallback, between runs or calls) **voids** the record: you cannot certify a moving target.
 
 A run is not always one model call — a site may retry, fall back, or turn a tool
 loop — and everything the run is judged and charged for is pooled across all of

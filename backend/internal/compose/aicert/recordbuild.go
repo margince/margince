@@ -37,9 +37,8 @@ import (
 // to happen that no test would catch.
 func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profile ai.Profile, promptVersion string) Record {
 	results := acc.allResults
-	// Only what a judge graded: a run skipped for truncation carries Score 0
-	// because nobody scored it, and averaging that in reports the absence as a
-	// verdict. An all-ungraded task leaves both numbers at zero beside a
+	// Only what a judge graded: an ungraded run carries Score 0 because nobody
+	// scored it, and averaging that in reports the absence as a verdict. An all-ungraded task leaves both numbers at zero beside a
 	// not_supported verdict, which is what Verdict reaches for the same reason.
 	judgeP50, judgeMin, _ := judgeMedianAndMin(results)
 

@@ -127,11 +127,11 @@ func TestAnEvenGradedSetTakesTheAverageOfItsMiddles(t *testing.T) {
 // actor in that arithmetic.
 func TestACutOffRunCountsAsARunAndNeverAsAPass(t *testing.T) {
 	t.Parallel()
-	_, reliability := Verdict([]RunResult{
+	_, reliability := Verdict(ScenarioRuns{Runs: []RunResult{
 		{HardPass: true, Score: 100},
 		{HardPass: false, Ungraded: true},
 		{HardPass: true, Score: 90},
-	}, Bands{CertifiedMin: 70, DegradedMin: 50, Floor: 40})
+	}, Bands: Bands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}})
 	if reliability != 2.0/3.0 {
 		t.Errorf("reliability = %v, want 2/3 — the cut-off run is one of three runs", reliability)
 	}
@@ -148,7 +148,7 @@ func TestATaskWhoseEveryRunWasCutOffIsNotCertified(t *testing.T) {
 	}
 	bands := Bands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}
 
-	verdict, _ := Verdict(runs, bands)
+	verdict, _ := Verdict(ScenarioRuns{Runs: runs, Bands: bands})
 	if verdict != VerdictNotSupported {
 		t.Errorf("verdict = %q, want %q — no judge saw any of these runs", verdict, VerdictNotSupported)
 	}

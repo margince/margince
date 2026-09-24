@@ -8,7 +8,7 @@ import (
 	"slices"
 )
 
-// Verdict strings — the three §5 outcomes a run set can land on.
+// Verdict strings — the three outcomes a set of run sets can land on.
 const (
 	VerdictCertified         = "certified"
 	VerdictSupportedDegraded = "supported_degraded"
@@ -47,15 +47,19 @@ type RunResult struct {
 	Degraded         bool `json:"degraded"`
 	HardPass         bool `json:"hard_pass"`
 	Score            int  `json:"score"`
-	// Ungraded says no judge saw this run, so Score is absent rather than zero
-	// and must not reach a median or a minimum. A run cut off at the output
-	// ceiling is the case: there is no answer to have an opinion about, and
-	// folding its 0 into the judge's numbers would report the skipped opinion
-	// as a bad one — the same ambiguity, entered from the other side.
+	// Ungraded says no judge gave this run an opinion, so Score is absent rather
+	// than zero and must not reach a median or a minimum. A run cut off at the
+	// output ceiling has no answer to have an opinion about; a judge whose reply
+	// never parsed gave none. Folding either's 0 into the judge's numbers would
+	// report a missing opinion as a bad one.
 	//
 	// It stays in the run, validator and pass counts: it happened, and the
-	// mechanical grade judged the same incomplete text production would have.
+	// mechanical grade still judged it.
 	Ungraded bool `json:"ungraded,omitempty"`
+	// JudgeScores holds the graded opinions the run was scored from, in the order
+	// given; more than one means the first fell below certified_min and Score is
+	// their median, so a reader can see a contested grade.
+	JudgeScores []int `json:"judge_scores,omitempty"`
 }
 
 // judgeMedianAndMin answers the median and minimum of the scores a judge
@@ -100,53 +104,109 @@ func medianOf(sorted []int) int {
 	return (sorted[mid-1] + sorted[mid]) / 2
 }
 
-// Verdict folds N runs of one scenario into a certification outcome per
-// spec §5, literally:
-//
-//	Certified          = every run HardPass ∧ median(Score) ≥ b.CertifiedMin ∧ min(Score) ≥ b.Floor
-//	Supported-degraded = ≥⌈2N/3⌉ runs HardPass ∧ median(Score) ≥ b.DegradedMin
-//	otherwise          = Not-supported
-//
-// reliability is the fraction of runs that HardPassed (0..1), reported
-// regardless of which verdict the run set lands on — it is the number a
-// dashboard trends over time, not just the pass/fail label.
-//
-// Verdict requires an ODD run count (N=0 or even panics): ⌈2N/3⌉ is a
-// threshold on the RUN set, and the runner's own config (RunnerConfig.Repeats)
-// already enforces oddness before any run happens, so a call here with an
-// even N is a caller bug, not a certification input to report gracefully.
-// The median is NOT what the oddness buys — it comes from the graded subset,
-// which an ungraded run leaves even, and medianOf defines that case.
-func Verdict(rs []RunResult, b Bands) (verdict string, reliability float64) {
-	n := len(rs)
-	if n == 0 || n%2 == 0 {
-		panic(fmt.Sprintf("aicert: Verdict: run count must be odd and non-zero, got %d", n))
-	}
+// ScenarioRuns is one scenario's run set and the bands its own judge scores are
+// held to; scenarios in one task carry different bands.
+type ScenarioRuns struct {
+	Runs  []RunResult
+	Bands Bands
+}
 
-	passed := 0
-	for _, r := range rs {
-		if r.HardPass {
-			passed++
+// certifiedPassPercent is the pooled pass rate, in percent, a set of run sets
+// must reach to certify.
+const certifiedPassPercent = 95
+
+// Verdict folds a set of scenario run sets into one certification outcome — a
+// single scenario for its record row, every scenario of a task for the task:
+//
+//	certified          = pooled passes ≥ 95% of all runs
+//	                   ∧ every scenario passes ≥⌈2n/3⌉ of its own n runs
+//	                   ∧ every scenario's graded median ≥ its CertifiedMin ∧ graded minimum ≥ its Floor
+//	supported_degraded = pooled passes ≥ ⌈2N/3⌉ of all N runs
+//	                   ∧ every scenario's graded median ≥ its DegradedMin
+//	otherwise          = not_supported, which includes any scenario no judge graded
+//
+// A rate rather than "every run" so the bar does not rise with corpus size: at
+// 99% per run, 57 of 57 happens barely half the time. The per-scenario majority
+// keeps one case failing systematically from hiding inside a large pool.
+//
+// reliability is the pooled fraction of runs that HardPassed (0..1), reported
+// whichever verdict the set lands on.
+//
+// Every scenario's run count must be ODD and non-zero, and the set non-empty,
+// or Verdict panics: RunnerConfig.Repeats enforces oddness before any run, so a
+// call breaking it is a caller bug, not a certification input.
+func Verdict(sets ...ScenarioRuns) (verdict string, reliability float64) {
+	if len(sets) == 0 {
+		panic("aicert: Verdict: no scenario run sets")
+	}
+	tallies := make([]scenarioTally, 0, len(sets))
+	for _, set := range sets {
+		n := len(set.Runs)
+		if n == 0 || n%2 == 0 {
+			panic(fmt.Sprintf("aicert: Verdict: run count must be odd and non-zero, got %d", n))
+		}
+		tally := scenarioTally{runs: n, judgeBand: judgeBand(set.Runs, set.Bands)}
+		for _, r := range set.Runs {
+			if r.HardPass {
+				tally.passed++
+			}
+		}
+		tallies = append(tallies, tally)
+	}
+	return verdictOver(tallies)
+}
+
+// scenarioTally is what the verdict rule reads of one scenario: its run and
+// pass counts, and the best verdict its judge scores alone reach.
+type scenarioTally struct {
+	runs, passed int
+	judgeBand    string
+}
+
+// judgeBand is the best verdict rs's graded scores reach against b, ignoring
+// pass/fail. No graded run reaches nothing: a band is not met by a score nobody gave.
+func judgeBand(rs []RunResult, b Bands) string {
+	median, minScore, graded := judgeMedianAndMin(rs)
+	switch {
+	case !graded:
+		return VerdictNotSupported
+	case median >= b.CertifiedMin && minScore >= b.Floor:
+		return VerdictCertified
+	case median >= b.DegradedMin:
+		return VerdictSupportedDegraded
+	default:
+		return VerdictNotSupported
+	}
+}
+
+// verdictOver applies Verdict's rule to tallies; the record's per-site verdict
+// reads it too, from the scenario rows it kept.
+func verdictOver(tallies []scenarioTally) (verdict string, reliability float64) {
+	runs, passed := 0, 0
+	certified, degraded := true, true
+	for _, t := range tallies {
+		runs += t.runs
+		passed += t.passed
+		if t.judgeBand != VerdictCertified || t.passed < twoThirds(t.runs) {
+			certified = false
+		}
+		if t.judgeBand != VerdictCertified && t.judgeBand != VerdictSupportedDegraded {
+			degraded = false
 		}
 	}
-	reliability = float64(passed) / float64(n)
-
-	// Every run ungraded leaves no opinion to band on. The mechanical grade
-	// still decides pass/fail, and the judge's half of the bands cannot be met
-	// by a score nobody gave — so the verdict falls to not-supported rather
-	// than certifying on an empty median.
-	median, minScore, graded := judgeMedianAndMin(rs)
-	if !graded {
+	if runs == 0 {
+		return VerdictNotSupported, 0
+	}
+	reliability = float64(passed) / float64(runs)
+	switch {
+	case certified && passed*100 >= certifiedPassPercent*runs:
+		return VerdictCertified, reliability
+	case degraded && passed >= twoThirds(runs):
+		return VerdictSupportedDegraded, reliability
+	default:
 		return VerdictNotSupported, reliability
 	}
-
-	if passed == n && median >= b.CertifiedMin && minScore >= b.Floor {
-		return VerdictCertified, reliability
-	}
-	// ceil(2N/3) via integer arithmetic: (2N + 2) / 3.
-	degradedThreshold := (2*n + 2) / 3
-	if passed >= degradedThreshold && median >= b.DegradedMin {
-		return VerdictSupportedDegraded, reliability
-	}
-	return VerdictNotSupported, reliability
 }
+
+// twoThirds is ⌈2n/3⌉ in integer arithmetic.
+func twoThirds(n int) int { return (2*n + 2) / 3 }

@@ -90,13 +90,14 @@ type journaledRun struct {
 
 // resumeKey identifies the one run a journaled line may stand in for.
 //
-// The judge, profile and corpus version are not here: they are constant for a
-// whole certification run, so they are filtered once at load rather than
-// compared per lookup. The candidate binding IS here, because a routed run
-// certifies each task against its own resolved model.
+// The profile and corpus version are not here: they are constant for a whole
+// certification run, so they are filtered once at load rather than compared per
+// lookup. Both bindings ARE here, because each is chosen per task: a routed run
+// resolves its own candidate, and a task whose candidate is the primary judge is
+// graded by the fallback.
 type resumeKey struct {
-	candidate, task, scenario, stamp string
-	run                              int
+	candidate, judge, task, scenario, stamp string
+	run                                     int
 }
 
 // binaryIdentity is the SHA-256 of the running executable — the exact code that
@@ -152,7 +153,6 @@ func bindingKey(c ai.ProviderConfig) string {
 type runJournal struct {
 	sink   *jsonlSink
 	loaded map[resumeKey]runOutcome
-	judge  string
 	// build is this binary's identity, filed on every appended line and required
 	// of every replayed one — see journaledRun.Build.
 	build string
@@ -172,10 +172,7 @@ type runJournal struct {
 // failing is free: a journal that could not be rewritten is a journal that
 // cannot be trusted to be appended to either, and finding out after an hour of
 // spend would be the same defect this file exists to remove.
-func openRunJournal(ctx context.Context, dir string, judge ai.ProviderConfig, profile ai.Profile, now time.Time, log *slog.Logger) (*runJournal, error) {
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return nil, fmt.Errorf("aicert: resume dir %s: %w", dir, err)
-	}
+func openRunJournal(ctx context.Context, dir string, profile ai.Profile, now time.Time, log *slog.Logger) (*runJournal, error) {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, fmt.Errorf("aicert: resume dir %s: %w", dir, err)
 	}
@@ -190,7 +187,6 @@ func openRunJournal(ctx context.Context, dir string, judge ai.ProviderConfig, pr
 	path := filepath.Join(dir, journalFilename)
 	j := &runJournal{
 		loaded:  map[resumeKey]runOutcome{},
-		judge:   bindingKey(judge),
 		profile: string(profile),
 		build:   build,
 		lock:    lock,
@@ -221,7 +217,7 @@ const journalFilename = "aicert-resume.jsonl"
 
 // readLive returns every unexpired line in the journal, and fills j.loaded with
 // the subset THIS run could replay. The two differ on purpose: compaction must
-// keep a line belonging to another judge or another profile, which is somebody
+// keep a line belonging to another profile or another binary, which is somebody
 // else's still-good measurement, not this run's to discard.
 func (j *runJournal) readLive(ctx context.Context, path string, now time.Time, log *slog.Logger) ([]journaledRun, error) {
 	f, err := os.Open(path) // #nosec G304 -- see openRunJournal
@@ -257,7 +253,7 @@ func (j *runJournal) readLive(ctx context.Context, path string, now time.Time, l
 			continue
 		}
 		live = append(live, line)
-		if line.Judge == j.judge && line.Profile == j.profile && line.CorpusVersion == corpusVersionV1 && line.Build == j.build {
+		if line.Profile == j.profile && line.CorpusVersion == corpusVersionV1 && line.Build == j.build {
 			j.loaded[keyOf(line)] = line.Outcome
 		}
 	}
@@ -270,13 +266,13 @@ func (j *runJournal) readLive(ctx context.Context, path string, now time.Time, l
 // agree today would let a field added to resumeKey be filled in on one side
 // only, and a lookup keyed on less than the append was filed under silently
 // replays the wrong run.
-func resumeKeyFor(candidate, task, scenario, stamp string, run int) resumeKey {
-	return resumeKey{candidate: candidate, task: task, scenario: scenario, stamp: stamp, run: run}
+func resumeKeyFor(candidate, judge, task, scenario, stamp string, run int) resumeKey {
+	return resumeKey{candidate: candidate, judge: judge, task: task, scenario: scenario, stamp: stamp, run: run}
 }
 
 // keyOf is resumeKeyFor over a line already on disk.
 func keyOf(line journaledRun) resumeKey {
-	return resumeKeyFor(line.Candidate, line.Task, line.Scenario, line.Stamp, line.Run)
+	return resumeKeyFor(line.Candidate, line.Judge, line.Task, line.Scenario, line.Stamp, line.Run)
 }
 
 // rewriteJournal replaces path with exactly the lines given, via a temporary
@@ -345,19 +341,19 @@ func releaseResumeDir(lock *os.File) error {
 }
 
 // forTask is the journal as ONE task's certification sees it: the file, plus
-// the candidate binding every line of this task's own must match. A routed run
-// resolves a different model per task, so binding it here is what keeps one
-// task from replaying a run another task's model produced.
-func (j *runJournal) forTask(task ai.Task, candidate ai.ProviderConfig) taskJournal {
-	return taskJournal{j: j, task: task, candidate: bindingKey(candidate)}
+// the candidate and judge every line of this task's own must match. Both are
+// chosen per task, so binding them here is what keeps one task from replaying a
+// run another task's model produced or another judge graded.
+func (j *runJournal) forTask(task ai.Task, candidate, judge ai.ProviderConfig) taskJournal {
+	return taskJournal{j: j, task: task, candidate: bindingKey(candidate), judge: bindingKey(judge)}
 }
 
 // taskJournal is one task's view of the journal, so runScenario carries a
-// single value instead of a file, a binding and a task name.
+// single value instead of a file, two bindings and a task name.
 type taskJournal struct {
-	j         *runJournal
-	task      ai.Task
-	candidate string
+	j                *runJournal
+	task             ai.Task
+	candidate, judge string
 }
 
 // restartHint says what a restart will actually cost, and says nothing when it
@@ -380,7 +376,7 @@ func (t taskJournal) lookup(sc Scenario, stamp string, run int) (runOutcome, boo
 	if t.j == nil {
 		return runOutcome{}, false
 	}
-	out, ok := t.j.loaded[resumeKeyFor(t.candidate, string(t.task), sc.Name, stamp, run)]
+	out, ok := t.j.loaded[resumeKeyFor(t.candidate, t.judge, string(t.task), sc.Name, stamp, run)]
 	return out, ok
 }
 
@@ -396,7 +392,7 @@ func (t taskJournal) append(ctx context.Context, sc Scenario, stamp string, run 
 		At:            at.UTC().Format(time.RFC3339Nano),
 		Candidate:     t.candidate,
 		Build:         t.j.build,
-		Judge:         t.j.judge,
+		Judge:         t.judge,
 		Profile:       t.j.profile,
 		CorpusVersion: corpusVersionV1,
 		Task:          string(t.task),

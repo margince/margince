@@ -5,7 +5,10 @@
 # can be named, diffed and reused. Copy the `seeds` block into your own
 # config/margince.yaml, or point a certification run at this file:
 #
-#     make e2e-ai ROUTING=config/presets/gemini_cloud.yaml JUDGE=...
+#     make e2e-ai ROUTING=config/presets/gemini_cloud.yaml
+#
+# The pinned judge is this preset's premium model, so its premium-led tasks are
+# graded by JUDGE_FALLBACK= instead: a model never grades itself.
 #
 # Needs GEMINI_API_KEY and nothing else. Not loaded automatically — see README.md.
 version: 1

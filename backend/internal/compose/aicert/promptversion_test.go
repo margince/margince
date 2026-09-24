@@ -537,3 +537,37 @@ func TestMovingAScenarioFileDoesNotMoveItsStamp(t *testing.T) {
 		}
 	}
 }
+
+// The grading rule has no request to be read from, so the stamp's grader third
+// carries it outright: a record graded under another rule does not read current.
+func TestAScenarioStampCoversTheGradingRule(t *testing.T) {
+	census, err := compose.NewTaskCensus()
+	if err != nil {
+		t.Fatalf("building the task census: %v", err)
+	}
+	corpus, err := LoadCorpus("corpus", census)
+	if err != nil || len(corpus) == 0 {
+		t.Fatalf("LoadCorpus: %d scenario(s), %v", len(corpus), err)
+	}
+	ctx := context.Background()
+	sc := corpus[0]
+	stamps, err := ScenarioStamps(ctx, []Scenario{sc}, census)
+	if err != nil {
+		t.Fatalf("ScenarioStamps: %v", err)
+	}
+	request, err := firstBuiltRequest(ctx, sc, census)
+	if err != nil {
+		t.Fatalf("firstBuiltRequest: %v", err)
+	}
+	graderRequest, err := graderRequestDigest(sc, request)
+	if err != nil {
+		t.Fatalf("graderRequestDigest: %v", err)
+	}
+	third := stamps[sc.Name][stampSegment*2:]
+	if third == graderRequest {
+		t.Fatal("the grader third is the bare request digest — a change of grading rule would leave every record current")
+	}
+	if third == gradedBy(gradingRule+"-next", graderRequest) {
+		t.Fatal("two grading rules stamp the same grader third")
+	}
+}

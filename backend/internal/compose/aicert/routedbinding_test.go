@@ -179,3 +179,74 @@ func TestARoutedRunTakesItsProfileFromTheRouting(t *testing.T) {
 		t.Errorf("recordProfile() = %q, want the configured cloud_frontier", got)
 	}
 }
+
+// The judge pinned for certification is also a model a preset leads with, so
+// the tasks that model serves are graded by the fallback and every other task
+// by the primary — per task, from the one choice the run itself makes.
+func TestJudgeForTakesTheFallbackOnlyWhereTheCandidateIsThePrimary(t *testing.T) {
+	primary := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/big-1", BaseURL: "https://broker.example/api"}
+	fallback := ai.ProviderConfig{Provider: "openai_compatible", Model: "openai/gpt-oss-120b", BaseURL: "https://broker.example/api"}
+	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), JudgeBinding: primary, JudgeFallback: fallback, Profile: ai.ProfileEUHosted}
+	for _, tc := range []struct {
+		task ai.Task
+		want ai.ProviderConfig
+	}{
+		{ai.TaskDocumentExtract, fallback},              // premium-led: its candidate IS the primary judge
+		{ai.TaskBriefRanking, fallback},                 // premium-led too
+		{ai.TaskCaptureConfidentialityVerdict, primary}, // local_small-led: the primary is not its candidate
+	} {
+		candidate, _, ok := resolveBinding(*cfg.Routing, tc.task)
+		if !ok {
+			t.Fatalf("%s resolved no candidate under the dev-like routing", tc.task)
+		}
+		got, err := cfg.judgeFor(candidate)
+		if err != nil {
+			t.Fatalf("%s: judgeFor refused a task one of the two judges can grade: %v", tc.task, err)
+		}
+		if got.Model != tc.want.Model {
+			t.Errorf("%s (candidate %s) is graded by %s, want %s", tc.task, candidate.Model, got.Model, tc.want.Model)
+		}
+	}
+	if err := validateRoutedBindings(cfg, slog.New(slog.DiscardHandler)); err != nil {
+		t.Errorf("every task has a judge that is not its candidate, so the run must be accepted, got %v", err)
+	}
+}
+
+// A task whose candidate is BOTH judges has nobody left to grade it, and the run
+// is refused before its first call, naming the task an operator must move.
+func TestValidateRoutedBindingsRefusesATaskThatCollidesWithBothJudges(t *testing.T) {
+	both := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/big-1", BaseURL: "https://broker.example/api"}
+	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), JudgeBinding: both, JudgeFallback: both, Profile: ai.ProfileEUHosted}
+	err := validateRoutedBindings(cfg, slog.New(slog.DiscardHandler))
+	if err == nil {
+		t.Fatal("a premium-led task whose candidate is both the judge and the fallback was accepted; it would grade itself")
+	}
+	for _, want := range []string{"document_extract", "MARGINCE_AICERT_JUDGE_FALLBACK_MODEL"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal must name %q, got %q", want, err)
+		}
+	}
+	if strings.Contains(err.Error(), string(ai.TaskCaptureConfidentialityVerdict)) {
+		t.Errorf("the refusal names a local_small-led task the primary judge grades fine: %q", err)
+	}
+}
+
+// Under MODEL= the one candidate is every task's, so a candidate that is the
+// primary judge is graded by the fallback rather than refused.
+func TestASingleCandidateThatIsThePrimaryJudgeIsGradedByTheFallback(t *testing.T) {
+	primary := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}
+	fallback := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"}
+	cfg := RunnerConfig{Binding: primary, JudgeBinding: primary, JudgeFallback: fallback, Profile: ai.ProfileEUHosted}
+	if err := validateBindings(cfg, slog.New(slog.DiscardHandler)); err != nil {
+		t.Fatalf("a fallback that differs from the candidate grades it, so the run must be accepted, got %v", err)
+	}
+	if got, err := cfg.judgeFor(cfg.Binding); err != nil || got.Model != fallback.Model {
+		t.Errorf("judgeFor(candidate = primary judge) = (%v, %v), want the fallback", got, err)
+	}
+
+	cfg.JudgeFallback = ai.ProviderConfig{}
+	err := validateBindings(cfg, slog.New(slog.DiscardHandler))
+	if err == nil || !strings.Contains(err.Error(), "MARGINCE_AICERT_JUDGE_MODEL") {
+		t.Errorf("with no fallback a candidate that is the judge must be refused, naming the fix; got %v", err)
+	}
+}

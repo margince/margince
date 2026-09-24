@@ -13,9 +13,8 @@ package aicert_test
 // hash of the request payload, always prefixed "fake-completion:"), so
 // an expected answer of "fake-completion" is a reliable, script-free
 // HardPass signal. The judge side of that same unscripted
-// fallback is never valid JSON, so every judge score here lands at 0
-// (the "parsed twice, still failed, score 0" path) and every verdict is
-// not_supported — Run() has no seam to script the judge, unlike
+// fallback is never valid JSON, so every run here is left ungraded and
+// every verdict is not_supported — Run() has no seam to script the judge, unlike
 // certifyTask's own tests, so this is the honest ceiling of a pure
 // black-box run.
 
@@ -250,5 +249,40 @@ func TestRunAnUnrunnableBindingJoinsAnErrorPerTaskAndAbortsNone(t *testing.T) {
 		if !strings.Contains(err.Error(), task) {
 			t.Errorf("joined error must name task %s, got %v", task, err)
 		}
+	}
+}
+
+// A candidate that is the pinned judge is graded by the fallback, and the
+// journal files each run under the judge that actually graded it — a replay
+// keyed on the primary would hand the fallback's grades to the other judge.
+func TestRunGradesACandidateThatIsThePrimaryJudgeWithTheFallback(t *testing.T) {
+	dir := t.TempDir()
+	corpusDir := filepath.Join(dir, "corpus")
+	resumeDir := filepath.Join(dir, "resume")
+	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
+
+	records, err := aicert.Run(context.Background(), aicert.RunnerConfig{
+		Census:        censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
+		Binding:       ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		JudgeBinding:  ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		JudgeFallback: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"},
+		Profile:       ai.ProfileEUHosted,
+		CorpusDir:     corpusDir,
+		RecordDir:     filepath.Join(dir, "records"),
+		ResumeDir:     resumeDir,
+		Repeats:       1,
+	}, quietTestLogger())
+	if err != nil {
+		t.Fatalf("a fallback judge distinct from the candidate must let the run proceed, got %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("got %d records, want 1", len(records))
+	}
+	journal, err := os.ReadFile(filepath.Join(resumeDir, "aicert-resume.jsonl")) // #nosec G304 -- a t.TempDir path
+	if err != nil {
+		t.Fatalf("reading the resume journal: %v", err)
+	}
+	if !strings.Contains(string(journal), `"judge":"\"fake\"|\"grader\"`) {
+		t.Errorf("the journal does not file the run under the fallback judge that graded it:\n%s", journal)
 	}
 }

@@ -23,14 +23,14 @@ import (
 )
 
 // runScenario drives repeats runs of one scenario, folding each into acc, and
-// returns the scenario's own verdict for certifyTask to fold into the task's
-// worst-case verdict. The per-run degrade gates sit here rather than inside
+// returns its run set for certifyTask to judge beside its siblings. The per-run
+// degrade gates sit here rather than inside
 // certifyTask because they void the WHOLE task: a demoted answer or a demoted
 // grader anywhere in the set means no record, not a lower band.
 func runScenario(ctx context.Context, task ai.Task, sc Scenario, stamp string, census *aitasks.Registry, repeats int,
 	candidateRouter *ai.Router, candidateRec *traceRecorder, judgeRouter *ai.Router, judgeRec *traceRecorder,
 	log *slog.Logger, acc *taskAccumulation, trace *payloadTrace, journal taskJournal,
-) (string, error) {
+) ([]RunResult, error) {
 	scenarioResults := make([]RunResult, 0, repeats)
 	for i := 0; i < repeats; i++ {
 		run := i + 1
@@ -42,14 +42,14 @@ func runScenario(ctx context.Context, task ai.Task, sc Scenario, stamp string, c
 			var runErr error
 			outcome, runErr = driveRun(ctx, candidateRouter, candidateRec, judgeRouter, judgeRec, sc, task, census, log, trace, journal, run)
 			if runErr != nil {
-				return "", fmt.Errorf("aicert: task %s scenario %s run %d: %w", task, sc.Name, run, runErr)
+				return nil, fmt.Errorf("aicert: task %s scenario %s run %d: %w", task, sc.Name, run, runErr)
 			}
 		}
 		// Applied to a replayed run too, though only a run that already passed
 		// it is ever journaled: one gate over both paths is one answer to
 		// "may this run be certified", rather than two that can drift apart.
 		if err := degradeGate(task, sc, run, outcome); err != nil {
-			return "", err
+			return nil, err
 		}
 		// Journaled only once the accumulation ACCEPTS it, never before. addRun
 		// enforces served-identity uniformity across the whole set, which is a
@@ -59,16 +59,15 @@ func runScenario(ctx context.Context, task ai.Task, sc Scenario, stamp string, c
 		// sticky for six hours, escapable only by throwing away the whole
 		// journal with RESUME=.
 		if err := acc.addRun(task, sc, i, outcome); err != nil {
-			return "", err
+			return nil, err
 		}
 		if !replayed {
 			journal.append(ctx, sc, stamp, run, outcome, nowFunc(), log)
 		}
 		scenarioResults = append(scenarioResults, outcome.RunResult)
 	}
-	scenarioVerdict, _ := Verdict(scenarioResults, sc.Expect.Bands)
-	acc.scenarios = append(acc.scenarios, scenarioRow(sc, stamp, scenarioVerdict, scenarioResults))
-	return scenarioVerdict, nil
+	acc.scenarios = append(acc.scenarios, scenarioRow(sc, stamp, scenarioResults))
+	return scenarioResults, nil
 }
 
 // degradeGate voids the whole task when a run was served, or graded, on a
@@ -176,13 +175,15 @@ func worthRedriving(err error) bool {
 // beside the task's pooled numbers. Passed and the reported outcomes are
 // counted separately because they answer different questions: whether the run
 // did what the scenario asked, and what came back when it did not.
-func scenarioRow(sc Scenario, stamp, verdict string, results []RunResult) ScenarioRecord {
+func scenarioRow(sc Scenario, stamp string, results []RunResult) ScenarioRecord {
 	tally := tallyOutcomes(results)
+	verdict, _ := Verdict(ScenarioRuns{Runs: results, Bands: sc.Expect.Bands})
 	row := ScenarioRecord{
 		Scenario:            sc.Name,
 		Site:                sc.Site,
 		Stamp:               stamp,
 		Verdict:             verdict,
+		JudgeBand:           judgeBand(results, sc.Expect.Bands),
 		Runs:                len(results),
 		ReportedAccepted:    tally.accepted,
 		ReportedWrongAnswer: tally.wrongAnswer,
@@ -309,7 +310,7 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	}
 
 	judgeMark := judgeRec.mark()
-	score, judgeServedModel, judgeDegraded, err := judgeScore(ctx, judge, judgeRec, sc, caseTrace, output, log)
+	judged, err := judgeScore(ctx, judge, judgeRec, sc, caseTrace, output, log)
 	if err != nil {
 		// The same debt the candidate side settles: a judge call that failed
 		// still spent, and driveRun may discard this whole attempt, so the
@@ -327,15 +328,17 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 		output: output, outcome: evaluated.Result, passed: outcomeAsExpected && capsOK,
 		scope: aitasks.ScopeOf(factory), pooled: pooled,
 	})
-	graded.Score = score
-	graded.JudgeServedModel = judgeServedModel
-	graded.JudgeDegraded = judgeDegraded
+	graded.Score = judged.score
+	graded.JudgeScores = judged.scores
+	graded.Ungraded = judged.ungraded
+	graded.JudgeServedModel = judged.servedModel
+	graded.JudgeDegraded = judged.degraded
 	return graded, nil
 }
 
 // candidateSideRun is one run's outcome with everything the CANDIDATE side
-// knows and nothing the judge does. The graded path adds the score and the
-// grader's identity; the truncated path adds neither and marks itself Ungraded.
+// knows and nothing the judge does. The judged path adds what the judge gave,
+// which may be no opinion; the truncated path asks for none and marks itself Ungraded.
 //
 // One builder for both rather than two, because a second copy is where a field
 // added to the record later reaches the judged runs and misses the cut-off ones.

@@ -64,12 +64,13 @@ func logResolvedBindings(t *testing.T, routing ai.RoutingConfig) {
 // which fails closed without one and in practice rides the same broker. A native
 // vendor is left empty on purpose: inheriting a broker host would point, say, an
 // anthropic judge at OpenRouter and grade through a serving path the record does
-// not name. JUDGE_BASE_URL= still overrides both.
-func judgeBaseURL() string {
-	if own := os.Getenv("MARGINCE_AICERT_JUDGE_BASE_URL"); own != "" {
+// not name. JUDGE_BASE_URL= still overrides both, and the fallback judge
+// resolves its own host the same way from its own pair of variables.
+func judgeBaseURL(modelVar, baseURLVar string) string {
+	if own := os.Getenv(baseURLVar); own != "" {
 		return own
 	}
-	if strings.HasPrefix(os.Getenv("MARGINCE_AICERT_JUDGE_MODEL"), "openai_compatible:") {
+	if strings.HasPrefix(os.Getenv(modelVar), "openai_compatible:") {
 		return os.Getenv("MARGINCE_AICERT_BASE_URL")
 	}
 	return ""
@@ -130,9 +131,20 @@ func TestE2ECertify(t *testing.T) {
 
 	// The judge is a SECOND model on purpose: one grading itself is certified by
 	// construction. Run refuses the two being equal before a call is paid for.
-	judge, err := ai.ParseBinding(os.Getenv("MARGINCE_AICERT_JUDGE_MODEL"), judgeBaseURL())
+	judge, err := ai.ParseBinding(os.Getenv("MARGINCE_AICERT_JUDGE_MODEL"),
+		judgeBaseURL("MARGINCE_AICERT_JUDGE_MODEL", "MARGINCE_AICERT_JUDGE_BASE_URL"))
 	if err != nil {
 		t.Fatalf("MARGINCE_AICERT_JUDGE_MODEL: %v", err)
+	}
+	// The fallback is optional: unset, a task whose candidate is the judge is
+	// refused before the first paid call rather than graded by anything else.
+	var judgeFallback ai.ProviderConfig
+	if spec := os.Getenv("MARGINCE_AICERT_JUDGE_FALLBACK_MODEL"); spec != "" {
+		judgeFallback, err = ai.ParseBinding(spec,
+			judgeBaseURL("MARGINCE_AICERT_JUDGE_FALLBACK_MODEL", "MARGINCE_AICERT_JUDGE_FALLBACK_BASE_URL"))
+		if err != nil {
+			t.Fatalf("MARGINCE_AICERT_JUDGE_FALLBACK_MODEL: %v", err)
+		}
 	}
 
 	// repeats stays 0 (Run's own "default to 3" per RunnerConfig.Repeats'
@@ -156,10 +168,11 @@ func TestE2ECertify(t *testing.T) {
 	}
 
 	cfg := aicert.RunnerConfig{
-		Census:       census,
-		Binding:      binding,
-		Routing:      routing,
-		JudgeBinding: judge,
+		Census:        census,
+		Binding:       binding,
+		Routing:       routing,
+		JudgeBinding:  judge,
+		JudgeFallback: judgeFallback,
 		// Under ROUTING= the profile is the FILE's own, not the environment's: it
 		// is part of a record's identity and part of what ValidateTierBinding
 		// enforces, so taking it from anywhere but the config that names the

@@ -109,7 +109,7 @@ func ScenarioStamps(ctx context.Context, scenarios []Scenario, census *aitasks.R
 	stamps := make(map[string]string, len(scenarios))
 	for _, sc := range scenarios {
 		// Hash each scenario on its own: the scenario WHOLE, the request its site
-		// builds, and the grader's request beside it.
+		// builds, and the grader's request under the grading rule.
 		encoded, err := json.Marshal(sc)
 		if err != nil {
 			return nil, fmt.Errorf("aicert: stamp: scenario %q cannot be digested: %w", sc.Name, err)
@@ -122,10 +122,11 @@ func ScenarioStamps(ctx context.Context, scenarios []Scenario, census *aitasks.R
 		if err != nil {
 			return nil, err
 		}
-		grader, err := graderRequestDigest(sc, request)
+		graderRequest, err := graderRequestDigest(sc, request)
 		if err != nil {
 			return nil, err
 		}
+		grader := gradedBy(gradingRule, graderRequest)
 		sum := sha256.Sum256(encoded)
 		// All three parts are fixed-width hex, so concatenating them is unambiguous.
 		stamp := hex.EncodeToString(sum[:]) + candidate + grader
@@ -234,6 +235,17 @@ func graderRequestDigest(sc Scenario, candidateRequest model.Request) (string, e
 		return "", fmt.Errorf("aicert: stamp: scenario %q: %w", sc.Name, err)
 	}
 	return canonicalRequestDigest(compose.JudgeRequest(sc.Expect.Rubric, ask, stampCandidateOutput))
+}
+
+// gradingRule versions the scoring rule and the judge-opinion policy.
+// Bump it whenever either changes, so every record graded the old way reads stale.
+const gradingRule = "grading-rule-2"
+
+// gradedBy is the stamp's grader third: the grader's request digest under the
+// rule that turns its opinions into a verdict, which no request carries.
+func gradedBy(rule, graderRequest string) string {
+	sum := sha256.Sum256([]byte(rule + "\n" + graderRequest))
+	return hex.EncodeToString(sum[:])
 }
 
 // perCallID matches a canonical UUID, which is the shape of every identifier

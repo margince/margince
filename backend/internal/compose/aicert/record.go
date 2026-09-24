@@ -146,8 +146,11 @@ type ScenarioRecord struct {
 	// existed, which the report reads as "ask the task stamp instead".
 	Stamp   string `json:"stamp,omitempty"`
 	Verdict string `json:"verdict"`
-	Runs    int    `json:"runs"`
-	Passed  int    `json:"passed"`
+	// JudgeBand is the best verdict this scenario's judge scores alone reach
+	// against its own bands — what a verdict over several rows needs of each.
+	JudgeBand string `json:"judge_band,omitempty"`
+	Runs      int    `json:"runs"`
+	Passed    int    `json:"passed"`
 	// The same reported-outcome counts the task carries, on this scenario's own
 	// runs: they say what came back, never whether it was what was asked for.
 	ReportedAccepted    int `json:"reported_accepted"`
@@ -185,21 +188,22 @@ func (t SiteTally) Reliability() float64 {
 // False means this record measured that site not at all — a different thing
 // from measuring it and finding nothing, which is why it is not a zero tally.
 //
-// The verdict folds to the WORST of the site's scenarios, the same way the
-// task's own does: a site is only as certified as its weakest scenario.
+// The verdict is Verdict's rule over the site's scenario rows, the same rule
+// the task's own verdict is.
 func (r Record) ForSite(variant string) (SiteTally, bool) {
 	var tally SiteTally
-	found := false
+	var rows []scenarioTally
 	for _, sc := range r.Scenarios {
 		if sc.Site != variant {
 			continue
 		}
-		if !found {
-			tally.Verdict = sc.Verdict
-			found = true
-		} else {
-			tally.Verdict = worstVerdict(tally.Verdict, sc.Verdict)
+		// A row written before JudgeBand existed: its own verdict is the most its
+		// scores are known to reach, which reproduces the worst-scenario fold.
+		band := sc.JudgeBand
+		if band == "" {
+			band = sc.Verdict
 		}
+		rows = append(rows, scenarioTally{runs: sc.Runs, passed: sc.Passed, judgeBand: band})
 		tally.Runs += sc.Runs
 		tally.Passed += sc.Passed
 		tally.ReportedAccepted += sc.ReportedAccepted
@@ -207,7 +211,11 @@ func (r Record) ForSite(variant string) (SiteTally, bool) {
 		tally.ReportedInvalid += sc.ReportedInvalid
 		tally.ReportedAbstained += sc.ReportedAbstained
 	}
-	return tally, found
+	if len(rows) == 0 {
+		return SiteTally{}, false
+	}
+	tally.Verdict, _ = verdictOver(rows)
+	return tally, true
 }
 
 // sanitizeForPath maps a raw identifier (a provider name, or a served-model

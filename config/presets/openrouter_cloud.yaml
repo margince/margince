@@ -11,11 +11,11 @@
 # Not loaded automatically — see README.md. Copy the `seeds` block into your own
 # config/margince.yaml, or:
 #
-#     make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
-#       JUDGE=gemini:gemini-3.5-flash
+#     make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml
 #
-# The judge is OFF this preset on purpose: every model bound here is the leading
-# rung of some task, and the runner refuses a judge that grades itself.
+# The pinned judge (gemini:gemini-3.5-flash, so GEMINI_API_KEY too) is OFF this
+# preset on purpose: every model bound here is the leading rung of some task, and
+# the runner refuses a judge that grades itself.
 #
 # The measurements behind every `routing:` value here, and what was tried and
 # rejected: docs/reference/openrouter.md.
