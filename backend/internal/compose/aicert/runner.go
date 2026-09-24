@@ -185,10 +185,6 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	}
 
 	ctx = ensureWorkspace(ctx)
-	if err := preflight(ctx, cfg, sortedTasks(byTask), nil, log); err != nil {
-		return nil, fmt.Errorf("aicert: runner: %w", err)
-	}
-
 	// TraceDir empty ⇒ tracing off: trace stays nil and every method no-ops.
 	var trace *payloadTrace
 	if cfg.TraceDir != "" {
@@ -218,6 +214,14 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 			log.WarnContext(ctx, "aicert: closing resume journal", "err", cerr)
 		}
 	}()
+
+	// After the journal, because a restart replaying every run sends nothing and
+	// the pre-flight would be its one paid call.
+	if journal.replaysEverything(ctx, cfg, byTask, repeats) {
+		log.InfoContext(ctx, "aicert: pre-flight skipped — every run replays from the resume journal")
+	} else if err := preflight(ctx, cfg, sortedTasks(byTask), nil, log); err != nil {
+		return nil, fmt.Errorf("aicert: runner: %w", err)
+	}
 
 	var records []Record
 	var runErrs []error
@@ -327,7 +331,7 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	taskVerdict, _ := Verdict(sets...)
 
 	rec := buildRecord(task, taskVerdict, acc, profile, promptVersion)
-	rec.CandidateUpstream, rec.JudgeUpstream = effectiveUpstream(binding), effectiveUpstream(judgeBinding)
+	rec.CandidateUpstream, rec.JudgeUpstream = ai.UpstreamPreferencesFor(binding), ai.UpstreamPreferencesFor(judgeBinding)
 	return rec, nil
 }
 

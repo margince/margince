@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package modelfailure answers an HTTP request whose model lane ended without
-// an answer. It is a package of its own so that a compose subpackage, which
-// cannot import the root, answers the way the root's handlers do.
+// an answer. It is a package of its own so a compose subpackage, which cannot
+// import the root, can answer the same way. Every root handler that can reach a
+// model is held to it by TestEveryHandlerReachingAModelAnswersThroughModelFailure;
+// the subpackages' handlers are not censused, and many still answer httperr.
 package modelfailure
 
 import (
@@ -63,9 +65,11 @@ func answered(w http.ResponseWriter, r *http.Request, err error) bool {
 // Matched by sentinel, never by message: ai.ErrAllTiersFailed when the walk
 // reached the end of the bound rungs, and the outcomes that stop it sooner — a
 // reply the models declined or the validator refused (ai.ModelDeclined), a
-// request rejected, an account out of budget.
+// request rejected, an account out of budget — and the embed lane, which has no
+// walk to end, failing to answer (ai.ErrEmbedLaneFailed).
 func unanswered(err error) bool {
 	return errors.Is(err, ai.ErrAllTiersFailed) ||
+		errors.Is(err, ai.ErrEmbedLaneFailed) ||
 		ai.ModelDeclined(err) ||
 		errors.Is(err, model.ErrRequestRejected) ||
 		errors.Is(err, ai.ErrProviderQuota)

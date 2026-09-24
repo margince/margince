@@ -130,15 +130,22 @@ func binaryIdentity() (string, error) {
 }
 
 // bindingKey renders a binding as the string two runs are compared on. Input is
-// folded in with the rest because it changes what the model may be GIVEN, which
-// is part of what a run measured and not a label on it.
+// folded in with the rest because it changes what the model may be GIVEN, and
+// the upstream preferences because they choose the host, and with it the
+// precision, that serves the model: both are part of what a run measured.
 //
-// Each component is QUOTED rather than joined on a separator, so no value
-// containing the separator can spell another binding's key: two bindings that
-// collided here would replay one model's runs under the other's name, which is
-// the one mistake this whole file exists to make impossible.
+// The preferences are the EFFECTIVE ones, so an inherited default and the same
+// block spelled out are one key. Each component is QUOTED rather than joined on
+// a separator, so no value containing the separator can spell another binding's
+// key: two bindings that collided here would replay one model's runs under the
+// other's name, which is the one mistake this whole file exists to make
+// impossible. An empty key is a binding that could not be rendered.
 func bindingKey(c ai.ProviderConfig) string {
-	return fmt.Sprintf("%q|%q|%q|%q", c.Provider, c.Model, c.BaseURL, strings.Join(c.Input, ","))
+	upstream, err := json.Marshal(ai.UpstreamPreferencesFor(c))
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("%q|%q|%q|%q|%q", c.Provider, c.Model, c.BaseURL, strings.Join(c.Input, ","), upstream)
 }
 
 // runJournal is the whole run's journal file: the live runs it loaded, and the
@@ -345,7 +352,41 @@ func releaseResumeDir(lock *os.File) error {
 // chosen per task, so binding them here is what keeps one task from replaying a
 // run another task's model produced or another judge graded.
 func (j *runJournal) forTask(task ai.Task, candidate, judge ai.ProviderConfig) taskJournal {
-	return taskJournal{j: j, task: task, candidate: bindingKey(candidate), judge: bindingKey(judge)}
+	candidateKey, judgeKey := bindingKey(candidate), bindingKey(judge)
+	if candidateKey == "" || judgeKey == "" {
+		// A binding with no key can be neither filed nor matched, so this task pays for every run.
+		return taskJournal{task: task}
+	}
+	return taskJournal{j: j, task: task, candidate: candidateKey, judge: judgeKey}
+}
+
+// replaysEverything reports whether every run this certification would drive is
+// already journaled, so that nothing will be sent. Any doubt answers false: a
+// task whose bindings or stamps cannot be resolved is certifyTask's to report.
+func (j *runJournal) replaysEverything(ctx context.Context, cfg RunnerConfig, byTask map[ai.Task][]Scenario, repeats int) bool {
+	if j == nil || len(byTask) == 0 {
+		return false
+	}
+	quiet := slog.New(slog.DiscardHandler)
+	for task, scenarios := range byTask {
+		candidate, judge, err := taskBindings(ctx, cfg, task, quiet)
+		if err != nil {
+			return false
+		}
+		stamps, err := ScenarioStamps(ctx, scenarios, cfg.Census)
+		if err != nil {
+			return false
+		}
+		view := j.forTask(task, candidate, judge)
+		for _, sc := range scenarios {
+			for run := 1; run <= repeats; run++ {
+				if _, ok := view.lookup(sc, stamps[sc.Name], run); !ok {
+					return false
+				}
+			}
+		}
+	}
+	return true
 }
 
 // taskJournal is one task's view of the journal, so runScenario carries a

@@ -245,7 +245,8 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 }
 
 // rejectedAgainAbove reports whether callErr rejected the request and the next
-// rung of rest (rest[0] is the rung that answered) is the same known binding.
+// rung of rest (rest[0] is the rung that answered) is the same known binding:
+// provider, model and base URL, the one API the identical request would reach.
 func rejectedAgainAbove(b *binding, callErr error, rest []Tier) bool {
 	if !errors.Is(callErr, model.ErrRequestRejected) || len(rest) < 2 {
 		return false

@@ -349,3 +349,35 @@ func TestARoutedRunValidatesOnlyTheTasksItCertifies(t *testing.T) {
 		t.Fatalf("TASK=%s grades itself and must be refused naming it; got %v", colliding, err)
 	}
 }
+
+// A restart that will replay every run from the journal sends no scenario, so a
+// pre-flight would be the one paid call it makes. It is skipped, and said so.
+func TestARunThatReplaysEveryRunSkipsThePreflight(t *testing.T) {
+	task := ai.TaskCaptureConfidentialityVerdict
+	dir := t.TempDir()
+	corpusDir := filepath.Join(dir, "corpus")
+	writeCorpusFile(t, corpusDir, string(task)+"/basic_01.yaml", scenarioYAML(string(task)))
+	run := func() string {
+		var out strings.Builder
+		if _, err := aicert.Run(context.Background(), aicert.RunnerConfig{
+			Census:       censusFor(t, task),
+			Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+			JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"},
+			Profile:      ai.ProfileEUHosted,
+			CorpusDir:    corpusDir,
+			RecordDir:    filepath.Join(dir, "records"),
+			ResumeDir:    filepath.Join(dir, "resume"),
+			Repeats:      1,
+		}, slog.New(slog.NewTextHandler(&out, nil))); err != nil {
+			t.Fatalf("certifying: %v", err)
+		}
+		return out.String()
+	}
+	const served = "aicert: pre-flight served"
+	if first := run(); !strings.Contains(first, served) {
+		t.Fatalf("the first run sent no pre-flight, so the second proves nothing about skipping one:\n%s", first)
+	}
+	if second := run(); strings.Contains(second, served) || !strings.Contains(second, "pre-flight skipped") {
+		t.Errorf("a run replaying every run from the journal still paid for a pre-flight, or did not say it skipped one:\n%s", second)
+	}
+}

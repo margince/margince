@@ -351,7 +351,9 @@ func (c *openaiClient) postRaw(ctx context.Context, path string, payload []byte)
 
 // openaiError surfaces the API's error type and message — and only those, so a
 // logged failure can never echo the request (or the key). Both are redacted,
-// and the code decides whether the request itself was malformed.
+// and the code decides whether the request itself was malformed or its content
+// was refused by policy — the latter the same withholding a failed response
+// with that code reports.
 func openaiError(ctx context.Context, resp *http.Response) error {
 	var apiErr struct {
 		Error struct {
@@ -362,6 +364,10 @@ func openaiError(ctx context.Context, resp *http.Response) error {
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil && apiErr.Error.Type != "" {
+		var code string
+		if json.Unmarshal(apiErr.Error.Code, &code) == nil && openaiPolicyCodes[code] {
+			return withheldError{wire: providerOpenAI, reason: code, detail: safeProviderText(ctx, apiErr.Error.Message)}
+		}
 		err := providerRefusal(resp, "", fmt.Errorf("ai: openai: %s: %s (http %d)",
 			safeProviderText(ctx, apiErr.Error.Type), safeProviderText(ctx, apiErr.Error.Message), resp.StatusCode))
 		if openAIRejectsTheRequest(apiErr.Error.Code) {
@@ -409,8 +415,9 @@ func openaiTerminalStatus(ctx context.Context, out openaiResponse) error {
 	}
 }
 
-// openaiPolicyCodes are the failed-response codes that are a policy decision
-// about the content, so the answer is withheld rather than the call failed.
+// openaiPolicyCodes are the codes, on a failed response or a 400, that are a
+// policy decision about the content, so the answer is withheld rather than the
+// call failed.
 var openaiPolicyCodes = map[string]bool{"invalid_prompt": true, "bio_policy": true}
 
 // openaiMaxOutputTokens is the incomplete reason for a reply the output

@@ -95,6 +95,22 @@ func vendorRefusals() map[string]refusalFixture {
 				`"details":[{"@type":"type.googleapis.com/google.rpc.BadRequest","fieldViolations":[{"description":"Invalid JSON payload received. Unknown name \"labels\": Cannot find field."}]}]}}`, true,
 		},
 
+		"gemini/model-dependent setting": {
+			providerGemini, http.StatusBadRequest,
+			`{"error":{"code":400,"message":"Invalid value at 'generation_config.thinking_config.thinking_budget' (TYPE_INT32), \"high\"","status":"INVALID_ARGUMENT",` +
+				`"details":[{"@type":"type.googleapis.com/google.rpc.BadRequest","fieldViolations":[{"field":"generation_config.thinking_config.thinking_budget","description":"Invalid value at 'generation_config.thinking_config.thinking_budget' (TYPE_INT32), \"high\""}]}]}}`, false,
+		},
+		"gemini/camel-cased setting": {
+			providerGemini, http.StatusBadRequest,
+			`{"error":{"code":400,"message":"Invalid value at 'generationConfig.responseMimeType'.","status":"INVALID_ARGUMENT",` +
+				`"details":[{"@type":"type.googleapis.com/google.rpc.BadRequest","fieldViolations":[{"field":"generationConfig.responseMimeType","description":"Invalid value."}]}]}}`, false,
+		},
+		"gemini/malformed content": {
+			providerGemini, http.StatusBadRequest,
+			`{"error":{"code":400,"message":"Invalid value at 'contents[0].role' (TYPE_STRING), \"assistant\"","status":"INVALID_ARGUMENT",` +
+				`"details":[{"@type":"type.googleapis.com/google.rpc.BadRequest","fieldViolations":[{"field":"contents[0].role","description":"Invalid value at 'contents[0].role' (TYPE_STRING), \"assistant\""}]}]}}`, true,
+		},
+
 		"openai-compat/context length": {
 			providerOpenAICompatible, http.StatusBadRequest,
 			`{"error":{"message":"This endpoint's maximum context length is 131072 tokens. However, you requested about 200000 tokens.","code":400}}`, false,
@@ -106,6 +122,10 @@ func vendorRefusals() map[string]refusalFixture {
 		"openai-compat/unsupported parameter": {
 			providerOpenAICompatible, http.StatusBadRequest,
 			`{"error":{"message":"Unsupported parameter: 'temperature'.","type":"invalid_request_error","code":"unsupported_parameter"}}`, false,
+		},
+		"openai-compat/no upstream host": {
+			providerOpenAICompatible, http.StatusNotFound,
+			`{"error":{"message":"No allowed providers are available for the selected model.","code":404}}`, false,
 		},
 		"openai-compat/invalid schema": {
 			providerOpenAICompatible, http.StatusBadRequest,
@@ -220,15 +240,15 @@ func TestTheLadderTreatsAnOutcomeAsAnOutcome(t *testing.T) {
 		want      error
 		wantCalls int
 	}{
-		"withheld":                      {withheldError{wire: "fake", reason: "refusal"}, routeMeta{"fake", "m"}, model.ErrOutputWithheld, 2},
-		"rejected under the same model": {rejected, routeMeta{"fake", "m"}, model.ErrRequestRejected, 1},
-		"rejected under another model":  {rejected, routeMeta{"fake", "other"}, model.ErrRequestRejected, 2},
+		"withheld":                      {withheldError{wire: "fake", reason: "refusal"}, routeMeta{provider: "fake", model: "m"}, model.ErrOutputWithheld, 2},
+		"rejected under the same model": {rejected, routeMeta{provider: "fake", model: "m"}, model.ErrRequestRejected, 1},
+		"rejected under another model":  {rejected, routeMeta{provider: "fake", model: "other"}, model.ErrRequestRejected, 2},
 	} {
 		t.Run(name, func(t *testing.T) {
 			fake := NewFakeClient().ScriptSteps(FakeStep{Err: tc.cause}, FakeStep{Err: tc.cause})
 			r := assembleRouter(map[Tier]model.Client{TierCheapCloud: fake, TierPremium: fake},
 				NewFakeClient(), ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens, nil,
-				map[Tier]routeMeta{TierCheapCloud: {"fake", "m"}, TierPremium: tc.above}, false, nil)
+				map[Tier]routeMeta{TierCheapCloud: {provider: "fake", model: "m"}, TierPremium: tc.above}, false, nil)
 			_, _, err := r.Complete(wsContext(t), TaskColdStart, model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
 			if !errors.Is(err, tc.want) {
 				t.Fatalf("err = %v, want %v", err, tc.want)
@@ -240,5 +260,18 @@ func TestTheLadderTreatsAnOutcomeAsAnOutcome(t *testing.T) {
 				t.Errorf("the ladder made %d call(s), want %d", got, tc.wantCalls)
 			}
 		})
+	}
+}
+
+// The same provider and model behind another base URL is another API, which may
+// accept what this one refused, so a rejection there walks rather than stops.
+func TestTwoEndpointsOfOneModelAreTwoBindings(t *testing.T) {
+	meta := embedInclusiveMeta(RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://one.example"},
+		TierPremium:    {Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://two.example"},
+	}})
+	b := &binding{routeMeta: meta}
+	if rejectedAgainAbove(b, rejectedRequest(errors.New("bad schema")), []Tier{TierCheapCloud, TierPremium}) {
+		t.Error("a rejection at one base URL stopped the walk before another base URL was asked")
 	}
 }

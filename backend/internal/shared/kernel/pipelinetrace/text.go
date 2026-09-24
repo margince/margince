@@ -80,6 +80,7 @@ var reasonTexts = map[Reason]string{
 	ReasonArchived:             "the message is archived",
 	ReasonNotConnectorCaptured: "the message was not captured by a connector",
 	ReasonAudienceLimited:      "the message is limited to the contacts on it, and this step does not read limited mail",
+	ReasonModelsDeclined:       "every model asked declined to label the message, so it is not asked again",
 	ReasonAwaitingBatch:        "it is eligible and waiting for the next batch",
 	ReasonLabelled:             "the message was labelled",
 	AbsentNotComparable: "what a connector filters on its own side is not counted here — " +

@@ -84,10 +84,11 @@ func TestAWalkThatEndedOnAnOutcomeIsAnsweredAsTheAssistantNotAnswering(t *testin
 		cause     error
 		wantLevel string
 	}{
-		"a withheld answer":         {cause: model.ErrOutputWithheld, wantLevel: ""},
-		"a reply that never passed": {cause: ai.ErrOutputRejected, wantLevel: ""},
-		"a rejected request":        {cause: model.ErrRequestRejected, wantLevel: "level=ERROR"},
-		"an exhausted account":      {cause: ai.ErrProviderQuota, wantLevel: ""},
+		"a withheld answer":          {cause: model.ErrOutputWithheld, wantLevel: ""},
+		"a reply that never passed":  {cause: ai.ErrOutputRejected, wantLevel: ""},
+		"a rejected request":         {cause: model.ErrRequestRejected, wantLevel: "level=ERROR"},
+		"an exhausted account":       {cause: ai.ErrProviderQuota, wantLevel: ""},
+		"an embed lane that is down": {cause: ai.ErrEmbedLaneFailed, wantLevel: ""},
 	} {
 		t.Run(name, func(t *testing.T) {
 			var logged bytes.Buffer

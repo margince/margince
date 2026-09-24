@@ -15,11 +15,20 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 )
+
+// ErrNoUpstreamHost is a broker answering that none of the hosts it offers for
+// the model can serve this request under the preferences it carries: a data
+// policy, a provider allowlist, a precision, a parameter no host supports. It
+// fails identically on every attempt, so re-sending it is paid for and learns
+// nothing. The ladder still walks past it, because another rung is another
+// model or broker, which may have a host.
+var ErrNoUpstreamHost = errors.New("ai: the broker has no upstream host that can serve this request")
 
 // openAICompatError surfaces the vendor's structured error message only —
 // never the raw response body, which may be unstructured HTML/text — so a logged
@@ -57,6 +66,9 @@ func openAICompatError(ctx context.Context, resp *http.Response) error {
 			if openAIRejectsTheRequest(apiErr.Error.Code) {
 				return rejectedRequest(err)
 			}
+			if brokerFoundNoHost(resp.StatusCode, apiErr.Error.Message) {
+				return fmt.Errorf("%w: %w", ErrNoUpstreamHost, err)
+			}
 			return err
 		}
 		if apiErr.Message != "" {
@@ -65,6 +77,24 @@ func openAICompatError(ctx context.Context, resp *http.Response) error {
 		}
 	}
 	return providerRefusal(resp, "", fmt.Errorf("ai: openai-compat: http %d", resp.StatusCode))
+}
+
+// brokerFoundNoHost reads OpenRouter's 404 for a request no upstream host can
+// serve. The broker has no code for it beyond the status, which it also sends
+// for an unknown model, so its own opening words are what separate the two.
+// Only the OUTER message is read: that sentence is the broker's, where
+// metadata.raw is an upstream vendor's and says nothing about the broker's hosts.
+func brokerFoundNoHost(status int, message string) bool {
+	if status != http.StatusNotFound {
+		return false
+	}
+	message = strings.ToLower(message)
+	for _, opening := range []string{"no endpoints found", "no endpoints available", "no allowed providers"} {
+		if strings.HasPrefix(message, opening) {
+			return true
+		}
+	}
+	return false
 }
 
 // compatErrorDetail is the sentence worth logging out of a broker's answer.

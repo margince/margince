@@ -4,9 +4,7 @@
 package aicert
 
 import (
-	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -14,41 +12,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// The upstream preferences a record names are the ones the router applied.
-// ParseRouting runs the ai package's own defaulting, so a parsed config is the
-// production answer for each binding; this fails if the two ever disagree, in
-// either direction — a default the record omits, or one it invents.
-func TestARecordNamesTheUpstreamPreferencesTheRouterApplies(t *testing.T) {
-	t.Parallel()
-	cfg, err := ai.ParseRouting([]byte(`
-profile: cloud_frontier
-tiers:
-  cheap_cloud: {provider: openai_compatible, model: z-ai/glm-5.2, base_url: "https://openrouter.ai/api"}
-  premium: {provider: openai_compatible, model: m, base_url: "https://api.example.com"}
-  local_small: {provider: gemini, model: gemini-flash}
-  local_large: {provider: openai_compatible, model: z-ai/glm-5.2, base_url: "https://openrouter.ai/api", routing: {}}
-embeddings: {provider: gemini, model: e}
-`))
-	if err != nil {
-		t.Fatalf("parsing the routing: %v", err)
-	}
-	for tier, applied := range cfg.Tiers {
-		declared := applied
-		if tier != ai.TierLocalLarge {
-			declared.Routing = nil
-		}
-		if got := effectiveUpstream(declared); !reflect.DeepEqual(got, applied.Routing) {
-			t.Errorf("tier %s (%s at %q): record says %+v, the router applies %+v",
-				tier, applied.Provider, applied.BaseURL, got, applied.Routing)
-		}
-	}
-	if cfg.Tiers[ai.TierCheapCloud].Routing == nil {
-		t.Fatal("the broker tier inherited no default, so this test compares nothing on the case it exists for")
-	}
-}
-
-// errNoHostMatches is a broker's answer when its upstream filter leaves no host.
-var errNoHostMatches = errors.New("ai: openai-compat: : No endpoints found that can handle the requested parameters. (http 404)")
+// errNoHostMatches is a broker's answer when its upstream filter leaves no host,
+// as the adapter raises it; the ai package pins that against the wire.
+var errNoHostMatches = fmt.Errorf("%w: ai: openai-compat: : No endpoints found that can handle the requested parameters. (http 404)",
+	ai.ErrNoUpstreamHost)
 
 // A preference no host can meet fails the same way on every attempt, so it is
 // not re-driven as an outage, and the refusal names the variable that lifts it.

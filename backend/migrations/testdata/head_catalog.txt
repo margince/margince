@@ -45,6 +45,7 @@ public.activity.audience_reason text gen=- def=-
 public.activity.body text gen=- def=-
 public.activity.bulk_mail_attested boolean NOT NULL gen=- def=false
 public.activity.capture_label text gen=- def=-
+public.activity.capture_label_declined_at timestamp with time zone gen=- def=-
 public.activity.capture_labeled_at timestamp with time zone gen=- def=-
 public.activity.captured_by text NOT NULL gen=- def=-
 public.activity.channel_provider text gen=- def=-
@@ -67,6 +68,7 @@ public.activity.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity.origin text NOT NULL gen=- def='human'::text
 public.activity.owed_verdict text gen=- def=-
 public.activity.owed_verdict_at timestamp with time zone gen=- def=-
+public.activity.owed_verdict_declined_at timestamp with time zone gen=- def=-
 public.activity.owed_verdict_ruleset text gen=- def=-
 public.activity.raw jsonb gen=- def=-
 public.activity.raw_capture_id uuid gen=- def=-

@@ -225,6 +225,7 @@ type typeCheckedSources struct {
 	fset  *token.FileSet
 	files []*ast.File
 	info  *types.Info
+	pkg   *types.Package
 }
 
 // composeLoad is what type-checking this package needs from the go command: its
@@ -314,12 +315,16 @@ func typeCheckPlanted(t *testing.T, src string) *typeCheckedSources {
 
 func typeCheck(t *testing.T, load *composeLoad, path string, files []*ast.File) *typeCheckedSources {
 	t.Helper()
-	info := &types.Info{Types: map[ast.Expr]types.TypeAndValue{}, Selections: map[*ast.SelectorExpr]*types.Selection{}}
-	if _, err := (&types.Config{Importer: load.importer}).Check(path, load.fset, files, info); err != nil {
+	info := &types.Info{
+		Types: map[ast.Expr]types.TypeAndValue{}, Selections: map[*ast.SelectorExpr]*types.Selection{},
+		Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{},
+	}
+	pkg, err := (&types.Config{Importer: load.importer}).Check(path, load.fset, files, info)
+	if err != nil {
 		// A file the checker cannot resolve is a file the census cannot clear.
 		t.Fatalf("type-checking %s: %v", path, err)
 	}
-	return &typeCheckedSources{fset: load.fset, files: files, info: info}
+	return &typeCheckedSources{fset: load.fset, files: files, info: info, pkg: pkg}
 }
 
 // The two shipped agents are the reason the allowlist exists, so the property

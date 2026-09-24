@@ -111,6 +111,7 @@ type capturedRow struct {
 	audience        string
 	undecidedSender bool
 	withContact     bool
+	declined        bool
 }
 
 func (e *factsEnv) seed(t *testing.T, row capturedRow) ids.UUID {
@@ -137,6 +138,11 @@ func (e *factsEnv) seed(t *testing.T, row capturedRow) ids.UUID {
 			INSERT INTO capture_pending_counterparty (id, owner_id, email, status, activity_id)
 			VALUES ($1, $2, $3, 'pending', $4)`, ids.NewV7(), e.user, email, id)
 	}
+	if row.declined {
+		if recorded, err := e.store.MarkCaptureLabelDeclined(e.as(), id); err != nil || !recorded {
+			t.Fatalf("recording the decline: recorded=%v err=%v", recorded, err)
+		}
+	}
 	if row.withContact {
 		contact := ids.NewV7()
 		e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
@@ -158,6 +164,7 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 		e.seed(t, capturedRow{kind: "email", archived: true}):              pipelinetrace.ReasonArchived,
 		e.seed(t, capturedRow{kind: "email", capturedBy: "human:someone"}): pipelinetrace.ReasonNotConnectorCaptured,
 		e.seed(t, capturedRow{kind: "email", undecidedSender: true}):       pipelinetrace.ReasonSenderUndecided,
+		e.seed(t, capturedRow{kind: "email", declined: true}):              pipelinetrace.ReasonModelsDeclined,
 	}
 	// The audience exclusion is asserted apart from the loop above, because the
 	// trace read is itself audience-gated: to a reader outside the audience the

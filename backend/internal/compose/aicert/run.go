@@ -167,11 +167,11 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 // returns the refusal alone, never ErrAllTiersFailed, so a spending cap can
 // never be retried into — and one place decides what "the ladder ran out" means.
 // A throttle keeps the sentinel and stays retryable, because backoff is exactly
-// what it asks for. A withheld answer never carries it: driveCandidate records
-// it as the run's outcome before this is asked. A rejected request and a
-// preference no host meets may, and are excluded: both fail every attempt alike.
+// what it asks for. A withheld answer and a rejected request never carry it:
+// the ladder returns an outcome bare. A preference no host meets may, as the
+// last rung's cause, and is excluded: it fails every attempt alike.
 func worthRedriving(err error) bool {
-	return errors.Is(err, ai.ErrAllTiersFailed) && !errors.Is(err, model.ErrRequestRejected) && !noHostServes(err)
+	return errors.Is(err, ai.ErrAllTiersFailed) && !errors.Is(err, ai.ErrNoUpstreamHost)
 }
 
 // scenarioRow is what this scenario's own runs did, for the record to carry

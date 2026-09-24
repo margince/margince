@@ -19,10 +19,10 @@ type ModelRef struct{ Provider, Model string }
 func embedInclusiveMeta(cfg RoutingConfig) map[Tier]routeMeta {
 	meta := make(map[Tier]routeMeta, len(cfg.Tiers)+1)
 	for tier, binding := range cfg.Tiers {
-		meta[tier] = routeMeta{provider: binding.Provider, model: binding.Model}
+		meta[tier] = routeMeta{provider: binding.Provider, model: binding.Model, baseURL: binding.BaseURL}
 	}
 	if cfg.Embeddings.Model != "" {
-		meta[TierEmbedLane] = routeMeta{provider: cfg.Embeddings.Provider, model: cfg.Embeddings.Model}
+		meta[TierEmbedLane] = routeMeta{provider: cfg.Embeddings.Provider, model: cfg.Embeddings.Model, baseURL: cfg.Embeddings.BaseURL}
 	}
 	return meta
 }

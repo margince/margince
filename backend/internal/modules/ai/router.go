@@ -41,6 +41,9 @@ const traceWriteTimeout = 5 * time.Second
 type routeMeta struct {
 	provider string
 	model    string
+	// baseURL is part of the identity rejectedAgainAbove compares: one model
+	// behind two endpoints is two APIs, which may refuse different requests.
+	baseURL string
 }
 
 // Router is the tiered routing engine (B-EP06.4): tasks name tiers,

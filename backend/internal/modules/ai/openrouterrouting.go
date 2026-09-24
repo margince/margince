@@ -334,17 +334,25 @@ func (r *OpenRouterRouting) Validate() error {
 // happens there, and no embedding model is served at fp4-versus-bf16 stakes.
 func (cfg *RoutingConfig) applyUpstreamDefaults() {
 	for tier, binding := range cfg.Tiers {
-		if binding.Routing != nil || !upstreamPreferencesApply(binding) {
-			continue
-		}
-		binding.Routing = DefaultOpenRouterRouting()
+		binding.Routing = UpstreamPreferencesFor(binding)
 		cfg.Tiers[tier] = binding
 	}
 }
 
-// upstreamPreferencesApply reports whether a binding is the broker case that
+// UpstreamPreferencesFor is the upstream preferences a binding is served under:
+// its own declaration, the product default for an undeclared broker binding, and
+// nil for a binding no preference reaches. Exported so the certification lane
+// records what this rule applied rather than a copy of it.
+func UpstreamPreferencesFor(binding ProviderConfig) *OpenRouterRouting {
+	if binding.Routing != nil || !UpstreamPreferencesApply(binding) {
+		return binding.Routing
+	}
+	return DefaultOpenRouterRouting()
+}
+
+// UpstreamPreferencesApply reports whether a binding is the broker case that
 // upstream-selection preferences describe.
-func upstreamPreferencesApply(binding ProviderConfig) bool {
+func UpstreamPreferencesApply(binding ProviderConfig) bool {
 	return binding.Provider == providerOpenAICompatible && IsOpenRouterHost(binding.BaseURL)
 }
 

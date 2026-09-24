@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -113,6 +114,103 @@ func TestTheSettlePassJudgesPastAConversationTheModelsDecline(t *testing.T) {
 	if verdict, decidedBy := settlementOf(t, e, hostile); verdict != activities.RequestUnsure || decidedBy != settleDeclinedBy {
 		t.Errorf("the declined conversation was recorded %q by %q; want %q by %q",
 			verdict, decidedBy, activities.RequestUnsure, settleDeclinedBy)
+	}
+}
+
+// A declined message is asked in one batch and once on its own, and then never
+// again — not later in the same pass, and not on the next tick. Left in the
+// backlog it would be the oldest row forever, re-read with nine fresh messages
+// every iteration and splitting each batch it rode in into single calls.
+func TestTheClassifyPassAsksADeclinedMessageOnceAcrossPasses(t *testing.T) {
+	e := integration.Setup(t)
+	hostile := seedUnlabeledEmail(t, e, "Invoice "+hostileMarker)
+	var ordinary []ids.UUID
+	for i := range classifyBatchSize + 3 {
+		ordinary = append(ordinary, seedUnlabeledEmail(t, e, fmt.Sprintf("offer %d", i)))
+	}
+	brain := &withholdingWhere{inner: &scriptedClassifyBrain{}}
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	for pass := 1; pass <= 2; pass++ {
+		if err := classifier.RunWorkspace(ctx, 0); err != nil {
+			t.Fatalf("pass %d: %v", pass, err)
+		}
+		if brain.withheld != 2 {
+			t.Fatalf("after pass %d the declined message had been sent %d times, want 2 — its batch and itself, once", pass, brain.withheld)
+		}
+	}
+	for _, id := range ordinary {
+		if labelOf(t, e, id) == nil {
+			t.Errorf("message %s was left unlabeled beside a declined one", id)
+		}
+	}
+	if labelOf(t, e, hostile) != nil {
+		t.Error("the declined message was labeled; it stays unlabeled")
+	}
+}
+
+func TestTheOwedPassAsksADeclinedMessageOnceAcrossPasses(t *testing.T) {
+	e := integration.Setup(t)
+	hostile := seedWaitingMail(t, e, "Invoice "+hostileMarker)
+	var ordinary []ids.UUID
+	for i := range owedBatchSize + 3 {
+		ordinary = append(ordinary, seedWaitingMail(t, e, fmt.Sprintf("Monatsreporting %d", i)))
+	}
+	brain := &withholdingWhere{inner: &owedBrainStub{verdict: activities.OwedVerdictInformsUs, confidence: 0.95}}
+	for pass := 1; pass <= 2; pass++ {
+		runOwedWorker(t, e, brain)
+		if brain.withheld != 2 {
+			t.Fatalf("after pass %d the declined message had been sent %d times, want 2 — its batch and itself, once", pass, brain.withheld)
+		}
+	}
+	for _, id := range ordinary {
+		if verdictOf(t, e, id) == nil {
+			t.Errorf("message %s was left unjudged beside a declined one", id)
+		}
+	}
+	if verdictOf(t, e, hostile) != nil {
+		t.Error("the declined message was judged; it stays unjudged")
+	}
+}
+
+// standInBrain is the offline stand-in an installation runs on before a
+// provider is bound: it answers, and every answer is refused.
+type standInBrain struct{ calls int }
+
+func (b *standInBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	b.calls++
+	return model.Response{}, fmt.Errorf("%w: %w", ai.ErrUnconfiguredModel, ai.ErrOutputRejected)
+}
+
+// The stand-in declines everything because nothing is bound, which says nothing
+// about any message. Recording it as the models' decline would strand the whole
+// backlog on the day a provider is bound, so the pass stops instead.
+func TestAPassWithNoProviderBoundDeclinesNothing(t *testing.T) {
+	e := integration.Setup(t)
+	waiting := seedWaitingMail(t, e, "Monatsreporting Juli")
+	unlabeled := seedUnlabeledEmail(t, e, "please send the offer")
+
+	brain := &standInBrain{}
+	runOwedWorker(t, e, brain)
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+	if err := classifier.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("a pass with no provider bound failed rather than waiting: %v", err)
+	}
+	if brain.calls != 2 {
+		t.Errorf("the stand-in was asked %d times, want once per pass — nothing it answers is worth a re-ask", brain.calls)
+	}
+	var owedDeclined, labelDeclined bool
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT (SELECT owed_verdict_declined_at IS NOT NULL FROM activity WHERE id = $1),
+			       (SELECT capture_label_declined_at IS NOT NULL FROM activity WHERE id = $2)`,
+			waiting, unlabeled).Scan(&owedDeclined, &labelDeclined)
+	})
+	if err != nil {
+		t.Fatalf("reading the decline stamps: %v", err)
+	}
+	if owedDeclined || labelDeclined {
+		t.Errorf("the stand-in's refusal was recorded as a decline (owed %v, label %v)", owedDeclined, labelDeclined)
 	}
 }
 

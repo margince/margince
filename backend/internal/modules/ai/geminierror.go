@@ -32,9 +32,9 @@ func geminiError(ctx context.Context, resp *http.Response) error {
 			// google.rpc.BadRequest names the fields a malformed body got
 			// wrong, and is the one detail that says the request is malformed.
 			Details []struct {
-				Type            string            `json:"@type"`
-				RetryDelay      string            `json:"retryDelay"`      //nolint:tagliatelle // Google's wire format (camelCase)
-				FieldViolations []json.RawMessage `json:"fieldViolations"` //nolint:tagliatelle // Google's wire format (camelCase)
+				Type            string                 `json:"@type"`
+				RetryDelay      string                 `json:"retryDelay"`      //nolint:tagliatelle // Google's wire format (camelCase)
+				FieldViolations []geminiFieldViolation `json:"fieldViolations"` //nolint:tagliatelle // Google's wire format (camelCase)
 			} `json:"details"`
 		} `json:"error"`
 	}
@@ -47,7 +47,9 @@ func geminiError(ctx context.Context, resp *http.Response) error {
 		if strings.Contains(detail.Type, "RetryInfo") && detail.RetryDelay != "" {
 			limit = geminiRetryableLimit
 		}
-		malformed = malformed || (strings.HasSuffix(detail.Type, "google.rpc.BadRequest") && len(detail.FieldViolations) > 0)
+		if strings.HasSuffix(detail.Type, "google.rpc.BadRequest") {
+			malformed = malformed || bodyFieldViolated(detail.FieldViolations)
+		}
 	}
 	err := providerRefusal(resp, limit, fmt.Errorf("ai: gemini: %s: %s (http %d)",
 		safeProviderText(ctx, apiErr.Error.Status), safeProviderText(ctx, apiErr.Error.Message), resp.StatusCode))
@@ -57,6 +59,26 @@ func geminiError(ctx context.Context, resp *http.Response) error {
 		return rejectedRequest(err)
 	}
 	return err
+}
+
+// geminiFieldViolation is one google.rpc.BadRequest entry; field is the path
+// into the request body, absent when Google names only a description.
+type geminiFieldViolation struct {
+	Field string `json:"field"`
+}
+
+// bodyFieldViolated reports whether a violation names the request's own shape.
+// One under generation_config does not: those settings — a thinking budget, a
+// mime type — are what one model accepts and another refuses, which is a
+// reason to walk to the next rung rather than to stop.
+func bodyFieldViolated(violations []geminiFieldViolation) bool {
+	for _, v := range violations {
+		path := strings.ReplaceAll(strings.ToLower(v.Field), "_", "")
+		if !strings.HasPrefix(path, "generationconfig") {
+			return true
+		}
+	}
+	return false
 }
 
 // geminiRetryableLimit is the limit-source name a RetryInfo detail stands for.

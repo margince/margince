@@ -565,3 +565,26 @@ func stampFor(t *testing.T, sc Scenario) string {
 	}
 	return stamps[sc.Name]
 }
+
+// Upstream preferences decide which host serves a broker binding, and two hosts
+// at different precision are two measurements. A binding's key therefore carries
+// the preferences it is SERVED under, so the product default and the same block
+// spelled out are one key, and any other block is another.
+func TestAJournaledRunIsNotReplayedUnderOtherUpstreamPreferences(t *testing.T) {
+	broker := ai.ProviderConfig{Provider: "openai_compatible", Model: "z-ai/glm-5.2", BaseURL: "https://openrouter.ai/api"}
+	pinned := broker
+	pinned.Routing = &ai.OpenRouterRouting{Only: []string{"deepinfra"}}
+	ownRouting := broker
+	ownRouting.Routing = &ai.OpenRouterRouting{}
+	spelledDefault := broker
+	spelledDefault.Routing = ai.DefaultOpenRouterRouting()
+
+	for name, other := range map[string]ai.ProviderConfig{"a pinned host": pinned, "the broker's own routing": ownRouting} {
+		if bindingKey(other) == bindingKey(broker) {
+			t.Errorf("a binding served under %s shares a journal key with the product default", name)
+		}
+	}
+	if bindingKey(spelledDefault) != bindingKey(broker) {
+		t.Error("the product default spelled out keys apart from the same default inherited — one upstream, two keys")
+	}
+}

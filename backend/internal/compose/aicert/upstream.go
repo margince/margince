@@ -13,39 +13,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
-
-// brokerProvider is the provider a broker binding names. The ai package keeps
-// its provider constants unexported, so the spelling is held against its own
-// defaulting by TestARecordNamesTheUpstreamPreferencesTheRouterApplies.
-const brokerProvider = "openai_compatible"
-
-// upstreamApplies reports whether a binding is the broker case upstream
-// preferences reach — the predicate ai.NewLocalRouter defaults by, mirrored
-// because it is unexported there and held equal to it by the test above.
-func upstreamApplies(binding ai.ProviderConfig) bool {
-	return binding.Provider == brokerProvider && ai.IsOpenRouterHost(binding.BaseURL)
-}
-
-// effectiveUpstream is the upstream preferences a binding is served under: its
-// own declaration, the product default for an undeclared broker binding, and
-// nil for a binding no preference reaches. An explicit empty block stays empty,
-// because it is the operator asking for the broker's own routing.
-func effectiveUpstream(binding ai.ProviderConfig) *ai.OpenRouterRouting {
-	switch {
-	case binding.Routing != nil:
-		return binding.Routing
-	case upstreamApplies(binding):
-		return ai.DefaultOpenRouterRouting()
-	default:
-		return nil
-	}
-}
 
 // bindingRole names one of a run's two bindings by the variables that set it,
 // so a refusal sends the reader to the one they have to edit.
@@ -76,7 +48,7 @@ func refuseUnreachableUpstream(cfg RunnerConfig) error {
 		role    bindingRole
 		binding ai.ProviderConfig
 	}{{candidateRole, cfg.Binding}, {judgeRole, cfg.JudgeBinding}} {
-		if b.binding.Routing != nil && !upstreamApplies(b.binding) {
+		if b.binding.Routing != nil && !ai.UpstreamPreferencesApply(b.binding) {
 			errs = append(errs, fmt.Errorf("%s names upstream preferences, but the %s %s:%s is not a broker binding on an OpenRouter host; unset it",
 				b.role.upstreamEnv, b.role.name, b.binding.Provider, b.binding.Model))
 		}
@@ -84,26 +56,20 @@ func refuseUnreachableUpstream(cfg RunnerConfig) error {
 	return errors.Join(errs...)
 }
 
-// noHostServes reports whether a broker answered that no upstream host matches
-// the request's preferences. Read from the broker's own sentence because the ai
-// package raises no sentinel for it; a miss only costs the specific hint.
-func noHostServes(err error) bool {
-	text := strings.ToLower(err.Error())
-	return strings.Contains(text, "no endpoints found") || strings.Contains(text, "no allowed providers")
-}
-
 // unservable is a binding's call failure with the edit that fixes it named: a
 // preference no host meets fails identically on every attempt, and a rejected
-// request is the binding or the request shape rather than the model.
+// request is the vendor refusing the request's own shape rather than the model
+// answering it.
 func unservable(role bindingRole, err error) error {
 	switch {
-	case noHostServes(err):
+	case errors.Is(err, ai.ErrNoUpstreamHost):
 		return fmt.Errorf("no host the broker offers for the %s matches the upstream preferences it is served under — "+
 			"set %s='{}' (%s) for the broker's own routing, or preferences a host of this model meets%s; no record is written: %w",
 			role.name, role.upstreamVar, role.upstreamEnv, role.routedHint, err)
 	case errors.Is(err, model.ErrRequestRejected):
-		return fmt.Errorf("the provider rejected the %s's request, and would on every run — check %s, its key and its base URL; "+
-			"no record is written, because a refused request measures the binding, not the model: %w", role.name, role.modelVar, err)
+		return fmt.Errorf("the vendor behind the %s (%s) refused the shape of the request itself — its response schema or a "+
+			"parameter it names — and would on every run; no record is written, because a refused request measures the "+
+			"request against that vendor, not the model: %w", role.name, role.modelVar, err)
 	default:
 		return err
 	}
@@ -125,13 +91,17 @@ func preflight(ctx context.Context, cfg RunnerConfig, tasks []ai.Task, hooks *ce
 	}
 	var errs []error
 	for _, p := range preflightProbes(cfg, tasks, hooks) {
+		// A binding that cannot be set up is certifyTask's to report, per task,
+		// where it costs that task's record alone; the pre-flight only notes it.
 		routing, err := ladderForTask(p.role.name, p.binding, cfg.recordProfile(), p.ladderTask)
 		if err != nil {
-			continue // certifyTask reports it per task, where it costs that task's record alone
+			log.DebugContext(ctx, "aicert: pre-flight skipped a binding it could not route", "role", p.role.name, "err", err)
+			continue
 		}
 		router, err := compose.NewLocalRouterForCert(routing, append([]ai.LocalOption{ai.WithoutResultCache()}, p.opts...)...)
 		if err != nil {
-			continue // as above
+			log.DebugContext(ctx, "aicert: pre-flight skipped a binding it could not build", "role", p.role.name, "err", err)
+			continue
 		}
 		_, _, err = router.Complete(ctx, p.servedTask, model.Request{
 			Messages:  []model.Message{{Role: roleUser, Content: preflightPrompt}},
@@ -170,7 +140,7 @@ func preflightProbes(cfg RunnerConfig, tasks []ai.Task, hooks *certifyHooks) []p
 			}
 			candidate = resolved
 		}
-		if key := candidate.Provider + "|" + candidate.Model + "|" + candidate.BaseURL; !seen[key] {
+		if key := bindingKey(candidate); !seen[key] {
 			seen[key] = true
 			probes = append(probes, preflightProbe{candidateRole, candidate, task, task, hooks.candidateOpts})
 		}
