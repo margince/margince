@@ -271,27 +271,25 @@ e2e-siteread: composition ## Deep-read quality floor vs the real gradion.com (pa
 # else's, and the record names the model it measured.
 #
 # JUDGE is a SECOND model on purpose: one grading itself is certified by
-# construction. It is pinned so every record is graded by one model — a judge
-# swap flips verdicts on the same candidate. JUDGE_FALLBACK grades the tasks whose
-# candidate IS the judge (a Gemini preset's premium rung); a task that is both is
-# refused before the first paid call, and `JUDGE_FALLBACK=` refuses every collision.
-# The defaults sit on the exported names, so an operator's environment wins; JUDGE*
-# default to those and override both, and `?=` keeps an explicit empty one empty.
-# BASE_URL carries a broker host — openai_compatible fails closed without one —
-# and a native vendor leaves it empty.
-MARGINCE_AICERT_ROUTING                 ?=
-MARGINCE_AICERT_MODEL                   ?=
-MARGINCE_AICERT_BASE_URL                ?=
-MARGINCE_AICERT_JUDGE_MODEL             ?= gemini:gemini-3.5-flash
-MARGINCE_AICERT_JUDGE_BASE_URL          ?=
-MARGINCE_AICERT_JUDGE_FALLBACK_MODEL    ?= gemini:gemini-3.1-flash-lite
-MARGINCE_AICERT_JUDGE_FALLBACK_BASE_URL ?=
-JUDGE                                   ?= $(MARGINCE_AICERT_JUDGE_MODEL)
-JUDGE_BASE_URL                          ?= $(MARGINCE_AICERT_JUDGE_BASE_URL)
-JUDGE_FALLBACK                          ?= $(MARGINCE_AICERT_JUDGE_FALLBACK_MODEL)
-JUDGE_FALLBACK_BASE_URL                 ?= $(MARGINCE_AICERT_JUDGE_FALLBACK_BASE_URL)
-MARGINCE_AICERT_PROFILE                 ?= eu_hosted
-MARGINCE_AICERT_UPSTREAM                ?=
+# construction. ONE judge grades every task of a run — a judge swap flips
+# verdicts on the same candidate — and a task whose candidate is the judge is
+# refused before the first paid call. The default is gpt-oss-120b on OpenRouter
+# for cost; `JUDGE=gemini:gemini-3.1-flash-lite` grades a run that certifies it.
+# The defaults sit on the exported names, so an operator's environment wins;
+# JUDGE* default to those and override both, and `?=` keeps an explicit empty one
+# empty. BASE_URL carries a broker host — openai_compatible fails closed without
+# one — so the OpenRouter host is the default only while JUDGE is the default
+# model: a native vendor judge leaves it empty.
+AICERT_DEFAULT_JUDGE           := openai_compatible:openai/gpt-oss-120b
+MARGINCE_AICERT_ROUTING        ?=
+MARGINCE_AICERT_MODEL          ?=
+MARGINCE_AICERT_BASE_URL       ?=
+MARGINCE_AICERT_JUDGE_MODEL    ?= $(AICERT_DEFAULT_JUDGE)
+MARGINCE_AICERT_JUDGE_BASE_URL ?= $(if $(filter $(AICERT_DEFAULT_JUDGE),$(JUDGE)),https://openrouter.ai/api)
+JUDGE                          ?= $(MARGINCE_AICERT_JUDGE_MODEL)
+JUDGE_BASE_URL                 ?= $(MARGINCE_AICERT_JUDGE_BASE_URL)
+MARGINCE_AICERT_PROFILE        ?= eu_hosted
+MARGINCE_AICERT_UPSTREAM       ?=
 
 # TRACE names a directory for the payload trace — every candidate and judge
 # call's post-stripper request+response (the ai_call_payload shape), dumped to
@@ -343,13 +341,12 @@ AICERT_TIMEOUT ?= 90m
 # itself a task and leads at premium, so a config binding claude-haiku-4.5 there
 # makes the grader collide with every premium-led candidate — the run checks that
 # for every resolved task up front rather than failing mid-corpus after paying.
-e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. JUDGE=gemini:gemini-3.5-flash grades, JUDGE_FALLBACK=gemini:gemini-3.1-flash-lite where the candidate is the judge (JUDGE_FALLBACK= refuses those). BYOK key auto-loaded from .env.local. TASK=x RUNS=3 BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' PROFILE=eu_hosted (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
+e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=openai_compatible:openai/gpt-oss-120b by default, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies that model. BYOK key auto-loaded from .env.local. TASK=x RUNS=3 BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' PROFILE=eu_hosted (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
 	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \
 	  MARGINCE_AICERT_BASE_URL=$(if $(BASE_URL),$(BASE_URL),$(MARGINCE_AICERT_BASE_URL)) \
 	  MARGINCE_AICERT_JUDGE_MODEL=$(JUDGE) MARGINCE_AICERT_JUDGE_BASE_URL=$(JUDGE_BASE_URL) \
-	  MARGINCE_AICERT_JUDGE_FALLBACK_MODEL=$(JUDGE_FALLBACK) MARGINCE_AICERT_JUDGE_FALLBACK_BASE_URL=$(JUDGE_FALLBACK_BASE_URL) \
 	  MARGINCE_AICERT_PROFILE=$(if $(PROFILE),$(PROFILE),$(MARGINCE_AICERT_PROFILE)) \
 	  MARGINCE_AICERT_UPSTREAM='$(if $(UPSTREAM),$(UPSTREAM),$(MARGINCE_AICERT_UPSTREAM))' \
 	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" \

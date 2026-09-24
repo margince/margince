@@ -7,8 +7,8 @@
 #
 #     make e2e-ai ROUTING=config/presets/gemini_cloud.yaml
 #
-# The pinned judge is this preset's premium model, so its premium-led tasks are
-# graded by JUDGE_FALLBACK= instead: a model never grades itself.
+# The default judge (openai_compatible:openai/gpt-oss-120b, so
+# OPENAI_COMPATIBLE_API_KEY too) is off this preset, so one judge grades it all.
 #
 # Needs GEMINI_API_KEY and nothing else. Not loaded automatically — see README.md.
 version: 1

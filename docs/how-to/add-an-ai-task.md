@@ -221,7 +221,7 @@ and it caps how much of the site one certification run can cover:
    — read that first, or the run fails on a missing key.
 
    ```
-   # real calls, billed to YOUR api key; MODEL is required, JUDGE is pinned
+   # real calls, billed to YOUR api key; MODEL is required, JUDGE defaults to gpt-oss-120b
    make e2e-ai TASK=<your task> MODEL=gemini:gemini-3.1-flash-lite
    make e2e-ai-report                # free: band, scope, binding, counts, scenario coverage
    cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert

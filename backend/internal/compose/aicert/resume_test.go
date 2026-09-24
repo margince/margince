@@ -232,12 +232,12 @@ func TestAJournaledRunIsNotReplayedForADifferentJudge(t *testing.T) {
 		t.Fatalf("first certification: %v", err)
 	}
 
-	// A task graded by the fallback asks for its own judge's runs. The primary's
-	// are somebody else's still-good measurement: not offered, and not discarded.
+	// A run under another judge asks for its own judge's runs. These are
+	// somebody else's still-good measurement: not offered, and not discarded.
 	var replayed bool
 	withJournal(t, dir, fixedResumeNow, func(j *runJournal) {
-		fallback := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "a-different-judge"}
-		_, replayed = j.forTask(ai.TaskSummarize, testCandidateBinding, fallback).lookup(sc, stampFor(t, sc), 1)
+		otherJudge := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "a-different-judge"}
+		_, replayed = j.forTask(ai.TaskSummarize, testCandidateBinding, otherJudge).lookup(sc, stampFor(t, sc), 1)
 	})
 	if replayed {
 		t.Fatal("a run graded by one judge was offered as a replay to another")

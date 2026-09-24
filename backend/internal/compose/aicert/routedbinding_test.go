@@ -109,12 +109,15 @@ func TestValidateRoutedBindingsCatchesAJudgeCollisionUpFront(t *testing.T) {
 	if err == nil {
 		t.Fatal("a judge bound to the same model as a premium-led candidate was accepted; the run would have paid for tasks before reaching the collision")
 	}
-	// The message has to name the colliding tasks, or an operator cannot tell
-	// whether to move the judge or rebind a rung.
-	for _, want := range []string{"vendor/big-1", "document_extract"} {
+	// The message has to name the colliding tasks and a judge to switch to, or an
+	// operator cannot tell whether to move the judge or rebind a rung.
+	for _, want := range []string{"vendor/big-1", "document_extract", "JUDGE=gemini:gemini-3.1-flash-lite"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the refusal must name %q, got %q", want, err)
 		}
+	}
+	if strings.Contains(err.Error(), string(ai.TaskCaptureConfidentialityVerdict)) {
+		t.Errorf("the refusal names a local_small-led task the judge grades fine: %q", err)
 	}
 }
 
@@ -180,73 +183,36 @@ func TestARoutedRunTakesItsProfileFromTheRouting(t *testing.T) {
 	}
 }
 
-// The judge pinned for certification is also a model a preset leads with, so
-// the tasks that model serves are graded by the fallback and every other task
-// by the primary — per task, from the one choice the run itself makes.
-func TestJudgeForTakesTheFallbackOnlyWhereTheCandidateIsThePrimary(t *testing.T) {
-	primary := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/big-1", BaseURL: "https://broker.example/api"}
-	fallback := ai.ProviderConfig{Provider: "openai_compatible", Model: "openai/gpt-oss-120b", BaseURL: "https://broker.example/api"}
-	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), JudgeBinding: primary, JudgeFallback: fallback, Profile: ai.ProfileEUHosted}
-	for _, tc := range []struct {
-		task ai.Task
-		want ai.ProviderConfig
-	}{
-		{ai.TaskDocumentExtract, fallback},              // premium-led: its candidate IS the primary judge
-		{ai.TaskBriefRanking, fallback},                 // premium-led too
-		{ai.TaskCaptureConfidentialityVerdict, primary}, // local_small-led: the primary is not its candidate
-	} {
-		candidate, _, ok := resolveBinding(*cfg.Routing, tc.task)
+// One judge grades every task of a run, whichever rung the task leads on: the
+// tasks share nothing else, so a second grader would make their verdicts
+// incomparable.
+func TestJudgeForGradesEveryTaskWithTheOneJudge(t *testing.T) {
+	judge := ai.ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
+	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), JudgeBinding: judge, Profile: ai.ProfileEUHosted}
+	for _, task := range []ai.Task{ai.TaskDocumentExtract, ai.TaskCaptureConfidentialityVerdict} {
+		candidate, _, ok := resolveBinding(*cfg.Routing, task)
 		if !ok {
-			t.Fatalf("%s resolved no candidate under the dev-like routing", tc.task)
+			t.Fatalf("%s resolved no candidate under the dev-like routing", task)
 		}
 		got, err := cfg.judgeFor(candidate)
-		if err != nil {
-			t.Fatalf("%s: judgeFor refused a task one of the two judges can grade: %v", tc.task, err)
+		if err != nil || got.Provider != judge.Provider || got.Model != judge.Model {
+			t.Errorf("%s (candidate %s) is graded by (%v, %v), want the one judge", task, candidate.Model, got, err)
 		}
-		if got.Model != tc.want.Model {
-			t.Errorf("%s (candidate %s) is graded by %s, want %s", tc.task, candidate.Model, got.Model, tc.want.Model)
-		}
-	}
-	if err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler)); err != nil {
-		t.Errorf("every task has a judge that is not its candidate, so the run must be accepted, got %v", err)
-	}
-}
-
-// A task whose candidate is BOTH judges has nobody left to grade it, and the run
-// is refused before its first call, naming the task an operator must move.
-func TestValidateRoutedBindingsRefusesATaskThatCollidesWithBothJudges(t *testing.T) {
-	both := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/big-1", BaseURL: "https://broker.example/api"}
-	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), JudgeBinding: both, JudgeFallback: both, Profile: ai.ProfileEUHosted}
-	err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler))
-	if err == nil {
-		t.Fatal("a premium-led task whose candidate is both the judge and the fallback was accepted; it would grade itself")
-	}
-	for _, want := range []string{"document_extract", "MARGINCE_AICERT_JUDGE_FALLBACK_MODEL"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("the refusal must name %q, got %q", want, err)
-		}
-	}
-	if strings.Contains(err.Error(), string(ai.TaskCaptureConfidentialityVerdict)) {
-		t.Errorf("the refusal names a local_small-led task the primary judge grades fine: %q", err)
 	}
 }
 
 // Under MODEL= the one candidate is every task's, so a candidate that is the
-// primary judge is graded by the fallback rather than refused.
-func TestASingleCandidateThatIsThePrimaryJudgeIsGradedByTheFallback(t *testing.T) {
-	primary := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}
-	fallback := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"}
-	cfg := RunnerConfig{Binding: primary, JudgeBinding: primary, JudgeFallback: fallback, Profile: ai.ProfileEUHosted}
-	if err := validateBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler)); err != nil {
-		t.Fatalf("a fallback that differs from the candidate grades it, so the run must be accepted, got %v", err)
+// judge refuses the run, naming the tasks and the flag that fixes it.
+func TestASingleCandidateThatIsTheJudgeIsRefused(t *testing.T) {
+	judge := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}
+	cfg := RunnerConfig{Binding: judge, JudgeBinding: judge, Profile: ai.ProfileEUHosted}
+	err := validateBindings(cfg, []ai.Task{ai.TaskSummarize}, slog.New(slog.DiscardHandler))
+	if err == nil {
+		t.Fatal("a candidate that is the judge was accepted; it would grade itself")
 	}
-	if got, err := cfg.judgeFor(cfg.Binding); err != nil || got.Model != fallback.Model {
-		t.Errorf("judgeFor(candidate = primary judge) = (%v, %v), want the fallback", got, err)
-	}
-
-	cfg.JudgeFallback = ai.ProviderConfig{}
-	err := validateBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler))
-	if err == nil || !strings.Contains(err.Error(), "MARGINCE_AICERT_JUDGE_MODEL") {
-		t.Errorf("with no fallback a candidate that is the judge must be refused, naming the fix; got %v", err)
+	for _, want := range []string{"summarize", "JUDGE=gemini:gemini-3.1-flash-lite"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal must name %q, got %q", want, err)
+		}
 	}
 }

@@ -40,14 +40,17 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    binding — that is the `ai.routing` setting, this lane opens no database, and
    `ROUTING=` reads what a fresh install would be *seeded* with.
 
-   `JUDGE=provider:model` is the second model that grades the answers, pinned to
-   `gemini:gemini-3.5-flash` (an exported `MARGINCE_AICERT_JUDGE_MODEL` replaces
-   it) because a judge swap flips verdicts on its own, and **never resolved from
-   the routing**. A model never grades itself: under `gemini_cloud`, whose
-   `premium` rung is that judge, the premium-led tasks are graded by the fallback,
-   `JUDGE_FALLBACK=` (`gemini:gemini-3.1-flash-lite`), and each record's
-   `judge_served_model` names the judge that graded it. A task that is both, or any
-   collision under `JUDGE_FALLBACK=`, is refused before the first paid call.
+   `JUDGE=provider:model` is the second model that grades the answers, and **one
+   judge grades every task of a run** — a judge swap flips verdicts on its own.
+   It defaults to `openai_compatible:openai/gpt-oss-120b` on OpenRouter, chosen
+   for cost (needs `OPENAI_COMPATIBLE_API_KEY`); an exported
+   `MARGINCE_AICERT_JUDGE_MODEL` replaces it and `JUDGE=` overrides both —
+   `gemini:gemini-3.1-flash-lite` (also cheap) or `gemini:gemini-3.5-flash`, with
+   `GEMINI_API_KEY`. It is **never resolved from the routing**, and a model never
+   grades itself: a run in which any task it certifies has the judge as its
+   candidate is refused before the first paid call, naming those tasks.
+   `openrouter_cloud` binds gpt-oss-120b itself, so certify it with
+   `JUDGE=gemini:gemini-3.1-flash-lite`.
 
    For an OpenAI-wire broker — one OpenRouter key reaching every open-weight
    model — add the endpoint, which `openai_compatible` fails closed without:
@@ -55,8 +58,7 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    ```bash
    make e2e-ai TASK=cold_start \
      MODEL=openai_compatible:z-ai/glm-5.2 \
-     BASE_URL=https://openrouter.ai/api \
-     JUDGE=gemini:gemini-3.1-pro
+     BASE_URL=https://openrouter.ai/api
    ```
 
    `PROFILE=` names the environment class a record is filed under (`eu_hosted`,
@@ -76,9 +78,7 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
 ## 1. Certify a task
 
 ```bash
-make e2e-ai TASK=cold_start \
-  MODEL=gemini:gemini-3.1-flash-lite \
-  JUDGE=anthropic:claude-sonnet-4-6
+make e2e-ai TASK=cold_start MODEL=gemini:gemini-3.1-flash-lite
 ```
 
 This certifies **the model you name**, not any binding this installation holds.
@@ -101,7 +101,7 @@ To certify **what a deployment binds** rather than one model you typed, point
 `ROUTING=` at that deployment's config (path read from the repo root):
 
 ```bash
-make e2e-ai ROUTING=config/margince.dev.yaml JUDGE=anthropic:claude-sonnet-4-6
+make e2e-ai ROUTING=config/margince.dev.yaml
 ```
 
 It resolves a model per task from that config's `seeds.ai_routing` and logs the
@@ -134,9 +134,7 @@ Certify a *different* model against the same corpus — change `MODEL=`, leave
 `JUDGE=` where it is, so the two runs differ in exactly one thing:
 
 ```bash
-make e2e-ai TASK=cold_start \
-  MODEL=gemini:gemini-3.5-flash \
-  JUDGE=anthropic:claude-sonnet-4-6
+make e2e-ai TASK=cold_start MODEL=gemini:gemini-3.5-flash
 ```
 
 Certify both the incumbent and the candidate, then compare their records before
@@ -149,9 +147,9 @@ the provider/model split cuts at the FIRST colon, so
 `openai_compatible:openai/gpt-oss-20b:free` binds the whole slug.
 
 Other knobs: `RUNS=5` (odd repeat count), `PROFILE=` (environment class),
-`JUDGE_BASE_URL=` when the judge is on a *different* broker — unset, it falls back
-to `BASE_URL=`, since a judge on the candidate's broker is the common case and
-re-typing the host was the common mistake.
+`JUDGE_BASE_URL=` for an `openai_compatible` judge you name — the OpenRouter host
+is the default only for the default judge, and unset it falls back to
+`BASE_URL=`, since a judge on the candidate's broker is the common case.
 
 ## 3. Read the readiness report
 

@@ -92,9 +92,9 @@ type journaledRun struct {
 //
 // The profile and corpus version are not here: they are constant for a whole
 // certification run, so they are filtered once at load rather than compared per
-// lookup. Both bindings ARE here, because each is chosen per task: a routed run
-// resolves its own candidate, and a task whose candidate is the primary judge is
-// graded by the fallback.
+// lookup. Both bindings ARE here: a routed run resolves each task's candidate,
+// and a journal outlives the run, so a later run under another judge must not
+// replay this one's grades.
 type resumeKey struct {
 	candidate, judge, task, scenario, stamp string
 	run                                     int

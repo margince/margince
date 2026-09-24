@@ -72,10 +72,10 @@ func taskBindings(ctx context.Context, cfg RunnerConfig, task ai.Task, log *slog
 //
 // The candidate-is-not-the-judge check runs for every task the run will certify,
 // not just one: cert_judge's own ladder leads at premium, so against a config
-// binding claude-haiku-4.5 there the grader collides with the candidate for every
-// premium-led task the fallback cannot take. Caught here that costs nothing;
-// caught per task it would surface midway through a paid corpus, after the tasks
-// before it had been billed. A task the run will not certify cannot collide.
+// binding the judge's model there the grader collides with the candidate for
+// every premium-led task. Caught here that costs nothing; caught per task it
+// would surface midway through a paid corpus, after the tasks before it had been
+// billed.
 func validateRoutedBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger) error {
 	if cfg.JudgeBinding.Provider == "" || cfg.JudgeBinding.Model == "" {
 		return errors.New("no judge binding — set MARGINCE_AICERT_JUDGE_MODEL=provider:model; " +
@@ -87,15 +87,24 @@ func validateRoutedBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger)
 			"a record is filed under it, so a run states which one it measured", cfg.Routing.Profile)
 	}
 	warnUnboundDegradeTargets(cfg, log)
+	return refuseSelfJudgedTasks(cfg, tasks)
+}
 
+// refuseSelfJudgedTasks names every task this run certifies whose candidate is
+// the judge. A task the run will not certify cannot collide, so TASK= narrows it.
+func refuseSelfJudgedTasks(cfg RunnerConfig, tasks []ai.Task) error {
 	var collisions []string
 	for _, task := range tasks {
-		binding, _, ok := resolveBinding(*cfg.Routing, task)
-		if !ok {
-			continue // reported per task at run time, where it costs one record
+		candidate := cfg.Binding
+		if cfg.Routing != nil {
+			resolved, _, ok := resolveBinding(*cfg.Routing, task)
+			if !ok {
+				continue // reported per task at run time, where it costs one record
+			}
+			candidate = resolved
 		}
-		if _, err := cfg.judgeFor(binding); err != nil {
-			collisions = append(collisions, fmt.Sprintf("%s (%s:%s)", task, binding.Provider, binding.Model))
+		if _, err := cfg.judgeFor(candidate); err != nil {
+			collisions = append(collisions, fmt.Sprintf("%s (%s:%s)", task, candidate.Provider, candidate.Model))
 		}
 	}
 	if len(collisions) > 0 {
@@ -105,25 +114,19 @@ func validateRoutedBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger)
 	return nil
 }
 
-// errSelfJudged is judgeFor's refusal: every judge on offer is the candidate.
-var errSelfJudged = errors.New("a model grading itself is certified by construction, so name a " +
-	"MARGINCE_AICERT_JUDGE_MODEL, or a MARGINCE_AICERT_JUDGE_FALLBACK_MODEL, that differs from the candidate")
+// errSelfJudged is judgeFor's refusal: the candidate is the judge.
+var errSelfJudged = errors.New("a model grading itself is certified by construction, and one judge " +
+	"grades every task of a run — pick a judge this run does not certify, e.g. " +
+	"JUDGE=gemini:gemini-3.1-flash-lite (MARGINCE_AICERT_JUDGE_MODEL)")
 
 // judgeFor is the judge that grades a task certified against candidate, and the
 // one place the candidate-is-not-the-judge rule is spelled: both validations and
 // the run itself ask it, so what was checked up front is what grades.
-//
-// The primary grades every task it is not itself the candidate for, and the
-// fallback grades the rest — a preset that leads its premium tasks with the
-// pinned judge's model would otherwise be refused outright.
 func (c RunnerConfig) judgeFor(candidate ai.ProviderConfig) (ai.ProviderConfig, error) {
-	if !sameModel(candidate, c.JudgeBinding) {
-		return c.JudgeBinding, nil
+	if sameModel(candidate, c.JudgeBinding) {
+		return ai.ProviderConfig{}, errSelfJudged
 	}
-	if c.JudgeFallback.Provider != "" && c.JudgeFallback.Model != "" && !sameModel(candidate, c.JudgeFallback) {
-		return c.JudgeFallback, nil
-	}
-	return ai.ProviderConfig{}, errSelfJudged
+	return c.JudgeBinding, nil
 }
 
 // sameModel is the identity a self-grading check compares: provider and model,

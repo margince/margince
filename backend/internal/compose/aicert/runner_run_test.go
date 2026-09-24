@@ -252,38 +252,55 @@ func TestRunAnUnrunnableBindingJoinsAnErrorPerTaskAndAbortsNone(t *testing.T) {
 	}
 }
 
-// A candidate that is the pinned judge is graded by the fallback, and the
-// journal files each run under the judge that actually graded it — a replay
-// keyed on the primary would hand the fallback's grades to the other judge.
-func TestRunGradesACandidateThatIsThePrimaryJudgeWithTheFallback(t *testing.T) {
+// A routed run certifies tasks against different candidates, and ONE judge
+// grades all of them: the journal files every task's runs under that judge.
+func TestARoutedRunGradesEveryTaskWithTheOneJudge(t *testing.T) {
+	local, premium := ai.TaskCaptureConfidentialityVerdict, ai.TaskDocumentExtract
+	premiumLead := ai.TaskLadder(premium)[0]
+	if ai.TaskLadder(local)[0] == premiumLead {
+		t.Fatalf("%s and %s lead on the same rung, so they cannot resolve to different candidates", local, premium)
+	}
+	routing := ai.RoutingConfig{Profile: ai.ProfileEUHosted, Tiers: map[ai.Tier]ai.ProviderConfig{}}
+	for _, tier := range ai.AllTiers() {
+		routing.Tiers[tier] = ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate-a"}
+	}
+	routing.Tiers[premiumLead] = ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate-b"}
+
 	dir := t.TempDir()
 	corpusDir := filepath.Join(dir, "corpus")
 	resumeDir := filepath.Join(dir, "resume")
-	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
-
+	for _, task := range []ai.Task{local, premium} {
+		writeCorpusFile(t, corpusDir, string(task)+"/basic_01.yaml", scenarioYAML(string(task)))
+	}
 	records, err := aicert.Run(context.Background(), aicert.RunnerConfig{
-		Census:        censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
-		Binding:       ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		JudgeBinding:  ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		JudgeFallback: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"},
-		Profile:       ai.ProfileEUHosted,
-		CorpusDir:     corpusDir,
-		RecordDir:     filepath.Join(dir, "records"),
-		ResumeDir:     resumeDir,
-		Repeats:       1,
+		Census:       censusFor(t, local, premium),
+		Routing:      &routing,
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"},
+		CorpusDir:    corpusDir,
+		RecordDir:    filepath.Join(dir, "records"),
+		ResumeDir:    resumeDir,
+		Repeats:      1,
 	}, quietTestLogger())
 	if err != nil {
-		t.Fatalf("a fallback judge distinct from the candidate must let the run proceed, got %v", err)
+		t.Fatalf("a judge distinct from every candidate must let the run proceed, got %v", err)
 	}
-	if len(records) != 1 {
-		t.Fatalf("got %d records, want 1", len(records))
+	if len(records) != 2 {
+		t.Fatalf("got %d records, want one per task", len(records))
 	}
 	journal, err := os.ReadFile(filepath.Join(resumeDir, "aicert-resume.jsonl")) // #nosec G304 -- a t.TempDir path
 	if err != nil {
 		t.Fatalf("reading the resume journal: %v", err)
 	}
-	if !strings.Contains(string(journal), `"judge":"\"fake\"|\"grader\"`) {
-		t.Errorf("the journal does not file the run under the fallback judge that graded it:\n%s", journal)
+	lines := strings.Split(strings.TrimSpace(string(journal)), "\n")
+	for _, candidate := range []string{"candidate-a", "candidate-b"} {
+		if !strings.Contains(string(journal), `"candidate":"\"fake\"|\"`+candidate+`\"`) {
+			t.Errorf("no run was certified against %s — the tasks did not resolve to their own rungs:\n%s", candidate, journal)
+		}
+	}
+	for _, line := range lines {
+		if !strings.Contains(line, `"judge":"\"fake\"|\"grader\"`) {
+			t.Errorf("a run was graded by something other than the one judge:\n%s", line)
+		}
 	}
 }
 

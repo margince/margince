@@ -73,10 +73,6 @@ type RunnerConfig struct {
 	// file's binding while MODEL= moved only the candidate — so deleting the file
 	// without naming a judge would have collapsed the two silently.
 	JudgeBinding ai.ProviderConfig // MARGINCE_AICERT_JUDGE_MODEL + _JUDGE_BASE_URL
-	// JudgeFallback grades the tasks whose candidate IS JudgeBinding, so one
-	// pinned judge does not strand the tasks a preset leads with that model.
-	// Optional; the zero value refuses those tasks instead. See judgeFor.
-	JudgeFallback ai.ProviderConfig // MARGINCE_AICERT_JUDGE_FALLBACK_MODEL + _JUDGE_FALLBACK_BASE_URL
 	// Profile is the environment class each record is filed under — it is part of
 	// a record's identity (its path and its sort key), not a label, so a run says
 	// which one it measured rather than inheriting it from a file.
@@ -142,14 +138,11 @@ func validateBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger) error
 		return errors.New("no judge binding — set MARGINCE_AICERT_JUDGE_MODEL=provider:model; " +
 			"the judge is a SECOND model on purpose, and the run has no file to inherit one from")
 	}
-	if _, err := cfg.judgeFor(cfg.Binding); err != nil {
-		return fmt.Errorf("the candidate %s:%s is every judge on offer: %w", cfg.Binding.Provider, cfg.Binding.Model, err)
-	}
 	if !cfg.Profile.Valid() {
 		return fmt.Errorf("MARGINCE_AICERT_PROFILE=%q is not an environment class; a record is filed "+
 			"under it, so a run states which one it measured", cfg.Profile)
 	}
-	return nil
+	return refuseSelfJudgedTasks(cfg, tasks)
 }
 
 // Run certifies every task named by cfg.TaskFilter (or, when empty,
