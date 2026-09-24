@@ -446,7 +446,7 @@ func (pkg *packageFuncs) handsBack(fn *ast.FuncDecl, stmt ast.Stmt, lhs []ast.Ex
 		Owed: func(cond ast.Expr, outcome bool) bool {
 			return !gatekit.ErrorSettled(cond, outcome, pkg.info, func(e ast.Expr) bool {
 				ident, ok := ast.Unparen(e).(*ast.Ident)
-				return ok && assigned[pkg.info.Uses[ident]] && types.Implements(pkg.info.TypeOf(e), errorType)
+				return ok && assigned[pkg.info.Uses[ident]] && types.Implements(pkg.info.TypeOf(e), gatekit.ErrorInterface())
 			})
 		},
 	}
@@ -464,14 +464,12 @@ func (pkg *packageFuncs) returnsAFailure(ret *ast.ReturnStmt) bool {
 		if sanctionedWorkerReturn(result) {
 			return true
 		}
-		if t := pkg.info.TypeOf(result); t != nil && types.Implements(t, errorType) {
+		if t := pkg.info.TypeOf(result); t != nil && types.Implements(t, gatekit.ErrorInterface()) {
 			return true
 		}
 	}
 	return false
 }
-
-var errorType = types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
 
 // reads reports whether any of exprs reads any of objs.
 func (pkg *packageFuncs) reads(exprs []ast.Expr, objs map[types.Object]bool) bool {

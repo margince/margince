@@ -43,6 +43,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
+// gatekit:fixture planted handler sources the census is run over, keyed by
+// the shape each plants — test input, not waived costs
+//
 // plantedModelHandlers are the handlers the flow test plants, each marking
 // the model call the census must name with "// unanswered"; a handler with no
 // mark must be answered. A census that asked only whether a model and
@@ -733,13 +736,11 @@ func errorSlots(t types.Type) []int {
 	return slots
 }
 
-var errorInterface = types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
-
 // carriesError reports whether a value of t is an error, or a struct holding
 // one in a field, which is how a result can carry a model failure out without
 // an error result.
 func carriesError(t types.Type) bool {
-	if types.Implements(t, errorInterface) {
+	if types.Implements(t, gatekit.ErrorInterface()) {
 		return true
 	}
 	if ptr, ok := types.Unalias(t).(*types.Pointer); ok {
@@ -750,7 +751,7 @@ func carriesError(t types.Type) bool {
 		return false
 	}
 	for field := range st.Fields() {
-		if types.Implements(field.Type(), errorInterface) {
+		if types.Implements(field.Type(), gatekit.ErrorInterface()) {
 			return true
 		}
 	}

@@ -168,7 +168,17 @@ func recognisesKind(atom ast.Expr, info *types.Info, subject func(ast.Expr) bool
 	return false
 }
 
-var errorInterface = types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
+var errorInterface = ErrorInterface()
+
+// ErrorInterface is the predeclared error interface, for a census asking
+// whether a type is an error or whether an errors.As target could hold any.
+func ErrorInterface() *types.Interface {
+	iface, ok := types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
+	if !ok {
+		panic("gatekit: the predeclared error type is not an interface; go/types changed its universe")
+	}
+	return iface
+}
 
 func comparesToNil(c *ast.BinaryExpr, subject func(ast.Expr) bool) bool {
 	isNil := func(e ast.Expr) bool {
@@ -325,34 +335,38 @@ func (w *pathWalk) clauses(body *ast.BlockStmt, tagless bool) pathOut {
 	var out pathOut
 	settledBelow, hasDefault, isSelect := false, false, false
 	for _, clause := range body.List {
-		var list []ast.Stmt
 		switch c := clause.(type) {
 		case *ast.CaseClause:
 			hasDefault = hasDefault || c.List == nil
-			list = c.Body
-			skip := settledBelow
+			walk := !settledBelow
 			if tagless && c.List != nil {
-				// A case runs when any of its expressions is true, so it owes
-				// nothing only when each of them proves that; one proving it
-				// false settles every case below.
-				owedIn := false
-				for _, expr := range c.List {
-					owedIn = owedIn || w.owed(expr, true)
-					settledBelow = settledBelow || !w.owed(expr, false)
-				}
-				skip = skip || !owedIn
+				owedIn, settles := w.caseOwed(c.List)
+				walk = walk && owedIn
+				settledBelow = settledBelow || settles
 			}
-			if skip {
-				continue
+			if walk {
+				out = out.join(w.list(c.Body))
 			}
 		case *ast.CommClause:
 			isSelect = true
-			list = append([]ast.Stmt{c.Comm}, c.Body...)
+			out = out.join(w.list(append([]ast.Stmt{c.Comm}, c.Body...)))
 		}
-		out = out.join(w.list(list))
 	}
 	falls := out.falls || out.breaks || (!hasDefault && !isSelect && !settledBelow)
 	return pathOut{falls: falls, continues: out.continues, exits: out.exits}
+}
+
+// caseOwed reads the expressions of a tagless switch case: whether the value
+// is still owed when the case runs, and whether the case failing proves it
+// owes nothing in every case below. A case runs when any of its expressions is
+// true, so it owes nothing only when each of them proves that; one proving it
+// false settles every case below.
+func (w *pathWalk) caseOwed(exprs []ast.Expr) (owedIn, settlesBelow bool) {
+	for _, expr := range exprs {
+		owedIn = owedIn || w.owed(expr, true)
+		settlesBelow = settlesBelow || !w.owed(expr, false)
+	}
+	return owedIn, settlesBelow
 }
 
 // leave follows the paths leaving node outwards, to the end of the function.
@@ -369,17 +383,11 @@ func (w *pathWalk) leave(node ast.Node, out pathOut) bool {
 	case *ast.CaseClause:
 		return w.leave(p, w.rest(p.Body, node, out))
 	case *ast.CommClause:
-		if node == p.Comm {
-			return w.leave(p, w.then(out, func() pathOut { return w.list(p.Body) }))
-		}
-		return w.leave(p, w.rest(p.Body, node, out))
+		return w.leave(p, w.leaveComm(p, node, out))
 	case *ast.LabeledStmt:
 		return w.leave(p, out)
 	case *ast.IfStmt:
-		if node == p.Init {
-			out = w.then(out, func() pathOut { return w.branches(p) })
-		}
-		return w.leave(p, out)
+		return w.leave(p, w.leaveIf(p, node, out))
 	case *ast.SwitchStmt:
 		return w.leave(p, w.leaveSwitch(node, p.Init, nil, p.Body, p.Tag == nil, out))
 	case *ast.TypeSwitchStmt:
@@ -390,6 +398,24 @@ func (w *pathWalk) leave(node ast.Node, out pathOut) bool {
 		return w.leaveLoop(p, node, nil, false, p.Body, out)
 	}
 	return true
+}
+
+// leaveComm is the paths leaving a select case that node, its communication
+// or a statement of its body, sent them out of.
+func (w *pathWalk) leaveComm(clause *ast.CommClause, node ast.Node, out pathOut) pathOut {
+	if node == clause.Comm {
+		return w.then(out, func() pathOut { return w.list(clause.Body) })
+	}
+	return w.rest(clause.Body, node, out)
+}
+
+// leaveIf is the paths leaving an if that node sent them out of: from its init
+// they still pass through the arms.
+func (w *pathWalk) leaveIf(stmt *ast.IfStmt, node ast.Node, out pathOut) pathOut {
+	if node == stmt.Init {
+		return w.then(out, func() pathOut { return w.branches(stmt) })
+	}
+	return out
 }
 
 // leaveBlock resumes after node in block: the function ends at its body, and a
