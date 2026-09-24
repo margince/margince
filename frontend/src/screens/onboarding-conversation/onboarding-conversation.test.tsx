@@ -405,7 +405,7 @@ describe("the conversational company act", () => {
 
     // Only the selection-authorized change lands in the review; the model's
     // extra proposal never auto-applies.
-    await screen.findByRole("heading", { name: "Not guessed" });
+    await screen.findByRole("heading", { name: "Questions for you" });
     const digest = digestElement();
     await waitFor(() => {
       expect(
@@ -792,7 +792,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
 
-    await screen.findByRole("heading", { name: "Not guessed" });
+    await screen.findByRole("heading", { name: "Questions for you" });
     const digest = digestElement();
     // "Gradion GmbH" names both the identity summary at the top of the
     // digest and its own settled line further down.
@@ -840,7 +840,7 @@ describe("the conversational company act", () => {
 
     await userEvent.click(screen.getByRole("radio", { name: /Gradion GmbH/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await screen.findByRole("heading", { name: "Not guessed" });
+    await screen.findByRole("heading", { name: "Questions for you" });
 
     // The review's own textboxes are the deck's field controls — an answer
     // to a specific, asked question — never a free-text composer beside it.
@@ -922,7 +922,7 @@ describe("the conversational company act", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(
       await screen.findByRole("heading", {
-        name: "Not guessed",
+        name: "Questions for you",
       }),
     ).toBeTruthy();
     expect(

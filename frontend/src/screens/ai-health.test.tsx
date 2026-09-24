@@ -126,7 +126,7 @@ describe("model lane health", () => {
     renderCard([ANSWERING], 1, { automation: ["read", "update"] });
     expect(
       await screen.findByText(
-        /only an operator can see whether model tiers respond/i,
+        /only an administrator or operations user can see whether model tiers respond/i,
       ),
     ).toBeInTheDocument();
     // The lane that WOULD have rendered is absent, so this is the withheld
@@ -140,7 +140,7 @@ describe("model lane health", () => {
     // left standing would resume the call the moment a grant changed.
     renderCard([ANSWERING], 1, { automation: ["read", "update"] });
     await screen.findByText(
-      /only an operator can see whether model tiers respond/i,
+      /only an administrator or operations user can see whether model tiers respond/i,
     );
     const calls = (
       globalThis.fetch as unknown as { mock: { calls: unknown[][] } }

@@ -147,7 +147,7 @@ describe("VoiceCollectScene", () => {
       screen.getByRole("button", { name: "Paste text instead" }),
     );
     const add = screen.getByRole("button", {
-      name: "Add it to my corpus.",
+      name: "Add to writing samples",
     });
     expect(add).toBeDisabled();
 
@@ -174,7 +174,7 @@ describe("VoiceCollectScene", () => {
       screen.getByLabelText("Paste the text you wrote here"),
       "Something",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Discard it." }));
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
 
     expect(onAddPaste).not.toHaveBeenCalled();
     expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();

@@ -22,7 +22,7 @@ function CopyTheLink({ text = LINK }: Readonly<{ text?: string }>) {
   const copy = useClipboardCopy(text, {
     copy: "Copy link",
     copied: "Copied",
-    remedy: "Select the link and copy it by hand.",
+    remedy: "Select the link and copy it manually.",
   });
   return (
     <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: "32rem" }}>

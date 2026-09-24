@@ -303,10 +303,10 @@ describe("JobHealthCard", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveClass("callout-danger");
     expect(alert).toHaveTextContent(/will not run without intervention/i);
-    expect(alert).toHaveTextContent(/3 jobs/);
+    expect(alert).toHaveTextContent(/intervention: 3\./);
     // The span, in the sentence. A count with no window asks the reader to
     // guess, and the guess is "since forever".
-    expect(alert).toHaveTextContent(/last 24 hours/i);
+    expect(alert).toHaveTextContent(/last 24h/i);
     // Nothing to say about a week that holds no more than the day does.
     expect(alert).not.toHaveTextContent(/7 days/i);
     // And the count itself carries the tone on the row it belongs to.
@@ -350,7 +350,7 @@ describe("JobHealthCard", () => {
     });
     render(<JobHealthCard />);
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/4 dead jobs in the last 24 hours/i);
+    expect(alert).toHaveTextContent(/Dead jobs in the last 24h: 4/i);
     expect(alert).toHaveTextContent(
       /531 discarded or canceled in the last 7 days/i,
     );

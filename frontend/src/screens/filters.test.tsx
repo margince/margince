@@ -524,7 +524,9 @@ it("names the seat when a read seat is refused a preview", async () => {
   // has met and offers nothing to do about it, so the catalog copy replaces it.
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toContain("This seat is read-only");
-  expect(alert.textContent).toContain("Ask an operator to upgrade the seat.");
+  expect(alert.textContent).toContain(
+    "Ask an administrator to upgrade the seat.",
+  );
   expect(alert.textContent).not.toContain("seat tier insufficient");
 });
 

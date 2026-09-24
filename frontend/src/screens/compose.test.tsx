@@ -574,7 +574,7 @@ describe("ComposeModal", () => {
     );
 
     await screen.findByRole("heading", { name: "AI-assisted draft" });
-    expect(screen.getByText(/A model helped write this draft/i)).toBeTruthy();
+    expect(screen.getByText(/This draft was written by AI/i)).toBeTruthy();
   });
 
   it("discloses nothing when no model produced the draft", async () => {
@@ -2468,7 +2468,7 @@ describe("ComposeModal started from an account", () => {
     );
 
     expect(
-      await screen.findByText(/No contacts on this company yet/),
+      await screen.findByText(/No contacts at this company yet/),
     ).toBeTruthy();
     // The dead end is about the DRAFT, not about which body of work the
     // message is for.

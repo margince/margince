@@ -125,7 +125,7 @@ it("withholds the card from a seat without the grant, and asks the server nothin
   render(<ExtensionIngestHealthCard />);
 
   expect(
-    await screen.findByText(/requires a permission your seat does not have/),
+    await screen.findByText(/requires a permission your role does not have/),
   ).toBeInTheDocument();
   // A refusal the reader cannot act on has no business becoming this card's
   // error state, so the call is never issued.

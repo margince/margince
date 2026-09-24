@@ -283,9 +283,7 @@ describe("capture activity", () => {
     );
     // "Awaiting classification" alone would tell the reader to wait for an answer
     // that is never coming.
-    expect(
-      await screen.findByText(/no check result is coming/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/no result is coming/i)).toBeInTheDocument();
   });
 
   it("says where the numbers start, so the funnel is not read as everything", async () => {
@@ -404,7 +402,9 @@ describe("capture activity", () => {
     expect(
       funnel.getByText(en["captureActivity.funnel.deferred"]),
     ).toBeInTheDocument();
-    expect(funnel.queryByText(/sent for check/i)).not.toBeInTheDocument();
+    expect(
+      funnel.queryByText(/sent for a sender check/i),
+    ).not.toBeInTheDocument();
   });
 
   it("says when the sender pass runs while messages are waiting on it", async () => {
@@ -641,7 +641,7 @@ describe("capture activity", () => {
       }),
     );
     const row = within(await screen.findByRole("list"));
-    expect(row.getByText(/sent for check/i)).toBeInTheDocument();
+    expect(row.getByText(/sent for a sender check/i)).toBeInTheDocument();
     expect(row.getByText(/judged a real person/i)).toBeInTheDocument();
     expect(row.queryByText(/awaiting sender check/i)).not.toBeInTheDocument();
   });

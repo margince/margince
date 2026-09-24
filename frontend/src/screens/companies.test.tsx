@@ -1027,9 +1027,7 @@ describe("CompanyScreen — hierarchy roll-up in the rail (P-7)", () => {
     await openProfile();
 
     await waitFor(() =>
-      expect(
-        screen.getByText("Companies not visible to you excluded: 1"),
-      ).toBeTruthy(),
+      expect(screen.getByText("Hidden companies excluded: 1")).toBeTruthy(),
     );
   });
 });

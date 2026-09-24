@@ -361,7 +361,9 @@ describe("SettingsScreen RBAC surfaces", () => {
       await screen.findByText("Estimated AI spend and usage"),
     ).toBeTruthy();
     expect(
-      await screen.findByText(/only an operator can see AI spend/i),
+      await screen.findByText(
+        /only an administrator or operations user can see AI spend/i,
+      ),
     ).toBeTruthy();
   });
 

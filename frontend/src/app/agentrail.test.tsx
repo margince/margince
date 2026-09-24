@@ -946,7 +946,7 @@ describe("AgentRail", () => {
     });
 
   const BRIEF_RUNNING = "Preparing Morning brief…";
-  const BRIEF_FAILED = "Morning brief failed.";
+  const BRIEF_FAILED = "Morning brief failed";
 
   const runLines = () =>
     [...panel().querySelectorAll(".arrunline")].map((el) => el.textContent);
@@ -1306,7 +1306,7 @@ describe("AgentRail", () => {
   // raw token reaches no surface at all.
   it("keeps the degrade reason out of the line and out of the panel", async () => {
     const reason = "brief_partial: crm_read_timeout";
-    const stopped = "Morning brief stopped partway.";
+    const stopped = "Morning brief stopped partway";
     withSettled(RUN({ state: "degraded", degrade_reason: reason }));
     const user = userEvent.setup();
     const { container } = render(ROUTE);
@@ -1343,13 +1343,13 @@ describe("AgentRail", () => {
     withSettled(RUN({ state: "done" }));
     const user = userEvent.setup();
     const { container } = render(ROUTE);
-    await settlesOnLine(container, "Morning brief ready.");
+    await settlesOnLine(container, "Morning brief ready");
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
     await openPanel(user, container);
     expect(runLines()).toEqual([]);
     expect(panel().textContent).not.toContain("Running now");
     expect(
       panel().querySelector(".aritem:not(.arempty)")?.textContent,
-    ).toContain("Morning brief ready.");
+    ).toContain("Morning brief ready");
   });
 });

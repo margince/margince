@@ -191,13 +191,13 @@ describe("the account's document library", () => {
     // list that opened them all fired one request per deal file and buried the
     // filenames the reader came for.
     const toggle = await screen.findByRole("button", {
-      name: "Show reading",
+      name: "Show extracted fields",
     });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
 
     fireEvent.click(toggle);
     expect(
-      await screen.findByRole("button", { name: "Hide reading" }),
+      await screen.findByRole("button", { name: "Hide extracted fields" }),
     ).toBeTruthy();
   });
 

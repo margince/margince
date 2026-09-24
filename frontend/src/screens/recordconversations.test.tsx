@@ -122,7 +122,7 @@ describe("whose move a conversation is waiting on", () => {
     expect(
       row &&
         Array.from(row.querySelectorAll(".badge")).map((b) => b.textContent),
-    ).toContain("Awaiting reply");
+    ).toContain("Awaiting their reply");
   });
 });
 
@@ -228,7 +228,7 @@ describe("a withheld newest message", () => {
     expect(badges).not.toContain("Needs reply");
     // And not the other verdict either: a withheld row claims no move in
     // either direction, rather than quietly reporting the opposite one.
-    expect(badges).not.toContain("Awaiting reply");
+    expect(badges).not.toContain("Awaiting their reply");
   });
 
   it("keeps the withheld member's words off the card, open as it is", () => {

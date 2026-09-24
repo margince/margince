@@ -1633,7 +1633,7 @@ describe("company view — the state strip", () => {
     expect(strip.textContent).toContain("1 stalled");
     // Whose move it is reads the SAME `engagement` field, now in the daily
     // brief rather than a second copy in the strip.
-    expect(within(strip).queryByText("Awaiting reply")).toBeNull();
+    expect(within(strip).queryByText("Awaiting their reply")).toBeNull();
   });
 
   it("does not draw the worst open signal a second time", async () => {

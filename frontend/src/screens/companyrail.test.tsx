@@ -991,7 +991,7 @@ describe("CompanyRail", () => {
       }),
     });
     expect(
-      screen.getByText("No open deals. Closed deals only."),
+      screen.getByText("No open deals, only closed ones."),
     ).toBeInTheDocument();
     // No first-deal verb here — the account has already had deals, it is
     // between two of them rather than never having started. The way to the

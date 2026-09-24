@@ -289,7 +289,9 @@ it("withholds the trace from a principal without the diagnostics read, and asks 
   const { seen } = mount(true, true, { automation: ["read", "update"] });
 
   expect(
-    await screen.findByText(/only an operator can read the call trace/i),
+    await screen.findByText(
+      /only an administrator or operations user can read the call trace/i,
+    ),
   ).toBeTruthy();
   expect(screen.getByText("AI call trace")).toBeTruthy();
   expect(seen.some((path) => path.includes("/ai/calls"))).toBe(false);

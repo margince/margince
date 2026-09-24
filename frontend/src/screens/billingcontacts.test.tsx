@@ -216,7 +216,9 @@ it("offers no verbs at all on a company this reader cannot write", async () => {
   // entitled to. What goes is every way to change it.
   expect(screen.getByText("Pat Okafor")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Add contact" })).toBeNull();
-  expect(screen.queryByRole("button", { name: /^Change role of/ })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /^Change .*’s role$/ }),
+  ).toBeNull();
 });
 
 it("offers no verbs to a reader without the relationship grant", async () => {
@@ -235,7 +237,9 @@ it("offers no verbs to a reader without the relationship grant", async () => {
   await settled(seen);
   expect(screen.getByText("Pat Okafor")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Add contact" })).toBeNull();
-  expect(screen.queryByRole("button", { name: /^Change role of/ })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /^Change .*’s role$/ }),
+  ).toBeNull();
   expect(
     screen.queryByRole("button", { name: /^Remove Pat Okafor from/ }),
   ).toBeNull();
@@ -267,7 +271,9 @@ it("offers naming and changing but not Remove to a seat that cannot delete", asy
   expect(
     await screen.findByRole("button", { name: "Add contact" }),
   ).toBeTruthy();
-  expect(screen.getByRole("button", { name: /^Change role of/ })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: /^Change .*’s role$/ }),
+  ).toBeTruthy();
   expect(
     screen.queryByRole("button", { name: /^Remove Pat Okafor from/ }),
   ).toBeNull();
@@ -303,7 +309,7 @@ it("pins a capacity change to the edge's own version", async () => {
   // wire, so the verbs appear one tick after the first render.
   await userEvent.click(
     await screen.findByRole("button", {
-      name: "Change role of Pat Okafor",
+      name: "Change Pat Okafor’s role",
     }),
   );
   await userEvent.click(screen.getByRole("button", { name: "Save change" }));
@@ -365,7 +371,7 @@ it("says so rather than writing unpinned when the edge cannot be read back", asy
   // wire, so the verbs appear one tick after the first render.
   await userEvent.click(
     await screen.findByRole("button", {
-      name: "Change role of Pat Okafor",
+      name: "Change Pat Okafor’s role",
     }),
   );
   await userEvent.click(screen.getByRole("button", { name: "Save change" }));

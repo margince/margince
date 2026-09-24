@@ -320,7 +320,7 @@ const SUMMARY_LINE = en["agent.activity.summarizeNamed.done"].replace(
   "{name}",
   "Sabine Mayer",
 );
-const BRIEF_LINE = "Morning brief ready.";
+const BRIEF_LINE = "Morning brief ready";
 
 const summary = (agoMs: number) =>
   settledRun("summarize", agoMs, { subject_label: "Sabine Mayer" });

@@ -187,7 +187,7 @@ it("says nothing about unpriced calls when every call was priced", async () => {
 // the code it arrives with.
 it("distinguishes an empty window from a refused read", async () => {
   mount({ budget, days: [] });
-  expect(await screen.findByText("No AI calls in this month.")).toBeTruthy();
+  expect(await screen.findByText("No AI calls this month.")).toBeTruthy();
   cleanup();
   mount(
     {
@@ -242,7 +242,7 @@ it("names every row, and puts the per-day breakdown behind one disclosure", asyn
 
 it("keeps historical usage usable when the live allowance band is unknown", async () => {
   mount({ budget: { ...budget, band: "future-band" }, days: [] });
-  expect(await screen.findByText("No AI calls in this month.")).toBeTruthy();
+  expect(await screen.findByText("No AI calls this month.")).toBeTruthy();
 });
 
 it("withholds the spend from a principal without the diagnostics read, and asks the server for nothing", async () => {
@@ -254,7 +254,9 @@ it("withholds the spend from a principal without the diagnostics read, and asks 
   });
 
   expect(
-    await screen.findByText(/only an operator can see AI spend/i),
+    await screen.findByText(
+      /only an administrator or operations user can see AI spend/i,
+    ),
   ).toBeTruthy();
   expect(screen.getByText("Estimated AI spend and usage")).toBeTruthy();
   expect(seen.some((url) => url.includes("/ai/usage"))).toBe(false);

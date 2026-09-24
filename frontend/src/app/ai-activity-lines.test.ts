@@ -187,7 +187,7 @@ describe("speak", () => {
           id: "019f7e65-fbf7-7114-b114-40af4af63a77",
         },
       },
-      after: " ready.",
+      after: " ready",
     });
   });
 
@@ -239,7 +239,7 @@ describe("speak", () => {
       (key) => en[key],
     );
     expect(line?.subject).toEqual({ name: "Acme", route: null });
-    expect(line && spokenText(line)).toBe("Summary of Acme ready.");
+    expect(line && spokenText(line)).toBe("Summary of Acme ready");
   });
 
   it("renders the line for a state that has copy", () => {

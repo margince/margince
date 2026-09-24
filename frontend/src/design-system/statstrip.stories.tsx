@@ -115,7 +115,7 @@ export const QualifiedRow: Story = {
       />
       <StatCard label="Meetings ahead" value="4" detail="1 needs prep" />
       <StatCard
-        label="Promises due"
+        label="Commitments due"
         value="—"
         detail="promises are not tracked yet"
       />

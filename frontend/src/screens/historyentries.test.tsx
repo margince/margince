@@ -140,7 +140,7 @@ describe("putting one change back", () => {
 
     const button = await screen.findByRole("button", { name: /^undo$/i });
     expect(button.hasAttribute("disabled")).toBe(true);
-    expect(screen.getByText(/fields were changed again since/i)).toBeTruthy();
+    expect(screen.getByText(/fields have changed since/i)).toBeTruthy();
   });
 
   // The same words on both sides of the press. A refusal discovered at press
@@ -217,7 +217,7 @@ describe("putting one change back", () => {
     await user.click(await screen.findByRole("button", { name: /^undo$/i }));
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/2 fields/i)).toBeTruthy();
+    expect(within(dialog).getByText(/before this change: 2/i)).toBeTruthy();
     expect(within(dialog).getByText("Value")).toBeTruthy();
     expect(within(dialog).getByText("Name")).toBeTruthy();
     expect(restoreCalls(fetchMock)).toHaveLength(0);

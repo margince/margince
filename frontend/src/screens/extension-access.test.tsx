@@ -717,7 +717,7 @@ describe("ExtensionAccessCard", () => {
     // to find out why.
     expect(
       screen.getAllByText(
-        "Your seat can read this page. Changing a grant requires a full seat.",
+        "Your role can read this page. Changing a grant requires a full seat.",
       )[0],
     ).toBeTruthy();
     const denied = cell("ext_notes_note", "Admin", "Read");

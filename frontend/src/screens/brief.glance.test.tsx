@@ -54,7 +54,7 @@ describe("BriefGlance — the greeting follows the reader's own hour", () => {
   // would move the heading under the reader a moment after they read it.
   it("greets the hour with no name at all while the session is in flight", () => {
     expect(greetingAt(9, null)).toBe("Good morning.");
-    expect(greetingAt(2, null)).toBe("Good evening.");
+    expect(greetingAt(2, null)).toBe("Working late.");
   });
 
   it("draws no line for a reading it was not given", () => {
@@ -132,8 +132,8 @@ describe("BriefGlance — the weekly's sentence comes from the closed week", () 
 
   it("states the week's result and what it left behind", () => {
     const said = sentenceOf("weekly", CLOSED_WEEK);
-    expect(said).toContain("2 deals won");
-    expect(said).toContain("2 promises");
+    expect(said).toContain("Deals won: 2");
+    expect(said).toContain("Commitments carried over: 2");
   });
 
   // The two views compose from different reads. Over the weekly the morning's

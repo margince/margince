@@ -108,7 +108,7 @@ describe("BriefScreen — the context rail", () => {
     expect(screen.getByText("Companies created")).toBeTruthy();
     expect(
       screen.getByText(
-        "Classified: 4 promises, 2 meetings, 30 messages without a sales action.",
+        "Commitments: 4 · Meetings: 2 · Messages without a sales action: 30",
       ),
     ).toBeTruthy();
     await user.click(screen.getByText("Duplicates to review"));

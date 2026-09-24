@@ -308,7 +308,11 @@ describe("AiProviderKeysCard", () => {
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiProviderKeysCard />);
 
-    expect(await screen.findByText(/only an operator/i)).toBeTruthy();
+    expect(
+      await screen.findByText(
+        /only an administrator or operations user who can change model bindings/i,
+      ),
+    ).toBeTruthy();
     expect(screen.queryByPlaceholderText(/paste/i)).toBeNull();
     const asked = backend.fetchMock.mock.calls.map((c) => String(c[0]));
     expect(asked.some((u) => u.includes("/ai/provider-keys"))).toBe(false);

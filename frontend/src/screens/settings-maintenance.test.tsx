@@ -292,7 +292,7 @@ describe("ResetDataCard (danger zone)", () => {
       await screen.findByText(
         // The whole line, not a prefix: dropping the trailing counters is
         // exactly the regression this guards, and a prefix match would pass.
-        "Cleared 84 tables, 12 job rows, 12 event streams, 341 cache keys and 7 stored files.",
+        "Cleared: tables 84, job rows 12, event streams 12, cache keys 341, stored files 7.",
       ),
     ).toBeInTheDocument();
   });
@@ -375,7 +375,7 @@ describe("ResetDataCard (danger zone)", () => {
 
     await confirmReset(user, "Acme Inc");
     expect(
-      await screen.findByText(/Cleared 84 tables, 12 job rows/),
+      await screen.findByText(/Cleared: tables 84, job rows 12/),
     ).toBeInTheDocument();
 
     // Retry: the dialog stays open on error, so the summary from the first

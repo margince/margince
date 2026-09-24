@@ -111,7 +111,7 @@ const RUNTIME_LABELS: WorkbenchRuntimeLabels = {
   unavailable: "Not available yet",
   chip: "Active model and cost",
   answering: "Active model",
-  scope: "This run only. The full log is in Settings, then AI.",
+  scope: "This run only. The full log is in Settings under AI.",
   tokensShort: "tok",
 };
 

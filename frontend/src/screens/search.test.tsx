@@ -416,7 +416,7 @@ describe("SearchScreen", () => {
 
     const hit = await screen.findByText("Key Account");
     expect(hit.tagName).toBe("BUTTON");
-    expect(screen.getByText("Records: 7")).toBeTruthy();
+    expect(screen.getByText("Tagged records: 7")).toBeTruthy();
 
     await userEvent.setup().click(hit);
     expect(window.location.hash).toBe(

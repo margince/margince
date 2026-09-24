@@ -128,6 +128,6 @@ describe("sharing a forecast view", () => {
     );
 
     expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
-    expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
+    expect(screen.getByText(/copy it manually/i)).toBeTruthy();
   });
 });

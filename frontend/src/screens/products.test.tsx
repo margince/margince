@@ -92,7 +92,7 @@ function archiveButton() {
   return screen.queryByRole("button", { name: "Archive product" });
 }
 function postureLine() {
-  return screen.queryByText("Read-only. You cannot change products.");
+  return screen.queryByText("Read-only. Your role cannot change products.");
 }
 
 describe("ProductsAdmin", () => {

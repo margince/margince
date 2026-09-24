@@ -196,7 +196,7 @@ describe("held threads", () => {
       },
     ]);
     expect(
-      await screen.findByText(/first message deleted/i),
+      await screen.findByText(/first message erased/i),
     ).toBeInTheDocument();
   });
 
@@ -207,9 +207,7 @@ describe("held threads", () => {
     // left the subject line empty.
     renderCard([{ ...JUDGED, subject: undefined }]);
     expect(await screen.findByText(/^no subject$/i)).toBeInTheDocument();
-    expect(
-      screen.queryByText(/first message deleted/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/first message erased/i)).not.toBeInTheDocument();
     // And not the withheld reading either: a blank subject is a fact about the
     // sender, "not shared with you" a fact about the reader.
     expect(screen.queryByText(/not shared with you/i)).not.toBeInTheDocument();
@@ -222,9 +220,7 @@ describe("held threads", () => {
     // for.
     renderCard([WITHHELD]);
     expect(await screen.findByText(/not shared with you/i)).toBeInTheDocument();
-    expect(
-      screen.queryByText(/first message deleted/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/first message erased/i)).not.toBeInTheDocument();
   });
 
   it("refuses the release when there is no message left to share", async () => {

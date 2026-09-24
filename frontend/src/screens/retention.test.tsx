@@ -159,7 +159,7 @@ describe("RetentionCard rows", () => {
 
     const suppressed = await findRow("activity/transcript");
     expect(
-      within(suppressed).getByText(/held by retain-only mode/i),
+      within(suppressed).getByText(/paused by retain-only mode/i),
     ).toBeInTheDocument();
     // Not just a badge: the row states the consequence, because "enabled but
     // inert" is the one thing a reader cannot infer from the other columns.
@@ -172,7 +172,7 @@ describe("RetentionCard rows", () => {
     const acting = await findRow("deal/won");
     expect(within(acting).getByText(/acting nightly/i)).toBeInTheDocument();
     expect(
-      within(acting).queryByText(/held by retain-only mode/i),
+      within(acting).queryByText(/paused by retain-only mode/i),
     ).not.toBeInTheDocument();
   });
 
@@ -401,7 +401,7 @@ describe("the retain-only posture", () => {
     await waitFor(async () => {
       expect(
         within(await findRow("activity/transcript")).getByText(
-          /held by retain-only mode/i,
+          /paused by retain-only mode/i,
         ),
       ).toBeInTheDocument();
     });
@@ -422,7 +422,7 @@ describe("the retain-only posture", () => {
     // A reader still sees WHY a row is inert; only the controls are withheld.
     const row = await findRow("activity/transcript");
     expect(
-      within(row).getByText(/held by retain-only mode/i),
+      within(row).getByText(/paused by retain-only mode/i),
     ).toBeInTheDocument();
     expect(
       within(row).queryByRole("button", { name: /edit/i }),

@@ -469,7 +469,7 @@ describe("what a channel reply says it will be filed under", () => {
 
     expect(
       await screen.findByText(
-        "Filed under ERP-27 · ERP rollout with the thread it answers.",
+        "Sending files it under ERP-27 · ERP rollout, with the thread it answers.",
       ),
     ).toBeTruthy();
     // Stated, not asked. A picker here would take an answer the send has no
@@ -489,7 +489,9 @@ describe("what a channel reply says it will be filed under", () => {
     // unrendered surface standing in for one.
     expect(await screen.findByRole("textbox", { name: "Body" })).toBeTruthy();
     expect(
-      screen.queryByText(/Filed under .* with the thread it answers/),
+      screen.queryByText(
+        /Sending files it under .* with the thread it answers/,
+      ),
     ).toBeNull();
   });
 
@@ -525,7 +527,9 @@ describe("what a channel reply says it will be filed under", () => {
 
     expect(await screen.findByLabelText("Project")).toBeTruthy();
     expect(
-      screen.queryByText(/Filed under .* with the thread it answers/),
+      screen.queryByText(
+        /Sending files it under .* with the thread it answers/,
+      ),
     ).toBeNull();
   });
 });
