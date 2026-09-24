@@ -34,6 +34,20 @@ const CONTROLLER_SPEAKS_PREFIX = "privacynotice.";
 // The onboarding conversation, where an agent literally speaks in a bubble.
 const AGENT_SPEAKS_PREFIX = "ob.conv.";
 
+// A consent statement is the reader's sentence, not the product's.
+const SPOKEN_BY_THE_READER = new Set<string>([
+  "directSend.acknowledge",
+  "book.consentWording",
+  "prefs.wordingGeneric",
+]);
+const SPOKEN_BY_THE_READER_PREFIX = "prefs.wording.";
+
+function spokenByTheReader(key: string): boolean {
+  return (
+    SPOKEN_BY_THE_READER.has(key) || key.startsWith(SPOKEN_BY_THE_READER_PREFIX)
+  );
+}
+
 describe("en copy style", () => {
   it("uses no em dash or en dash", () => {
     expect(offenders(/[—–]/)).toEqual([]);
@@ -74,21 +88,25 @@ describe("en copy style", () => {
   });
 
   // Margince is software; it has no opinions, intentions or feelings to own.
+  // Case-sensitive so the country code in "English (US)" is not read as "us".
   it("never speaks as we", () => {
     expect(
-      offenders(/\b(?:we|us|our|ours)\b/i, {
+      offenders(/\b(?:We|we|Us|us|Our|our|Ours|ours)\b/, {
         text: prose,
-        exempt: (key) => key.startsWith(CONTROLLER_SPEAKS_PREFIX),
+        exempt: (key) =>
+          key.startsWith(CONTROLLER_SPEAKS_PREFIX) || spokenByTheReader(key),
       }),
     ).toEqual([]);
   });
 
-  // "me" stays legal: "Assign to me" is the object of a control, not a voice.
+  // "me" and "my" stay legal: "Assign to me" and "My deals" name the reader's
+  // own records in a control, not a voice. `\bI\b` also catches I’m and I’ve.
   it("says I only inside the onboarding conversation", () => {
     expect(
-      offenders(/\bI\b|\b[Mm]y(?:self)?\b/, {
+      offenders(/\bI\b|\b[Mm]yself\b/, {
         text: prose,
-        exempt: (key) => key.startsWith(AGENT_SPEAKS_PREFIX),
+        exempt: (key) =>
+          key.startsWith(AGENT_SPEAKS_PREFIX) || spokenByTheReader(key),
       }),
     ).toEqual([]);
   });
@@ -97,5 +115,11 @@ describe("en copy style", () => {
     const british =
       /\b(?:colour\w*|organis\w*|behaviour\w*|favourite\w*|centre[ds]?|licence[ds]?|cancell(?:ed|ing)|labell(?:ed|ing)|analyse[dr]?|analysing|catalogue[ds]?|recognis\w*|customis\w*|authoris\w*|prioritis\w*|summaris\w*|initialis\w*|optimis\w*|synchronis\w*|programmes?|grey(?:s|ed|ish)?|enrolments?|enrols?)\b/i;
     expect(offenders(british, { text: prose })).toEqual([]);
+  });
+
+  // A quoted label is copied from another product's screen and must match it.
+  it("writes and, never an ampersand", () => {
+    const unquoted = (value: string) => value.replace(/“[^”]*”/g, "");
+    expect(offenders(/&/, { text: unquoted })).toEqual([]);
   });
 });

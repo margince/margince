@@ -42,13 +42,18 @@ items and most help text are impersonal statements.
   intentions or feelings. "We could not save" becomes "Changes were not saved".
   The one exception is the privacy notice, where the data controller addresses
   the data subject and in law speaks as "we".
-- Never "I" or "my", with one exception: a conversation surface where an agent
+- Never "I", with one exception: a conversation surface where an agent
   literally speaks in a message bubble (the onboarding conversation). There the
   agent says "I" in short, factual sentences, and nowhere else. Status lines,
   notifications and activity entries about agent work use the neutral voice:
   "Summary of {name} ready", not "My summary of {name} is ready".
 - "Me" is allowed as the object of a control that picks the reader: "Assign to
   me", "Only me". It is a conventional UI label, not the product speaking.
+- "My" is allowed only as a scope label that names the reader's own records
+  ("My deals"), never inside a sentence.
+- A consent statement the reader makes as their own words (an acknowledgement
+  before sending, a consent wording) is the reader's sentence, so it may say
+  "I" and "we" and is exempt from both pronoun rules.
 - Never "please".
 
 ### Tone by situation
@@ -182,7 +187,7 @@ hidden for this role."
 ## What the gate holds
 
 `frontend/src/i18n/copy-style.test.ts` checks every value of the `en` catalog,
-one test per rule, and lists each offender as its key and value:
+one test for each of its twelve rules, and lists each offender as its key and value:
 
 | Rule | What fails |
 |---|---|
@@ -194,13 +199,14 @@ one test per rule, and lists each offender as its key and value:
 | Abbreviations | e.g., i.e., etc., vs. |
 | Never "please" | The word, in any case |
 | No contractions | A fixed list: can’t, won’t, don’t, isn’t, aren’t, didn’t, doesn’t, couldn’t, wasn’t, hasn’t, haven’t, it’s, that’s, there’s, you’re, you’ve, we’re, they’re, let’s, with either apostrophe |
-| Never "we" | we, us, our, ours, outside keys starting `privacynotice.` |
-| Never "I" | I, I’m, I’ve, my, myself, outside keys starting `ob.conv.` |
+| Never "we" | we, us, our, ours in lower or leading capital (so the country code "US" passes), outside keys starting `privacynotice.` or `prefs.wording.` and the consent statements listed in the test |
+| Never "I" | I, I’m, I’ve, myself, outside keys starting `ob.conv.` or `prefs.wording.` and the consent statements listed in the test |
+| No ampersand | Any `&` outside curly quotes; write "and". A label in “…” is copied from another product's screen and must match it |
 | American spelling | A fixed list of British spellings of words the catalog uses |
 
 Placeholders are removed before the word rules run, so `{name}` never reads as
 copy. The gate cannot see the rest of this page: tone, sentence case, articles,
-periods, tense, voice, a spaced hyphen, w/ and &, numbers and ranges, list form,
+periods, tense, voice, a spaced hyphen, w/, numbers and ranges, list form,
 length ceilings, vocabulary, message shapes, a contraction outside its list, and
 "you" used where nobody needed addressing. Those are the author's and the
 reviewer's judgement.
