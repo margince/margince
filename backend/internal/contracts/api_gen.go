@@ -32981,7 +32981,7 @@ type OpenDealRoomThreadRequest struct {
 	// RequiredChange Only with a document. Marks the thread as one the seller still owes an answer on.
 	RequiredChange *bool `json:"required_change,omitempty"`
 
-	// Source Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for a person writing through this product.
+	// Source Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for someone writing through this product.
 	Source *string `json:"source,omitempty"`
 }
 

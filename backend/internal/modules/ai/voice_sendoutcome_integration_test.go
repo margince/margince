@@ -134,7 +134,7 @@ func (e *sendOutcomeEnv) seedDraft(t *testing.T, opts draftOptions) draftFixture
 	var profile ids.UUID
 	if err := e.owner.QueryRow(ctx, `
 		INSERT INTO voice_profile (owner_id, scope, status, source, captured_by)
-		VALUES ($1, 'user', 'ready', 'ui', $2) RETURNING id`,
+		VALUES ($1, 'user', 'ready', 'manual', $2) RETURNING id`,
 		profileOwner, "human:"+profileOwner.String()).Scan(&profile); err != nil {
 		t.Fatal(err)
 	}

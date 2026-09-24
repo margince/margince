@@ -1,4 +1,4 @@
--- `source` names WHERE a row came from, and a person using this product is one
+-- `source` names WHERE a row came from, and someone using this product is one
 -- origin with one spelling.
 --
 -- The Deal Room's tables and the outcome review's frozen rows carry `source`
@@ -42,9 +42,16 @@ UPDATE deal_room_document    SET source = 'manual' WHERE source IN ('mcp', 'ui')
 UPDATE deal_room_thread      SET source = 'manual' WHERE source IN ('mcp', 'ui');
 UPDATE deal_room_comment     SET source = 'manual' WHERE source IN ('mcp', 'ui');
 
--- The cache holds request bodies a click replays VERBATIM, `source` included,
--- so a card written before this sweep would re-write the retired word into a
--- fresh row the moment somebody clicks it. Clearing it is safe: an absent row
--- is the same cache miss as an unreadable one, and the deal page already
--- rewrites the card on its next read.
+-- Both caches below hold a request body a click replays VERBATIM, `source`
+-- included, so a row written before this sweep would re-write the retired
+-- word into a fresh record the moment somebody clicks it. Clearing either is
+-- safe: an absent or emptied cache reads as a miss the owning page already
+-- regenerates on its next read, not as an error a user sees.
 DELETE FROM deal_status_card;
+
+-- The account scan's findings carry the same add-task body, so the same
+-- replay risk applies. Only the findings and the fingerprint they were read
+-- from collapse — the per-reader row's scan state (status, attempt,
+-- generated_at) is left standing, so a settled read is treated as changed and
+-- re-run rather than as never having happened.
+UPDATE company_scan SET findings = '[]'::jsonb, fingerprint = NULL;

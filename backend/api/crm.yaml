@@ -26889,7 +26889,7 @@ components:
       properties:
         source:
           type: string
-          description: 'What produced the row: email:<id> | calendar:<id> | connector:<n>:<id> | api | import:<batch> | ui | coldstart.'
+          description: 'What produced the row: email:<id> | calendar:<id> | connector:<n>:<id> | api | import:<batch> | manual | coldstart.'
         captured_by:
           type: string
           readOnly: true
@@ -44093,7 +44093,7 @@ components:
         required_change:
           type: boolean
           description: Only with a document. Marks the thread as one the seller still owes an answer on.
-        source: { type: string, description: 'Provenance. Required on the seller edge; a buyer''s comment always carries the credential''s own value. `manual` for a person writing through this product.' }
+        source: { type: string, description: 'Provenance. Required on the seller edge; a buyer''s comment always carries the credential''s own value. `manual` for someone writing through this product.' }
       additionalProperties: false
 
     PostDealRoomCommentRequest:

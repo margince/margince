@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -40,7 +41,7 @@ const toolVersionV1 = "1.0.0"
 // assistant rather than through a form. Which door it came through, and who
 // walked through it, are recorded in captured_by, where retrieval ranking and
 // the record history both read them.
-const ToolSource = "manual"
+const ToolSource = provenance.RecordSourceManual
 
 // StageResolver supplies the advance_deal tier resolver's input: the
 // target stage's configured semantic (won/lost is a property of pipeline

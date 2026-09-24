@@ -29,8 +29,12 @@ package gates
 // neither is refused; both would land a retired word in a row. A retired word
 // spelled inside a raw JSON body a test hands to a decoder is the same blind
 // spot from the other side: the bytes carry it, but no `KeyValueExpr` does, so
-// this walks past it exactly as it walks past a variable. What this holds is
-// the tree read as Go syntax, which is where every regression so far came from.
+// this walks past it exactly as it walks past a variable. A raw SQL literal a
+// fixture hands to `Exec`/`QueryRow` is the same blind spot again: the word
+// sits inside one Go string, never as a key this walk can name, so "fixtures
+// are IN SCOPE" above holds only for the shapes Go syntax exposes. What this
+// holds is the tree read as Go syntax, which is where every regression so far
+// came from.
 
 import (
 	"fmt"

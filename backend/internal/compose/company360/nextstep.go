@@ -116,12 +116,12 @@ func recommendedNextStep(companyID ids.CompanyID, in suggestionInputs) nextStep 
 	return nextStep{body: TaskBody(subject, "company", companyID.UUID)}
 }
 
-// TaskBody is a step as POST /tasks takes it. `source` is the UI because that
-// is where the click happens: a rep pressing the button on this card is the
-// author of the task, and recording anything else would put an actor in the
-// audit trail who did not decide it. Exported because the account scan's
-// findings ask for a step the same way, and the page writes both from the
-// body they carry.
+// TaskBody is a step as POST /tasks takes it. `source` is manual because a
+// rep pressing the button on this card is the origin of the task, whichever
+// screen the button sits on, and recording anything else would put an actor
+// in the audit trail who did not decide it. Exported because the account
+// scan's findings ask for a step the same way, and the page writes both from
+// the body they carry.
 //
 //nolint:staticcheck // ST1003: the field names mirror the oapi-codegen type this must assign to
 func TaskBody(

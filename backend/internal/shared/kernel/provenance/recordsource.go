@@ -23,8 +23,8 @@ const RecordSourceManual = "manual"
 var retiredRecordSourceSpellings = []string{"mcp", "ui"}
 
 // RetiredRecordSourceSpellings lists the retired words, sorted. One owner, so
-// the census over Go, the census over TypeScript and the migration predicate
-// read the same set rather than three copies that drift.
+// the census over Go and the census over TypeScript read the same set rather
+// than two copies that drift.
 func RetiredRecordSourceSpellings() []string {
 	return slices.Clone(retiredRecordSourceSpellings)
 }
