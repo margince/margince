@@ -139,23 +139,29 @@ func TestGeminiStructuredOutputRidesResponseFormat(t *testing.T) {
 
 // A structured request thinks at low unless its caller chose a level, because
 // Gemini's thinking is charged to the same maxOutputTokens the answer needs; a
-// free-text request keeps the model's own default.
+// free-text request keeps the model's own default. So does a Flash-Lite, whose
+// default is already shallower than low: naming low would make it think more.
 func TestGeminiThinkingDefaultsLowOnlyForAStructuredRequest(t *testing.T) {
 	schema := json.RawMessage(`{"type":"object"}`)
 	cases := []struct {
 		name   string
+		model  string
 		schema json.RawMessage
 		chosen string
 		want   string
 	}{
-		{"structured, no level chosen", schema, "", geminiStructuredThinkingLevel},
-		{"structured, caller chose high", schema, "high", "high"},
-		{"free text, no level chosen", nil, "", ""},
-		{"free text, caller chose medium", nil, "medium", "medium"},
+		{"structured, no level chosen", "gemini-3.5-flash", schema, "", geminiStructuredThinkingLevel},
+		{"structured on pro, no level chosen", "gemini-3.1-pro-preview", schema, "", geminiStructuredThinkingLevel},
+		{"structured, caller chose high", "gemini-3.5-flash", schema, "high", "high"},
+		{"free text, no level chosen", "gemini-3.5-flash", nil, "", ""},
+		{"free text, caller chose medium", "gemini-3.5-flash", nil, "medium", "medium"},
+		{"structured on flash-lite, no level chosen", "gemini-3.1-flash-lite", schema, "", ""},
+		{"structured on 2.5 flash-lite, no level chosen", "gemini-2.5-flash-lite", schema, "", ""},
+		{"structured on flash-lite, caller chose medium", "gemini-3.1-flash-lite", schema, "medium", "medium"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := geminiGenerationConfig(model.Request{ResponseSchema: tc.schema}, geminiOptions{ThinkingLevel: tc.chosen})
+			cfg := geminiGenerationConfig(model.Request{ResponseSchema: tc.schema}, tc.model, geminiOptions{ThinkingLevel: tc.chosen})
 			got := ""
 			if cfg.ThinkingConfig != nil {
 				got = cfg.ThinkingConfig.ThinkingLevel
@@ -181,6 +187,31 @@ func TestGeminiThinkingLevelFromProviderOptions(t *testing.T) {
 	}
 	if !bytes.Contains(body, []byte(`"thinkingLevel":"low"`)) {
 		t.Fatalf("thinkingLevel not on wire: %s", body)
+	}
+}
+
+// The thinking default follows the model the request names, the "models/"
+// prefix included, not the binding's default model.
+func TestGeminiStructuredThinkingFollowsTheRequestedModel(t *testing.T) {
+	for _, tc := range []struct {
+		model string
+		sent  bool
+	}{{"models/gemini-3.1-flash-lite", false}, {"gemini-3.5-flash", true}} {
+		var body []byte
+		client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
+			body = readBody(t, r.Body)
+			_, _ = w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"{}"}]},"finishReason":"STOP"}]}`))
+		})
+		if _, err := client.Complete(context.Background(), model.Request{
+			Model:          tc.model,
+			Messages:       []model.Message{{Role: "user", Content: "hi"}},
+			ResponseSchema: json.RawMessage(`{"type":"object"}`),
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if sent := bytes.Contains(body, []byte(`"thinkingConfig"`)); sent != tc.sent {
+			t.Errorf("%s: thinkingConfig sent = %v, want %v: %s", tc.model, sent, tc.sent, body)
+		}
 	}
 }
 

@@ -135,6 +135,11 @@ type openaiResponse struct {
 }
 
 func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	resp, err := c.completeResponse(ctx, req)
+	return reportSchemaDowngrade(resp, err, strictDowngrade(req.ResponseSchema))
+}
+
+func (c *openaiClient) completeResponse(ctx context.Context, req model.Request) (model.Response, error) {
 	body, err := c.post(ctx, "/v1/responses", req, false)
 	if err != nil {
 		return model.Response{}, err

@@ -112,7 +112,26 @@ const geminiJSONOutput = "APPLICATION_JSON"
 // "low" rather than the shallower "minimal" because it is the floor every
 // Gemini model this tree binds accepts: gemini-3.1-pro-preview answers minimal
 // with a 400.
+//
+// It only ever LOWERS a model's thinking, so a model whose own default is
+// already at or below it is sent no level (geminiThinksShallowByDefault).
 const geminiStructuredThinkingLevel = "low"
+
+// geminiThinksShallowByDefault reports whether a model's own thinking default
+// is already no deeper than geminiStructuredThinkingLevel, so naming that level
+// would raise it. Google's thinking table puts every Flash-Lite there:
+// gemini-3.1-flash-lite and gemini-3.5-flash-lite default to minimal,
+// gemini-2.5-flash-lite does not think at all unless asked, and
+// gemini-3.1-flash-lite-image accepts only minimal and high, so low is a 400
+// there besides.
+//
+// Keyed on the family name rather than a list of ids because the table is per
+// family: a new Flash-Lite ships at the cheap end of the scale by design, and
+// an unlisted id falling through to "low" would re-open the raise this exists
+// to prevent.
+func geminiThinksShallowByDefault(model string) bool {
+	return strings.Contains(model, "flash-lite")
+}
 
 type geminiThinking struct {
 	ThinkingLevel string `json:"thinkingLevel"` //nolint:tagliatelle // Google's wire format (camelCase)
@@ -306,7 +325,7 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 	if req.System != "" {
 		wire.SystemInstruction = &geminiContent{Parts: []geminiPart{{Text: req.System}}}
 	}
-	wire.GenerationConfig = geminiGenerationConfig(req, opts)
+	wire.GenerationConfig = geminiGenerationConfig(req, genModel, opts)
 
 	method := "generateContent"
 	query := ""
@@ -371,7 +390,10 @@ func geminiAttachmentPart(a model.Attachment) geminiPart {
 	return geminiPart{InlineData: &geminiInlineData{MimeType: a.MIME, Data: base64.StdEncoding.EncodeToString(a.Bytes)}}
 }
 
-func geminiGenerationConfig(req model.Request, opts geminiOptions) *geminiGenConfig {
+// geminiGenerationConfig takes the model id the request resolves to, because
+// the thinking level a schema-constrained request gets depends on that model's
+// own default.
+func geminiGenerationConfig(req model.Request, modelID string, opts geminiOptions) *geminiGenConfig {
 	cfg := &geminiGenConfig{}
 	if req.MaxTokens > 0 {
 		cfg.MaxOutputTokens = req.MaxTokens
@@ -381,7 +403,7 @@ func geminiGenerationConfig(req model.Request, opts geminiOptions) *geminiGenCon
 	level := opts.ThinkingLevel
 	if len(req.ResponseSchema) > 0 {
 		cfg.ResponseFormat = &geminiResponseFormat{Text: geminiTextFormat{MimeType: geminiJSONOutput, Schema: req.ResponseSchema}}
-		if level == "" {
+		if level == "" && !geminiThinksShallowByDefault(modelID) {
 			level = geminiStructuredThinkingLevel
 		}
 	}

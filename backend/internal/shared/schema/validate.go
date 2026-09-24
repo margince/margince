@@ -14,11 +14,13 @@ package schema
 // validator would cover ground this codebase never uses. Extend the
 // vocabulary here only alongside a new Node constructor above.
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
+	"io"
 	"slices"
+	"strconv"
 )
 
 // ValidateJSON parses schemaJSON into a Node (the same wire shape Must
@@ -29,9 +31,19 @@ func ValidateJSON(schemaJSON json.RawMessage, value string) error {
 	if err := json.Unmarshal(schemaJSON, &node); err != nil {
 		return fmt.Errorf("schema: parsing schema: %w", err)
 	}
+	// Numbers stay the literal the model wrote (json.Number), because an
+	// integer is judged by its spelling: a float64 has already forgotten
+	// whether it was written 3 or 3.0.
+	dec := json.NewDecoder(bytes.NewReader([]byte(value)))
+	dec.UseNumber()
 	var data any
-	if err := json.Unmarshal([]byte(value), &data); err != nil {
+	if err := dec.Decode(&data); err != nil {
 		return fmt.Errorf("schema: value is not valid JSON: %w", err)
+	}
+	// json.Unmarshal refuses anything after the value; a Decoder stops at the
+	// value's end, so it is asked what follows, which must be nothing.
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
+		return errors.New("schema: value is not valid JSON: something follows the value")
 	}
 	return node.validate(data, "$")
 }
@@ -56,17 +68,12 @@ func (n Node) validate(v any, path string) error {
 		}
 		return nil
 	case typeNumber:
-		if _, ok := v.(float64); !ok {
+		if _, ok := v.(json.Number); !ok {
 			return fmt.Errorf("%s: want number, got %T", path, v)
 		}
 		return nil
 	case typeInteger:
-		// JSON has one number type, so an integer is a number with no
-		// fractional part — 3.0 is one, as JSON Schema itself counts it.
-		if f, ok := v.(float64); !ok || f != math.Trunc(f) {
-			return fmt.Errorf("%s: want integer, got %v", path, v)
-		}
-		return nil
+		return validateInteger(v, path)
 	case typeNull:
 		if v != nil {
 			return fmt.Errorf("%s: want null, got %T", path, v)
@@ -77,6 +84,25 @@ func (n Node) validate(v any, path string) error {
 	default:
 		return fmt.Errorf("%s: unsupported schema type %q", path, n.Type)
 	}
+}
+
+// validateInteger admits a number written as a whole-number literal that fits
+// a Go int, and nothing else. JSON Schema itself counts 3.0 as an integer, but
+// every reader of an integer field here decodes it into an int, and
+// encoding/json refuses 3.0, 1e2 and 1e300 there — so a validator that
+// admitted them would pass the answer its reader then fails on. The validator
+// holds the reader's rule, not the looser one.
+//
+//craft:ignore naked-any same decoded-JSON contract as validate
+func validateInteger(v any, path string) error {
+	number, ok := v.(json.Number)
+	if !ok {
+		return fmt.Errorf("%s: want integer, got %T", path, v)
+	}
+	if _, err := strconv.ParseInt(number.String(), 10, strconv.IntSize); err != nil {
+		return fmt.Errorf("%s: want a whole number an int holds, got %s", path, number)
+	}
+	return nil
 }
 
 //craft:ignore naked-any same decoded-JSON contract as validate

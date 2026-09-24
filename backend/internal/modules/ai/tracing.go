@@ -102,7 +102,7 @@ func (r *Router) finalizeAttempt(ctx context.Context, b *binding, lc *logicalCal
 	// means no broker named an upstream, and substituting the configured
 	// provider would turn "nobody told us" into a claim about who served.
 	trace.ServedProvider, trace.FinishReason = resp.ServedProvider, finishReasonFor(resp.FinishReason, callErr)
-	trace.SchemaDowngrade = resp.SchemaDowngrade
+	trace.SchemaDowngrade = schemaDowngradeFor(resp.SchemaDowngrade, callErr)
 	// Payload capture is best-effort and, like the trace write itself, must
 	// not become a new way for a working model call to fail (contrast the
 	// meter, which fails loudly to protect the budget guardrail). flush()
@@ -302,7 +302,23 @@ func (r *Router) traceForFailedRung(b *binding, base Call, t Tier, callErr error
 	// to the next rung. There is no Response on this path at all: the rung
 	// failed, so the reason can only have come from the error.
 	c.FinishReason = finishReasonFor("", callErr)
+	c.SchemaDowngrade = schemaDowngradeFor("", callErr)
 	return c
+}
+
+// schemaDowngradeFor is finishReasonFor's rule for the schema downgrade: what
+// the Response reported, else what a failed call's error carries
+// (reportSchemaDowngrade), else "" — the schema went as written, or there was
+// none. One function because both trace writers record it.
+func schemaDowngradeFor(reported string, callErr error) string {
+	if reported != "" {
+		return reported
+	}
+	var downgraded interface{ SchemaDowngrade() string }
+	if errors.As(callErr, &downgraded) {
+		return downgraded.SchemaDowngrade()
+	}
+	return ""
 }
 
 // finishReasonFor derives the terminal for one stored attempt, and is the ONE

@@ -197,10 +197,19 @@ func withTruncationFeedback(req model.Request) model.Request {
 // lever for whatever spent the budget — room, when thinking spent it; brevity,
 // when the answer did — and a complete-but-wrong one is shown why it was
 // refused.
+//
+// Room is only a lever while there is room to give. A request already at
+// roomToAnswerMaxTokens would go out again unchanged — the same request re-rolled,
+// and a byte-identical one besides, which the result cache cannot tell from
+// the attempt that failed — so it gets the brevity retry instead: the one lever
+// left is asking for less.
 func feedbackFor(req model.Request, resp model.Response, cause error) model.Request {
 	switch {
 	case truncated(resp) && thinkingSpentTheBudget(resp):
-		return withRoomToAnswer(req, resp)
+		if room := withRoomToAnswer(req, resp); room.MaxTokens > appliedCeiling(req) {
+			return room
+		}
+		return withTruncationFeedback(req)
 	case truncated(resp):
 		return withTruncationFeedback(req)
 	default:
@@ -229,8 +238,8 @@ func thinkingSpentTheBudget(resp model.Response) bool {
 //
 // Raising the ceiling rather than lowering the thinking level, because it is
 // the one lever every wire has: thinking controls are per vendor, and a
-// structured Gemini request already thinks at the lowest level all its models
-// accept (geminiStructuredThinkingLevel).
+// structured Gemini request already thinks at low or at its model's shallower
+// default (geminiStructuredThinkingLevel).
 //
 // The growth is bounded three ways: the ceiling at most doubles; every retry
 // grows from the caller's request rather than from the previous retry, so a
@@ -239,26 +248,29 @@ func thinkingSpentTheBudget(resp model.Response) bool {
 // ceiling the caller set above that.
 func withRoomToAnswer(req model.Request, resp model.Response) model.Request {
 	out := req
-	ceiling := req.MaxTokens
-	if ceiling <= 0 {
-		// A request that set no ceiling ran under the one every adapter sends
-		// for it. That constant, and not the attempt's reported output count,
-		// is what grows: a count off the wire is the provider's claim, and it
-		// must not decide what the next request may spend.
-		ceiling = unsetMaxOutputTokens
-	}
+	ceiling := appliedCeiling(req)
 	grown := min(ceiling+min(resp.ReasoningTokens, ceiling), roomToAnswerMaxTokens)
 	out.MaxTokens = max(ceiling, grown)
 	return out
 }
 
+// appliedCeiling is the output ceiling a request actually ran under. A request
+// that set none ran under the one every adapter sends for it, and that
+// constant, not the attempt's reported output count, is what a retry grows
+// from: a count off the wire is the provider's claim, and it must not decide
+// what the next request may spend.
+func appliedCeiling(req model.Request) int {
+	if req.MaxTokens <= 0 {
+		return unsetMaxOutputTokens
+	}
+	return req.MaxTokens
+}
+
 // roomToAnswerMaxTokens is the most output a room-to-answer retry asks for:
-// the widest structured lane's ceiling, doubled. A retry asking past what the
-// serving model can emit is refused with a 400, which walks the ladder as an
-// outage instead of recovering the answer, so the bound sits at the smallest
-// output limit among the models the shipped presets bind — 16,384 for
-// mistral-small-3.2-24b-instruct, read from OpenRouter's catalog 2026-09-24.
-// Every other bound model emits at least twice that.
+// one more structured budget (ReasoningOutputMaxTokens) on top of the one a
+// structured lane already runs under. It bounds what a retry may spend, and
+// it is not a model's output limit: a serving model that cannot emit this much
+// answers the retry with a 400, which walks the ladder like any other refusal.
 const roomToAnswerMaxTokens = 2 * ReasoningOutputMaxTokens
 
 // withValidatorFeedback appends the failed output and its validation

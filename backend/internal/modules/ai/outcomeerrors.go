@@ -66,6 +66,36 @@ func withSpend(err error, spent model.Response) error {
 	return withheld
 }
 
+// downgradedError is a failed call's error carrying the schema downgrade the
+// request was sent under, which a failed call has no Response to report on.
+// The trace reads it back through SchemaDowngrade (schemaDowngradeFor).
+type downgradedError struct {
+	err       error
+	downgrade string
+}
+
+func (e downgradedError) Error() string { return e.err.Error() }
+
+func (e downgradedError) Unwrap() error { return e.err }
+
+// SchemaDowngrade satisfies the accessor schemaDowngradeFor probes for.
+func (e downgradedError) SchemaDowngrade() string { return e.downgrade }
+
+// reportSchemaDowngrade stamps the downgrade an adapter decided before sending
+// on the call's outcome: on the Response when it was served, on the error when
+// it was not. Every adapter that decides one reports it here, so the served
+// and failed rows of one request cannot disagree about what was sent.
+func reportSchemaDowngrade(resp model.Response, err error, downgrade string) (model.Response, error) {
+	if err != nil {
+		if downgrade == "" {
+			return resp, err
+		}
+		return resp, downgradedError{err: err, downgrade: downgrade}
+	}
+	resp.SchemaDowngrade = downgrade
+	return resp, nil
+}
+
 // truncatedError ends a stream the output ceiling cut off: the port's
 // model.ErrOutputTruncated, naming its wire, and carrying the same terminal
 // Complete reports on a Response so one truncation is one value in the trace

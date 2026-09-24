@@ -503,6 +503,43 @@ func TestCostReportPricesEmbeddingCallsHonestly(t *testing.T) {
 	}
 }
 
+// A rate row that publishes no cache price bills cached tokens at the input
+// rate in the report exactly as PriceCall does: the two are one rule in two
+// languages, and a zero read as "free" would lower the reported cost of every
+// call that hit a warm cache.
+func TestCostReportPricesAZeroCachePriceAtTheInputRate(t *testing.T) {
+	e := setupRateStore(t)
+	ctx := context.Background()
+	ws, wsCtx := e.seedWorkspace(ctx, t)
+	store := e.storeFor(ws)
+
+	rate := ModelRate{
+		Provider: providerOpenAICompatible, ModelID: "no-cache-price-model",
+		InputPerMTokMicroUSD: 1_500_000, OutputPerMTokMicroUSD: 7_500_000,
+		EffectiveDate: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+	e.insertRate(ctx, t, rate)
+	day := time.Date(2026, 2, 2, 9, 0, 0, 0, time.UTC)
+	e.insertCall(ctx, t, callFixture{
+		task: TaskSummarize, provider: rate.Provider, model: rate.ModelID,
+		tokensIn: 900, cachedTokens: 400, cacheWriteTokens: 200, tokensOut: 100, occurredAt: day,
+	})
+
+	report, err := store.CostReport(wsCtx, day.Truncate(24*time.Hour), day.Add(24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 900 prompt tokens and 100 out, every prompt token at the input rate:
+	// (900×1.5e6 + 100×7.5e6)/1e6.
+	const want = 2100
+	if got := PriceCall(Usage{TokensIn: 900, CachedTokens: 400, CacheWriteTokens: 200, TokensOut: 100}, rate); got != want {
+		t.Fatalf("PriceCall = %d, want %d", got, want)
+	}
+	if len(report) != 1 || report[0].CostMicroUSD != want {
+		t.Fatalf("report = %+v, want one line costing %d", report, want)
+	}
+}
+
 // storeFor binds a rate store to the workspace a test just seeded. One store
 // per workspace, because the handle carries the tenant now (ADR-0091 §9
 // step 3) — a shared one would run every test against whichever workspace

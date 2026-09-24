@@ -140,7 +140,7 @@ func TestCompleteCarriesCacheWriteTokens(t *testing.T) {
 // record, so a reply generation did not constrain is not mistaken for one it
 // did.
 func TestTheTraceRecordsTheSchemaDowngradeTheAdapterReported(t *testing.T) {
-	for _, downgrade := range []string{"", model.SchemaRelaxed, model.SchemaDropped} {
+	for _, downgrade := range []string{"", model.SchemaRelaxed, model.SchemaUnenforced, model.SchemaDropped} {
 		fcs := &fakeCallStore{}
 		r := assembleRouter(
 			map[Tier]model.Client{TierCheapCloud: stubClient{resp: model.Response{Text: "{}", SchemaDowngrade: downgrade}}},
@@ -154,6 +154,59 @@ func TestTheTraceRecordsTheSchemaDowngradeTheAdapterReported(t *testing.T) {
 		if len(fcs.recorded) != 1 || fcs.recorded[0].SchemaDowngrade != downgrade {
 			t.Fatalf("trace SchemaDowngrade = %+v, want %q", fcs.recorded, downgrade)
 		}
+	}
+}
+
+// A cache hit replays the answer and the downgrade it was generated under
+// together: the replayed answer was held to exactly what the first one was.
+func TestACacheHitRecordsTheDowngradeItsAnswerWasGeneratedUnder(t *testing.T) {
+	fcs := &fakeCallStore{}
+	r := assembleRouter(
+		map[Tier]model.Client{TierCheapCloud: stubClient{resp: model.Response{Text: "{}", SchemaDowngrade: model.SchemaRelaxed}}},
+		nil, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, fcs,
+		map[Tier]routeMeta{TierCheapCloud: {provider: "anthropic", model: "claude-x"}},
+		false, nil,
+	)
+	ctx := wsCtx()
+	for range 2 {
+		if _, _, err := r.serveCompletion(ctx, TaskColdStart, []Tier{TierCheapCloud}, model.Request{}); err != nil {
+			t.Fatalf("complete: %v", err)
+		}
+	}
+	if len(fcs.recorded) != 2 || !fcs.recorded[1].CacheHit {
+		t.Fatalf("want a served call then a cache hit, got %+v", fcs.recorded)
+	}
+	if got := fcs.recorded[1].SchemaDowngrade; got != model.SchemaRelaxed {
+		t.Fatalf("cache hit SchemaDowngrade = %q, want %q", got, model.SchemaRelaxed)
+	}
+}
+
+// A rung that failed after its adapter decided the schema records that
+// decision, both as a rung the walk fell back from and as the terminal row.
+func TestAFailedRungRecordsTheDowngradeItsErrorCarries(t *testing.T) {
+	failWith := func(downgrade string) stubClient {
+		_, err := reportSchemaDowngrade(model.Response{}, errors.New("upstream down"), downgrade)
+		return stubClient{err: err}
+	}
+	fcs := &fakeCallStore{}
+	r := assembleRouter(
+		map[Tier]model.Client{TierCheapCloud: failWith(model.SchemaDropped), TierPremium: failWith(model.SchemaUnenforced)},
+		nil, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, fcs,
+		map[Tier]routeMeta{
+			TierCheapCloud: {provider: "anthropic", model: "claude-x"},
+			TierPremium:    {provider: "openai", model: "gpt-x"},
+		},
+		false, nil,
+	)
+	if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud, TierPremium}, model.Request{}); err == nil {
+		t.Fatal("every rung failed, yet the call was served")
+	}
+	got := map[Tier]string{}
+	for _, call := range fcs.recorded {
+		got[call.Tier] = call.SchemaDowngrade
+	}
+	if got[TierCheapCloud] != model.SchemaDropped || got[TierPremium] != model.SchemaUnenforced {
+		t.Fatalf("recorded downgrades by tier = %v, want cheap_cloud dropped, premium unenforced", got)
 	}
 }
 

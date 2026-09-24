@@ -54,13 +54,32 @@ type ModelRate struct {
 // micro-USD grain (1e-6 USD) that is sub-cent noise per call and is
 // intentional — CostReport performs the identical division so a
 // row-by-row sum of PriceCall never drifts from the aggregate SQL.
+//
+// A cache bucket whose price is 0 prices at the input rate (cacheRate).
 func PriceCall(u Usage, r ModelRate) int64 {
 	uncached := int64(uncachedTokensIn(u.TokensIn, u.CachedTokens, u.CacheWriteTokens))
 	total := uncached*r.InputPerMTokMicroUSD +
-		int64(u.CachedTokens)*r.CacheReadPerMTokMicroUSD +
-		int64(u.CacheWriteTokens)*r.CacheWritePerMTokMicroUSD +
+		int64(u.CachedTokens)*cacheRate(r.CacheReadPerMTokMicroUSD, r.InputPerMTokMicroUSD) +
+		int64(u.CacheWriteTokens)*cacheRate(r.CacheWritePerMTokMicroUSD, r.InputPerMTokMicroUSD) +
 		int64(u.TokensOut)*r.OutputPerMTokMicroUSD
 	return total / 1_000_000
+}
+
+// cacheRate is what one cached-token bucket costs per MTok. A cache price of 0
+// on a row is a vendor publishing no separate cache price — no discount on a
+// cached read, no surcharge on a cache write — so those tokens cost what any
+// prompt token costs. Reading the 0 literally would bill a cached token as free,
+// and every adapter now reports its cache buckets, so on a row like
+// mistral-medium-3-5 the cost report would fall as the cache warmed.
+//
+// A free model is unaffected: its input rate is 0 as well. CostReport spells
+// the same rule in SQL (COALESCE(NULLIF(cache, 0), input)), and
+// TestCostReportPricesAZeroCachePriceAtTheInputRate holds the two together.
+func cacheRate(cache, input int64) int64 {
+	if cache == 0 {
+		return input
+	}
+	return cache
 }
 
 // DayCost is one (calendar day, task, tier) computed cost line

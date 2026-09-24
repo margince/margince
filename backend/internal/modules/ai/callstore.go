@@ -126,9 +126,10 @@ type Call struct {
 	// failure was the model's fault or the output budget's.
 	FinishReason string
 	// SchemaDowngrade is model.Response.SchemaDowngrade: whether generation
-	// held the response schema as written, only its shape, or none of it.
-	// Recorded because the three produce answers that read alike and fail the
-	// validator for different reasons.
+	// held the response schema as written, only its shape, only as far as the
+	// endpoint chose to, or none of it — on a failed call, what its error
+	// carried. Recorded because these produce answers that read alike and fail
+	// the validator for different reasons.
 	SchemaDowngrade string
 	Degraded        bool
 	ErrorSentinel   string

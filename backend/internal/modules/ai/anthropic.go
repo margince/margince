@@ -77,11 +77,26 @@ type anthropicResponseFormat struct {
 // simple wire.
 const streamedCompleteThreshold = 8192
 
+// Complete fits the response schema once, before either wire is chosen, and
+// reports the downgrade that fit cost on whatever the call returns — the
+// Response, or the error of a call that failed after the schema was decided,
+// whose record still says what was sent.
 func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	schema, downgrade := anthropicOutputSchema(req.ResponseSchema)
+	var (
+		resp model.Response
+		err  error
+	)
 	if req.MaxTokens > streamedCompleteThreshold {
-		return c.completeStreamed(ctx, req)
+		resp, err = c.completeStreamed(ctx, req, schema)
+	} else {
+		resp, err = c.completePlain(ctx, req, schema)
 	}
-	body, downgrade, err := c.post(ctx, req)
+	return reportSchemaDowngrade(resp, err, downgrade)
+}
+
+func (c *anthropicClient) completePlain(ctx context.Context, req model.Request, schema json.RawMessage) (model.Response, error) {
+	body, err := c.post(ctx, req, schema)
 	if err != nil {
 		return model.Response{}, err
 	}
@@ -133,7 +148,6 @@ func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (mode
 		CacheWriteTokens: out.Usage.CacheCreationInputTokens,
 		ReasoningTokens:  reasoningWithin(out.Usage.OutputTokens, out.Usage.OutputTokensDetails.ThinkingTokens),
 		ServedModel:      out.Model,
-		SchemaDowngrade:  downgrade,
 	}
 	finish, err := anthropicFinishReason(out.StopReason)
 	if err != nil {
@@ -172,8 +186,8 @@ func anthropicFinishReason(stopReason string) (string, error) {
 // schema-constrained JSON deltas) accumulate into one response, and the
 // usage counts are read off the message_start / message_delta events so
 // metering stays exact.
-func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Request) (model.Response, error) {
-	body, downgrade, err := c.postStream(ctx, req)
+func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Request, schema json.RawMessage) (model.Response, error) {
+	body, err := c.postStream(ctx, req, schema)
 	if err != nil {
 		return model.Response{}, err
 	}
@@ -181,7 +195,7 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 	defer func() { _ = body.Close() }()
 
 	var text strings.Builder
-	resp := model.Response{SchemaDowngrade: downgrade}
+	var resp model.Response
 	scanner := streamLineScanner(body)
 	for scanner.Scan() {
 		if err := ctx.Err(); err != nil {
@@ -232,7 +246,8 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 func (c *anthropicClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
 	// A stream has no Response to report a schema downgrade on, and no caller
 	// that sends a schema down it.
-	body, _, err := c.postStream(ctx, req)
+	schema, _ := anthropicOutputSchema(req.ResponseSchema)
+	body, err := c.postStream(ctx, req, schema)
 	if err != nil {
 		return nil, err
 	}
@@ -256,27 +271,28 @@ func (c *anthropicClient) Caps() model.Capabilities {
 
 // post sends one non-streaming Messages call; postStream opens the SSE
 // variant of the same call. Two names so a call site says which wire
-// mode it gets instead of passing a bare boolean. Both return the schema
-// downgrade the request was sent under (anthropicschema.go).
-func (c *anthropicClient) post(ctx context.Context, req model.Request) (io.ReadCloser, string, error) {
-	return c.send(ctx, req, false)
+// mode it gets instead of passing a bare boolean. Both send schema, the
+// response schema already fitted to the decoder (anthropicschema.go), or no
+// output_config when it is nil.
+func (c *anthropicClient) post(ctx context.Context, req model.Request, schema json.RawMessage) (io.ReadCloser, error) {
+	return c.send(ctx, req, schema, false)
 }
 
-func (c *anthropicClient) postStream(ctx context.Context, req model.Request) (io.ReadCloser, string, error) {
-	return c.send(ctx, req, true)
+func (c *anthropicClient) postStream(ctx context.Context, req model.Request, schema json.RawMessage) (io.ReadCloser, error) {
+	return c.send(ctx, req, schema, true)
 }
 
 // send performs one Messages call, attaching the output_config.format
 // guardrail fitted to what the decoder enforces. The fit is settled before the
 // request leaves, so a 400 here is the vendor's answer about the request and
 // is never retried with the schema cleared.
-func (c *anthropicClient) send(ctx context.Context, req model.Request, stream bool) (io.ReadCloser, string, error) {
+func (c *anthropicClient) send(ctx context.Context, req model.Request, schema json.RawMessage, stream bool) (io.ReadCloser, error) {
 	// Images map to native content blocks; a PDF does not, because
 	// `document` support is model-dependent here in a way image support is not,
 	// and this adapter cannot see which model the binding named. Anything outside
 	// the declaration is refused rather than dropped (spec §3.8).
 	if err := anthropicRefuseAttachments(req.Attachments, c.attachmentMIMEs); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	wire := anthropicWire{
 		Model:     req.Model,
@@ -296,7 +312,6 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, stream bo
 			Name: tool.Name, Description: tool.Description, InputSchema: tool.InputSchema,
 		})
 	}
-	schema, downgrade := anthropicOutputSchema(req.ResponseSchema)
 	if len(schema) > 0 {
 		wire.OutputConfig = &anthropicOutputConfig{
 			Format: &anthropicResponseFormat{Type: jsonSchemaFormatType, Schema: schema},
@@ -304,25 +319,25 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, stream bo
 	}
 	payload, _, err := sendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/v1/messages", bytes.NewReader(payload))
 	if err != nil {
-		return nil, "", fmt.Errorf("ai: anthropic: build request: %w", err)
+		return nil, fmt.Errorf("ai: anthropic: build request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-Api-Key", c.apiKey)
 	httpReq.Header.Set("Anthropic-Version", anthropicAPIVersion)
 	resp, err := c.http.Do(httpReq)
 	if err != nil {
-		return nil, "", fmt.Errorf("ai: anthropic: %w", err)
+		return nil, fmt.Errorf("ai: anthropic: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		//craft:ignore swallowed-errors best-effort close on the error path — the API status error is the answer
 		defer func() { _ = resp.Body.Close() }()
-		return nil, "", anthropicError(ctx, resp)
+		return nil, anthropicError(ctx, resp)
 	}
-	return resp.Body, downgrade, nil
+	return resp.Body, nil
 }
 
 // anthropicError surfaces the API's error type and message — and only

@@ -16,8 +16,8 @@ package ai
 // even though the decoder cannot hold it, and an object that declares its
 // properties is closed. The caller's validator still holds the whole original
 // schema, so a moved bound is checked after generation rather than lost. A
-// shape no fit can express — a free-form object, a type union, a reference —
-// is not sent at all. Either downgrade is reported on the Response, so the call
+// shape no fit can express — a free-form object, a type union, an external or
+// recursive reference — is not sent at all. Either downgrade is reported on the Response, so the call
 // record says which answers generation did not fully hold.
 //
 // The shared schema builder emits nothing outside the subset, so its schemas go
@@ -38,9 +38,24 @@ import (
 // express in any form, so the request goes without one.
 var errSchemaIneligible = errors.New("ai: anthropic: response schema cannot be enforced")
 
+// The JSON Schema keywords the schema walks in this package branch on.
+const (
+	kwType                 = "type"
+	kwObject               = "object"
+	kwProperties           = "properties"
+	kwAdditionalProperties = "additionalProperties"
+	kwItems                = "items"
+	kwAnyOf                = "anyOf"
+	kwAllOf                = "allOf"
+	kwRef                  = "$ref"
+	kwDefs                 = "$defs"
+	kwDefinitions          = "definitions"
+	kwDescription          = "description"
+)
+
 // anthropicSchemaTypes are the JSON types the decoder accepts, one per `type`.
 var anthropicSchemaTypes = map[string]bool{
-	"object": true, "array": true, "string": true, "integer": true, "number": true, "boolean": true, "null": true,
+	kwObject: true, "array": true, "string": true, "integer": true, "number": true, "boolean": true, "null": true,
 }
 
 // anthropicStringFormats are the `format` values the decoder enforces.
@@ -68,8 +83,11 @@ func anthropicOutputSchema(raw json.RawMessage) (json.RawMessage, string) {
 	if len(raw) == 0 {
 		return nil, ""
 	}
-	var fitter anthropicSchemaFitter
-	fitted, err := fitter.fitSubschema(raw)
+	fitter, err := newAnthropicSchemaFitter(raw)
+	var fitted json.RawMessage
+	if err == nil {
+		fitted, err = fitter.fitSubschema(raw)
+	}
 	switch {
 	case err != nil:
 		return nil, model.SchemaDropped
@@ -85,13 +103,39 @@ func anthropicOutputSchema(raw json.RawMessage) (json.RawMessage, string) {
 // anthropicSchemaFitter walks one schema. changed says the fitted copy differs
 // from what was written, relaxed that some bound in it is no longer enforced —
 // two facts, because closing an object is the first without the second.
-type anthropicSchemaFitter struct{ changed, relaxed bool }
+//
+// definitions are the local reference targets the root declares, the only
+// `$ref` values the decoder resolves; depth is how far below the root the walk
+// is, since a definitions block anywhere else is not where a "#/$defs/…"
+// pointer lands.
+type anthropicSchemaFitter struct {
+	changed, relaxed bool
+	definitions      map[string]json.RawMessage
+	depth            int
+}
+
+// newAnthropicSchemaFitter reads the root's definitions before the walk, so a
+// reference can be checked against them wherever it appears, and refuses a
+// schema whose definitions reach themselves: the decoder takes local
+// references but not recursive ones.
+func newAnthropicSchemaFitter(raw json.RawMessage) (*anthropicSchemaFitter, error) {
+	definitions, err := rootDefinitions(raw)
+	if err != nil {
+		return nil, err
+	}
+	if err := refuseRecursion(definitions); err != nil {
+		return nil, err
+	}
+	return &anthropicSchemaFitter{definitions: definitions}, nil
+}
 
 func (f *anthropicSchemaFitter) fitSubschema(raw json.RawMessage) (json.RawMessage, error) {
 	node, err := decodeSchemaObject(raw)
 	if err != nil {
 		return nil, err
 	}
+	f.depth++
+	defer func() { f.depth-- }()
 	fitted, err := f.fit(node)
 	if err != nil {
 		return nil, err
@@ -121,24 +165,48 @@ func (f *anthropicSchemaFitter) fit(node schemaObject) (schemaObject, error) {
 		return out, err
 	}
 	f.changed, f.relaxed = true, true
-	description, err := describeMoved(out.get("description"), moved)
+	description, err := describeMoved(out.get(kwDescription), moved)
 	if err != nil {
 		return nil, err
 	}
-	return out.with("description", description), nil
+	return out.with(kwDescription, description), nil
 }
 
 // fitKeyword answers one keyword: kept (possibly with a fitted value), moved
-// into the description (keep false, no error), or ineligible.
+// into the description (keep false, no error), or ineligible. The keywords
+// whose values are schemas are walked here; every other one is answered by
+// fitLeafKeyword.
 //
 // An allowlist, like schemastrict.go's and for its reason: a keyword this walk
 // has never seen is a keyword it cannot vouch for, and vouching wrongly is a
 // 400 on a call that would have been answered without the schema.
 func (f *anthropicSchemaFitter) fitKeyword(key string, value json.RawMessage) (json.RawMessage, bool, error) {
 	switch key {
-	case "description", "title", "default", "const", "required":
+	case kwProperties:
+		return f.fitNamedSchemas(value)
+	case kwDefs, kwDefinitions:
+		if f.depth != 1 {
+			return nil, false, fmt.Errorf("%w: %s below the root, where no local reference resolves", errSchemaIneligible, key)
+		}
+		return f.fitNamedSchemas(value)
+	case kwItems:
+		fitted, err := f.fitSubschema(value)
+		return fitted, err == nil, err
+	case kwAnyOf, kwAllOf:
+		return f.fitBranches(key, value)
+	case kwRef:
+		return value, true, f.localReference(value)
+	}
+	return fitLeafKeyword(key, value)
+}
+
+// fitLeafKeyword answers a keyword whose value is not a schema: an annotation
+// or a constraint on the value itself.
+func fitLeafKeyword(key string, value json.RawMessage) (json.RawMessage, bool, error) {
+	switch key {
+	case kwDescription, "title", "default", "const", "required":
 		return value, true, nil
-	case "type":
+	case kwType:
 		var name string
 		if json.Unmarshal(value, &name) != nil || !anthropicSchemaTypes[name] {
 			return nil, false, fmt.Errorf("%w: type %s", errSchemaIneligible, value)
@@ -146,20 +214,13 @@ func (f *anthropicSchemaFitter) fitKeyword(key string, value json.RawMessage) (j
 		return value, true, nil
 	case "enum":
 		return value, true, scalarEnum(value)
-	case "additionalProperties":
+	case kwAdditionalProperties:
 		// Only a closed object is enforceable; one that admits extra keys on
 		// purpose cannot be closed without refusing the keys it asked for.
 		if !bytes.Equal(bytes.TrimSpace(value), []byte("false")) {
 			return nil, false, fmt.Errorf("%w: an object open to extra properties", errSchemaIneligible)
 		}
 		return value, true, nil
-	case "properties":
-		return f.fitProperties(value)
-	case "items":
-		fitted, err := f.fitSubschema(value)
-		return fitted, err == nil, err
-	case "anyOf", "allOf":
-		return f.fitBranches(value)
 	case "format":
 		var format string
 		return value, json.Unmarshal(value, &format) == nil && anthropicStringFormats[format], nil
@@ -180,12 +241,12 @@ func (f *anthropicSchemaFitter) fitKeyword(key string, value json.RawMessage) (j
 // properties to close over is a free-form map, which no closed object can
 // stand in for.
 func (f *anthropicSchemaFitter) close(node, out schemaObject) (schemaObject, error) {
-	if _, declared := node.lookup("additionalProperties"); declared {
+	if _, declared := node.lookup(kwAdditionalProperties); declared {
 		return out, nil
 	}
 	var name string
-	isObject := json.Unmarshal(node.get("type"), &name) == nil && name == "object"
-	props, hasProps := node.lookup("properties")
+	isObject := json.Unmarshal(node.get(kwType), &name) == nil && name == kwObject
+	props, hasProps := node.lookup(kwProperties)
 	if !isObject && !hasProps {
 		return out, nil
 	}
@@ -196,13 +257,14 @@ func (f *anthropicSchemaFitter) close(node, out schemaObject) (schemaObject, err
 		return nil, fmt.Errorf("%w: an object with no declared properties", errSchemaIneligible)
 	}
 	f.changed = true
-	return out.with("additionalProperties", json.RawMessage("false")), nil
+	return out.with(kwAdditionalProperties, json.RawMessage("false")), nil
 }
 
-// fitProperties fits every schema in a `properties` map, whose keys are the
-// caller's property names rather than keywords, keeping them in the order the
-// caller wrote them: a model fills fields in the order it is shown them.
-func (f *anthropicSchemaFitter) fitProperties(value json.RawMessage) (json.RawMessage, bool, error) {
+// fitNamedSchemas fits every schema in a map whose keys are the caller's names
+// rather than keywords — `properties`, and the root's `$defs` or
+// `definitions` — keeping them in the order the caller wrote them: a model
+// fills fields in the order it is shown them.
+func (f *anthropicSchemaFitter) fitNamedSchemas(value json.RawMessage) (json.RawMessage, bool, error) {
 	byName, err := decodeSchemaObject(value)
 	if err != nil {
 		return nil, false, err
@@ -219,14 +281,19 @@ func (f *anthropicSchemaFitter) fitProperties(value json.RawMessage) (json.RawMe
 	return out, err == nil, err
 }
 
-// fitBranches fits every branch of an anyOf or allOf.
-func (f *anthropicSchemaFitter) fitBranches(value json.RawMessage) (json.RawMessage, bool, error) {
+// fitBranches fits every branch of an anyOf or allOf. An allOf branch that is
+// a reference is refused: the decoder takes allOf and takes $ref, but not the
+// two combined.
+func (f *anthropicSchemaFitter) fitBranches(key string, value json.RawMessage) (json.RawMessage, bool, error) {
 	var branches []json.RawMessage
 	if err := json.Unmarshal(value, &branches); err != nil {
 		return nil, false, fmt.Errorf("%w: a union is not a list", errSchemaIneligible)
 	}
 	fitted := make([]json.RawMessage, 0, len(branches))
 	for _, branch := range branches {
+		if key == kwAllOf && schemaDeclares(branch, kwRef) {
+			return nil, false, fmt.Errorf("%w: a reference inside allOf", errSchemaIneligible)
+		}
 		one, err := f.fitSubschema(branch)
 		if err != nil {
 			return nil, false, err

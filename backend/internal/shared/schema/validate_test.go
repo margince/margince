@@ -4,6 +4,7 @@
 package schema_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -73,15 +74,47 @@ func TestValidateJSONRejectsMalformedValueJSON(t *testing.T) {
 	}
 }
 
-func TestValidateJSONHoldsAnIntegerToAWholeNumber(t *testing.T) {
+// An integer passes exactly when the field's reader — encoding/json into an
+// int — would take it, so a validated answer is never one its reader refuses.
+func TestValidateJSONHoldsAnIntegerToWhatAnIntReaderTakes(t *testing.T) {
 	sch := schema.Must(schema.Array(schema.Integer()))
-	if err := schema.ValidateJSON(sch, `[1, 2, 3.0]`); err != nil {
-		t.Fatalf("whole numbers refused: %v", err)
+	for _, value := range []string{`[1, -2, 0]`, `[9223372036854775807]`, `[]`} {
+		if err := schema.ValidateJSON(sch, value); err != nil {
+			t.Errorf("%s refused: %v", value, err)
+		}
+		var read []int
+		if err := json.Unmarshal([]byte(value), &read); err != nil {
+			t.Errorf("fixture %s is not one an int reader takes: %v", value, err)
+		}
 	}
-	for _, value := range []string{`[1, 2.5]`, `["3"]`} {
+	for _, value := range []string{`[1, 2.5]`, `["3"]`, `[3.0]`, `[1e2]`, `[1e300]`, `[9223372036854775808]`} {
 		if err := schema.ValidateJSON(sch, value); err == nil {
 			t.Errorf("%s accepted as a list of integers", value)
 		}
+		var read []int
+		if err := json.Unmarshal([]byte(value), &read); err == nil {
+			t.Errorf("fixture %s is one an int reader takes, so refusing it proves nothing", value)
+		}
+	}
+}
+
+// A number field takes any JSON number, integral or not.
+func TestValidateJSONAdmitsAnyNumberForANumberField(t *testing.T) {
+	sch := schema.Must(schema.Array(schema.Number()))
+	if err := schema.ValidateJSON(sch, `[1, 2.5, 3.0, 1e300, -0]`); err != nil {
+		t.Fatalf("numbers refused: %v", err)
+	}
+}
+
+func TestValidateJSONRefusesTrailingValues(t *testing.T) {
+	sch := schema.Must(schema.Number())
+	for _, value := range []string{`1 2`, `1 ]`, `1 }`, `1 x`} {
+		if err := schema.ValidateJSON(sch, value); err == nil {
+			t.Errorf("%q accepted as one JSON value", value)
+		}
+	}
+	if err := schema.ValidateJSON(sch, " 1 \n"); err != nil {
+		t.Errorf("whitespace around a value refused: %v", err)
 	}
 }
 

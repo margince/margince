@@ -197,9 +197,9 @@ func TestRoomToAnswerDoesNotCompoundAcrossRetries(t *testing.T) {
 	}
 }
 
-// A retry stops at the bound every bound model can emit, and a caller ceiling
-// already above that bound is never lowered.
-func TestRoomToAnswerStopsAtTheCeilingEveryBoundModelCanEmit(t *testing.T) {
+// A retry's ceiling stops at roomToAnswerMaxTokens, and a caller ceiling
+// already at or above that bound is never lowered.
+func TestRoomToAnswerStopsAtItsBound(t *testing.T) {
 	requests := structuredWith(t, 12000, cutOffStep(12000, 11000), model.Response{Text: `{"ok":true}`})
 	if len(requests) != 2 || requests[1].MaxTokens != roomToAnswerMaxTokens {
 		t.Fatalf("retry ceiling = %+v, want 12000+11000 stopped at %d", requests, roomToAnswerMaxTokens)
@@ -208,5 +208,22 @@ func TestRoomToAnswerStopsAtTheCeilingEveryBoundModelCanEmit(t *testing.T) {
 	requests = structuredWith(t, wide, cutOffStep(wide, wide-10), model.Response{Text: `{"ok":true}`})
 	if len(requests) != 2 || requests[1].MaxTokens != wide {
 		t.Fatalf("retry ceiling = %+v, want the caller's own %d kept", requests, wide)
+	}
+}
+
+// A request with no room left to give is not re-sent unchanged: that is the
+// failed attempt re-rolled. It is asked for a briefer answer instead, at the
+// bound and above it.
+func TestARequestWithNoRoomLeftIsAskedToBeBrief(t *testing.T) {
+	for _, ceiling := range []int{roomToAnswerMaxTokens, 3 * roomToAnswerMaxTokens} {
+		requests := structuredWith(t, ceiling, cutOffStep(ceiling, ceiling-10), model.Response{Text: `{"ok":true}`})
+		if len(requests) != 2 {
+			t.Fatalf("ceiling %d: made %d calls, want the cut-off attempt and one retry", ceiling, len(requests))
+		}
+		retry := requests[1]
+		if last := retry.Messages[len(retry.Messages)-1]; retry.MaxTokens != ceiling || last.Content != truncationFeedback {
+			t.Errorf("ceiling %d: retry = %d tokens ending %q, want the same ceiling and the brevity instruction",
+				ceiling, retry.MaxTokens, last.Content)
+		}
 	}
 }

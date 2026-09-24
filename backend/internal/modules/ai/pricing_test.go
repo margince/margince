@@ -37,12 +37,30 @@ func TestPriceCall(t *testing.T) {
 			ModelRate{},
 			0,
 		},
-		// floor: cached > tokens_in can't go negative
+		// a row publishing no cache price: 300 uncached + 400 read + 200 write
+		// all at the $1.50 input rate, 100 out at $7.50
+		// = (900×1.5e6 + 100×7.5e6)/1e6 = (1.35e9+7.5e8)/1e6 = 2100
+		{
+			"zero cache price bills the input rate",
+			Usage{TokensIn: 900, CachedTokens: 400, CacheWriteTokens: 200, TokensOut: 100},
+			ModelRate{InputPerMTokMicroUSD: 1_500_000, OutputPerMTokMicroUSD: 7_500_000},
+			2100,
+		},
+		// only the write price is unpublished: 400 read at $0.15, the rest at $1.50
+		// = (300×1.5e6 + 400×1.5e5 + 200×1.5e6)/1e6 = (4.5e8+6e7+3e8)/1e6 = 810
+		{
+			"zero cache-write price bills the input rate, cache read keeps its own",
+			Usage{TokensIn: 900, CachedTokens: 400, CacheWriteTokens: 200},
+			ModelRate{InputPerMTokMicroUSD: 1_500_000, CacheReadPerMTokMicroUSD: 150_000},
+			810,
+		},
+		// floor: cached > tokens_in leaves the uncached bucket at 0, not -40;
+		// the 50 cached price at their own rate = 50×5e5/1e6 = 25
 		{
 			"defensive floor",
 			Usage{TokensIn: 10, CachedTokens: 50},
-			ModelRate{InputPerMTokMicroUSD: 5_000_000},
-			0,
+			ModelRate{InputPerMTokMicroUSD: 5_000_000, CacheReadPerMTokMicroUSD: 500_000},
+			25,
 		},
 	}
 	for _, c := range cases {
