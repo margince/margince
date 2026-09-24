@@ -8,13 +8,13 @@ import (
 	"strings"
 )
 
-// IsEURegionHost reports whether a broker host slug names one EU-region
+// isEURegionHost reports whether a broker host slug names one EU-region
 // endpoint.
 //
 // A base slug (`mistral`) matches every region the vendor serves from, and a
 // variant slug (`mistral/zdr`) names a retention policy rather than a place, so
 // neither pins anything to the EU.
-func IsEURegionHost(slug string) bool {
+func isEURegionHost(slug string) bool {
 	_, region, found := strings.Cut(slug, "/")
 	if !found {
 		return false
@@ -39,7 +39,7 @@ func EURegionPinGap(binding ProviderConfig) string {
 		return "no `only:` — the broker may serve " + binding.Model + " from any region"
 	}
 	for _, slug := range binding.Routing.Only {
-		if !IsEURegionHost(slug) {
+		if !isEURegionHost(slug) {
 			return "`only:` admits " + slug + ", which is not an EU-region endpoint"
 		}
 	}

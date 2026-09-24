@@ -21,8 +21,8 @@ func TestIsEURegionHostAdmitsOnlyARegionVariant(t *testing.T) {
 		"deepinfra/us-east":     false,
 		"eu":                    false,
 	} {
-		if got := IsEURegionHost(slug); got != want {
-			t.Errorf("IsEURegionHost(%q) = %v, want %v", slug, got, want)
+		if got := isEURegionHost(slug); got != want {
+			t.Errorf("isEURegionHost(%q) = %v, want %v", slug, got, want)
 		}
 	}
 }

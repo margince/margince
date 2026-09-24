@@ -34,7 +34,7 @@ func TestTheCallTraceRecordsWhetherGenerationHeldTheSchema(t *testing.T) {
 			RequestFingerprint: "fp-schema-" + downgrade, SchemaDowngrade: downgrade,
 		}})
 	}
-	for _, downgrade := range []string{"", model.SchemaRelaxed, model.SchemaUnenforced, model.SchemaDropped} {
+	for _, downgrade := range model.SchemaDowngrades() {
 		logical, err := record(downgrade)
 		if err != nil {
 			t.Fatalf("recording a %q downgrade: %v", downgrade, err)

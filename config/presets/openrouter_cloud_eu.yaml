@@ -2,8 +2,8 @@
 # config/presets/openrouter_cloud_eu.yaml — every lane, chat and embeddings, on
 # Mistral's EU endpoint.
 #
-# The `_eu` in the name is a promise, and TestAResidencyPresetPinsEveryLaneToAnEURegion
-# holds it: every lane here must name an EU-region endpoint in `only:`. A lane
+# The `eu_hosted` profile this preset declares is a promise, and
+# TestAResidencyPresetPinsEveryLaneToAnEURegion holds it: every lane here must name an EU-region endpoint in `only:`. A lane
 # that inherits the product default or writes `routing: {}` lets the broker serve
 # the model from any region — including a model with no EU endpoint at all, which
 # it then serves from somewhere else without failing.

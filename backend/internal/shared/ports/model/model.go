@@ -252,6 +252,13 @@ const (
 	SchemaDropped    = "dropped"
 )
 
+// SchemaDowngrades lists the values Response.SchemaDowngrade may carry, the
+// empty "held as written" first, for a caller that walks them rather than
+// naming each one and missing the next.
+func SchemaDowngrades() []string {
+	return []string{"", SchemaRelaxed, SchemaUnenforced, SchemaDropped}
+}
+
 type Response struct {
 	Text string
 	// InputTokens is the TOTAL prompt tokens billed, cache reads AND cache

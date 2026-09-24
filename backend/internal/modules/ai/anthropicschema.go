@@ -17,8 +17,9 @@ package ai
 // properties is closed. The caller's validator still holds the whole original
 // schema, so a moved bound is checked after generation rather than lost. A
 // shape no fit can express — a free-form object, a type union, an external or
-// recursive reference — is not sent at all. Either downgrade is reported on the Response, so the call
-// record says which answers generation did not fully hold.
+// recursive reference — is not sent at all. Either downgrade is reported on
+// the Response, so the call record says which answers generation did not fully
+// hold.
 //
 // The shared schema builder emits nothing outside the subset, so its schemas go
 // verbatim; what reaches the fit is a hand-written schema, or one an extension
