@@ -30,7 +30,7 @@ const retentionPolicyObject = "retention_policy"
 // information to express the same intent.
 //
 // Default FALSE, deliberately. Storage limitation (Art. 5(1)(e)) is what
-// "compliant out of the box" means for the seeded ladder (DM-SEED-1..6), so the
+// "compliant out of the box" means for the seeded ladder (DM-SEED-1..7), so the
 // regulated installation opts IN rather than every installation opting out. A
 // deployment that must never delete says so before first boot instead
 // (`seeds.retention.default_policy: retain_only`, GCS-PARAM-7), which closes the
