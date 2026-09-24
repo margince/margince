@@ -574,9 +574,7 @@ describe("PrivacyInboxCard", () => {
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.type(screen.getByLabelText(/resolution/i), "done");
     await userEvent.click(within(row).getByRole("button", { name: /reject/i }));
-    expect(
-      await screen.findByText(/decided this request first/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/else decided this/i)).toBeInTheDocument();
   });
 
   // A patch failure that is NOT the illegal-transition 422 must
@@ -612,9 +610,7 @@ describe("PrivacyInboxCard", () => {
       await screen.findByText(en["common.permissionDenied"]),
     ).toBeInTheDocument();
     expect(screen.queryByText(/data_subject_request/i)).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(/decided this request first/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/else decided this/i)).not.toBeInTheDocument();
   });
 
   it("assigns from the roster", async () => {
@@ -1103,9 +1099,7 @@ describe("fulfilling an erasure", () => {
     const confirm = screen.getByRole("button", { name: /erase and suppress/i });
     await userEvent.click(confirm);
 
-    expect(
-      await screen.findByText(/decided this request first/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/else decided this/i)).toBeInTheDocument();
     expect(confirm).toBeDisabled();
     // The refusal must trigger the same re-read as the row's own plain
     // PATCH race — a second GET beyond the initial page load — so the row

@@ -1603,14 +1603,10 @@ describe("ComposeModal send refusals", () => {
     await userEvent.type(screen.getByLabelText("Cc"), "second@x.com");
     await userEvent.tab();
 
-    expect(
-      screen.queryByText(/more than one recipient is refused/i),
-    ).toBeNull();
+    expect(screen.queryByText(/more than one recipient/i)).toBeNull();
     await pickWhy(WHY_LABEL.marketing);
 
-    expect(
-      await screen.findByText(/more than one recipient is refused/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/more than one recipient/i)).toBeTruthy();
     // A warning, not a gate — and nothing was sent to earn it.
     expect(
       sent.some((r) => r.key === "POST /activities/act-1/send-email"),
@@ -1624,9 +1620,7 @@ describe("ComposeModal send refusals", () => {
     await fillSendableForm();
     await pickWhy(WHY_LABEL.marketing);
 
-    expect(
-      screen.queryByText(/more than one recipient is refused/i),
-    ).toBeNull();
+    expect(screen.queryByText(/more than one recipient/i)).toBeNull();
   });
 });
 
