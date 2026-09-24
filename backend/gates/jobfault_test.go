@@ -19,7 +19,10 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"go/types"
+	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -142,7 +145,7 @@ func TestEveryWorkerReturnsThroughJobsFault(t *testing.T) {
 			// directly (deepreadbudget.go). Checking returns alone would
 			// wave that path through, so every assignment to the named
 			// result takes the same test.
-			for _, assigned := range namedResultAssignments(fn) {
+			for _, assigned := range pkg.namedResultAssignments(fn) {
 				if sanctionedWorkerReturn(assigned) {
 					continue
 				}
@@ -167,12 +170,48 @@ func TestEveryWorkerReturnsThroughJobsFault(t *testing.T) {
 	if workers < workerFloor {
 		t.Fatalf("found only %d Work methods, expected at least %d — the walker matched nothing", workers, workerFloor)
 	}
+	assertCallsResolve(t, packages)
 	// Staleness is only meaningful once the sweep above actually ran: on the
 	// vacuity Fatal every entry would report as unmatched, burying the one
 	// failure that explains all of them. An entry reported here names a worker
 	// that no longer logs-and-returns-nil, so its kind's fault block in
 	// api/jobs.yaml is what goes.
 	nilAfterLogging.AssertAllMatched(t)
+}
+
+// assertCallsResolve fails when the loose type-check stopped resolving this
+// tree's calls. The log census follows a call only when it resolves to a
+// declaration here, so a check that resolved nothing would follow nothing and
+// find no log anywhere — a clean result from a census that read nothing.
+func assertCallsResolve(t *testing.T, packages map[string]*packageFuncs) {
+	t.Helper()
+	resolving, unresolved := 0, 0
+	for _, pkg := range packages {
+		unresolved += pkg.unresolved
+		for _, fn := range pkg.decls {
+			if fn.Name.Name == "Work" && fn.Recv != nil && pkg.resolvesACall(fn) {
+				resolving++
+			}
+		}
+	}
+	if resolving < workerFloor {
+		t.Fatalf("only %d Work methods make a call the census resolves into their own package, "+
+			"expected at least %d — the type-check has stopped resolving this tree", resolving, workerFloor)
+	}
+	t.Logf("%d Work methods make a call into their own package; %d references into stood-in imports left unresolved",
+		resolving, unresolved)
+}
+
+// resolvesACall reports whether fn makes any call the census follows.
+func (pkg *packageFuncs) resolvesACall(fn *ast.FuncDecl) bool {
+	found := false
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		if call, ok := n.(*ast.CallExpr); ok && pkg.callee(call) != nil {
+			found = true
+		}
+		return !found
+	})
+	return found
 }
 
 // errorLogsAndReturnsNil reports where fn logs a failure when it also returns
@@ -183,6 +222,10 @@ func TestEveryWorkerReturnsThroughJobsFault(t *testing.T) {
 // A heuristic, and deliberately a broad one: the cost of a false positive is
 // writing one waiver with a rationale, while the cost of a false negative is
 // a tenant failure that never surfaces anywhere.
+//
+// A bare return counts as returning nil: it hands back the named results, and
+// a worker that logs a failure it caught in a shadowing `err :=` and then
+// returns bare hands back a named error nothing assigned.
 //
 // The log is looked for through the calls Work makes into its own package, as
 // well as in its own body: a worker that hands its failure to a helper which
@@ -200,47 +243,91 @@ func errorLogsAndReturnsNil(fn *ast.FuncDecl, pkg *packageFuncs) string {
 		}
 		return true
 	})
+	for _, ret := range topLevelReturns(fn.Body) {
+		returnsNil = returnsNil || len(ret.Results) == 0
+	}
 	if !returnsNil {
 		return ""
 	}
 	return pkg.loggerIn(fn, map[*ast.FuncDecl]bool{})
 }
 
-// packageFuncs is one package's declarations, so a call from a worker can be
-// followed to the body it runs.
+// packageFuncs is one package's declarations, type-checked so a call from a
+// worker can be followed to the body it runs and a variable told from another
+// of the same name.
 type packageFuncs struct {
-	funcs   map[string]*ast.FuncDecl
-	methods map[string]map[string]*ast.FuncDecl
+	info  *types.Info
+	decls map[*types.Func]*ast.FuncDecl
+	// unresolved counts the references the check could not resolve — each
+	// one into an import, which stands in empty; see typeCheckLoosely.
+	unresolved int
 }
 
-// indexPackageFuncs groups the declarations of files by the directory — the
-// package — each lives in.
+// indexPackageFuncs type-checks the files of each directory — each package —
+// on its own.
 func indexPackageFuncs(fset *token.FileSet, files []*ast.File) map[string]*packageFuncs {
-	packages := map[string]*packageFuncs{}
+	byDir := map[string][]*ast.File{}
 	for _, file := range files {
 		dir := filepath.Dir(fset.Position(file.Pos()).Filename)
-		pkg := packages[dir]
-		if pkg == nil {
-			pkg = &packageFuncs{funcs: map[string]*ast.FuncDecl{}, methods: map[string]map[string]*ast.FuncDecl{}}
-			packages[dir] = pkg
+		byDir[dir] = append(byDir[dir], file)
+	}
+	packages := map[string]*packageFuncs{}
+	for dir, group := range byDir {
+		info, unresolved := typeCheckLoosely(fset, dir, group)
+		pkg := &packageFuncs{info: info, decls: map[*types.Func]*ast.FuncDecl{}, unresolved: unresolved}
+		for _, file := range group {
+			for _, decl := range file.Decls {
+				if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
+					if obj, ok := info.Defs[fn.Name].(*types.Func); ok {
+						pkg.decls[obj] = fn
+					}
+				}
+			}
 		}
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil {
-				continue
-			}
-			if fn.Recv == nil {
-				pkg.funcs[fn.Name.Name] = fn
-				continue
-			}
-			recv := receiverTypeName(fn)
-			if pkg.methods[recv] == nil {
-				pkg.methods[recv] = map[string]*ast.FuncDecl{}
-			}
-			pkg.methods[recv][fn.Name.Name] = fn
-		}
+		packages[dir] = pkg
 	}
 	return packages
+}
+
+// typeCheckLoosely checks one package with every import standing in as an
+// empty package, and reports how many references that left unresolved.
+//
+// The walk follows only this package's own declarations, and those resolve
+// without the imports: a local, a field of a local type, a method on one. What
+// a stand-in costs is a call on a value of an IMPORTED type, which the walk
+// would not follow in any case. The checker reports each reference into a
+// stand-in and moves past it, so one pass resolves everything else.
+func typeCheckLoosely(fset *token.FileSet, dir string, files []*ast.File) (*types.Info, int) {
+	info := &types.Info{
+		Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{},
+		Types: map[ast.Expr]types.TypeAndValue{}, Selections: map[*ast.SelectorExpr]*types.Selection{},
+	}
+	unresolved := 0
+	conf := types.Config{Importer: standInImports{}, Error: func(error) { unresolved++ }}
+	if _, err := conf.Check(dir, fset, files, info); err == nil {
+		return info, 0
+	}
+	return info, unresolved
+}
+
+// standInImports answers every import with an empty package named for the
+// last element of its path.
+type standInImports struct{}
+
+func (standInImports) Import(importPath string) (*types.Package, error) {
+	pkg := types.NewPackage(importPath, path.Base(importPath))
+	pkg.MarkComplete()
+	return pkg, nil
+}
+
+// method is the declaration of the method named name on the type named recv.
+func (pkg *packageFuncs) method(recv, name string) *ast.FuncDecl {
+	for _, fn := range pkg.decls {
+		if fn.Name.Name == name && receiverTypeName(fn) == recv {
+			return fn
+		}
+	}
+	return nil
 }
 
 // loggerIn names the function, fn or one it hands a failure to in this
@@ -248,21 +335,22 @@ func indexPackageFuncs(fset *token.FileSet, files []*ast.File) map[string]*packa
 // are followed without a depth limit; seen stops a recursive pair from looping.
 //
 // A call is followed when nothing fn returns carries its result: one made as
-// a statement — plain, deferred or spawned — or one whose assigned names no
+// a statement — plain, deferred or spawned — or one whose assigned variables no
 // return statement reads. That is the call a failure disappears into. A helper
 // whose error fn returns has handed the failure back, and whatever it logged on
 // the way is the same failure Work then reports through jobs.Fault.
 //
-// What it resolves, without type information: a package-level function called
-// by its bare name, and a method called through fn's own receiver. A method
-// reached through a field or a local value is not followed, because its type is
-// not visible to a syntactic walk.
+// Variables and calls are resolved by type, not by name: a shadowing `err`
+// that is never returned is not the `err` a later return reads, and a method
+// reached through a field (w.engine.run) is followed to its body. A method
+// called through an interface is not, because which body runs is decided at
+// run time.
 func (pkg *packageFuncs) loggerIn(fn *ast.FuncDecl, seen map[*ast.FuncDecl]bool) string {
 	if seen[fn] {
 		return ""
 	}
 	seen[fn] = true
-	returned := namesReturned(fn)
+	returned := pkg.returnedValues(fn)
 	var logger string
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		if logger != "" {
@@ -275,37 +363,61 @@ func (pkg *packageFuncs) loggerIn(fn *ast.FuncDecl, seen map[*ast.FuncDecl]bool)
 			}
 		case *ast.ExprStmt:
 			if call, ok := v.X.(*ast.CallExpr); ok {
-				logger = pkg.loggerThrough(fn, call, seen)
+				logger = pkg.loggerThrough(call, seen)
 			}
 		case *ast.AssignStmt:
-			if call, ok := singleCall(v.Rhs); ok && !anyNameIn(v.Lhs, returned) {
-				logger = pkg.loggerThrough(fn, call, seen)
+			if call, ok := singleCall(v.Rhs); ok && !pkg.assignsAny(v.Lhs, returned) {
+				logger = pkg.loggerThrough(call, seen)
 			}
 		case *ast.DeferStmt:
-			logger = pkg.loggerThrough(fn, v.Call, seen)
+			logger = pkg.loggerThrough(v.Call, seen)
 		case *ast.GoStmt:
-			logger = pkg.loggerThrough(fn, v.Call, seen)
+			logger = pkg.loggerThrough(v.Call, seen)
 		}
 		return logger == ""
 	})
 	return logger
 }
 
-// namesReturned is every identifier any return statement in fn reads.
-func namesReturned(fn *ast.FuncDecl) map[string]bool {
-	names := map[string]bool{}
+// returnedValues holds the variables fn hands back: those a return statement
+// reads, and fn's named results when a bare return hands those back.
+func (pkg *packageFuncs) returnedValues(fn *ast.FuncDecl) map[types.Object]bool {
+	returned := map[types.Object]bool{}
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		if ret, ok := n.(*ast.ReturnStmt); ok {
-			ast.Inspect(ret, func(m ast.Node) bool {
-				if ident, ok := m.(*ast.Ident); ok {
-					names[ident.Name] = true
-				}
-				return true
-			})
+		ret, ok := n.(*ast.ReturnStmt)
+		if !ok {
+			return true
+		}
+		ast.Inspect(ret, func(m ast.Node) bool {
+			if ident, ok := m.(*ast.Ident); ok && pkg.info.Uses[ident] != nil {
+				returned[pkg.info.Uses[ident]] = true
+			}
+			return true
+		})
+		if len(ret.Results) == 0 {
+			for obj := range pkg.namedResults(fn) {
+				returned[obj] = true
+			}
 		}
 		return true
 	})
-	return names
+	return returned
+}
+
+// namedResults is fn's named results, the blank one aside.
+func (pkg *packageFuncs) namedResults(fn *ast.FuncDecl) map[types.Object]bool {
+	named := map[types.Object]bool{}
+	if fn.Type.Results == nil {
+		return named
+	}
+	for _, result := range fn.Type.Results.List {
+		for _, name := range result.Names {
+			if obj := pkg.info.Defs[name]; obj != nil && name.Name != "_" {
+				named[obj] = true
+			}
+		}
+	}
+	return named
 }
 
 // singleCall is the call an assignment's one right-hand side makes.
@@ -317,19 +429,32 @@ func singleCall(rhs []ast.Expr) (*ast.CallExpr, bool) {
 	return call, ok
 }
 
-// anyNameIn reports whether any assigned identifier is one of names.
-func anyNameIn(lhs []ast.Expr, names map[string]bool) bool {
+// assignsAny reports whether any assigned variable is one of objs.
+func (pkg *packageFuncs) assignsAny(lhs []ast.Expr, objs map[types.Object]bool) bool {
 	for _, expr := range lhs {
-		if ident, ok := expr.(*ast.Ident); ok && ident.Name != "_" && names[ident.Name] {
+		if objs[pkg.assignedObject(expr)] {
 			return true
 		}
 	}
 	return false
 }
 
-// loggerThrough is loggerIn of what call, made inside fn, resolves to.
-func (pkg *packageFuncs) loggerThrough(fn *ast.FuncDecl, call *ast.CallExpr, seen map[*ast.FuncDecl]bool) string {
-	if callee := pkg.callee(fn, call); callee != nil {
+// assignedObject is the variable an assignment to expr writes, declared there
+// or before; nil for anything but a named variable.
+func (pkg *packageFuncs) assignedObject(expr ast.Expr) types.Object {
+	ident, ok := expr.(*ast.Ident)
+	if !ok || ident.Name == "_" {
+		return nil
+	}
+	if obj := pkg.info.Defs[ident]; obj != nil {
+		return obj
+	}
+	return pkg.info.Uses[ident]
+}
+
+// loggerThrough is loggerIn of what call resolves to.
+func (pkg *packageFuncs) loggerThrough(call *ast.CallExpr, seen map[*ast.FuncDecl]bool) string {
+	if callee := pkg.callee(call); callee != nil {
 		return pkg.loggerIn(callee, seen)
 	}
 	return ""
@@ -348,17 +473,20 @@ func isErrorLog(call *ast.CallExpr) bool {
 	return false
 }
 
-// callee resolves call, made inside fn, to a declaration in this package.
-func (pkg *packageFuncs) callee(fn *ast.FuncDecl, call *ast.CallExpr) *ast.FuncDecl {
-	switch fun := call.Fun.(type) {
+// callee resolves call to its declaration in this package: a function by
+// name, or a method through any value of a type declared here.
+func (pkg *packageFuncs) callee(call *ast.CallExpr) *ast.FuncDecl {
+	var ident *ast.Ident
+	switch fun := ast.Unparen(call.Fun).(type) {
 	case *ast.Ident:
-		return pkg.funcs[fun.Name]
+		ident = fun
 	case *ast.SelectorExpr:
-		recv, ok := fun.X.(*ast.Ident)
-		if !ok || fn.Recv == nil || len(fn.Recv.List[0].Names) == 0 || fn.Recv.List[0].Names[0].Name != recv.Name {
-			return nil
-		}
-		return pkg.methods[receiverTypeName(fn)][fun.Sel.Name]
+		ident = fun.Sel
+	default:
+		return nil
+	}
+	if f, ok := pkg.info.Uses[ident].(*types.Func); ok {
+		return pkg.decls[f.Origin()]
 	}
 	return nil
 }
@@ -382,23 +510,14 @@ func topLevelReturns(body *ast.BlockStmt) []*ast.ReturnStmt {
 	return found
 }
 
-// namedResultAssignments returns every value assigned to fn's named error
-// result. A Work method with unnamed results has none, and the defer that
+// namedResultAssignments returns the values assigned to fn's named error
+// results. A Work method with unnamed results has none, and the defer that
 // assigns one is reached through a FuncLit — which topLevelReturns
 // deliberately skips — so this walk descends into literals rather than
-// stopping at them.
-func namedResultAssignments(fn *ast.FuncDecl) []ast.Expr {
-	if fn.Type.Results == nil {
-		return nil
-	}
-	named := map[string]bool{}
-	for _, result := range fn.Type.Results.List {
-		for _, name := range result.Names {
-			if name.Name != "_" {
-				named[name.Name] = true
-			}
-		}
-	}
+// stopping at them. A shadowing variable of the same name is a different
+// variable, and what it is assigned never reaches River.
+func (pkg *packageFuncs) namedResultAssignments(fn *ast.FuncDecl) []ast.Expr {
+	named := pkg.namedResults(fn)
 	if len(named) == 0 {
 		return nil
 	}
@@ -414,20 +533,15 @@ func namedResultAssignments(fn *ast.FuncDecl) []ast.Expr {
 		// gets reported, rather than the index being skipped and the path
 		// waved through.
 		if len(stmt.Rhs) == 1 && len(stmt.Lhs) > 1 {
-			for _, lhs := range stmt.Lhs {
-				if ident, ok := lhs.(*ast.Ident); ok && named[ident.Name] {
-					assigned = append(assigned, stmt.Rhs[0])
-					break
-				}
+			if pkg.assignsAny(stmt.Lhs, named) {
+				assigned = append(assigned, stmt.Rhs[0])
 			}
 			return true
 		}
 		for i, lhs := range stmt.Lhs {
-			ident, ok := lhs.(*ast.Ident)
-			if !ok || !named[ident.Name] || i >= len(stmt.Rhs) {
-				continue
+			if named[pkg.assignedObject(lhs)] && i < len(stmt.Rhs) {
+				assigned = append(assigned, stmt.Rhs[i])
 			}
-			assigned = append(assigned, stmt.Rhs[i])
 		}
 		return true
 	})
@@ -502,25 +616,84 @@ func check() error { slog.Error("x"); return errors.New("x") }`, ""},
 		"a helper logging while Work never returns nil": {`type worker struct{}
 func (w *worker) Work() error { logFailure(); return jobs.Fault(nil) }
 func logFailure() { slog.Error("x") }`, ""},
+		"a bare return after a failure caught in a shadowing err": {`type worker struct{ log logger }
+func (w *worker) Work() (err error) { if err := run(); err != nil { w.log.Error("x", "err", err); return }; return jobs.Fault(nil) }
+func run() error { return nil }`, "Work"},
+		"a helper assigned to a shadowing err no return reads": {`type worker struct{}
+func (w *worker) Work() error {
+	if err := logFailure(); err != nil { w.drop(err) }
+	if err := check(); err != nil { return jobs.Fault(err) }
+	return nil
+}
+func (w *worker) drop(error) {}
+func logFailure() error { slog.Error("x"); return nil }
+func check() error { return nil }`, "logFailure"},
+		"a helper whose failure a bare return hands back": {`type worker struct{}
+func (w *worker) Work() (err error) { if err = check(); err != nil { return }; return nil }
+func check() error { slog.Error("x"); return errors.New("x") }`, ""},
+		"a method reached through a field": {`type engine struct{}
+func (e *engine) run() { slog.Error("x") }
+type worker struct{ engine *engine }
+func (w *worker) Work() error { w.engine.run(); return nil }`, "run"},
 		"another package's function of the same name": {`type worker struct{}
 func (w *worker) Work() error { other.logFailure(); return nil }
 func logFailure() { slog.Error("x") }`, ""},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			fset := token.NewFileSet()
-			file, err := parser.ParseFile(fset, filepath.Join("planted", "worker.go"), prelude+tc.src, 0)
-			if err != nil {
-				t.Fatalf("parse the planted worker: %v", err)
-			}
-			pkg := indexPackageFuncs(fset, []*ast.File{file})["planted"]
-			work := pkg.methods["worker"]["Work"]
-			if work == nil {
-				t.Fatal("the planted worker declares no Work method the index can see")
-			}
+			pkg, work := plantedWorker(t, prelude+tc.src)
 			if got := errorLogsAndReturnsNil(work, pkg); got != tc.want {
 				t.Errorf("the census reports a log in %q; want %q", got, tc.want)
 			}
 		})
 	}
+}
+
+// A named error result reaches River through whatever is assigned to it, and
+// only that: a shadowing `err :=` of the same name is another variable, and
+// what it holds never reaches river_job.errors. Each planted worker lists the
+// values the census must report as assigned to the named result.
+func TestTheJobFaultCensusReadsANamedResultByVariable(t *testing.T) {
+	t.Parallel()
+	const prelude = "package planted\ntype worker struct{}\nfunc run() error { return nil }\nfunc pair() (int, error) { return 0, nil }\n"
+	for name, tc := range map[string]struct {
+		src  string
+		want []string
+	}{
+		"a raw cause assigned, then a bare return": {`func (w *worker) Work() (err error) { err = run(); return }`, []string{"run()"}},
+		"a tuple assigning the named result":       {`func (w *worker) Work() (err error) { _, err = pair(); return }`, []string{"pair()"}},
+		"an assignment in a deferred literal":      {`func (w *worker) Work() (err error) { defer func() { err = run() }(); return nil }`, []string{"run()"}},
+		"a shadowing err of the same name": {`func (w *worker) Work() (err error) {
+	if err := run(); err != nil { return jobs.Fault(err) }
+	return nil
+}`, nil},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			pkg, work := plantedWorker(t, prelude+tc.src)
+			var got []string
+			for _, assigned := range pkg.namedResultAssignments(work) {
+				got = append(got, types.ExprString(assigned))
+			}
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("the census reports %q assigned to the named result; want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// plantedWorker type-checks one planted file and finds its worker's Work.
+func plantedWorker(t *testing.T, src string) (*packageFuncs, *ast.FuncDecl) {
+	t.Helper()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, filepath.Join("planted", "worker.go"), src, 0)
+	if err != nil {
+		t.Fatalf("parse the planted worker: %v", err)
+	}
+	pkg := indexPackageFuncs(fset, []*ast.File{file})["planted"]
+	work := pkg.method("worker", "Work")
+	if work == nil {
+		t.Fatal("the planted worker declares no Work method the index can see")
+	}
+	return pkg, work
 }
