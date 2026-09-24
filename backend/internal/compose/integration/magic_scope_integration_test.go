@@ -34,11 +34,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -449,7 +447,8 @@ func TestAnUnwiredUndoJudgeSaysItDidNotLook(t *testing.T) {
 
 // pendingStub and sourceStub fix the SIZE of the two optional lanes, which is
 // what a totals assertion needs and what no real queue gives a test control
-// over. What the real engine puts in one is the case at the bottom of this file.
+// over. What the real engine puts in one is answered where that engine is bound,
+// in the compose package's own integration suite.
 type pendingStub struct {
 	approvals []crmcontracts.Approval
 	err       error
@@ -480,9 +479,9 @@ func (t troubledStub) TroubledRuns(
 	return t.runs, nil
 }
 
-// stubInstant dates the stubbed rows. Fixed rather than read off the clock: none
-// of these lanes is bounded by the window, so a row's age is not what any case
-// below turns on, and a test that read the wall clock would say it was.
+// stubInstant dates the stubbed rows. Fixed rather than read off the clock: a
+// stub answers the same rows whatever window it is handed, so no case below
+// turns on a row's age, and reading the wall clock here would suggest one did.
 var stubInstant = time.Date(2026, time.March, 4, 7, 30, 0, 0, time.UTC)
 
 func stagedRow(kind string) crmcontracts.Approval {
@@ -659,85 +658,20 @@ func TestAStandingConditionIsReportedHoweverOldItIs(t *testing.T) {
 		t.Fatalf("watching = %+v, want the connection failing since %v — a condition that "+
 			"predates the window is still true now", receipt.Watching, brokeLongAgo)
 	}
-	if !receipt.Watching[0].OccurredAt.Before(receipt.Since) {
-		t.Errorf("the line began at %v, inside the window starting %v — this case proves "+
-			"nothing unless the condition predates the window",
-			receipt.Watching[0].OccurredAt, receipt.Since)
+	// Asserted on the value rather than on occurred_at, which for this lane is
+	// when the condition was seen. Without it the case would pass over a
+	// condition that began inside the window and prove nothing.
+	began, dated := (*receipt.Watching[0].Summary.Values)["failing_since"]
+	if !dated {
+		t.Fatalf("the line carries no failing_since, so nothing here says the condition "+
+			"predates the window: %+v", receipt.Watching[0].Summary.Values)
 	}
-}
-
-// stagedQueue is the needs-you lane's binding onto the approvals engine: the two
-// lines compose's own adapter holds, spelled here because that type is
-// unexported and this package cannot reach it.
-//
-// A stub in its place would prove the lane can draw a row the test wrote. What
-// the case below is about is a row the PRODUCT staged, read back through the
-// same ListWire the inbox decides from — one queue, not two readings of it.
-type stagedQueue struct{ svc *approvals.Service }
-
-func (q stagedQueue) PendingApprovals(
-	ctx context.Context, limit int,
-) ([]crmcontracts.Approval, error) {
-	status := "pending"
-	rows, _, err := q.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: limit})
-	return rows, err
-}
-
-// A DECISION WAITING REACHES THE RECEIPT THROUGH THE ENGINE THAT HOLDS IT.
-//
-// The lane's read runs INSIDE this page's own transaction on a second
-// connection, which a unit test cannot exercise at all; and the row it returns
-// is shaped by the engine's own authority filter and target-label freeze rather
-// than by a fixture's idea of them.
-func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testing.T) {
-	e := Setup(t)
-	since := time.Now().Add(-time.Hour)
-	pipeline, open, _ := DealFixture(t, e)
-	deal := e.SeedDeal(t, "Weber GmbH — Phase 2", pipeline, open, &e.Rep1)
-
-	queue := approvals.NewService(e.DB())
-	change, hash, err := diffhash.Canonical(json.RawMessage(`{"stage": "won"}`))
+	startedAt, err := time.Parse(time.RFC3339, began)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failing_since = %q, which no client can read as an instant: %v", began, err)
 	}
-	staged, err := queue.Stage(e.AgentCtx(), approvals.StageInput{
-		Kind: "advance_deal", ProposedChange: change, DiffHash: hash,
-		TargetType: "deal", TargetID: deal, Summary: "a summary naming nothing",
-	})
-	if err != nil {
-		t.Fatalf("staging the decision: %v", err)
-	}
-
-	receipt, err := magic.NewService(e.Pool, nil, time.Now).
-		WithPendingDecisions(stagedQueue{svc: queue}).
-		Read(e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms), &since, 20)
-	if err != nil {
-		t.Fatalf("reading the receipt: %v", err)
-	}
-
-	var line crmcontracts.MagicLine
-	var found bool
-	for _, candidate := range receipt.NeedsYou {
-		if ids.UUID(candidate.Id) == staged.UUID {
-			line, found = candidate, true
-		}
-	}
-	if !found {
-		t.Fatalf("a proposal the engine staged is absent from needs_you: %+v", receipt.NeedsYou)
-	}
-	if line.Summary.Key != "magic.action.approval_advance_deal" {
-		t.Errorf("summary key = %q, want the sentence advance_deal asks", line.Summary.Key)
-	}
-	// The caption the engine froze at staging, which is what the approver was
-	// shown; a lane resolving it itself would name whatever the record became.
-	if line.Summary.Values == nil || (*line.Summary.Values)["target"] != "Weber GmbH — Phase 2" {
-		t.Errorf("summary values = %v, want the target the engine recorded", line.Summary.Values)
-	}
-	if line.Entity == nil || ids.UUID(line.Entity.Id) != deal {
-		t.Errorf("entity = %+v, want the deal the proposal is about", line.Entity)
-	}
-	if receipt.Totals.NeedsYou != len(receipt.NeedsYou) {
-		t.Errorf("totals.needs_you says %d over %d drawn lines",
-			receipt.Totals.NeedsYou, len(receipt.NeedsYou))
+	if !startedAt.Before(receipt.Since) {
+		t.Errorf("the condition began at %v, inside the window starting %v — this case proves "+
+			"nothing unless it predates the window", startedAt, receipt.Since)
 	}
 }

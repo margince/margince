@@ -57,7 +57,11 @@ func (s *Service) needsYou(
 	}
 	lines := make([]crmcontracts.MagicLine, 0, len(approvals))
 	for _, approval := range approvals {
-		lines = append(lines, pendingLine(approval))
+		line, ok := pendingLine(approval)
+		if !ok {
+			continue
+		}
+		lines = append(lines, line)
 	}
 	return lines, nil, nil
 }
@@ -91,8 +95,30 @@ func sentenceForKind(kind string) string {
 	return "magic.action.approval_pending"
 }
 
-// pendingLine dresses one staged decision.
-func pendingLine(a crmcontracts.Approval) crmcontracts.MagicLine {
+// pendingLine dresses one staged decision, or refuses it.
+//
+// TWO ROWS ARE REFUSED, and neither is lost by it: both stay on the approvals
+// inbox, which is where a decision is answered and which this lane only
+// mirrors.
+//
+// A row whose effective status is no longer pending. Expiry is LAZY — the
+// column still reads pending until the sweep runs, and the engine folds the
+// deadline in on the way out — so drawing the raw column would count a dead
+// proposal in the reader's total and send them to a decision the write refuses.
+//
+// And a row a HUMAN staged. proposed_by carries the staging principal verbatim,
+// and a rep asking for a consent override stages under their own name; this
+// surface reports what ran WITHOUT being asked, which is why its actor
+// vocabulary has no human member. Reporting a colleague's request back as
+// machinery is the spookiness this package exists to remove, inverted.
+func pendingLine(a crmcontracts.Approval) (crmcontracts.MagicLine, bool) {
+	if a.Status != crmcontracts.ApprovalStatusPending {
+		return crmcontracts.MagicLine{}, false
+	}
+	actor, machine := machineProposer(a.ProposedBy)
+	if !machine {
+		return crmcontracts.MagicLine{}, false
+	}
 	values := map[string]string{"kind": a.Kind}
 	if a.TargetLabel != nil {
 		// The caption frozen at staging time, which is what the approver was
@@ -109,7 +135,7 @@ func pendingLine(a crmcontracts.Approval) crmcontracts.MagicLine {
 			Values: &values,
 		},
 		Consequence: &consequence,
-		Actor:       proposerOf(a.ProposedBy),
+		Actor:       actor,
 		// Nothing has happened yet, so there is nothing to put back. Stated
 		// rather than absent, which a client would have to guess about.
 		Undo: &crmcontracts.MagicUndo{Undoable: false, Reason: &nothingToUndo},
@@ -125,30 +151,41 @@ func pendingLine(a crmcontracts.Approval) crmcontracts.MagicLine {
 	if a.OnBehalfOf != nil {
 		line.Actor.OnBehalfOf = a.OnBehalfOf
 	}
-	return line
+	return line, true
 }
 
-// proposerOf reads who staged the proposal out of `agent:<id>` / `connector:<n>`.
+// systemProposer is how the product names itself when no namespaced job did.
+const systemProposer = "system"
+
+// machineProposer reads who staged the proposal, and answers whether it was a
+// machine at all.
 //
-// A spelling this build cannot classify is still NAMED, whole and unparsed,
-// under the system actor: a decision whose proposer reads oddly is a decision
-// the reader can still make, and dropping the line to avoid an odd label would
-// take the decision away instead.
-func proposerOf(proposedBy string) crmcontracts.MagicActor {
+// FAIL CLOSED ON PROVENANCE. An id this build cannot place is refused rather
+// than filed under the system actor, because the one spelling it is most likely
+// to be is a human's: every principal id here is `agent:`, `connector:`,
+// `system` or `human:`, and a default that swept the remainder into `system`
+// would launder exactly the case the contract forbids. An unplaceable proposer
+// is also the shape a NEW principal kind arrives in, and guessing it is the
+// product would be a claim this package cannot support.
+func machineProposer(proposedBy string) (crmcontracts.MagicActor, bool) {
+	if proposedBy == systemProposer {
+		return crmcontracts.MagicActor{
+			Type: crmcontracts.MagicActorTypeMagicActorSystem,
+			Id:   proposedBy,
+		}, true
+	}
 	prefix, id, found := strings.Cut(proposedBy, ":")
-	if found {
-		switch crmcontracts.MagicActorType(prefix) {
-		case crmcontracts.MagicActorTypeMagicActorAgent,
-			crmcontracts.MagicActorTypeMagicActorSystem,
-			crmcontracts.MagicActorTypeMagicActorConnector:
-			return crmcontracts.MagicActor{
-				Type: crmcontracts.MagicActorType(prefix),
-				Id:   id,
-			}
-		}
+	if !found || id == "" {
+		return crmcontracts.MagicActor{}, false
 	}
-	return crmcontracts.MagicActor{
-		Type: crmcontracts.MagicActorTypeMagicActorSystem,
-		Id:   proposedBy,
+	switch crmcontracts.MagicActorType(prefix) {
+	case crmcontracts.MagicActorTypeMagicActorAgent,
+		crmcontracts.MagicActorTypeMagicActorSystem,
+		crmcontracts.MagicActorTypeMagicActorConnector:
+		return crmcontracts.MagicActor{
+			Type: crmcontracts.MagicActorType(prefix),
+			Id:   id,
+		}, true
 	}
+	return crmcontracts.MagicActor{}, false
 }

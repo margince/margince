@@ -25,8 +25,10 @@ import (
 
 // SourceHealth answers the reader's own capture connections needing a hand.
 //
-// A seam because capture is a sibling module: compose injects the edge, and
-// this package declares the row it wants rather than importing the module's.
+// A seam because capture is a sibling module: compose injects the edge. This
+// one carries its own row rather than the module's, as the attention feed's
+// identical lane does; the automation seam next door borrows its module's type
+// instead, so the package has both spellings and neither is the rule.
 type SourceHealth interface {
 	CaptureConcerns(ctx context.Context) ([]CaptureConcern, error)
 }
@@ -132,16 +134,21 @@ func concernLine(c CaptureConcern, asOf time.Time) (crmcontracts.MagicLine, bool
 	if c.AccountLabel != "" {
 		values["account"] = c.AccountLabel
 	}
-	// A condition that is a state rather than a streak has no beginning this
-	// read can name, and this lane reports the standing condition rather than
-	// its history — so the read's own instant is the honest answer for one.
-	occurredAt := asOf
+	// WHEN THE CONDITION BEGAN TRAVELS AS A VALUE, and only where there is one.
+	// A parked connection is a state rather than a streak and has no beginning
+	// anything here can name; putting the read's instant in its place would date
+	// the observation as the outage and tell a reader a three-week-dead mailbox
+	// broke just now. The client says "failing since" only when this is set.
 	if c.FailingSince != nil {
-		occurredAt = *c.FailingSince
+		values["failing_since"] = c.FailingSince.UTC().Format(time.RFC3339)
 	}
 	return crmcontracts.MagicLine{
-		Id:         openapi_types.UUID(c.ConnectionID),
-		OccurredAt: occurredAt,
+		Id: openapi_types.UUID(c.ConnectionID),
+		// The instant this condition was OBSERVED, uniformly across the lane —
+		// the one thing every standing condition has. The contract's occurred_at
+		// says so for this lane, because everywhere else on the receipt it means
+		// when the thing happened.
+		OccurredAt: asOf,
 		Lane:       crmcontracts.MagicLineLaneMagicLaneWatching,
 		Summary: crmcontracts.MagicSentence{
 			Key:    condition.sentence,

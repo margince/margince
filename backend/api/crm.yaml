@@ -47724,7 +47724,15 @@ components:
       required: [id, occurred_at, summary, actor, lane]
       properties:
         id: { type: string, format: uuid, description: "The underlying row's id — an audit entry, an approval." }
-        occurred_at: { type: string, format: date-time }
+        occurred_at:
+          type: string
+          format: date-time
+          description: >-
+            When the thing happened. On a `watching` line it is when the condition was
+            OBSERVED instead, uniformly: a source that is off rather than failing has no
+            beginning to report, and dating the observation as the outage would tell a
+            reader a long-dead mailbox broke just now. Where a condition does have a
+            start, it travels as the `failing_since` value on the summary.
         lane:
           type: string
           enum: [done, needs_you, could_not_complete, watching]

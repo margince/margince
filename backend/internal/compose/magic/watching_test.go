@@ -113,13 +113,16 @@ func TestAConditionThisBuildCannotNameIsDroppedRatherThanDrawnBlank(t *testing.T
 	}
 }
 
-func TestAStandingConditionCarriesTheReadsOwnInstant(t *testing.T) {
+func TestAConditionThatIsAStateReportsNoBeginning(t *testing.T) {
 	line, ok := concernLine(CaptureConcern{Kind: "reauth_required", Provider: "google"}, watchInstant)
 	if !ok {
 		t.Fatal("a re-authentication concern draws no line")
 	}
 	if !line.OccurredAt.Equal(watchInstant) {
-		t.Errorf("occurred_at = %v, want the read's own instant %v", line.OccurredAt, watchInstant)
+		t.Errorf("occurred_at = %v, want the instant it was observed %v", line.OccurredAt, watchInstant)
+	}
+	if began, dated := (*line.Summary.Values)["failing_since"]; dated {
+		t.Errorf("failing_since = %q over a condition that never started failing", began)
 	}
 }
 
@@ -131,8 +134,11 @@ func TestAFailureStreakCarriesItsOwnBeginning(t *testing.T) {
 	if !ok {
 		t.Fatal("a failing sync draws no line")
 	}
-	if !line.OccurredAt.Equal(began) {
-		t.Errorf("occurred_at = %v, want the streak's start %v", line.OccurredAt, began)
+	if !line.OccurredAt.Equal(watchInstant) {
+		t.Errorf("occurred_at = %v, want the instant it was observed %v", line.OccurredAt, watchInstant)
+	}
+	if got := (*line.Summary.Values)["failing_since"]; got != began.UTC().Format(time.RFC3339) {
+		t.Errorf("failing_since = %q, want the streak's start %v", got, began)
 	}
 }
 

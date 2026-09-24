@@ -1,6 +1,8 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import {
   line,
   receipt,
@@ -253,5 +255,55 @@ describe("the receipt draws every lane it promises", () => {
     expect(
       screen.queryByText("Nothing was done on your behalf in this window."),
     ).toBeNull();
+  });
+
+  // A watching line's occurred_at is when the condition was seen, so a source
+  // that broke weeks ago would otherwise read as having broken on page load.
+  it("dates a failing source from when it started failing", async () => {
+    stub(
+      receipt({
+        watching: [
+          line({
+            lane: "watching",
+            occurred_at: "2026-09-13T07:30:00Z",
+            summary: {
+              key: "magic.action.capture_sync_failing",
+              values: {
+                provider: "google",
+                failing_since: "2026-08-20T06:00:00Z",
+              },
+            },
+          }),
+        ],
+      }),
+    );
+    renderMagic();
+    const when = await screen.findByText(/Failing since/);
+    // The outage's own date, not the read's: a client showing occurred_at here
+    // would date every watched source to this page load.
+    expect(when.textContent).toContain(
+      formatDateTime("2026-08-20T06:00:00Z", "en", viewerZone()),
+    );
+  });
+
+  // A source that is off rather than failing has no beginning to report, and
+  // inventing one from the read would be the same lie in the other direction.
+  it("reports no beginning for a condition that never started failing", async () => {
+    stub(
+      receipt({
+        watching: [
+          line({
+            lane: "watching",
+            summary: {
+              key: "magic.action.capture_reauth_required",
+              values: { provider: "google" },
+            },
+          }),
+        ],
+      }),
+    );
+    renderMagic();
+    await screen.findByText("Needs restoring");
+    expect(screen.queryByText(/Failing since/)).toBeNull();
   });
 });

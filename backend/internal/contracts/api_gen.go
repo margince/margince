@@ -31625,8 +31625,10 @@ type MagicLine struct {
 	Id openapi_types.UUID `json:"id"`
 
 	// Lane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
-	Lane       MagicLineLane `json:"lane"`
-	OccurredAt time.Time     `json:"occurred_at"`
+	Lane MagicLineLane `json:"lane"`
+
+	// OccurredAt When the thing happened. On a `watching` line it is when the condition was OBSERVED instead, uniformly: a source that is off rather than failing has no beginning to report, and dating the observation as the outage would tell a reader a long-dead mailbox broke just now. Where a condition does have a start, it travels as the `failing_since` value on the summary.
+	OccurredAt time.Time `json:"occurred_at"`
 
 	// Summary What happened, as a key and the values to fill it with.
 	//

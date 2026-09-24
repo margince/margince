@@ -10104,6 +10104,7 @@ export const de = {
   "magic.col.what": "Was passiert ist",
   "magic.col.about": "Betrifft",
   "magic.col.when": "Wann",
+  "magic.failingSince": "Fehlerhaft seit {when}",
   "magic.col.wayBack": "Weg zurück",
   "magic.noRecord": "Kein Datensatz genannt",
   "magic.undo.fromHistory":

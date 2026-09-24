@@ -10011,6 +10011,7 @@ export const vi = {
   "magic.col.what": "Chuyện gì đã xảy ra",
   "magic.col.about": "Liên quan đến",
   "magic.col.when": "Khi nào",
+  "magic.failingSince": "Lỗi từ {when}",
   "magic.col.wayBack": "Cách hoàn tác",
   "magic.noRecord": "Không nêu bản ghi nào",
   "magic.undo.fromHistory": "Có thể hoàn tác từ lịch sử của bản ghi",

@@ -10309,6 +10309,7 @@ export const en = {
   "magic.col.what": "What happened",
   "magic.col.about": "About",
   "magic.col.when": "When",
+  "magic.failingSince": "Failing since {when}",
   "magic.col.wayBack": "Way back",
   "magic.noRecord": "No record named",
   "magic.undo.fromHistory": "Can be put back from the record's history",

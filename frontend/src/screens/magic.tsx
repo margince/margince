@@ -247,8 +247,7 @@ function MagicLaneSection({
               {
                 key: "when",
                 header: t("magic.col.when"),
-                render: (row: MagicLine) =>
-                  formatDateTime(row.occurred_at, locale, zone),
+                render: (row: MagicLine) => <LineWhen line={row} zone={zone} />,
               },
               {
                 key: "wayBack",
@@ -292,6 +291,25 @@ function LineSentence({ line }: Readonly<{ line: MagicLine }>) {
  * translated clause is how a sentence ends up ungrammatical in two of three
  * languages.
  */
+/**
+ * When it happened, and for a watched source how long it has been that way.
+ *
+ * A watching line's occurred_at is when the condition was OBSERVED, so printing
+ * it alone would date every outage to this page load. Where the condition has a
+ * beginning the server sends it, and that is the figure a reader acts on.
+ */
+function LineWhen({ line, zone }: Readonly<{ line: MagicLine; zone: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const began = line.summary.values?.failing_since;
+  if (line.lane === "watching" && began) {
+    return t("magic.failingSince", {
+      when: formatDateTime(began, locale, zone),
+    });
+  }
+  return formatDateTime(line.occurred_at, locale, zone);
+}
+
 function LineSubject({ line }: Readonly<{ line: MagicLine }>) {
   const t = useT();
   const label = subjectLabel(line);

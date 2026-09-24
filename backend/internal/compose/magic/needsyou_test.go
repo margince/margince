@@ -155,9 +155,9 @@ func TestAnUnwiredApprovalSeamDrawsAnEmptyLane(t *testing.T) {
 	}
 }
 
-// A proposer this build cannot classify is still named. Dropping the line to
-// avoid an odd label would take the decision away to tidy the caption.
-func TestTheProposerIsNamedEvenWhenItsSpellingIsUnknown(t *testing.T) {
+// Each machine spelling is named as itself. A proposer filed under the wrong
+// type is a claim about who asked, on the one surface whose purpose is to say.
+func TestAMachineProposerIsNamedAsWhatItIs(t *testing.T) {
 	cases := []struct {
 		proposedBy string
 		wantType   crmcontracts.MagicActorType
@@ -166,8 +166,7 @@ func TestTheProposerIsNamedEvenWhenItsSpellingIsUnknown(t *testing.T) {
 		{"connector:gmail", crmcontracts.MagicActorTypeMagicActorConnector, "gmail"},
 		{"agent:overnight", crmcontracts.MagicActorTypeMagicActorAgent, "overnight"},
 		{"system:retention", crmcontracts.MagicActorTypeMagicActorSystem, "retention"},
-		{"nonsense", crmcontracts.MagicActorTypeMagicActorSystem, "nonsense"},
-		{"human:lars", crmcontracts.MagicActorTypeMagicActorSystem, "human:lars"},
+		{"system", crmcontracts.MagicActorTypeMagicActorSystem, "system"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.proposedBy, func(t *testing.T) {
@@ -182,6 +181,43 @@ func TestTheProposerIsNamedEvenWhenItsSpellingIsUnknown(t *testing.T) {
 			}
 			if lines[0].Actor.Id != tc.wantID {
 				t.Errorf("actor id = %q, want %q", lines[0].Actor.Id, tc.wantID)
+			}
+		})
+	}
+}
+
+// THE PROVENANCE RULE, held. This surface reports what ran without being asked,
+// and its actor vocabulary has no human member: a rep's own request for review
+// reaches the inbox under their own name, and reporting it here as machinery
+// would be a lie about who asked. An id this build cannot place is refused for
+// the same reason — the likeliest thing it is, is a human.
+func TestARequestAHumanMadeIsNotTheMachinerysWork(t *testing.T) {
+	for _, proposedBy := range []string{"human:lars", "nonsense", "", "agent:", ":gmail"} {
+		t.Run(proposedBy, func(t *testing.T) {
+			approval := stagedApproval("overnight")
+			approval.ProposedBy = proposedBy
+			if lines := decisionsWaiting(t, approval); len(lines) != 0 {
+				t.Errorf("a proposal by %q was drawn as %q machinery", proposedBy, lines[0].Actor.Type)
+			}
+		})
+	}
+}
+
+// Expiry is lazy: the column still reads pending until the sweep runs, and the
+// engine folds the deadline in on the way out. Drawing the raw column would
+// count a dead proposal in the reader's total and send them to a decision the
+// write refuses.
+func TestAProposalThatRanOutOfTimeIsNotWaitingOnAnybody(t *testing.T) {
+	for _, status := range []crmcontracts.ApprovalStatus{
+		crmcontracts.ApprovalStatusExpired,
+		crmcontracts.ApprovalStatusApproved,
+		crmcontracts.ApprovalStatusRejected,
+	} {
+		t.Run(string(status), func(t *testing.T) {
+			approval := stagedApproval("overnight")
+			approval.Status = status
+			if lines := decisionsWaiting(t, approval); len(lines) != 0 {
+				t.Errorf("a %q proposal was drawn as a decision waiting", status)
 			}
 		})
 	}
