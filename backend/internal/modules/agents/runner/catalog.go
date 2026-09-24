@@ -37,13 +37,12 @@ type AgentSpec struct {
 	// (ADR-0009 Decision 5). A name here the passport does not admit
 	// stays refused.
 	//
-	// Required and non-empty: an empty set is read as "no narrowing" at the
-	// Job seam, so a spec that loses its list quietly regains the whole
-	// catalog — and a misspelt verb is how an agent silently loses the one
-	// tool its goal depends on.
+	// Required and non-empty: the runner refuses a job carrying none rather
+	// than offer it the whole catalog — and a misspelt verb is how an agent
+	// silently loses the one tool its goal depends on.
 	//
 	// IT IS NOT FILLED IN HERE. The value is declared in api/ai-tasks.yaml
-	// under agent_loop's agents{} and attached by compose, because the
+	// as this agent's agent_loop site's tools and attached by compose, because the
 	// listing rides in every step of the window: the allowlist is a prompt
 	// COST as well as a boundary, and the contract is where this repo says
 	// what an AI task costs. A module may not import a sibling, so this
@@ -58,8 +57,7 @@ type AgentSpec struct {
 //
 // The entries carry NO Tools: that half is declared in api/ai-tasks.yaml and
 // joined on by compose's scheduledAgents(). A caller that ranges this directly
-// and builds a Job from it produces a run narrowed by its passport alone —
-// which is why no production path does.
+// and builds a Job from it produces a run the runner refuses to start.
 func Catalog() []AgentSpec {
 	return []AgentSpec{
 		{

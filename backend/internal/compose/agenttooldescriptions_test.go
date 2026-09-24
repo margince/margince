@@ -284,44 +284,6 @@ const (
 	listingBudgetDenominator = 24
 )
 
-// wholeCatalogBudgetNumerator/Denominator bound the WHOLE catalog, and this is
-// a floor rather than a budget — the distinction is the point.
-//
-// The certification lane really does offer the WHOLE catalog: 21 of the 23
-// agent_loop corpus scenarios declare `tools: catalog`, resolved through
-// agentLoopCatalog(), each building a real window. (The count is deliberately
-// not written here — it said 56 while the surface served 67, and a number in a
-// comment nothing checks is one more thing to go quietly wrong.) If that stopped fitting,
-// NOTHING WOULD BREAK LOUDLY — window.bounded() elides the transcript only,
-// stops at two messages, and sends whatever remains, and the bound providers'
-// real contexts dwarf 24,000. The scenarios would keep passing while measuring
-// a prompt larger than this build's own stated envelope, and no test anywhere
-// would say so.
-//
-// That is what this holds: the lane's measured envelope, not its survival. A
-// certification turn is ONE turn — goal, grounding, one reply, no accumulating
-// transcript — so it does not need the 7/24 a forty-step run reserves. 7/8 of
-// 24,000 leaves 3,000 for those three, which is ample for a one-turn replay.
-//
-// No feature is expected to argue with this number, and one that has to is a
-// signal about the CEILING rather than about itself. That happened at a
-// MinimumPromptWindow of 24,000, where this floor left 63 tokens for a 67-tool
-// catalog and the next verb anyone added failed here (margince/margince#3882).
-// The ceiling is now derived from the local provider's cap rather than picked.
-//
-// THE ROOM IS STILL SMALL: a few hundred tokens, which is one or two more
-// verbs. That is not an oversight to trim the ceiling for — the slack the
-// ceiling holds covers prompt bytes this side cannot count, and spending it
-// here buys tool descriptions at the price of truncating runs. When this fails
-// again, the question is which tools the certification lane needs to offer at
-// once, not how to make the number bigger.
-//
-// The per-agent bound above is the one that rations anything.
-const (
-	wholeCatalogBudgetNumerator   = 7
-	wholeCatalogBudgetDenominator = 8
-)
-
 // oneToolBudgetNumerator/Denominator bound a SINGLE tool's rendered entry.
 //
 // The two bounds above ration the listing as a whole, and neither of them is
@@ -444,20 +406,6 @@ func TestTheAgentListingBudgetRefusesAListingThatWouldFillTheWindow(t *testing.T
 	}
 	if over := listingOverBudget("morning_brief", specsNamed(t, []string{"read_record"})); over != "" {
 		t.Errorf("a one-tool listing was reported over budget: %s", over)
-	}
-}
-
-// The whole catalog is not a run's listing, but it IS the certification lane's,
-// and the lane has no other statement of what it costs.
-func TestTheWholeCatalogStillFitsTheCertificationLanesWindow(t *testing.T) {
-	tokens := len(runner.ToolListing(servedSurface(t).Specs())) / 4
-	floor := runner.MinimumPromptWindow * wholeCatalogBudgetNumerator / wholeCatalogBudgetDenominator
-	if tokens > floor {
-		t.Errorf("the whole catalog renders ~%d tokens against the %d this build's window allows it — "+
-			"21 of the agent_loop corpus scenarios offer exactly this surface, and nothing would fail "+
-			"loudly: the window elides its transcript and sends anyway, so those scenarios would go on "+
-			"passing while measuring a prompt larger than the envelope this build claims",
-			tokens, floor)
 	}
 }
 

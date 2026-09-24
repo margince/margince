@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 46,
+    "sites": 47,
     "sites_best_current": 0,
     "sites_best_partial": 0,
-    "sites_best_stale": 46,
-    "sites_absent": 0,
-    "scenarios": 170,
+    "sites_best_stale": 45,
+    "sites_absent": 2,
+    "scenarios": 152,
     "records": 136,
     "bindings": 16,
     "self_judged_records": 8
@@ -62,11 +62,11 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 72,
-          "passed": 56,
-          "cases_failing_often": 5,
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
@@ -505,9 +505,9 @@
       "bands": {
         "certified": 11,
         "supported_degraded": 2,
-        "not_supported": 15
+        "not_supported": 14
       },
-      "untested": 1,
+      "untested": 2,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -562,11 +562,11 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 72,
-          "passed": 60,
-          "cases_failing_often": 4,
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
@@ -1005,9 +1005,9 @@
       "bands": {
         "certified": 12,
         "supported_degraded": 4,
-        "not_supported": 13
+        "not_supported": 12
       },
-      "untested": 0,
+      "untested": 1,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -1062,11 +1062,11 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 72,
-          "passed": 50,
-          "cases_failing_often": 8,
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
@@ -1505,9 +1505,9 @@
       "bands": {
         "certified": 6,
         "supported_degraded": 4,
-        "not_supported": 14
+        "not_supported": 13
       },
-      "untested": 5,
+      "untested": 6,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -1562,11 +1562,11 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 72,
-          "passed": 38,
-          "cases_failing_often": 11,
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
@@ -2005,9 +2005,9 @@
       "bands": {
         "certified": 10,
         "supported_degraded": 1,
-        "not_supported": 17
+        "not_supported": 16
       },
-      "untested": 1,
+      "untested": 2,
       "unbound": 0,
       "unrecognised": 0
     }
@@ -2019,18 +2019,18 @@
         "model": "gemini-3.1-flash-lite",
         "env": "eu_hosted"
       },
-      "sites": 40,
+      "sites": 39,
       "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 40,
-      "runs": 459,
-      "passed": 409,
-      "reliability": 0.8910675381263616,
+      "sites_stale": 39,
+      "runs": 387,
+      "passed": 349,
+      "reliability": 0.9018087855297158,
       "slowest_p95_ms": 6994,
       "bands": {
         "certified": 21,
         "supported_degraded": 7,
-        "not_supported": 12
+        "not_supported": 11
       }
     },
     {
@@ -2119,18 +2119,18 @@
         "model": "google/gemma-4-31b-it",
         "env": "cloud_frontier"
       },
-      "sites": 39,
+      "sites": 38,
       "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 39,
-      "runs": 357,
-      "passed": 294,
-      "reliability": 0.8235294117647058,
+      "sites_stale": 38,
+      "runs": 285,
+      "passed": 238,
+      "reliability": 0.8350877192982457,
       "slowest_p95_ms": 237887,
       "bands": {
         "certified": 19,
         "supported_degraded": 7,
-        "not_supported": 13
+        "not_supported": 12
       }
     },
     {
@@ -2139,18 +2139,18 @@
         "model": "mistralai/ministral-14b-2512",
         "env": "cloud_frontier"
       },
-      "sites": 11,
+      "sites": 10,
       "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 11,
-      "runs": 160,
-      "passed": 113,
-      "reliability": 0.70625,
+      "sites_stale": 10,
+      "runs": 45,
+      "passed": 39,
+      "reliability": 0.8666666666666667,
       "slowest_p95_ms": 20620,
       "bands": {
         "certified": 8,
         "supported_degraded": 0,
-        "not_supported": 3
+        "not_supported": 2
       }
     },
     {
@@ -2159,18 +2159,18 @@
         "model": "mistralai/ministral-14b-2512",
         "env": "eu_hosted"
       },
-      "sites": 33,
+      "sites": 32,
       "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 33,
-      "runs": 309,
-      "passed": 191,
-      "reliability": 0.6181229773462783,
+      "sites_stale": 32,
+      "runs": 237,
+      "passed": 153,
+      "reliability": 0.6455696202531646,
       "slowest_p95_ms": 86185,
       "bands": {
         "certified": 7,
         "supported_degraded": 8,
-        "not_supported": 18
+        "not_supported": 17
       }
     },
     {
@@ -2299,18 +2299,18 @@
         "model": "openai/gpt-oss-120b",
         "env": "eu_hosted"
       },
-      "sites": 40,
+      "sites": 39,
       "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 40,
-      "runs": 456,
-      "passed": 360,
-      "reliability": 0.7894736842105263,
+      "sites_stale": 39,
+      "runs": 384,
+      "passed": 310,
+      "reliability": 0.8072916666666666,
       "slowest_p95_ms": 140306,
       "bands": {
         "certified": 13,
         "supported_degraded": 7,
-        "not_supported": 20
+        "not_supported": 19
       }
     },
     {
@@ -2478,399 +2478,57 @@
     },
     {
       "task": "agent_loop",
-      "site": "loop",
-      "key": "agent_loop/loop",
+      "site": "morning_brief",
+      "key": "agent_loop/morning_brief",
       "scope": "single_turn",
-      "missing_context_scopes": [
-        "identity",
-        "positioning",
-        "sales",
-        "offer"
-      ],
-      "best_state": "stale",
+      "missing_context_scopes": [],
+      "best_state": "absent",
       "recommended": null,
       "scenarios": [
         {
-          "name": "a_description_is_not_a_name",
+          "name": "morning_brief_a_retrieved_deal_is_not_the_queue",
           "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_description_is_not_a_name.yaml"
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/morning_brief_a_retrieved_deal_is_not_the_queue.yaml"
         },
         {
-          "name": "a_draft_precedes_a_send",
+          "name": "morning_brief_reads_its_queue_first",
           "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_draft_precedes_a_send.yaml"
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/morning_brief_reads_its_queue_first.yaml"
         },
         {
-          "name": "a_goal_no_tool_can_serve_ends_the_turn",
+          "name": "morning_brief_retrieved_text_is_not_an_instruction",
           "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_goal_no_tool_can_serve_ends_the_turn.yaml"
-        },
-        {
-          "name": "a_name_alone_is_still_a_search",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_name_alone_is_still_a_search.yaml"
-        },
-        {
-          "name": "a_promise_is_not_a_slipping_deal",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_promise_is_not_a_slipping_deal.yaml"
-        },
-        {
-          "name": "a_stepless_deal_is_a_slipping_deal",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_stepless_deal_is_a_slipping_deal.yaml"
-        },
-        {
-          "name": "a_structured_question_is_not_a_text_search",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_structured_question_is_not_a_text_search.yaml"
-        },
-        {
-          "name": "a_thin_relationship_is_not_a_slipping_deal",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_thin_relationship_is_not_a_slipping_deal.yaml"
-        },
-        {
-          "name": "a_total_is_still_a_report",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_total_is_still_a_report.yaml"
-        },
-        {
-          "name": "a_warm_path_is_not_a_search",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_warm_path_is_not_a_search.yaml"
-        },
-        {
-          "name": "ambiguity_ends_the_turn",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/ambiguity_ends_the_turn.yaml"
-        },
-        {
-          "name": "catchup_over_raw_reads",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/catchup_over_raw_reads.yaml"
-        },
-        {
-          "name": "coverage_names_the_gap",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/coverage_names_the_gap.yaml"
-        },
-        {
-          "name": "enrichment_is_not_search",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/enrichment_is_not_search.yaml"
-        },
-        {
-          "name": "goal_already_answered_by_seed_context",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/basic_02_final.yaml"
-        },
-        {
-          "name": "goal_needs_a_tool_call",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/basic_01.yaml"
-        },
-        {
-          "name": "identity_is_checked_before_a_record_is_created",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/identity_is_checked_before_a_record_is_created.yaml"
-        },
-        {
-          "name": "logging_what_happened_changes_nothing_else",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/logging_what_happened_changes_nothing_else.yaml"
-        },
-        {
-          "name": "meeting_prep_is_not_a_catchup",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/meeting_prep_is_not_a_catchup.yaml"
-        },
-        {
-          "name": "slipping_is_its_own_question",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/slipping_is_its_own_question.yaml"
-        },
-        {
-          "name": "the_calendar_event_is_the_anchor",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/the_calendar_event_is_the_anchor.yaml"
-        },
-        {
-          "name": "the_record_is_found_before_it_is_changed",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/the_record_is_found_before_it_is_changed.yaml"
-        },
-        {
-          "name": "the_stage_id_comes_from_the_pipeline",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/the_stage_id_comes_from_the_pipeline.yaml"
-        },
-        {
-          "name": "who_knows_needs_the_contact",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/who_knows_needs_the_contact.yaml"
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/morning_brief_retrieved_text_is_not_an_instruction.yaml"
         }
       ],
-      "records": [
+      "records": []
+    },
+    {
+      "task": "agent_loop",
+      "site": "overnight_at_risk_sweep",
+      "key": "agent_loop/overnight_at_risk_sweep",
+      "scope": "single_turn",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
         {
-          "binding": {
-            "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": 0,
-          "scenarios_total": 24,
-          "runs": 72,
-          "passed": 60,
-          "reliability": 0.8333333333333334,
-          "latency_p50_ms": 1521,
-          "latency_p95_ms": 3389,
-          "reported": {
-            "accepted": 60,
-            "wrong_answer": 12,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "24 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
-          "stale_cause": {
-            "case_changed": [
-              "a_thin_relationship_is_not_a_slipping_deal",
-              "a_warm_path_is_not_a_search",
-              "coverage_names_the_gap"
-            ],
-            "prompt_changed": [
-              "a_description_is_not_a_name",
-              "a_draft_precedes_a_send",
-              "a_goal_no_tool_can_serve_ends_the_turn",
-              "a_name_alone_is_still_a_search",
-              "a_promise_is_not_a_slipping_deal",
-              "a_stepless_deal_is_a_slipping_deal",
-              "a_structured_question_is_not_a_text_search",
-              "a_thin_relationship_is_not_a_slipping_deal",
-              "a_total_is_still_a_report",
-              "a_warm_path_is_not_a_search",
-              "ambiguity_ends_the_turn",
-              "catchup_over_raw_reads",
-              "coverage_names_the_gap",
-              "enrichment_is_not_search",
-              "goal_already_answered_by_seed_context",
-              "goal_needs_a_tool_call",
-              "identity_is_checked_before_a_record_is_created",
-              "logging_what_happened_changes_nothing_else",
-              "meeting_prep_is_not_a_catchup",
-              "slipping_is_its_own_question",
-              "the_calendar_event_is_the_anchor",
-              "the_record_is_found_before_it_is_changed",
-              "the_stage_id_comes_from_the_pipeline",
-              "who_knows_needs_the_contact"
-            ],
-            "grader_changed": [
-              "a_description_is_not_a_name",
-              "a_draft_precedes_a_send",
-              "a_goal_no_tool_can_serve_ends_the_turn",
-              "a_name_alone_is_still_a_search",
-              "a_promise_is_not_a_slipping_deal",
-              "a_stepless_deal_is_a_slipping_deal",
-              "a_structured_question_is_not_a_text_search",
-              "a_thin_relationship_is_not_a_slipping_deal",
-              "a_total_is_still_a_report",
-              "a_warm_path_is_not_a_search",
-              "ambiguity_ends_the_turn",
-              "catchup_over_raw_reads",
-              "coverage_names_the_gap",
-              "enrichment_is_not_search",
-              "goal_already_answered_by_seed_context",
-              "goal_needs_a_tool_call",
-              "identity_is_checked_before_a_record_is_created",
-              "logging_what_happened_changes_nothing_else",
-              "meeting_prep_is_not_a_catchup",
-              "slipping_is_its_own_question",
-              "the_calendar_event_is_the_anchor",
-              "the_record_is_found_before_it_is_changed",
-              "the_stage_id_comes_from_the_pipeline",
-              "who_knows_needs_the_contact"
-            ]
-          }
+          "name": "overnight_sweep_one_quiet_deal_is_not_the_book",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_one_quiet_deal_is_not_the_book.yaml"
         },
         {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": 0,
-          "scenarios_total": 24,
-          "runs": 72,
-          "passed": 56,
-          "reliability": 0.7777777777777778,
-          "latency_p50_ms": 5378,
-          "latency_p95_ms": 12636,
-          "reported": {
-            "accepted": 56,
-            "wrong_answer": 16,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "24 scenarios it scored have changed since (how a run is graded): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
-          "stale_cause": {
-            "grader_changed": [
-              "a_description_is_not_a_name",
-              "a_draft_precedes_a_send",
-              "a_goal_no_tool_can_serve_ends_the_turn",
-              "a_name_alone_is_still_a_search",
-              "a_promise_is_not_a_slipping_deal",
-              "a_stepless_deal_is_a_slipping_deal",
-              "a_structured_question_is_not_a_text_search",
-              "a_thin_relationship_is_not_a_slipping_deal",
-              "a_total_is_still_a_report",
-              "a_warm_path_is_not_a_search",
-              "ambiguity_ends_the_turn",
-              "catchup_over_raw_reads",
-              "coverage_names_the_gap",
-              "enrichment_is_not_search",
-              "goal_already_answered_by_seed_context",
-              "goal_needs_a_tool_call",
-              "identity_is_checked_before_a_record_is_created",
-              "logging_what_happened_changes_nothing_else",
-              "meeting_prep_is_not_a_catchup",
-              "slipping_is_its_own_question",
-              "the_calendar_event_is_the_anchor",
-              "the_record_is_found_before_it_is_changed",
-              "the_stage_id_comes_from_the_pipeline",
-              "who_knows_needs_the_contact"
-            ]
-          }
+          "name": "overnight_sweep_reads_what_is_slipping_before_it_logs",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_reads_what_is_slipping_before_it_logs.yaml"
         },
         {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": null,
-          "scenarios_total": 24,
-          "runs": 115,
-          "passed": 74,
-          "reliability": 0.6434782608695652,
-          "latency_p50_ms": 1804,
-          "latency_p95_ms": 2954,
-          "reported": {
-            "accepted": 74,
-            "wrong_answer": 40,
-            "invalid": 1,
-            "abstained": 0
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": 0,
-          "scenarios_total": 24,
-          "runs": 72,
-          "passed": 38,
-          "reliability": 0.5277777777777778,
-          "latency_p50_ms": 1928,
-          "latency_p95_ms": 3108,
-          "reported": {
-            "accepted": 38,
-            "wrong_answer": 34,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "24 scenarios it scored have changed since (how a run is graded): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
-          "stale_cause": {
-            "grader_changed": [
-              "a_description_is_not_a_name",
-              "a_draft_precedes_a_send",
-              "a_goal_no_tool_can_serve_ends_the_turn",
-              "a_name_alone_is_still_a_search",
-              "a_promise_is_not_a_slipping_deal",
-              "a_stepless_deal_is_a_slipping_deal",
-              "a_structured_question_is_not_a_text_search",
-              "a_thin_relationship_is_not_a_slipping_deal",
-              "a_total_is_still_a_report",
-              "a_warm_path_is_not_a_search",
-              "ambiguity_ends_the_turn",
-              "catchup_over_raw_reads",
-              "coverage_names_the_gap",
-              "enrichment_is_not_search",
-              "goal_already_answered_by_seed_context",
-              "goal_needs_a_tool_call",
-              "identity_is_checked_before_a_record_is_created",
-              "logging_what_happened_changes_nothing_else",
-              "meeting_prep_is_not_a_catchup",
-              "slipping_is_its_own_question",
-              "the_calendar_event_is_the_anchor",
-              "the_record_is_found_before_it_is_changed",
-              "the_stage_id_comes_from_the_pipeline",
-              "who_knows_needs_the_contact"
-            ]
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": 0,
-          "scenarios_total": 24,
-          "runs": 72,
-          "passed": 50,
-          "reliability": 0.6944444444444444,
-          "latency_p50_ms": 2445,
-          "latency_p95_ms": 11107,
-          "reported": {
-            "accepted": 50,
-            "wrong_answer": 22,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "24 scenarios it scored have changed since (how a run is graded): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
-          "stale_cause": {
-            "grader_changed": [
-              "a_description_is_not_a_name",
-              "a_draft_precedes_a_send",
-              "a_goal_no_tool_can_serve_ends_the_turn",
-              "a_name_alone_is_still_a_search",
-              "a_promise_is_not_a_slipping_deal",
-              "a_stepless_deal_is_a_slipping_deal",
-              "a_structured_question_is_not_a_text_search",
-              "a_thin_relationship_is_not_a_slipping_deal",
-              "a_total_is_still_a_report",
-              "a_warm_path_is_not_a_search",
-              "ambiguity_ends_the_turn",
-              "catchup_over_raw_reads",
-              "coverage_names_the_gap",
-              "enrichment_is_not_search",
-              "goal_already_answered_by_seed_context",
-              "goal_needs_a_tool_call",
-              "identity_is_checked_before_a_record_is_created",
-              "logging_what_happened_changes_nothing_else",
-              "meeting_prep_is_not_a_catchup",
-              "slipping_is_its_own_question",
-              "the_calendar_event_is_the_anchor",
-              "the_record_is_found_before_it_is_changed",
-              "the_stage_id_comes_from_the_pipeline",
-              "who_knows_needs_the_contact"
-            ]
-          }
+          "name": "overnight_sweep_retrieved_text_is_not_an_instruction",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_retrieved_text_is_not_an_instruction.yaml"
         }
-      ]
+      ],
+      "records": []
     },
     {
       "task": "brief_ranking",
@@ -10594,5 +10252,51 @@
       ]
     }
   ],
-  "unclaimed_records": []
+  "unclaimed_records": [
+    {
+      "task": "agent_loop",
+      "binding": {
+        "provider": "gemini",
+        "model": "gemini-3.1-flash-lite",
+        "env": "eu_hosted"
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    },
+    {
+      "task": "agent_loop",
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "google/gemma-4-31b-it",
+        "env": "cloud_frontier"
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    },
+    {
+      "task": "agent_loop",
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "mistralai/ministral-14b-2512",
+        "env": "cloud_frontier"
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    },
+    {
+      "task": "agent_loop",
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "mistralai/ministral-14b-2512",
+        "env": "eu_hosted"
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    },
+    {
+      "task": "agent_loop",
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "openai/gpt-oss-120b",
+        "env": "eu_hosted"
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    }
+  ]
 }

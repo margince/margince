@@ -10,7 +10,7 @@
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
     "tools_added_by_shipped_units": 0,
-    "never_driven_but_graded_elsewhere": 18
+    "never_driven_but_graded_elsewhere": 10
   },
   "models": [
     {
@@ -1198,9 +1198,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1238,7 +1236,9 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
       "measured_by_model": {}
     },
     {
@@ -1250,9 +1250,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1271,9 +1269,7 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1297,9 +1293,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1325,7 +1319,9 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
       "measured_by_model": {}
     },
     {
@@ -1341,9 +1337,7 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1356,7 +1350,6 @@
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": [
-        "agent_loop",
         "enrich"
       ],
       "measured_by_model": {}
@@ -1415,9 +1408,7 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1481,7 +1472,6 @@
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": [
-        "agent_loop",
         "draft_reply"
       ],
       "measured_by_model": {}
@@ -1509,9 +1499,7 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1539,9 +1527,7 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1680,7 +1666,9 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
       "measured_by_model": {}
     },
     {
@@ -1707,9 +1695,7 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1724,9 +1710,7 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1738,9 +1722,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1804,9 +1786,7 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": true,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1901,9 +1881,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
@@ -1994,9 +1972,7 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
@@ -2034,9 +2010,7 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 6,
@@ -2164,9 +2138,7 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
@@ -2240,9 +2212,7 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,

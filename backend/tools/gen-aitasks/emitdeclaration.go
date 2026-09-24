@@ -138,7 +138,7 @@ func writeCompanyContextTable(b *strings.Builder, c contract, taskNames []string
 // function because the declaration tables it sits beside are already at the
 // length a reader can hold, not because an agent table is a thing apart.
 func writeAgentTable(b *strings.Builder, c contract, taskNames []string) {
-	b.WriteString("// Agent is one scheduled agent of a tool-fed task, and Tools is what it\n")
+	b.WriteString("// Agent is one agent_loop site — a scheduled agent — and Tools is what it\n")
 	b.WriteString("// attaches. The listing rides in EVERY step of that agent's window, so\n")
 	b.WriteString("// this list is both what the run may call and what it pays for in prompt.\n")
 	b.WriteString("//\n")
@@ -148,14 +148,14 @@ func writeAgentTable(b *strings.Builder, c contract, taskNames []string) {
 	b.WriteString("type Agent struct {\n\tName  string\n\tTools []string\n}\n\n")
 	b.WriteString("var taskAgents = map[Task][]Agent{\n")
 	for _, name := range taskNames {
-		agents := c.Tasks[name].Agents
+		agents := agentLoopSites(c.Tasks[name])
 		if len(agents) == 0 {
 			continue
 		}
 		fmt.Fprintf(b, "\t%s: {\n", taskConst(name))
-		for _, agent := range sortedAgentNames(agents) {
-			fmt.Fprintf(b, "\t\t{Name: %q, Tools: []string{", agent)
-			for i, tool := range agents[agent].Tools {
+		for _, agent := range agents {
+			fmt.Fprintf(b, "\t\t{Name: %q, Tools: []string{", agent.Name)
+			for i, tool := range agent.Tools {
 				if i > 0 {
 					b.WriteString(", ")
 				}
@@ -166,7 +166,7 @@ func writeAgentTable(b *strings.Builder, c contract, taskNames []string) {
 		b.WriteString("\t},\n")
 	}
 	b.WriteString("}\n\n")
-	b.WriteString("// AgentsFor returns the task's declared agents in sorted name order. A\n")
+	b.WriteString("// AgentsFor returns the task's agent_loop sites in sorted name order. A\n")
 	b.WriteString("// task that schedules none returns none.\n")
 	b.WriteString("func AgentsFor(t Task) []Agent { return taskAgents[t] }\n\n")
 }

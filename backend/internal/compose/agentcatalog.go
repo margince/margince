@@ -61,8 +61,8 @@ func joinScheduledAgents(specs []runner.AgentSpec, declared []ai.Agent) ([]runne
 		tools, ok := unclaimed[spec.Name]
 		if !ok {
 			return nil, fmt.Errorf(
-				"agent %q is scheduled but the contract declares no tools for it — add it under "+
-					"agent_loop's agents{} in api/ai-tasks.yaml, or the run is narrowed by its passport alone",
+				"agent %q is scheduled but the contract declares no tools for it — declare it as an "+
+					"agent_loop site with its tools in api/ai-tasks.yaml, or the runner refuses its every job",
 				spec.Name)
 		}
 		spec.Tools = slices.Clone(tools)

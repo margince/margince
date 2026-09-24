@@ -70,7 +70,7 @@ func TestADegradeReasonNeverCarriesTheCauseItDegradedOn(t *testing.T) {
 			if tc.cancelled {
 				cancel()
 			}
-			res, err := New(&fakeSurface{}, tc.brain).Run(ctx, Job{Goal: "g", TriggerRef: "morning_brief:2026-08-21"})
+			res, err := New(&fakeSurface{}, tc.brain).Run(ctx, Job{Goal: "g", TriggerRef: "morning_brief:2026-08-21", Tools: []string{"read_record"}})
 			if err != nil {
 				t.Fatalf("a degrade is an answer, not an error: %v", err)
 			}
@@ -113,7 +113,7 @@ func TestEveryClosedReasonSaysWhatStoppedTheRun(t *testing.T) {
 		invalidOutputReason(consecutiveInvalidLimit),
 		string(FailureEditedApprovalCarriedNoChange), string(FailurePassportNoLongerValid),
 		string(FailureSpecLeftTheCatalog), string(FailureRunFaulted),
-		string(FailureCouldNotStart),
+		string(FailureCouldNotStart), unscopedJobReason,
 	} {
 		if strings.TrimSpace(reason) == "" {
 			t.Error("a degrade with no reason tells the reader only that something went wrong")
@@ -133,7 +133,7 @@ func TestEveryClosedReasonSaysWhatStoppedTheRun(t *testing.T) {
 func TestTheCauseWithheldFromTheRowIsHandedToTheOperatorLog(t *testing.T) {
 	logged := captureRunnerLog(t)
 	res, err := New(&fakeSurface{}, failingBrain{}).Run(context.Background(),
-		Job{Goal: "g", TriggerRef: "morning_brief:2026-08-21"})
+		Job{Goal: "g", TriggerRef: "morning_brief:2026-08-21", Tools: []string{"read_record"}})
 	if err != nil {
 		t.Fatal(err)
 	}
