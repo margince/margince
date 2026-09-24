@@ -31,13 +31,13 @@ A message marked "inbound: yes" was sent TO us by someone outside. For those, AL
 they answered: "positive" (interest, a question worth answering, a request to meet or to hear
 more), "negative" (not interested, the wrong contact with no referral, a request to stop
 writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a redirect with no
-view of its own). Omit "reply" entirely for a message marked "inbound: no": we wrote it, so it
-answers nobody. Omit it too when the message does not read as an answer at all. A guess here
-becomes a number somebody is measured on, so leave it out when you cannot tell.
+view of its own). Set "reply" to null for a message marked "inbound: no": we wrote it, so it
+answers nobody. Set it to null too when the message does not read as an answer at all. A guess
+here becomes a number somebody is measured on, so give null when you cannot tell.
 
 "confidence" covers EVERY judgement you emit for that message — the label and, when you give
 one, the reply. Report the LOWEST of the two, not the label's alone. If you are sure of the
-label and unsure of the reply, either omit the reply or let the lower number stand for both.`
+label and unsure of the reply, either set the reply to null or let the lower number stand for both.`
 
 // SystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func SystemFor(fence promptfence.Fence) string {
