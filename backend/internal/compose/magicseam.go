@@ -61,10 +61,14 @@ func newMagicService(
 // separate because each satisfies its own consumer's interface.
 type magicPendingDecisions struct{ svc *approvals.Service }
 
+// stagedAndUndecided is the status the inbox filter takes, spelled as the
+// contract spells it so this seam and the day's cannot drift apart from it.
+var stagedAndUndecided = string(crmcontracts.ApprovalStatusPending)
+
 func (m magicPendingDecisions) PendingApprovals(
 	ctx context.Context, limit int,
 ) ([]crmcontracts.Approval, error) {
-	status := "pending"
+	status := stagedAndUndecided
 	rows, _, err := m.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: limit})
 	return rows, err
 }

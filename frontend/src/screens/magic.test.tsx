@@ -121,9 +121,7 @@ describe("the receipt draws every lane it promises", () => {
     );
     renderMagic();
     expect(
-      await screen.findByText(
-        "Source not available to you: Proposals",
-      ),
+      await screen.findByText("Source not available to you: Proposals"),
     ).toBeTruthy();
     // The lane the refusal belongs to is EMPTY, and saying so would report a
     // clear queue over an answer nobody could read.
@@ -305,5 +303,22 @@ describe("the receipt draws every lane it promises", () => {
     renderMagic();
     await screen.findByText("Needs restoring");
     expect(screen.queryByText(/Failing since/)).toBeNull();
+  });
+
+  // A RESPONSE THIS CLIENT DID NOT EXPECT MUST NOT TAKE THE PAGE DOWN.
+  //
+  // The panel sits on Home beside every other section, so a field read off a
+  // shape the server did not send throws inside the shell's render and costs a
+  // reader the whole screen, not one card. Version skew is the ordinary way
+  // that happens.
+  it("draws without a count rather than throwing on a receipt it cannot read", async () => {
+    stub({ data: [] } as unknown as ReturnType<typeof receipt>);
+    renderMagic();
+    // Waited for the state the DATA produces, not the heading, which the panel
+    // draws while the read is still in flight and which would pass over a
+    // render that throws the moment the answer lands.
+    await waitFor(() => {
+      expect(screen.getAllByText(/Some data did not load/)).toHaveLength(4);
+    });
   });
 });

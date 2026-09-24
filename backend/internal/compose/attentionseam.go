@@ -59,7 +59,7 @@ func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQ
 // cap, so the number stops being exact only once it is already large enough to
 // mean the same thing to a reader.
 func (a attentionApprovals) CountPending(ctx context.Context) (int, error) {
-	status := "pending"
+	status := stagedAndUndecided
 	rows, _, err := a.svc.ListWire(ctx, approvals.ListInput{
 		Status: &status,
 		Limit:  approvals.PendingScanCap,

@@ -97,7 +97,7 @@ export function MagicPanel() {
       // happened" over an hour and over a day are different claims, and only
       // the server knows which one this page is making.
       footer={
-        receipt &&
+        receipt?.since &&
         t("magic.since", {
           when: formatDateTime(receipt.since, locale, zone),
         })
@@ -199,7 +199,10 @@ function MagicLaneSection({
   const answered = listReadState(read, rows);
   const state =
     answered === "empty" && !canReportEmpty ? "unavailable" : answered;
-  const count = receipt?.totals[lane];
+  // Optional all the way down: a response missing this field is a server older
+  // or newer than this client, and a receipt that renders without a count beats
+  // a panel that throws and takes the page with it.
+  const count = receipt?.totals?.[lane];
   return (
     <section className="magic-lane">
       <div className="magic-lane-head">
