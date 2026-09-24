@@ -287,7 +287,7 @@ func (e *loadEnv) waitingAgedFrom(t *testing.T, subject, address string, contact
 // unjudged reads the backlog as a set of ids.
 func unjudged(t *testing.T, e *loadEnv) map[ids.UUID]bool {
 	t.Helper()
-	rows, _, err := storeKnowing(e).OwedBacklog(asClassifier(e), time.Now(), 100, 400, 400)
+	rows, _, err := storeKnowing(e).OwedBacklog(asClassifier(e), rulesetNew, time.Now(), 100, 400, 400)
 	if err != nil {
 		t.Fatalf("reading the unjudged backlog: %v", err)
 	}
@@ -301,7 +301,7 @@ func unjudged(t *testing.T, e *loadEnv) map[ids.UUID]bool {
 // candidate reads one message out of the backlog, failing if it is absent.
 func candidate(t *testing.T, e *loadEnv, id ids.UUID) OwedCandidate {
 	t.Helper()
-	rows, _, err := storeKnowing(e).OwedBacklog(asClassifier(e), time.Now(), 100, 400, 400)
+	rows, _, err := storeKnowing(e).OwedBacklog(asClassifier(e), rulesetNew, time.Now(), 100, 400, 400)
 	if err != nil {
 		t.Fatalf("reading the unjudged backlog: %v", err)
 	}

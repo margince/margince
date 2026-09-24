@@ -15,7 +15,9 @@ package activities
 //
 // ClassifyBacklogPredicate is therefore ONE string, used verbatim by the backlog
 // query and by the single-row question below. They cannot disagree, because
-// there is nothing to disagree with.
+// there is nothing to disagree with. It is built by a function only because one
+// arm compares against the classify prompt's digest, which each caller binds as
+// its own placeholder.
 
 import (
 	"context"
@@ -41,7 +43,11 @@ import (
 // labelling routes attention, and a message from someone the workspace has not
 // yet decided is a counterparty at all should not compete for it — least of all
 // when the pending question may resolve to `noise` and hide it.
-const ClassifyBacklogPredicate = `capture_label IS NULL
+//
+// rulesetParam is the placeholder the caller bound the classify prompt's digest
+// to: a decline stands only against the prompt that was declined.
+func ClassifyBacklogPredicate(rulesetParam string) string {
+	return `capture_label IS NULL
 	  AND captured_by LIKE 'connector:%' AND kind = 'email'
 	  AND archived_at IS NULL
 	  -- A limited message is not labelled. The label is derived from the
@@ -54,13 +60,15 @@ const ClassifyBacklogPredicate = `capture_label IS NULL
 	  -- path (A165/ADR-0114 §2), and the label pass is a model call over its
 	  -- text — precisely the further processing the hold bars.
 	  AND restricted_at IS NULL
-	  -- Every rung declined to label it (MarkCaptureLabelDeclined): asking
-	  -- again would be refused again, and paid for on every tick.
-	  AND capture_label_declined_at IS NULL
+	  -- Every rung declined to label it under THIS prompt
+	  -- (MarkCaptureLabelDeclined): asking again would be refused again, and
+	  -- paid for on every tick. A decline under an older prompt is re-offered.
+	  AND ` + captureLabelDecline.offeredSQL("", rulesetParam) + `
 	  AND NOT EXISTS (
 	    SELECT 1 FROM capture_pending_counterparty p
 	     WHERE p.email = activity.counterparty_email
 	       AND p.status IN ('pending', 'unsure'))`
+}
 
 // PipelineFacts is one activity's contribution to its own pipeline ladder.
 //
@@ -103,9 +111,16 @@ type PipelineFacts struct {
 // The compose assembler gates first as well, and that is still not sufficient:
 // a guard the caller supplies is a guard the next caller can forget, and this
 // read is reachable from two doors.
-func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFacts, error) {
+//
+// classifyRuleset is the digest of the classify prompt that ships, the one the
+// backlog is read under, so "the models declined it" is answered for the prompt
+// that would be asked next rather than for one retired since.
+func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID, classifyRuleset string) (PipelineFacts, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return PipelineFacts{}, err
+	}
+	if classifyRuleset == "" {
+		return PipelineFacts{}, fmt.Errorf("activities: reading pipeline facts: %w", errRulesetUnnamed)
 	}
 	var out PipelineFacts
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -125,13 +140,13 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 			  captured_by,
 			  archived_at IS NOT NULL,
 			  audience <> 'workspace',
-			  capture_label_declined_at IS NOT NULL,
+			  NOT `+captureLabelDecline.offeredSQL("", "$3")+`,
 			  EXISTS (SELECT 1 FROM capture_pending_counterparty p
 			           WHERE p.email = activity.counterparty_email
 			             AND p.status = ANY($2)),
-			  (`+ClassifyBacklogPredicate+`)
+			  (`+ClassifyBacklogPredicate("$3")+`)
 			FROM activity
-			WHERE id = $1`, id, pipelinetrace.OpenDispositionStatuses())
+			WHERE id = $1`, id, pipelinetrace.OpenDispositionStatuses(), classifyRuleset)
 		if err := row.Scan(&out.HasContactLink, &label, &threadKey, &kind, &capturedBy,
 			&archived, &audienceLimited, &declined, &senderUndecided, &eligible); err != nil {
 			return err

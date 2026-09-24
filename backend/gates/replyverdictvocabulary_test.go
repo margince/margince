@@ -101,9 +101,13 @@ func TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 	// And the PROMPT has to offer every word too. Read from the system prompt
 	// alone, for the same reason the map is: a word appearing anywhere in the
 	// file would satisfy a whole-file search after the prompt stopped naming it.
-	systemPrompt := between(string(engine), "const classifySystem = `", "`")
+	promptSurface, err := os.ReadFile("internal/compose/capturelabel/prompt.go")
+	if err != nil {
+		t.Fatalf("reading the classify prompt: %v", err)
+	}
+	systemPrompt := between(string(promptSurface), "const system = `", "`")
 	if systemPrompt == "" {
-		t.Fatal("no `const classifySystem` in the classify engine — the prompt this gate measures has moved")
+		t.Fatal("no `const system` in the classify prompt surface — the prompt this gate measures has moved")
 	}
 	for _, verdict := range fromDB {
 		if !strings.Contains(schemaEnum, `"`+verdict+`"`) {

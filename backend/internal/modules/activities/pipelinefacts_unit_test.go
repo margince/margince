@@ -112,9 +112,9 @@ func TestTheBacklogPredicateIsTheOneTheReaderAsks(t *testing.T) {
 	// of the predicate's text.
 	for _, clause := range []string{
 		"capture_label IS NULL", "captured_by LIKE 'connector:%'", "kind = 'email'",
-		"archived_at IS NULL", "capture_pending_counterparty",
+		"archived_at IS NULL", "capture_pending_counterparty", "capture_label_declined_ruleset",
 	} {
-		if !strings.Contains(ClassifyBacklogPredicate, clause) {
+		if !strings.Contains(ClassifyBacklogPredicate("$1"), clause) {
 			t.Errorf("the shared predicate no longer contains %q — if the backlog's "+
 				"rule changed, the trace's explanation of it must change with it", clause)
 		}

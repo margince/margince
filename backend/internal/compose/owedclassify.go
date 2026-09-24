@@ -169,7 +169,7 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 		maxVerdicts = owedCatchUpCap
 	}
 	if err := c.drain(ctx, maxVerdicts, "backlog", func() ([]owedCandidate, time.Time, error) {
-		return c.store.OwedBacklog(ctx, c.now(), owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
+		return c.store.OwedBacklog(ctx, owedverdict.Ruleset, c.now(), owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
 	}); err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func (c *OwedClassifier) judgeEach(ctx context.Context, msgs []owedCandidate, re
 		}
 		solo, err := c.ask(ctx, []owedCandidate{msg})
 		if declinedByTheModels(err) {
-			recorded, markErr := c.store.MarkOwedVerdictDeclined(ctx, msg.ID)
+			recorded, markErr := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
 			if markErr != nil {
 				return judged, markErr
 			}
