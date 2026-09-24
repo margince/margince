@@ -499,7 +499,7 @@ describe("UsersAdminCard", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    expect(screen.queryByLabelText("New user's email")).toBeNull();
+    expect(screen.queryByLabelText("Email")).toBeNull();
     const dialog = await openInvite();
     // The dialog's own submit reads the plain form of the verb, so the two are
     // tellable apart — for a reader and for `getByRole`.

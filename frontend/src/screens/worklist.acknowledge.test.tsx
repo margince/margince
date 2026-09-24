@@ -154,7 +154,7 @@ describe("settling a notice", () => {
     await user.click(screen.getByRole("button", { name: "Got it" }));
 
     expect(
-      await screen.findByText("That could not be marked as seen."),
+      await screen.findByText("Item was not marked as seen. Retry."),
     ).toBeTruthy();
     expect(screen.getByText("A deal you own changed stage")).toBeTruthy();
   });

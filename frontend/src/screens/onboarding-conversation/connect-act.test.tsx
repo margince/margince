@@ -112,7 +112,7 @@ it("offers Microsoft as a live card and opens its dialog", async () => {
   expect(await screen.findByRole("dialog")).toBeTruthy();
   expect(
     await screen.findByRole("button", {
-      name: "Allow access to my Microsoft",
+      name: "Connect Microsoft",
     }),
   ).toBeTruthy();
 });
@@ -265,7 +265,7 @@ it("marks this tab's own attempt before the real redirect fires", async () => {
   renderConnectAct();
   await userEvent.click(screen.getByRole("button", { name: /Microsoft/ }));
   await userEvent.click(
-    screen.getByRole("button", { name: "Allow access to my Microsoft" }),
+    screen.getByRole("button", { name: "Connect Microsoft" }),
   );
   await waitFor(() => expect(assign).toHaveBeenCalled());
   expect(sessionStorage.getItem("ob.connect.oauthAttempt")).toBe("graph");
@@ -393,14 +393,14 @@ it("asks how far back to read once the mailbox is confirmed", async () => {
   renderConnectAct("ok");
   expect(
     await screen.findByRole("heading", {
-      name: "How far back should I read?",
+      name: "Import period",
     }),
   ).toBeTruthy();
   // Exactly one history-read decision on the surface — the standalone
   // Settings-style backfill panel is not a second one stacked beside it.
-  expect(screen.queryByText("Import your mail history")).toBeNull();
+  expect(screen.queryByText("Import mailbox history")).toBeNull();
   expect(
-    screen.getAllByRole("heading", { name: "How far back should I read?" }),
+    screen.getAllByRole("heading", { name: "Import period" }),
   ).toHaveLength(1);
 });
 
@@ -420,7 +420,7 @@ it("closes the backread onto the surface and finishes only from the surface's Co
   const { dispatch, persist } = renderConnectAct("ok");
 
   await userEvent.click(
-    await screen.findByRole("button", { name: "Continue while it reads" }),
+    await screen.findByRole("button", { name: "Continue during import" }),
   );
 
   // Nothing left the step; the result is gone and the LinkedIn card is
@@ -462,7 +462,7 @@ it("declining the history read closes the result without starting one or leaving
   const { dispatch } = renderConnectAct("ok");
 
   await userEvent.click(
-    await screen.findByRole("button", { name: "Do not read history now" }),
+    await screen.findByRole("button", { name: "Skip history import" }),
   );
 
   await waitFor(() =>
@@ -520,7 +520,7 @@ it("stops offering the mailbox-less exit once consent has returned", async () =>
 it("keeps the mailbox-less exit open when consent returned but no mailbox could be confirmed", async () => {
   stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
   renderConnectAct("ok");
-  await screen.findByText("We couldn't confirm the connection.");
+  await screen.findByText("The connection could not be confirmed.");
   expect(
     screen.getByRole("button", { name: "Continue without a mailbox" }),
   ).toBeInTheDocument();
@@ -783,7 +783,7 @@ describe("dismissal during an in-flight connect request", () => {
     await userEvent.click(screen.getByRole("button", { name: /Microsoft/ }));
     await userEvent.click(
       screen.getByRole("button", {
-        name: "Allow access to my Microsoft",
+        name: "Connect Microsoft",
       }),
     );
     await waitFor(() =>
@@ -978,7 +978,7 @@ it("says why every mail card is disabled when the roster read fails, and offers 
   renderConnectAct();
 
   expect(
-    await screen.findByText("Could not check your mailboxes"),
+    await screen.findByText("Mailboxes could not be checked"),
   ).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Google/ })).toBeDisabled();
 
@@ -988,7 +988,7 @@ it("says why every mail card is disabled when the roster read fails, and offers 
     expect(screen.getByRole("button", { name: /Google/ })).not.toBeDisabled(),
   );
   expect(
-    screen.queryByText("Could not check your mailboxes"),
+    screen.queryByText("Mailboxes could not be checked"),
   ).not.toBeInTheDocument();
 });
 

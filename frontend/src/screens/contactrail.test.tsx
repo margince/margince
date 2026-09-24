@@ -308,7 +308,7 @@ function section(heading: string): HTMLElement {
   throw new Error(`the rail drew no section headed "${heading}"`);
 }
 
-const WITHHELD_SENTENCE = "Hidden — your role cannot read this";
+const WITHHELD_SENTENCE = "Hidden for your role";
 
 // contactStanding is the one line of relationship standing the record's head
 // carries: a pure derivation from the two touch timestamps, tested directly

@@ -8,7 +8,7 @@ import { plain, type SpokenLine } from "./ai-activity-speak";
 // The rail's own line, split out of agentrail.test.tsx because that file is over
 // the 1000-line ceiling this tree holds test files to.
 
-const IDLE = "Nothing needs you";
+const IDLE = "Nothing needs attention";
 const READING = "Reading companies";
 const WRITING = "Saving the deal";
 

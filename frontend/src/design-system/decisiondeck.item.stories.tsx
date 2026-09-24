@@ -53,7 +53,7 @@ const CARD: DecisionCardLabels = {
   expired: "This ran out of time before anyone answered it.",
   draftSubject: "Subject",
   draftBody: "Message",
-  showMore: "Show the whole message",
+  showMore: "Show full message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",
   loading: "Reading the proposal",
@@ -62,7 +62,7 @@ const CARD: DecisionCardLabels = {
 const LABELS: DecisionDeckLabels = {
   card: CARD,
   deckLabel: "Waiting on you",
-  viewLabel: "How the queue is shown",
+  viewLabel: "View",
   viewDeck: "Deck",
   viewList: "List",
   keys: "→ stages accept, ← reject, ↑ edit, ↓ later. Enter sends.",
@@ -72,7 +72,7 @@ const LABELS: DecisionDeckLabels = {
   skipped: (count) => `${count} skipped`,
   commitNothingToSend: "Clear skipped",
   commit: "Send staged decisions",
-  unstage: "Undo the last one",
+  unstage: "Undo last",
   clearedTitle: "Deck clear",
   cleared: (count) => `${count} decisions sent`,
   clearedTime: () => "at 09:00",
@@ -157,7 +157,7 @@ export const ARowAtListDensity: Story = {
     layout: "row" as const,
     labels: {
       ...LABELS,
-      compactRow: { detail: "What is being proposed", more: "Other answers" },
+      compactRow: { detail: "Proposal", more: "More options" },
     },
   },
 };

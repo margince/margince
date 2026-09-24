@@ -193,7 +193,7 @@ export const AFullDay: Story = {
           category: "decisions",
           level: 6,
           consequence: "data_drifts",
-          title: "Add someone from your mail",
+          title: "Add contact from mail",
           because: [{ kind: "routine" }],
           actions: ["decide"],
         },

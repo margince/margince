@@ -148,7 +148,7 @@ describe("the licence stays out of the orb and its line", () => {
       () => {
         expect(coreState(container)).toBe("working");
         expect(container.querySelector(".arline")?.textContent).toBe(
-          "I'm writing your morning brief.",
+          "Preparing Morning brief…",
         );
       },
       { timeout: 3000 },

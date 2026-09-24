@@ -391,7 +391,7 @@ describe("adding a document from the account", () => {
     const submit = screen.getByRole("button", { name: "Upload" });
     await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(true));
     expect(
-      screen.getByText("Pick the deal to file this against."),
+      screen.getByText("Select the deal to file this under."),
     ).toBeTruthy();
     await user.click(submit);
     expect(uploads(calls)).toHaveLength(0);
@@ -533,7 +533,7 @@ describe("adding a document from the account", () => {
     // is already on the record.
     expect(closed).not.toHaveBeenCalled();
     expect(
-      screen.getByText("Drop the file here, or click to choose one"),
+      screen.getByText("Drop a file here, or click to choose one"),
     ).toBeTruthy();
   });
 
@@ -572,7 +572,7 @@ describe("adding a document from the account", () => {
     await user.upload(screen.getByLabelText(/File/), orderForm());
     await waitFor(() =>
       expect(
-        screen.getByText("You may not add documents to this record."),
+        screen.getByText("You do not have permission to add documents to this record."),
       ).toBeTruthy(),
     );
     // The seat is clamped by the server on the METHOD, before RBAC — a grant
@@ -630,7 +630,7 @@ describe("adding a document from the account", () => {
     view.rerender(dialog(true));
 
     expect(
-      await screen.findByText("Drop the file here, or click to choose one"),
+      await screen.findByText("Drop a file here, or click to choose one"),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Upload" })).toBeTruthy();
     expect(await screen.findByText("Choose a file to upload.")).toBeTruthy();
@@ -659,12 +659,12 @@ describe("adding a document from the account", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     release?.();
     await waitFor(() =>
-      expect(screen.queryByText("Add a document")).toBeNull(),
+      expect(screen.queryByText("Add document")).toBeNull(),
     );
 
     await user.click(screen.getByRole("button", { name: "reopen" }));
     expect(
-      await screen.findByText("Drop the file here, or click to choose one"),
+      await screen.findByText("Drop a file here, or click to choose one"),
     ).toBeTruthy();
     expect(screen.queryByText(/Uploaded, but not filed/)).toBeNull();
   });

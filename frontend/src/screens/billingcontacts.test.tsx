@@ -106,7 +106,7 @@ it("shows nothing on a contact who handles nobody's invoices", () => {
   // handle no invoices, and an empty panel on every contact page in the
   // product would be noise stating the obvious.
   render(<ContactBillingRoles companies={[]} />);
-  expect(screen.queryByText("Handles invoices for")).toBeNull();
+  expect(screen.queryByText("Billing roles")).toBeNull();
 });
 
 it("names the companies a contact bills for", () => {
@@ -122,7 +122,7 @@ it("names the companies a contact bills for", () => {
       ]}
     />,
   );
-  expect(screen.getByText("Handles invoices for")).toBeTruthy();
+  expect(screen.getByText("Billing roles")).toBeTruthy();
   expect(screen.getByText("Acme")).toBeTruthy();
   expect(screen.getByText("Approves")).toBeTruthy();
 });
@@ -215,7 +215,7 @@ it("offers no verbs at all on a company this reader cannot write", async () => {
   // Who is invoiced still renders: that is a fact a read-only reader is
   // entitled to. What goes is every way to change it.
   expect(screen.getByText("Pat Okafor")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Name somebody" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add contact" })).toBeNull();
   expect(
     screen.queryByRole("button", { name: /^Change the capacity/ }),
   ).toBeNull();
@@ -236,7 +236,7 @@ it("offers no verbs to a reader without the relationship grant", async () => {
   render(<BillingContactsPanel contacts={[PAT]} companyId={COMPANY} />);
   await settled(seen);
   expect(screen.getByText("Pat Okafor")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Name somebody" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add contact" })).toBeNull();
   expect(
     screen.queryByRole("button", { name: /^Change the capacity/ }),
   ).toBeNull();
@@ -269,7 +269,7 @@ it("offers naming and changing but not Remove to a seat that cannot delete", asy
   // true while the grant snapshot is still in flight — which makes an
   // absence assertion pass against a panel that simply has not decided yet.
   expect(
-    await screen.findByRole("button", { name: "Name somebody" }),
+    await screen.findByRole("button", { name: "Add contact" }),
   ).toBeTruthy();
   expect(
     screen.getByRole("button", { name: /^Change the capacity/ }),

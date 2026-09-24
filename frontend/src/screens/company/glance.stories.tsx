@@ -125,5 +125,5 @@ export const Opened: Story = {
 // own empty state rather than teasing an exchange it cannot promise.
 export const NothingLogged: Story = {
   render: () => <Fold data={view([])} />,
-  play: openTheFold("What happened"),
+  play: openTheFold("Meeting notes"),
 };

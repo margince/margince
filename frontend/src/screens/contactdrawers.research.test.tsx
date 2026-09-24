@@ -271,6 +271,6 @@ describe("the research drawer mapping claims to profile fields", () => {
     rerender(ui(true));
 
     await screen.findByText(acmeClaim.body);
-    expect(field().textContent).toContain("Choose a field");
+    expect(field().textContent).toContain("Select field");
   });
 });

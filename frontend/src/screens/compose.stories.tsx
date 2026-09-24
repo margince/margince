@@ -28,8 +28,8 @@ import {
 // It is the WHY that satisfies the send precondition. The consent purposes are
 // served below because the composer reads them, but a reader never picks one —
 // the answer here is what the send derives its purpose from.
-const WHY_ASK = "Why are you writing?";
-const WHY_ANSWER = "They asked me to get in touch";
+const WHY_ASK = "Reason for contact";
+const WHY_ANSWER = "Follow-up they requested";
 
 // One consent purpose is enough to satisfy the Send precondition and populate
 // the purpose dropdown; its `label` is what the story clicks and its `key`
@@ -156,7 +156,7 @@ async function composerOnScreen() {
 // so a story reaches the send outcome (409 gate / 501 unavailable) it captures.
 //
 // EVERY FIELD BY THE NAME A READER SEES, never by a placeholder: the subject's
-// placeholder is the example copy ("What it is about") and the body is a
+// placeholder is the example copy ("Topic of the email") and the body is a
 // contentEditable `RichText` that has none at all, so the placeholder queries
 // this helper used to make could not match anything the composer draws.
 //

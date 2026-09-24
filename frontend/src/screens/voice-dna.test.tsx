@@ -183,13 +183,13 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     stubApi();
     render(<VoiceDnaCard />);
     // The row names the sample; the zone under it is the control.
-    expect(await screen.findByLabelText("Your first writing sample")).toBe(
+    expect(await screen.findByLabelText("First writing sample")).toBe(
       fileInput(),
     );
     // What to add, why, and how much: the part onboarding narrates and a bare
     // row used to leave out.
-    expect(screen.getByText("What works best")).toBeTruthy();
-    expect(screen.getByText("Why this matters")).toBeTruthy();
+    expect(screen.getByText("Best samples")).toBeTruthy();
+    expect(screen.getByText("Why add samples")).toBeTruthy();
     expect(screen.getByText(/800 words minimum/)).toBeTruthy();
     // No paste box: files are the one way in here.
     expect(screen.queryByRole("textbox")).toBeNull();
@@ -198,7 +198,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
   it("mints exactly one profile on the first add and then shows the build control", async () => {
     const calls = stubApi();
     render(<VoiceDnaCard />);
-    await screen.findByLabelText("Your first writing sample");
+    await screen.findByLabelText("First writing sample");
     await userEvent.upload(
       fileInput(),
       new File(["Short sentences. Concrete nouns."], "letter.txt", {
@@ -228,7 +228,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
         /you do not have permission to change your Voice DNA/i,
       ),
     ).toBeTruthy();
-    expect(screen.queryByLabelText("Your first writing sample")).toBeNull();
+    expect(screen.queryByLabelText("First writing sample")).toBeNull();
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
@@ -246,7 +246,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     }
     // The preferences and the derived text are rows inside the voice card once
     // there is a profile; with none, neither is named at all.
-    for (const absent of ["Your preferences", "Your derived voice"]) {
+    for (const absent of ["Preferences", "Derived voice"]) {
       expect(screen.queryByText(absent)).toBeNull();
     }
   });
@@ -296,8 +296,8 @@ describe("the Settings Voice DNA card with a profile", () => {
     if (!voice) {
       throw new Error("the voice heading is not inside a card");
     }
-    expect(within(voice).getByText("Your preferences")).toBeTruthy();
-    expect(within(voice).getByText("Your derived voice")).toBeTruthy();
+    expect(within(voice).getByText("Preferences")).toBeTruthy();
+    expect(within(voice).getByText("Derived voice")).toBeTruthy();
   });
 
   it("keeps the corpus and the way to add to it in one card", async () => {
@@ -330,7 +330,7 @@ describe("the Settings Voice DNA card with a profile", () => {
     // The preferences box takes its name from the row that names the decision,
     // so the words on screen and the name it announces are one string.
     expect(
-      await screen.findByRole("textbox", { name: "Your preferences" }),
+      await screen.findByRole("textbox", { name: "Preferences" }),
     ).toBeTruthy();
     // The file control takes its name from the row above the zone.
     expect(screen.getByLabelText("Add writing samples")).toBe(fileInput());

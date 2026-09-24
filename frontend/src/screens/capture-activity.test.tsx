@@ -283,7 +283,7 @@ describe("capture activity", () => {
         ],
       }),
     );
-    // "Waiting on a verdict" alone would tell the reader to wait for an answer
+    // "Awaiting classification" alone would tell the reader to wait for an answer
     // that is never coming.
     expect(
       await screen.findByText(/no verdict is coming/i),
@@ -348,7 +348,7 @@ describe("capture activity", () => {
 
   it("does not say a capped deferral is waiting for a verdict", async () => {
     // The outcome and its own explanation must not argue: nothing is queued and
-    // no verdict is coming, so "Waiting on a verdict" above "no verdict is
+    // no verdict is coming, so "Awaiting classification" above "no verdict is
     // coming" is the screen contradicting itself.
     renderTab(
       windowBody({
@@ -370,7 +370,7 @@ describe("capture activity", () => {
   it("keeps the deferred bucket's tense, because the count is only the waiting", async () => {
     // The bucket used to be one number over both the settled and the
     // still-waiting, so a tense in its label was a claim it could not support
-    // and it read "Sent for a verdict" instead. The server now counts a judged
+    // and it read "Sent for check" instead. The server now counts a judged
     // sender's message under the answer, so `deferred` IS the waiting — and the
     // label a human opens this page for is the one it could not say before.
     renderTab(
@@ -692,7 +692,7 @@ describe("capture activity", () => {
     }
     // The block list is on this page at all — it used to live two tabs away
     // under Company, behind a door most seats cannot open.
-    expect(await screen.findByText("Keep out of capture")).toBeInTheDocument();
+    expect(await screen.findByText("Capture exclusions")).toBeInTheDocument();
     // And the log is closed, so nothing about one message is on screen until
     // somebody asks for it.
     const log = await logDisclosure();

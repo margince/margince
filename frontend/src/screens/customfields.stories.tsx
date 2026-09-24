@@ -174,10 +174,10 @@ export const BuilderRefusal: Story = {
     // the claim itself and the verb it keeps dead, which is what the co-located
     // test asserts too.
     await canvas.findByText(
-      "That looks like a new object or relationship, not a field.",
+      "This looks like a new object or relationship",
     );
     await expect(
-      canvas.getByRole("button", { name: "Confirm & add field" }),
+      canvas.getByRole("button", { name: "Add field" }),
     ).toBeDisabled();
   },
 };

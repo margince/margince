@@ -147,7 +147,7 @@ describe("VoiceCollectScene", () => {
       screen.getByRole("button", { name: "Paste text instead" }),
     );
     const add = screen.getByRole("button", {
-      name: "Yes, add it to my corpus.",
+      name: "Add it to my corpus.",
     });
     expect(add).toBeDisabled();
 
@@ -175,7 +175,7 @@ describe("VoiceCollectScene", () => {
       "Something",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "No, discard it." }),
+      screen.getByRole("button", { name: "Discard it." }),
     );
 
     expect(onAddPaste).not.toHaveBeenCalled();
@@ -480,7 +480,7 @@ describe("VoiceResultScene", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Not quite me — add more writing" }),
+      screen.getByRole("button", { name: "Not quite me: add more writing" }),
     );
     expect(onRevise).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByRole("button", { name: "That is me" }));

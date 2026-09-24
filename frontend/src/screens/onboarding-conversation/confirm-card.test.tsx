@@ -280,7 +280,7 @@ describe("a field the read did not return", () => {
     // row is empty — the same line the manual path shows, where nothing ever
     // read a site to have missed it.
     await user.click(within(offer).getByRole("button", { name: "Show less" }));
-    expect(offer).toHaveTextContent("Nothing here yet. Yours to add.");
+    expect(offer).toHaveTextContent("Nothing here yet. Add it manually.");
   });
 });
 

@@ -25,7 +25,7 @@ afterEach(() => {
 
 describe("a live contact that is not the viewer's to change refuses its core write verbs", () => {
   const sentence =
-    "You cannot change this contact. Ask their owner to share them with you, or your administrator for the right to edit them.";
+    "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights.";
   const notMine: Contact360 = {
     ...view,
     contact: { ...view.contact, owner_id: "u-other", writable: false },

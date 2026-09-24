@@ -50,7 +50,7 @@ describe("the standing beside the step", () => {
 
     expect(await screen.findByText("Blocked")).toBeTruthy();
     expect(screen.getByText("Legal has not returned the DPA.")).toBeTruthy();
-    expect(screen.getByText("Margince believes")).toBeTruthy();
+    expect(screen.getByText("Assessment")).toBeTruthy();
   });
 
   // The night's finding is prose about the deal and carries no standing word.
@@ -86,7 +86,7 @@ describe("the standing beside the step", () => {
     renderWorklist();
 
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
-    expect(screen.queryByText("Margince believes")).toBeNull();
+    expect(screen.queryByText("Assessment")).toBeNull();
     // The deterministic explanation is still there.
     expect(screen.getByText(/41/)).toBeTruthy();
   });

@@ -183,7 +183,7 @@ describe("BriefScreen — the context rail", () => {
 
     expect(await screen.findByText(/rejected our credentials/i)).toBeTruthy();
     await user.click(
-      screen.getByRole("button", { name: "Fix the connection" }),
+      screen.getByRole("button", { name: "Fix connector" }),
     );
     expect(window.location.hash).toBe("#/settings/connections");
   });
@@ -200,7 +200,7 @@ describe("BriefScreen — the context rail", () => {
 
     await screen.findByText("Overnight");
     expect(
-      screen.queryByRole("button", { name: "Fix the connection" }),
+      screen.queryByRole("button", { name: "Fix connector" }),
     ).toBeNull();
   });
 

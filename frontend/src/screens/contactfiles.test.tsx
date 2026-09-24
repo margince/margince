@@ -395,7 +395,7 @@ describe("the contact's files tab", () => {
     // The verb the tab shipped without: a reader who wants a CV on a contact
     // had to reach the upload from the account's library and change its parent.
     await user.click(
-      await screen.findByRole("button", { name: "Add a document" }),
+      await screen.findByRole("button", { name: "Add document" }),
     );
     await user.upload(
       screen.getByLabelText(/File/),

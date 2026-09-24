@@ -54,7 +54,7 @@ describe("BriefGlance — the greeting follows the reader's own hour", () => {
   // would move the heading under the reader a moment after they read it.
   it("greets the hour with no name at all while the session is in flight", () => {
     expect(greetingAt(9, null)).toBe("Good morning.");
-    expect(greetingAt(2, null)).toBe("Still at it.");
+    expect(greetingAt(2, null)).toBe("Good evening.");
   });
 
   it("draws no line for a reading it was not given", () => {

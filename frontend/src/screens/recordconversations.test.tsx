@@ -122,7 +122,7 @@ describe("whose move a conversation is waiting on", () => {
     expect(
       row &&
         Array.from(row.querySelectorAll(".badge")).map((b) => b.textContent),
-    ).toContain("Waiting on them");
+    ).toContain("Awaiting reply");
   });
 });
 
@@ -228,7 +228,7 @@ describe("a withheld newest message", () => {
     expect(badges).not.toContain("Your move");
     // And not the other verdict either: a withheld row claims no move in
     // either direction, rather than quietly reporting the opposite one.
-    expect(badges).not.toContain("Waiting on them");
+    expect(badges).not.toContain("Awaiting reply");
   });
 
   it("keeps the withheld member's words off the card, open as it is", () => {
@@ -295,13 +295,13 @@ describe("a record with no conversations", () => {
   it("says so honestly rather than drawing an empty list", () => {
     draw([group("call-1", [entry("call", { id: "call-1" })])]);
 
-    expect(screen.getByText("No conversations with them yet.")).toBeTruthy();
+    expect(screen.getByText("No conversations yet.")).toBeTruthy();
   });
 
   it("says so for a record with no chronology at all", () => {
     draw([]);
 
-    expect(screen.getByText("No conversations with them yet.")).toBeTruthy();
+    expect(screen.getByText("No conversations yet.")).toBeTruthy();
   });
 });
 

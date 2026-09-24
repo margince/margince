@@ -249,7 +249,7 @@ it("renders call badges and expands the attempt and payload detail", async () =>
   expect(toggle.getAttribute("aria-expanded")).toBe("true");
   expect(await screen.findByText(/retry_on_5xx/)).toBeTruthy();
   expect(screen.getByText("Request payload")).toBeTruthy();
-  expect(screen.getByText("Export as cert scenario")).toBeTruthy();
+  expect(screen.getByText("Export certification scenario")).toBeTruthy();
 });
 
 // The filter is a settings row now: the row draws the label and the Select is

@@ -561,7 +561,7 @@ describe("ListTable: pending, error and empty states", () => {
       .mockResolvedValue(emptyPage());
     render(<ListTableHarness fetchPage={fetchPage} />);
 
-    await screen.findByText("Couldn't load this view.");
+    await screen.findByText("Could not load this view. Reload the page.");
     expect(screen.getByText("missing scope contacts:read")).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
@@ -1129,7 +1129,7 @@ describe("two chips on one list", () => {
     // surface — rather than only the chip being changed — would drop the owner
     // answer here, so picking a lifecycle would silently widen the list back to
     // every owner while the owner chip still showed "Unassigned".
-    await user.click(screen.getByRole("button", { name: "Account lifecycle" }));
+    await user.click(screen.getByRole("button", { name: "Lifecycle" }));
     await user.click(screen.getByRole("radio", { name: "Customer" }));
 
     await waitFor(() =>

@@ -1028,7 +1028,7 @@ describe("watching a run that is still moving", () => {
     // Over a lookup the reader is watching it is a stale fact dressed as a
     // live one, which is what sent Lars looking for a broken button.
     expect(screen.queryByText(/last call to the provider failed/)).toBeNull();
-    expect(await screen.findByText("Looking them up…")).toBeDefined();
+    expect(await screen.findByText("Looking up…")).toBeDefined();
   });
 
   // Two phases, and the reader is told which. Once the provider has answered,
@@ -1056,7 +1056,7 @@ describe("watching a run that is still moving", () => {
       </StoryProviders>,
     );
 
-    expect(await screen.findByText("Answer received")).toBeDefined();
+    expect(await screen.findByText("Response received")).toBeDefined();
     expect(screen.queryByText(/Asking Surfe/)).toBeNull();
   });
 
@@ -1086,7 +1086,7 @@ describe("watching a run that is still moving", () => {
       </StoryProviders>,
     );
 
-    await screen.findByText("Answer received");
+    await screen.findByText("Response received");
     expect(screen.queryByRole("button", { name: /Buy / })).toBeNull();
     expect(screen.queryByRole("button", { name: /Check again/ })).toBeNull();
   });

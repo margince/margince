@@ -75,10 +75,10 @@ describe("the hidden-backlog panel", () => {
     draw(backlog({ clear: false, past_horizon: 3, not_sales: 7 }));
 
     await waitFor(() =>
-      expect(screen.getByText("Too old for the queue")).toBeTruthy(),
+      expect(screen.getByText("Too old for the Worklist")).toBeTruthy(),
     );
     expect(screen.getByText("3 waiting")).toBeTruthy();
-    expect(screen.getByText("Judged not sales work")).toBeTruthy();
+    expect(screen.getByText("Marked not sales work")).toBeTruthy();
     expect(screen.getByText("7 waiting")).toBeTruthy();
   });
 
@@ -88,10 +88,10 @@ describe("the hidden-backlog panel", () => {
     draw(backlog({ clear: false, past_horizon: 3 }));
 
     await waitFor(() =>
-      expect(screen.getByText("Too old for the queue")).toBeTruthy(),
+      expect(screen.getByText("Too old for the Worklist")).toBeTruthy(),
     );
     expect(screen.queryByText("Set aside by you")).toBeNull();
-    expect(screen.queryByText("Judged not sales work")).toBeNull();
+    expect(screen.queryByText("Marked not sales work")).toBeNull();
   });
 
   // THE failure this whole reading exists for. A read cut short by its own scan

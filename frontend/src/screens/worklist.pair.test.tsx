@@ -140,7 +140,7 @@ describe("deciding a duplicate pair on the row", () => {
     const fetched = stubOk();
     draw(pairRow());
 
-    await userEvent.click(screen.getByRole("button", { name: "Not the same" }));
+    await userEvent.click(screen.getByRole("button", { name: "Not duplicates" }));
 
     await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
     const body = await bodyOf(fetched);
@@ -183,7 +183,7 @@ describe("deciding a duplicate pair on the row", () => {
     );
     draw(pairRow());
 
-    await userEvent.click(screen.getByRole("button", { name: "Not the same" }));
+    await userEvent.click(screen.getByRole("button", { name: "Not duplicates" }));
 
     expect(
       await screen.findByText(/could not be settled the way you asked/),
@@ -208,7 +208,7 @@ describe("deciding a duplicate pair on the row", () => {
     );
     draw(pairRow());
 
-    await userEvent.click(screen.getByRole("button", { name: "Not the same" }));
+    await userEvent.click(screen.getByRole("button", { name: "Not duplicates" }));
 
     expect(await screen.findByText(/cannot settle this pair/)).toBeTruthy();
     expect(screen.queryByText(/Try again/)).toBeNull();
@@ -241,7 +241,7 @@ describe("deciding a duplicate pair on the row", () => {
       draw(pairRow());
 
       await userEvent.click(
-        screen.getByRole("button", { name: "Not the same" }),
+        screen.getByRole("button", { name: "Not duplicates" }),
       );
 
       expect(await screen.findByRole("button", { name: "Close" })).toBeTruthy();
@@ -264,7 +264,7 @@ describe("deciding a duplicate pair on the row", () => {
     );
     draw(pairRow());
 
-    await userEvent.click(screen.getByRole("button", { name: "Not the same" }));
+    await userEvent.click(screen.getByRole("button", { name: "Not duplicates" }));
 
     expect(await screen.findByText(/Try again/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
@@ -324,7 +324,7 @@ describe("deciding a duplicate pair on the row", () => {
     draw(pairRow());
 
     expect(screen.getByRole("button", { name: "Keep Acme GmbH" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Not the same" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Not duplicates" })).toBeTruthy();
   });
 
   // THE PAIR NOBODY CAN MERGE, which is the case the two above cannot see.
@@ -338,7 +338,7 @@ describe("deciding a duplicate pair on the row", () => {
 
     expect(screen.queryByRole("button", { name: "Keep Acme GmbH" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Keep ACME Gmbh" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Not the same" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Not duplicates" })).toBeTruthy();
     // And NOT the steward sentence: this reader is the one who can act.
     expect(
       screen.queryByText(/Only somebody who can change both records/),
@@ -346,13 +346,13 @@ describe("deciding a duplicate pair on the row", () => {
   });
 
   // The lead line is the question the verbs answer, so it changes with them.
-  // "Which record should survive?" over a card with no Keep button asks for an
+  // "Which record should be kept?" over a card with no Keep button asks for an
   // answer the page will not take.
   it("asks whether they are the same at all when neither can survive", () => {
     draw(pairRow({ actions: ["dismiss"] }));
 
     expect(screen.getByText(/cannot be combined/)).toBeTruthy();
-    expect(screen.queryByText("Which record should survive?")).toBeNull();
+    expect(screen.queryByText("Which record should be kept?")).toBeNull();
   });
 
   // And the ordinary pair still asks its own question, or the case above is
@@ -360,7 +360,7 @@ describe("deciding a duplicate pair on the row", () => {
   it("asks which record survives when the merge is on offer", () => {
     draw(pairRow());
 
-    expect(screen.getByText("Which record should survive?")).toBeTruthy();
+    expect(screen.getByText("Which record should be kept?")).toBeTruthy();
     expect(screen.queryByText(/cannot be combined/)).toBeNull();
   });
 
@@ -372,7 +372,7 @@ describe("deciding a duplicate pair on the row", () => {
     const fetched = stubOk();
     draw(pairRow({ actions: ["dismiss"] }));
 
-    await userEvent.click(screen.getByRole("button", { name: "Not the same" }));
+    await userEvent.click(screen.getByRole("button", { name: "Not duplicates" }));
 
     await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
     const body = await bodyOf(fetched);

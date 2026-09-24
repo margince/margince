@@ -200,8 +200,8 @@ describe("ConfirmModal", () => {
       <ConfirmModal
         open
         onClose={() => undefined}
-        title="Fulfil erasure request"
-        confirmLabel="Erase + suppress"
+        title="Fulfill erasure request"
+        confirmLabel="Erase and suppress"
         confirmVariant="danger"
         confirmDisabled
         onConfirm={onConfirm}
@@ -210,7 +210,7 @@ describe("ConfirmModal", () => {
       </ConfirmModal>,
     );
 
-    const confirm = screen.getByRole("button", { name: "Erase + suppress" });
+    const confirm = screen.getByRole("button", { name: "Erase and suppress" });
     expect((confirm as HTMLButtonElement).disabled).toBe(true);
     // An unmet precondition is not a write in flight. The two used to share
     // one `disabled` on this control, so "type ERASE first" was drawn exactly

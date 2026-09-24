@@ -109,7 +109,7 @@ function backend(opts: {
 
 // StrictMode is not decoration here. An earlier cut of this screen fired the
 // mint from a mount effect; StrictMode's double mount tore the request's
-// observer down and the dialog hung on "Creating the link…" forever — broken on
+// observer down and the dialog hung on "Creating link…" forever — broken on
 // `make dev`, invisible to a suite that rendered without it. Rendering as the
 // dev server does is what makes that class of defect reachable from a test.
 const render = (ui: ReactNode) => {
@@ -302,7 +302,7 @@ describe("admin-issued set-password link", () => {
 
   it("recovers from a transport failure instead of hanging on pending", async () => {
     // An HTTP refusal arrives as `error`; only a network failure rejects. An
-    // uncaught rejection leaves the dialog on "Creating the link…" forever,
+    // uncaught rejection leaves the dialog on "Creating link…" forever,
     // with no way to tell a dead connection from a slow server.
     vi.stubGlobal(
       "fetch",

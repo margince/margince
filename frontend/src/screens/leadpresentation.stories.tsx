@@ -81,7 +81,7 @@ export const CountsUnavailable: Story = {
     await expect(
       await within(canvasElement).findByRole("alert"),
     ).toHaveTextContent(
-      "The Qualified and Disqualified counts could not be read.",
+      "Qualified and Disqualified counts did not load.",
     );
   },
 };

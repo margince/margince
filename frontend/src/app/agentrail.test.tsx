@@ -439,7 +439,7 @@ describe("AgentRail", () => {
     await waitFor(() => {
       const runtime = panel().querySelector(".armeta")?.textContent ?? "";
       expect(runtime).toContain("Development AI");
-      expect(runtime).toContain("offline development path");
+      expect(runtime).toContain("Offline development mode");
     });
   });
 
@@ -945,8 +945,8 @@ describe("AgentRail", () => {
         jsonResponse({ running: [], recent: settled, faults: [fault] }),
     });
 
-  const BRIEF_RUNNING = "I'm writing your morning brief.";
-  const BRIEF_FAILED = "I couldn't finish your morning brief.";
+  const BRIEF_RUNNING = "Preparing Morning brief…";
+  const BRIEF_FAILED = "Morning brief failed.";
 
   const runLines = () =>
     [...panel().querySelectorAll(".arrunline")].map((el) => el.textContent);
@@ -1052,7 +1052,7 @@ describe("AgentRail", () => {
   it("names no record for a summary that carried no name", async () => {
     withRuns(RUN({ kind: "summarize" }));
     const { container } = render(ROUTE);
-    await settlesOnLine(container, "I'm writing a summary.");
+    await settlesOnLine(container, "Writing summary…");
   });
 
   it("moves the Core to working when a server run is live and this tab is idle", async () => {
@@ -1303,7 +1303,7 @@ describe("AgentRail", () => {
   // raw token reaches no surface at all.
   it("keeps the degrade reason out of the line and out of the panel", async () => {
     const reason = "brief_partial: crm_read_timeout";
-    const stopped = "I stopped partway through your morning brief.";
+    const stopped = "Morning brief stopped partway.";
     withSettled(RUN({ state: "degraded", degrade_reason: reason }));
     const user = userEvent.setup();
     const { container } = render(ROUTE);
@@ -1340,13 +1340,13 @@ describe("AgentRail", () => {
     withSettled(RUN({ state: "done" }));
     const user = userEvent.setup();
     const { container } = render(ROUTE);
-    await settlesOnLine(container, "Your morning brief is ready.");
+    await settlesOnLine(container, "Morning brief ready.");
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
     await openPanel(user, container);
     expect(runLines()).toEqual([]);
     expect(panel().textContent).not.toContain("Running now");
     expect(
       panel().querySelector(".aritem:not(.arempty)")?.textContent,
-    ).toContain("Your morning brief is ready.");
+    ).toContain("Morning brief ready.");
   });
 });

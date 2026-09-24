@@ -69,7 +69,7 @@ afterEach(() => {
 });
 
 // The card's create verb lives in the panel header now, and it names the whole
-// act ("Add a domain") while the dialog it opens keeps the bare "Add" — so
+// act ("Add domain") while the dialog it opens keeps the bare "Add" — so
 // naming it by the catalog key is what stops this query matching the submit
 // button instead.
 const addButton = () =>

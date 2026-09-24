@@ -165,9 +165,9 @@ function requestsTo(calls: Request[], suffix: string, method: string) {
 // a pick therefore opens the dialog first and scopes its queries to it.
 async function openAddDialog() {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Connect an account" }),
+    await screen.findByRole("button", { name: "Add connector" }),
   );
-  return screen.getByRole("dialog", { name: "Add a connection" });
+  return screen.getByRole("dialog", { name: "Add connector" });
 }
 
 beforeEach(() => {
@@ -280,7 +280,7 @@ describe("the connected-inboxes card", () => {
     ).toBeTruthy();
     expect(row.closest(".settinglist")).not.toBeNull();
     expect(
-      screen.getByRole("button", { name: "Connect an account" }),
+      screen.getByRole("button", { name: "Add connector" }),
     ).toBeTruthy();
   });
 
@@ -311,10 +311,10 @@ describe("the connected-inboxes card", () => {
     // The chooser gives way rather than stacking behind the form: two overlays
     // deep, Escape and the focus restore both answer to the wrong layer.
     expect(
-      await screen.findByRole("dialog", { name: "Connect an IMAP mailbox" }),
+      await screen.findByRole("dialog", { name: "Connect IMAP mailbox" }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("dialog", { name: "Add a connection" }),
+      screen.queryByRole("dialog", { name: "Add connector" }),
     ).toBeNull();
   });
 
@@ -329,7 +329,7 @@ describe("the connected-inboxes card", () => {
     stubApi([gmailNoSendGrant]);
     render(<ConnectorsCard />);
     expect(
-      await screen.findByText("Capturing only — cannot send"),
+      await screen.findByText("Capture only, no sending"),
     ).toBeTruthy();
     expect(
       screen.getByText(/Reconnect this mailbox to send from it/),
@@ -342,7 +342,7 @@ describe("the connected-inboxes card", () => {
     stubApi([gmailConnected]);
     render(<ConnectorsCard />);
     expect(await screen.findByText("Capturing")).toBeTruthy();
-    expect(screen.queryByText("Capturing only — cannot send")).toBeNull();
+    expect(screen.queryByText("Capture only, no sending")).toBeNull();
     expect(screen.queryByRole("button", { name: /Reconnect/ })).toBeNull();
   });
 
@@ -350,7 +350,7 @@ describe("the connected-inboxes card", () => {
     stubApi([imapConnected]);
     render(<ConnectorsCard />);
     expect(await screen.findByText("IMAP mailbox")).toBeTruthy();
-    expect(screen.queryByText("Capturing only — cannot send")).toBeNull();
+    expect(screen.queryByText("Capture only, no sending")).toBeNull();
   });
 
   it("shows an honest waiting line for a connection that has never synced", async () => {
@@ -410,7 +410,7 @@ describe("the connected-inboxes card", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /Reconnect/ }),
     );
-    expect(await screen.findByText("Connect an IMAP mailbox")).toBeTruthy();
+    expect(await screen.findByText("Connect IMAP mailbox")).toBeTruthy();
   });
 
   it("surfaces a failed reconnect instead of redirecting", async () => {
@@ -635,7 +635,7 @@ describe("the OAuth return outcome", () => {
   });
 });
 
-// The "Add a connection" affordance (Task 1): one verb in the card's header
+// The "Add connector" affordance (Task 1): one verb in the card's header
 // opens a dialog listing the providers still addable, each with the sentence
 // its choice needs. An OAuth pick connects+redirects, IMAP hands over to the
 // inline form, and a 501 from a specific provider's connect renders an honest
@@ -737,7 +737,7 @@ describe("add a connection", () => {
     render(<ConnectorsCard />);
     await screen.findByText("Google Calendar"); // a roster row label
     expect(
-      screen.queryByRole("button", { name: "Connect an account" }),
+      screen.queryByRole("button", { name: "Add connector" }),
     ).toBeNull();
   });
 });
@@ -825,7 +825,7 @@ describe("the Telegram connector panel", () => {
     render(<ConnectorsCard />);
     expect(
       within(await screen.findByTestId("public-origin")).getByText(
-        "Not answering",
+        "Unreachable",
       ),
     ).toBeTruthy();
   });
@@ -838,7 +838,7 @@ describe("the Telegram connector panel", () => {
     render(<ConnectorsCard />);
     expect(
       within(await screen.findByTestId("public-origin")).getByText(
-        "Not checked yet",
+        "Not checked",
       ),
     ).toBeTruthy();
   });

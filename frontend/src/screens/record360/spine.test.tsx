@@ -126,7 +126,7 @@ describe("the silence between the last word and today", () => {
     );
 
     expect(screen.getByText("7 days")).toBeTruthy();
-    expect(screen.getByText("They have never written back")).toBeTruthy();
+    expect(screen.getByText("Never replied")).toBeTruthy();
     expect(screen.getByText(en["co.spine.singleThreaded"])).toBeTruthy();
   });
 
@@ -143,7 +143,7 @@ describe("the silence between the last word and today", () => {
     );
 
     expect(screen.queryByText(/days/)).toBeNull();
-    expect(screen.queryByText("They have never written back")).toBeNull();
+    expect(screen.queryByText("Never replied")).toBeNull();
   });
 
   it("tells a stalled relationship from one that never started", () => {
@@ -157,8 +157,8 @@ describe("the silence between the last word and today", () => {
       }),
     );
 
-    expect(screen.getByText("Silence since then")).toBeTruthy();
-    expect(screen.queryByText("They have never written back")).toBeNull();
+    expect(screen.getByText("No contact since")).toBeTruthy();
+    expect(screen.queryByText("Never replied")).toBeNull();
   });
 
   it("draws nothing at all on an account nobody has spoken to", () => {
@@ -198,7 +198,7 @@ describe("what the thread says is coming", () => {
     );
 
     expect(screen.getByText("Send the NDA")).toBeTruthy();
-    expect(screen.getByText("Past its date")).toBeTruthy();
+    expect(screen.getByText("Overdue")).toBeTruthy();
   });
 
   it("dates the close and leaves the figure to the readings above it", () => {
@@ -259,12 +259,12 @@ describe("the last thing that was actually said", () => {
     const titles = [...document.querySelectorAll(".co-spine-title")].map(
       (node) => node.textContent,
     );
-    // Oldest first down the page, "You last spoke" sits on the newest, and
+    // Oldest first down the page, "Last contact" sits on the newest, and
     // nothing is dated ahead so today's line closes the axis.
     expect(titles).toEqual([
       "An older thread",
-      "You last spoke",
-      "They have never written back",
+      "Last contact",
+      "Never replied",
       TODAY,
     ]);
     expect(screen.getByText("Where we landed")).toBeTruthy();
@@ -398,8 +398,8 @@ describe("the conversations behind the last word", () => {
     );
     expect(titles).toEqual([
       "Kickoff",
-      "You last spoke",
-      "They have never written back",
+      "Last contact",
+      "Never replied",
       TODAY,
     ]);
     expect(screen.getByText("2 messages")).toBeTruthy();
@@ -506,7 +506,7 @@ describe("the conversations behind the last word", () => {
       }),
     );
 
-    expect(screen.getByText("More conversations before this")).toBeTruthy();
+    expect(screen.getByText("More threads before this")).toBeTruthy();
     expect(screen.queryByText("One earlier conversation")).toBeNull();
     expect(screen.queryByText("1 Jul 2026")).toBeNull();
   });
@@ -531,7 +531,7 @@ describe("the conversations behind the last word", () => {
         },
       }),
     );
-    expect(screen.getByText("More conversations before this")).toBeTruthy();
+    expect(screen.getByText("More threads before this")).toBeTruthy();
   });
 
   it("counts one dropped conversation in the singular", () => {
@@ -600,8 +600,8 @@ describe("the rows a conversation is recognised from", () => {
       (node) => node.textContent,
     );
     expect(titles).toEqual([
-      "You last spoke",
-      "They have never written back",
+      "Last contact",
+      "Never replied",
       TODAY,
     ]);
   });
@@ -632,7 +632,7 @@ describe("what the waiting is measured from", () => {
     expect(screen.queryByText("60 days")).toBeNull();
     // They answered once, so this is a thread that stalled rather than one
     // that never started.
-    expect(screen.getByText("Silence since then")).toBeTruthy();
+    expect(screen.getByText("No contact since")).toBeTruthy();
   });
 
   it("draws no gap once they have answered our latest message", () => {
@@ -644,8 +644,8 @@ describe("what the waiting is measured from", () => {
       }),
     );
 
-    expect(screen.queryByText("Silence since then")).toBeNull();
-    expect(screen.queryByText("They have never written back")).toBeNull();
+    expect(screen.queryByText("No contact since")).toBeNull();
+    expect(screen.queryByText("Never replied")).toBeNull();
   });
 });
 
@@ -666,10 +666,10 @@ describe("an account nobody has written to", () => {
     );
 
     // The head stop still dates the thread from the meeting.
-    expect(screen.getByText("You last spoke")).toBeTruthy();
+    expect(screen.getByText("Last contact")).toBeTruthy();
     // But nothing is waiting on a reply.
-    expect(screen.queryByText("They have never written back")).toBeNull();
-    expect(screen.queryByText("Silence since then")).toBeNull();
+    expect(screen.queryByText("Never replied")).toBeNull();
+    expect(screen.queryByText("No contact since")).toBeNull();
   });
 });
 
@@ -784,8 +784,8 @@ describe("where today's marker sits on the axis", () => {
       (node) => node.textContent,
     );
     expect(titles).toEqual([
-      "You last spoke",
-      "They have never written back",
+      "Last contact",
+      "Never replied",
       TODAY,
       "Send the proposal",
     ]);
@@ -1037,7 +1037,7 @@ describe("who held a meeting", () => {
 // reader asks "what was that about", and the answer is the message.
 describe("a conversation the reader can open", () => {
   // Two conversations, so the older one is a stop that leads with its subject
-  // rather than with "You last spoke".
+  // rather than with "Last contact".
   const twoMails = (over: Record<string, unknown> = {}) =>
     view({
       last_outbound_at: SPOKE,

@@ -262,7 +262,7 @@ describe("the timeline tab", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={withheld} />);
     expect(screen.queryByText(/Nothing has been logged/)).toBeNull();
     expect(
-      screen.getByText("Hidden — your role cannot read this"),
+      screen.getByText("Hidden for your role"),
     ).toBeTruthy();
   });
 
@@ -278,7 +278,7 @@ describe("the timeline tab", () => {
 
     expect(screen.queryByText(/No conversations with them yet/)).toBeNull();
     expect(
-      screen.getByText("Hidden — your role cannot read this"),
+      screen.getByText("Hidden for your role"),
     ).toBeTruthy();
   });
 });
@@ -336,7 +336,7 @@ describe("the deals tab", () => {
     expect(screen.getByText("Sam Ops")).toBeTruthy();
     expect(screen.getByText("Champion")).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "Open deal & buying role" }),
+      screen.queryByRole("heading", { name: "Open deal and buying role" }),
     ).toBeNull();
   });
 

@@ -50,7 +50,7 @@ export const FewerSlots: Story = {
         value="€1.2m"
         detail="offline_demo"
       />
-      <StatCard label="Payment behaviour" value="typically 4 days early" />
+      <StatCard label="Payment behavior" value="typically 4 days early" />
       <StatCard label="Health" value="Watch" tone="warning" onOpen={() => {}} />
     </StatStrip>
   ),
@@ -171,7 +171,7 @@ export const SlotsWithDoors: Story = {
       {/* A figure the read could not finish counting: the `+` is the caveat, on
           the figure it qualifies rather than in a sentence under the row. */}
       <StatCard
-        label="Decisions waiting"
+        label="Pending approvals"
         value="8+"
         detail="waiting on your answer"
         narrow="row"
@@ -234,7 +234,7 @@ export const NarrowRowSlotsFold: Story = {
         onOpen={() => {}}
       />
       <StatCard
-        label="Decisions waiting"
+        label="Pending approvals"
         value="4+"
         detail="waiting on your answer"
         narrow="row"

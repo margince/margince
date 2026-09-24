@@ -184,7 +184,7 @@ it("asks for no preview until a clause is complete", async () => {
   // filter_shape_invalid — asking would spend a request to be told so.
   expect(seen.some((url) => url.includes("/filters/preview"))).toBe(false);
   // And the count says nothing has been asked, which is NOT the same as zero.
-  expect(screen.getByText("Add a clause to see what it selects")).toBeTruthy();
+  expect(screen.getByText("Add a clause to preview matches")).toBeTruthy();
   // Nor is there a results table: an empty one would say "no records match this
   // filter" about a filter nobody has written.
   expect(screen.queryByText("Matching records")).toBeNull();
@@ -257,7 +257,7 @@ it("restores a saved filter, count and all, without a clause being retyped", asy
   render(<FiltersScreen />, { wrapper });
 
   await user.click(
-    await screen.findByRole("button", { name: "Load a saved filter" }),
+    await screen.findByRole("button", { name: "Load saved filter" }),
   );
   await user.click(screen.getByRole("button", { name: "Berliners" }));
 
@@ -281,7 +281,7 @@ it("does not offer a view whose stored filter it cannot read", async () => {
 
   await screen.findByRole("button", { name: "Add clause" });
   expect(
-    screen.queryByRole("button", { name: "Load a saved filter" }),
+    screen.queryByRole("button", { name: "Load saved filter" }),
   ).toBeNull();
 });
 
@@ -476,11 +476,11 @@ it("reads a refused preview as a failure, not as an unwritten filter", async () 
   vi.stubGlobal("fetch", previewRefused({}, 502));
   await addSecondClause(user);
 
-  // Not "Add a clause to see what it selects": two complete clauses are on
+  // Not "Add a clause to preview matches": two complete clauses are on
   // screen, and blaming the reader for the server's refusal is exactly what hid
   // this refusal.
   expect(await screen.findByText("Count unavailable")).toBeTruthy();
-  expect(screen.queryByText("Add a clause to see what it selects")).toBeNull();
+  expect(screen.queryByText("Add a clause to preview matches")).toBeNull();
   // The reason and the way out land where a sentence fits.
   expect(
     screen.getByRole("heading", { name: "Matching records" }),
@@ -542,7 +542,7 @@ it("starts a fresh tree when the object changes", async () => {
   // The contact clause is gone rather than carried onto deals, where the field it
   // names does not exist — a filter the new vocabulary would refuse.
   expect(screen.queryByLabelText("Value")).toBeNull();
-  expect(screen.getByText("Add a clause to see what it selects")).toBeTruthy();
+  expect(screen.getByText("Add a clause to preview matches")).toBeTruthy();
 });
 
 // The shell's page head names every rail destination and prints the subtitle
@@ -556,7 +556,7 @@ it("leaves the page's own name to the shell", async () => {
   expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   expect(
     screen.queryByText(
-      "Build a filter, watch what it selects, and save it as a view.",
+      "Build a filter, preview its matches and save it as a view.",
     ),
   ).toBeNull();
   // The object choice stays, because it is the screen's own state rather than

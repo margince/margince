@@ -121,7 +121,7 @@ describe("what the open pipeline says", () => {
     );
 
     expect(
-      screen.getByText("Hidden — your role cannot read this"),
+      screen.getByText("Hidden for your role"),
     ).toBeTruthy();
     expect(screen.queryByText("No open deals")).toBeNull();
   });
@@ -220,7 +220,7 @@ describe("what the in-flight count says", () => {
     }
     expect(inFlight.textContent).not.toMatch(/\d/);
     expect(
-      screen.getAllByText("Hidden — your role cannot read this").length,
+      screen.getAllByText("Hidden for your role").length,
     ).toBeGreaterThan(0);
   });
 

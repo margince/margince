@@ -127,7 +127,7 @@ it("keeps a rejected draft visible after a concurrent edit", async () => {
   );
   await user.click(screen.getByRole("button", { name: "Save allowance" }));
   expect(
-    await screen.findByText("The change could not be applied"),
+    await screen.findByText("Change not applied"),
   ).toBeTruthy();
   expect(screen.getByLabelText("Tokens per full user per month")).toHaveValue(
     "12000000",
@@ -151,7 +151,7 @@ it.each([
   expect(await screen.findByText("AI by activity")).toBeTruthy();
   expect(
     screen.getByText(
-      "Only a reader who holds both AI diagnostics read and AI allowance read can see which features are live right now.",
+      "Only a user with both AI diagnostics read and AI allowance read can see which features are live now.",
     ),
   ).toBeTruthy();
   expect(screen.queryByRole("table")).toBeNull();

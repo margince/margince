@@ -24,7 +24,7 @@ afterEach(cleanup);
 const LABELS: Readonly<Record<string, string>> = {
   display_name: "Company name",
   icp: "Ideal customer",
-  offer_summary: "What do you sell?",
+  offer_summary: "Products and services",
 };
 const FIELDS = Object.keys(LABELS) as CompanyFieldName[];
 

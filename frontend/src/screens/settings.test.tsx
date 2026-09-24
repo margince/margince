@@ -201,13 +201,13 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     await user.click(screen.getByRole("button", { name: "Edit signature" }));
-    const draft = await screen.findByRole("textbox", { name: "Your sign-off" });
+    const draft = await screen.findByRole("textbox", { name: "Sign-off" });
     await user.type(draft, "half a sign-off nobody meant to keep");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     await user.click(screen.getByRole("button", { name: "Edit signature" }));
     const reopened = await screen.findByRole("textbox", {
-      name: "Your sign-off",
+      name: "Sign-off",
     });
     if (!(reopened instanceof HTMLTextAreaElement)) {
       throw new Error("the sign-off box is not a textarea");
@@ -358,7 +358,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // who may read it. No request is made for it, so a rep never hits a 403
     // error box (GET /ai/usage).
     expect(
-      await screen.findByText("Estimated AI spend & usage history"),
+      await screen.findByText("Estimated AI spend and usage"),
     ).toBeTruthy();
     expect(
       await screen.findByText(
@@ -549,7 +549,7 @@ describe("SettingsScreen restructured pages", () => {
     await waitFor(() =>
       expect(
         screen
-          .getByRole("link", { name: "Privacy & retention" })
+          .getByRole("link", { name: "Privacy and retention" })
           .getAttribute("aria-current"),
       ).toBe("page"),
     );

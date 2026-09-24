@@ -13,7 +13,7 @@ import { useClipboardCopy } from "./clipboardcopy";
 const LABELS = {
   copy: "Copy link",
   copied: "Copied",
-  remedy: "Select it in the field and copy it by hand.",
+  remedy: "Copy failed. Select the link in the field and copy it manually.",
 } as const;
 
 afterEach(cleanup);

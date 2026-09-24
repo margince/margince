@@ -588,7 +588,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Board" }));
 
     // The dials the board obeys are still on screen.
-    expect(screen.getByRole("button", { name: "Add a filter" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add filter" })).toBeTruthy();
     expect(screen.getByRole("searchbox")).toBeTruthy();
     // And it admits there is more than it is showing.
     expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
@@ -657,7 +657,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
 
     const sentence =
-      "You cannot change this lead. Ask its owner to share it with you, or your administrator for the right to edit it.";
+      "You cannot change this lead. Ask its owner to share it, or an administrator for edit access.";
     // The band says it once for the page; the inline rows each carry the same
     // sentence beside their own value, as they do on a closed lead.
     expect((await screen.findAllByText(sentence)).length).toBeGreaterThan(0);
@@ -798,7 +798,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadScreen id="l-1" />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Reverse promotion" }),
+      await screen.findByRole("button", { name: "Reverse qualification" }),
     );
     const confirm = () =>
       screen.getByRole("button", { name: "Reverse" }) as HTMLButtonElement;
@@ -836,7 +836,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
 
     expect(
-      await screen.findByText("Promoted — this lead is now read-only."),
+      await screen.findByText("Qualified. This lead is read-only."),
     ).toBeTruthy();
     expect(screen.queryByText(/Disqualified — this lead/)).toBeNull();
   });
@@ -900,7 +900,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
 
     expect(
-      await screen.findByText("Promoted — this lead is now read-only."),
+      await screen.findByText("Qualified. This lead is read-only."),
     ).toBeTruthy();
     // The outcome line never claims a result it could not read.
     expect(screen.queryByText(en["lead.promotedMerged"])).toBeNull();
@@ -1017,7 +1017,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     const describedBy = button.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
     expect(document.getElementById(describedBy as string)?.textContent).toBe(
-      "needs an email address and an open status",
+      "Requires an email address and an open status.",
     );
   });
 });
@@ -1096,7 +1096,7 @@ function stubFetch(
 // moment, which names the step it is on: "Filter", then the attribute.
 async function pickFilter(attribute: string, value: string) {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Add a filter" }),
+    await screen.findByRole("button", { name: "Add filter" }),
   );
   const step = (name: string) => screen.getByRole("group", { name });
   await userEvent.click(
@@ -1331,7 +1331,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
       expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Unassigned queue" }),
+      screen.getByRole("button", { name: "Unassigned" }),
     );
 
     // Both dials in the SAME request, and NOT the New & unassigned view's
@@ -1365,7 +1365,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
       expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "New & unassigned" }),
+      screen.getByRole("button", { name: "New and unassigned" }),
     );
 
     await waitFor(() =>
@@ -2313,7 +2313,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // why a mutation added later is still caught by construction.
     const viewControls = new Set([
       "Overview",
-      "Deals & projects",
+      "Deals and projects",
       "History",
       "Hide details",
       // The trigger discloses; the open above sweeps the verbs behind it.
@@ -2423,7 +2423,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // and the terminal badge — so the wait names the badge it meant.
       expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
     );
-    const reason = "Disqualified — this lead is now read-only.";
+    const reason = "Disqualified. This lead is read-only.";
     await openLeadActions();
     for (const testId of ["lead-disqualify"]) {
       const control = screen.getByTestId(testId) as HTMLButtonElement;
@@ -2482,7 +2482,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     await waitFor(() =>
       expect(screen.getByText("Decision-maker title")).toBeTruthy(),
     );
-    expect(screen.getByText("They replied")).toBeTruthy();
+    expect(screen.getByText("Lead replied")).toBeTruthy();
     // The decay is shown as arithmetic a reader can check, not asserted.
     expect(screen.getByText("25 halving every 14 days")).toBeTruthy();
     expect(
@@ -2531,7 +2531,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       expect(screen.getByLabelText(question)).toBeTruthy();
     }
     expect(
-      screen.getByRole("button", { name: "Add to the score" }),
+      screen.getByRole("button", { name: "Add to score" }),
     ).toBeTruthy();
   });
 
@@ -2551,13 +2551,13 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     });
     render(<LeadScreen id="l-1" />);
     await waitFor(() =>
-      expect(screen.getByText("What you know about this lead")).toBeTruthy(),
+      expect(screen.getByText("Lead signals")).toBeTruthy(),
     );
     expect(
-      screen.queryByRole("button", { name: "Add to the score" }),
+      screen.queryByRole("button", { name: "Add to score" }),
     ).toBeNull();
     expect(
-      screen.getAllByText("This lead is closed and takes no changes.").length,
+      screen.getAllByText("This lead is closed and cannot be changed.").length,
     ).toBeGreaterThan(0);
   });
 
@@ -2575,7 +2575,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     await waitFor(() =>
       expect(
         screen.getAllByText(
-          "No source on record — nothing says where this lead came from.",
+          "No source on record.",
         ).length,
       ).toBeTruthy(),
     );
@@ -2599,7 +2599,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // the sentence is counted once before that door opens and twice after —
     // exactly, so neither surface can drop it unnoticed.
     const notStored =
-      "The breakdown for this score isn\u2019t stored yet — the next update will show it.";
+      "The breakdown for this score is not stored yet. The next update shows it.";
     await waitFor(() => expect(screen.getAllByText(notStored)).toHaveLength(1));
     const grid = document.querySelector(".readings-grid");
     if (!(grid instanceof HTMLElement)) {
@@ -2614,9 +2614,9 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       within(scoreCard).getByRole("button", { name: "Evidence" }),
     );
     await waitFor(() => expect(screen.getAllByText(notStored)).toHaveLength(2));
-    expect(screen.queryByText("What this score has to work with:")).toBeNull();
+    expect(screen.queryByText("Score inputs:")).toBeNull();
     expect(
-      screen.queryByText("Nothing counted toward this score yet."),
+      screen.queryByText("No factors counted toward this score yet."),
     ).toBeNull();
   });
 
@@ -2635,14 +2635,14 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // prospect rather than an unassessed one (ADR-0108 §4).
     await waitFor(() =>
       expect(
-        screen.getByText("What this score has to work with:"),
+        screen.getByText("Score inputs:"),
       ).toBeTruthy(),
     );
     // Deliberately NOT "no reply yet": engagement lives in linked activities
     // this client never reads, so the page states what MOVES the score rather
     // than asserting the prospect has done nothing.
     expect(
-      screen.getByText("A reply or a meeting is what moves it most."),
+      screen.getByText("A reply or a meeting raises the score most."),
     ).toBeTruthy();
   });
 

@@ -660,7 +660,7 @@ describe("the deal form's partner fields", () => {
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
     expect(inForm().queryByLabelText("via Partner")).toBeNull();
-    expect(inForm().queryByLabelText("What the partner did")).toBeNull();
+    expect(inForm().queryByLabelText("Partner attribution")).toBeNull();
   });
 
   it("offers the partner once one exists, and asks what they did only after one is picked", async () => {
@@ -672,11 +672,11 @@ describe("the deal form's partner fields", () => {
     const partner = await inForm().findByLabelText("via Partner");
     // The claim is a question about a partner, so it is not asked before one
     // is named.
-    expect(inForm().queryByLabelText("What the partner did")).toBeNull();
+    expect(inForm().queryByLabelText("Partner attribution")).toBeNull();
 
     await pickOption(user, partner, "VietnamPartner JSC");
 
-    expect(await inForm().findByLabelText("What the partner did")).toBeTruthy();
+    expect(await inForm().findByLabelText("Partner attribution")).toBeTruthy();
   });
 
   // Only actual partners: the picker once listed every company, which let

@@ -67,7 +67,7 @@ describe("the deal's email box", () => {
     renderBox();
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Draft the reply" }),
+        screen.getByRole("button", { name: "Draft reply" }),
       ).toBeTruthy(),
     );
   });
@@ -77,11 +77,11 @@ describe("the deal's email box", () => {
     renderBox();
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Send an email" }),
+        screen.getByRole("button", { name: "Send email" }),
       ).toBeTruthy(),
     );
     expect(
-      screen.queryByRole("button", { name: "Draft the reply" }),
+      screen.queryByRole("button", { name: "Draft reply" }),
     ).toBeNull();
   });
 
@@ -93,6 +93,6 @@ describe("the deal's email box", () => {
   it("offers a fresh mail before the read has answered", () => {
     serveCard(MAIL);
     renderBox();
-    expect(screen.getByRole("button", { name: "Send an email" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send email" })).toBeTruthy();
   });
 });

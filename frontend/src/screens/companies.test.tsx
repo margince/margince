@@ -605,7 +605,7 @@ describe("CompanyScreen — profile fields card (B5)", () => {
     await openProfile();
 
     await waitFor(() =>
-      expect(screen.getByText("What they promise")).toBeTruthy(),
+      expect(screen.getByText("Value proposition")).toBeTruthy(),
     );
     expect(screen.getByText("Fleet retrofits without downtime")).toBeTruthy();
     // The value is EDITABLE now, so the value's own button starts an edit and
@@ -633,7 +633,7 @@ describe("CompanyScreen — profile fields card (B5)", () => {
     // A field the read never grounded still DRAWS ITS ROW, empty. The tab is a
     // form now, not a list of what a crawl happened to find: a reader can only
     // add what they can see is missing, and the old card hid exactly that.
-    expect(screen.getAllByText("Who they sell to").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Ideal customer profile").length).toBeGreaterThan(0);
   });
 
   it("draws every narrative field as an empty row when nothing has been read", async () => {
@@ -653,9 +653,9 @@ describe("CompanyScreen — profile fields card (B5)", () => {
     // is present and blank, so the reader can state what they know. The old
     // card answered "Nothing read yet" and offered no way to change that.
     await waitFor(() =>
-      expect(screen.getAllByText("What they sell").length).toBeGreaterThan(0),
+      expect(screen.getAllByText("Offering").length).toBeGreaterThan(0),
     );
-    expect(screen.getAllByText("How they sell").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Sales motion").length).toBeGreaterThan(0);
   });
 });
 
@@ -706,13 +706,13 @@ describe("CompanyScreen — facts card (B6)", () => {
     await openProfile();
 
     await waitFor(() =>
-      expect(screen.getByText("Facts about this company")).toBeTruthy(),
+      expect(screen.getByText("Company facts")).toBeTruthy(),
     );
     // Scoped to the facts card: the right rail carries a Signals card of its
     // own, and "which categories did the site read produce" is a question
     // about this card, not about the page.
     const factsCard = screen
-      .getByText("Facts about this company")
+      .getByText("Company facts")
       .closest("section");
     if (!factsCard) {
       throw new Error("the facts card has no section wrapper");
@@ -1001,7 +1001,7 @@ describe("CompanyScreen — hierarchy roll-up in the rail (P-7)", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          "A currency conversion rate is missing — the roll-up cannot be computed.",
+          "An exchange rate is missing, so the total cannot be calculated.",
         ),
       ).toBeTruthy(),
     );
@@ -1399,7 +1399,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     });
     render(<CompanyScreen id="o-1" />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Open the deal" }),
+      await screen.findByRole("button", { name: "Open deal" }),
     );
     await waitFor(() => expect(window.location.hash).toContain("d-7"));
   });
@@ -1558,11 +1558,11 @@ describe("CompanyScreen — Ask Margince", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "What's open here?" }),
+        screen.getByRole("button", { name: "What is open here?" }),
       ).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "What's open here?" }),
+      screen.getByRole("button", { name: "What is open here?" }),
     );
 
     await waitFor(() => expect(asked).toEqual({ question: "whats_open" }));
@@ -1575,7 +1575,7 @@ describe("CompanyScreen — Ask Margince", () => {
     expect(screen.getByText("Written by Margince")).toBeTruthy();
     // The question is repeated over its answer, so a reader who has scrolled
     // cannot pair the wrong one with it.
-    expect(screen.getAllByText("What's open here?").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("What is open here?").length).toBeGreaterThan(1);
   });
 
   it("says there is nothing to answer from rather than nothing at all", async () => {
@@ -1589,11 +1589,11 @@ describe("CompanyScreen — Ask Margince", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "What's open here?" }),
+        screen.getByRole("button", { name: "What is open here?" }),
       ).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "What's open here?" }),
+      screen.getByRole("button", { name: "What is open here?" }),
     );
 
     await waitFor(() =>
@@ -1612,11 +1612,11 @@ describe("CompanyScreen — Ask Margince", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "What's open here?" }),
+        screen.getByRole("button", { name: "What is open here?" }),
       ).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "What's open here?" }),
+      screen.getByRole("button", { name: "What is open here?" }),
     );
 
     await waitFor(() =>
@@ -1686,11 +1686,11 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // DealsSection now; this fixture has none, so the fit card takes the
     // overview's work slot instead: whether to sell here at all is a
     // different question from what is running today.
-    expect(stack?.textContent).toContain("What they are worth to you");
+    expect(stack?.textContent).toContain("Growth fit");
 
     // What Margince spotted reads in the WORK column, beside the rest of what
     // wants a decision, rather than in the context column.
-    expect(stack?.textContent).toContain("Margince also spotted");
+    expect(stack?.textContent).toContain("Signals");
 
     // The relationship around it, and how the account is filed, live in the
     // PAGE's context column — queried off the document, because that column is
@@ -1700,7 +1700,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     expect(rail).toBeTruthy();
     for (const card of [
       "Active deals",
-      "Their key contacts",
+      "Key contacts",
       "Details",
       "Tags",
     ]) {
@@ -1734,13 +1734,13 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     const headings = within(stack)
       .getAllByRole("heading")
       .map((heading) => heading.textContent);
-    const needsAt = headings.indexOf("What needs you");
-    const dossierAt = headings.indexOf("What this company is");
-    const askAt = headings.indexOf("Ask about this account");
+    const needsAt = headings.indexOf("Needs attention");
+    const dossierAt = headings.indexOf("Company overview");
+    const askAt = headings.indexOf("Ask about this company");
     // The fit card takes this account's slot: nothing in this fixture is in
     // flight, so the question is whether to sell here at all rather than what
     // is running today.
-    const fitAt = headings.indexOf("What they are worth to you");
+    const fitAt = headings.indexOf("Growth fit");
     expect(needsAt).toBeGreaterThanOrEqual(0);
     expect(dossierAt).toBeGreaterThan(needsAt);
     expect(askAt).toBeGreaterThan(dossierAt);
@@ -1964,8 +1964,8 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     const opensWith = (title: string) =>
       headings().some((one) => one?.startsWith(title));
     await waitFor(() => expect(opensWith("Details")).toBe(true));
-    expect(opensWith("What they do")).toBe(true);
-    expect(opensWith("Facts about this company")).toBe(true);
+    expect(opensWith("Description")).toBe(true);
+    expect(opensWith("Company facts")).toBe(true);
     // The roll-up is one of the panes that runs its own read, so it arrives
     // on its own clock rather than with the ones above.
     await waitFor(() => expect(opensWith("Roll-up")).toBe(true));
@@ -2006,7 +2006,7 @@ describe("CompanyScreen — the timeline says where it stops", () => {
     // the cuts that read further back.
     expect(
       screen.getByText(
-        "Older entries are not shown here — there are more of both kinds than this view can put in order. Pick Activities or Changes to read further back.",
+        "Older entries are not shown because there are too many to order together. Select Activities or Changes to see further back.",
       ),
     ).toBeTruthy();
   });
@@ -2232,7 +2232,7 @@ describe("CompanyScreen — the Partner tab is scoped to the account being read"
     );
     await userEvent.click(
       await screen.findByRole("button", {
-        name: "Set up partner programme",
+        name: "Set up partner program",
       }),
     );
 

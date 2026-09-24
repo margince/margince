@@ -579,7 +579,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     renderTriage([]);
 
     expect(
-      screen.getByText("Nothing more needed — you can continue."),
+      screen.getByText("Nothing more needed. You can continue."),
     ).toBeInTheDocument();
   });
 
@@ -676,7 +676,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     // No triangle glyph on an advisory row — only its own name — but the
     // tier still reaches a screen reader on the row itself.
     expect(
-      within(buyingIntents).getByText("Worth a check", {
+      within(buyingIntents).getByText("To review", {
         selector: ".sr-only",
       }),
     ).toBeInTheDocument();
@@ -899,7 +899,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     expect(named).toEqual([
       "Company name",
       "Registered address",
-      "Register / VAT ID",
+      "Register and VAT ID",
       "Legal form",
       "Register court",
     ]);
@@ -931,7 +931,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
       "Register court",
     );
     expect(advisoryItem.querySelector(".sr-only")).toHaveTextContent(
-      "Worth a check",
+      "To review",
     );
   });
 
@@ -1147,9 +1147,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
     renderTriage([], readWith([]));
 
     expect(
-      screen.getByText("What I read, and what I skipped"),
+      screen.getByText("Pages read and skipped"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Background, not work")).toBeInTheDocument();
+    expect(screen.getByText("Background information")).toBeInTheDocument();
     expect(
       screen.queryByText("Everything else I found"),
     ).not.toBeInTheDocument();
@@ -1230,7 +1230,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     expect(
       within(row).getByText(
-        "Not stated on your legal or imprint page. Yours to add.",
+        "Not stated on your legal notice or imprint page. Add it manually.",
       ),
     ).toBeInTheDocument();
   });
@@ -1247,7 +1247,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     expect(
       within(row).getByText(
-        "I did not find a legal or imprint page on your site to check. Yours to add.",
+        "I found no legal notice or imprint page on your site. Add it manually.",
       ),
     ).toBeInTheDocument();
   });

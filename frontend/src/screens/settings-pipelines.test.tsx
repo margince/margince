@@ -403,7 +403,7 @@ describe("PipelinesCard", () => {
     );
     render(<PipelinesCard />);
     await user.click(
-      await screen.findByRole("button", { name: "Put back in use" }),
+      await screen.findByRole("button", { name: "Restore" }),
     );
     await waitFor(() => expect(restored).toHaveLength(1));
     expect(restored[0].url).toContain("/pipelines/pl-old/restore");

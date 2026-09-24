@@ -85,7 +85,7 @@ describe("sharing a forecast view", () => {
     // Offered and then refused by the server is the shape to avoid: the reader
     // presses a choice, waits, and is told no.
     expect(
-      screen.getByText("No state has been frozen for this period yet."),
+      screen.getByText("No snapshot exists for this period yet."),
     ).toBeTruthy();
   });
 

@@ -23,7 +23,7 @@ function renderHead(restsOn?: Grounding[]) {
       <VerdictHead
         label="At risk"
         tone="danger"
-        because="Waiting on them"
+        because="Awaiting reply"
         restsOn={restsOn}
       />
     </LocaleProvider>,
@@ -99,7 +99,7 @@ describe("VerdictHead scale", () => {
         <VerdictHead
           label="At risk"
           tone="danger"
-          because="Waiting on them"
+          because="Awaiting reply"
           scale="compact"
         />
       </LocaleProvider>,
@@ -124,7 +124,7 @@ describe("VerdictHead scale", () => {
         <VerdictHead
           label="At risk"
           tone="danger"
-          because="Waiting on them"
+          because="Awaiting reply"
           scale="compact"
         />
       </LocaleProvider>,

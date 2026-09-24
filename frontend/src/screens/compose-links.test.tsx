@@ -187,7 +187,7 @@ describe("what a sent message files under", () => {
     await screen.findByLabelText("Related to");
     await pickBy("Related to", "Acme Renewal");
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -221,7 +221,7 @@ describe("what a sent message files under", () => {
     // The choice is visible, and so is what it does to the draft.
     expect(screen.getByText("Scoped to ERP-27")).toBeTruthy();
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -314,7 +314,7 @@ describe("what a sent message files under", () => {
 
     expect(await screen.findByText("Scoped to ERP-27")).toBeTruthy();
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -341,7 +341,7 @@ describe("what a sent message files under", () => {
 
     await screen.findByLabelText("Related to");
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -383,7 +383,7 @@ describe("what a sent message files under", () => {
     await screen.findByLabelText("Related to");
     await pickBy("Related to", "Acme Renewal");
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -416,7 +416,7 @@ describe("what a sent message files under", () => {
 
     await screen.findByLabelText("Subject");
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() =>

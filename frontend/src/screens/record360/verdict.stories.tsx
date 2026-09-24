@@ -69,7 +69,7 @@ function Head({
               },
               {
                 key: "promise",
-                label: "Promise overdue",
+                label: "Commitment overdue",
                 figure: "19 days",
                 tone: "danger",
               },

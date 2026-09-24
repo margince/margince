@@ -275,7 +275,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     // the honest post-create state: paused until the user enables it
     await waitFor(() =>
       expect(
-        screen.getByText("Created paused — nothing runs until you enable it."),
+        screen.getByText("Created paused. Nothing runs until it is enabled."),
       ).toBeTruthy(),
     );
     const row = document.querySelector('[data-automation="au-1"]');
@@ -325,11 +325,11 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     if (confirmationRequired && autoExecute) {
       expect(
         within(confirmationRequired).getByRole("img", {
-          name: "confirm-first",
+          name: "approval first",
         }),
       ).toBeTruthy();
       expect(
-        within(autoExecute).getByRole("img", { name: "auto-execute" }),
+        within(autoExecute).getByRole("img", { name: "automatic" }),
       ).toBeTruthy();
     }
   });
@@ -382,7 +382,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     );
     expect(
       screen.getByText(
-        "Read-only view — you do not have permission to change automations.",
+        "Read-only: you do not have permission to change automations.",
       ),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Use template" })).toBeNull();
@@ -614,7 +614,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     );
     expect(
       screen.queryByText(
-        "Read-only view — you do not have permission to change automations.",
+        "Read-only: you do not have permission to change automations.",
       ),
     ).toBeNull();
     await waitFor(() =>
@@ -632,7 +632,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
 // automation:update grant as pause and edit; the panels mount lazily and
 // independently (opening one never closes the other).
 describe("AutomationRow — Runs/Preview toggles", () => {
-  const previewTitle = "Dry-run blast radius";
+  const previewTitle = "Dry-run impact";
   // A benign stub for the lazily-mounted panels' first fetch: these tests are
   // about mount and independence, so runs answer empty and preview zero.
   function panelBackend() {
@@ -989,7 +989,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     const picker = screen.getByRole("combobox", { name: "date_field" });
     await waitFor(() => expect(picker).toBeDisabled());
     expect(
-      screen.getByText("Couldn't load this object's date fields. Try again."),
+      screen.getByText("Could not load date fields. Retry."),
     ).toBeTruthy();
   });
 

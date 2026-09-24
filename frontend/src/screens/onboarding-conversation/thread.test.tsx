@@ -181,7 +181,7 @@ describe("question card interactivity", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", {
-        name: "Skip this - I will set it myself",
+        name: "Skip. I will set it myself.",
       }),
     ).not.toBeInTheDocument();
     expect(onAnswer).not.toHaveBeenCalled();
@@ -249,13 +249,13 @@ describe("question card interactivity", () => {
 
     expect(
       screen.queryByRole("button", {
-        name: "Skip this - I will set it myself",
+        name: "Skip. I will set it myself.",
       }),
     ).not.toBeInTheDocument();
     // The dismissal is still an honest record: it says what happened, as
     // the ordinary user turn it always was.
     expect(
-      screen.getByText("Skip this - I will set it myself"),
+      screen.getByText("Skip. I will set it myself."),
     ).toBeInTheDocument();
   });
 });

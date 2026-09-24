@@ -244,7 +244,7 @@ describe("a citation's receipt", () => {
     // Nowhere to go: an activity has no page of its own, and a receipt that
     // offered one would be a button that does nothing.
     expect(
-      screen.queryByRole("button", { name: "Open the record" }),
+      screen.queryByRole("button", { name: "Open record" }),
     ).toBeNull();
   });
 
@@ -298,7 +298,7 @@ describe("a citation's receipt", () => {
       screen.getByText("Open deal, last worked · 14/03/2026"),
     ).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Open the record" }));
+    await user.click(screen.getByRole("button", { name: "Open record" }));
     expect(open).toHaveBeenCalledWith("deal", "d-1", []);
   });
 });

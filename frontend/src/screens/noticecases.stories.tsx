@@ -137,7 +137,7 @@ export const EndingADuty: Story = {
       await canvas.findByRole("button", { name: "End without sending" }),
     );
     const dialog = within(await screen.findByRole("dialog"));
-    await dialog.findByText("Why, in your own words");
+    await dialog.findByText("Reason, in your own words");
   },
 };
 

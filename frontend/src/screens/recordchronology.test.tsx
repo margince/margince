@@ -214,7 +214,7 @@ describe("the record's chronology", () => {
     );
     expect(
       screen.queryByText(
-        "No field on this record has been changed since it was created.",
+        "No field has changed since this record was created.",
       ),
     ).toBeNull();
   });
@@ -238,7 +238,7 @@ describe("the record's chronology", () => {
     // sentence, because there is only one feed to be cut.
     expect(
       screen.getByText(
-        "There are more activities here than fit. Only the most recent ones are listed.",
+        "Only the most recent activities are shown.",
       ),
     ).toBeTruthy();
   });

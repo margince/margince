@@ -195,11 +195,11 @@ const HELD_REFETCH_TEST_MS = SETTLE_MS + WRITE_TEST_MS;
 // the server admits neither for a manager, a rep or a read_only seat.
 describe("ProviderCard write posture", () => {
   const READ_ONLY =
-    "Read-only view — connecting a provider spends money, so it is an admin or ops action.";
-  const CONNECT = "Replace the key";
+    "Read-only: connecting a provider costs money, so only an administrator or ops user can do it.";
+  const CONNECT = "Replace API key";
   const DISCONNECT = "Disconnect";
-  const DELETE_DATA = "Delete bought data";
-  const KEY_FIELD = "Replace the API key";
+  const DELETE_DATA = "Delete purchased data";
+  const KEY_FIELD = "Replace API key";
   const AUTOMATIC_LOOKUP = en["provider.automaticLookup"];
   // Disconnect and delete-data live behind the overflow, because neither is the
   // same weight as Connect: one is recoverable and the other irreversibly

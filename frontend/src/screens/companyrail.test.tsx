@@ -532,14 +532,14 @@ describe("CompanyRail", () => {
     stub();
     renderRail({ view: view({ sections_omitted: ["contacts"] }) });
     expect(
-      screen.getAllByText("Hidden — your role cannot read this").length,
+      screen.getAllByText("Hidden for your role").length,
     ).toBeGreaterThan(0);
     // A withheld section carries no header link: a count would have nothing
     // true to show, and an "Add" would offer to write into a section the
     // reader cannot even see. Scoped to Contacts's own panel — Deals is
     // unrelated and legitimately shows its own "Add" for its own empty read.
     const contactsPanel = screen
-      .getByRole("heading", { name: "Their key contacts" })
+      .getByRole("heading", { name: "Key contacts" })
       .closest<HTMLElement>("details");
     expect(contactsPanel).not.toBeNull();
     expect(
@@ -828,7 +828,7 @@ describe("CompanyRail", () => {
       }),
     });
     const contactsPanel = screen
-      .getByRole("heading", { name: "Their key contacts" })
+      .getByRole("heading", { name: "Key contacts" })
       .closest<HTMLElement>("details");
     expect(contactsPanel).not.toBeNull();
     if (!contactsPanel) {
@@ -962,7 +962,7 @@ describe("CompanyRail", () => {
     });
     renderRail();
     expect(
-      screen.getByText("No deals on this account yet."),
+      screen.getByText("No deals for this company yet."),
     ).toBeInTheDocument();
     expect(
       await screen.findByRole("button", { name: "New deal" }),
@@ -991,7 +991,7 @@ describe("CompanyRail", () => {
       }),
     });
     expect(
-      screen.getByText("Nothing open, only closed history."),
+      screen.getByText("No open deals. Closed deals only."),
     ).toBeInTheDocument();
     // No first-deal verb here — the account has already had deals, it is
     // between two of them rather than never having started. The way to the
@@ -1019,7 +1019,7 @@ describe("CompanyRail", () => {
     expect(spy).toHaveBeenCalledWith("contacts");
     // That is the empty roster's one verb: no second "Add" under it.
     const contactsPanel = screen
-      .getByRole("heading", { name: "Their key contacts" })
+      .getByRole("heading", { name: "Key contacts" })
       .closest<HTMLElement>("details");
     expect(contactsPanel).not.toBeNull();
     expect(
@@ -1060,7 +1060,7 @@ describe("CompanyRail", () => {
     });
     // Twenty-five is where the server cut, not how many there are: the
     // summary carries no badge and the verb no figure, on both sections.
-    for (const name of ["Their key contacts", "Active deals"]) {
+    for (const name of ["Key contacts", "Active deals"]) {
       const panel = screen
         .getByRole("heading", { name })
         .closest<HTMLElement>("details");
@@ -1119,7 +1119,7 @@ describe("CompanyRail", () => {
     expect(container.querySelector(".skeleton")).toBeTruthy();
     expect(
       screen.queryByText(
-        "Could not be loaded — this may not be the whole picture",
+        "Could not be loaded. This section may be incomplete.",
       ),
     ).not.toBeInTheDocument();
   });
@@ -1132,7 +1132,7 @@ describe("CompanyRail", () => {
     // skeleton pretending a read is still running.
     expect(
       screen.getAllByText(
-        "Could not be loaded — this may not be the whole picture",
+        "Could not be loaded. This section may be incomplete.",
       ).length,
     ).toBeGreaterThan(0);
   });

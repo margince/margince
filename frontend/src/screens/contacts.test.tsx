@@ -202,7 +202,7 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     );
     render(<ContactsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Couldn't load this view.")).toBeTruthy(),
+      expect(screen.getByText("Could not load this view. Reload the page.")).toBeTruthy(),
     );
     expect(screen.getByText("missing scope contacts:read")).toBeTruthy();
   });

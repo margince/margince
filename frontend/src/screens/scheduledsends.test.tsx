@@ -191,9 +191,9 @@ it("puts what needs a contact first, and says why it stopped", async () => {
   mount([SENT, WAITING, HELD]);
   const headings = await screen.findAllByRole("heading", { level: 2 });
   expect(headings.map((heading) => heading.textContent)).toEqual([
-    "Stopped, waiting on you",
-    "Waiting to send",
-    "No longer waiting",
+    "Held for your action",
+    "Scheduled",
+    "Sent or withdrawn",
   ]);
   // The held reason is words on the row, not a wire token: a rep cannot act on
   // "consent_withdrawn".
@@ -209,7 +209,7 @@ it("counts the recipients it is not listing", async () => {
 it("offers no verb on a message that has already gone", async () => {
   mount([SENT]);
   expect(await screen.findByText("Sent")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Change moment" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Reschedule" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Withdraw" })).toBeNull();
 });
 
@@ -259,7 +259,7 @@ it("pins a move to the version the row was drawn from", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
   await user.click(
-    await screen.findByRole("button", { name: "Change moment" }),
+    await screen.findByRole("button", { name: "Reschedule" }),
   );
   const picker = screen.getByLabelText(/New moment for/);
   // Seeded from the send's own moment, so a rep who opens the control and saves
@@ -282,7 +282,7 @@ it("refuses to move a message to nowhere", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
   await user.click(
-    await screen.findByRole("button", { name: "Change moment" }),
+    await screen.findByRole("button", { name: "Reschedule" }),
   );
   await user.clear(screen.getByLabelText(/New moment for/));
   expect(
@@ -313,11 +313,11 @@ it("tells the reader to read the list again when the row is not the row on the s
   const user = userEvent.setup();
   mountRefusing([WAITING], "PATCH");
   await user.click(
-    await screen.findByRole("button", { name: "Change moment" }),
+    await screen.findByRole("button", { name: "Reschedule" }),
   );
   await user.click(screen.getByRole("button", { name: "Move it" }));
   expect(await screen.findByText(/This list is out of date/)).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Read it again" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Reload" })).toBeTruthy();
   // The raw server detail is the one thing that must not reach the reader: it
   // names a row version, which says nothing about what to do next.
   expect(screen.queryByText(/is not the current version/)).toBeNull();
@@ -326,7 +326,7 @@ it("tells the reader to read the list again when the row is not the row on the s
 it("says nothing is scheduled with one sentence, not three", async () => {
   mount([]);
   expect(
-    await screen.findByText("You have not scheduled a message yet."),
+    await screen.findByText("No scheduled messages yet."),
   ).toBeTruthy();
   expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
 });

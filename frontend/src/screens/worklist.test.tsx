@@ -55,7 +55,7 @@ describe("what the ranked queue tells a reader", () => {
 
     expect(
       await screen.findByText(
-        "No tasks are due today or overdue. Later work is on each record's own Tasks tab.",
+        "No tasks due today or overdue. Later tasks are on each record’s Tasks tab.",
       ),
     ).toBeTruthy();
     // The unqualified sentence is the one that misled: it must not be what a
@@ -318,7 +318,7 @@ describe("what the ranked queue tells a reader", () => {
     // pages twenty at a time, so the page alone left an officer with no sign
     // of which row they were sent to read.
     const request = await screen.findByRole("link", {
-      name: "An open privacy request",
+      name: "Open privacy request",
     });
     const dsr = "01a05500-0000-7000-8000-00000000dddd";
     expect(request.getAttribute("href")).toBe(`#/settings/privacy?case=${dsr}`);
@@ -334,7 +334,7 @@ describe("what the ranked queue tells a reader", () => {
     renderWorklist();
 
     expect(
-      await screen.findByText("If you do nothing, it slips."),
+      await screen.findByText("Otherwise, the task slips."),
     ).toBeTruthy();
   });
 
@@ -388,7 +388,7 @@ describe("what the ranked queue tells a reader", () => {
     );
     const { container } = renderWorklist();
 
-    await screen.findByText("A decision is waiting");
+    await screen.findByText("Approval waiting");
     // Named values, not a blanket ban on underscores: a real title may carry
     // one ("ACME_Q3"), and the raw words that actually leak — a kind, a source,
     // a reason, an i18n key — mostly carry none.
@@ -544,7 +544,7 @@ describe("what the ranked queue tells a reader", () => {
           }),
           row({
             id: "no-destination",
-            title: "Add someone from your mail",
+            title: "Add contact from mail",
             source: "approval",
             category: "decisions",
             consequence: "data_drifts",
@@ -665,7 +665,7 @@ describe("what the ranked queue tells a reader", () => {
 
     expect(
       await screen.findByText(
-        "Nothing is waiting among the sources that answered.",
+        "No items in the sources that loaded.",
       ),
     ).toBeTruthy();
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
@@ -989,8 +989,8 @@ describe("the address opens a queue", () => {
 
 // The label moves with the route.
 //
-// The row's own comment refused to say "Draft the reply" while the click only
-// navigated: "a link labelled 'Draft the reply' would promise something the
+// The row's own comment refused to say "Draft reply" while the click only
+// navigated: "a link labelled 'Draft reply' would promise something the
 // click does not do… the label moves back when it lands". This is the assertion
 // that the two halves stay together — mutate either and one of these fails.
 describe("the draft_reply verb says what the click does", () => {

@@ -229,7 +229,7 @@ describe("ProjectLinks", () => {
           words={{
             attach: "Attach company",
             move: "Attach company",
-            detachTitle: "Take this company off?",
+            detachTitle: "Remove company from project?",
             search: "Search companies by name",
           }}
         />

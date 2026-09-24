@@ -343,7 +343,7 @@ describe("AiRoutingCard", () => {
     expect(screen.getByText("AI by activity")).toBeTruthy();
     expect(
       screen.getByText(
-        "Only a reader who holds both AI diagnostics read and AI allowance read can see which features are live right now.",
+        "Only a user with both AI diagnostics read and AI allowance read can see which features are live now.",
       ),
     ).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();

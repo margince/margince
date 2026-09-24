@@ -236,7 +236,7 @@ describe("ContactNetworkTab", () => {
     );
     expect(
       screen.queryByText(
-        "Nobody here corresponds with them or with anyone at their company yet.",
+        "No one in the company corresponds with this contact or their company yet.",
       ),
     ).toBeNull();
   });

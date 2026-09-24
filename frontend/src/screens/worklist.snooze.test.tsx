@@ -97,7 +97,7 @@ function draw(respond: () => Promise<Response> = settled) {
 // What the panel's line for a span is CALLED.
 //
 // A whole sentence — "Snooze for 3 days" — and not the bare span it used to be.
-// The lines sit behind a caret now rather than under a labelled "For how long"
+// The lines sit behind a caret now rather than under a labelled "Snooze duration"
 // trigger, so a reader who opens the panel from the keyboard hears the line and
 // nothing else: "3 days" alone is a fragment whose verb they have to remember
 // pressing. Read from the catalogue rather than retyped, because a test naming
@@ -159,7 +159,7 @@ describe("how long a row is put down for", () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const fetch = draw();
 
-      await user.click(screen.getByRole("button", { name: "For how long" }));
+      await user.click(screen.getByRole("button", { name: "Snooze duration" }));
       await user.click(
         await screen.findByRole("button", { name: spanLine(days) }),
       );
@@ -182,7 +182,7 @@ describe("how long a row is put down for", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const fetch = draw();
 
-    await user.click(screen.getByRole("button", { name: "For how long" }));
+    await user.click(screen.getByRole("button", { name: "Snooze duration" }));
     await user.click(
       await screen.findByRole("button", {
         name: en["worklist.disposition.snoozeUntil.reply"],
@@ -240,7 +240,7 @@ describe("how long a row is put down for", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.queryByRole("button", { name: "For how long" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Snooze duration" })).toBeNull();
   });
 
   // What the confirmation SAYS a press did.
@@ -253,7 +253,7 @@ describe("how long a row is put down for", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     draw();
 
-    await user.click(screen.getByRole("button", { name: "For how long" }));
+    await user.click(screen.getByRole("button", { name: "Snooze duration" }));
     await user.click(await screen.findByRole("button", { name: spanLine(7) }));
 
     expect(
@@ -283,7 +283,7 @@ describe("how long a row is put down for", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     draw();
 
-    await user.click(screen.getByRole("button", { name: "For how long" }));
+    await user.click(screen.getByRole("button", { name: "Snooze duration" }));
 
     expect(
       await screen.findByRole("button", { name: spanLine(1) }),
@@ -343,7 +343,7 @@ describe("while one answer is being written", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     draw(neverSettles);
 
-    await user.click(screen.getByRole("button", { name: "For how long" }));
+    await user.click(screen.getByRole("button", { name: "Snooze duration" }));
     const week = await screen.findByRole("button", { name: spanLine(7) });
     await user.click(week);
 

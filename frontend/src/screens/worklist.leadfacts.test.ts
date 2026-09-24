@@ -37,7 +37,7 @@ it("gives an SDR contact context without inventing a response deadline", () => {
   expect(text).toContain("North Logistics");
   expect(text).toContain("Contacted");
   expect(text).toContain("Referral");
-  expect(text).toContain("no response target configured");
+  expect(text).toContain("no response target set");
   expect(leadFactsText(base, t, "en", "UTC")).toBeNull();
 });
 

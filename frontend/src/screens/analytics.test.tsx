@@ -88,7 +88,7 @@ describe("the delivery section", () => {
     expect(link.getAttribute("href")).toBe("#/projects/p1");
     // Nothing quiet is the good answer, said in words.
     expect(
-      screen.getByText("No delivering project has gone quiet."),
+      screen.getByText("No project in delivery has gone quiet."),
     ).toBeTruthy();
     // An empty plan takes the report's own declared defaults server-side.
     const phase = bodies.find((sent) => sent.key === "projects-by-phase");
@@ -122,7 +122,7 @@ describe("the delivery section", () => {
     expect(screen.queryByText("2026-08-20T09:00:00Z")).toBeNull();
     // A young install's other two cards say so in words.
     expect(
-      (await screen.findAllByText("No projects yet — a won deal opens one."))
+      (await screen.findAllByText("No projects yet. A won deal creates one."))
         .length,
     ).toBe(2);
   });
@@ -159,7 +159,7 @@ describe("the data coverage section", () => {
     expect(screen.getByText("the mailbox")).toBeTruthy();
     // An unconnected source is a decision, not a repair — its words say so.
     expect(
-      screen.getByText("Not connected — nothing to fix, something to decide"),
+      screen.getByText("Not connected"),
     ).toBeTruthy();
     // Only the read source carries a date; the unread one shows absence.
     expect(screen.getByText("—")).toBeTruthy();
@@ -173,7 +173,7 @@ describe("the data coverage section", () => {
       .click(await screen.findByRole("button", { name: "Data coverage" }));
     expect(
       await screen.findByText(
-        "No check has run yet. A fresh installation has not been looked at — different from one that was looked at and found healthy.",
+        "No check has run yet. An unchecked installation is not the same as a healthy one.",
       ),
     ).toBeTruthy();
   });
@@ -352,7 +352,7 @@ describe("the performance section", () => {
     expect(screen.getByText("21 days")).toBeTruthy();
     // A withheld percentile is words, not a zero and not a dash: below the
     // sample floor the engine answers null, and the cell says why.
-    expect(screen.getByText("Too few to say")).toBeTruthy();
+    expect(screen.getByText("Too few deals")).toBeTruthy();
     // The stage-age card names the stage from the pipeline, not by UUID.
     expect(screen.getByText("Qualify")).toBeTruthy();
     expect(screen.getByText("12 days")).toBeTruthy();

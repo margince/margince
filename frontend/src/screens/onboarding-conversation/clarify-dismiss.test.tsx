@@ -356,14 +356,14 @@ describe("dismissing a clarify in the company act", () => {
     ).toBeTruthy();
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Skip this - I will set it myself" }),
+      screen.getByRole("button", { name: "Skip. I will set it myself." }),
     );
 
     // The dismissal is noted and the deck's confirm button re-arms — the
     // required fields are all grounded and no decision is left open, so
     // nothing else stands between the reader and confirming.
     const confirm = (await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     })) as HTMLButtonElement;
     expect(confirm.disabled).toBe(false);
 
@@ -378,7 +378,7 @@ describe("dismissing a clarify in the company act", () => {
     // heading is the first proof the confirm landed, and Continue carries the
     // installation's prefilled reporting basis forward unchanged.
     await screen.findByRole("heading", {
-      name: "First, the basis.",
+      name: "Set the reporting basis",
     });
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
@@ -386,7 +386,7 @@ describe("dismissing a clarify in the company act", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(
-      await screen.findByRole("heading", { name: "Teach me how you write." }),
+      await screen.findByRole("heading", { name: "Train your writing voice" }),
     ).toBeTruthy();
   });
 
@@ -405,7 +405,7 @@ describe("dismissing a clarify in the company act", () => {
     );
 
     const confirm = (await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     })) as HTMLButtonElement;
     expect(confirm.disabled).toBe(false);
     await userEvent.click(confirm);

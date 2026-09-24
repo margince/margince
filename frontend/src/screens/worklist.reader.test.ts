@@ -56,7 +56,7 @@ it("attributes the original change, including self and legacy unknowns", () => {
   expect(noticeDetail(notice, undefined, t)).toContain("Dana Weiss");
   expect(
     noticeDetail({ ...notice, notice_origin: undefined }, viewer, t),
-  ).toContain("We don’t know who made this change.");
+  ).toContain("Change author unknown.");
 });
 
 it("renders the recorded stages in each language without inventing a missing stage", () => {

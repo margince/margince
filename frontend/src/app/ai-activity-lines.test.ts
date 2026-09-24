@@ -402,7 +402,7 @@ describe("the kinds the rail asks for", () => {
 // The taskbar ticker names work by react-query key; the rail names it by AI
 // task. Where a key and a displayed kind denote THE SAME action, a reader meets
 // two different sentences for one thing — the bar saying "Writing to Anna"
-// while the panel says "I'm drafting your reply."
+// while the panel says "Drafting reply…"
 //
 // The pairing is HAND-MAINTAINED and cannot be otherwise: nothing in the types
 // connects a mutation key to the task it triggers, and that missing link is

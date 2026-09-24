@@ -177,7 +177,7 @@ describe("handing a file to the Settings voice card", () => {
     expect(input.multiple).toBe(true);
     expect(screen.getByLabelText("Add writing samples")).toBe(input);
     // The zone says what teaches the voice, beside the control, every time.
-    expect(screen.getByText("What works best")).toBeTruthy();
+    expect(screen.getByText("Best samples")).toBeTruthy();
     expect(screen.getByText(/Sent emails, saved as/)).toBeTruthy();
     expect(screen.getByText(/Leave out what others wrote/)).toBeTruthy();
   });
@@ -261,7 +261,7 @@ describe("handing a file to the Settings voice card", () => {
     await screen.findByText(/Which speaker is you/);
     await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
     await userEvent.click(
-      screen.getByRole("button", { name: "That one is me" }),
+      screen.getByRole("button", { name: "Use this speaker" }),
     );
 
     await waitFor(() => expect(bodies).toHaveLength(1));
@@ -289,7 +289,7 @@ describe("handing a file to the Settings voice card", () => {
 
     await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
     await userEvent.click(
-      screen.getByRole("button", { name: "That one is me" }),
+      screen.getByRole("button", { name: "Use this speaker" }),
     );
 
     // The next question is a question, not a pre-filled answer.
@@ -302,7 +302,7 @@ describe("handing a file to the Settings voice card", () => {
     });
     expect(
       screen
-        .getByRole("button", { name: "That one is me" })
+        .getByRole("button", { name: "Use this speaker" })
         .hasAttribute("disabled"),
     ).toBe(true);
     // Only the answered file was written.
@@ -325,7 +325,7 @@ describe("handing a file to the Settings voice card", () => {
     expect(screen.getByText(/“standup\.vtt”/)).toBeTruthy();
     await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
     await userEvent.click(
-      screen.getByRole("button", { name: "That one is me" }),
+      screen.getByRole("button", { name: "Use this speaker" }),
     );
     expect(await screen.findByText(/“two\.vtt”/)).toBeTruthy();
     expect(bodies).toHaveLength(1);
@@ -543,7 +543,7 @@ describe("adding many files at once", () => {
       await screen.findByText(/Which speaker is you/);
       await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
       await userEvent.click(
-        screen.getByRole("button", { name: "That one is me" }),
+        screen.getByRole("button", { name: "Use this speaker" }),
       );
     }
     await waitFor(() => {

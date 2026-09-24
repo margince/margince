@@ -55,7 +55,7 @@ describe("the record's email box", () => {
   it("offers the reply when the caller passes a reply target", () => {
     renderBox(MAIL);
     expect(
-      screen.getByRole("button", { name: "Draft the reply" }),
+      screen.getByRole("button", { name: "Draft reply" }),
     ).toBeTruthy();
   });
 
@@ -63,7 +63,7 @@ describe("the record's email box", () => {
     renderBox();
     expect(screen.getByRole("button", { name: "Write email" })).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Draft the reply" }),
+      screen.queryByRole("button", { name: "Draft reply" }),
     ).toBeNull();
   });
 
@@ -87,7 +87,7 @@ describe("the record's email box", () => {
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByRole("button", { name: "Send an email" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send email" })).toBeTruthy();
   });
 });
 
@@ -179,7 +179,7 @@ describe("the record's own waiting-reply read", () => {
     const user = userEvent.setup();
     renderDetecting();
     const replyButton = await screen.findByRole("button", {
-      name: "Draft the reply",
+      name: "Draft reply",
     });
     await user.click(replyButton);
     // The composer only asks who a reply goes to for the activity it was

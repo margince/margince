@@ -349,7 +349,7 @@ describe("OAuthReturnPanel handing off to the backread", () => {
     render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
     expect(
-      await screen.findByRole("heading", { name: "Reading your mailbox" }),
+      await screen.findByRole("heading", { name: "Importing mailbox history" }),
     ).toBeInTheDocument();
     expect(screen.getByText("120 of about 400 messages")).toBeInTheDocument();
     expect(statusReads).toEqual([]);
@@ -372,7 +372,7 @@ describe("OAuthReturnPanel handing off to the backread", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "How far back should I read?",
+        name: "Import period",
       }),
     ).toBeInTheDocument();
     expect(
@@ -384,7 +384,7 @@ describe("OAuthReturnPanel handing off to the backread", () => {
     installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
     render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
-    await screen.findByText("We couldn't confirm the connection.");
+    await screen.findByText("The connection could not be confirmed.");
     expect(screen.getByRole("button", { name: /^done$/i })).toBeInTheDocument();
     expect(screen.queryByText(/How far back should I read/)).toBeNull();
   });
@@ -401,7 +401,7 @@ describe("OAuthReturnPanel handing off to the backread", () => {
     });
     render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
-    await screen.findByText("We couldn't confirm the connection.");
+    await screen.findByText("The connection could not be confirmed.");
     expect(
       screen.queryByRole("button", { name: /^done$/i }),
     ).not.toBeInTheDocument();
@@ -424,7 +424,7 @@ describe("OAuthReturnPanel handing off to the backread", () => {
     });
     render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
-    await screen.findByText("Confirming the connection…");
+    await screen.findByText("Confirming connection…");
     expect(
       screen.queryByRole("button", { name: /^done$/i }),
     ).not.toBeInTheDocument();
@@ -455,11 +455,11 @@ describe("OAuthReturnPanel reading a reader-typed outcome", () => {
     render(<OAuthReturnPanel outcome={outcome} onDone={vi.fn()} />);
 
     expect(
-      await screen.findByText("We couldn't confirm the connection."),
+      await screen.findByText("The connection could not be confirmed."),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Head to Settings → Connections to try connecting again.",
+        "Connect again under Settings → Connections.",
       ),
     ).toBeInTheDocument();
   });

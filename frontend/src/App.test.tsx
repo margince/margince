@@ -256,7 +256,7 @@ describe("extension routes (vanilla registry)", () => {
     ).toBeTruthy();
     expect(
       screen.queryByText(
-        "Not built yet — this surface arrives with its build ticket.",
+        "This screen is not available yet.",
       ),
     ).toBeNull();
   });
@@ -342,7 +342,7 @@ describe("auth boundary states (login spec §4)", () => {
     vi.stubGlobal("fetch", probe(500));
     mount();
     expect(
-      await screen.findByText("Margince couldn't be reached"),
+      await screen.findByText("Margince could not be reached"),
     ).toBeTruthy();
     expect(screen.queryByLabelText("Email")).toBeNull();
   });
@@ -469,7 +469,7 @@ describe("auth boundary states (login spec §4)", () => {
     );
     mount();
     expect(
-      await screen.findByRole("heading", { name: "Choose your own password" }),
+      await screen.findByRole("heading", { name: "Set your own password" }),
     ).toBeTruthy();
     // Not the login screen: the password they have is correct, and being asked
     // for it again explains nothing.
@@ -509,7 +509,7 @@ describe("auth boundary states (login spec §4)", () => {
     );
     mount();
     expect(
-      await screen.findByText("Margince couldn't be reached"),
+      await screen.findByText("Margince could not be reached"),
     ).toBeTruthy();
   });
 });

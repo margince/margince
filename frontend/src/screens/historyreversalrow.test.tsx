@@ -108,7 +108,7 @@ describe("a reversal and the change it reversed, as one row", () => {
     // The value the record moved to and back from is not drawn as a diff: the
     // pair came to nothing, so there is nothing to point an arrow at.
     expect(screen.queryByText("Head of Platform")).toBeNull();
-    expect(screen.getByText("net: unchanged")).toBeTruthy();
+    expect(screen.getByText("Net: unchanged")).toBeTruthy();
     expect(screen.getByText("Head of Ops")).toBeTruthy();
   });
 
@@ -195,7 +195,7 @@ describe("a reversal and the change it reversed, as one row", () => {
     expect(within(reversal).getByRole("button", { name: /Redo/ })).toBeTruthy();
     expect(within(reversal).queryByText("Put back")).toBeNull();
     expect(
-      screen.getByText("This change has already been put back."),
+      screen.getByText("This change was already undone."),
     ).toBeTruthy();
   });
 });
@@ -221,8 +221,8 @@ describe("a pair that only partly went back", () => {
     expect(
       screen.queryByText("Sam Okafor's change, undone by Tin Nguyen"),
     ).toBeNull();
-    expect(screen.queryByText("net: unchanged")).toBeNull();
-    expect(screen.getByText("still changed")).toBeTruthy();
+    expect(screen.queryByText("Net: unchanged")).toBeNull();
+    expect(screen.getByText("Still changed")).toBeTruthy();
     // The field that did NOT go back, as the diff it still is.
     expect(screen.getByText("Source")).toBeTruthy();
     expect(screen.getByText("referral")).toBeTruthy();
@@ -255,7 +255,7 @@ describe("a reversal whose partner is not on the page", () => {
     vi.stubGlobal("fetch", servingOnePage([tinsReversal]));
     render(<RecordHistory kind="contact" id="p1" restore={restore} />);
 
-    expect(await screen.findByText("undoing an earlier change")).toBeTruthy();
+    expect(await screen.findByText("Undoes an earlier change")).toBeTruthy();
     expect(screen.getByText("Tin Nguyen restored the record")).toBeTruthy();
     // Never a half-empty pair: nothing to disclose, and its own verb is redo.
     expect(

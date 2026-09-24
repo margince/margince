@@ -272,7 +272,7 @@ describe("LicenseCard", () => {
 
     expect(
       await waitFor(() =>
-        screen.getByText("This installation's license was refused"),
+        screen.getByText("This installation’s license was refused"),
       ),
     ).toBeTruthy();
     expect(screen.getByText("License refused")).toBeTruthy();
@@ -478,7 +478,7 @@ describe("the licensee", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() => screen.getByText("This license needs a renewal")),
+      await waitFor(() => screen.getByText("License needs renewal")),
     ).toBeTruthy();
     // Amber, not an alert: nothing has gone wrong yet.
     expect(screen.queryByRole("alert")).toBeNull();
@@ -507,7 +507,7 @@ describe("the licensee", () => {
     expect(screen.getByText(/still works/i)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     // One notice, not two: the grace state supersedes the renewal warning.
-    expect(screen.queryByText("This license needs a renewal")).toBeNull();
+    expect(screen.queryByText("License needs renewal")).toBeNull();
   });
 
   it("shows no licensee card for an unlicensed installation", async () => {

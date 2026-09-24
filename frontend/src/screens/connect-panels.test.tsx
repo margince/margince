@@ -61,7 +61,7 @@ it("OAuthConnectPanel posts the given provider and redirects", async () => {
   });
   render(<OAuthConnectPanel provider="graph" onDismiss={() => {}} />);
   await userEvent.click(
-    screen.getByRole("button", { name: "Allow access to my Microsoft" }),
+    screen.getByRole("button", { name: "Connect Microsoft" }),
   );
   await waitFor(() =>
     expect(assign).toHaveBeenCalledWith("https://login.microsoftonline/x"),
@@ -130,7 +130,7 @@ it("OAuthReturnPanel reports a confirm-failure when the returning provider is no
   });
   render(<OAuthReturnPanel outcome="ok" provider="graph" onDone={vi.fn()} />);
   expect(
-    await screen.findByText("We couldn't confirm the connection."),
+    await screen.findByText("The connection could not be confirmed."),
   ).toBeTruthy();
 });
 
@@ -154,7 +154,7 @@ it("OAuthReturnPanel refuses to offer an import for an unrecognized provider seg
   });
   render(<OAuthReturnPanel outcome="ok" provider="bogus" onDone={vi.fn()} />);
   expect(
-    await screen.findByText("We couldn't confirm the connection."),
+    await screen.findByText("The connection could not be confirmed."),
   ).toBeTruthy();
   expect(screen.queryByText("Live and capturing")).toBeNull();
   // The backfill panel reads the run for the mailbox it is offered for; the
@@ -166,7 +166,7 @@ it("OAuthReturnPanel reports a confirm-failure when no connection came back", as
   installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
   render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
   expect(
-    await screen.findByText("We couldn't confirm the connection."),
+    await screen.findByText("The connection could not be confirmed."),
   ).toBeTruthy();
 });
 

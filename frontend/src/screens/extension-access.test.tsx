@@ -355,7 +355,7 @@ describe("ExtensionAccessCard", () => {
     // its reference half, behind a disclosure that reads last and closed. So
     // the two are still told apart — by a row label and a summary rather than
     // by two section headings.
-    expect(within(unit).getByText("What this unit brings")).toBeTruthy();
+    expect(within(unit).getByText("What this unit adds")).toBeTruthy();
     // … and each registered object keeps a matrix of its own within the card,
     // NAMED by the row that holds it: the object is what a reader landing on a
     // tick in the middle of one has to be able to trace back to.
@@ -715,7 +715,7 @@ describe("ExtensionAccessCard", () => {
     // to find out why.
     expect(
       screen.getAllByText(
-        "Your seat reads this page. Changing a grant needs a full seat.",
+        "Your seat can read this page. Changing a grant requires a full seat.",
       )[0],
     ).toBeTruthy();
     const denied = cell("ext_notes_note", "Admin", "Read");

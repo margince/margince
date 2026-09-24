@@ -694,7 +694,7 @@ describe("filter menu", () => {
         chosen={{ status: "new" }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Add a filter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add filter" }));
     const menu = document.querySelector(".lt-menu.open");
     expect(menu).toBeTruthy();
     // Status already carries its own row — the attribute picker offers only
@@ -840,7 +840,7 @@ describe("a chip with an async search source", () => {
     }
 
     expect(
-      await screen.findByText("The search failed. Try again."),
+      await screen.findByText("Search failed. Retry."),
     ).toBeTruthy();
   });
 });

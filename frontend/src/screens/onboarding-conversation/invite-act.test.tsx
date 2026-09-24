@@ -50,7 +50,7 @@ describe("InviteAct", () => {
     const dispatch = renderInvite();
     expect(
       await screen.findByRole("heading", {
-        name: "Will you be working in Margince yourself?",
+        name: "Will you work in Margince yourself?",
       }),
     ).toBeInTheDocument();
     expect(
@@ -64,7 +64,7 @@ describe("InviteAct", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(dispatch).not.toHaveBeenCalled();
     expect(
-      screen.getByText("Pick one of the two to continue."),
+      screen.getByText("Select 1 of the 2 options to continue."),
     ).toBeInTheDocument();
   });
 

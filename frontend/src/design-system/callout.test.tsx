@@ -104,11 +104,11 @@ describe("Callout", () => {
 
   it("interrupts only where the caller asked for it", () => {
     render(
-      <Callout tone="danger" live="alert" title="That did not save">
+      <Callout tone="danger" live="alert" title="Change not saved">
         The role changed while you were editing.
       </Callout>,
     );
-    expect(screen.getByRole("alert")).toHaveTextContent("That did not save");
+    expect(screen.getByRole("alert")).toHaveTextContent("Change not saved");
   });
 
   it.each(TONES)(

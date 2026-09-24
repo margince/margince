@@ -33,7 +33,7 @@ export const ConfirmOpen: Story = {
   args: {
     label: "Archive",
     confirmText:
-      "Are you sure? This archives the record — there is no undo control.",
+      "Archive this record? There is no undo.",
     archive: () => Promise.resolve({ id: "p-1" }),
     invalidate: "contacts",
     recordKey: "contact",

@@ -233,7 +233,7 @@ describe("RecordAccess — a contact", () => {
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(screen.getByText("Only you")).toBeTruthy();
     expect(
-      screen.queryByText("The company can see this contact now."),
+      screen.queryByText("This contact is now visible to all users."),
     ).toBeNull();
   });
 

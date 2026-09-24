@@ -79,7 +79,7 @@ it("surfaces clipboard rejection", async () => {
   await userEvent.click(screen.getByRole("checkbox"));
   await userEvent.click(screen.getByRole("button", { name: "Copy YAML" }));
   expect(
-    await screen.findByText("This browser refused the clipboard"),
+    await screen.findByText("Clipboard access denied"),
   ).toBeTruthy();
-  expect(screen.getByText("Use the preview or download instead.")).toBeTruthy();
+  expect(screen.getByText("Copy failed. Use the preview or download instead.")).toBeTruthy();
 });

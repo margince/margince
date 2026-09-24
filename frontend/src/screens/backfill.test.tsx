@@ -291,7 +291,7 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    expect(await screen.findByText("Counting your mailbox…")).toBeTruthy();
+    expect(await screen.findByText("Counting messages…")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /Start the import/ }));
 
     await waitFor(() =>

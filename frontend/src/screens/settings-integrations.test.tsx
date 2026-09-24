@@ -100,7 +100,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
       screen.getByRole("heading", { name: "LinkedIn connections" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Where your network reaches" }),
+      screen.getByRole("heading", { name: "Network reach" }),
     ).toBeTruthy();
     // And nothing workspace-wide: a key everybody spends from and the
     // subscriptions everybody's writes fire.
@@ -122,7 +122,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
     for (const heading of [
       "Connected mailboxes and calendars",
       "LinkedIn connections",
-      "Where your network reaches",
+      "Network reach",
     ]) {
       expect(screen.queryByRole("heading", { name: heading })).toBeNull();
     }

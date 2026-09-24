@@ -164,7 +164,7 @@ describe("BasisAct", () => {
     const user = userEvent.setup();
 
     expect(
-      await screen.findByRole("heading", { name: "First, the basis." }),
+      await screen.findByRole("heading", { name: "Set the reporting basis" }),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Base currency")).toBeNull();
 

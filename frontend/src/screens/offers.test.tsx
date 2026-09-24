@@ -384,7 +384,7 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     stubOffer({ ...baseOffer, line_items: [unpriced] });
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
-    expect(screen.getAllByText("unpriced — excluded from total").length).toBe(
+    expect(screen.getAllByText("unpriced, excluded from total").length).toBe(
       2,
     );
     expect(screen.queryByText("€0.00")).toBeNull();
@@ -470,7 +470,7 @@ describe("AI disclosure/diff banner (OP-11)", () => {
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
     expect(
-      screen.queryByRole("heading", { name: "AI-assisted disclosure" }),
+      screen.queryByRole("heading", { name: "AI-assisted draft" }),
     ).toBeNull();
   });
 });

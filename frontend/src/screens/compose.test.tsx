@@ -29,7 +29,7 @@ import { TimelineActions } from "./timelineactions";
 // The composer's "why are you writing?" dial, named rather than reached for by
 // role alone: To, Cc and Bcc are comboboxes of their own now, so a bare role
 // query matches four controls and every readiness wait has to say which.
-const WHY_ASK = "Why are you writing?";
+const WHY_ASK = "Reason for contact";
 const DISCLOSURE = { name: "AI-assisted draft" };
 type Activity = components["schemas"]["Activity"];
 
@@ -366,7 +366,7 @@ describe("RelinkModal", () => {
     );
     await userEvent.click(
       screen.getByRole("checkbox", {
-        name: "Also move the rest of this conversation",
+        name: "Move rest of thread",
       }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Relink" }));
@@ -403,7 +403,7 @@ describe("RelinkModal", () => {
     );
     expect(
       screen.queryByRole("checkbox", {
-        name: "Also move the rest of this conversation",
+        name: "Move rest of thread",
       }),
     ).toBeNull();
   });
@@ -446,7 +446,7 @@ describe("RelinkModal", () => {
 // dropdown was replaced because the record already decides what is allowed, and
 // a key a rep picked was never that.
 const WHY_LABEL = {
-  requestedFollowup: "They asked me to get in touch",
+  requestedFollowup: "Follow-up they requested",
   marketing: "Marketing",
 } as const;
 
@@ -781,23 +781,23 @@ describe("ComposeModal", () => {
 
     // Nothing is said before the reader has asked to send: a form reporting
     // what is missing while they are still typing is scolding them.
-    expect(screen.queryByText("Give this email a subject.")).toBeNull();
+    expect(screen.queryByText("Enter a subject.")).toBeNull();
 
     await userEvent.click(send);
 
     expect(screen.getByText("Add at least one recipient.")).toBeTruthy();
-    expect(screen.getByText("Give this email a subject.")).toBeTruthy();
+    expect(screen.getByText("Enter a subject.")).toBeTruthy();
     expect(
-      screen.getByText("Write the message before sending it."),
+      screen.getByText("Enter a message before sending."),
     ).toBeTruthy();
-    expect(screen.getByText("Say why you are writing to them.")).toBeTruthy();
+    expect(screen.getByText("Select the reason for contact.")).toBeTruthy();
     expect(
       sent.filter((call) => call.key.startsWith("POST /activities")),
     ).toHaveLength(0);
 
     // And they stop being said as the fields are answered.
     await fillSendableForm();
-    expect(screen.queryByText("Give this email a subject.")).toBeNull();
+    expect(screen.queryByText("Enter a subject.")).toBeNull();
   });
 
   it("sends the edited email with no approval token or idempotency key", async () => {
@@ -1252,7 +1252,7 @@ describe("ComposeModal draft binding", () => {
     );
 
     expect(
-      await screen.findByText("The request failed. Please try again."),
+      await screen.findByText("The request failed. Retry."),
     ).toBeTruthy();
     expect(messageText("Body")).toBe("Draft A body.");
 
@@ -2981,10 +2981,10 @@ describe("what the composer says this message is", () => {
     // here is being asked to restate what the thread in front of them says.
     expect(
       await screen.findByText(
-        "This continues their own message, so it needs no reason from you.",
+        "This replies to the recipient’s own message, so no reason is needed.",
       ),
     ).toBeTruthy();
-    expect(screen.queryByLabelText("Why are you writing?")).toBeNull();
+    expect(screen.queryByLabelText("Reason for contact")).toBeNull();
   });
 
   it("sends a reply with no claim at all", async () => {
@@ -3003,7 +3003,7 @@ describe("what the composer says this message is", () => {
     );
 
     await screen.findByText(
-      "This continues their own message, so it needs no reason from you.",
+      "This replies to the recipient’s own message, so no reason is needed.",
     );
     await userEvent.type(screen.getByLabelText("To"), "a@x.com");
     await userEvent.tab();
@@ -3067,7 +3067,7 @@ describe("what the composer says this message is", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "anchor it" }));
     await screen.findByText(
-      "This continues their own message, so it needs no reason from you.",
+      "This replies to the recipient’s own message, so no reason is needed.",
     );
 
     await userEvent.type(screen.getByLabelText("To"), "a@x.com");
@@ -3141,7 +3141,7 @@ describe("what the composer says this message is", () => {
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     expect(
-      await screen.findByText("Say why you are writing to them."),
+      await screen.findByText("Select the reason for contact."),
     ).toBeTruthy();
     expect(sent).toBe(false);
   });

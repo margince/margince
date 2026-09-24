@@ -157,9 +157,9 @@ describe("reading a transcript for its next steps", () => {
       screen.getByText("3 next steps waiting for your review"),
     ).toBeTruthy();
     // The 🟡 tier is drawn, never spelled as an emoji.
-    expect(screen.getByRole("img", { name: "confirm-first" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "approval first" })).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Open the Worklist" }));
+    await user.click(screen.getByRole("button", { name: "Open Worklist" }));
     expect(window.location.hash).toContain("worklist");
   });
 
@@ -179,9 +179,9 @@ describe("reading a transcript for its next steps", () => {
     // A correct empty answer is not a queue of work: nothing to review, and
     // nowhere to go.
     expect(
-      screen.queryByRole("button", { name: "Open the Worklist" }),
+      screen.queryByRole("button", { name: "Open Worklist" }),
     ).toBeNull();
-    expect(screen.queryByRole("img", { name: "confirm-first" })).toBeNull();
+    expect(screen.queryByRole("img", { name: "approval first" })).toBeNull();
   });
 
   it("explains a reading it could not finish, and never as an empty result", async () => {
@@ -203,11 +203,11 @@ describe("reading a transcript for its next steps", () => {
     expect(screen.queryByText("Done")).toBeNull();
     expect(
       screen.queryByText(
-        "Read in full. This conversation states no next steps.",
+        "Transcript read in full. No next steps found.",
       ),
     ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Open the Worklist" }),
+      screen.queryByRole("button", { name: "Open Worklist" }),
     ).toBeNull();
   });
 
@@ -219,7 +219,7 @@ describe("reading a transcript for its next steps", () => {
     // asserted: a heading alone would pass on a notice that never says nothing
     // was staged.
     expect(
-      await screen.findByText("This transcript could not be read"),
+      await screen.findByText("Transcript could not be read"),
     ).toBeTruthy();
     expect(screen.getByText("Nothing was staged.")).toBeTruthy();
   });
@@ -234,11 +234,11 @@ describe("reading a transcript for its next steps", () => {
     expect(screen.queryByText("0 lines read")).toBeNull();
     expect(
       screen.queryByText(
-        "Read in full. This conversation states no next steps.",
+        "Transcript read in full. No next steps found.",
       ),
     ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Open the Worklist" }),
+      screen.queryByRole("button", { name: "Open Worklist" }),
     ).toBeNull();
   });
 

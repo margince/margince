@@ -387,7 +387,7 @@ describe("restore into the conversational shell", () => {
     });
     render(<OnboardingScreen />);
 
-    expect(await screen.findByText("Connect your accounts.")).toBeTruthy();
+    expect(await screen.findByText("Connect your accounts")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Google/ })).toBeTruthy();
     // Microsoft is a live OAuth path now — the chip opens the same connect
     // panel Google does, no "Soon" placeholder. It starts disabled until the
@@ -416,7 +416,7 @@ describe("restore into the conversational shell", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Will you be working in Margince yourself?",
+        name: "Will you work in Margince yourself?",
       }),
     ).toBeTruthy();
     // Both answers are on the page, and reopening the question records
@@ -467,7 +467,7 @@ describe("restore into the conversational shell", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(await screen.findByText("Invite the first user.")).toBeTruthy();
+    expect(await screen.findByText("Invite the first user")).toBeTruthy();
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
     });
@@ -506,7 +506,7 @@ describe("restore into the conversational shell", () => {
     expect(body.step).toBe("complete");
     // The handoff scene has the surface.
     await waitFor(() =>
-      expect(screen.queryByText("Invite the first user.")).toBeNull(),
+      expect(screen.queryByText("Invite the first user")).toBeNull(),
     );
   });
 
@@ -519,7 +519,7 @@ describe("restore into the conversational shell", () => {
     });
     render(<OnboardingScreen />);
 
-    expect(await screen.findByText("Connect your accounts.")).toBeTruthy();
+    expect(await screen.findByText("Connect your accounts")).toBeTruthy();
   });
 
   // Leaving the voice act lands directly on the merged connect screen — mail
@@ -537,7 +537,7 @@ describe("restore into the conversational shell", () => {
       await screen.findByRole("button", { name: "Continue" }),
     );
 
-    expect(await screen.findByText("Connect your accounts.")).toBeTruthy();
+    expect(await screen.findByText("Connect your accounts")).toBeTruthy();
     // The LinkedIn card is on this same screen, unopened until asked for.
     expect(
       screen.queryByRole("button", { name: "Skip LinkedIn for now" }),
@@ -601,7 +601,7 @@ describe("reload adoption of a persisted read", () => {
     // narrate into no longer renders at all — the deck's own heading is
     // what proves the reload landed on the review.
     expect(
-      await screen.findByRole("button", { name: "Confirm the profile" }),
+      await screen.findByRole("button", { name: "Confirm profile" }),
     ).toBeTruthy();
   });
 
@@ -653,7 +653,7 @@ describe("reload adoption of a persisted read", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
 
     expect(
-      await screen.findByRole("button", { name: "Confirm the profile" }),
+      await screen.findByRole("button", { name: "Confirm profile" }),
     ).toBeTruthy();
   });
 
@@ -675,7 +675,7 @@ describe("reload adoption of a persisted read", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: "Confirm the profile" },
+        { name: "Confirm profile" },
         {
           timeout: 8000,
         },

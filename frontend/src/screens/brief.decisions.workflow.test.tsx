@@ -276,7 +276,7 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
     );
 
     expect(
-      await screen.findByText("Already decided — nothing left to do here."),
+      await screen.findByText("Already decided. Nothing left to do."),
     ).toBeTruthy();
     // The refusal on the first item did not swallow the second one.
     expect(writeRoutes(calls)).toEqual([
@@ -347,7 +347,7 @@ describe("ApprovalTray — a bundle says only what its members agree on", () => 
     expect(screen.queryByText("Automated by an agent")).toBeNull();
     // The KIND is every member's, so the chip that says what this act is stays:
     // the rule drops the fact that diverged, not the card's meta line.
-    expect(screen.getByText("Send an email")).toBeTruthy();
+    expect(screen.getByText("Send email")).toBeTruthy();
   });
 
   // The other end. Without this, blanking the tag unconditionally would pass the

@@ -107,10 +107,10 @@ const RUNTIME_LABELS: WorkbenchRuntimeLabels = {
   latency: "Model latency",
   estimatedCost: "Estimated provider cost",
   partial: "Partial · unpriced usage exists",
-  awaiting: "Shown after my first model call",
+  awaiting: "Shown after the first model call",
   unavailable: "Not available yet",
-  chip: "What is answering, and what it costs",
-  answering: "What is answering right now",
+  chip: "Active model and cost",
+  answering: "Active model",
   scope: "This run only. The full log is in Settings → AI.",
   tokensShort: "tok",
 };
@@ -157,9 +157,9 @@ function Artifact() {
 // them is the `variant` prop itself.
 const BASE = {
   state: "working",
-  eyebrow: "Hi, I'm Margince",
-  title: "Your company research AI",
-  status: "I'm ready to research",
+  eyebrow: "Margince",
+  title: "Company research AI",
+  status: "Ready to research",
   configured: "deepseek-chat · llama3.1:8b",
   configuredSummary: "2 models, split between cloud and local",
   locale: "en",

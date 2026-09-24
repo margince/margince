@@ -159,8 +159,8 @@ async function fillAndSend(user: ReturnType<typeof userEvent.setup>) {
   writeMessage("Body", "Attached.");
   await pickOption(
     user,
-    screen.getByLabelText("Why are you writing?"),
-    "They asked me to get in touch",
+    screen.getByLabelText("Reason for contact"),
+    "Follow-up they requested",
   );
   await user.click(screen.getByRole("button", { name: "Send" }));
 }

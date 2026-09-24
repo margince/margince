@@ -107,11 +107,11 @@ describe("SettingRow", () => {
     render(
       <SettingRow
         testId="posture-row"
-        label="Retain-only posture"
+        label="Retain-only mode"
         description="While this is on, this installation destroys nothing."
         control={
           <Switch
-            label="Retain-only posture"
+            label="Retain-only mode"
             labelHidden
             reason="Only an admin or ops can change retention."
             checked={false}

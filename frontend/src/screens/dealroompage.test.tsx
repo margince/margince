@@ -126,7 +126,7 @@ it("names the room, marks it live, and counts who is in it", async () => {
     screen.getByText("Last seen by a buyer: 2026-08-24"),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "← Back to the deal" }),
+    screen.getByRole("button", { name: "← Back to deal" }),
   ).toBeInTheDocument();
 });
 

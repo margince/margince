@@ -150,7 +150,7 @@ describe("the VAT mark beside the number", () => {
     // different facts, and the mark must not spend the second on the first.
     expect(
       await screen.findByRole("button", {
-        name: "VAT ID: not checked with the register yet",
+        name: "VAT ID: not yet checked with the register",
       }),
     ).toBeInTheDocument();
   });
@@ -283,7 +283,7 @@ describe("the VAT mark beside the number", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", {
-        name: "VAT ID: not checked with the register yet",
+        name: "VAT ID: not yet checked with the register",
       }),
     ).toBeNull();
   });

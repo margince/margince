@@ -115,7 +115,7 @@ async function openReplyAndAddress(address: string) {
     />,
   );
   await screen.findByText(
-    "This continues their own message, so it needs no reason from you.",
+    "This replies to the recipient’s own message, so no reason is needed.",
   );
   const user = userEvent.setup();
   await user.type(screen.getByLabelText("To"), address);
@@ -233,7 +233,7 @@ describe("the composer asks before anybody presses Send", () => {
       />,
     );
     await screen.findByText(
-      "This continues their own message, so it needs no reason from you.",
+      "This replies to the recipient’s own message, so no reason is needed.",
     );
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("To"), "anna@example.test");
@@ -284,7 +284,7 @@ describe("the composer asks before anybody presses Send", () => {
       />,
     );
     await screen.findByText(
-      "This continues their own message, so it needs no reason from you.",
+      "This replies to the recipient’s own message, so no reason is needed.",
     );
     expect(screen.queryByRole("button", { name: /ready to send/i })).toBeNull();
   });

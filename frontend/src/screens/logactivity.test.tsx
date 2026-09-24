@@ -477,7 +477,7 @@ describe("log activity from a 360", () => {
       const log = screen.getByRole("button", { name: "Log" });
       expect(log.hasAttribute("disabled")).toBe(true);
 
-      await user.type(screen.getByLabelText("Who was there"), "Fré");
+      await user.type(screen.getByLabelText("Attendees"), "Fré");
       await user.click(
         await screen.findByRole("button", { name: "Frédéric de Gombert" }),
       );
@@ -497,7 +497,7 @@ describe("log activity from a 360", () => {
       render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
       await user.type(screen.getByLabelText("Subject *"), "Kickoff");
-      await user.type(screen.getByLabelText("Who was there"), "Fré");
+      await user.type(screen.getByLabelText("Attendees"), "Fré");
       await user.click(
         await screen.findByRole("button", { name: "Frédéric de Gombert" }),
       );
@@ -532,7 +532,7 @@ describe("log activity from a 360", () => {
       );
       render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
-      await user.type(screen.getByLabelText("Who was there"), "Fré");
+      await user.type(screen.getByLabelText("Attendees"), "Fré");
       await user.click(
         await screen.findByRole("button", { name: "Frédéric de Gombert" }),
       );
@@ -540,7 +540,7 @@ describe("log activity from a 360", () => {
       // Switching kind hides the picker but does not forget the contact: the
       // reader answered a question the form stopped asking.
       await pickOption(user, screen.getByLabelText("Type"), "Note");
-      expect(screen.queryByLabelText("Who was there")).toBeNull();
+      expect(screen.queryByLabelText("Attendees")).toBeNull();
       await user.type(screen.getByLabelText("Subject *"), "Pricing thoughts");
       await user.click(screen.getByRole("button", { name: "Log" }));
 
@@ -563,7 +563,7 @@ describe("log activity from a 360", () => {
     it("asks nobody for a note, which a company can hold on its own", async () => {
       stubApi({ "POST /activities": createdActivity });
       render(<LogActivity entityType="company" entityId="o1" />);
-      expect(screen.queryByLabelText("Who was there")).toBeNull();
+      expect(screen.queryByLabelText("Attendees")).toBeNull();
     });
 
     it("says the company has no contacts rather than offering none silently", async () => {
@@ -575,7 +575,7 @@ describe("log activity from a 360", () => {
       });
       render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
-      await user.type(screen.getByLabelText("Who was there"), "any");
+      await user.type(screen.getByLabelText("Attendees"), "any");
       // The picker's own empty-search wording, so a company with nobody on it
       // reads as an answered question rather than a field that never responded.
       expect(await screen.findByText(/no match/i)).toBeTruthy();
@@ -890,7 +890,7 @@ describe("log activity from a 360", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          "Could not read that file — try pasting the text instead.",
+          "File could not be read. Paste the text instead.",
         ),
       ).toBeTruthy(),
     );

@@ -562,7 +562,7 @@ describe("an access state this build does not know", () => {
     expect(await screen.findByText("This room is now read-only.")).toBeTruthy();
     expect(
       screen.queryByText(
-        "This room is closed; what it shared is a record now.",
+        "This room is closed. Its content is kept as a record.",
       ),
     ).toBeNull();
   });

@@ -109,7 +109,7 @@ describe("the offer to put an approved change back", () => {
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
 
     const undo = await screen.findByRole("button", {
-      name: "Undo on the record",
+      name: "Undo on record",
     });
     await userEvent.click(undo);
     expect(globalThis.location.hash).toBe("#/deals/d1");
@@ -133,7 +133,7 @@ describe("the offer to put an approved change back", () => {
 
     await waitFor(() => expect(rejectCalls(fetched)).toBe(1));
     expect(
-      screen.queryByRole("button", { name: "Undo on the record" }),
+      screen.queryByRole("button", { name: "Undo on record" }),
     ).toBeNull();
   });
 
@@ -158,7 +158,7 @@ describe("the offer to put an approved change back", () => {
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
     await waitFor(() => expect(approveCalls(fetched)).toBe(1));
     expect(
-      screen.queryByRole("button", { name: "Undo on the record" }),
+      screen.queryByRole("button", { name: "Undo on record" }),
     ).toBeNull();
   });
 });

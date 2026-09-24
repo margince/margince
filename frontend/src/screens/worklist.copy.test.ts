@@ -49,7 +49,7 @@ describe("comparisonText", () => {
     // could check draws the plain sentence rather than a false tie.
     const comparison: WorklistComparison = { comparator: "waiting_days" };
     expect(comparisonText(comparison, t, "en", zone)).toBe(
-      "Above the next on how long it has waited.",
+      "Ranked above the next item by waiting time.",
     );
   });
 
@@ -76,7 +76,7 @@ describe("comparisonText", () => {
   // explain was the one row with no explanation.
   it("names crowded, which this build's own server emits", () => {
     expect(comparisonText({ comparator: "crowded" }, t, "en", zone)).toBe(
-      "Above the next because that one is one of many of its kind.",
+      "Ranked above the next item, which is one of many of its kind.",
     );
   });
 });
@@ -206,8 +206,8 @@ describe("the verbs the row can and cannot take a reader to", () => {
   });
 
   it("names a first message as writing, not as replying", () => {
-    expect(moveLabel(movingRow("draft_email"), t)).toBe("Draft the email");
-    expect(moveLabel(movingRow("draft_reply"), t)).toBe("Draft the reply");
+    expect(moveLabel(movingRow("draft_email"), t)).toBe("Draft email");
+    expect(moveLabel(movingRow("draft_reply"), t)).toBe("Draft reply");
   });
 
   // And the label still follows the ROUTE. A deal has no composer, so the same
@@ -217,7 +217,7 @@ describe("the verbs the row can and cannot take a reader to", () => {
       ...movingRow("draft_email"),
       subject: { type: "deal", id: "d-1" },
     };
-    expect(moveLabel(onADeal, t)).toBe("Open to write");
+    expect(moveLabel(onADeal, t)).toBe("Write email");
   });
 
   // These are PERFORMED, not navigated: one posts a task body, one leaves for a
@@ -410,7 +410,7 @@ describe("an unavailable source", () => {
 
   it("never reads its own title as the sentence's subject", () => {
     // What `sourceName` returns is a row TITLE, and most of them are whole
-    // clauses — "A mailbox connection needs attention". Framed as a subject,
+    // clauses — "Mailbox connection needs attention". Framed as a subject,
     // fourteen of these ran two sentences together, and each one read as a
     // rendering fault rather than as a source the page could not reach.
     //
@@ -478,7 +478,7 @@ describe("the open_meeting_brief move", () => {
   // so on its own rather than borrow the reply wording, which is only the
   // fall-through for a verb with no words of its own.
   it("names itself as the brief, not as a reply", () => {
-    expect(moveLabel(briefRow("p-9"), t)).toBe("Prepare for the meeting");
+    expect(moveLabel(briefRow("p-9"), t)).toBe("Prepare for meeting");
   });
 });
 

@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AssistantPanel } from "./assistant";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// "Ask about this account" as it stands in the company overview's column: the
+// "Ask about this company" as it stands in the company overview's column: the
 // same header band as the readings above and below it, with the disclosure
 // badge IN that band rather than as a line of prose inside the body.
 //

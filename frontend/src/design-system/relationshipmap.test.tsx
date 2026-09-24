@@ -35,7 +35,7 @@ function model(over: Partial<RelationshipMapModel> = {}): RelationshipMapModel {
         label: "Philipp Königs",
         sublabel: "CFO",
         engagement: "untried",
-        engagementLabel: "Not approached",
+        engagementLabel: "Not contacted",
         actions: [{ id: "write", label: "Write to Philipp", primary: true }],
       },
       {
@@ -84,7 +84,7 @@ function model(over: Partial<RelationshipMapModel> = {}): RelationshipMapModel {
         to: "p-1",
         kind: "route",
         band: "cold",
-        words: "never written to",
+        words: "never contacted",
       },
       {
         id: "m-1",

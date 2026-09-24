@@ -442,7 +442,7 @@ describe("provenanceOf", () => {
   });
 
   it("reports an unrecorded source as unknown rather than as the reader's own typing", () => {
-    // The old fallback made every unattributed row read as "typed by you" —
+    // The old fallback made every unattributed row read as "entered by you" —
     // the one attribution nobody can check.
     expect(provenanceOf(undefined)).toEqual({ kind: "unknown" });
     expect(provenanceOf("")).toEqual({ kind: "unknown" });

@@ -40,10 +40,10 @@ describe("AuthScreen login", () => {
     // complete on the first render, and reading the visible layer instead would
     // be asserting on a race.
     expect(
-      screen.getByText("Hi, I’m Margince.", { selector: ".sr-only" }),
+      screen.getByText("This is Margince.", { selector: ".sr-only" }),
     ).toBeTruthy();
     expect(
-      screen.getByText("I’m here to take care of the work around your work."),
+      screen.getByText("It takes care of the work around your work."),
     ).toBeTruthy();
     // What the region no longer says, asserted because each was removed on
     // purpose and a silent return would be a change nobody asked for: the
@@ -126,7 +126,7 @@ describe("AuthScreen login", () => {
     );
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "Margince couldn't be reached",
+      "Margince could not be reached",
     );
     expect(probe).toHaveBeenCalledOnce();
     expect(
@@ -148,7 +148,7 @@ describe("AuthScreen login", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain(
-      "We couldn't sign you in. Check your email and password and try again.",
+      "Sign-in failed. Check the email and password and try again.",
     );
     expect(screen.getByLabelText("Email")).toHaveProperty(
       "value",
@@ -183,7 +183,7 @@ describe("AuthScreen login", () => {
     await userEvent.type(screen.getByLabelText("Password"), "whatever{enter}");
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Margince couldn't be reached");
+    expect(alert.textContent).toContain("Margince could not be reached");
   });
 
   it("restores a deep link after login instead of forcing the Brief", async () => {
@@ -207,7 +207,7 @@ describe("AuthScreen login", () => {
     render(<AuthScreen onAuthed={vi.fn()} notice="session-expired" />);
     expect(
       await screen.findByText(
-        "Your session expired. Sign in again to continue.",
+        "The session expired. Sign in again to continue.",
       ),
     ).toBeTruthy();
     cleanup();
@@ -368,7 +368,7 @@ describe("AuthScreen forgot password", () => {
       "ada@example.com{enter}",
     );
 
-    expect(await screen.findByText("Check your inbox")).toBeTruthy();
+    expect(await screen.findByText("Check your email")).toBeTruthy();
     expect(String(calls[0]?.url)).toContain("/v1/auth/forgot-password");
   });
 });
@@ -478,7 +478,7 @@ describe("AuthScreen reset deep link", () => {
     );
 
     expect(
-      await screen.findByText("That reset link is invalid, used, or expired."),
+      await screen.findByText("This reset link is invalid, already used or expired."),
     ).toBeTruthy();
     expect(screen.getByText("Request a new link")).toBeTruthy();
   });
@@ -511,7 +511,7 @@ describe("AuthScreen reset deep link", () => {
 
     expect(
       await screen.findByText(
-        "Too many attempts. Wait a moment, then set your password again.",
+        "Too many attempts. Wait a moment, then set the password again.",
       ),
     ).toBeTruthy();
     // The link is untouched by a rate limit, so replacing it is still wrong.
@@ -537,7 +537,7 @@ describe("AuthScreen reset deep link", () => {
 
     expect(
       await screen.findByText(
-        "That password was refused. Choose a different one and try again.",
+        "The password was refused. Choose a different password.",
       ),
     ).toBeTruthy();
     // The link is still good, so replacing it must not be offered.
@@ -563,7 +563,7 @@ describe("AuthScreen reset deep link", () => {
 
     expect(
       await screen.findByText(
-        "We couldn't set your password just now. Your link is still valid, so try again in a moment.",
+        "The password was not set. The link is still valid; try again in a moment.",
       ),
     ).toBeTruthy();
     expect(screen.queryByText("Request a new link")).toBeNull();
@@ -590,7 +590,7 @@ describe("AuthScreen reset deep link", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain(
-      "That reset link is invalid, used, or expired.",
+      "This reset link is invalid, already used or expired.",
     );
   });
 
@@ -643,7 +643,7 @@ describe("AvailabilityScreen", () => {
   it("presents connectivity and installation problems as availability with a retry", async () => {
     const onRetry = vi.fn();
     render(<AvailabilityScreen kind="connection" onRetry={onRetry} />);
-    expect(screen.getByText("Margince couldn't be reached")).toBeTruthy();
+    expect(screen.getByText("Margince could not be reached")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(onRetry).toHaveBeenCalled();
     cleanup();

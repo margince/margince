@@ -94,7 +94,7 @@ function archiveButton() {
 }
 function postureLine() {
   return screen.queryByText(
-    "Read-only view — you may not change offer templates.",
+    "Read-only: you do not have permission to change offer templates.",
   );
 }
 

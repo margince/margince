@@ -191,7 +191,7 @@ describe("ProjectScreen", () => {
     });
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
-    const withheld = screen.getAllByText("Hidden — your role cannot read this");
+    const withheld = screen.getAllByText("Hidden for your role");
     // The contracts card, the rollups plate, the company in the subtitle and
     // the timeline: four withheld sections, four sentences, no empty state
     // standing in for any of them. The coverage line is gone from the page, so

@@ -132,7 +132,7 @@ test("says nobody has answered rather than naming a fallback", async () => {
     />,
   );
 
-  expect(await screen.findByText("Written to · no replies")).not.toBeNull();
+  expect(await screen.findByText("Contacted · no replies")).not.toBeNull();
 });
 
 // A bare "6" says nothing about an account until the reader knows whether it
@@ -402,7 +402,7 @@ test("says the reading failed rather than vanishing", async () => {
 
   expect(await screen.findByText("Unavailable")).not.toBeNull();
   expect(
-    await screen.findByText("Read failed · list unaffected"),
+    await screen.findByText("Load failed · list unaffected"),
   ).not.toBeNull();
 });
 

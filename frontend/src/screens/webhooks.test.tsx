@@ -550,7 +550,7 @@ describe("WebhooksCard — pause/resume + re-target (EditAction)", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          "This record changed since you opened it — reload and try again.",
+          "This record changed since it was opened. Reload and retry.",
         ),
       ).toBeTruthy(),
     );

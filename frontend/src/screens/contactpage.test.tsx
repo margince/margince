@@ -169,7 +169,7 @@ describe("the Data & tools tab's added capabilities", () => {
       ],
     };
     mount("research", withEnrichment);
-    expect(await screen.findByText("What Margince read")).toBeTruthy();
+    expect(await screen.findByText("Enriched details")).toBeTruthy();
     expect(screen.getByText("Head of Procurement")).toBeTruthy();
     // The heading and the value alone don't prove the page reaches the
     // control the ticket was about — the confirm/correct buttons themselves
@@ -179,7 +179,7 @@ describe("the Data & tools tab's added capabilities", () => {
     // (/me) than the field's own read — findByRole waits it out rather than
     // catching the render before that query has settled.
     expect(
-      await screen.findByRole("button", { name: "That is right" }),
+      await screen.findByRole("button", { name: "Confirm" }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
   });
@@ -209,7 +209,7 @@ describe("a moment action that opens the composer", () => {
       await screen.findByRole("button", { name: "Draft a follow-up" }),
     );
 
-    expect(await intentValue()).toBe("follow up — it has gone quiet");
+    expect(await intentValue()).toBe("follow up after a quiet period");
   });
 
   it("opens the same drawer for the generic verb, carrying no reason", async () => {
@@ -332,7 +332,7 @@ describe("the header's writing verb", () => {
   // to hold beside it, and that is the claim rather than an omission: the
   // composer asks about consent, because consent is answered per PURPOSE and
   // the purpose is a fact about the message.
-  const NO_TRANSPORT = "No address, and no conversation to reply to.";
+  const NO_TRANSPORT = "No address and no thread to reply to.";
 
   it("names mail when an address is the only way to reach them", async () => {
     mount("overview", view, [mailAllowed]);
@@ -968,7 +968,7 @@ describe("a live contact that is not the viewer's to change", () => {
     contact: { ...view.contact, owner_id: "u-other", writable: false },
   };
   const sentence =
-    "You cannot change this contact. Ask their owner to share them with you, or your administrator for the right to edit them.";
+    "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights.";
 
   it("says so once, and refuses Share from that sentence", async () => {
     const user = userEvent.setup();
@@ -987,7 +987,7 @@ describe("a live contact that is not the viewer's to change", () => {
   it("refuses the upload on the Documents tab from the same sentence", async () => {
     mount("documents", notMine);
 
-    const add = await screen.findByRole("button", { name: "Add a document" });
+    const add = await screen.findByRole("button", { name: "Add document" });
     expect(add.hasAttribute("disabled")).toBe(true);
     expect(
       document.getElementById(add.getAttribute("aria-describedby") ?? "")

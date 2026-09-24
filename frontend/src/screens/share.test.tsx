@@ -554,7 +554,7 @@ describe("ShareScreen", () => {
 
     expect(await screen.findByTestId("share-acl-list")).toBeTruthy();
     expect(
-      screen.queryByText("This isn't a record that can be shared."),
+      screen.queryByText("This record cannot be shared."),
     ).toBeNull();
   });
 });

@@ -317,7 +317,7 @@ describe("the agent panel's report", () => {
   // A quiet line rather than a dashed plate: the dashes read as a tile whose
   // number failed to load, which is the opposite of what an all-clear says.
   //
-  // And its OWN sentence. The head's resting line says "Nothing needs you" on
+  // And its OWN sentence. The head's resting line says "Nothing needs attention" on
   // exactly the installation this section is empty on, so the two stood on one
   // panel saying the same four words.
   it("says the all-clear as a plain line, undashed and in its own words", async () => {

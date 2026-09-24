@@ -100,10 +100,10 @@ describe("the buying committee, drawn", () => {
       pending: false,
     });
     expect(
-      screen.getByText("Hidden — your role cannot read this"),
+      screen.getByText("Hidden for your role"),
     ).toBeTruthy();
     expect(
-      screen.queryByText("No stakeholder is recorded on this deal"),
+      screen.queryByText("No stakeholders on this deal"),
     ).toBeNull();
     expect(screen.queryByText("Dana Weiss")).toBeNull();
   });
@@ -122,7 +122,7 @@ describe("the buying committee, drawn", () => {
       document.querySelector('[role="status"][aria-busy="true"]'),
     ).toBeTruthy();
     expect(
-      screen.queryByText("No stakeholder is recorded on this deal"),
+      screen.queryByText("No stakeholders on this deal"),
     ).toBeNull();
     expect(screen.queryByText("Dana Weiss")).toBeNull();
   });
@@ -142,7 +142,7 @@ describe("the buying committee, drawn", () => {
     });
     expect(container.firstChild).toBeNull();
     expect(
-      screen.queryByText("No stakeholder is recorded on this deal"),
+      screen.queryByText("No stakeholders on this deal"),
     ).toBeNull();
   });
 
@@ -154,7 +154,7 @@ describe("the buying committee, drawn", () => {
     });
     expect(container.firstChild).not.toBeNull();
     expect(
-      screen.getByText("Hidden — your role cannot read this"),
+      screen.getByText("Hidden for your role"),
     ).toBeTruthy();
   });
 });

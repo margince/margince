@@ -400,10 +400,10 @@ const DOSSIER_TEST_MS =
  */
 async function openTheEditingBoard(): Promise<void> {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Read the whole profile" }),
+    await screen.findByRole("button", { name: "Read full profile" }),
   );
   await userEvent.click(
-    await screen.findByRole("button", { name: "Choose the facts to keep" }),
+    await screen.findByRole("button", { name: "Choose facts to keep" }),
   );
 }
 
@@ -659,7 +659,7 @@ describe("the mandatory company minimum", () => {
     await screen.findByLabelText(/Your website address/);
     await chooseManual();
 
-    expect(screen.getByText("Your legal company")).toBeTruthy();
+    expect(screen.getByText("Legal company")).toBeTruthy();
     // Past the six optional legal facts to display_name, the one question in
     // this chapter that blocks the interview until it is answered.
     await skipManual();
@@ -706,7 +706,7 @@ describe("the mandatory company minimum", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /Confirm and save company/ }),
     );
-    expect(await screen.findByText("Couldn't save your company")).toBeTruthy();
+    expect(await screen.findByText("Company not saved")).toBeTruthy();
     expect(screen.getByText("database unavailable")).toBeTruthy();
     expect(
       (screen.getByLabelText(/What do you sell\?/) as HTMLTextAreaElement)

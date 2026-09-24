@@ -254,7 +254,7 @@ describe("the day's call, and which record it is read from", () => {
         },
       },
     });
-    expect(screen.getByText("Waiting on them")).toBeTruthy();
+    expect(screen.getByText("Awaiting reply")).toBeTruthy();
     // How long it has stood that way, counted from the last thing WE sent and
     // measured against the same `as_of` the rest of the page is read at: a
     // state with no duration is a status, and a rep cannot act on a status.
@@ -273,7 +273,7 @@ describe("the day's call, and which record it is read from", () => {
         },
       },
     });
-    expect(screen.getByText("Waiting on us")).toBeTruthy();
+    expect(screen.getByText("Waiting on your team")).toBeTruthy();
     // Days since our own last message say nothing once they have replied, and
     // "no answer in 18 days" over a thread that ended with their answer is
     // what costs a reader trust in every other reading beside it.
@@ -584,7 +584,7 @@ describe("the account scan on the needs list", () => {
     );
     expect(
       screen.getByText(
-        "Margince is reading this account's exchanges and deals.",
+        "Margince is analyzing this company’s exchanges and deals.",
       ),
     ).toBeTruthy();
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
@@ -613,7 +613,7 @@ describe("the account scan on the needs list", () => {
     expect(screen.getByText("Read 14 exchanges and 2 deals")).toBeTruthy();
     expect(
       screen.getByText(
-        "The account has moved since. It is read again within the hour.",
+        "The company has changed since. It is analyzed again within the hour.",
       ),
     ).toBeTruthy();
   });
