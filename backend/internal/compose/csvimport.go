@@ -213,6 +213,11 @@ func (h importHandlers) stageRun(
 		return crmcontracts.ImportRun{}, err
 	}
 
+	source, err := checkedSource(ctx, h.blobs, req.SourceRef, mapping)
+	if err != nil {
+		return crmcontracts.ImportRun{}, err
+	}
+
 	runs := migration.NewRunStore(h.db)
 	run, err := runs.CreateStagedRun(ctx, migration.CreateStagedRunInput{
 		Connector: string(req.Connector),
@@ -224,7 +229,6 @@ func (h importHandlers) stageRun(
 		return crmcontracts.ImportRun{}, err
 	}
 
-	source := migration.NewCSVSource(h.blobs, req.SourceRef, object, mapping.Fields, mapping.SourceKey)
 	writers := newCSVWriters(h.db, run.ID, &mapping)
 	report, err := migration.NewEngine(runs, writers).DryRun(ctx, source)
 	if err != nil {
