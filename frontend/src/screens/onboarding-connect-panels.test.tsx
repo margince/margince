@@ -376,7 +376,7 @@ describe("OAuthReturnPanel handing off to the backread", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByText("About 4,820 messages in that window."),
+      await screen.findByText("About 4,820 messages in this period."),
     ).toBeInTheDocument();
   });
 
@@ -459,7 +459,7 @@ describe("OAuthReturnPanel reading a reader-typed outcome", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Connect again under Settings → Connections.",
+        "Connect again under Settings, then Connections.",
       ),
     ).toBeInTheDocument();
   });

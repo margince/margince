@@ -73,7 +73,7 @@ items and most help text are impersonal statements.
 
 ## Grammar and mechanics
 
-- **American English** spelling: color, organization, canceled, license (noun
+- **American English** spelling: color, canceled, license (noun
   and verb), catalog, analyze, center.
 - **Sentence case** everywhere: titles, headings, labels, buttons, menu items,
   tabs, badges. Capitalize proper nouns and product names only.
@@ -133,9 +133,9 @@ nouns and are not reworded. Internal jargon never reaches the screen.
 
 | Concept | Write | Never |
 |---|---|---|
-| The tenant | company | workspace, org, account |
+| The tenant | company | workspace, account, the retired company nouns in [record-vocabulary.md](record-vocabulary.md) |
 | A human record | contact | the retired record nouns in [record-vocabulary.md](record-vocabulary.md), except where the word means a human being rather than the record |
-| A company record | company | account, organization |
+| A company record | company | account and the other retired record nouns in [record-vocabulary.md](record-vocabulary.md) |
 | Sales object | deal | opportunity |
 | Ordered stages | pipeline | funnel |
 | Manager's forecast number | call | commit (which is a per-deal forecast category) |

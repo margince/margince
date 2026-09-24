@@ -104,7 +104,7 @@ func TestAGrantNamesThePublishedQuestionItAnswered(t *testing.T) {
 	// THE ANSWERS ARE IN IT. What somebody agreed to is the question and the
 	// option they picked together; a version pinning only the question would
 	// let the labels change under it.
-	if !strings.Contains(body, "keep me posted") {
+	if !strings.Contains(body, "Subscribe to news") {
 		t.Errorf("the published question does not carry the answers the subject chose between: %q",
 			body)
 	}

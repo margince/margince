@@ -813,7 +813,7 @@ export const en = {
   // a reader, so the screen states the fact it can stand behind and stops.
   "common.errorNoCause": "The request failed. No cause reported.",
   "common.assistantUnavailable":
-    "The assistant did not respond, so no draft was created. Enter the details manually, or ask an administrator to check the model under Settings → AI.",
+    "The assistant did not respond, so no draft was created. Enter the details manually, or ask an administrator to check the model under Settings, then AI.",
   "common.gatewayUnavailable":
     "The server did not finish the request in time and may still be processing it. Wait before retrying, or the work can run twice.",
   // Every 403 the server codes `permission_denied`, which is two refusals with
@@ -1009,7 +1009,7 @@ export const en = {
 
   "company.reject": "Not a company",
   "company.rejectConfirm":
-    "This archives “{name}” and blocks {domain} as a company, so later messages from that domain do not create it again. An administrator can unblock the domain in Settings → Capture.",
+    "This archives “{name}” and blocks {domain} as a company, so later messages from that domain do not create it again. An administrator can unblock the domain in Settings, then Capture.",
   "company.rejectReasonLabel": "Reason this is not a company",
   "company.rejectReasonHint":
     "A reason a reviewer of blocked domains can act on. The block outlasts the record.",
@@ -1793,7 +1793,7 @@ export const en = {
   "linkedinImport.notConnectedNote":
     "Saving your profile URL attributes imported connections to you by name.",
   "linkedinImport.whichFile":
-    "LinkedIn provides Connections.csv under Settings → Data privacy → Get a copy of your data. Upload that file from the archive. Uploaded connections never become contacts: they stay out of search, lists and contact pages, and no one can write to or email them.",
+    "LinkedIn provides Connections.csv under Settings, then Data privacy, then Get a copy of your data. Upload that file from the archive. Uploaded connections never become contacts: they stay out of search, lists and contact pages, and no one can write to or email them.",
   "linkedinImport.choose": "Choose Connections.csv",
   "linkedinImport.importLabel": "Connections export",
   "linkedinImport.noMatchesYet":
@@ -5081,7 +5081,7 @@ export const en = {
   // to get to it.
   "ob.ai.runtimeChip": "Active model and cost",
   "ob.ai.answeringNow": "Active model",
-  "ob.ai.runScope": "This run only. The full log is in Settings → AI.",
+  "ob.ai.runScope": "This run only. The full log is in Settings, then AI.",
   "ob.ai.tier.localSmall": "local, fast",
   "ob.ai.tier.cheapCloud": "cloud, efficient",
   "ob.ai.tier.premium": "premium reasoning",
@@ -5334,13 +5334,13 @@ export const en = {
   "ob.s4.connectVerifying": "Confirming connection…",
   "ob.s4.connectLive": "Live and capturing",
   "ob.s4.connectConfirmFailed": "The connection could not be confirmed.",
-  "ob.s4.connectRetry": "Connect again under Settings → Connections.",
+  "ob.s4.connectRetry": "Connect again under Settings, then Connections.",
   "ob.s4.connectDenied": "Access was declined. Nothing was connected.",
   "ob.s4.googleBtn": "Connect Gmail",
   "ob.s4.googleHint":
     "Reads your mail and can send from it. Both are granted on Google’s screen; disconnect at any time.",
   "ob.s4.googleUnverified":
-    "If Google warns about an “unverified app”, select Advanced → Continue. Google’s screen lists exactly what is granted.",
+    "If Google warns about an “unverified app”, select Advanced, then Continue. Google’s screen lists exactly what is granted.",
   "backfill.title": "Import mailbox history",
   "backfill.intro":
     "Choose how far back to import. The scope and estimated cost are shown before anything runs, and this step can be skipped.",
@@ -5436,7 +5436,7 @@ export const en = {
     "It cannot read or annotate your Morning brief. Your records, Worklist and scheduled weekly review remain available.",
   "overnightGrant.saveFailedTitle": "Answer was not saved",
   "overnightGrant.saveFailed":
-    "Everything else is connected. Set this under Settings → Connections after signing in.",
+    "Everything else is connected. After signing in, set this under Settings, then Connections.",
   "overnightGrant.renewTitle": "Overnight authority expired",
   "overnightGrant.renew":
     "Turn this off and on again to renew it. Until then, your Morning brief is not prepared.",
@@ -5607,7 +5607,7 @@ export const en = {
   "captureNotice.whoReads":
     "A new mailbox is held by default. A message stays with the people who were on it until a classifier judges the thread to be ordinary business. Only then can colleagues read it. You can set the mailbox to hold everything instead, at any time.",
   "captureNotice.yourControl":
-    "You decide per sender and per thread, under Settings → Connections: keep a correspondent out entirely, share a thread with the team, or delete what a sender brought in. Nothing here asks for your agreement. This describes what happens, so you know it before you connect.",
+    "You decide per sender and per thread, under Settings, then Connections: keep a correspondent out entirely, share a thread with the team, or delete what a sender brought in. Nothing here asks for your agreement. This describes what happens, so you know it before you connect.",
   "connectors.mailPosture.label": "Mail visibility",
   "connectors.mailPosture.classified": "Held until classified",
   "connectors.mailPosture.held": "Always held",
@@ -5661,7 +5661,7 @@ export const en = {
   "connectors.oauthMisconfigured":
     "This installation cannot complete the connection because the provider’s API is not enabled. An administrator must enable it; the server log names the API.",
   "connectors.oauthBadClient":
-    "The provider refused this installation’s app credentials. An administrator must check the client ID and secret under Settings → General; reconnecting does not fix this.",
+    "The provider refused this installation’s app credentials. An administrator must check the client ID and secret under Settings, then General; reconnecting does not fix this.",
   "connectors.dismissOutcome": "Dismiss",
   "connectors.oauthConnected": "Connected",
   "connectors.oauthNotConnected": "Nothing was connected",
@@ -6198,7 +6198,7 @@ export const en = {
   // same form Settings → Contacts uses.
   "ob.conv.team.title": "Invite the first user",
   "ob.conv.team.body":
-    "Someone must be the first person working in Margince. Add them now, or later under Settings → People.",
+    "Someone must be the first person working in Margince. Add them now, or later under Settings, then People.",
   "ob.conv.team.invitedLabel": "Invited so far",
   "ob.conv.team.invitedLine": "{name} is invited.",
   "ob.conv.team.skip": "Skip for now",
@@ -8107,7 +8107,7 @@ export const en = {
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
-    "Margince uses your AI provider account. All of this can be changed later under Settings → AI.",
+    "Margince uses your AI provider account. All of this can be changed later under Settings, then AI.",
   "firstRun.ai.provider": "Provider",
   "firstRun.ai.key": "API key",
   "firstRun.ai.keyHint": "Stored in the key vault and never shown again.",
@@ -8456,7 +8456,7 @@ export const en = {
   "consent.scopeNote.enrich":
     "spends enrichment credits; each purchase still asks you first",
   "consent.ceiling":
-    "Never more than your own permissions. You can disconnect any time in Settings → Agents.",
+    "Never more than your own permissions. You can disconnect any time in Settings, then Agents.",
   "consent.pickOne": "Pick at least one, or deny.",
   "consent.offline":
     "It stays connected and renews access without asking again until you revoke it.",
@@ -10081,7 +10081,7 @@ export const en = {
     "Add each URI to the app before saving here. Sign-in adds the sign-in button to the login page; Mailbox and Calendar let people connect theirs. A missing URI fails at the provider’s consent screen.",
   "firstRun.google.helpToggle": "Where to find these",
   "firstRun.google.helpStep1":
-    "In the Google Cloud console, open a project and go to “APIs & Services” → Credentials → Create credentials → OAuth client ID, and choose Web application.",
+    "In the Google Cloud console, open a project and go to “APIs & Services”, then Credentials. Select Create credentials, then OAuth client ID, and choose Web application.",
   "firstRun.google.helpStep2":
     "Enable the Gmail API and add both the gmail.readonly and gmail.send scopes to the consent screen. They share 1 consent because Google does not add a scope to an issued refresh token; requesting send later means connecting the mailbox again.",
   "firstRun.google.helpStep3":
@@ -10092,7 +10092,7 @@ export const en = {
   "firstRun.google.helpDocs":
     "Full prerequisites, including Microsoft and IMAP: docs/how-to/connect-a-mailbox.md",
   "firstRun.platform.imapNote":
-    "Nothing is configured for the whole installation. Connect your own mailbox now or later; other mailboxes connect under Settings → Connections, each with its own app password.",
+    "Nothing is configured for the whole installation. Connect your own mailbox now or later; other mailboxes connect under Settings, then Connections, each with its own app password.",
   "firstRun.platform.skip": "Not now",
   "firstRun.needed": "Needed to continue",
   "firstRun.stillNeeded": "Still needed: {fields}",
@@ -10116,7 +10116,7 @@ export const en = {
   "aiRates.unpricedDetail": "calls still run",
   "aiRates.unpricedConsequence": "Missing from usage and spend",
   "aiRates.unpricedBasis":
-    "Add a rate under Settings → AI to report the cost of these calls.",
+    "To report the cost of these calls, add a rate under Settings, then AI.",
   "aiRates.priced": "From {date}",
   "aiRates.proposed": "OpenRouter’s price",
   "aiRates.proposedDetail": "Provider price · not yet approved",
