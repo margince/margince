@@ -160,13 +160,13 @@ default.
    here: `make bench-mobile` samples it, because one wall-clock reading on a
    shared runner measures the runner.
 8. The unauthenticated surface at 390px / 320px / 200% zoom (ADR-0076): no
-   horizontal scroll, the primary action reachable at 44px or taller, the
-   identity region whole at every width — no row dropped or clipped to fit —
-   and above the task on screen while the task stays first in the DOM, one h1
-   and it is the greeting, the Core out of the a11y tree, and axe. The rest of
-   the §3.8 sweep walks authenticated routes only, so login had never been
-   measured at any width — the first run of this found a contrast defect in the
-   field labels.
+   horizontal scroll, the primary action inside the viewport with a 44px
+   target (rounded), the identity region whole at every width — every row
+   present, visible and taller than zero — and above the task on screen while
+   the task stays first in the DOM, one h1 and it is the greeting, the Core out
+   of the a11y tree, and axe. The rest of the §3.8 sweep walks authenticated
+   routes only, so login had never been measured at any width — the first run
+   of this found a contrast defect in the field labels.
 
 ## Working agreements
 
