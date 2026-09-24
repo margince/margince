@@ -123,6 +123,9 @@ var erasureCascadeFiles = []string{
 	"internal/modules/privacy/erasure_leadtwins.go",
 	"internal/modules/privacy/erasure_payloads.go",
 	"internal/modules/privacy/erasure_channels.go",
+	// The drafts a rep started to the subject and never sent. Same Art. 17
+	// transaction; its own file because the table is not the eraser's own.
+	"internal/modules/privacy/maildrafts.go",
 	// The live capabilities over the subject's consent record — the
 	// preference-center token and the double-opt-in token. Split out of
 	// erasure.go for the same size reason as the timeline, and named here for

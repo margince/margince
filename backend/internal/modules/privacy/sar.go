@@ -173,6 +173,10 @@ type SARPackage struct {
 	// subject's to know — one is a message they received, the other is one
 	// somebody wrote to them that the system is still holding.
 	ScheduledMessages []map[string]any `json:"scheduled_messages"`
+	// The messages a rep started to the subject and has not sent or scheduled:
+	// the composer's saved drafts (mail_draft). Apart from ScheduledMessages
+	// because nobody has decided to send these at all.
+	DraftMessages []map[string]any `json:"draft_messages"`
 	// The messages written to the subject that nobody has DECIDED yet: an
 	// automation composed them and they are waiting in somebody's approval
 	// inbox (#707). Held apart from ScheduledMessages for the same reason that

@@ -253,6 +253,9 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	if err == nil {
 		err = clearCommunicationRecord(ctx, tx, id, subjectEmails)
 	}
+	if err == nil {
+		err = purgeContactMailDrafts(ctx, tx, ids.From[ids.ContactKind](id), subjectEmails)
+	}
 	// Read BEFORE the delete below, for the reason the eraser gives at its own
 	// copy of this: the LinkedIn ghost sweep identifies rows by this address,
 	// and contact_social is about to stop holding it.
