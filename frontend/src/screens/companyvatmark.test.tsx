@@ -221,7 +221,7 @@ describe("the VAT mark beside the number", () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByText(/the answer appears here once it replies/),
+        screen.queryByText(/The result appears here when it replies/),
       ).toBeNull();
     });
   });
@@ -240,7 +240,7 @@ describe("the VAT mark beside the number", () => {
     );
 
     expect(
-      await screen.findByText(/number on this record has changed/),
+      await screen.findByText(/number on this record changed after this check/),
     ).toBeVisible();
   });
 
@@ -298,7 +298,7 @@ describe("the VAT mark beside the number", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: /the check could not be read just now/,
+        name: /check result could not be loaded/,
       }),
     ).toBeInTheDocument();
   });
@@ -316,7 +316,9 @@ describe("the VAT mark beside the number", () => {
       await screen.findByRole("button", { name: "VAT ID: Valid" }),
     );
 
-    expect(screen.queryByText(/number on this record has changed/)).toBeNull();
+    expect(
+      screen.queryByText(/number on this record changed after this check/),
+    ).toBeNull();
   });
 
   it("shows the answer once the register replies, without a reload", async () => {
@@ -356,7 +358,7 @@ describe("the VAT mark beside the number", () => {
       await screen.findByRole("button", { name: "VAT ID: Not valid" }),
     );
     fireEvent.click(await screen.findByRole("button", { name: "Check again" }));
-    await screen.findByText(/the answer appears here once it replies/);
+    await screen.findByText(/The result appears here when it replies/);
 
     // The timers have to be fake BEFORE the poll schedules itself, or the
     // setTimeout it registers belongs to the real clock and advancing a fake
@@ -404,7 +406,7 @@ describe("the VAT mark beside the number", () => {
     );
     const ask = await screen.findByRole("button", { name: "Check again" });
     fireEvent.click(ask);
-    await screen.findByText(/the answer appears here once it replies/);
+    await screen.findByText(/The result appears here when it replies/);
 
     // Pressed four more times while the answer is outstanding.
     fireEvent.click(ask);
@@ -551,7 +553,7 @@ describe("the VAT mark beside the number", () => {
     // No await between them: this is the double-click a reader actually makes.
     fireEvent.click(ask);
     fireEvent.click(ask);
-    await screen.findByText(/the answer appears here once it replies/);
+    await screen.findByText(/The result appears here when it replies/);
 
     expect(posts).toHaveLength(1);
   });

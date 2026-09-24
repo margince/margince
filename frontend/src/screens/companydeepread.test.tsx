@@ -217,7 +217,7 @@ describe("company-360 deep read", () => {
       expect(screen.getByText("Read up to the page limit")).toBeTruthy(),
     );
     expect(screen.queryByText(/Stopped early/)).toBeNull();
-    expect(screen.getByText("6 evidenced facts staged")).toBeTruthy();
+    expect(screen.getByText("6 facts with evidence staged")).toBeTruthy();
     // The crawl's own URL lists are debug output, not something a contact
     // reading a company record has any use for.
     expect(screen.queryByText("Pages skipped")).toBeNull();
@@ -282,7 +282,7 @@ describe("company-360 deep read", () => {
     // the panel's own title and would be there for a read still loading, so
     // waiting on it alone could pass without the report ever arriving.
     await waitFor(() =>
-      expect(screen.getByText("9 evidenced facts staged")).toBeTruthy(),
+      expect(screen.getByText("9 facts with evidence staged")).toBeTruthy(),
     );
     expect(screen.getByText("Website research")).toBeTruthy();
     expect(screen.queryByText("Research this company")).toBeNull();
@@ -367,9 +367,7 @@ describe("company-360 deep read", () => {
     await startDeepRead(calls);
 
     await waitFor(() =>
-      expect(
-        screen.getByText("2 proposals waiting for your review"),
-      ).toBeTruthy(),
+      expect(screen.getByText("2 proposals awaiting review")).toBeTruthy(),
     );
     // A complete crawl carries no stopped-early banner.
     expect(screen.queryByText(/Stopped early:/)).toBeNull();

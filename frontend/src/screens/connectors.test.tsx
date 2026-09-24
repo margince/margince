@@ -279,9 +279,7 @@ describe("the connected-inboxes card", () => {
       within(row).getByText(/No mailbox or calendar is connected yet/),
     ).toBeTruthy();
     expect(row.closest(".settinglist")).not.toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Add connector" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add connector" })).toBeTruthy();
   });
 
   it("offers every provider from the dialog when nothing is connected", async () => {
@@ -313,9 +311,7 @@ describe("the connected-inboxes card", () => {
     expect(
       await screen.findByRole("dialog", { name: "Connect IMAP mailbox" }),
     ).toBeTruthy();
-    expect(
-      screen.queryByRole("dialog", { name: "Add connector" }),
-    ).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Add connector" })).toBeNull();
   });
 
   it("offers reconnect only for a connection that needs re-auth", async () => {
@@ -328,9 +324,7 @@ describe("the connected-inboxes card", () => {
   it("says a Gmail mailbox cannot send before the rep discovers it at send time", async () => {
     stubApi([gmailNoSendGrant]);
     render(<ConnectorsCard />);
-    expect(
-      await screen.findByText("Capture only, no sending"),
-    ).toBeTruthy();
+    expect(await screen.findByText("Capture only, no sending")).toBeTruthy();
     expect(
       screen.getByText(/Reconnect this mailbox to send from it/),
     ).toBeTruthy();
@@ -356,7 +350,7 @@ describe("the connected-inboxes card", () => {
   it("shows an honest waiting line for a connection that has never synced", async () => {
     stubApi([{ ...gmailConnected, last_synced_at: null }]);
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/Waiting for the first sync/)).toBeTruthy();
+    expect(await screen.findByText(/Awaiting first sync/)).toBeTruthy();
   });
 
   it("surfaces a load failure without crashing the card", async () => {
@@ -364,7 +358,7 @@ describe("the connected-inboxes card", () => {
     render(<ConnectorsCard />);
     // The card's own claim as the heading, the server's cause under it: both,
     // because the heading alone says nothing about why.
-    expect(await screen.findByText(/Couldn't load/)).toBeTruthy();
+    expect(await screen.findByText(/Could not load connectors/)).toBeTruthy();
     expect(await screen.findByText(/boom/)).toBeTruthy();
   });
 
@@ -505,7 +499,9 @@ describe("the connected-inboxes card's richer health line", () => {
         }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/rejected our credentials/i)).toBeTruthy();
+    expect(
+      await screen.findByText(/rejected the stored credentials/i),
+    ).toBeTruthy();
   });
 
   it("renders the 501 not-configured response as a calm state, not an error", async () => {
@@ -514,7 +510,7 @@ describe("the connected-inboxes card's richer health line", () => {
     });
     render(<ConnectorsCard />);
     expect(
-      await screen.findByText(/isn't configured in this deployment/i),
+      await screen.findByText(/is not configured on this installation/i),
     ).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByText(/couldn't load/i)).toBeNull();
@@ -529,7 +525,7 @@ describe("the connected-inboxes card's richer health line", () => {
       await screen.findByRole("button", { name: /^Disconnect$/ }),
     );
     expect(
-      await screen.findByText(/delete the credential we stored/i),
+      await screen.findByText(/deletes the stored credential/i),
     ).toBeTruthy();
     expect(screen.getByText(/Google may still list Margince/i)).toBeTruthy();
   });
@@ -544,7 +540,7 @@ describe("the connected-inboxes card's richer health line", () => {
       await screen.findByRole("button", { name: /^Disconnect$/ }),
     );
     expect(
-      await screen.findByText(/delete the credential we stored/i),
+      await screen.findByText(/deletes the stored credential/i),
     ).toBeTruthy();
     expect(screen.queryByText(/Google may still list Margince/i)).toBeNull();
   });
@@ -562,8 +558,10 @@ describe("the OAuth return outcome", () => {
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/you declined access/i)).toBeTruthy();
-    expect(screen.queryByText(/couldn't be completed/i)).toBeNull();
+    expect(
+      await screen.findByText(/Access was declined, so nothing/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
   });
 
   it("renders an honest failure note when the connection could not complete", async () => {
@@ -572,8 +570,10 @@ describe("the OAuth return outcome", () => {
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/couldn't be completed/i)).toBeTruthy();
-    expect(screen.queryByText(/you declined access/i)).toBeNull();
+    expect(
+      await screen.findByText(/connection could not be completed/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Access was declined, so nothing/i)).toBeNull();
   });
 
   // A permanent failure must not tell the reader to try again: the provider's
@@ -586,9 +586,9 @@ describe("the OAuth return outcome", () => {
     });
     render(<ConnectorsCard />);
     expect(
-      await screen.findByText(/administrator needs to enable it/i),
+      await screen.findByText(/administrator must enable it/i),
     ).toBeTruthy();
-    expect(screen.queryByText(/couldn't be completed/i)).toBeNull();
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
   });
 
   it("tells the reader to accept every permission when the provider declined", async () => {
@@ -597,9 +597,11 @@ describe("the OAuth return outcome", () => {
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/accept every permission/i)).toBeTruthy();
+    expect(
+      await screen.findByText(/Accept every requested permission/i),
+    ).toBeTruthy();
     // The generic "couldn't be completed — please try again" must not also show.
-    expect(screen.queryByText(/couldn't be completed/i)).toBeNull();
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
   });
 
   it("renders a brief success note on ok — never an error", async () => {
@@ -608,9 +610,9 @@ describe("the OAuth return outcome", () => {
       "GET /connectors": () => jsonResponse({ data: [gmailConnected] }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/mailbox is now capturing/i)).toBeTruthy();
-    expect(screen.queryByText(/couldn't be completed/i)).toBeNull();
-    expect(screen.queryByText(/you declined access/i)).toBeNull();
+    expect(await screen.findByText(/mailbox is capturing/i)).toBeTruthy();
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
+    expect(screen.queryByText(/Access was declined, so nothing/i)).toBeNull();
   });
 
   it("renders no outcome note when the route carries none", async () => {
@@ -629,9 +631,9 @@ describe("the OAuth return outcome", () => {
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
-    await screen.findByText(/you declined access/i);
+    await screen.findByText(/Access was declined, so nothing/i);
     await userEvent.click(screen.getByRole("button", { name: /dismiss/i }));
-    expect(screen.queryByText(/you declined access/i)).toBeNull();
+    expect(screen.queryByText(/Access was declined, so nothing/i)).toBeNull();
   });
 });
 
@@ -687,7 +689,7 @@ describe("add a connection", () => {
     );
     expect(
       await within(dialog).findByText(
-        "Outlook isn't configured in this deployment.",
+        "Outlook is not configured on this installation.",
       ),
     ).toBeTruthy();
   });
@@ -736,9 +738,7 @@ describe("add a connection", () => {
     ]);
     render(<ConnectorsCard />);
     await screen.findByText("Google Calendar"); // a roster row label
-    expect(
-      screen.queryByRole("button", { name: "Add connector" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add connector" })).toBeNull();
   });
 });
 
@@ -815,7 +815,7 @@ describe("the Telegram connector panel", () => {
 
     const row = await screen.findByTestId("public-origin");
     expect(within(row).getByText("https://crm.example.com")).toBeTruthy();
-    expect(within(row).getByText("Answering")).toBeTruthy();
+    expect(within(row).getByText("Reachable")).toBeTruthy();
   });
 
   it("says so when the address does not answer", async () => {

@@ -305,9 +305,7 @@ describe("the signed document on the contract form", () => {
       />,
     );
 
-    expect(
-      await screen.findByText("Hidden for your role"),
-    ).toBeTruthy();
+    expect(await screen.findByText("Hidden for your role")).toBeTruthy();
     // And the picker must not restate the absence the panel just declined to
     // claim: "Drop a file here" is the sentence for a field that KNOWS nothing
     // is filed.
@@ -330,7 +328,7 @@ describe("the signed document on the contract form", () => {
     // documents" would be a request about a record that does not exist.
     show(<ContractForm companyId="o-1" open onClose={() => {}} />);
 
-    await screen.findByText("Record contract");
+    await screen.findByRole("heading", { name: "Record contract" });
     await waitFor(() => {
       expect(asked.filter((url) => url.includes("/documents"))).toHaveLength(0);
     });

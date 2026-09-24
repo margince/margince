@@ -194,7 +194,7 @@ describe("the legal identity a contact can state", () => {
     // legal name, never inside the address disclosure, which is closed here.
     expect(screen.getByText("Add VAT ID")).toBeVisible();
     expect(screen.getByText("Add registered address")).toBeVisible();
-    expect(screen.getByText("Register and VAT ID")).toBeVisible();
+    expect(screen.getByText("Register / VAT ID")).toBeVisible();
     expect(screen.getByText("Registered address")).toBeVisible();
   });
 
@@ -350,7 +350,7 @@ describe("the legal identity a contact can state", () => {
     await user.click(
       screen.getByRole("button", { name: "Change Register / VAT ID" }),
     );
-    await user.type(screen.getByLabelText("Register and VAT ID"), "DE811907980");
+    await user.type(screen.getByLabelText("Register / VAT ID"), "DE811907980");
     await user.keyboard("{Enter}");
 
     // The endpoint matters as much as the value: this is the write that queues
@@ -381,8 +381,8 @@ describe("the legal identity a contact can state", () => {
     await user.click(
       screen.getByRole("button", { name: "Change Register / VAT ID" }),
     );
-    await user.clear(screen.getByLabelText("Register and VAT ID"));
-    await user.type(screen.getByLabelText("Register and VAT ID"), "DE811907980");
+    await user.clear(screen.getByLabelText("Register / VAT ID"));
+    await user.type(screen.getByLabelText("Register / VAT ID"), "DE811907980");
     await user.keyboard("{Enter}");
 
     // Two contacts correcting the same number: unpinned, the second silently
@@ -425,7 +425,7 @@ describe("the legal identity a contact can state", () => {
     await user.click(
       screen.getByRole("button", { name: "Change Register / VAT ID" }),
     );
-    await user.clear(screen.getByLabelText("Register and VAT ID"));
+    await user.clear(screen.getByLabelText("Register / VAT ID"));
     await user.keyboard("{Enter}");
 
     expect(
@@ -433,7 +433,7 @@ describe("the legal identity a contact can state", () => {
     ).toBeVisible();
     // The refused write left the claim standing, so the draft is still there to
     // correct rather than the row having gone blank under the reader.
-    expect(screen.getByLabelText("Register and VAT ID")).toBeVisible();
+    expect(screen.getByLabelText("Register / VAT ID")).toBeVisible();
   });
 });
 

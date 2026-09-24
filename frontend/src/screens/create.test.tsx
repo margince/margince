@@ -57,7 +57,7 @@ function render(ui: ReactNode) {
  * The create form, scoped to the dialog it is in.
  *
  * The list behind it carries a column picker, and a column's tick is now a real
- * labelled control — so "Value" and "via Partner" name a field in the form AND
+ * labelled control — so "Value" and "via partner" name a field in the form AND
  * a column in that menu. The dialog is the boundary between the record being
  * made and the list it will join.
  */
@@ -659,7 +659,7 @@ describe("the deal form's partner fields", () => {
     render(<DealsScreen startCreating />);
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
-    expect(inForm().queryByLabelText("via Partner")).toBeNull();
+    expect(inForm().queryByLabelText("via partner")).toBeNull();
     expect(inForm().queryByLabelText("Partner attribution")).toBeNull();
   });
 
@@ -669,7 +669,7 @@ describe("the deal form's partner fields", () => {
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
     const user = userEvent.setup();
-    const partner = await inForm().findByLabelText("via Partner");
+    const partner = await inForm().findByLabelText("via partner");
     // The claim is a question about a partner, so it is not asked before one
     // is named.
     expect(inForm().queryByLabelText("Partner attribution")).toBeNull();
@@ -696,7 +696,7 @@ describe("the deal form's partner fields", () => {
     const user = userEvent.setup();
     render(<DealsScreen startCreating />);
     const form = within(await screen.findByRole("dialog"));
-    const partner = await form.findByLabelText("via Partner");
+    const partner = await form.findByLabelText("via partner");
     await user.click(partner);
 
     const offered = within(screen.getByRole("listbox"))

@@ -156,7 +156,7 @@ describe("the account's recent exchanges", () => {
     // The chip and the direction phrase are what tell a call from a note here,
     // and an email's own row states both in its own words instead.
     expect(screen.getByText("Call")).toBeTruthy();
-    expect(screen.getByText("we called")).toBeTruthy();
+    expect(screen.getByText("your team called")).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: /Depot walkthrough/ }),
     ).toBeNull();

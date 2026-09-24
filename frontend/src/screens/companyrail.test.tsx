@@ -388,7 +388,7 @@ describe("CompanyRail", () => {
     });
     renderRail();
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Account lifecycle" }),
+      await screen.findByRole("button", { name: "Change Lifecycle" }),
     );
     // The fixture is already "customer" — picking a DIFFERENT value, or the
     // no-op guard skips the write entirely.
@@ -531,9 +531,9 @@ describe("CompanyRail", () => {
   it("marks a withheld section restricted instead of drawing it empty", () => {
     stub();
     renderRail({ view: view({ sections_omitted: ["contacts"] }) });
-    expect(
-      screen.getAllByText("Hidden for your role").length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText("Hidden for your role").length).toBeGreaterThan(
+      0,
+    );
     // A withheld section carries no header link: a count would have nothing
     // true to show, and an "Add" would offer to write into a section the
     // reader cannot even see. Scoped to Contacts's own panel — Deals is
@@ -1117,11 +1117,7 @@ describe("CompanyRail", () => {
     const { container } = renderRail({ view: undefined, loading: true });
     // The skeleton placeholder, not the "could not be loaded" sentence.
     expect(container.querySelector(".skeleton")).toBeTruthy();
-    expect(
-      screen.queryByText(
-        "Could not be loaded. This section may be incomplete.",
-      ),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(en["state.unavailable"])).not.toBeInTheDocument();
   });
 
   it("reads a failed composite read (view undefined, not loading) as unavailable", () => {
@@ -1130,10 +1126,8 @@ describe("CompanyRail", () => {
     // The SAME undefined `view` as the loading test above, but with
     // `loading={false}` — the honest "could not be loaded" sentence, not a
     // skeleton pretending a read is still running.
-    expect(
-      screen.getAllByText(
-        "Could not be loaded. This section may be incomplete.",
-      ).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(en["state.unavailable"]).length).toBeGreaterThan(
+      0,
+    );
   });
 });

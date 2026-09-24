@@ -134,7 +134,9 @@ describe("the thin contact page", () => {
     mount(viewWith(null));
 
     expect(screen.getByText(/Brandt Automotive GmbH/)).toBeTruthy();
-    expect(screen.getByText(/Connect the mailbox/)).toBeTruthy();
+    expect(
+      screen.getByText(/Connect a mailbox that writes to this contact/),
+    ).toBeTruthy();
   });
 
   it("still names it while they are serving notice", () => {
@@ -143,7 +145,9 @@ describe("the thin contact page", () => {
     expect(screen.getByText(/Brandt Automotive GmbH/)).toBeTruthy();
     // The next step is the one for a page that HAS an employer. Treating a
     // notice period as a departure would ask for an employer already on record.
-    expect(screen.getByText(/Connect the mailbox/)).toBeTruthy();
+    expect(
+      screen.getByText(/Connect a mailbox that writes to this contact/),
+    ).toBeTruthy();
   });
 
   it("asks for an employer once the last day has passed", () => {

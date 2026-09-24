@@ -162,7 +162,7 @@ test("reads coverage against the roster, and names both gaps", async () => {
   // talking to us.
   expect(await screen.findByText("6 of 9")).not.toBeNull();
   expect(
-    await screen.findByText("2 not approached · 2 owed a reply"),
+    await screen.findByText("2 not contacted · 2 awaiting your reply"),
   ).not.toBeNull();
 });
 
@@ -351,7 +351,7 @@ test("a way-in nobody has answered narrows to nothing in particular", async () =
   (
     await screen.findByRole("button", {
       name: "Open",
-      description: "Best way in",
+      description: "Best route",
     })
   ).click();
   expect(narrowed).toEqual([null]);
@@ -549,7 +549,7 @@ test("reads the roles from the deal, and refreshes the board after", async () =>
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
   );
-  await screen.findByText(/Seated 1 from what they wrote/);
+  await screen.findByText(/Roles assigned from their messages: 1/);
   // The POST goes to the DEAL; the refresh reads the ACCOUNT. A component that
   // refreshed the deal instead would show the board as it was before the write.
   expect(
@@ -580,7 +580,7 @@ test("tells nothing-proposed apart from everything-refused", async () => {
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
   );
-  await screen.findByText(/Nothing in their messages says who buys/);
+  await screen.findByText(/Their messages do not show who buys/);
   first.unmount();
 
   stub(suggestedCoverage(), {
@@ -597,7 +597,7 @@ test("tells nothing-proposed apart from everything-refused", async () => {
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
   );
-  await screen.findByText(/3 reading\(s\) were dropped/);
+  await screen.findByText(/Suggestions dropped for weak evidence: 3/);
 });
 
 // A role is recorded on a deal. Hidden, the button teaches nothing; disabled
@@ -613,7 +613,7 @@ test("says why it cannot read roles when the account has no open deal", async ()
   );
   const button = await screen.findByRole("button", { name: /Suggest roles/i });
   expect((button as HTMLButtonElement).disabled).toBe(true);
-  expect(await screen.findByText(/Roles are recorded on a deal/)).toBeTruthy();
+  expect(await screen.findByText(/Roles are set per deal/)).toBeTruthy();
 });
 
 // Confirming writes the SAME role back. That looks like a no-op and is not:
@@ -746,7 +746,7 @@ test("says a concurrent edit happened rather than printing the sentinel", async 
     />,
   );
   await user.click(await screen.findByRole("button", { name: /^Confirm$/ }));
-  await screen.findByText(/changed since you opened it/);
+  await screen.findByText(/changed since it was opened/);
   expect(screen.queryByText("version skew")).toBeNull();
 });
 
@@ -773,6 +773,6 @@ test("says the reading needs a model rather than naming a handler", async () => 
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
   );
-  await screen.findByText(/Reading roles needs a model/);
+  await screen.findByText(/Role suggestions need a model/);
   expect(screen.queryByText(/ProposeDealRoles/)).toBeNull();
 });

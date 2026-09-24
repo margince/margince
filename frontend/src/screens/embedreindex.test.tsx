@@ -336,7 +336,9 @@ it("says the search index is withheld, and asks the server for nothing", async (
 
   // A rep holds no grant on embedding_reindex at all (migration 0115).
   expect(
-    await screen.findByText(/only an admin or ops can see the search index/i),
+    await screen.findByText(
+      /only an administrator or ops user can see the search index/i,
+    ),
   ).toBeTruthy();
   expect(screen.getByText("Search index")).toBeTruthy();
   // No status and no actions — and the half of the old behaviour worth keeping:

@@ -394,7 +394,7 @@ describe("AskMarginceModal", () => {
       await screen.findByText("Captured messages are kept for 400 days."),
     ).toBeTruthy();
 
-    await user.click(screen.getByRole("combobox", { name: /which set/i }));
+    await user.click(screen.getByRole("combobox", { name: /document set/i }));
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", {
         name: "Pricing",
@@ -519,7 +519,7 @@ describe("AskMarginceModal", () => {
     // Nothing is wrong with the question, and the reader is not sent looking
     // for a document to file.
     expect(
-      screen.getByText(/nothing is wrong with your question/i),
+      screen.getByText(/passages are searchable\. Retry shortly/i),
     ).toBeTruthy();
     expect(screen.queryByText(/not covered by this set/i)).toBeNull();
   });
@@ -566,7 +566,7 @@ describe("AskMarginceModal", () => {
 
     // The reader is TOLD, above the passage, rather than left to infer it from
     // a badge — a passage presented like an answer is read as one.
-    expect(await screen.findByText(/nothing has read them/i)).toBeTruthy();
+    expect(await screen.findByText(/have not been reviewed/i)).toBeTruthy();
     // And the passage is still reachable: the search did find it, and throwing
     // it away would throw away the only thing the ask produced.
     await user.click(
@@ -636,7 +636,7 @@ describe("AskMarginceModal", () => {
     // that the company has none: the second is a statement about somebody
     // else's data, and it is one this reader has no way to check.
     expect(
-      await screen.findByText(/cannot open this company's documents/i),
+      await screen.findByText(/cannot open this company’s documents/i),
     ).toBeTruthy();
     expect(screen.queryByText(/filed no documents yet/i)).toBeNull();
     await user.type(
@@ -677,7 +677,7 @@ describe("AskMarginceModal", () => {
       await screen.findByRole("button", { name: "1: retention.md, line 6" }),
     );
     expect(
-      await within(documentPane()).findByText(/would not open/i),
+      await within(documentPane()).findByText(/could not be opened/i),
     ).toBeTruthy();
     expect(
       within(documentPane()).getByText("purged in the nightly sweep"),

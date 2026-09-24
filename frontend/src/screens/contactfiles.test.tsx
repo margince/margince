@@ -273,7 +273,9 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" />);
 
     expect(await screen.findByText("This section did not load.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: en["state.retry"] }),
+    ).toBeTruthy();
     expect(screen.queryByText(en["contact.documents.empty"])).toBeNull();
   });
 

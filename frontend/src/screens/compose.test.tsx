@@ -291,7 +291,7 @@ describe("RelinkModal", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Relink" }));
 
-    expect(await screen.findByText(/read without a version/i)).toBeTruthy();
+    expect(await screen.findByText(/loaded without a version/i)).toBeTruthy();
     // And nothing was sent: a refusal that still wrote would be the
     // last-write-wins this whole change is about.
     expect(sent.find((r) => r.key === "POST /activities/act-1/relink")).toBe(
@@ -574,7 +574,7 @@ describe("ComposeModal", () => {
     );
 
     await screen.findByRole("heading", { name: "AI-assisted draft" });
-    expect(screen.getByText(/This draft was produced by AI/i)).toBeTruthy();
+    expect(screen.getByText(/A model helped write this draft/i)).toBeTruthy();
   });
 
   it("discloses nothing when no model produced the draft", async () => {
@@ -635,7 +635,9 @@ describe("ComposeModal", () => {
       screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
-    expect(await screen.findByText("Built from your corpus · v3")).toBeTruthy();
+    expect(
+      await screen.findByText("Built from your writing samples · v3"),
+    ).toBeTruthy();
     expect(screen.getByText("Provisional voice")).toBeTruthy();
   });
 
@@ -666,7 +668,7 @@ describe("ComposeModal", () => {
       screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
-    expect(await screen.findByText(/not written in your voice/)).toBeTruthy();
+    expect(await screen.findByText(/does not use your voice/)).toBeTruthy();
   });
 
   it("stays quiet about the voice when a draft simply has no profile behind it", async () => {
@@ -697,7 +699,7 @@ describe("ComposeModal", () => {
     );
 
     expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
-    expect(screen.queryByText(/not written in your voice/)).toBeNull();
+    expect(screen.queryByText(/does not use your voice/)).toBeNull();
   });
 
   it("flags nothing provisional when the profile is past that band", async () => {
@@ -733,7 +735,9 @@ describe("ComposeModal", () => {
       screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
-    expect(await screen.findByText("Built from your corpus · v3")).toBeTruthy();
+    expect(
+      await screen.findByText("Built from your writing samples · v3"),
+    ).toBeTruthy();
     expect(screen.queryByText("Provisional voice")).toBeNull();
   });
 
@@ -787,9 +791,7 @@ describe("ComposeModal", () => {
 
     expect(screen.getByText("Add at least one recipient.")).toBeTruthy();
     expect(screen.getByText("Enter a subject.")).toBeTruthy();
-    expect(
-      screen.getByText("Enter a message before sending."),
-    ).toBeTruthy();
+    expect(screen.getByText("Enter a message before sending.")).toBeTruthy();
     expect(screen.getByText("Select the reason for contact.")).toBeTruthy();
     expect(
       sent.filter((call) => call.key.startsWith("POST /activities")),
@@ -944,10 +946,10 @@ describe("ComposeModal", () => {
     );
 
     expect(
-      await screen.findByText(/did not finish this request in time/i),
+      await screen.findByText(/did not finish the request in time/i),
     ).toBeTruthy();
     // And it warns before a retry, because the first call may still be running.
-    expect(screen.getByText(/may still be working/i)).toBeTruthy();
+    expect(screen.getByText(/may still be processing it/i)).toBeTruthy();
   });
 });
 
@@ -1251,9 +1253,7 @@ describe("ComposeModal draft binding", () => {
       screen.getByRole("button", { name: "Discard draft" }),
     );
 
-    expect(
-      await screen.findByText("The request failed. Retry."),
-    ).toBeTruthy();
+    expect(await screen.findByText("The request failed. Retry.")).toBeTruthy();
     expect(messageText("Body")).toBe("Draft A body.");
 
     await pickWhy(WHY_LABEL.requestedFollowup);
@@ -1436,8 +1436,12 @@ describe("ComposeModal draft provenance", () => {
     );
 
     // v4's words were never applied, so v4 may not be named over v3's.
-    expect(screen.getByText("Built from your corpus · v3")).toBeTruthy();
-    expect(screen.queryByText("Built from your corpus · v4")).toBeNull();
+    expect(
+      screen.getByText("Built from your writing samples · v3"),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("Built from your writing samples · v4"),
+    ).toBeNull();
   });
 
   it("drops the disclosure once the body it described is cleared", async () => {
@@ -1509,9 +1513,7 @@ describe("ComposeModal send refusals", () => {
     await fillSendableForm();
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
-    expect(
-      await screen.findByText(/never granted permission to send/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/without permission to send/i)).toBeTruthy();
     expect(
       screen
         .getByRole("link", { name: "Reconnect your mailbox" })
@@ -1540,7 +1542,7 @@ describe("ComposeModal send refusals", () => {
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     expect(
-      await screen.findByText(/reaches one addressee at a time/i),
+      await screen.findByText(/goes to one recipient at a time/i),
     ).toBeTruthy();
     expect(screen.queryByText("opaque server wording")).toBeNull();
   });
@@ -1587,7 +1589,7 @@ describe("ComposeModal send refusals", () => {
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     expect(await screen.findByText(/opaque server wording/i)).toBeTruthy();
-    expect(screen.queryByText(/never granted permission to send/i)).toBeNull();
+    expect(screen.queryByText(/without permission to send/i)).toBeNull();
   });
 
   it("warns about a second addressee before the send, not after it", async () => {
@@ -1601,10 +1603,14 @@ describe("ComposeModal send refusals", () => {
     await userEvent.type(screen.getByLabelText("Cc"), "second@x.com");
     await userEvent.tab();
 
-    expect(screen.queryByText(/more than one addressee/i)).toBeNull();
+    expect(
+      screen.queryByText(/more than one recipient is refused/i),
+    ).toBeNull();
     await pickWhy(WHY_LABEL.marketing);
 
-    expect(await screen.findByText(/more than one addressee/i)).toBeTruthy();
+    expect(
+      await screen.findByText(/more than one recipient is refused/i),
+    ).toBeTruthy();
     // A warning, not a gate — and nothing was sent to earn it.
     expect(
       sent.some((r) => r.key === "POST /activities/act-1/send-email"),
@@ -1618,7 +1624,9 @@ describe("ComposeModal send refusals", () => {
     await fillSendableForm();
     await pickWhy(WHY_LABEL.marketing);
 
-    expect(screen.queryByText(/more than one addressee/i)).toBeNull();
+    expect(
+      screen.queryByText(/more than one recipient is refused/i),
+    ).toBeNull();
   });
 });
 
@@ -1716,11 +1724,11 @@ describe("ComposeModal — channel reply", () => {
     // Confirming an irreversible send under the name of a channel this
     // message will never travel on is a lie the rep cannot check.
     expect(screen.getByText("Send this message?")).toBeTruthy();
-    expect(screen.queryByText("Draft email")).toBeNull();
+    expect(screen.queryByText("Send this email?")).toBeNull();
     // The heading is the only place the channel is named, so it cannot also
     // be the only place the irreversibility is: the modal chrome around it
     // is a tier dot and two buttons.
-    expect(screen.getByText(/irreversible action/)).toBeTruthy();
+    expect(screen.getByText(/cannot be undone/)).toBeTruthy();
   });
 
   it("gives the message box an accessible name of its own", async () => {
@@ -1817,7 +1825,7 @@ describe("TimelineActions", () => {
     stubRoutes();
     render(<TimelineActions activity={note} entityType="deal" entityId="d1" />);
     await userEvent.click(screen.getByRole("button", { name: "Reply" }));
-    expect(await screen.findByText("Draft email")).toBeTruthy();
+    expect(await screen.findByText("Send this email?")).toBeTruthy();
   });
 
   it("opens the composer when Reply is clicked", async () => {
@@ -1826,8 +1834,8 @@ describe("TimelineActions", () => {
       <TimelineActions activity={email} entityType="deal" entityId="d1" />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Reply" }));
-    // The ConfirmModal titled "Draft email" mounts only once Reply opens it.
-    expect(await screen.findByText("Draft email")).toBeTruthy();
+    // The ConfirmModal titled "Send this email?" mounts only once Reply opens it.
+    expect(await screen.findByText("Send this email?")).toBeTruthy();
   });
 
   it("offers no reply when the contact is unreachable", async () => {
@@ -2459,7 +2467,9 @@ describe("ComposeModal started from an account", () => {
       />,
     );
 
-    expect(await screen.findByText(/Nobody on this account yet/)).toBeTruthy();
+    expect(
+      await screen.findByText(/No contacts on this company yet/),
+    ).toBeTruthy();
     // The dead end is about the DRAFT, not about which body of work the
     // message is for.
     expect(
@@ -2928,7 +2938,7 @@ describe("what the composer says it is answering", () => {
     expect(await screen.findByText("New email")).toBeTruthy();
     await waitFor(() =>
       expect(
-        screen.queryByRole("region", { name: /continue a conversation/i }),
+        screen.queryByRole("region", { name: /Continue thread/i }),
       ).toBeNull(),
     );
   });
@@ -3225,7 +3235,7 @@ describe("the composer's conversation pane", () => {
     // while the thread read is out, so the region existing does not yet mean
     // the messages are drawn.
     const pane = await screen.findByRole("region", {
-      name: /this conversation/i,
+      name: /This thread/i,
     });
     await waitFor(() => expect(pane.querySelectorAll("li")).toHaveLength(2));
   });
@@ -3255,23 +3265,21 @@ describe("the composer's conversation pane", () => {
     // existing does not yet mean there is anything to pick.
     const choice = await screen.findByRole("button", { name: /Re: Q3/ });
     expect(
-      screen.getByRole("region", { name: /continue a conversation/i }),
+      screen.getByRole("region", { name: /Continue thread/i }),
     ).toBeTruthy();
-    expect(
-      screen.queryByRole("region", { name: /^this conversation$/i }),
-    ).toBeNull();
+    expect(screen.queryByRole("region", { name: /^this thread$/i })).toBeNull();
 
     // Taking one turns the column into that conversation, with a way back.
     await userEvent.click(choice);
     expect(
-      await screen.findByRole("region", { name: /this conversation/i }),
+      await screen.findByRole("region", { name: /This thread/i }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "New email" })).toBeTruthy();
   });
 
   it("draws no conversation beside a reply to a note", async () => {
     // A timeline row offers Reply on a note as readily as on a mail. One filed
-    // note under the heading "this conversation" claims to be an exchange.
+    // note under the heading "This thread" claims to be an exchange.
     const note: Activity = { ...threaded, kind: "note" };
     const second: Activity = { ...sibling, kind: "note" };
     const sent = stubRoutes({
@@ -3297,9 +3305,7 @@ describe("the composer's conversation pane", () => {
       ).not.toHaveLength(0),
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
-    expect(
-      screen.queryByRole("region", { name: /this conversation/i }),
-    ).toBeNull();
+    expect(screen.queryByRole("region", { name: /This thread/i })).toBeNull();
   });
 
   it("shows a mail with no thread as the one message it is", async () => {

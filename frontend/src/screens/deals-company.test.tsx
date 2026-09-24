@@ -512,7 +512,7 @@ describe("the deals table's company columns", () => {
       expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
     );
     expect(
-      within(cellUnder("via Partner", "Fleet retrofit")).getByRole("img", {
+      within(cellUnder("via partner", "Fleet retrofit")).getByRole("img", {
         name: MASK,
       }),
     ).toBeTruthy();

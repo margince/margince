@@ -166,7 +166,7 @@ describe("drafting to a contact", () => {
     );
 
     await userEvent.type(
-      screen.getByPlaceholderText(/What should this email achieve|Reply with/),
+      screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "kurz halten",
     );
     await userEvent.click(
@@ -326,7 +326,7 @@ describe("drafting to a contact", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText(/not offered from this page/i)).toBeTruthy(),
+      expect(screen.getByText(/not available on this page/i)).toBeTruthy(),
     );
     // No claim about the model, because nothing was asked of it.
     expect(screen.queryByText(/model is not configured/i)).toBeNull();

@@ -358,7 +358,7 @@ describe("ConnectedAgentsCard", () => {
       expect(screen.queryByRole("button", { name: /^Disconnect/ })).toBeNull();
       expect(
         screen.getByRole("button", {
-          name: "End the connection to Claude Code",
+          name: "End connection to Claude Code",
         }),
       ).toBeTruthy();
     } finally {

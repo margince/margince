@@ -292,7 +292,9 @@ describe("what the message carries", () => {
       await screen.findByRole("button", { name: /^Offer_Nordwand_v3\.pdf/ }),
     );
     await user.click(
-      await screen.findByRole("button", { name: /Do not send/ }),
+      await screen.findByRole("button", {
+        name: /^Remove Offer_Nordwand_v3\.pdf/,
+      }),
     );
     await fillAndSend(user);
 

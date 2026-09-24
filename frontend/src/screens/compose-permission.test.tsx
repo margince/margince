@@ -135,7 +135,7 @@ describe("the composer asks before anybody presses Send", () => {
     await openReplyAndAddress("anna@example.test");
 
     expect(
-      await screen.findByText(/asked not to receive marketing/i),
+      await screen.findByText(/objected to marketing/i),
     ).toBeInTheDocument();
     // The question is about THIS message: the thread being answered and the
     // addressee the rep named, through the reply door the send will use.
@@ -158,8 +158,8 @@ describe("the composer asks before anybody presses Send", () => {
       ),
     );
     expect(screen.queryByText(/cannot send this message/i)).toBeNull();
-    expect(screen.queryByText(/no record of why/i)).toBeNull();
-    expect(screen.queryByText(/could not check/i)).toBeNull();
+    expect(screen.queryByText(/No recorded reason/i)).toBeNull();
+    expect(screen.queryByText(/send check did not complete/i)).toBeNull();
   });
 
   // No override exists yet on the server, so no control is drawn: a button here
@@ -178,9 +178,9 @@ describe("the composer asks before anybody presses Send", () => {
     await openReplyAndAddress("stranger@example.test");
 
     expect(
-      await screen.findByText(/no record of why you may write/i),
+      await screen.findByText(/No recorded reason to contact/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/will be refused/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sending is refused until/i)).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /say why you may write/i }),
     ).toBeNull();
@@ -196,7 +196,9 @@ describe("the composer asks before anybody presses Send", () => {
     );
     await openReplyAndAddress("anna@example.test");
 
-    expect(await screen.findByText(/could not check/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/send check did not complete/i),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("To")).toBeInTheDocument();
   });
 
@@ -211,7 +213,9 @@ describe("the composer asks before anybody presses Send", () => {
     );
     await openReplyAndAddress("anna@example.test");
 
-    expect(await screen.findByText(/could not check/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/send check did not complete/i),
+    ).toBeInTheDocument();
   });
 
   // A BLIND COPY IS BLIND TO THE RECIPIENTS, NEVER TO THE CONSENT GATE.

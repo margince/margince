@@ -202,7 +202,9 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     );
     render(<ContactsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Could not load this view. Reload the page.")).toBeTruthy(),
+      expect(
+        screen.getByText("Could not load this view. Reload the page."),
+      ).toBeTruthy(),
     );
     expect(screen.getByText("missing scope contacts:read")).toBeTruthy();
   });
@@ -340,7 +342,7 @@ describe("ContactsScreen — search/sort/pagination (P-14)", () => {
     render(<ContactsScreen />);
     await waitFor(() => expect(screen.getByText("Anna Weber")).toBeTruthy());
 
-    const next = screen.getByRole("button", { name: "Next ›" });
+    const next = screen.getByRole("button", { name: "Next" });
     expect((next as HTMLButtonElement).disabled).toBe(false);
     await userEvent.click(next);
 

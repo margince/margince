@@ -45,7 +45,7 @@ describe("a contact nobody has bought data for", () => {
     // The plate names what is missing AND what a lookup costs. Without it the
     // panel is a blank body whose only verb sits in the header corner.
     const title = await screen.findByText(en["provider.profile.emptyTitle"]);
-    expect(await screen.findByText(/It spends Surfe credits/)).toBeDefined();
+    expect(await screen.findByText(/spends Surfe credits/)).toBeDefined();
 
     // The verb lives INSIDE the plate, which is the whole point: a button that
     // stayed in the header corner would satisfy every text assertion above
@@ -60,7 +60,7 @@ describe("a contact nobody has bought data for", () => {
     const posted = mount(neverRun(), queuedRun);
 
     await user.click(
-      await screen.findByRole("button", { name: /Look this contact up/ }),
+      await screen.findByRole("button", { name: /Look up contact/ }),
     );
 
     // One request, naming a provider. A body without one is refused by the
@@ -90,7 +90,7 @@ describe("a contact nobody has bought data for", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: /Look this contact up/ }),
+      await screen.findByRole("button", { name: /Look up contact/ }),
     );
 
     // The server's own words, not a generic line: a refusal nobody can read is
@@ -125,7 +125,7 @@ describe("a contact whose data was already bought", () => {
       await screen.findByRole("button", { name: /Check again/ }),
     ).toBeDefined();
     expect(
-      screen.queryByRole("button", { name: /Look this contact up/ }),
+      screen.queryByRole("button", { name: /Look up contact/ }),
     ).toBeNull();
   });
 
@@ -156,7 +156,7 @@ describe("the lookup button's wording follows the contact's run history", () => 
     mount({ ...neverRun(), state: "invalid_credentials" }, queuedRun);
 
     expect(
-      await screen.findByRole("button", { name: /Look this contact up/ }),
+      await screen.findByRole("button", { name: /Look up contact/ }),
     ).toBeDefined();
     expect(screen.queryByRole("button", { name: /Check again/ })).toBeNull();
   });
@@ -177,7 +177,7 @@ describe("the lookup button's wording follows the contact's run history", () => 
       await screen.findByRole("button", { name: /Check again/ }),
     ).toBeDefined();
     expect(
-      screen.queryByRole("button", { name: /Look this contact up/ }),
+      screen.queryByRole("button", { name: /Look up contact/ }),
     ).toBeNull();
   });
 
@@ -253,7 +253,7 @@ describe("two providers connected", () => {
     // button, or a body that named the wrong provider, would buy from whoever
     // happened to be first.
     const buttons = await screen.findAllByRole("button", {
-      name: /Look this contact up/,
+      name: /Look up contact/,
     });
     expect(buttons.length).toBe(2);
     await user.click(buttons[1]);
@@ -292,7 +292,7 @@ describe("which contact a lookup is charged to", () => {
         <ContactProviderSection contactId="p-1" profiles={[neverRun()]} />
       </StoryProviders>,
     );
-    await screen.findByRole("button", { name: /Look this contact up/ });
+    await screen.findByRole("button", { name: /Look up contact/ });
 
     // The panel stays mounted across the change of subject: the record page
     // keys its subtree by contact today, and this is the case that breaks the
@@ -303,7 +303,7 @@ describe("which contact a lookup is charged to", () => {
       </StoryProviders>,
     );
     await user.click(
-      await screen.findByRole("button", { name: /Look this contact up/ }),
+      await screen.findByRole("button", { name: /Look up contact/ }),
     );
 
     await expect.poll(() => paths).toEqual(["p-2"]);
@@ -355,15 +355,13 @@ describe("a lookup that came back mostly empty", () => {
 
     // The count is the answer to "did my lookup do anything": six asked, one
     // returned. Without it a green badge over one field reads as a success.
-    expect(
-      await screen.findByText(/asked for 5 details, got 1 back/),
-    ).toBeDefined();
+    expect(await screen.findByText(/1 of 5 details returned/)).toBeDefined();
   });
 
   it("names the categories the provider had nothing for, in words a rep knows", async () => {
     mount(mostlyEmpty(), queuedRun);
 
-    const line = await screen.findByText(/Asked for, none found/);
+    const line = await screen.findByText(/Requested, not found/);
     // The provider's vocabulary is a set of keys — `professional_email`,
     // `linkedin_profile`. Printed raw they are not words anybody uses.
     expect(line.textContent).toContain("work email");
@@ -1023,7 +1021,7 @@ describe("watching a run that is still moving", () => {
       </StoryProviders>,
     );
 
-    expect(await screen.findByText(/Asking Surfe/)).toBeDefined();
+    expect(await screen.findByText(/Querying Surfe/)).toBeDefined();
     // The connection's last failure is real and belongs on the page at rest.
     // Over a lookup the reader is watching it is a stale fact dressed as a
     // live one, which is what sent Lars looking for a broken button.
@@ -1057,7 +1055,7 @@ describe("watching a run that is still moving", () => {
     );
 
     expect(await screen.findByText("Response received")).toBeDefined();
-    expect(screen.queryByText(/Asking Surfe/)).toBeNull();
+    expect(screen.queryByText(/Querying Surfe/)).toBeNull();
   });
 
   // The money case. The server's duplicate-spend fence covers the LIVE run

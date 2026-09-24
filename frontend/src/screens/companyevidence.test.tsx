@@ -149,9 +149,7 @@ describe("where a cited value came from", () => {
   it("reports a receipt it cannot read as exactly that", async () => {
     show({ entity_type: "profile_field", entity_id: "p-1" });
 
-    expect(
-      await screen.findByText(/This receipt could not be read/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Source could not be loaded/)).toBeTruthy();
   });
 });
 

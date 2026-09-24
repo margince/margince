@@ -159,7 +159,7 @@ describe("drafting to a lead", () => {
     );
 
     await userEvent.type(
-      screen.getByPlaceholderText(/What should this email achieve|Reply with/),
+      screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "shorter",
     );
     await userEvent.click(

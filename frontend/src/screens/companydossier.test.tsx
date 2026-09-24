@@ -133,9 +133,9 @@ describe("what this company is", () => {
     show();
 
     expect(
-      await screen.findByText(/Nothing has been recorded about this company/),
+      await screen.findByText(/Nothing recorded about this company/),
     ).toBeTruthy();
-    expect(screen.queryByText(/could not be read/)).toBeNull();
+    expect(screen.queryByText(/could not be loaded/)).toBeNull();
   });
 
   it("reports a payload it cannot parse as exactly that", async () => {
@@ -145,8 +145,8 @@ describe("what this company is", () => {
     show();
 
     expect(
-      await screen.findByText(/This description could not be read/),
+      await screen.findByText(/Overview could not be loaded/),
     ).toBeTruthy();
-    expect(screen.queryByText(/Nothing has been recorded/)).toBeNull();
+    expect(screen.queryByText(/Nothing recorded/)).toBeNull();
   });
 });

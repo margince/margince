@@ -261,9 +261,7 @@ describe("the timeline tab", () => {
   it("says the section is withheld rather than drawing it empty", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={withheld} />);
     expect(screen.queryByText(/Nothing has been logged/)).toBeNull();
-    expect(
-      screen.getByText("Hidden for your role"),
-    ).toBeTruthy();
+    expect(screen.getByText("Hidden for your role")).toBeTruthy();
   });
 
   // The same obligation on the new cut, which reads that same withheld
@@ -277,9 +275,7 @@ describe("the timeline tab", () => {
     await user.click(screen.getByRole("button", { name: "Threads" }));
 
     expect(screen.queryByText(/No conversations with them yet/)).toBeNull();
-    expect(
-      screen.getByText("Hidden for your role"),
-    ).toBeTruthy();
+    expect(screen.getByText("Hidden for your role")).toBeTruthy();
   });
 });
 
@@ -442,7 +438,7 @@ describe("the meetings tab", () => {
         onBriefMeeting={(id) => briefed.push(id)}
       />,
     );
-    const actions = screen.getAllByRole("button", { name: "Brief me" });
+    const actions = screen.getAllByRole("button", { name: "Prepare brief" });
     expect(actions.length).toBe(2);
     await userEvent.setup().click(actions[0]);
     expect(briefed.length).toBe(1);
@@ -476,14 +472,14 @@ describe("the meetings tab", () => {
     // verb. Asserting the subject would be wrong: a withheld row redacts it,
     // which is the whole point of the state.
     expect(screen.queryByText(/Nothing logged/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Brief me" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Prepare brief" })).toBeNull();
   });
 
   it("offers no brief when the surface cannot open one", () => {
     // Without the callback the verb would be a button that does nothing, which
     // teaches a reader the feature is broken rather than absent.
     withProviders(<ContactMeetingsTab view={view} />);
-    expect(screen.queryByRole("button", { name: "Brief me" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Prepare brief" })).toBeNull();
   });
 
   it("names the meeting the reader picked, not the soonest one", async () => {
@@ -496,7 +492,7 @@ describe("the meetings tab", () => {
         onBriefMeeting={(id) => briefed.push(id)}
       />,
     );
-    const actions = screen.getAllByRole("button", { name: "Brief me" });
+    const actions = screen.getAllByRole("button", { name: "Prepare brief" });
     // The booked meeting leads the tab; the held one follows it.
     await userEvent.setup().click(actions[1]);
     expect(briefed).toEqual(["a-2"]);

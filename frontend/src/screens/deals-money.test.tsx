@@ -245,7 +245,7 @@ describe("an offer cannot be created in a currency nobody chose", () => {
     expect(describedBy).toBeTruthy();
     expect(
       document.getElementById((describedBy ?? "").split(" ")[0])?.textContent,
-    ).toContain("Price this deal first");
+    ).toContain("Set the deal value first");
   });
 
   it("does not fire the write when refused", async () => {

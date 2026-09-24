@@ -168,7 +168,9 @@ describe("who owns this record", () => {
     // "no longer in the user list" is a claim about a read that came back. Said
     // over one still running, it reports an owner as departed on the evidence
     // of nothing having arrived yet.
-    expect(await screen.findByText("Loading…")).toBeTruthy();
+    expect(
+      (await screen.findByRole("button", { name: "Change Owner" })).textContent,
+    ).toContain("Loading…");
     expect(
       screen.queryByText("Current owner (no longer in the user list)"),
     ).toBeNull();
@@ -402,7 +404,7 @@ it("does not offer to clear a company's lifecycle", async () => {
   const user = userEvent.setup();
   renderInApp(<CompanyDetails company={COMPANY} />);
   await user.click(
-    await screen.findByRole("button", { name: "Change Account lifecycle" }),
+    await screen.findByRole("button", { name: "Change Lifecycle" }),
   );
   await user.click(screen.getByRole("combobox"));
   expect(screen.queryByRole("option", { name: "Not set" })).toBeNull();
