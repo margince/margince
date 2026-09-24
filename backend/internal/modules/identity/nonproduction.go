@@ -66,6 +66,9 @@ func (h Handlers) CompanyContextAvailable() bool {
 // one writer is the option that wires the reindex engine, so /me cannot offer
 // the reindex surface on an installation whose routes answer 501.
 //
+// Held by: TestOneWriterDecidesWhetherTheReindexSurfaceExists
+// (backend/internal/compose/embedreindexavailability_test.go).
+//
 // Bound or unbound only: which model is bound stays behind the reindex status
 // route's own grant. Without it /me reports unavailable, failing closed.
 func (h Handlers) WithEmbedReindexAvailable(available bool) Handlers {

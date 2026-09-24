@@ -159,14 +159,25 @@ func assertMeAgreesWithTheReindexEngine(t *testing.T, s *Server) {
 	}
 }
 
-// A server that never ran the reindex option reports the surface absent, the
-// same answer its generated 501 routes give.
+// A role with no router takes the option's first early return and reports the
+// surface absent, the same answer its generated 501 routes give.
 func TestMeReportsNoReindexSurfaceWithoutARouter(t *testing.T) {
 	s := &Server{}
 	WithEmbedReindex(nil, insertOnlyRunnerForTest(t))(s, nil)
 
 	if s.EmbedReindexAvailable() {
 		t.Error("/me advertises the reindex surface on a server with no router")
+	}
+	assertMeAgreesWithTheReindexEngine(t, s)
+}
+
+// A server that never ran the option at all agrees with itself too: the zero
+// value is absent and so is the engine, with no post-loop publish needed.
+func TestMeReportsNoReindexSurfaceWhenTheOptionNeverRan(t *testing.T) {
+	s := &Server{}
+
+	if s.EmbedReindexAvailable() {
+		t.Error("/me advertises the reindex surface on a server that never wired it")
 	}
 	assertMeAgreesWithTheReindexEngine(t, s)
 }

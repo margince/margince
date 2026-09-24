@@ -309,10 +309,11 @@ export function EmbedReindexCard() {
   // for them an absent card would read as "this installation has no search index"
   // rather than "this is not yours to see".
   //
-  // The query stays gated on `canRead` and that half of the reasoning stands:
-  // the answer is already known, so asking for a 403 in order to render it
-  // would turn a settled denial into a "status unavailable" the reader cannot
-  // act on. This runs after every hook call above so the hooks-call-order stays
+  // The query is gated on `canRead && bound`, and each half asks nothing for
+  // the same reason: a denial is already known, and an unbound lane can only
+  // answer 501, so asking for either refusal in order to render it would turn
+  // a settled answer into a "status unavailable" the reader cannot act on.
+  // This runs after every hook call above so the hooks-call-order stays
   // unconditional, and it is gated on the /me probe itself so the notice waits
   // for the grants rather than flashing while they are in flight.
   //
