@@ -76,11 +76,14 @@ func TestCompanyReadAnswerBuildsABoundedGroundedModelRequest(t *testing.T) {
 	if !strings.HasPrefix(brain.request.Messages[0].Content, "<"+marker+">") {
 		t.Fatalf("the dossier turn is not inside the declared boundary: %q", brain.request.Messages[0].Content)
 	}
-	if len(brain.request.Messages) != 4 || !strings.Contains(brain.request.Messages[0].Content, "Acme GmbH") ||
-		brain.request.Messages[1].Content != "Did you find the imprint?" ||
-		brain.request.Messages[2].Role != "assistant" || brain.request.Messages[3].Content != "Please update the legal name to Acme GmbH." {
-		t.Fatalf("model request lost the administrator or dossier evidence: %+v", brain.request.Messages)
+	if !strings.Contains(brain.request.Messages[0].Content, "Acme GmbH") {
+		t.Fatalf("model request lost the dossier evidence: %+v", brain.request.Messages)
 	}
+	requireTurnsInOrder(t, brain.request.Messages, []model.Message{
+		{Role: chatRoleUser, Content: "Did you find the imprint?"},
+		{Role: "assistant", Content: "Yes, I found one."},
+		{Role: chatRoleUser, Content: "Please update the legal name to Acme GmbH."},
+	})
 
 	want := errors.New("provider unavailable")
 	engine.brain = &replyBrainStub{err: want}

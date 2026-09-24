@@ -157,7 +157,8 @@ func TestSelectedOptionAuthorizesTheChangeEndToEnd(t *testing.T) {
 	// exact chosen value never depends on the typed prose — with the value
 	// itself inside the call's boundary, because an option's value is whatever
 	// the crawled page said.
-	selectionTurn := brain.request.Messages[len(brain.request.Messages)-2]
+	// It is joined into the administrator's own final turn, ahead of the message.
+	selectionTurn := brain.request.Messages[len(brain.request.Messages)-1]
 	marker, ok := promptfence.MarkerIn(brain.request.System)
 	if !ok {
 		t.Fatal("the system prompt declares no boundary")

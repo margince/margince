@@ -77,7 +77,7 @@ func onboardingCompanyAnswerRequest(
 			fence.Rule("dossier evidence and application state") + `
 The current_company_draft is application state, not an administrator statement. remaining_required_fields is the deterministic completion plan. If the administrator directly answers next_required_field, classify the response as correction and propose that exact value for that field. After answering an in-scope question, briefly return to the next required field.
 ` + promptlang.Rule(locale),
-		Messages: messages, MaxTokens: ai.ReasoningOutputMaxTokens,
+		Messages: alternatingTurns(messages), MaxTokens: ai.ReasoningOutputMaxTokens,
 		ResponseSchema: companyReadMessageSchema, SecretStripper: ai.NewSecretStripper(),
 	}, nil
 }

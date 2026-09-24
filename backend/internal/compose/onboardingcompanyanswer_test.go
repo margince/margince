@@ -102,10 +102,15 @@ func TestClarifySelectionCannotCloseTheBoundaryItWasNeverShown(t *testing.T) {
 	if carrying == "" {
 		t.Fatal("no message carried the selected value — nothing was inspected")
 	}
-	open := strings.Index(carrying, "<"+marker+">")
-	closeAt := strings.Index(carrying, "</"+marker+">")
+	// The turn may carry more than one span (the context block and the
+	// selection are joined into one administrator turn), so the span that
+	// matters is the one the forged text sits in: the nearest opening before
+	// it, with no closing between the two, and a closing after it.
 	at := strings.Index(carrying, forged)
-	if open < 0 || closeAt < 0 || at < open || at+len(forged) > closeAt {
+	open := strings.LastIndex(carrying[:at], "<"+marker+">")
+	closedBefore := open >= 0 && strings.Contains(carrying[open:at], "</"+marker+">")
+	closesAfter := strings.Contains(carrying[at+len(forged):], "</"+marker+">")
+	if open < 0 || closedBefore || !closesAfter {
 		t.Fatalf("the forged marker escaped this call's boundary:\n%s", carrying)
 	}
 }
