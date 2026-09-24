@@ -215,6 +215,12 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 		"a host pin on the embeddings lane":        {embedded("routing: {only: [mistral/eu]}"), true},
 		"a host blocklist on the embeddings lane":  {embedded("routing: {ignore: [deepinfra], allow_fallbacks: false}"), true},
 		"an effort cap on the embeddings lane":     {embedded("routing: {reasoning_effort: low}"), false},
+		// The embeddings lane shares the chat tiers' host rule: a direct vendor
+		// on the OpenAI wire fronts one host, so a pin there has nothing to pick.
+		"a host pin on an embeddings lane pointed elsewhere": {
+			"profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\n" +
+				"embeddings: {provider: openai_compatible, model: e, base_url: 'https://api.mistral.ai', routing: {only: [x]}}\n", false,
+		},
 		"a host pin on a native embeddings lane": {
 			"profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\nembeddings: {provider: gemini, model: e, routing: {only: [x]}}\n", false,
 		},

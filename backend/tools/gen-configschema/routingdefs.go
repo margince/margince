@@ -75,17 +75,19 @@ const routingDefsTemplate = `{
         "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
         "then": { "required": ["base_url"] }
       },
-      {
-        "if": { "required": ["routing"] },
-        "then": {
-          "properties": {
-            "provider": { "const": "openai_compatible" },
-            "base_url": { "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://([^/]*\\.)?[Oo][Pp][Ee][Nn][Rr][Oo][Uu][Tt][Ee][Rr]\\.[Aa][Ii](:[0-9]+)?(/|$)" }
-          },
-          "required": ["provider", "base_url"]
-        }
-      }
+      { "$ref": "#/$defs/routingNeedsOpenRouter" }
     ]
+  },
+  "routingNeedsOpenRouter": {
+    "description": "A routing block is OpenRouter's own fields, so a lane may declare one only when it is an openai_compatible binding whose base_url is an OpenRouter host. One clause for both lanes, so the chat tiers and the embeddings lane cannot come to disagree about which host that is. The pattern is case-insensitive because URL hosts are, and the parser lowercases the host before it compares.",
+    "if": { "required": ["routing"] },
+    "then": {
+      "properties": {
+        "provider": { "const": "openai_compatible" },
+        "base_url": { "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://([^/]*\\.)?[Oo][Pp][Ee][Nn][Rr][Oo][Uu][Tt][Ee][Rr]\\.[Aa][Ii](:[0-9]+)?(/|$)" }
+      },
+      "required": ["provider", "base_url"]
+    }
   },
   "upstreamRouting": {
     "description": "Which of a broker's upstream hosts may serve this tier. OpenRouter fronts many inference hosts per model, and its own default picks among them weighted by the inverse square of price — so one model id is served at fp4 on one call and at bf16 on the next, with latency to match. Valid ONLY on an openai_compatible binding whose base_url is an OpenRouter host; the parser refuses it anywhere else rather than send a vendor fields it never asked for. OMIT the block to inherit the product default (sort: throughput, quantizations: [fp16, bf16], require_parameters: true — reliability over price); write an empty object to opt out and take the broker's own price-weighted routing. Measured 2026-09-02 — see docs/reference/openrouter.md.",
@@ -156,16 +158,7 @@ const routingDefsTemplate = `{
         "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
         "then": { "required": ["base_url"] }
       },
-      {
-        "if": { "required": ["routing"] },
-        "then": {
-          "properties": {
-            "provider": { "const": "openai_compatible" },
-            "base_url": { "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://([^/]*\\.)?[Oo][Pp][Ee][Nn][Rr][Oo][Uu][Tt][Ee][Rr]\\.[Aa][Ii](:[0-9]+)?(/|$)" }
-          },
-          "required": ["provider", "base_url"]
-        }
-      }
+      { "$ref": "#/$defs/routingNeedsOpenRouter" }
     ]
   },
   "embeddingsRouting": {
