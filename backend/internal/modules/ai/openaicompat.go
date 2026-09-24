@@ -10,7 +10,6 @@ package ai
 // provider name, never a field on this struct (spec §3.2/§3.6).
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -214,7 +213,7 @@ func (c *openAICompatClient) Stream(ctx context.Context, req model.Request) (mod
 	if err != nil {
 		return nil, err
 	}
-	return &openAICompatStream{body: body, scanner: streamLineScanner(body)}, nil
+	return &openAICompatStream{body: body, scanner: streamLineScanner(body), end: streamEnd{wire: "openai-compat"}}, nil
 }
 
 func (c *openAICompatClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
@@ -437,47 +436,3 @@ func (c *openAICompatClient) post(ctx context.Context, path string, payload []by
 	}
 	return resp.Body, nil
 }
-
-// openAICompatStream reads the OpenAI-compatible SSE stream: `data: {...}`
-// lines, terminated by `data: [DONE]`.
-type openAICompatStream struct {
-	body    io.ReadCloser
-	scanner *bufio.Scanner
-}
-
-type openAICompatStreamEvent struct {
-	Choices []struct {
-		Delta struct {
-			Content string `json:"content"`
-		} `json:"delta"`
-	} `json:"choices"`
-}
-
-func (s *openAICompatStream) Next(ctx context.Context) (string, bool, error) {
-	for s.scanner.Scan() {
-		if err := ctx.Err(); err != nil {
-			return "", false, err
-		}
-		line := strings.TrimSpace(s.scanner.Text())
-		if line == "" || !strings.HasPrefix(line, "data:") {
-			continue
-		}
-		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-		if data == "[DONE]" {
-			return "", false, nil
-		}
-		var ev openAICompatStreamEvent
-		if err := json.Unmarshal([]byte(data), &ev); err != nil {
-			return "", false, fmt.Errorf("ai: openai-compat: stream event: %w", err)
-		}
-		if len(ev.Choices) > 0 && ev.Choices[0].Delta.Content != "" {
-			return ev.Choices[0].Delta.Content, true, nil
-		}
-	}
-	if err := s.scanner.Err(); err != nil {
-		return "", false, fmt.Errorf("ai: openai-compat: stream: %w", err)
-	}
-	return "", false, nil
-}
-
-func (s *openAICompatStream) Close() error { return s.body.Close() }

@@ -199,7 +199,7 @@ func (c *openaiClient) Stream(ctx context.Context, req model.Request) (model.Tok
 	if err != nil {
 		return nil, err
 	}
-	return &openaiStream{body: body, scanner: streamLineScanner(body)}, nil
+	return &openaiStream{body: body, scanner: streamLineScanner(body), end: streamEnd{wire: providerOpenAI}}, nil
 }
 
 func (c *openaiClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
@@ -379,8 +379,8 @@ func openaiError(ctx context.Context, resp *http.Response) error {
 }
 
 // openaiCutOff reports a response the output ceiling stopped: an answer,
-// truncated, rather than a failed call. Only Complete reads it — TokenStream
-// has no terminal to carry the truncation, so a stream ends on truncatedError.
+// truncated, rather than a failed call. Only Complete reads it — a stream ends
+// on truncatedError, the port's model.ErrOutputTruncated.
 func openaiCutOff(out openaiResponse) bool {
 	return out.Status == "incomplete" && out.IncompleteDetails.Reason == openaiMaxOutputTokens
 }
@@ -430,10 +430,11 @@ const openaiMaxOutputTokens = "max_output_tokens"
 type openaiStream struct {
 	body    io.ReadCloser
 	scanner *bufio.Scanner
+	end     streamEnd
 }
 
 func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
-	for s.scanner.Scan() {
+	for !s.end.read && s.scanner.Scan() {
 		if err := ctx.Err(); err != nil {
 			return "", false, err
 		}
@@ -459,7 +460,7 @@ func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
 				return ev.Delta, true, nil
 			}
 		case "response.completed":
-			return "", false, nil
+			s.end.finish("")
 		case "response.failed", "response.incomplete":
 			if err := openaiTerminalStatus(ctx, ev.Response); err != nil {
 				return "", false, err
@@ -467,15 +468,11 @@ func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
 			// The embedded response object omitted its status — the event
 			// type itself is still the authority that this is a failure.
 			return "", false, fmt.Errorf("ai: openai: stream ended with %s", ev.Type)
-		case "error":
+		case sseErrorEvent:
 			return "", false, fmt.Errorf("ai: openai: stream error: %s: %s", safeProviderText(ctx, ev.Code), safeProviderText(ctx, ev.Message))
 		}
 	}
-	if err := s.scanner.Err(); err != nil {
-		return "", false, fmt.Errorf("ai: openai: stream: %w", err)
-	}
-	// EOF without response.completed: the connection dropped mid-generation.
-	return "", false, fmt.Errorf("ai: openai: stream ended without a terminal event")
+	return s.end.outcome(s.scanner.Err())
 }
 
 func (s *openaiStream) Close() error { return s.body.Close() }

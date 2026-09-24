@@ -184,30 +184,7 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 		if !isData {
 			continue
 		}
-		var ev struct {
-			Type    string `json:"type"`
-			Message struct {
-				Model string `json:"model"`
-				Usage struct {
-					InputTokens int `json:"input_tokens"`
-					// Same cache-inclusive normalization as the non-streaming path
-					// (see the Complete usage struct above): Anthropic's
-					// message_start usage also reports input_tokens exclusive of
-					// both cache buckets.
-					CacheReadInputTokens     int `json:"cache_read_input_tokens"`
-					CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
-				} `json:"usage"`
-			} `json:"message"`
-			Delta struct {
-				Type        string `json:"type"`
-				Text        string `json:"text"`
-				PartialJSON string `json:"partial_json"`
-				StopReason  string `json:"stop_reason"`
-			} `json:"delta"`
-			Usage struct {
-				OutputTokens int `json:"output_tokens"`
-			} `json:"usage"`
-		}
+		var ev anthropicStreamEvent
 		if err := json.Unmarshal([]byte(data), &ev); err != nil {
 			return model.Response{}, fmt.Errorf("ai: anthropic: stream event: %w", err)
 		}
@@ -234,6 +211,8 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 		case "message_stop":
 			resp.Text = text.String()
 			return resp, nil
+		case sseErrorEvent:
+			return model.Response{}, ev.failure(ctx)
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -247,7 +226,7 @@ func (c *anthropicClient) Stream(ctx context.Context, req model.Request) (model.
 	if err != nil {
 		return nil, err
 	}
-	return &anthropicStream{body: body, scanner: streamLineScanner(body)}, nil
+	return &anthropicStream{body: body, scanner: streamLineScanner(body), end: streamEnd{wire: providerAnthropic}}, nil
 }
 
 // Embed is a different lane, not a chat-tier capability: Anthropic
@@ -373,43 +352,93 @@ func anthropicError(ctx context.Context, resp *http.Response) error {
 	return providerRefusal(resp, "", fmt.Errorf("ai: anthropic: http %d", resp.StatusCode))
 }
 
-// anthropicStream parses the Messages SSE stream, yielding text deltas.
+// anthropicStream parses the Messages SSE stream, yielding text deltas. The
+// reply's terminal is message_delta's stop_reason, read through the same
+// anthropicFinishReason Complete uses; message_stop closes the stream after it.
 type anthropicStream struct {
 	body    io.ReadCloser
 	scanner *bufio.Scanner
+	end     streamEnd
+	// finish is the stop_reason message_delta reported, held until
+	// message_stop confirms the reply is over.
+	finish string
+}
+
+// anthropicStreamEvent is one Messages SSE event, as both readers of the
+// stream decode it: Complete over SSE and the token stream.
+type anthropicStreamEvent struct {
+	Type    string `json:"type"`
+	Message struct {
+		Model string `json:"model"`
+		Usage struct {
+			InputTokens int `json:"input_tokens"`
+			// Same cache-inclusive normalization as the non-streaming path
+			// (see the Complete usage struct above): Anthropic's
+			// message_start usage also reports input_tokens exclusive of
+			// both cache buckets.
+			CacheReadInputTokens     int `json:"cache_read_input_tokens"`
+			CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+		} `json:"usage"`
+	} `json:"message"`
+	Delta struct {
+		Type        string `json:"type"`
+		Text        string `json:"text"`
+		PartialJSON string `json:"partial_json"`
+		StopReason  string `json:"stop_reason"`
+	} `json:"delta"`
+	Usage struct {
+		OutputTokens int `json:"output_tokens"`
+	} `json:"usage"`
+	// Error is the `error` event's body: an overload or a server fault after
+	// the 200 went out.
+	Error struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+// failure is an `error` event as the caller sees it: the provider's own reason,
+// never mistaken for a connection that simply dropped.
+func (ev anthropicStreamEvent) failure(ctx context.Context) error {
+	return fmt.Errorf("ai: anthropic: stream error: %s: %s",
+		safeProviderText(ctx, ev.Error.Type), safeProviderText(ctx, ev.Error.Message))
 }
 
 func (s *anthropicStream) Next(ctx context.Context) (string, bool, error) {
-	for s.scanner.Scan() {
+	for !s.end.read && s.scanner.Scan() {
 		if err := ctx.Err(); err != nil {
 			return "", false, err
 		}
-		line := s.scanner.Text()
-		data, isData := strings.CutPrefix(line, "data: ")
+		data, isData := strings.CutPrefix(s.scanner.Text(), "data: ")
 		if !isData {
 			continue
 		}
-		var ev struct {
-			Type  string `json:"type"`
-			Delta struct {
-				Type string `json:"type"`
-				Text string `json:"text"`
-			} `json:"delta"`
-		}
+		var ev anthropicStreamEvent
 		if err := json.Unmarshal([]byte(data), &ev); err != nil {
 			return "", false, fmt.Errorf("ai: anthropic: stream event: %w", err)
 		}
-		switch {
-		case ev.Type == "content_block_delta" && ev.Delta.Type == "text_delta":
-			return ev.Delta.Text, true, nil
-		case ev.Type == "message_stop":
-			return "", false, nil
+		switch ev.Type {
+		case "content_block_delta":
+			if ev.Delta.Type == "text_delta" && ev.Delta.Text != "" {
+				return ev.Delta.Text, true, nil
+			}
+		case "message_delta":
+			// A delta may carry usage alone, with stop_reason null.
+			if ev.Delta.StopReason == "" {
+				continue
+			}
+			finish, err := anthropicFinishReason(ev.Delta.StopReason)
+			if err != nil {
+				return "", false, err
+			}
+			s.finish = finish
+		case "message_stop":
+			s.end.finish(s.finish)
+		case sseErrorEvent:
+			return "", false, ev.failure(ctx)
 		}
 	}
-	if err := s.scanner.Err(); err != nil {
-		return "", false, fmt.Errorf("ai: anthropic: stream: %w", err)
-	}
-	return "", false, nil
+	return s.end.outcome(s.scanner.Err())
 }
 
 func (s *anthropicStream) Close() error { return s.body.Close() }

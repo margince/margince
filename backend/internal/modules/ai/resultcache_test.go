@@ -56,3 +56,57 @@ func TestResultCacheEvictsExpiredBeforeLive(t *testing.T) {
 		t.Fatalf("cache holds %d entries, over the %d cap", len(c.entries), maxResultCacheEntries)
 	}
 }
+
+// A reply cut off at the output ceiling, or one with no text, is one bad roll
+// of the model. The cache itself refuses it, so no writer can replay it by
+// forgetting to check; every other terminal is cacheable, whichever wire spelled
+// it.
+func TestResultCacheKeepsOnlyAnswersWorthReplaying(t *testing.T) {
+	for name, tc := range map[string]struct {
+		resp model.Response
+		kept bool
+	}{
+		"a finished reply":                    {resp: model.Response{Text: "whole", FinishReason: "stop"}, kept: true},
+		"a finished reply in anthropic terms": {resp: model.Response{Text: "whole", FinishReason: "end_turn"}, kept: true},
+		"a finished reply in gemini terms":    {resp: model.Response{Text: "whole", FinishReason: "STOP"}, kept: true},
+		"a reply naming no terminal":          {resp: model.Response{Text: "whole"}, kept: true},
+		"a reply cut off at the ceiling":      {resp: model.Response{Text: `{"answer":"aa`, FinishReason: model.FinishReasonLength}},
+		"an empty reply":                      {resp: model.Response{FinishReason: "stop"}},
+		"a reply of only whitespace":          {resp: model.Response{Text: " \n\t", FinishReason: "stop"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c := newResultCache(time.Minute)
+			ws := ids.New[ids.WorkspaceKind]()
+			c.put("key", ws, sameBinding, tc.resp, TierCheapCloud)
+			if _, _, hit := c.get("key", ws, sameBinding); hit != tc.kept {
+				t.Errorf("cached = %v, want %v", hit, tc.kept)
+			}
+		})
+	}
+}
+
+// What the rule is for, through the router: the identical next request reaches
+// the model again instead of being served the cut-off answer for the TTL.
+func TestTheRouterDoesNotReplayACutOffAnswer(t *testing.T) {
+	cheap := NewFakeClient().ScriptSteps(
+		FakeStep{Text: `{"answer":"aa`, FinishReason: model.FinishReasonLength},
+		FakeStep{Text: `{"answer":"whole"}`, FinishReason: "stop"},
+	)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+	ctx := wsContext(t)
+	req := model.Request{Messages: []model.Message{{Role: "user", Content: "same thread"}}}
+
+	if _, _, err := r.Complete(ctx, TaskSummarize, req); err != nil {
+		t.Fatal(err)
+	}
+	second, info, err := r.Complete(ctx, TaskSummarize, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Cached || second.Text != `{"answer":"whole"}` {
+		t.Fatalf("the second request was served %q (cached %v), want the fresh whole answer", second.Text, info.Cached)
+	}
+	if len(cheap.Calls()) != 2 {
+		t.Fatalf("model called %d times, want 2 — the cut-off answer must not stand in for a fresh call", len(cheap.Calls()))
+	}
+}

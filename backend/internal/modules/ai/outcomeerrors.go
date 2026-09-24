@@ -66,9 +66,10 @@ func withSpend(err error, spent model.Response) error {
 	return withheld
 }
 
-// truncatedError ends a stream the output ceiling cut off. A stream's port has
-// no terminal to carry the truncation that Complete reports as a Response, so
-// it arrives here instead, spelled as Complete spells it.
+// truncatedError ends a stream the output ceiling cut off: the port's
+// model.ErrOutputTruncated, naming its wire, and carrying the same terminal
+// Complete reports on a Response so one truncation is one value in the trace
+// whichever path served it.
 type truncatedError struct{ wire string }
 
 func (e truncatedError) Error() string {
@@ -77,6 +78,8 @@ func (e truncatedError) Error() string {
 
 // FinishReason satisfies the accessor finishReasonFor probes for.
 func (truncatedError) FinishReason() string { return model.FinishReasonLength }
+
+func (truncatedError) Unwrap() error { return model.ErrOutputTruncated }
 
 // rejectedRequest marks err as the vendor's own verdict that the request is
 // malformed. Only a vendor error code can make that claim: a status cannot,

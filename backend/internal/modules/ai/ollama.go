@@ -286,7 +286,7 @@ func (c *ollamaClient) Stream(ctx context.Context, req model.Request) (model.Tok
 	if err != nil {
 		return nil, err
 	}
-	return &ollamaStream{body: body, scanner: streamLineScanner(body)}, nil
+	return &ollamaStream{body: body, scanner: streamLineScanner(body), end: streamEnd{wire: providerOllama}}, nil
 }
 
 func (c *ollamaClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
@@ -431,32 +431,40 @@ func (c *ollamaClient) post(ctx context.Context, path string, payload []byte) (i
 	return resp.Body, nil
 }
 
-// ollamaStream reads the JSON-lines chat stream.
+// ollamaStream reads the JSON-lines chat stream. The reply's terminal is the
+// done event's done_reason, already in the port's vocabulary as Complete reads
+// it; a body that closes before a done event dropped mid-generation.
 type ollamaStream struct {
 	body    io.ReadCloser
 	scanner *bufio.Scanner
+	end     streamEnd
 }
 
 func (s *ollamaStream) Next(ctx context.Context) (string, bool, error) {
-	for s.scanner.Scan() {
+	for !s.end.read && s.scanner.Scan() {
 		if err := ctx.Err(); err != nil {
 			return "", false, err
 		}
-		var ev ollamaChatEvent
+		var ev struct {
+			ollamaChatEvent
+			// Error is Ollama's report that generation failed after the 200
+			// went out: a runner that crashed or ran out of memory mid-reply.
+			Error string `json:"error"`
+		}
 		if err := json.Unmarshal(s.scanner.Bytes(), &ev); err != nil {
 			return "", false, fmt.Errorf("ai: ollama: stream event: %w", err)
 		}
+		if ev.Error != "" {
+			return "", false, fmt.Errorf("ai: ollama: stream error: %s", safeProviderText(ctx, ev.Error))
+		}
 		if ev.Done {
-			return "", false, nil
+			s.end.finish(ev.DoneReason)
 		}
 		if ev.Message.Content != "" {
 			return ev.Message.Content, true, nil
 		}
 	}
-	if err := s.scanner.Err(); err != nil {
-		return "", false, fmt.Errorf("ai: ollama: stream: %w", err)
-	}
-	return "", false, nil
+	return s.end.outcome(s.scanner.Err())
 }
 
 func (s *ollamaStream) Close() error { return s.body.Close() }

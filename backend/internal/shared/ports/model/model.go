@@ -308,10 +308,33 @@ type Response struct {
 // normalization changes.
 const FinishReasonLength = "length"
 
+// ErrOutputTruncated ends a stream the output ceiling cut off: every chunk
+// before it was generated and billed, and the answer they spell is
+// half-written. It is a stream's spelling of a Response carrying
+// FinishReasonLength — the call succeeded, so a caller that reads it as an
+// outage retries what a briefer request would fix.
+//
+// Port-level so other modules can errors.Is without importing a provider
+// package.
+var ErrOutputTruncated = errors.New("model: the answer was cut off at the output ceiling")
+
 // TokenStream delivers incremental completion tokens; Close releases the
 // underlying connection.
+//
+// How a stream ENDS is part of its answer, because a caller holding the chunks
+// cannot tell a whole answer from a cut one by reading them:
+//
+//   - ok false with a nil error means the provider's own terminal said the
+//     answer finished. Nothing else may end a stream cleanly.
+//   - an error matching ErrOutputTruncated means the output ceiling cut the
+//     answer off after the chunks already delivered.
+//   - an error matching ErrOutputWithheld means the provider declined to
+//     deliver the answer.
+//   - any other error means the stream failed, including a connection that
+//     closed before the provider's terminal arrived.
 type TokenStream interface {
-	// Next returns the next chunk; ok is false when the stream is done.
+	// Next returns the next chunk; ok is false when the stream is done, and
+	// err then says how it ended.
 	Next(ctx context.Context) (chunk string, ok bool, err error)
 	Close() error
 }

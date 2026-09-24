@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"strings"
 	"sync"
 	"time"
 
@@ -67,13 +68,30 @@ func (c *resultCache) get(key string, wsID ids.WorkspaceID, generation uint64) (
 	return entry.resp, entry.tier, true
 }
 
+// put keeps one completion for replay, unless it is not an answer worth
+// replaying. The rule lives here rather than at a call site so that no writer
+// can cache what it forgot to check.
 func (c *resultCache) put(key string, wsID ids.WorkspaceID, generation uint64, resp model.Response, tier Tier) {
+	if !replayable(resp) {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, exists := c.entries[key]; !exists && len(c.entries) >= maxResultCacheEntries {
 		c.makeRoomLocked()
 	}
 	c.entries[key] = cacheEntry{workspaceID: wsID, generation: generation, resp: resp, tier: tier, expires: c.now().Add(c.ttl)}
+}
+
+// replayable reports whether a completion may be served again to the next
+// identical request. A reply cut off at the output ceiling, or one carrying no
+// text at all, is one bad roll of the model: cached, it becomes every identical
+// request's answer for the TTL, where a fresh call might have finished. Only
+// the cut-off terminal is refused, because every other terminal a Response
+// can carry is spelled per wire ("stop", "end_turn", "STOP") and a finished
+// reply must stay cacheable on all of them.
+func replayable(resp model.Response) bool {
+	return resp.FinishReason != model.FinishReasonLength && strings.TrimSpace(resp.Text) != ""
 }
 
 // forget drops one request's cached completion. The structured-output

@@ -191,7 +191,7 @@ func (c *geminiClient) Stream(ctx context.Context, req model.Request) (model.Tok
 	if err != nil {
 		return nil, err
 	}
-	return &geminiStream{body: body, scanner: streamLineScanner(body)}, nil
+	return &geminiStream{body: body, scanner: streamLineScanner(body), end: streamEnd{wire: providerGemini}}, nil
 }
 
 func (c *geminiClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
@@ -388,29 +388,21 @@ func (c *geminiClient) post(ctx context.Context, path string, payload []byte) (i
 }
 
 // geminiStream reads the :streamGenerateContent?alt=sse stream. There is no
-// [DONE] sentinel — the final chunk carries finishReason STOP and then the
-// stream closes; text arrives at candidates[0].content.parts[].text on each
-// chunk. sawTerminal remembers the terminal so an EOF without one (a
-// connection dropped mid-generation) surfaces as an error, not a complete
-// answer. TokenStream has no terminal to carry a truncation, so a stream cut
-// off at MAX_TOKENS delivers its text and then ends on truncatedError.
+// [DONE] sentinel — the final chunk carries finishReason STOP (or MAX_TOKENS)
+// and then the stream closes; text arrives at candidates[0].content.parts[].text
+// on each chunk, the final one included.
 type geminiStream struct {
-	body        io.ReadCloser
-	scanner     *bufio.Scanner
-	sawTerminal bool
-	cutOff      bool
+	body    io.ReadCloser
+	scanner *bufio.Scanner
+	end     streamEnd
 }
 
 func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
-	if s.cutOff {
-		return "", false, truncatedError{wire: providerGemini}
-	}
-	for s.scanner.Scan() {
+	for !s.end.read && s.scanner.Scan() {
 		if err := ctx.Err(); err != nil {
 			return "", false, err
 		}
-		line := s.scanner.Text()
-		data, isData := strings.CutPrefix(line, "data: ")
+		data, isData := strings.CutPrefix(s.scanner.Text(), "data: ")
 		if !isData {
 			continue
 		}
@@ -425,8 +417,7 @@ func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
 			return "", false, err
 		}
 		if finish, terminal := geminiTerminal(ev); terminal {
-			s.sawTerminal = true
-			s.cutOff = finish == geminiMaxTokens
+			s.end.finish(geminiFinishReason(finish))
 		}
 		var chunk strings.Builder
 		for _, cand := range ev.Candidates {
@@ -437,18 +428,8 @@ func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
 		if chunk.Len() > 0 {
 			return chunk.String(), true, nil
 		}
-		if s.cutOff {
-			return "", false, truncatedError{wire: providerGemini}
-		}
 	}
-	if err := s.scanner.Err(); err != nil {
-		return "", false, fmt.Errorf("ai: gemini: stream: %w", err)
-	}
-	if !s.sawTerminal {
-		// EOF before the STOP terminal: the connection dropped mid-generation.
-		return "", false, fmt.Errorf("ai: gemini: stream ended without a terminal STOP")
-	}
-	return "", false, nil
+	return s.end.outcome(s.scanner.Err())
 }
 
 func (s *geminiStream) Close() error { return s.body.Close() }

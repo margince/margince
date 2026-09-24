@@ -392,8 +392,8 @@ func TestGeminiStreamSurfacesErrorChunkAndAbnormalFinish(t *testing.T) {
 }
 
 // A stream cut off at MAX_TOKENS delivers the text it generated, then ends on
-// an error: TokenStream has no terminal to carry "length", and a clean EOF
-// would pass the half-written answer off as a complete one.
+// model.ErrOutputTruncated: a clean end would pass the half-written answer off
+// as a complete one.
 func TestGeminiStreamCutOffDeliversItsTextThenSaysSo(t *testing.T) {
 	client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, `data: {"candidates":[{"content":{"parts":[{"text":"he"}]}}]}`+"\n\n")
@@ -512,8 +512,8 @@ func TestGeminiStreamEOFWithoutStopIsAnError(t *testing.T) {
 	if chunk, ok, err := stream.Next(context.Background()); err != nil || !ok || chunk != "partial" {
 		t.Fatalf("first chunk: %q %v %v", chunk, ok, err)
 	}
-	if _, _, err := stream.Next(context.Background()); err == nil || !strings.Contains(err.Error(), "STOP") {
-		t.Fatalf("EOF without STOP must be an error, got %v", err)
+	if _, _, err := stream.Next(context.Background()); err == nil || errors.Is(err, model.ErrOutputTruncated) {
+		t.Fatalf("EOF without STOP must be an error, and not a truncation, got %v", err)
 	}
 }
 

@@ -17,6 +17,8 @@ package gates
 
 import (
 	"go/ast"
+	"go/parser"
+	"go/token"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -114,8 +116,10 @@ func TestEveryWorkerReturnsThroughJobsFault(t *testing.T) {
 	nilAfterLogging := gatekit.Waive(census.NilAfterLoggingWaivers())
 
 	fset, files := parseGoFilesUnder(t, filepath.Join("internal", "compose"))
+	packages := indexPackageFuncs(fset, files)
 	workers := 0
 	for _, file := range files {
+		pkg := packages[filepath.Dir(fset.Position(file.Pos()).Filename)]
 		for _, decl := range file.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
 			if !ok || fn.Recv == nil || fn.Name.Name != "Work" || fn.Body == nil {
@@ -151,11 +155,11 @@ func TestEveryWorkerReturnsThroughJobsFault(t *testing.T) {
 			// A worker that error-logs AND returns nil is that shape unless a
 			// durable retry policy elsewhere makes the success honest.
 			recv := receiverTypeName(fn)
-			if errorLogsAndReturnsNil(fn) {
+			if logger := errorLogsAndReturnsNil(fn, pkg); logger != "" {
 				if !nilAfterLogging.Waived(t, recv) {
 					pos := fset.Position(fn.Pos())
-					t.Errorf("%s:%d: %s logs an error and returns nil — River will record this job as completed while the work failed. Return the failure, or ratify it in api/jobs.yaml with fault: {nil_after_logging: …} naming the retry policy that makes success honest.",
-						pos.Filename, pos.Line, recv)
+					t.Errorf("%s:%d: %s logs an error (in %s) and returns nil — River will record this job as completed while the work failed. Return the failure, or ratify it in api/jobs.yaml with fault: {nil_after_logging: …} naming the retry policy that makes success honest.",
+						pos.Filename, pos.Line, recv, logger)
 				}
 			}
 		}
@@ -171,26 +175,24 @@ func TestEveryWorkerReturnsThroughJobsFault(t *testing.T) {
 	nilAfterLogging.AssertAllMatched(t)
 }
 
-// errorLogsAndReturnsNil reports whether fn both logs a failure and returns
-// nil. Warn counts as well as Error: the defect is the SHAPE — a tenant's
-// failure becoming a green River row — and the level a worker happened to log
-// it at does not change what the operator sees in the job list.
+// errorLogsAndReturnsNil reports where fn logs a failure when it also returns
+// nil, naming the function holding the log call, or "" when it does not have
+// that shape. Warn counts as well as Error: the defect is the SHAPE — a
+// tenant's failure becoming a green River row — and the level a worker
+// happened to log it at does not change what the operator sees in the job list.
 // A heuristic, and deliberately a broad one: the cost of a false positive is
 // writing one waiver with a rationale, while the cost of a false negative is
 // a tenant failure that never surfaces anywhere.
-func errorLogsAndReturnsNil(fn *ast.FuncDecl) bool {
-	logs, returnsNil := false, false
+//
+// The log is looked for through the calls Work makes into its own package, as
+// well as in its own body: a worker that hands its failure to a helper which
+// logs it, then returns nil, turns the same tenant failure into the same green
+// row.
+func errorLogsAndReturnsNil(fn *ast.FuncDecl, pkg *packageFuncs) string {
+	returnsNil := false
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		switch v := n.(type) {
-		case *ast.CallExpr:
-			if sel, ok := v.Fun.(*ast.SelectorExpr); ok {
-				switch sel.Sel.Name {
-				case "Error", "ErrorContext", "Warn", "WarnContext":
-					logs = true
-				}
-			}
-		case *ast.ReturnStmt:
-			for _, r := range v.Results {
+		if ret, ok := n.(*ast.ReturnStmt); ok {
+			for _, r := range ret.Results {
 				if ident, ok := r.(*ast.Ident); ok && ident.Name == "nil" {
 					returnsNil = true
 				}
@@ -198,7 +200,125 @@ func errorLogsAndReturnsNil(fn *ast.FuncDecl) bool {
 		}
 		return true
 	})
-	return logs && returnsNil
+	if !returnsNil {
+		return ""
+	}
+	return pkg.loggerIn(fn, map[*ast.FuncDecl]bool{})
+}
+
+// packageFuncs is one package's declarations, so a call from a worker can be
+// followed to the body it runs.
+type packageFuncs struct {
+	funcs   map[string]*ast.FuncDecl
+	methods map[string]map[string]*ast.FuncDecl
+}
+
+// indexPackageFuncs groups the declarations of files by the directory — the
+// package — each lives in.
+func indexPackageFuncs(fset *token.FileSet, files []*ast.File) map[string]*packageFuncs {
+	packages := map[string]*packageFuncs{}
+	for _, file := range files {
+		dir := filepath.Dir(fset.Position(file.Pos()).Filename)
+		pkg := packages[dir]
+		if pkg == nil {
+			pkg = &packageFuncs{funcs: map[string]*ast.FuncDecl{}, methods: map[string]map[string]*ast.FuncDecl{}}
+			packages[dir] = pkg
+		}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Body == nil {
+				continue
+			}
+			if fn.Recv == nil {
+				pkg.funcs[fn.Name.Name] = fn
+				continue
+			}
+			recv := receiverTypeName(fn)
+			if pkg.methods[recv] == nil {
+				pkg.methods[recv] = map[string]*ast.FuncDecl{}
+			}
+			pkg.methods[recv][fn.Name.Name] = fn
+		}
+	}
+	return packages
+}
+
+// loggerIn names the function, fn or one it hands a failure to in this
+// package, that makes an error or warn log call, or "" when none does. Calls
+// are followed without a depth limit; seen stops a recursive pair from looping.
+//
+// Only a call made as a statement — plain, deferred or spawned — is followed:
+// one whose result, if it has one, nobody reads. That is the call a failure disappears into: a helper whose
+// error Work returns has handed the failure back, and whatever it logged on
+// the way is the same failure Work then reports through jobs.Fault.
+//
+// What it resolves, without type information: a package-level function called
+// by its bare name, and a method called through fn's own receiver. A method
+// reached through a field or a local value is not followed, because its type is
+// not visible to a syntactic walk.
+func (pkg *packageFuncs) loggerIn(fn *ast.FuncDecl, seen map[*ast.FuncDecl]bool) string {
+	if seen[fn] {
+		return ""
+	}
+	seen[fn] = true
+	var logger string
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		if logger != "" {
+			return false
+		}
+		switch v := n.(type) {
+		case *ast.CallExpr:
+			if isErrorLog(v) {
+				logger = fn.Name.Name
+			}
+		case *ast.ExprStmt:
+			if call, ok := v.X.(*ast.CallExpr); ok {
+				logger = pkg.loggerThrough(fn, call, seen)
+			}
+		case *ast.DeferStmt:
+			logger = pkg.loggerThrough(fn, v.Call, seen)
+		case *ast.GoStmt:
+			logger = pkg.loggerThrough(fn, v.Call, seen)
+		}
+		return logger == ""
+	})
+	return logger
+}
+
+// loggerThrough is loggerIn of what call, made inside fn, resolves to.
+func (pkg *packageFuncs) loggerThrough(fn *ast.FuncDecl, call *ast.CallExpr, seen map[*ast.FuncDecl]bool) string {
+	if callee := pkg.callee(fn, call); callee != nil {
+		return pkg.loggerIn(callee, seen)
+	}
+	return ""
+}
+
+// isErrorLog reports a call to a method named for an error or warn log.
+func isErrorLog(call *ast.CallExpr) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	switch sel.Sel.Name {
+	case "Error", "ErrorContext", "Warn", "WarnContext":
+		return true
+	}
+	return false
+}
+
+// callee resolves call, made inside fn, to a declaration in this package.
+func (pkg *packageFuncs) callee(fn *ast.FuncDecl, call *ast.CallExpr) *ast.FuncDecl {
+	switch fun := call.Fun.(type) {
+	case *ast.Ident:
+		return pkg.funcs[fun.Name]
+	case *ast.SelectorExpr:
+		recv, ok := fun.X.(*ast.Ident)
+		if !ok || fn.Recv == nil || len(fn.Recv.List[0].Names) == 0 || fn.Recv.List[0].Names[0].Name != recv.Name {
+			return nil
+		}
+		return pkg.methods[receiverTypeName(fn)][fun.Sel.Name]
+	}
+	return nil
 }
 
 // topLevelReturns collects the return statements belonging to fn itself,
@@ -301,4 +421,61 @@ func sanctionedWorkerReturn(expr ast.Expr) bool {
 	// River's own control returns are not failures: a snooze reschedules and
 	// a cancel is a deliberate stop. Neither carries a cause to publish.
 	return pkg.Name == "river" && (sel.Sel.Name == "JobSnooze" || sel.Sel.Name == "JobCancel")
+}
+
+// The log-and-return-nil census has to see a log wherever Work hands a failure
+// to be logged, and has to stop where the failure is handed back instead. Each
+// planted worker names the function the census must report, or "" for none.
+func TestTheJobFaultCensusSeesALogMadeThroughAHelper(t *testing.T) {
+	t.Parallel()
+	const prelude = "package planted\n"
+	for name, tc := range map[string]struct{ src, want string }{
+		"a log in Work itself": {`type worker struct{ log logger }
+func (w *worker) Work() error { if err := run(); err != nil { w.log.Error("x", "err", err); return nil }; return nil }
+func run() error { return nil }`, "Work"},
+		"a package function Work hands the failure to": {`type worker struct{}
+func (w *worker) Work() error { if err := run(); err != nil { logFailure(err) }; return nil }
+func logFailure(err error) { slog.ErrorContext(nil, "x", "err", err) }
+func run() error { return nil }`, "logFailure"},
+		"a method on Work's own receiver": {`type worker struct{ log logger }
+func (w *worker) Work() error { w.note(); return nil }
+func (w *worker) note() { w.log.WarnContext(nil, "x") }`, "note"},
+		"a log two calls down": {`type worker struct{}
+func (w *worker) Work() error { outer(); return nil }
+func outer() { inner() }
+func inner() { slog.Warn("x") }`, "inner"},
+		"a deferred helper": {`type worker struct{}
+func (w *worker) Work() error { defer cleanup(); return nil }
+func cleanup() { slog.Error("x") }`, "cleanup"},
+		"a recursive pair that never logs": {`type worker struct{}
+func (w *worker) Work() error { ping(); return nil }
+func ping() { pong() }
+func pong() { ping() }`, ""},
+		"a helper whose failure Work returns": {`type worker struct{}
+func (w *worker) Work() error { if err := check(); err != nil { return jobs.Fault(err) }; return nil }
+func check() error { slog.Error("x"); return errors.New("x") }`, ""},
+		"a helper logging while Work never returns nil": {`type worker struct{}
+func (w *worker) Work() error { logFailure(); return jobs.Fault(nil) }
+func logFailure() { slog.Error("x") }`, ""},
+		"another package's function of the same name": {`type worker struct{}
+func (w *worker) Work() error { other.logFailure(); return nil }
+func logFailure() { slog.Error("x") }`, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			fset := token.NewFileSet()
+			file, err := parser.ParseFile(fset, filepath.Join("planted", "worker.go"), prelude+tc.src, 0)
+			if err != nil {
+				t.Fatalf("parse the planted worker: %v", err)
+			}
+			pkg := indexPackageFuncs(fset, []*ast.File{file})["planted"]
+			work := pkg.methods["worker"]["Work"]
+			if work == nil {
+				t.Fatal("the planted worker declares no Work method the index can see")
+			}
+			if got := errorLogsAndReturnsNil(work, pkg); got != tc.want {
+				t.Errorf("the census reports a log in %q; want %q", got, tc.want)
+			}
+		})
+	}
 }

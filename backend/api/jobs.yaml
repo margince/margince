@@ -608,6 +608,13 @@ kinds:
       fixed months ago. Cheap: one grouped read over an index on decided_at,
       and on an installation whose authorities agree it finds nothing and says
       so once.
+    fault:
+      nil_after_logging: >-
+        the warn line is this pass's FINDING, not a failure: it is the mail
+        enforcing the engine would have stopped, logged at warn because that
+        is what an operator weighs before enforcing. A pass that read the
+        disagreement has succeeded whatever it found; a pass that could not
+        read it returns that through jobs.Fault.
 
   comms_scheduled_send_recovery:
     role: worker
