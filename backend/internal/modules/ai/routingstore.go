@@ -136,14 +136,13 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 		// model is choosing to run without AI, and it is the state a fresh
 		// installation is already in.
 		if !next.Unconfigured() {
-			if next, err = next.keepingStoredUpstream(current).finalize(); err == nil {
-				err = next.ResidencyGap()
-			}
-			if err != nil {
+			if next, err = next.keepingStoredUpstream(current).finalize(); err != nil {
 				refused = settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
 				return refused
 			}
 		}
+		// The residency bar is the entry's own validator (validateStoredRouting),
+		// which SetTx runs and answers with the same InvalidValue.
 		return settings.SetTx(ctx, s.settings, tx, Routing, next)
 	}); err != nil {
 		if refused != nil {
