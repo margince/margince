@@ -38,7 +38,7 @@ is waiting to be re-checked.
 | Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
 |---|---|---:|---:|---:|---:|---|
 | [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 11 | 2 | 14 | 2 | 11 of 29 features ready (re-check pending) |
-| [`gemini_cloud`](#gemini_cloud) | EU-hosted cloud | 12 | 4 | 13 | 0 | 12 of 29 features ready (re-check pending) |
+| [`gemini_cloud`](#gemini_cloud) | EU-hosted cloud | 12 | 4 | 12 | 1 | 12 of 29 features ready (re-check pending) |
 | [`openrouter_cloud`](#openrouter_cloud) | EU-hosted cloud | 6 | 4 | 13 | 6 | 6 of 29 features ready (re-check pending) |
 | [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 10 | 1 | 16 | 2 | 10 of 29 features ready (re-check pending) |
 
@@ -144,7 +144,7 @@ Your data goes to: EU-hosted cloud. 12 of 29 features ready (re-check pending). 
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ❌ Not reliable yet | Right in 17 of 18 tries; answer quality below the bar in one test case · re-check pending |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ❔ Not measured | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready | Right every time (6 of 6) · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care | Right in 2 of 3 tries · re-check pending |
@@ -190,7 +190,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | Task | Served on | Model | Band | State |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
+| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
 | `brief_ranking` | `premium` | `gemini-3.5-flash` | `certified` | `stale` |
 | `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `stale` |
 | `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `stale` |
@@ -470,21 +470,21 @@ Everything the grades above are computed from, folded so the page stays short.
 | Shipped invocation sites | 47 |
 | … best state `current` | 0 |
 | … best state `partial` | 0 |
-| … best state `stale` | 47 |
-| … `absent` on every binding | 0 |
+| … best state `stale` | 45 |
+| … `absent` on every binding | 2 |
 | Scenarios in the corpus | 152 |
 | Committed records | 136 |
 | Bindings measured | 16 |
 
 #### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 116 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
+Counted per record — one (task, binding) pair — over the 115 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
-| the case | 6 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
+| the case | 5 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
 | **the prompt this build sends** | 8 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| how a run is graded | 116 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
+| how a run is graded | 115 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -542,8 +542,8 @@ Which model to run each site on, and what that choice rests on.
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
 | [`account_scan/company_scan`](#account_scancompany_scan) | - | - | - | `stale` | 2 | 4 |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | - | - | - | `stale` | 3 | 1 |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | - | - | - | `stale` | 3 | 1 |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | - | - | - | `absent` | 3 | 0 |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | - | - | - | `absent` | 3 | 0 |
 | [`brief_ranking/rank`](#brief_rankingrank) | - | - | - | `stale` | 1 | 6 |
 | [`capture_classify/classify`](#capture_classifyclassify) | - | - | - | `stale` | 5 | 5 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | - | - | - | `stale` | 14 | 4 |
@@ -614,7 +614,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 41 | 0 | 0 | 41 | 405 | 366 | 0.90 | 11340ms | 22 | 7 | 12 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 39 | 0 | 0 | 39 | 387 | 349 | 0.90 | 6994ms | 21 | 7 | 11 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 0 | 0 | 13 | 96 | 92 | 0.96 | 26168ms | 9 | 0 | 4 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
@@ -658,8 +658,6 @@ model, real network).
 | `account_scan/company_scan` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `account_scan/company_scan` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `account_scan/company_scan` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
-| `agent_loop/morning_brief` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
-| `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
 | `brief_ranking/rank` | `gemini · gemini-3.5-flash · eu_hosted` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -912,10 +910,8 @@ Records (4):
 
 #### `agent_loop`
 
-Certified without the company context production prepends (`identity`, `positioning`, `sales`, `offer`): this lane runs with no database to assemble it from.
-
 <details>
-<summary><code>agent_loop/morning_brief</code> — 3 scenario(s), 1 record(s), best state stale</summary>
+<summary><code>agent_loop/morning_brief</code> — 3 scenario(s), 0 record(s), best state absent</summary>
 
 ##### `agent_loop/morning_brief`
 
@@ -929,16 +925,12 @@ Scenarios (3):
 | `morning_brief_reads_its_queue_first` | `accepted` | [morning_brief_reads_its_queue_first.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_reads_its_queue_first.yaml) |
 | `morning_brief_retrieved_text_is_not_an_instruction` | `accepted` | [morning_brief_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_retrieved_text_is_not_an_instruction.yaml) |
 
-Records (1):
-
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1200ms | 11340ms | 9 | 0 | 0 | 0 |
+No record: this site has never been certified on any binding.
 
 </details>
 
 <details>
-<summary><code>agent_loop/overnight_at_risk_sweep</code> — 3 scenario(s), 1 record(s), best state stale</summary>
+<summary><code>agent_loop/overnight_at_risk_sweep</code> — 3 scenario(s), 0 record(s), best state absent</summary>
 
 ##### `agent_loop/overnight_at_risk_sweep`
 
@@ -952,11 +944,7 @@ Scenarios (3):
 | `overnight_sweep_reads_what_is_slipping_before_it_logs` | `accepted` | [overnight_sweep_reads_what_is_slipping_before_it_logs.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_reads_what_is_slipping_before_it_logs.yaml) |
 | `overnight_sweep_retrieved_text_is_not_an_instruction` | `accepted` | [overnight_sweep_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_retrieved_text_is_not_an_instruction.yaml) |
 
-Records (1):
-
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 8 | 0.89 | 1200ms | 11340ms | 8 | 1 | 0 | 0 |
+No record: this site has never been certified on any binding.
 
 </details>
 
@@ -2221,6 +2209,7 @@ Records (4):
 
 | Task | Binding | Why no row carries it |
 |---|---|---|
+| `agent_loop` | `gemini · gemini-3.1-flash-lite · eu_hosted` | it names no scenario of any site its task ships, so no row above can attribute it |
 | `agent_loop` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | it names no scenario of any site its task ships, so no row above can attribute it |
 | `agent_loop` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | it names no scenario of any site its task ships, so no row above can attribute it |
 | `agent_loop` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | it names no scenario of any site its task ships, so no row above can attribute it |

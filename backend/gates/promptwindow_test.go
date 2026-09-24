@@ -126,10 +126,9 @@ func TestThePromptFloorLeavesRoomForItsCompletion(t *testing.T) {
 // derived from this number rations tools for nothing.
 //
 // The slack exists because this package cannot see the whole prompt. Its own
-// estimateTokens counts the system prompt and the message contents; the
-// adapter's contextWindow also counts each message's role, an 8-byte frame per
-// message, and the response schema in `Format` — several hundred tokens on a
-// long transcript. Sizing to the last token arithmetic allows would put the
+// estimate counts the system prompt, the message contents and the step schema;
+// the adapter's contextWindow also counts each message's role and an 8-byte
+// frame per message — a few hundred tokens on a long transcript. Sizing to the last token arithmetic allows would put the
 // real request over the cap on exactly the runs that need the room.
 func TestThePromptFloorKeepsOneBucketOfSlack(t *testing.T) {
 	t.Parallel()
@@ -142,8 +141,8 @@ func TestThePromptFloorKeepsOneBucketOfSlack(t *testing.T) {
 	// must still clear the cap. One token more than a bucket must not.
 	if clamped(floor+completion+bucket-1, bucket, maxContext) {
 		t.Errorf("MinimumPromptWindow %d leaves less than one %d-token bucket of slack before "+
-			"ollamaMaxContext (%d). The adapter counts message roles, a per-message frame and "+
-			"the response schema that this package's own estimate does not, so a run at the "+
+			"ollamaMaxContext (%d). The adapter counts message roles and a per-message frame "+
+			"that the runner's own estimate does not, so a run at the "+
 			"floor asks for more over there than it looks like here — and the excess is "+
 			"clamped, cutting the completion.", floor, bucket, maxContext)
 	}

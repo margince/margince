@@ -7,7 +7,13 @@ package runner
 // tests rather than inside window.go: the window is about what the model is
 // shown, and this is about what it may answer.
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"sort"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+)
 
 // stepSchema is the step protocol as a JSON Schema, so a provider with
 // schema-constrained decoding enforces the shape at GENERATION rather than
@@ -23,35 +29,51 @@ import "encoding/json"
 // args, final, tool. Property ORDER is load-bearing under grammar-constrained
 // decoding: converted to the builder, agent_loop fell 0.78→0.18 on one binding
 // and 0.53→0.31 on another, and no tool call in the failing run carried args at
-// all. Removing the field descriptions did not recover it; the order is what
-// the model follows.
+// all. Do not "fix" it back without re-certifying agent_loop on two bindings.
 //
-// So this stays a string until the builder can express an order. Do not
-// "fix" it back without re-certifying agent_loop on two bindings.
+// NO OBJECT HERE MAY BE DECLARED WITHOUT ITS KEYS. Gemini's decoder admits no
+// key into an object whose schema lists no properties, open or not: a model
+// that wanted to write arguments padded `"args": {` with whitespace to the
+// output ceiling, and a closing step wrote `"final": { }`. So args is one of
+// the offered tools' own input schemas and final declares its summary.
 //
-// It constrains the KEY SET and the types, and deliberately not the
-// exactly-one-of rule. Expressing that needs oneOf/not, which the strict
-// structured-output modes handle unevenly and may refuse the whole request
-// over; a rejected request is a worse failure than the one this prevents. The
-// XOR is a domain rule parseStep owns, and states with a better error than a
-// schema could — so the descriptions below say it in words instead, where a
-// model reads them.
+// A branch per step shape, each REQUIRING its keys, because an optional args
+// was simply skipped: the same decoder closed the object after "tool" in every
+// measured call. The branches are also the exactly-one-of rule parseStep holds,
+// and each is closed to mirror its DisallowUnknownFields.
 //
-// The STEP is closed, which mirrors parseStep's DisallowUnknownFields. A
-// schema open where the parser is closed would let constrained decoding produce
-// a step that then gets refused, which is this bug wearing the opposite face.
-//
-// args and final are OPEN objects, and must be: their keys belong to whichever
-// tool the model picked, which is a runtime registry rather than a shape known
-// here. A closed object with no properties admits no key at all, so a provider
-// enforcing it would refuse the arguments the loop has to send —
-// TestTheStepSchemaLetsArgsAndFinalCarryKeys exists to say so.
+// The schema is O(offered tools) and rides every step, so window.bounded counts
+// it against the prompt window with the rest of the request.
 //
 // Held by: TestTheStepSchemaAdmitsExactlyWhatTheStepParserAccepts (internal/modules/agents/runner/stepschema_test.go)
-var stepSchema = json.RawMessage(`{` +
-	`"type":"object",` +
-	`"properties":{` +
-	`"tool":{"type":"string"},` +
-	`"args":{"type":"object"},` +
-	`"final":{"type":"object"}},` +
-	`"additionalProperties":false}`)
+func stepSchema(offered []mcp.ToolSpec) json.RawMessage {
+	var b strings.Builder
+	b.WriteString(`{"anyOf":[`)
+	if len(offered) > 0 {
+		b.WriteString(`{"type":"object","properties":{"tool":{"type":"string"},"args":{"anyOf":[`)
+		b.WriteString(strings.Join(argsSchemas(offered), ","))
+		b.WriteString(`]}},"required":["tool","args"],"additionalProperties":false},`)
+	}
+	b.WriteString(`{"type":"object","properties":{"final":{"type":"object",` +
+		`"properties":{"summary":{"type":"string"}},"required":["summary"]}},` +
+		`"required":["final"],"additionalProperties":false}]}`)
+	return json.RawMessage(b.String())
+}
+
+// argsSchemas is each offered tool's input schema as the listing renders it, in
+// the listing's name order so one catalog always yields one request.
+func argsSchemas(offered []mcp.ToolSpec) []string {
+	sorted := append([]mcp.ToolSpec(nil), offered...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+	schemas := make([]string, 0, len(sorted))
+	for _, spec := range sorted {
+		compacted := CompactSchema(spec)
+		// The registry refuses a tool without an object schema at boot; one that
+		// reached here anyway must not make the whole request invalid JSON.
+		if !json.Valid([]byte(compacted)) {
+			compacted = `{"type":"object"}`
+		}
+		schemas = append(schemas, compacted)
+	}
+	return schemas
+}

@@ -268,19 +268,187 @@ Available tools:
 
 ```json
 {
-  "additionalProperties": false,
-  "properties": {
-    "args": {
+  "anyOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "args": {
+          "anyOf": [
+            {
+              "properties": {
+                "idempotency_key": {
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "items": {
+                  "items": {
+                    "properties": {
+                      "cited_evidence": {
+                        "description": "Evidence ids this item already carries, at least one. A finding citing nothing is refused: the whole point is that the claim is grounded in a record you read.",
+                        "items": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "minItems": 1,
+                        "type": "array"
+                      },
+                      "finding": {
+                        "description": "Why this is on the list, what changed, and the one next move.",
+                        "type": "string"
+                      },
+                      "item_id": {
+                        "description": "A brief item from the queue you just read.",
+                        "format": "uuid",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "item_id",
+                      "finding",
+                      "cited_evidence"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "narrative": {
+                  "description": "One sentence about the night as a whole. Empty when there is nothing worth saying.",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            {
+              "properties": {
+                "max_items": {
+                  "maximum": 20,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "project_id": {
+                  "description": "Keep only what is filed under this project or under none",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "record_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "record_type": {
+                  "enum": [
+                    "contact",
+                    "company",
+                    "deal",
+                    "lead",
+                    "project",
+                    "activity"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "record_type",
+                "record_id"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "cursor": {
+                  "description": "Keyset cursor from a previous page's next_cursor",
+                  "type": "string"
+                },
+                "filters": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+                  "type": "object"
+                },
+                "limit": {
+                  "maximum": 50,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "record_type": {
+                  "enum": [
+                    "contact",
+                    "company",
+                    "deal",
+                    "lead",
+                    "project"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "record_type"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {},
+              "type": "object"
+            },
+            {
+              "properties": {
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "record_type": {
+                  "description": "partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record.",
+                  "enum": [
+                    "contact",
+                    "company",
+                    "deal",
+                    "lead",
+                    "activity",
+                    "project",
+                    "partner"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "record_type",
+                "id"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "tool": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "args"
+      ],
       "type": "object"
     },
-    "final": {
+    {
+      "additionalProperties": false,
+      "properties": {
+        "final": {
+          "properties": {
+            "summary": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "summary"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "final"
+      ],
       "type": "object"
-    },
-    "tool": {
-      "type": "string"
     }
-  },
-  "type": "object"
+  ]
 }
 ```
 
@@ -346,19 +514,260 @@ Available tools:
 
 ```json
 {
-  "additionalProperties": false,
-  "properties": {
-    "args": {
+  "anyOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "args": {
+          "anyOf": [
+            {
+              "properties": {},
+              "type": "object"
+            },
+            {
+              "properties": {
+                "max_items": {
+                  "maximum": 20,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "project_id": {
+                  "description": "Keep only what is filed under this project or under none",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "record_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "record_type": {
+                  "enum": [
+                    "contact",
+                    "company",
+                    "deal",
+                    "lead",
+                    "project",
+                    "activity"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "record_type",
+                "record_id"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "cursor": {
+                  "description": "Keyset cursor from a previous page's next_cursor",
+                  "type": "string"
+                },
+                "filters": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+                  "type": "object"
+                },
+                "limit": {
+                  "maximum": 50,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "record_type": {
+                  "enum": [
+                    "contact",
+                    "company",
+                    "deal",
+                    "lead",
+                    "project"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "record_type"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "body": {
+                  "description": "Prose a colleague reads. Same language rule as subject.",
+                  "type": "string"
+                },
+                "channel_provider": {
+                  "description": "Required when kind is \"message\", else refused; a provider list_channel_providers names.",
+                  "type": "string"
+                },
+                "direction": {
+                  "enum": [
+                    "inbound",
+                    "outbound"
+                  ],
+                  "type": "string"
+                },
+                "due_at": {
+                  "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "email",
+                    "call",
+                    "meeting",
+                    "note",
+                    "task",
+                    "message"
+                  ],
+                  "type": "string"
+                },
+                "links": {
+                  "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
+                  "items": {
+                    "properties": {
+                      "entity_id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "entity_type": {
+                        "enum": [
+                          "contact",
+                          "company",
+                          "deal",
+                          "lead",
+                          "project"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "entity_type",
+                      "entity_id"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "occurred_at": {
+                  "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "source_id": {
+                  "type": "string"
+                },
+                "source_system": {
+                  "type": "string"
+                },
+                "subject": {
+                  "description": "Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "record_type": {
+                  "description": "partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record.",
+                  "enum": [
+                    "contact",
+                    "company",
+                    "deal",
+                    "lead",
+                    "activity",
+                    "project",
+                    "partner"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "record_type",
+                "id"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "assignee_id": {
+                  "description": "Narrow to one owner's promises; omit for everyone's",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "limit": {
+                  "description": "Cap the set; omit for 50, the server-side ceiling",
+                  "maximum": 50,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "project_id": {
+                  "description": "Keep only promises filed under this project or under none",
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            {
+              "properties": {
+                "limit": {
+                  "description": "Cap the ranked set; omit for the full evidenced set",
+                  "maximum": 50,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            }
+          ]
+        },
+        "tool": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "args"
+      ],
       "type": "object"
     },
-    "final": {
+    {
+      "additionalProperties": false,
+      "properties": {
+        "final": {
+          "properties": {
+            "summary": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "summary"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "final"
+      ],
       "type": "object"
-    },
-    "tool": {
-      "type": "string"
     }
-  },
-  "type": "object"
+  ]
 }
 ```
 

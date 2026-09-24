@@ -126,8 +126,8 @@ const ollamaContextBucket = 4096
 //     estimate not clamped back to the cap is 32,767, not 32,768. Subtracting
 //     alone gives a window one token too high.
 //   - contextWindow's estimate is BIGGER than a caller's for the same prompt.
-//     It also counts each message's role, an 8-byte per-message frame, and the
-//     response schema in `Format` — several hundred tokens on a long transcript.
+//     It also counts each message's role and an 8-byte per-message frame — a
+//     few hundred tokens on a long transcript.
 //
 // Trimming the slack trades a silent truncation — the completion cut inside a
 // reasoning model's thinking, which returns well-formed empty content and reads
