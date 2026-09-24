@@ -21,12 +21,12 @@ describe("FieldDiff", () => {
   });
   it("renders an empty origin when there is no old value", () => {
     render(<FieldDiff oldValue={null} newValue="Carol Wagner" />);
-    expect(screen.getByText("— created —")).toBeTruthy();
+    expect(screen.getByText("(created)")).toBeTruthy();
     expect(screen.getByText("Carol Wagner")).toBeTruthy();
   });
   it("renders a cleared marker when the new value is null", () => {
     render(<FieldDiff oldValue="x" newValue={null} />);
-    expect(screen.getByText("— cleared —")).toBeTruthy();
+    expect(screen.getByText("(cleared)")).toBeTruthy();
   });
 });
 

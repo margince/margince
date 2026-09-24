@@ -143,7 +143,7 @@ it("shows friendly conflict copy and retains the draft", async () => {
   await user.clear(input);
   await user.type(input, "CEO{Enter}");
   expect((await screen.findByRole("alert")).textContent).toContain(
-    "This record changed since you opened it",
+    "This record changed since it was opened",
   );
   expect(screen.getByDisplayValue("CEO")).toBeTruthy();
   expect(screen.queryByText("internal version mismatch")).toBeNull();

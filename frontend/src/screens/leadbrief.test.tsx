@@ -23,13 +23,13 @@ describe("LeadBrief", () => {
       <LocaleProvider initial="en">
         <LeadBrief
           standing={{ label: "Your move", tone: "accent" }}
-          because="Nobody has answered this lead yet."
+          because="No response to this lead yet."
         />
       </LocaleProvider>,
     );
     expect(screen.getByRole("heading", { name: "Lead brief" })).toBeTruthy();
     expect(screen.getByText("Your move")).toBeTruthy();
-    expect(screen.getByText("Nobody has answered this lead yet.")).toBeTruthy();
+    expect(screen.getByText("No response to this lead yet.")).toBeTruthy();
     expect(screen.queryByText(/Last update/)).toBeNull();
   });
 

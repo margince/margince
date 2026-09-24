@@ -124,7 +124,7 @@ describe("RecordAccess — a contact", () => {
     draw({ ...base, visibility: "owner", writable: true, owner_id: "u1" });
     await user.click(
       await screen.findByRole("button", {
-        name: /share with the company/i,
+        name: /share with all users/i,
       }),
     );
     expect(sent).toContain("PATCH /contacts/p-1");
@@ -157,7 +157,7 @@ describe("RecordAccess — a contact", () => {
     });
     expect(await screen.findByText("Only you")).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /share with the company/i }),
+      screen.queryByRole("button", { name: /share with all users/i }),
     ).toBeNull();
   });
 
@@ -176,7 +176,7 @@ describe("RecordAccess — a contact", () => {
     });
     await user.click(
       await screen.findByRole("button", {
-        name: /share with the company/i,
+        name: /share with all users/i,
       }),
     );
     expect(sent).toContain("PATCH /contacts/p-1");
@@ -227,13 +227,13 @@ describe("RecordAccess — a contact", () => {
     draw({ ...base, visibility: "owner", writable: true, owner_id: "u1" });
     await user.tab();
     expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: /share with the company/i }),
+      screen.getByRole("button", { name: /share with all users/i }),
     );
     await user.keyboard("{Enter}");
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(screen.getByText("Only you")).toBeTruthy();
     expect(
-      screen.queryByText("The company can see this contact now."),
+      screen.queryByText("This contact is now visible to all users."),
     ).toBeNull();
   });
 
@@ -276,13 +276,13 @@ describe("RecordAccess — a contact", () => {
     );
     draw();
     await user.click(
-      await screen.findByRole("button", { name: /share with the company/i }),
+      await screen.findByRole("button", { name: /share with all users/i }),
     );
     expect((await screen.findByRole("alert")).textContent).toBe(
       en["edit.versionSkew"],
     );
     await user.click(
-      screen.getByRole("button", { name: /share with the company/i }),
+      screen.getByRole("button", { name: /share with all users/i }),
     );
     await user.click(
       await screen.findByRole("button", { name: /make private/i }),
@@ -359,7 +359,7 @@ describe("RecordAccess — a company", () => {
       owner_id: "u1",
     });
     await user.click(
-      await screen.findByRole("button", { name: /share with the company/i }),
+      await screen.findByRole("button", { name: /share with all users/i }),
     );
     // The COMPANY endpoint: a component that wrote /contacts/c-1 would pass
     // every other assertion in this block.
@@ -413,7 +413,7 @@ describe("RecordAccess — a company", () => {
     });
     expect(await screen.findByText("Only you")).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /share with the company/i }),
+      screen.queryByRole("button", { name: /share with all users/i }),
     ).toBeNull();
   });
 

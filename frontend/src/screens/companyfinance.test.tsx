@@ -183,7 +183,7 @@ describe("the two readings the card draws as shapes", () => {
       open_balance: { amount_minor: 400_000, currency: "EUR" },
       overdue: { amount_minor: 100_000, currency: "EUR" },
     });
-    expect(await screen.findByText("25% of everything open.")).toBeTruthy();
+    expect(await screen.findByText("25% of open balance.")).toBeTruthy();
     expect(screen.getByText("Overdue €1,000.00")).toBeTruthy();
     expect(screen.getByText("Open €4,000.00")).toBeTruthy();
     const meter = screen.getByLabelText("Overdue share of the open balance");
@@ -199,7 +199,7 @@ describe("the two readings the card draws as shapes", () => {
     });
     expect(
       await screen.findByText(
-        "25% of everything open. Typically 26 days after due.",
+        "25% of open balance. Typically 26 days after due.",
       ),
     ).toBeTruthy();
   });

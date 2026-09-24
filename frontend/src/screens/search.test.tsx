@@ -416,7 +416,7 @@ describe("SearchScreen", () => {
 
     const hit = await screen.findByText("Key Account");
     expect(hit.tagName).toBe("BUTTON");
-    expect(screen.getByText("On 7 records")).toBeTruthy();
+    expect(screen.getByText("Tagged records: 7")).toBeTruthy();
 
     await userEvent.setup().click(hit);
     expect(window.location.hash).toBe(
@@ -425,7 +425,7 @@ describe("SearchScreen", () => {
   });
 
   // Absent is not zero. A server that sent no number has not said the word is
-  // unused, and printing "On 0 records" would be a claim nobody made.
+  // unused, and printing "Records: 0" would be a claim nobody made.
   it("prints no count when the answer carried none", async () => {
     vi.stubGlobal(
       "fetch",
@@ -448,7 +448,7 @@ describe("SearchScreen", () => {
     render(<SearchScreen q="key" />);
 
     expect(await screen.findByText("Key Account")).toBeTruthy();
-    expect(screen.queryByText(/On \d+ records/)).toBeNull();
+    expect(screen.queryByText(/Records: \d+/)).toBeNull();
   });
 });
 
@@ -545,7 +545,7 @@ describe("SearchScreen — narrowing by type", () => {
     await waitFor(() =>
       expect(globalThis.location.hash).toContain("type=product"),
     );
-    await user.click(screen.getByRole("button", { name: "Everything" }));
+    await user.click(screen.getByRole("button", { name: "All" }));
     await waitFor(() =>
       expect(globalThis.location.hash).not.toContain("type="),
     );
@@ -566,6 +566,6 @@ describe("SearchScreen — narrowing by type", () => {
     );
     render(<SearchScreen q="zzz" />);
     expect(await screen.findByText(/No matches/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Everything" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "All" })).toBeTruthy();
   });
 });

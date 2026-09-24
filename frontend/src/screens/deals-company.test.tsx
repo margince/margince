@@ -400,7 +400,7 @@ describe("the board past the picker's first page", () => {
     render(<DealsScreen />);
 
     const card = await boardCard("Fleet retrofit");
-    expect(await within(card).findByText("Name didn't load")).toBeTruthy();
+    expect(await within(card).findByText("Name did not load")).toBeTruthy();
     expect(within(card).queryByLabelText(MASK)).toBeNull();
     expect(screen.queryByText("o-refused")).toBeNull();
   });
@@ -512,7 +512,7 @@ describe("the deals table's company columns", () => {
       expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
     );
     expect(
-      within(cellUnder("via Partner", "Fleet retrofit")).getByRole("img", {
+      within(cellUnder("via partner", "Fleet retrofit")).getByRole("img", {
         name: MASK,
       }),
     ).toBeTruthy();

@@ -51,7 +51,7 @@ describe("the profile digest", () => {
     const onReadWhole = vi.fn();
     mount(<ProfileDigest rows={ROWS} onReadWhole={onReadWhole} />);
     await userEvent.click(
-      screen.getByRole("button", { name: "Read the whole profile" }),
+      screen.getByRole("button", { name: "Read full profile" }),
     );
     expect(onReadWhole).toHaveBeenCalledTimes(1);
   });

@@ -59,7 +59,7 @@ const CONTACT_DRAFT = {
   body: "Guten Tag Frau Malherbe,\n\nfür das Beispiel brauchen wir zwei Produkte.",
   generated_by: "model",
   ai_generated: true,
-  ai_disclosure: "This message was drafted with AI assistance.",
+  ai_disclosure: "Drafted with AI assistance. Review before sending.",
 };
 
 function stubRoutes(
@@ -166,7 +166,7 @@ describe("drafting to a contact", () => {
     );
 
     await userEvent.type(
-      screen.getByPlaceholderText(/What should this email achieve|Reply with/),
+      screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "kurz halten",
     );
     await userEvent.click(
@@ -218,7 +218,7 @@ describe("drafting to a contact", () => {
       (c) => c.key === "POST /contacts/c-1/draft-email",
     )[1];
     expect(rewrite.body).toEqual({
-      intent: "Say the same thing in fewer words.",
+      intent: "Keep the meaning and use fewer words.",
       rewrite_of: CONTACT_DRAFT.body,
     });
   });
@@ -326,7 +326,7 @@ describe("drafting to a contact", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText(/not offered from this page/i)).toBeTruthy(),
+      expect(screen.getByText(/not available on this page/i)).toBeTruthy(),
     );
     // No claim about the model, because nothing was asked of it.
     expect(screen.queryByText(/model is not configured/i)).toBeNull();

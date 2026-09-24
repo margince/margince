@@ -93,7 +93,7 @@ describe("the confirm page branches on what the link was for", () => {
 
     expect(await screen.findByText("You are subscribed")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Yes, subscribe me" }),
+      screen.queryByRole("button", { name: "Confirm subscription" }),
     ).not.toBeInTheDocument();
   });
 
@@ -135,7 +135,7 @@ describe("the confirm page branches on what the link was for", () => {
     render(<ConfirmDetailsScreen token="tok-flaky" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Yes, subscribe me" }),
+      await screen.findByRole("button", { name: "Confirm subscription" }),
     );
 
     // Never the confirmed state, and the refusal is on screen rather than the

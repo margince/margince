@@ -103,7 +103,7 @@ describe("Avatar", () => {
 
     it("falls back to the name when no key is given", () => {
       const { container: keyed } = render(
-        <Avatar identity="Voltaq Systems" name="Something else" />,
+        <Avatar identity="Voltaq Systems" name="Other" />,
       );
       const keyedTone = toneOf(keyed);
       cleanup();

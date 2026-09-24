@@ -153,7 +153,7 @@ describe("the preparation plan", () => {
     const headings = screen
       .getAllByRole("heading", { level: 3 })
       .map((h) => h.textContent);
-    expect(headings[0]).toBe("The outcome to earn");
+    expect(headings[0]).toBe("Target outcome");
     // And the sections a reader already had are still on the page, not buried:
     // an outline plan that hid the risks would be a regression.
     expect(headings).toContain("Risks and watch-outs");
@@ -162,7 +162,7 @@ describe("the preparation plan", () => {
 
   it("renders nothing of the plan when the brief carries none", () => {
     mount({ kind: "ready", brief: briefReady });
-    expect(screen.queryByText("The outcome to earn")).toBeNull();
+    expect(screen.queryByText("Target outcome")).toBeNull();
     expect(screen.queryByText("Close the meeting")).toBeNull();
   });
 
@@ -271,7 +271,7 @@ describe("the preparation plan", () => {
 describe("the coaching layer", () => {
   it("is absent for the rep whose meeting it is", () => {
     mount({ kind: "ready", brief: briefWithPlan });
-    expect(screen.queryByText("Coach the rep on one thing")).toBeNull();
+    expect(screen.queryByText("Coaching focus")).toBeNull();
   });
 
   it("leads the page for a lead, and says which view this is", () => {
@@ -279,7 +279,7 @@ describe("the coaching layer", () => {
     const headings = screen
       .getAllByRole("heading", { level: 3 })
       .map((h) => h.textContent);
-    expect(headings[0]).toBe("Coach the rep on one thing");
+    expect(headings[0]).toBe("Coaching focus");
     expect(screen.getByText("Manager view")).toBeTruthy();
   });
 
@@ -326,7 +326,7 @@ describe("the coaching layer", () => {
 
   it("gives the lead the branches the rep's own plan carries", () => {
     mount({ kind: "ready", brief: briefManager });
-    expect(screen.getByText("How this meeting can go")).toBeTruthy();
+    expect(screen.getByText("Possible outcomes")).toBeTruthy();
     expect(screen.getByText("It becomes a price negotiation")).toBeTruthy();
   });
 });
@@ -334,13 +334,13 @@ describe("the coaching layer", () => {
 describe("the states a read can land in", () => {
   it("says it is assembling", () => {
     mount({ kind: "loading" });
-    expect(screen.getByText("Assembling the brief…")).toBeTruthy();
+    expect(screen.getByText("Preparing brief…")).toBeTruthy();
   });
 
   it("says a cold record has nothing yet", () => {
     mount({ kind: "ready", brief: { ...briefReady, sections: [] } });
     expect(
-      screen.getByText("There is nothing recorded for this meeting yet."),
+      screen.getByText("Nothing recorded for this meeting yet."),
     ).toBeTruthy();
   });
 
@@ -350,7 +350,7 @@ describe("the states a read can land in", () => {
     // the omission rather than report itself empty.
     mount({ kind: "ready", brief: { ...briefOmitted, sections: [] } });
     expect(
-      screen.queryByText("There is nothing recorded for this meeting yet."),
+      screen.queryByText("Nothing recorded for this meeting yet."),
     ).toBeNull();
     expect(screen.getByText(/do not have access to Deal Rooms/)).toBeTruthy();
   });
@@ -366,7 +366,7 @@ describe("the states a read can land in", () => {
       screen.getByText("That meeting is filed under a different engagement."),
     ).toBeTruthy();
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await user.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalled();
   });
 });

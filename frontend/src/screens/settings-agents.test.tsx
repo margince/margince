@@ -100,7 +100,7 @@ function agentToolsBackend() {
           },
           {
             name: "send_email",
-            title: "Send an email",
+            title: "Send email",
             description:
               'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
             required_scope: "send",
@@ -137,9 +137,11 @@ describe("AgentToolsCard (IT-1)", () => {
     expect(sendRow).toBeTruthy();
     // The egress "reaches out" badge shows only on the tool that reaches
     // outside the workspace (send_email), never on the pure-read tool.
-    expect(sendRow && within(sendRow).getByText("Reaches out")).toBeTruthy();
     expect(
-      searchRow && within(searchRow).queryByText("Reaches out"),
+      sendRow && within(sendRow).getByText("External access"),
+    ).toBeTruthy();
+    expect(
+      searchRow && within(searchRow).queryByText("External access"),
     ).toBeNull();
   });
 
@@ -179,7 +181,7 @@ describe("AgentToolsCard (IT-1)", () => {
       '[data-tool="send_email"]',
     );
     expect(sendRow).toBeTruthy();
-    expect(sendRow && within(sendRow).getByText("Send an email")).toBeTruthy();
+    expect(sendRow && within(sendRow).getByText("Send email")).toBeTruthy();
     expect(
       sendRow && within(sendRow).getByText(/Put a mail on the wire/),
     ).toBeTruthy();
@@ -242,7 +244,7 @@ function agentToolsWithPassportsBackend() {
           },
           {
             name: "send_email",
-            title: "Send an email",
+            title: "Send email",
             description:
               'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
             required_scope: "send",
@@ -290,7 +292,7 @@ describe("AgentToolsCard passport scoping", () => {
     );
     expect(freeRow).toBeTruthy();
     expect(
-      freeRow && within(freeRow).queryByText("scope not granted"),
+      freeRow && within(freeRow).queryByText("Scope not granted"),
     ).toBeNull();
 
     const scopedRow = document.querySelector<HTMLElement>(
@@ -298,7 +300,7 @@ describe("AgentToolsCard passport scoping", () => {
     );
     expect(scopedRow).toBeTruthy();
     expect(
-      scopedRow && within(scopedRow).getByText("scope not granted"),
+      scopedRow && within(scopedRow).getByText("Scope not granted"),
     ).toBeTruthy();
   });
 
@@ -328,14 +330,14 @@ describe("AgentToolsCard passport scoping", () => {
     expect(naming).toBeTruthy();
     expect(answer).toBeTruthy();
     expect(
-      naming && within(naming).getByText("scope not granted"),
+      naming && within(naming).getByText("Scope not granted"),
     ).toBeTruthy();
     expect(
-      answer && within(answer).queryByText("scope not granted"),
+      answer && within(answer).queryByText("Scope not granted"),
     ).toBeNull();
     // And the answer column still carries the governance it is there for.
     expect(answer && within(answer).getByText("send")).toBeTruthy();
-    expect(answer && within(answer).getByText("Reaches out")).toBeTruthy();
+    expect(answer && within(answer).getByText("External access")).toBeTruthy();
   });
 
   // A human who only ever connected an agent through the OAuth consent screen
@@ -444,7 +446,7 @@ function revocablePassportsBackend() {
         data: [
           {
             name: "send_email",
-            title: "Send an email",
+            title: "Send email",
             description:
               'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
             required_scope: "send",
@@ -481,7 +483,7 @@ describe("PassportCard revoke (AS-2)", () => {
     // Scout grants "read" only, so the send tool reads as out of scope while
     // Scout is the filter.
     expect(
-      scopedRow && within(scopedRow).getByText("scope not granted"),
+      scopedRow && within(scopedRow).getByText("Scope not granted"),
     ).toBeTruthy();
 
     const scoutRow = screen
@@ -506,7 +508,7 @@ describe("PassportCard revoke (AS-2)", () => {
     );
     // ...and the inventory reads unfiltered again, matching what it shows.
     expect(
-      scopedRow && within(scopedRow).queryByText("scope not granted"),
+      scopedRow && within(scopedRow).queryByText("Scope not granted"),
     ).toBeNull();
   });
 

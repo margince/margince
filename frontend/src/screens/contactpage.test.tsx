@@ -118,7 +118,7 @@ describe("what the day's work says it could not read", () => {
     mount("overview", { ...view, sections_omitted: ["moments"] });
     expect(
       await screen.findByText(
-        "Not included: Margince's findings. You don't have access to them.",
+        "Not included: Margince findings. You do not have access to them.",
       ),
     ).toBeTruthy();
   });
@@ -169,7 +169,7 @@ describe("the Data & tools tab's added capabilities", () => {
       ],
     };
     mount("research", withEnrichment);
-    expect(await screen.findByText("What Margince read")).toBeTruthy();
+    expect(await screen.findByText("Enriched details")).toBeTruthy();
     expect(screen.getByText("Head of Procurement")).toBeTruthy();
     // The heading and the value alone don't prove the page reaches the
     // control the ticket was about — the confirm/correct buttons themselves
@@ -179,7 +179,7 @@ describe("the Data & tools tab's added capabilities", () => {
     // (/me) than the field's own read — findByRole waits it out rather than
     // catching the render before that query has settled.
     expect(
-      await screen.findByRole("button", { name: "That is right" }),
+      await screen.findByRole("button", { name: "Confirm value" }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
   });
@@ -190,7 +190,7 @@ describe("a moment action that opens the composer", () => {
   // matcher: this file carries no jest-dom, and narrowing beats asserting.
   async function intentValue(): Promise<string> {
     const field = await screen.findByRole("textbox", {
-      name: /What should this email achieve|Reply with/,
+      name: /Purpose of the email|Purpose of the reply/,
     });
     if (!(field instanceof HTMLInputElement)) {
       throw new Error("the composer's steering field is not a text input");
@@ -209,7 +209,7 @@ describe("a moment action that opens the composer", () => {
       await screen.findByRole("button", { name: "Draft a follow-up" }),
     );
 
-    expect(await intentValue()).toBe("follow up — it has gone quiet");
+    expect(await intentValue()).toBe("follow up after a quiet period");
   });
 
   it("opens the same drawer for the generic verb, carrying no reason", async () => {
@@ -225,7 +225,7 @@ describe("a moment action that opens the composer", () => {
     await user.click(within(header).getByRole("button", { name: "Email" }));
 
     expect(
-      await screen.findByRole("dialog", { name: /Draft email/ }),
+      await screen.findByRole("dialog", { name: /Send email/ }),
     ).toBeTruthy();
     // The steer field is here, and EMPTY: pressing the generic verb must not
     // inherit the reason the last rung left behind.
@@ -249,7 +249,7 @@ describe("a moment action that opens the composer", () => {
     await user.click(address);
 
     expect(
-      await screen.findByRole("dialog", { name: /Draft email/ }),
+      await screen.findByRole("dialog", { name: /Send email/ }),
     ).toBeTruthy();
     expect(screen.getAllByRole("dialog").length).toBe(1);
   });
@@ -332,7 +332,7 @@ describe("the header's writing verb", () => {
   // to hold beside it, and that is the claim rather than an omission: the
   // composer asks about consent, because consent is answered per PURPOSE and
   // the purpose is a fact about the message.
-  const NO_TRANSPORT = "No address, and no conversation to reply to.";
+  const NO_TRANSPORT = "No address and no thread to reply to.";
 
   it("names mail when an address is the only way to reach them", async () => {
     mount("overview", view, [mailAllowed]);
@@ -374,7 +374,7 @@ describe("the header's writing verb", () => {
 
     // And the picker it stayed neutral for is really there.
     await user.click(lead);
-    expect(await screen.findByLabelText("How to send")).toBeTruthy();
+    expect(await screen.findByLabelText(en["compose.transport"])).toBeTruthy();
   });
 
   it("refuses, and says why, when there is no way to write to them", async () => {
@@ -490,7 +490,9 @@ describe("which meeting the brief drawer asks about", () => {
       </StoryProviders>,
     );
 
-    const actions = await screen.findAllByRole("button", { name: "Brief me" });
+    const actions = await screen.findAllByRole("button", {
+      name: en["contact.meeting.brief"],
+    });
     // The booked meeting leads the tab and the held one follows it, so the
     // second verb is the one that used to be unreachable.
     await userEvent.setup().click(actions[1]);
@@ -557,7 +559,7 @@ describe("which meeting the brief drawer asks about", () => {
       </StoryProviders>,
     );
 
-    await screen.findAllByRole("button", { name: "Brief me" });
+    await screen.findAllByRole("button", { name: en["contact.meeting.brief"] });
     expect(asked).toEqual([]);
   });
 });
@@ -921,7 +923,7 @@ describe("ContactPageV2 — the addressed composer", () => {
     // email": the draft opens knowing what it is for. It is the field's VALUE
     // rather than text on the page — the composer hands it to a model.
     const intent = await screen.findByLabelText(
-      /What should this email achieve|Reply with/,
+      /Purpose of the email|Purpose of the reply/,
     );
     expect((intent as HTMLInputElement).value).toBe(
       en["contact.composer.intentReply"],
@@ -936,7 +938,7 @@ describe("ContactPageV2 — the addressed composer", () => {
 
     await screen.findByRole("heading", { name: view.contact.full_name });
     expect(
-      screen.queryByLabelText(/What should this email achieve|Reply with/),
+      screen.queryByLabelText(/Purpose of the email|Purpose of the reply/),
     ).toBeNull();
   });
 
@@ -946,14 +948,14 @@ describe("ContactPageV2 — the addressed composer", () => {
   it("closes when the address stops asking for it", async () => {
     window.location.hash = "#/contacts/p-1?compose=reply";
     mount("overview");
-    await screen.findByLabelText(/What should this email achieve|Reply with/);
+    await screen.findByLabelText(/Purpose of the email|Purpose of the reply/);
 
     window.location.hash = "#/contacts/p-1";
     window.dispatchEvent(new HashChangeEvent("hashchange"));
 
     await waitFor(() =>
       expect(
-        screen.queryByLabelText(/What should this email achieve|Reply with/),
+        screen.queryByLabelText(/Purpose of the email|Purpose of the reply/),
       ).toBeNull(),
     );
   });
@@ -968,7 +970,7 @@ describe("a live contact that is not the viewer's to change", () => {
     contact: { ...view.contact, owner_id: "u-other", writable: false },
   };
   const sentence =
-    "You cannot change this contact. Ask their owner to share them with you, or your administrator for the right to edit them.";
+    "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights.";
 
   it("says so once, and refuses Share from that sentence", async () => {
     const user = userEvent.setup();
@@ -987,7 +989,7 @@ describe("a live contact that is not the viewer's to change", () => {
   it("refuses the upload on the Documents tab from the same sentence", async () => {
     mount("documents", notMine);
 
-    const add = await screen.findByRole("button", { name: "Add a document" });
+    const add = await screen.findByRole("button", { name: "Add document" });
     expect(add.hasAttribute("disabled")).toBe(true);
     expect(
       document.getElementById(add.getAttribute("aria-describedby") ?? "")

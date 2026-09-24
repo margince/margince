@@ -161,7 +161,7 @@ test("a source that cannot be read says so instead of disappearing", async () =>
 
   // A retry, rather than a panel that silently removed the evidence: the email
   // panel's own failure arm cannot speak here, because it never mounts.
-  expect(await screen.findByRole("button", { name: "Try again" })).toBeTruthy();
+  expect(await screen.findByRole("button", { name: "Retry" })).toBeTruthy();
 });
 
 test("an email request is read in the task, with no click to open it", async () => {

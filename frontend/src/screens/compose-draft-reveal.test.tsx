@@ -34,7 +34,7 @@ const DRAFT = {
   body: "Hi Dung,\n\nYou asked what this would cost for 40 seats.",
   generated_by: "model",
   ai_generated: true,
-  ai_disclosure: "This message was drafted with AI assistance.",
+  ai_disclosure: "Drafted with AI assistance. Review before sending.",
 };
 
 const PURPOSES = {

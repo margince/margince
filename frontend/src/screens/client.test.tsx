@@ -73,7 +73,7 @@ describe("ClientSurfaceScreen", () => {
     expect(screen.getByText("Jonas Brandt")).toBeTruthy();
     expect(screen.getByText("Head of Fleet")).toBeTruthy();
     expect(screen.queryByText("Brandt Automotive GmbH")).toBeNull();
-    const links = screen.getAllByRole("link", { name: "Open the 360" });
+    const links = screen.getAllByRole("link", { name: "Open 360 view" });
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "#/contacts/p-1",
       "#/contacts/p-2",

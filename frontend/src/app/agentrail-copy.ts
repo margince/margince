@@ -138,25 +138,13 @@ export const TIPS: readonly Tip[] = [
 ];
 
 /**
- * The named line, per cache key, with `%s` where the record's name goes.
- *
- * This is the version of the line that does the work Lars asked the surface to
- * do: "Reading zenloop" is a sentence about the reader's own afternoon, and
- * "Reading a company" is a sentence about software. Only the keys that carry a
- * single record's id are here, because those are the only ones there is a name
- * to put in.
- *
- * The name is never fetched for this (`agentrail-ticker.ts`): it is used when the
- * tab already knows it, and `SAID` below is what shows when it does not.
- */
-/**
  * What a WRITE is called, keyed by the first segment of its `mutationKey`.
  *
  * Present tense and the reader's own verb, with `%s` where the record's name
  * goes: what a salesperson wants to see is "Enriching zenloop", because that is
  * the sentence that says the tool did the thing they did not want to do. A write
  * whose key carries no id, or whose record nothing can name yet, falls back to
- * the same phrase with the article in place of the name.
+ * the same phrase with the record kind in place of the name.
  *
  * A mutation with no `mutationKey` says nothing at all. That is deliberate: the
  * settings screens, the admin surfaces and the consent flows all write too, and a
@@ -164,14 +152,14 @@ export const TIPS: readonly Tip[] = [
  * actually the agent doing sales work.
  */
 export const WROTE: Readonly<Record<string, [named: string, plain: string]>> = {
-  "activity-log": ["Logging an activity on %s", "Logging an activity"],
-  "company-edit": ["Editing %s", "Editing a company"],
-  "company-new": ["Creating %s", "Creating a company"],
-  "contact-edit": ["Editing %s", "Editing a contact"],
-  "contact-new": ["Creating %s", "Creating a contact"],
-  "deal-edit": ["Editing the %s deal", "Editing a deal"],
-  "deal-new": ["Creating a deal on %s", "Creating a deal"],
-  dedupe: ["Deciding a duplicate of %s", "Deciding a duplicate"],
+  "activity-log": ["Logging activity on %s", "Logging activity"],
+  "company-edit": ["Editing %s", "Editing company"],
+  "company-new": ["Creating %s", "Creating company"],
+  "contact-edit": ["Editing %s", "Editing contact"],
+  "contact-new": ["Creating %s", "Creating contact"],
+  "deal-edit": ["Editing %s deal", "Editing deal"],
+  "deal-new": ["Creating deal for %s", "Creating deal"],
+  dedupe: ["Resolving duplicate of %s", "Resolving duplicate"],
   // SENDING, not drafting. The two are told apart by their mutation key rather
   // than by this table: `email` is the send, and the AI draft carries
   // `email-draft` so the rail can own it alone. They used to share one key,
@@ -180,22 +168,34 @@ export const WROTE: Readonly<Record<string, [named: string, plain: string]>> = {
   // from the server's feed. Deleting this entry fixed that and broke something
   // else: a send is a real write a rep waits on and the rail knows nothing
   // about it, so it went silent. Splitting the key is what serves both.
-  email: ["Writing to %s", "Writing an email"],
-  enrich: ["Enriching %s", "Enriching a contact"],
-  ingest: ["Ingesting %s", "Ingesting"],
-  "lead-edit": ["Editing %s", "Editing a lead"],
-  "site-read": ["Reading the %s website", "Reading a website"],
-  "task-new": ["Adding a task on %s", "Adding a task"],
+  email: ["Sending email to %s", "Sending email"],
+  enrich: ["Enriching %s", "Enriching contact"],
+  ingest: ["Importing %s", "Importing data"],
+  "lead-edit": ["Editing %s", "Editing lead"],
+  "site-read": ["Reading %s website", "Reading website"],
+  "task-new": ["Adding task for %s", "Adding task"],
 };
 
+/**
+ * The named line, per cache key, with `%s` where the record's name goes.
+ *
+ * This is the version of the line that does the work Lars asked the surface to
+ * do: "Loading zenloop" is a status about the reader's own afternoon, and
+ * "Loading company" is a status about software. Only the keys that carry a
+ * single record's id are here, because those are the only ones there is a name
+ * to put in.
+ *
+ * The name is never fetched for this (`agentrail-ticker.ts`): it is used when the
+ * tab already knows it, and `SAID` below is what shows when it does not.
+ */
 export const NAMED: Readonly<Record<string, string>> = {
-  deal: "Reading the %s deal",
-  lead: "Reading %s",
-  company: "Reading %s",
-  company360: "Reading everything about %s",
-  contact: "Reading %s",
-  contact360: "Reading everything about %s",
-  contactBrief: "Summarising %s",
+  deal: "Loading %s deal",
+  lead: "Loading %s",
+  company: "Loading %s",
+  company360: "Loading overview of %s",
+  contact: "Loading %s",
+  contact360: "Loading overview of %s",
+  contactBrief: "Summarizing %s",
 };
 
 /**
@@ -203,8 +203,8 @@ export const NAMED: Readonly<Record<string, string>> = {
  *
  * The line under the orb names one thing at a time (`agentrail-ticker.ts`), and
  * this is the vocabulary it names them in: the words a salesperson uses about
- * their own day, not the words the cache uses about itself. "Reading this
- * company" is a sentence; "fetching company360" is a key.
+ * their own day, not the words the cache uses about itself. "Loading company
+ * overview" is a status; "fetching company360" is a key.
  *
  * A key with no entry here produces NO LINE. That is the point of a table rather
  * than a fallback that opens up the key: half of what a session fetches is
@@ -213,30 +213,30 @@ export const NAMED: Readonly<Record<string, string>> = {
  * actually cares about.
  */
 export const SAID: Readonly<Record<string, string>> = {
-  activities: "Reading the activity trail",
-  approvals: "Checking what needs you",
-  "ai-calls": "Reading its own log",
-  "ai-usage": "Adding up what it spent",
-  companies: "Reading companies",
-  company: "Reading a company",
-  company360: "Reading everything about this company",
-  connectors: "Checking its sources",
-  deal: "Reading a deal",
-  "deal-offers": "Reading the offers on a deal",
-  deals: "Reading the pipeline",
-  dsrs: "Checking privacy requests",
-  lead: "Reading a lead",
-  leads: "Reading leads",
-  contacts: "Reading contacts",
-  contact: "Reading a contact",
-  contact360: "Reading everything about this contact",
-  contactBrief: "Summarising a contact",
-  pipelines: "Reading the pipeline",
+  activities: "Loading activities",
+  approvals: "Loading approvals",
+  "ai-calls": "Loading AI call log",
+  "ai-usage": "Loading AI usage",
+  companies: "Loading companies",
+  company: "Loading company",
+  company360: "Loading company overview",
+  connectors: "Loading connectors",
+  deal: "Loading deal",
+  "deal-offers": "Loading deal offers",
+  deals: "Loading pipeline",
+  dsrs: "Loading privacy requests",
+  lead: "Loading lead",
+  leads: "Loading leads",
+  contacts: "Loading contacts",
+  contact: "Loading contact",
+  contact360: "Loading contact overview",
+  contactBrief: "Summarizing contact",
+  pipelines: "Loading pipelines",
   // The brief is written on every open, from the reader's own records, and the
   // rail's own line follows on its next poll: this is the sentence for the
   // second before the feed can name the meeting.
-  meetingBrief: "Preparing a meeting brief",
-  "record-history": "Reading what changed",
-  tasks: "Reading your tasks",
-  teams: "Reading the team",
+  meetingBrief: "Preparing meeting brief",
+  "record-history": "Loading record history",
+  tasks: "Loading tasks",
+  teams: "Loading teams",
 };

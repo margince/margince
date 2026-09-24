@@ -38,7 +38,7 @@ describe("what a staged proposal shows", () => {
     expect(fields.map((entry) => entry.field)).not.toContain("deal_id");
     expect(shown(fields).map((entry) => entry.label)).toEqual([
       "Proposed date",
-      "What is wrong with it",
+      "Issues",
     ]);
   });
 
@@ -52,7 +52,7 @@ describe("what a staged proposal shows", () => {
   // A wire enum on screen is a token wearing a caption.
   it("puts an enum into words", () => {
     const flags = closeDate().find((entry) => entry.field === "flags");
-    expect(flags?.value).toBe("nothing has moved on it");
+    expect(flags?.value).toBe("no recent progress");
   });
 
   // A code the catalogue has no word for still reaches the reader: a finding
@@ -160,12 +160,12 @@ describe("what a staged proposal shows", () => {
       day,
     );
     expect(shown(fields).map((entry) => [entry.label, entry.value])).toEqual([
-      ["Name on it now", "Jonas Petersen"],
+      ["Current name", "Jonas Petersen"],
       ["Name in the message", "J. Petersen"],
-      // No "Company on it now": the lead has none, so the captured company is
+      // No "Current company": the lead has none, so the captured company is
       // the one value here that accepting actually writes.
       ["Company in the message", "Nordwind Logistik"],
-      ["Job title on it now", "Head of Operations"],
+      ["Current job title", "Head of Operations"],
       ["Job title in the message", "Operations Lead"],
       ["Email", "jonas@nordwind.test"],
     ]);

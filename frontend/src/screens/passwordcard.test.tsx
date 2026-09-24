@@ -122,7 +122,7 @@ describe("ChangePasswordCard", () => {
     );
 
     expect(submitButton()).toBeDisabled();
-    expect(screen.getByText(/don't match/i)).toBeInTheDocument();
+    expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

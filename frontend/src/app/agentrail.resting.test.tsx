@@ -132,13 +132,13 @@ describe("restingReadings", () => {
   // ABSENT, never a zero standing in for an all-clear.
   it("says nothing needs you when every read came back with nothing", () => {
     expect(restingReadings(QUIET, WORDS).map(said)).toEqual([
-      "Nothing needs you",
+      "Nothing needs attention",
     ]);
   });
 
   it("does not count an unanswered approvals read as a clean queue", () => {
     const answered = restingReadings({ ...QUIET, waiting: 0 }, WORDS);
-    expect(answered.map(said)).toEqual(["Nothing needs you"]);
+    expect(answered.map(said)).toEqual(["Nothing needs attention"]);
   });
 
   // The fix for the pinned line: a day that settled three runs says three
@@ -153,7 +153,7 @@ describe("restingReadings", () => {
       WORDS,
     );
     expect(lines.map(said)).toEqual([
-      "2 decisions waiting",
+      en["agent.line.waiting_other"].replace("{count}", "2"),
       "brief ready",
       "summary ready",
       "offline model",
@@ -246,9 +246,9 @@ describe("useRestingLine", () => {
   it("still moves when there is only one reading to report", () => {
     vi.useFakeTimers();
     const { result } = renderHook(() =>
-      useRestingLine([plain("Nothing needs you")], TIP_LINES),
+      useRestingLine([plain("Nothing needs attention")], TIP_LINES),
     );
-    expect(said(result.current)).toBe("Nothing needs you");
+    expect(said(result.current)).toBe("Nothing needs attention");
     advance(10_000);
     expect(said(result.current)).toBe("tip A");
   });
@@ -316,8 +316,11 @@ function settledRun(
 }
 
 /** The sentence from the screenshot this change was opened against. */
-const SUMMARY_LINE = "My summary of Sabine Mayer is ready.";
-const BRIEF_LINE = "Your morning brief is ready.";
+const SUMMARY_LINE = en["agent.activity.summarizeNamed.done"].replace(
+  "{name}",
+  "Sabine Mayer",
+);
+const BRIEF_LINE = "Morning brief ready";
 
 const summary = (agoMs: number) =>
   settledRun("summarize", agoMs, { subject_label: "Sabine Mayer" });

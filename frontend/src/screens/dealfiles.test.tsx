@@ -274,7 +274,7 @@ it("withholds the upload and the row verbs on a deal this caller may not write",
   render(<DealFiles deal={dealOf({ owner_id: "u-other", writable: false })} />);
 
   expect(await screen.findByText("MSA-redline.docx")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Add a document" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add document" })).toBeNull();
   expect(
     screen.queryByRole("button", { name: /Actions for MSA-redline/ }),
   ).toBeNull();

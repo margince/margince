@@ -384,9 +384,7 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     stubOffer({ ...baseOffer, line_items: [unpriced] });
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
-    expect(screen.getAllByText("unpriced — excluded from total").length).toBe(
-      2,
-    );
+    expect(screen.getAllByText("unpriced, excluded from total").length).toBe(2);
     expect(screen.queryByText("€0.00")).toBeNull();
   });
 });
@@ -424,7 +422,7 @@ describe("AI disclosure/diff banner (OP-11)", () => {
       ...baseOffer,
       status: "sent",
       ai_generated: true,
-      ai_disclosure: "This offer revision was drafted with AI assistance.",
+      ai_disclosure: "Drafted with AI assistance. Review before sending.",
       diff_from_previous: {
         added: [{ ...existingLine, id: "li-added", description: "Onboarding" }],
         removed: [
@@ -445,7 +443,7 @@ describe("AI disclosure/diff banner (OP-11)", () => {
     await screen.findByText("ANG-2026-0007");
 
     expect(
-      screen.getByText("This offer revision was drafted with AI assistance."),
+      screen.getByText("Drafted with AI assistance. Review before sending."),
     ).toBeTruthy();
     // ONE of each, so the singular is what the summary must say. It said
     // "1 line(s) added" and this test asserted it verbatim — the defect with a
@@ -470,7 +468,7 @@ describe("AI disclosure/diff banner (OP-11)", () => {
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
     expect(
-      screen.queryByRole("heading", { name: "AI-assisted disclosure" }),
+      screen.queryByRole("heading", { name: "AI-assisted offer" }),
     ).toBeNull();
   });
 });
@@ -484,7 +482,7 @@ describe("regenerate action (OP-11)", () => {
       revision: 3,
       status: "draft",
       ai_generated: true,
-      ai_disclosure: "This offer revision was drafted with AI assistance.",
+      ai_disclosure: "Drafted with AI assistance. Review before sending.",
       diff_from_previous: { added: [], removed: [], changed: [] },
     };
     stubOfferWithRegenerate(

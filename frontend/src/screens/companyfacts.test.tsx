@@ -120,9 +120,7 @@ describe("what the open pipeline says", () => {
       />,
     );
 
-    expect(
-      screen.getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
+    expect(screen.getByText("Hidden for your role")).toBeTruthy();
     expect(screen.queryByText("No open deals")).toBeNull();
   });
 
@@ -219,9 +217,9 @@ describe("what the in-flight count says", () => {
       throw new Error("the in-flight row has no wrapper to scope to");
     }
     expect(inFlight.textContent).not.toMatch(/\d/);
-    expect(
-      screen.getAllByText("Hidden — your role cannot read this").length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText("Hidden for your role").length).toBeGreaterThan(
+      0,
+    );
   });
 
   it("says nothing is in flight when both halves are readable and empty", () => {
@@ -265,7 +263,7 @@ describe("before the composite has answered", () => {
   it("says it is still reading rather than reporting an absence", () => {
     draw(<CompanyFacts company={company} view={undefined} />);
 
-    expect(screen.getAllByText("Reading…").length).toBe(2);
+    expect(screen.getAllByText("Loading…").length).toBe(2);
     expect(screen.queryByText("No open deals")).toBeNull();
     expect(screen.queryByText("Nothing")).toBeNull();
   });

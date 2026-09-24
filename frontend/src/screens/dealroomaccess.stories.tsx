@@ -253,8 +253,8 @@ export const ClipboardRefusedOnTheIssuedLink: Story = {
       await userEvent.click(
         await dialog.findByRole("button", { name: "Copy link" }),
       );
-      await dialog.findByText("This browser refused the clipboard");
-      await dialog.findByText("Select the link and copy it by hand.");
+      await dialog.findByText("Clipboard access denied");
+      await dialog.findByText("Select the link and copy it manually.");
     } finally {
       clipboard.restore();
     }

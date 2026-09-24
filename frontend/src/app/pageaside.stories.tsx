@@ -166,7 +166,7 @@ function ControlledQueue() {
         <PageAsideToggle
           controlled={{
             open,
-            labels: { show: "Show work queue", hide: "Hide work queue" },
+            labels: { show: "Show Worklist", hide: "Hide Worklist" },
             onToggle: () => setOpen(!open),
           }}
         />
@@ -178,11 +178,11 @@ export const WorkQueueControl: Story = {
   render: () => <ControlledQueue />,
   play: async ({ canvasElement }) => {
     const toggle = within(canvasElement).getByRole("button", {
-      name: "Show work queue",
+      name: "Show Worklist",
     });
     await userEvent.click(toggle);
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
-    await expect(toggle).toHaveAccessibleName("Hide work queue");
+    await expect(toggle).toHaveAccessibleName("Hide Worklist");
   },
 };
 

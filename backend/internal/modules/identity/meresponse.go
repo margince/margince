@@ -63,7 +63,8 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			RowScope: contractRowScope(id.Permissions.RowScope),
 		},
 		SettingsAvailability: &crmcontracts.SettingsAvailability{
-			CompanyContext: h.companyContextAvailable,
+			CompanyContext:   h.companyContextAvailable,
+			EmbeddingReindex: h.embedReindexAvailable,
 		},
 	}
 }

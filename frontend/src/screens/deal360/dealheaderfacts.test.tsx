@@ -366,7 +366,7 @@ describe("the close date says how much it is worth believing", () => {
   });
 
   it("counts the days a deal is already past, in the reader's own plural", () => {
-    // The arm nothing read back: a date behind us. "1 days past the date" is
+    // The arm nothing read back: a date behind us. "1 days overdue" is
     // the wording a catalogue that spells the plural once produces on the one
     // day a rep is most likely to be looking.
     show(
@@ -376,7 +376,7 @@ describe("the close date says how much it is worth believing", () => {
         locale="en"
       />,
     );
-    expect(screen.getByText("1 day past the date")).toBeInTheDocument();
+    expect(screen.getByText("1 day overdue")).toBeInTheDocument();
   });
 
   // The cell stays where a date is missing: when a deal lands is a question

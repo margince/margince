@@ -166,8 +166,8 @@ describe("walking to the rest of the queue", () => {
     });
     // One scope, stated: the total the sentence ends on is the same population
     // the bands are counted over, and neither is this page's single row.
-    expect(screen.getByText(/48 in all/)).toBeTruthy();
-    expect(screen.queryByText(/1 in all/)).toBeNull();
+    expect(screen.getByText(/· 48 total/)).toBeTruthy();
+    expect(screen.queryByText(/· 1 total/)).toBeNull();
   });
 
   // A server that does not send `in_play` has not said there is none of it.
@@ -236,7 +236,7 @@ describe("walking to the rest of the queue", () => {
     await userEvent.click(screen.getByRole("button", { name: "Show more" }));
 
     // The row survives, and the failure is stated where it happened.
-    await screen.findByText(/Could not load more/);
+    await screen.findByText(/More items did not load/);
     expect(screen.getByText("Already read")).toBeTruthy();
   });
 });

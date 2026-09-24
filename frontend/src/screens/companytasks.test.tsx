@@ -222,7 +222,7 @@ describe("CompanyScreen — the Tasks tab", () => {
     expect(screen.queryByText(DAY_AFTER)).toBeNull();
   });
 
-  // The button used to do nothing at all: the row said "Add the next step" and
+  // The button used to do nothing at all: the row said "Add next step" and
   // the page had no surface to route it to, so a reader pressed it and the
   // account stayed exactly as it was. The step is the server's own sentence
   // now, and the button writes THAT — not one this page recomposed from the
@@ -247,7 +247,7 @@ describe("CompanyScreen — the Tasks tab", () => {
     // The ask is the step, in the words the button writes — not "Set the next
     // step", which hands the reader back the finding as an instruction.
     await waitFor(() => expect(screen.getByText(RECOMMENDED)).toBeTruthy());
-    await user.click(screen.getByRole("button", { name: "Add the next step" }));
+    await user.click(screen.getByRole("button", { name: "Add next step" }));
 
     await waitFor(() => expect(posted).toEqual(preparedStep));
     // The POST returning is not the end of the write: it invalidates the
@@ -282,12 +282,10 @@ describe("CompanyScreen — the Tasks tab", () => {
     await openTasksTab(user);
 
     await waitFor(() =>
-      expect(screen.getByText("No open task on this account.")).toBeTruthy(),
+      expect(screen.getByText("No open tasks for this company.")).toBeTruthy(),
     );
     expect(screen.queryByText(RECOMMENDED)).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Add the next step" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add next step" })).toBeNull();
   });
 
   it("says the section is withheld rather than rendering it as empty", async () => {
@@ -305,12 +303,10 @@ describe("CompanyScreen — the Tasks tab", () => {
       throw new Error("the tasks tab has no section wrapper");
     }
     await waitFor(() =>
-      expect(
-        within(tasks).getByText("Hidden — your role cannot read this"),
-      ).toBeTruthy(),
+      expect(within(tasks).getByText("Hidden for your role")).toBeTruthy(),
     );
     expect(
-      within(tasks).queryByText("No open task on this account."),
+      within(tasks).queryByText("No open tasks for this company."),
     ).toBeNull();
   });
 

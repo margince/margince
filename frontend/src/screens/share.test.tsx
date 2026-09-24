@@ -451,7 +451,9 @@ describe("ShareScreen", () => {
     // The seat ceiling binds the RECIPIENT's licence, not the actor's
     // permission, and the server's own wording sends a reader looking at
     // their own role instead.
-    expect(await screen.findByText(/This seat is read-only/)).toBeTruthy();
+    expect(
+      await screen.findByText(/read-only seat cannot hold write access/),
+    ).toBeTruthy();
     expect(
       screen.queryByText("seat tier does not admit this action"),
     ).toBeNull();
@@ -553,8 +555,6 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="project" recordId="pr-1" />);
 
     expect(await screen.findByTestId("share-acl-list")).toBeTruthy();
-    expect(
-      screen.queryByText("This isn't a record that can be shared."),
-    ).toBeNull();
+    expect(screen.queryByText("This record cannot be shared.")).toBeNull();
   });
 });

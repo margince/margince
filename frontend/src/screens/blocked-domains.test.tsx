@@ -172,7 +172,7 @@ describe("BlockedDomainsCard", () => {
           ...BY_HEURISTIC,
           domain: "expensify.example",
           source: "human",
-          reason: "a tool we use, not a customer",
+          reason: "Supplier, not a customer",
         });
       },
     });
@@ -185,7 +185,7 @@ describe("BlockedDomainsCard", () => {
     );
     await user.type(
       within(dialog).getByTestId("blocked-domain-reason"),
-      "a tool we use, not a customer",
+      "Supplier, not a customer",
     );
     await user.click(
       within(dialog).getByRole("button", { name: en["blockedDomains.save"] }),
@@ -195,7 +195,7 @@ describe("BlockedDomainsCard", () => {
     expect(sent[0]).toEqual({
       domain: "mail.expensify.example",
       admission: "suppressed",
-      reason: "a tool we use, not a customer",
+      reason: "Supplier, not a customer",
     });
     // The server normalizes the domain and the write REPLACES any decision
     // already on it, so what landed is named: without it a sub-domain silently
@@ -310,7 +310,7 @@ describe("BlockedDomainsCard", () => {
 
     await screen.findByText("pwc.example");
     const row = rowFor("pwc.example");
-    // The decision verbs are absent on this row. Offering "Allow this one"
+    // The decision verbs are absent on this row. Offering "Allow"
     // where nothing has been judged invites a call the operator has no grounds
     // for — not knowing yet is the whole reason the row is in the list.
     expect(

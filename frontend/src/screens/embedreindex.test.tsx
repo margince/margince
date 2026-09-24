@@ -71,6 +71,7 @@ function mount(
   allow: GrantSpec,
   routes: Record<string, Handler>,
   requests: { method: string; url: string; body: unknown }[] = [],
+  embedLaneBound = true,
 ) {
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -94,7 +95,12 @@ function mount(
       const path = url.pathname.replace(/^\/v1/, "");
       requests.push({ method, url: path, body });
       if (path.endsWith("/me")) {
-        return json(meFixture({ allow }));
+        return json(
+          meFixture({
+            allow,
+            settingsAvailability: { embedding_reindex: embedLaneBound },
+          }),
+        );
       }
       const key = `${method} ${path}`;
       const handler = routes[key];
@@ -130,7 +136,7 @@ it("shows the estimate + utilization disclosure and disables confirm until the e
     "GET /embeddings/reindex/preview": () => previewPromise,
   });
 
-  await userEvent.click(await screen.findByText("Review & reindex"));
+  await userEvent.click(await screen.findByText("Review and reindex"));
 
   const confirmButton = await screen.findByRole("button", {
     name: "Start reindex",
@@ -162,7 +168,7 @@ it("states a failed estimate as the dialog's own refusal rather than as red text
       ),
   });
 
-  await userEvent.click(await screen.findByText("Review & reindex"));
+  await userEvent.click(await screen.findByText("Review and reindex"));
 
   // The server's own sentence, and it is what the dialog says ABOUT ITSELF —
   // the reason Confirm is refused — so it is spoken as an alert rather than
@@ -182,7 +188,7 @@ it("posts previewed_identity from the status read and force:false on a plain con
       json({ ...STATUS_NEEDED, status: "reembedding" }, 202),
   });
 
-  await userEvent.click(await screen.findByText("Review & reindex"));
+  await userEvent.click(await screen.findByText("Review and reindex"));
   const confirmButton = await screen.findByRole("button", {
     name: "Start reindex",
   });
@@ -216,13 +222,13 @@ it("Rebuild index stays available even when no reindex is needed, and posts forc
   // The naming of the row the button answers, not only the button: an action
   // row is a label, a help line and a verb, and a verb standing in the list
   // without the two says nothing about what it will do.
-  expect(screen.getByText("Rebuild the whole index")).toBeTruthy();
-  // The "Review & reindex" trigger only appears when a reindex is actually
+  expect(screen.getByText("Rebuild entire index")).toBeTruthy();
+  // The "Review and reindex" trigger only appears when a reindex is actually
   // needed — Rebuild is the always-available affordance instead. Its whole ROW
   // goes with it: a naming line left behind would offer an action nothing can
   // start.
-  expect(screen.queryByText("Review & reindex")).toBeNull();
-  expect(screen.queryByText("Reindex what changed")).toBeNull();
+  expect(screen.queryByText("Review and reindex")).toBeNull();
+  expect(screen.queryByText("Reindex changes")).toBeNull();
 
   await userEvent.click(screen.getByText("Rebuild index"));
   const confirmButton = await screen.findByRole("button", {
@@ -314,13 +320,13 @@ it("renders the status but no rebuild actions on the read grant alone", async ()
   // The status row keeps its own naming, so the reading is still labelled for a
   // seat that may only read it.
   expect(screen.getByText("Index status")).toBeTruthy();
-  expect(screen.queryByText("Review & reindex")).toBeNull();
+  expect(screen.queryByText("Review and reindex")).toBeNull();
   expect(screen.queryByRole("button", { name: /Rebuild/ })).toBeNull();
   // Both ACTION rows go whole. A naming line whose control the update grant
   // withheld would describe a rebuild this reader cannot start, which reads as a
   // broken card rather than as a boundary.
-  expect(screen.queryByText("Reindex what changed")).toBeNull();
-  expect(screen.queryByText("Rebuild the whole index")).toBeNull();
+  expect(screen.queryByText("Reindex changes")).toBeNull();
+  expect(screen.queryByText("Rebuild entire index")).toBeNull();
 });
 
 // Withheld, not absent: the card shares the maintenance page with sections a
@@ -336,7 +342,9 @@ it("says the search index is withheld, and asks the server for nothing", async (
 
   // A rep holds no grant on embedding_reindex at all (migration 0115).
   expect(
-    await screen.findByText(/only an admin or ops can see the search index/i),
+    await screen.findByText(
+      /only an administrator or operations user can see the search index/i,
+    ),
   ).toBeTruthy();
   expect(screen.getByText("Search index")).toBeTruthy();
   // No status and no actions — and the half of the old behaviour worth keeping:
@@ -344,9 +352,54 @@ it("says the search index is withheld, and asks the server for nothing", async (
   // turning it into an "unavailable" the reader cannot act on.
   expect(screen.queryByText("Reindex needed")).toBeNull();
   expect(screen.queryByText("Index status")).toBeNull();
-  expect(screen.queryByText("Review & reindex")).toBeNull();
+  expect(screen.queryByText("Review and reindex")).toBeNull();
   expect(screen.queryByText("Rebuild index")).toBeNull();
-  expect(screen.queryByText("Rebuild the whole index")).toBeNull();
+  expect(screen.queryByText("Rebuild entire index")).toBeNull();
+  expect(requests.some((r) => r.url === "/embeddings/reindex/status")).toBe(
+    false,
+  );
+});
+
+// Disabled, not absent: the grant is held and nothing refuses it, but no
+// embeddings model is bound, so the card names what would make it live.
+it("says no embeddings model is bound, links to AI settings, and asks for no status", async () => {
+  const { requests } = mount(
+    REINDEX_OPERATOR,
+    { "GET /embeddings/reindex/status": () => json(STATUS_NEEDED) },
+    [],
+    false,
+  );
+
+  expect(
+    await screen.findByText(/No embedding model is bound/),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Open AI settings" }),
+  ).toHaveAttribute("href", "#/settings/models");
+  expect(screen.getByText("Search index")).toBeInTheDocument();
+  expect(screen.queryByText("Index status")).toBeNull();
+  expect(screen.queryByRole("button", { name: /Rebuild/ })).toBeNull();
+  expect(requests.some((r) => r.url === "/embeddings/reindex/status")).toBe(
+    false,
+  );
+});
+
+// The permission is the first thing a reader is told: a seat that may not see
+// the index learns nothing about how this installation is bound.
+it("says the index is withheld rather than unbound when both hold", async () => {
+  const { requests } = mount(
+    {},
+    { "GET /embeddings/reindex/status": () => json(STATUS_NEEDED) },
+    [],
+    false,
+  );
+
+  expect(
+    await screen.findByText(
+      /only an administrator or operations user can see the search index/i,
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/No embedding model is bound/)).toBeNull();
   expect(requests.some((r) => r.url === "/embeddings/reindex/status")).toBe(
     false,
   );

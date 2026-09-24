@@ -60,7 +60,7 @@ describe("evidence mark", () => {
       expect(trigger.getAttribute("aria-expanded")).toBe("true");
     });
     const panel = await screen.findByRole("region", {
-      name: /Where "Fleet retrofits without downtime" came from/,
+      name: /Where “Fleet retrofits without downtime” came from/,
     });
     expect(panel.textContent).toContain("We retrofit fleets without downtime");
     expect(panel.textContent).toContain("https://brandt.example");

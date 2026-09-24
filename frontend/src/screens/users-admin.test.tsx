@@ -285,13 +285,13 @@ describe("UsersAdminCard", () => {
     // Inviting IS the admin's, and the card SAYS it is withheld rather than
     // simply dropping the verb: the page opens for every seat, so a roster with
     // no explanation reads as "this installation cannot add contacts".
-    expect(screen.queryByRole("button", { name: /invite a user/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /invite user/i })).toBeNull();
     // Matched on the KEY's text, not on the words "admins only": the string
     // stopped saying that when these became delegatable grants.
     expect(
       screen.getByText(new RegExp(en["users.adminOnly"], "i")),
     ).toBeTruthy();
-    expect(screen.queryByLabelText(/new user's email/i)).toBeNull();
+    expect(screen.queryByLabelText(/^Email/)).toBeNull();
   });
 
   // The escalation Codex found: `user_admin:update` WITHOUT the read. The
@@ -316,7 +316,7 @@ describe("UsersAdminCard", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.queryByRole("button", { name: /actions for/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /invite a user/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /invite user/i })).toBeNull();
   });
 
   // And the same holder WITH the read gets all of it, so the case above is not
@@ -333,7 +333,7 @@ describe("UsersAdminCard", () => {
 
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
     expect(screen.getAllByRole("combobox").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: /invite a user/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /invite user/i })).toBeTruthy();
   });
 
   it("carries the roster count and the invite verb in one card's header", async () => {
@@ -362,7 +362,7 @@ describe("UsersAdminCard", () => {
     }
     expect(within(header).getByText("5 users")).toBeTruthy();
     expect(
-      within(header).getByRole("button", { name: /invite a user/i }),
+      within(header).getByRole("button", { name: /invite user/i }),
     ).toBeTruthy();
     // And the invite fields are not on the page until the dialog carries them.
     expect(
@@ -435,7 +435,7 @@ describe("UsersAdminCard", () => {
     expect(
       within(agent).queryByRole("combobox", { name: /set role for/i }),
     ).toBeNull();
-    expect(within(agent).getByText(/acts under a passport/i)).toBeTruthy();
+    expect(within(agent).getByText(/acts through a passport/i)).toBeTruthy();
     // No set-password link: the seat holds no password by construction, which
     // is what makes it a thing that signs in nowhere. Its menu still opens —
     // deactivating the seat is a posture an operator is entitled to take.
@@ -488,9 +488,7 @@ describe("UsersAdminCard", () => {
   // whole act ("Invite a member") while the dialog's submit carries the bare
   // one ("Invite").
   const openInvite = async () => {
-    await userEvent.click(
-      screen.getByRole("button", { name: /invite a user/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /invite user/i }));
     return screen.findByRole("dialog");
   };
 
@@ -499,18 +497,18 @@ describe("UsersAdminCard", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    expect(screen.queryByLabelText("New user's email")).toBeNull();
+    expect(screen.queryByLabelText(/^Email/)).toBeNull();
     const dialog = await openInvite();
     // The dialog's own submit reads the plain form of the verb, so the two are
     // tellable apart — for a reader and for `getByRole`.
     expect(
       within(dialog).getByRole("button", { name: /^invite$/i }),
     ).toBeTruthy();
-    expect(within(dialog).getByLabelText(/new user's email/i)).toBeTruthy();
-    expect(within(dialog).getByLabelText(/new user's full name/i)).toBeTruthy();
+    expect(within(dialog).getByLabelText(/^Email/)).toBeTruthy();
+    expect(within(dialog).getByLabelText(/^Full name/)).toBeTruthy();
     expect(
       within(dialog).getByRole("combobox", {
-        name: /role for the new user/i,
+        name: /^Role/,
       }),
     ).toBeTruthy();
   });
@@ -684,7 +682,7 @@ describe("UsersAdminCard", () => {
     expect(offered).toEqual([
       "Admin",
       "Management",
-      "Team Lead",
+      "Team lead",
       "User",
       "Read-only",
       "Ops",
@@ -750,9 +748,9 @@ describe("UsersAdminCard", () => {
     // what picking one does.
     const shown = roleShown(rowFor("Nora None"), "nora none");
     expect(shown).toMatch(/holds/i);
-    expect(shown).toContain("Team Lead");
+    expect(shown).toContain("Team lead");
     expect(shown).toContain("Ops");
-    expect(shown).toMatch(/replaces them all/i);
+    expect(shown).toMatch(/replaces all of them/i);
   });
 
   it("sets a member's role through the role seam", async () => {
@@ -763,7 +761,7 @@ describe("UsersAdminCard", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     const active = rowFor("Ada Active");
-    await pickOption(user, roleSelect(active, "ada active"), "Team Lead");
+    await pickOption(user, roleSelect(active, "ada active"), "Team lead");
 
     await waitFor(() =>
       expect(
@@ -998,12 +996,12 @@ describe("UsersAdminCard", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     const active = rowFor("Ada Active");
-    await pickOption(user, roleSelect(active, "ada active"), "Team Lead");
+    await pickOption(user, roleSelect(active, "ada active"), "Team lead");
     await waitFor(() => expect(rosterReads).toBe(2));
 
     // Mid-flight: the row reads the role being applied and stays locked. "Admin"
     // here would be the stale cache showing through.
-    expect(roleShown(active, "ada active")).toBe("Team Lead");
+    expect(roleShown(active, "ada active")).toBe("Team lead");
     expect(roleSelect(active, "ada active").disabled).toBe(true);
 
     releaseRoster();
@@ -1012,7 +1010,7 @@ describe("UsersAdminCard", () => {
         false,
       ),
     );
-    expect(roleShown(rowFor("Ada Active"), "ada active")).toBe("Team Lead");
+    expect(roleShown(rowFor("Ada Active"), "ada active")).toBe("Team lead");
   });
 
   it("surfaces a failed invite as an inline error", async () => {

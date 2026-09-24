@@ -82,7 +82,7 @@ describe("historyValue", () => {
   });
 
   it("renders an empty JSON array as the catalog's word for nothing set", () => {
-    expect(historyValue("tags", "[]", ctx())).toBe("nothing set");
+    expect(historyValue("tags", "[]", ctx())).toBe("None set");
   });
 
   it("resolves a bare uuid to a name when the resolver names it", () => {

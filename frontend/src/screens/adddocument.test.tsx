@@ -293,7 +293,7 @@ function uploadedForm(calls: Recorded[]): FormData {
 async function pickDeal(user: UserEvent, term: string, name: RegExp) {
   await user.click(screen.getByRole("radio", { name: /A deal/ }));
   await user.type(
-    screen.getByRole("searchbox", { name: /Search this account/ }),
+    screen.getByRole("searchbox", { name: /Search company deals/ }),
     term,
   );
   await user.click(await screen.findByRole("button", { name }));
@@ -373,7 +373,7 @@ describe("adding a document from the account", () => {
     // sentence sits on a surface whose every other figure is grouped, so an
     // ungrouped 2000 here would be the one number written in another notation.
     expect(
-      screen.getByText(/covers this account's 2,000 newest deals/),
+      screen.getByText(/covers this company’s 2,000 newest deals/),
     ).toBeTruthy();
   });
 
@@ -391,7 +391,7 @@ describe("adding a document from the account", () => {
     const submit = screen.getByRole("button", { name: "Upload" });
     await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(true));
     expect(
-      screen.getByText("Pick the deal to file this against."),
+      screen.getByText("Select the deal to file this under."),
     ).toBeTruthy();
     await user.click(submit);
     expect(uploads(calls)).toHaveLength(0);
@@ -404,7 +404,7 @@ describe("adding a document from the account", () => {
 
     await user.click(screen.getByRole("radio", { name: /A deal/ }));
     await user.type(
-      screen.getByRole("searchbox", { name: /Search this account/ }),
+      screen.getByRole("searchbox", { name: /Search company deals/ }),
       "graz",
     );
 
@@ -533,7 +533,7 @@ describe("adding a document from the account", () => {
     // is already on the record.
     expect(closed).not.toHaveBeenCalled();
     expect(
-      screen.getByText("Drop the file here, or click to choose one"),
+      screen.getByText("Drop a file here, or click to choose one"),
     ).toBeTruthy();
   });
 
@@ -572,7 +572,9 @@ describe("adding a document from the account", () => {
     await user.upload(screen.getByLabelText(/File/), orderForm());
     await waitFor(() =>
       expect(
-        screen.getByText("You may not add documents to this record."),
+        screen.getByText(
+          "You do not have permission to add documents to this record.",
+        ),
       ).toBeTruthy(),
     );
     // The seat is clamped by the server on the METHOD, before RBAC — a grant
@@ -630,7 +632,7 @@ describe("adding a document from the account", () => {
     view.rerender(dialog(true));
 
     expect(
-      await screen.findByText("Drop the file here, or click to choose one"),
+      await screen.findByText("Drop a file here, or click to choose one"),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Upload" })).toBeTruthy();
     expect(await screen.findByText("Choose a file to upload.")).toBeTruthy();
@@ -658,13 +660,11 @@ describe("adding a document from the account", () => {
     // watching.
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     release?.();
-    await waitFor(() =>
-      expect(screen.queryByText("Add a document")).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByText("Add document")).toBeNull());
 
     await user.click(screen.getByRole("button", { name: "reopen" }));
     expect(
-      await screen.findByText("Drop the file here, or click to choose one"),
+      await screen.findByText("Drop a file here, or click to choose one"),
     ).toBeTruthy();
     expect(screen.queryByText(/Uploaded, but not filed/)).toBeNull();
   });
@@ -731,7 +731,7 @@ describe("adding a document from the account", () => {
 
     // The refusal names the limit, and NOTHING went over the wire: refusing
     // after a 3 MB round trip is the cost this check exists to avoid.
-    expect(screen.getByText(/larger than 3 MB/)).toBeTruthy();
+    expect(screen.getByText(/exceeds 3 MB/)).toBeTruthy();
     expect(uploads(calls)).toHaveLength(0);
   });
 

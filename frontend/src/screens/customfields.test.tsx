@@ -92,15 +92,13 @@ describe("FieldBuilder", () => {
     expect(
       screen.getByText(/looks like a new object or relationship/i),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Confirm & add field/i }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add field" })).toBeDisabled();
   });
 
   it("guards an empty label: Confirm disabled, guard toast on click attempt", async () => {
     const { onSubmit } = builder();
     const confirm = screen.getByRole("button", {
-      name: /Confirm & add field/i,
+      name: "Add field",
     });
     expect(confirm).toBeDisabled();
     // the guard toast is wired to the always-clickable Add affordance
@@ -134,9 +132,7 @@ describe("FieldBuilder", () => {
     const { onSubmit } = builder();
     await userEvent.type(screen.getByLabelText(/Label/i), "Renewal date");
     await userEvent.click(screen.getByRole("button", { name: /^Date$/i }));
-    await userEvent.click(
-      screen.getByRole("button", { name: /Confirm & add field/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Add field" }));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         object: "company",
@@ -160,14 +156,10 @@ describe("FieldBuilder", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Picklist$/i }));
     // The single option row is left blank — a picklist with no real choice
     // must not be confirmable.
-    expect(
-      screen.getByRole("button", { name: /Confirm & add field/i }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add field" })).toBeDisabled();
     // Typing a real option flips Confirm back on.
     await userEvent.type(screen.getByLabelText(/Option label/i), "Referral");
-    expect(
-      screen.getByRole("button", { name: /Confirm & add field/i }),
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add field" })).toBeEnabled();
   });
 });
 
@@ -351,12 +343,11 @@ const renderAdmin = () => {
 
 describe("CustomFieldsAdmin", () => {
   // The builder is a dialog behind a row verb now, so anything whose subject is
-  // one of its inputs opens it first. The row's verb and the dialog's submit are
-  // deliberately different strings — "Add a field" against "Confirm & add
-  // field" — so neither query can pick up the other.
+  // one of its inputs opens it first. The row's verb reads "New field" and the
+  // dialog's submit "Add field", which is queried within the dialog.
   const openBuilder = async () => {
     await userEvent.click(
-      await screen.findByRole("button", { name: "Add a field" }),
+      await screen.findByRole("button", { name: "New field" }),
     );
     return within(screen.getByRole("dialog"));
   };
@@ -441,9 +432,7 @@ describe("CustomFieldsAdmin", () => {
     const dialog = await openBuilder();
     await userEvent.type(dialog.getByLabelText(/^Label/i), "Deal size");
     await userEvent.click(dialog.getByRole("button", { name: /^Number$/i }));
-    await userEvent.click(
-      dialog.getByRole("button", { name: /Confirm & add field/i }),
-    );
+    await userEvent.click(dialog.getByRole("button", { name: "Add field" }));
     await waitFor(() =>
       expect(calls.some((call) => call.method === "POST")).toBe(true),
     );
@@ -455,7 +444,7 @@ describe("CustomFieldsAdmin", () => {
       source: "manual",
     });
     await waitFor(() =>
-      expect(screen.getByText(/Deal size" added/)).toBeInTheDocument(),
+      expect(screen.getByText(/Deal size” added/)).toBeInTheDocument(),
     );
     // The dialog is what carried the form, so a committed draft has nothing
     // left to type into: it closes, and the toast reports the outcome on the
@@ -478,10 +467,8 @@ describe("CustomFieldsAdmin", () => {
     await waitFor(() =>
       expect(screen.getByText("Renewal date")).toBeInTheDocument(),
     );
-    expect(screen.queryByRole("button", { name: "Add a field" })).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: /Confirm & add field/i }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "New field" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add field" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Archive field/i })).toBeNull();
     expect(
       screen.getByText(/read-only access to custom fields/i),
@@ -508,11 +495,9 @@ describe("CustomFieldsAdmin", () => {
     expect(screen.getAllByRole("button", { name: /Edit label/i }).length).toBe(
       1,
     );
-    // The row that opens the builder, spelled as the catalog spells it — the
-    // older assertion looked for "Add field to Deal", a string this screen has
-    // never rendered, so it passed whether or not the builder was reachable.
-    expect(screen.queryByText("Add a field to Deal")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Add a field" })).toBeNull();
+    // The row that opens the builder, spelled as the catalog spells it.
+    expect(screen.queryByText("Add field to Deal")).toBeNull();
+    expect(screen.queryByRole("button", { name: "New field" })).toBeNull();
   });
 
   it("offers the builder on create alone, without rename or retire", async () => {
@@ -531,11 +516,9 @@ describe("CustomFieldsAdmin", () => {
     // pass, since "no archive control" is also true when nothing renders. The
     // builder is behind the card's HEADER verb, so what proves it is reachable
     // is that verb plus the form it opens.
-    expect(screen.getByRole("button", { name: "Add a field" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "New field" })).toBeTruthy();
     const dialog = await openBuilder();
-    expect(
-      dialog.getByRole("button", { name: /Confirm & add field/i }),
-    ).toBeTruthy();
+    expect(dialog.getByRole("button", { name: "Add field" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Archive field/i })).toBeNull();
   });
 
@@ -558,9 +541,7 @@ describe("CustomFieldsAdmin", () => {
     const dialog = await openBuilder();
     await userEvent.type(dialog.getByLabelText(/^Label/i), "Doomed field");
     await userEvent.click(dialog.getByRole("button", { name: /^Number$/i }));
-    await userEvent.click(
-      dialog.getByRole("button", { name: /Confirm & add field/i }),
-    );
+    await userEvent.click(dialog.getByRole("button", { name: "Add field" }));
     // The POST is attempted…
     await waitFor(() =>
       expect(calls.some((call) => call.method === "POST")).toBe(true),
@@ -639,27 +620,27 @@ describe("AuditRail states", () => {
 
   it("says nothing about emptiness while the read is still running", () => {
     wrap(<AuditRail entries={[]} state="loading" onRetry={noop} />);
-    expect(screen.queryByText(/No custom-field changes yet/i)).toBeNull();
+    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
   });
 
   it("offers a retry on a failed read, and does not claim the trail is empty", () => {
     const retry = vi.fn();
     wrap(<AuditRail entries={[]} state="failed" onRetry={retry} />);
     expect(screen.getByText(/did not load/i)).toBeInTheDocument();
-    expect(screen.queryByText(/No custom-field changes yet/i)).toBeNull();
-    expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy();
+    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
+    expect(screen.getByRole("button", { name: /^retry$/i })).toBeTruthy();
   });
 
   it("says the trail is withheld, not empty, when the role cannot read it", () => {
     wrap(<AuditRail entries={[]} state="withheld" onRetry={noop} />);
-    expect(screen.getByText(/cannot read this/i)).toBeInTheDocument();
-    expect(screen.queryByText(/No custom-field changes yet/i)).toBeNull();
+    expect(screen.getByText(/Hidden for your role/i)).toBeInTheDocument();
+    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
   });
 
   it("shows the empty line only for a settled, genuinely empty read", () => {
     wrap(<AuditRail entries={[]} state="empty" onRetry={noop} />);
     expect(
-      screen.getByText(/No custom-field changes yet/i),
+      screen.getByText(/No custom field changes yet/i),
     ).toBeInTheDocument();
   });
 });

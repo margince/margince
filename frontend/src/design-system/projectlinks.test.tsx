@@ -39,7 +39,7 @@ describe("ProjectLinks", () => {
     expect(screen.queryByText("No projects yet")).toBeNull();
     // The instructional line, not a bare "nothing here": a reader who cannot
     // see any is the reader who needs telling how one appears.
-    expect(screen.getByText(/body of work a deal is about/)).toBeTruthy();
+    expect(screen.getByText(/once it is on a project/)).toBeTruthy();
     // And that line alone. As a pane of its own the section already carries
     // its name in the head, so a heading under it says the same word twice
     // and makes an absence the loudest thing in the column.
@@ -152,7 +152,7 @@ describe("ProjectLinks", () => {
 
     // The confirm's own verb is distinct from the row's, so a reader — and a
     // screen reader — can tell the ask from the act.
-    await user.click(screen.getByRole("button", { name: "Detach it" }));
+    await user.click(screen.getByRole("button", { name: "Detach project" }));
     await waitFor(() => expect(detach).toHaveBeenCalledWith("p1"));
   });
 
@@ -229,7 +229,7 @@ describe("ProjectLinks", () => {
           words={{
             attach: "Attach company",
             move: "Attach company",
-            detachTitle: "Take this company off?",
+            detachTitle: "Remove company from project?",
             search: "Search companies by name",
           }}
         />

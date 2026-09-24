@@ -66,7 +66,7 @@ const vertex = {
 };
 
 const meta: Meta<typeof AiProviderKeysCard> = {
-  title: "Settings/AI/Models & routing/Model provider keys",
+  title: "Settings/AI/Models and routing/Model provider keys",
   component: AiProviderKeysCard,
 };
 export default meta;

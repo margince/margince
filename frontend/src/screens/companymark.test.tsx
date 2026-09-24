@@ -74,10 +74,8 @@ it("stands the monogram in and offers to add each mark", () => {
     // whose only outcome is a refusal is worse than no control.
     expect(field.queryByRole("button", { name: /^Remove/ })).toBeNull();
   }
-  expect(screen.getByRole("button", { name: "Add a wide logo" })).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Add a square icon" }),
-  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Add wide logo" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Add square icon" })).toBeTruthy();
 });
 
 // Each slot answers for its own mark. A company that uploaded a wordmark and no
@@ -92,20 +90,16 @@ it("draws each mark in its own slot and offers the verbs that fit it", () => {
       ?.getAttribute("src"),
   ).toBe(LOGO);
   expect(
-    screen.getByRole("button", { name: "Replace the wide logo" }),
+    screen.getByRole("button", { name: "Replace wide logo" }),
   ).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Remove the wide logo" }),
-  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Remove wide logo" })).toBeTruthy();
 
   const icon = slot("Square icon");
   expect(icon.queryByRole("img", { name: "Acme GmbH" })).toBeNull();
   expect(icon.getByText("AG")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Add square icon" })).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Add a square icon" }),
-  ).toBeTruthy();
-  expect(
-    screen.queryByRole("button", { name: "Remove the square icon" }),
+    screen.queryByRole("button", { name: "Remove square icon" }),
   ).toBeNull();
 });
 
@@ -118,10 +112,10 @@ it("draws both marks when the company wears both", () => {
       ?.getAttribute("src"),
   ).toBe(ICON);
   expect(
-    screen.getByRole("button", { name: "Replace the square icon" }),
+    screen.getByRole("button", { name: "Replace square icon" }),
   ).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Remove the square icon" }),
+    screen.getByRole("button", { name: "Remove square icon" }),
   ).toBeTruthy();
 });
 
@@ -144,12 +138,12 @@ function stubFetch(answer: CompanyProfile) {
 it.each([
   {
     slotName: "Wide logo",
-    add: "Add a wide logo",
+    add: "Add wide logo",
     path: "/v1/company/logo",
   },
   {
     slotName: "Square icon",
-    add: "Add a square icon",
+    add: "Add square icon",
     path: "/v1/company/logo/icon",
   },
 ] as const)(
@@ -177,8 +171,8 @@ it.each([
 );
 
 it.each([
-  { verb: "Remove the wide logo", path: "/v1/company/logo" },
-  { verb: "Remove the square icon", path: "/v1/company/logo/icon" },
+  { verb: "Remove wide logo", path: "/v1/company/logo" },
+  { verb: "Remove square icon", path: "/v1/company/logo/icon" },
 ] as const)("removes a mark through $path", async ({ verb, path }) => {
   const user = userEvent.setup();
   const fetchStub = stubFetch(WITHOUT_MARK);
@@ -219,7 +213,7 @@ it("shows the server's refusal under the slot that was refused", async () => {
   );
   mark(WITHOUT_MARK);
 
-  await user.click(screen.getByRole("button", { name: "Add a square icon" }));
+  await user.click(screen.getByRole("button", { name: "Add square icon" }));
   await user.upload(
     slot("Square icon").getByLabelText("Square icon"),
     new File(["truncated"], "half-a-logo.png", { type: "image/png" }),
@@ -254,9 +248,7 @@ it("shows the server's refusal of a removal beside the control", async () => {
   );
   mark(WITH_MARK);
 
-  await user.click(
-    screen.getByRole("button", { name: "Remove the wide logo" }),
-  );
+  await user.click(screen.getByRole("button", { name: "Remove wide logo" }));
 
   expect(
     await screen.findByText(/being replaced by another write/),

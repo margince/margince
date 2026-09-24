@@ -73,7 +73,7 @@ describe("Field", () => {
       render(
         <Field
           label="New password"
-          error="These two don't match."
+          error="Passwords do not match."
           hint="Both fields have to say the same thing."
         >
           {(control) => <TextInput {...control} />}
@@ -88,13 +88,13 @@ describe("Field", () => {
       const spoken = described.map(
         (id) => document.getElementById(id)?.textContent,
       );
-      expect(spoken).toContain("These two don't match.");
+      expect(spoken).toContain("Passwords do not match.");
       expect(spoken).toContain("Both fields have to say the same thing.");
     });
 
     it("leaves a clean field unmarked", () => {
       render(
-        <Field label="New password" hint="At least 12 characters.">
+        <Field label="New password" hint="At least 12 characters">
           {(control) => <TextInput {...control} />}
         </Field>,
       );

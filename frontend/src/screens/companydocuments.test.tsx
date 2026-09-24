@@ -127,7 +127,7 @@ describe("the account's document library", () => {
     stub([]);
     show(<CompanyDocumentsCard companyId="o-1" />);
     expect(
-      await screen.findByText("No documents on this account yet."),
+      await screen.findByText("No documents for this company yet."),
     ).toBeTruthy();
   });
 
@@ -157,7 +157,7 @@ describe("the account's document library", () => {
     // has one: the file is upstairs, and the copy has to say so.
     expect(
       await screen.findByText(
-        "Every document here is filed against an agreement above.",
+        "Every document here is filed under a contract above.",
       ),
     ).toBeTruthy();
   });
@@ -191,13 +191,13 @@ describe("the account's document library", () => {
     // list that opened them all fired one request per deal file and buried the
     // filenames the reader came for.
     const toggle = await screen.findByRole("button", {
-      name: "Read this document",
+      name: "Show extracted fields",
     });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
 
     fireEvent.click(toggle);
     expect(
-      await screen.findByRole("button", { name: "Hide the reading" }),
+      await screen.findByRole("button", { name: "Hide extracted fields" }),
     ).toBeTruthy();
   });
 

@@ -76,7 +76,7 @@ describe("weekSentence — what the closed week says about itself", () => {
   });
 
   it("leads with what the week closed", () => {
-    expect(say(week({ deals_won: 2 }))).toContain("closed 2");
+    expect(say(week({ deals_won: 2 }))).toContain("Deals won: 2");
   });
 
   // What the wins were WORTH belongs to the Won card's detail line, which gave
@@ -103,15 +103,15 @@ describe("weekSentence — what the closed week says about itself", () => {
   // routed leads must not outrank the deal that paid for the quarter.
   it("puts a single win ahead of a busier count of anything else", () => {
     const said = say(week({ deals_won: 1, deals_moved: 9, meetings_held: 12 }));
-    expect(said).toContain("closed 1");
+    expect(said).toContain("Deals won: 1");
     expect(said).not.toContain("9");
   });
 
   it("falls back to what moved, then to what was held", () => {
     expect(say(week({ deals_moved: 3, meetings_held: 12 }))).toContain(
-      "moved 3",
+      "Deals moved forward: 3",
     );
-    expect(say(week({ meetings_held: 12 }))).toContain("held 12");
+    expect(say(week({ meetings_held: 12 }))).toContain("Meetings held: 12");
   });
 
   // A promise the rep made and did not keep is the first debt, because they
@@ -120,7 +120,7 @@ describe("weekSentence — what the closed week says about itself", () => {
     const said = say(
       week({ deals_won: 1, commitments_due: 4, commitments_kept: 1 }),
     );
-    expect(said).toContain("3 promises");
+    expect(said).toContain("Commitments carried over: 3");
   });
 
   // A commitment DROPPED is in neither figure — the schema says deciding on
@@ -130,12 +130,12 @@ describe("weekSentence — what the closed week says about itself", () => {
     const said = say(
       week({ deals_won: 1, commitments_due: 4, commitments_kept: 4 }),
     );
-    expect(said).not.toContain("promises");
+    expect(said).not.toContain("Commitments");
   });
 
   it("falls back to postponed tasks when no promise was missed", () => {
     expect(say(week({ deals_won: 1, tasks_carried_over: 2 }))).toContain(
-      "2 tasks",
+      "Tasks carried over: 2",
     );
   });
 
@@ -144,7 +144,9 @@ describe("weekSentence — what the closed week says about itself", () => {
   it("calls a week with nothing in it quiet, and still names its debt", () => {
     expect(say(week({}))).toBe(en["brief.week.quiet"]);
     expect(say(week({ tasks_carried_over: 2 }))).toContain("No completed work");
-    expect(say(week({ tasks_carried_over: 2 }))).toContain("2 tasks");
+    expect(say(week({ tasks_carried_over: 2 }))).toContain(
+      "Tasks carried over: 2",
+    );
   });
 });
 

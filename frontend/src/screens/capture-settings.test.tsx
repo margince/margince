@@ -101,7 +101,7 @@ describe("CaptureSettingsCard", () => {
     const reasonId = toggle.getAttribute("aria-describedby");
     expect(reasonId).toBeTruthy();
     expect(document.getElementById(reasonId ?? "")?.textContent).toMatch(
-      /Only an admin or ops/,
+      /Only an administrator or operations user/,
     );
   });
 

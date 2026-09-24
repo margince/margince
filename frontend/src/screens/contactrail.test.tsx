@@ -308,7 +308,7 @@ function section(heading: string): HTMLElement {
   throw new Error(`the rail drew no section headed "${heading}"`);
 }
 
-const WITHHELD_SENTENCE = "Hidden — your role cannot read this";
+const WITHHELD_SENTENCE = "Hidden for your role";
 
 // contactStanding is the one line of relationship standing the record's head
 // carries: a pure derivation from the two touch timestamps, tested directly
@@ -656,9 +656,9 @@ describe("which employer is the current one", () => {
     const [first, second] = employerOrder();
     expect(first).toContain("Notice GmbH");
     // Serving notice is still the current job, so the row says so.
-    expect(first).toContain("current");
+    expect(first).toContain("Current");
     expect(second).toContain("Former GmbH");
-    expect(second).not.toContain("current");
+    expect(second).not.toContain("Current");
   });
 
   it("stops calling it current once the last day has passed", async () => {
@@ -686,7 +686,7 @@ describe("which employer is the current one", () => {
     // Nobody is current here, so the section marks nobody — a flag left over
     // from a job that has ended must not outrank a row that never claimed one.
     for (const row of employerOrder()) {
-      expect(row).not.toContain("current");
+      expect(row).not.toContain("Current");
     }
   });
 

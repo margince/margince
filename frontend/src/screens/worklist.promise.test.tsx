@@ -106,7 +106,7 @@ describe("a promise the reader made", () => {
 
     await user.click(await screen.findByRole("button", { name: /^done$/i }));
     expect(
-      await screen.findByText(/could not be marked as kept/i),
+      await screen.findByText(/Commitment was not marked as kept/i),
     ).not.toBeNull();
   });
 });

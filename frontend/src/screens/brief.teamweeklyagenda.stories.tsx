@@ -67,7 +67,7 @@ export const ClipboardRefused: Story = {
       await userEvent.click(
         within(canvasElement).getByRole("button", { name: "Copy agenda" }),
       );
-      await screen.findByText("This browser refused the clipboard");
+      await screen.findByText("Clipboard access denied");
     } finally {
       clipboard.restore();
     }

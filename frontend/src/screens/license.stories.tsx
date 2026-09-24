@@ -30,7 +30,7 @@ function story(entitlement: Entitlement) {
 }
 
 const meta: Meta<typeof LicenseReading> = {
-  title: "Settings/People/Seats & license/Terms",
+  title: "Settings/People/Seats and license/Terms",
   component: LicenseReading,
 };
 export default meta;

@@ -35,7 +35,7 @@ const basis = (
 
 export const FourReadings: Story = {
   render: () => (
-    <ReadingsGrid label="Where this deal stands">
+    <ReadingsGrid label="Deal status">
       <StatCard
         label="The money"
         value="€185,000"
@@ -70,7 +70,7 @@ export const InANarrowColumn: Story = {
   // a row.
   render: () => (
     <div style={{ maxWidth: 480 }}>
-      <ReadingsGrid label="Where this contact stands">
+      <ReadingsGrid label="Contact status">
         <StatCard label="Whose move" value="Yours" tone="warning" />
         <StatCard label="Open promises" value="1" detail="19 days late" />
         <StatCard label="Deals they decide" value="€227k" />
@@ -87,7 +87,7 @@ export const InANarrowColumn: Story = {
 export const WithAFloor: Story = {
   render: () => (
     <ReadingsGrid
-      label="What today is worth"
+      label="Today’s figures"
       floor="Read to the page limit, so these are floors, not totals."
     >
       <StatCard label="Revenue at risk" value="€384.5k" tone="warning" />

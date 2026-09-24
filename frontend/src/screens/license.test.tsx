@@ -272,7 +272,7 @@ describe("LicenseCard", () => {
 
     expect(
       await waitFor(() =>
-        screen.getByText("This installation's license was refused"),
+        screen.getByText("This installation’s license was refused"),
       ),
     ).toBeTruthy();
     expect(screen.getByText("License refused")).toBeTruthy();
@@ -301,7 +301,7 @@ describe("LicenseCard", () => {
     // The copy has to say both halves, because an admin acts on the difference:
     // nobody currently working loses anything (P7), and the next invitation is
     // the thing that will not go through.
-    expect(alert.textContent).toMatch(/nobody loses access/i);
+    expect(alert.textContent).toMatch(/no one loses access/i);
     expect(alert.textContent).toMatch(/no new member can be invited/i);
     // The reading still states both figures, and its detail says which side of
     // the grant the count is on rather than leaving a reader to subtract.
@@ -478,7 +478,7 @@ describe("the licensee", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() => screen.getByText("This license needs a renewal")),
+      await waitFor(() => screen.getByText("License needs renewal")),
     ).toBeTruthy();
     // Amber, not an alert: nothing has gone wrong yet.
     expect(screen.queryByRole("alert")).toBeNull();
@@ -507,7 +507,7 @@ describe("the licensee", () => {
     expect(screen.getByText(/still works/i)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     // One notice, not two: the grace state supersedes the renewal warning.
-    expect(screen.queryByText("This license needs a renewal")).toBeNull();
+    expect(screen.queryByText("License needs renewal")).toBeNull();
   });
 
   it("shows no licensee card for an unlicensed installation", async () => {

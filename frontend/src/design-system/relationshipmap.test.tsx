@@ -35,7 +35,7 @@ function model(over: Partial<RelationshipMapModel> = {}): RelationshipMapModel {
         label: "Philipp Königs",
         sublabel: "CFO",
         engagement: "untried",
-        engagementLabel: "Not approached",
+        engagementLabel: "Not contacted",
         actions: [{ id: "write", label: "Write to Philipp", primary: true }],
       },
       {
@@ -84,7 +84,7 @@ function model(over: Partial<RelationshipMapModel> = {}): RelationshipMapModel {
         to: "p-1",
         kind: "route",
         band: "cold",
-        words: "never written to",
+        words: "never contacted",
       },
       {
         id: "m-1",
@@ -119,7 +119,7 @@ function draw(over: Partial<Parameters<typeof RelationshipMap>[0]> = {}) {
 test("names every node with its lane and its engagement", () => {
   draw();
   const philipp = screen.getByRole("button", {
-    name: /Philipp Königs, CFO, Economic buyer, Not approached/,
+    name: /Philipp Königs, CFO, Economic buyer, Not contacted/,
   });
   expect(philipp).not.toBeNull();
 });

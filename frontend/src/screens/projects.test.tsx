@@ -188,13 +188,13 @@ describe("ProjectsScreen", () => {
     render(<ProjectsScreen />);
     expect(await screen.findByText("No projects yet")).toBeTruthy();
     expect(
-      screen.getByText(/starts during the deal, in the initiative phase/),
+      screen.getByText(/starts in the initiative phase during the deal/),
     ).toBeTruthy();
     // The plate has to explain what the key is FOR — that a subject carrying it
     // files the mail — not merely that a key exists. Matched on the promise
     // rather than on the bracket glyph, which the copy is free to reword.
     expect(
-      screen.getByText(/filed under that project automatically/),
+      screen.getByText(/filed under the project automatically/),
     ).toBeTruthy();
     expect(screen.getByTestId("new-record")).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();

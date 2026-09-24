@@ -12,7 +12,7 @@ import { EnrichedFields } from "./contactcorrections";
 //
 //   - a control is offered only to somebody the server will admit. `POST
 //     /ai/feedback` demands `update` on the subject, so a read seat pressing
-//     "That is right" was promised a verdict and handed a 403.
+//     "Confirm" was promised a verdict and handed a 403.
 //   - a control is offered only where it can still apply. A claim a human has
 //     already corrected has been settled by the only party who settles it.
 //   - what the editor opens on is what the field says NOW. Text a reader
@@ -115,7 +115,7 @@ describe("who may correct what a machine read", () => {
     renderFields([field({})]);
 
     expect(await screen.findByRole("button", { name: "Edit" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "That is right" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Confirm value" })).toBeTruthy();
   });
 
   it("shows the evidence but no controls to a reader without the grant", async () => {
@@ -128,7 +128,7 @@ describe("who may correct what a machine read", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Edit" })).toBeNull(),
     );
-    expect(screen.queryByRole("button", { name: "That is right" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirm value" })).toBeNull();
   });
 
   it("shows no controls on a read seat, whatever the grant says", async () => {
@@ -142,7 +142,7 @@ describe("who may correct what a machine read", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Edit" })).toBeNull(),
     );
-    expect(screen.queryByRole("button", { name: "That is right" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirm value" })).toBeNull();
   });
 });
 
@@ -160,7 +160,7 @@ describe("which verdicts are still open", () => {
     // longer shows is asking about something that is not there.
     await waitFor(() =>
       expect(
-        screen.getAllByRole("button", { name: "That is right" }),
+        screen.getAllByRole("button", { name: "Confirm value" }),
       ).toHaveLength(1),
     );
     // Correct stays on every field: a value already settled once can still be
@@ -230,9 +230,7 @@ describe("what the editor opens on", () => {
         return new Response(null, { status: 204 });
       }),
     );
-    await user.click(
-      screen.getByRole("button", { name: "Save the correction" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Save correction" }));
 
     await waitFor(() => expect(sent).not.toBe(""));
     const body = JSON.parse(sent);

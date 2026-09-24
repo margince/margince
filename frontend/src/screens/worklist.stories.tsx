@@ -193,7 +193,7 @@ export const AFullDay: Story = {
           category: "decisions",
           level: 6,
           consequence: "data_drifts",
-          title: "Add someone from your mail",
+          title: "Add contact from mail",
           because: [{ kind: "routine" }],
           actions: ["decide"],
         },
@@ -427,7 +427,7 @@ export const ALeadsDay: Story = {
 export const ATeamBiggerThanTheBoardCanCount: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
-      await within(canvasElement).findByRole("button", { name: "My team" }),
+      await within(canvasElement).findByRole("button", { name: "Team" }),
     );
   },
   render: () => {

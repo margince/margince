@@ -93,10 +93,10 @@ export const Uploading: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Add a document" }),
+      await canvas.findByRole("button", { name: "Add document" }),
     );
     await within(canvasElement.ownerDocument.body).findByRole("heading", {
-      name: "Add a document",
+      name: "Add document",
     });
   },
 };

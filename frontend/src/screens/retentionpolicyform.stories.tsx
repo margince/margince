@@ -55,7 +55,7 @@ function form(routes: RouteMap = {}) {
 }
 
 const meta: Meta<typeof RetentionPolicyForm> = {
-  title: "Settings/Governance/Privacy & retention/Retention policy form",
+  title: "Settings/Governance/Privacy and retention/Retention policy form",
   component: RetentionPolicyForm,
   parameters: { layout: "padded" },
 };

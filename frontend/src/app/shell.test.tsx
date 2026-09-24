@@ -219,11 +219,11 @@ describe("PageTitle", () => {
     const { container } = render(<PageTitle route={{ screen: "filters" }} />);
     const heading = screen.getByRole("heading", {
       level: 1,
-      name: "Filters & views",
+      name: "Filters and views",
     });
     const sub = container.querySelector(".pagesub");
     expect(sub?.textContent).toBe(
-      "Build a filter, watch what it selects, and save it as a view.",
+      "Build a filter, preview its matches and save it as a view.",
     );
     // Directly under the name it explains, inside the title's own text column —
     // not beside the actions, where it would read as product chrome. The
@@ -335,7 +335,7 @@ describe("Section switcher (the page title at phone width)", () => {
   it("renders no switcher above the phone breakpoint", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Privacy & retention" }),
+      screen.getByRole("heading", { level: 1, name: "Privacy and retention" }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /change section/ })).toBeNull();
   });
@@ -349,12 +349,12 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     const heading = screen.getByRole("heading", { level: 1 });
     const switcher = screen.getByRole("button", {
-      name: "Privacy & retention — change section",
+      name: "Privacy and retention: change section",
     });
     expect(heading.contains(switcher)).toBe(true);
     // The visible word is the entry, and it is part of the name (WCAG 2.5.3), so
     // a reader driving the app by voice says what they can see.
-    expect(switcher.textContent).toContain("Privacy & retention");
+    expect(switcher.textContent).toContain("Privacy and retention");
     expect(switcher.getAttribute("aria-expanded")).toBe("false");
     // One heading, and the entry's name is in it once — not once in a heading
     // and again in a control under it.
@@ -369,7 +369,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     const dialog = screen.getByRole("dialog");
@@ -413,7 +413,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={named} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     const dialog = screen.getByRole("dialog");
@@ -433,7 +433,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     await user.click(
@@ -452,7 +452,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     await user.click(
@@ -674,9 +674,9 @@ describe("Shell", () => {
     );
     const headings = screen.getAllByRole("heading", { level: 1 });
     expect(headings).toHaveLength(1);
-    expect(headings[0].textContent).toBe("Filters & views");
+    expect(headings[0].textContent).toBe("Filters and views");
     expect(container.querySelector(".pagesub")?.textContent).toBe(
-      "Build a filter, watch what it selects, and save it as a view.",
+      "Build a filter, preview its matches and save it as a view.",
     );
   });
 

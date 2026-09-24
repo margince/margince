@@ -159,8 +159,8 @@ async function fillAndSend(user: ReturnType<typeof userEvent.setup>) {
   writeMessage("Body", "Attached.");
   await pickOption(
     user,
-    screen.getByLabelText("Why are you writing?"),
-    "They asked me to get in touch",
+    screen.getByLabelText("Reason for contact"),
+    "Follow-up they requested",
   );
   await user.click(screen.getByRole("button", { name: "Send" }));
 }
@@ -292,7 +292,9 @@ describe("what the message carries", () => {
       await screen.findByRole("button", { name: /^Offer_Nordwand_v3\.pdf/ }),
     );
     await user.click(
-      await screen.findByRole("button", { name: /Do not send/ }),
+      await screen.findByRole("button", {
+        name: /^Remove Offer_Nordwand_v3\.pdf/,
+      }),
     );
     await fillAndSend(user);
 
