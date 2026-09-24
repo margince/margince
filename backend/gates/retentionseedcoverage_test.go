@@ -28,10 +28,8 @@ import (
 	"os"
 	"regexp"
 	"slices"
-	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -45,6 +43,29 @@ var deliberatelyUnseeded = gatekit.Waive(map[string]string{
 })
 
 var seedRowRE = regexp.MustCompile(`\(\s*'([a-z_]+)'\s*,\s*(?:'([a-z_]+)'|NULL)\s*,\s*(\d+)\s*,\s*'([a-z]+)'\s*\)`)
+
+// selectorKeyRE reads the retention engine's own scope vocabulary off its
+// selector table. Read from SOURCE rather than imported: gates may not depend
+// on a module (arch-lint), and the subject here is a declaration rather than a
+// runtime value, so parsing it is the honest shape as well as the permitted one.
+var selectorKeyRE = regexp.MustCompile("(?m)^\\t\"([a-z_]+/[a-z_]*)\": `")
+
+// actionableScopes is every scope the engine has a selector for.
+func actionableScopes(t *testing.T) []string {
+	t.Helper()
+	src, err := os.ReadFile("internal/modules/privacy/retentionselectors.go")
+	if err != nil {
+		t.Fatalf("reading the selector table: %v", err)
+	}
+	var out []string
+	for _, m := range selectorKeyRE.FindAllStringSubmatch(string(src), -1) {
+		out = append(out, m[1])
+	}
+	if len(out) == 0 {
+		t.Fatal("no selector keys read out of retentionselectors.go — this gate would pass over anything")
+	}
+	return out
+}
 
 // seededScopes reads the scopes SeedDefaultRetentionTx plants, as
 // `object_type/category` with an empty category for a NULL.
@@ -74,9 +95,8 @@ func TestEveryActionableRetentionScopeShipsADefaultOrSaysWhyNot(t *testing.T) {
 
 	// The engine's own vocabulary, so a new selector joins this gate by
 	// existing rather than by somebody remembering to list it here.
-	for _, scope := range privacy.AuthorableScopes() {
-		key := strings.TrimSuffix(scope, "/")
-		if seeded[scope] || seeded[key+"/"] || seeded[scope+"/"] {
+	for _, scope := range actionableScopes(t) {
+		if seeded[scope] {
 			continue
 		}
 		if slices.Contains(deliberatelyUnseeded.Subjects(), scope) {
