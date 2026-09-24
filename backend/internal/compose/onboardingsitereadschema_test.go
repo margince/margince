@@ -25,8 +25,10 @@ func TestTheCompanyReadPromptAndSchemaNameTheSameFields(t *testing.T) {
 	if start < 0 {
 		t.Fatalf("the company-read prompt no longer lists its fields after %q", lead)
 	}
-	listed := companyReadMessageSystem[start+len(lead):]
-	listed = listed[:strings.Index(listed, ".")]
+	listed, _, ended := strings.Cut(companyReadMessageSystem[start+len(lead):], ".")
+	if !ended {
+		t.Fatalf("the company-read prompt's field list after %q never ends in a full stop", lead)
+	}
 	prompt := strings.Split(listed, ", ")
 	slices.Sort(prompt)
 

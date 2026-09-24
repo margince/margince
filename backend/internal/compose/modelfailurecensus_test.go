@@ -15,8 +15,11 @@ package compose
 // value able to make one, or is a method of a type holding one.
 
 import (
+	"fmt"
 	"go/ast"
+	"go/token"
 	"go/types"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -26,10 +29,11 @@ import (
 )
 
 // modelHandlersThatDegrade are handlers that reach a model and deliberately
-// answer without it, so a model failure never becomes their error.
+// answer without it in their own body, so a model failure never becomes their
+// error. A handler whose callee degrades needs no entry: a call that returns no
+// error has none to lose.
 var modelHandlersThatDegrade = gatekit.Waive(map[string]string{
-	"(compose.Server).RegenerateOffer":       "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
-	"(compose/network.Reads).DraftIntroNote": "a note the model cannot write falls back to the deterministic floor, returned as written_by deterministic; the model error never reaches the response",
+	"(compose.Server).RegenerateOffer": "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
 })
 
 func TestEveryHandlerReachingAModelAnswersThroughModelFailure(t *testing.T) {
@@ -54,7 +58,8 @@ type modelFailureFindings struct {
 }
 
 // modelFailureCensus names every handler, across checked, that reaches a model
-// and never answers through modelfailure.Write, unless it is waived.
+// and does not answer each model-reaching call's error through
+// modelfailure.Write, unless it is waived.
 func modelFailureCensus(t *testing.T, checked []*typeCheckedSources) modelFailureFindings {
 	t.Helper()
 	var got modelFailureFindings
@@ -65,11 +70,10 @@ func modelFailureCensus(t *testing.T, checked []*typeCheckedSources) modelFailur
 				continue
 			}
 			got.reaching++
-			if !unit.writesModelFailure && !modelHandlersThatDegrade.Waived(t, unit.name) {
-				got.findings = append(got.findings, unit.name+" reaches a model but never answers through "+
-					"modelfailure.Write, so a provider that is down reaches its client as an opaque 500 — "+
-					"write its error through modelfailure.Write")
+			if unit.answered() || modelHandlersThatDegrade.Waived(t, unit.name) {
+				continue
 			}
+			got.findings = append(got.findings, unit.finding())
 		}
 		if got.reaching > before {
 			got.packages++
@@ -158,9 +162,9 @@ func h(w http.ResponseWriter, r *http.Request, a asker) { if err := a.ask(r); er
 			if found == nil {
 				t.Fatal("the census did not see the planted handler")
 			}
-			if found.reachesModel != tc.reaches || found.writesModelFailure != tc.answered {
+			if found.reachesModel != tc.reaches || found.answered() != tc.answered {
 				t.Errorf("reaches a model = %v, answers through modelfailure = %v; want %v, %v",
-					found.reachesModel, found.writesModelFailure, tc.reaches, tc.answered)
+					found.reachesModel, found.answered(), tc.reaches, tc.answered)
 			}
 		})
 	}
@@ -169,8 +173,30 @@ func h(w http.ResponseWriter, r *http.Request, a asker) { if err := a.ask(r); er
 // handlerUnit is one HTTP handler — a declared function or a function literal
 // taking a ResponseWriter and a Request — and what its calls can reach.
 type handlerUnit struct {
-	name                             string
-	reachesModel, writesModelFailure bool
+	name         string
+	reachesModel bool
+	// modelCalls counts the calls in the handler that can reach a model, and
+	// unanswered names where each one whose error misses modelfailure.Write is.
+	modelCalls int
+	unanswered []string
+}
+
+// answered reports whether the handler reaches a model and answers every
+// model-reaching call's error through modelfailure.Write. A handler that
+// reaches a model through no call the census can follow is not: its error
+// goes somewhere the census cannot see.
+func (u handlerUnit) answered() bool {
+	return u.modelCalls > 0 && len(u.unanswered) == 0
+}
+
+func (u handlerUnit) finding() string {
+	if u.modelCalls == 0 {
+		return u.name + " reaches a model through no call whose error the census can follow — " +
+			"call the model-reaching function directly and answer its error through modelfailure.Write"
+	}
+	return u.name + " reaches a model, and the error of the call at " + strings.Join(u.unanswered, ", ") +
+		" never reaches modelfailure.Write, so a provider that is down reaches its client as an " +
+		"opaque 500 — write that error through modelfailure.Write"
 }
 
 // modelHandlerUnits finds every handler in the checked package and follows its
@@ -186,9 +212,13 @@ func modelHandlerUnits(checked *typeCheckedSources) []handlerUnit {
 			}
 			unit := handlerUnit{name: name}
 			for _, callee := range graph.refs(body) {
-				got := graph.visit(callee)
-				unit.reachesModel = unit.reachesModel || got.model
-				unit.writesModelFailure = unit.writesModelFailure || got.failure
+				unit.reachesModel = unit.reachesModel || graph.visit(callee).model
+			}
+			var unanswered []token.Pos
+			unit.modelCalls, unanswered = graph.unansweredModelCalls(body, sig)
+			for _, pos := range unanswered {
+				at := checked.fset.Position(pos)
+				unit.unanswered = append(unit.unanswered, fmt.Sprintf("%s:%d", filepath.Base(at.Filename), at.Line))
 			}
 			units = append(units, unit)
 			return true
@@ -213,18 +243,24 @@ func handlerOf(checked *typeCheckedSources, n ast.Node) (*types.Signature, *ast.
 }
 
 // reach is what one function's calls can get to.
-type reach struct{ model, failure bool }
+type reach struct{ model bool }
 
 // modelCallGraph resolves the package's functions to their bodies and memoises
-// what each can reach.
+// what each can reach, which of their parameters reach modelfailure.Write, and
+// how each body's values flow.
 type modelCallGraph struct {
 	checked *typeCheckedSources
 	bodies  map[*types.Func]*ast.BlockStmt
 	memo    map[*types.Func]*reach
+	sinks   map[sinkKey]bool
+	flows   map[*ast.BlockStmt]*modelErrorFlow
 }
 
 func newModelCallGraph(checked *typeCheckedSources) *modelCallGraph {
-	g := &modelCallGraph{checked: checked, bodies: map[*types.Func]*ast.BlockStmt{}, memo: map[*types.Func]*reach{}}
+	g := &modelCallGraph{
+		checked: checked, bodies: map[*types.Func]*ast.BlockStmt{}, memo: map[*types.Func]*reach{},
+		sinks: map[sinkKey]bool{}, flows: map[*ast.BlockStmt]*modelErrorFlow{},
+	}
 	for _, file := range checked.files {
 		for _, decl := range file.Decls {
 			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
@@ -259,11 +295,7 @@ func (g *modelCallGraph) visit(f *types.Func) reach {
 	}
 	r := &reach{}
 	g.memo[f] = r
-	switch {
-	case isModelFailureWrite(f):
-		r.failure = true
-		return *r
-	case isModelSeed(f, g.checked.pkg):
+	if isModelSeed(f, g.checked.pkg) {
 		r.model = true
 		return *r
 	}
@@ -272,9 +304,7 @@ func (g *modelCallGraph) visit(f *types.Func) reach {
 		callees = append(callees, g.refs(body)...)
 	}
 	for _, callee := range callees {
-		got := g.visit(callee)
-		r.model = r.model || got.model
-		r.failure = r.failure || got.failure
+		r.model = r.model || g.visit(callee).model
 	}
 	return *r
 }
