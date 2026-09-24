@@ -15,6 +15,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -62,7 +64,7 @@ func (h Handlers) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 func (h Handlers) GenerateMorningBrief(w http.ResponseWriter, r *http.Request) {
 	run, assembled, err := h.engine.SnapshotRunForDay(r.Context(), time.Now().UTC())
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	status := http.StatusOK

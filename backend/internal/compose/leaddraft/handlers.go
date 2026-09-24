@@ -10,6 +10,8 @@ package leaddraft
 import (
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -34,7 +36,7 @@ func (h Handlers) DraftLeadEmail(w http.ResponseWriter, r *http.Request, id crmc
 	}
 	draft, err := h.svc.Draft(r.Context(), ids.From[ids.LeadKind](ids.UUID(id)), req)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, draft)

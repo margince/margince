@@ -5,18 +5,20 @@ package compose
 
 // A handler waiting on a model answers a lane that did not answer as the lane
 // being down (modelfailure.Write), never as an opaque 500. The set it binds is
-// DERIVED: every handler in this package whose calls can reach a model call.
+// DERIVED: every handler in this package, or in any package beneath it, whose
+// calls can reach a model call. The packages are the go command's listing of
+// this tree, so a new subpackage is held the day it is added.
 //
-// "Can reach" is followed through this package's own functions and methods,
-// through an interface method to every type here that implements it, and out
-// of the package at the first call that takes a model request, takes a value
-// able to make one, or is a method of a type holding one. The subpackages are
-// not read; modelfailure's own doc says so.
+// "Can reach" is followed through the handler's own package's functions and
+// methods, through an interface method to every type there that implements it,
+// and out of the package at the first call that takes a model request, takes a
+// value able to make one, or is a method of a type holding one.
 
 import (
 	"go/ast"
 	"go/types"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -26,27 +28,93 @@ import (
 // modelHandlersThatDegrade are handlers that reach a model and deliberately
 // answer without it, so a model failure never becomes their error.
 var modelHandlersThatDegrade = gatekit.Waive(map[string]string{
-	"(compose.Server).RegenerateOffer": "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
+	"(compose.Server).RegenerateOffer":       "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
+	"(compose/network.Reads).DraftIntroNote": "a note the model cannot write falls back to the deterministic floor, returned as written_by deterministic; the model error never reaches the response",
 })
 
 func TestEveryHandlerReachingAModelAnswersThroughModelFailure(t *testing.T) {
-	reaching := 0
-	for _, unit := range modelHandlerUnits(typeCheckedComposeSources(t)) {
-		if !unit.reachesModel {
-			continue
-		}
-		reaching++
-		if unit.writesModelFailure || modelHandlersThatDegrade.Waived(t, unit.name) {
-			continue
-		}
-		t.Errorf("%s reaches a model but never answers through modelfailure.Write, so a provider that is down "+
-			"reaches its client as an opaque 500 — write its error through modelfailure.Write", unit.name)
+	got := modelFailureCensus(t, typeCheckedComposeTree(t))
+	for _, finding := range got.findings {
+		t.Error(finding)
 	}
 	modelHandlersThatDegrade.AssertAllMatched(t)
 	// The onboarding assistant, the cold start, the scrape, the site read and
-	// the corpus ask all reach a model; fewer means the scan lost its way.
-	if reaching < 5 {
-		t.Fatalf("found %d handlers reaching a model — the census is reading the wrong files", reaching)
+	// the corpus ask all reach a model in this package, and the briefs, the
+	// drafts and the dossier each in their own; fewer means the scan lost its way.
+	if got.reaching < 5 || got.packages < 10 {
+		t.Fatalf("found %d handlers in %d packages reaching a model — the census is reading the wrong files",
+			got.reaching, got.packages)
+	}
+}
+
+// modelFailureFindings is what the census found across the packages it read.
+type modelFailureFindings struct {
+	findings           []string
+	reaching, packages int
+}
+
+// modelFailureCensus names every handler, across checked, that reaches a model
+// and never answers through modelfailure.Write, unless it is waived.
+func modelFailureCensus(t *testing.T, checked []*typeCheckedSources) modelFailureFindings {
+	t.Helper()
+	var got modelFailureFindings
+	for _, pkg := range checked {
+		before := got.reaching
+		for _, unit := range modelHandlerUnits(pkg) {
+			if !unit.reachesModel {
+				continue
+			}
+			got.reaching++
+			if !unit.writesModelFailure && !modelHandlersThatDegrade.Waived(t, unit.name) {
+				got.findings = append(got.findings, unit.name+" reaches a model but never answers through "+
+					"modelfailure.Write, so a provider that is down reaches its client as an opaque 500 — "+
+					"write its error through modelfailure.Write")
+			}
+		}
+		if got.reaching > before {
+			got.packages++
+		}
+	}
+	return got
+}
+
+// A subpackage is read like the root: a handler planted in one, shaped the way
+// the subpackages are — a transport over a service holding the model lane — is
+// named by the census, and the same handler answering through modelfailure is
+// not.
+func TestTheModelFailureCensusNamesASubpackageHandler(t *testing.T) {
+	const source = `package planted
+import (
+	"net/http"
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	model "` + "MODEL" + `"
+)
+var _ = modelfailure.Write
+var _ = httperr.Write
+type Service struct{ lane model.Client }
+func (s *Service) Draft(r *http.Request) (string, error) {
+	res, err := s.lane.Complete(r.Context(), model.Request{})
+	return res.Text, err
+}
+type Handlers struct{ svc *Service }
+func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request) {
+	draft, err := h.svc.Draft(r)
+	if err != nil { WRITER(w, r, err); return }
+	httperr.WriteJSON(w, http.StatusOK, draft)
+}`
+	for writer, want := range map[string]int{"httperr.Write": 1, "modelfailure.Write": 0} {
+		t.Run(writer, func(t *testing.T) {
+			src := strings.NewReplacer("MODEL", modelPortPath, "WRITER", writer).Replace(source)
+			got := modelFailureCensus(t, []*typeCheckedSources{typeCheckPlantedAs(t, "compose/planted", src)})
+			if got.reaching != 1 || len(got.findings) != want {
+				t.Fatalf("reaching = %d, findings = %q; want 1 handler reaching a model and %d finding",
+					got.reaching, got.findings, want)
+			}
+			if want == 1 && !strings.HasPrefix(got.findings[0], "(compose/planted.Handlers).DraftEmail ") {
+				t.Errorf("the finding names %q, not the planted handler", got.findings[0])
+			}
+		})
 	}
 }
 

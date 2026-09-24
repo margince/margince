@@ -10,6 +10,8 @@ package contactbrief
 import (
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -40,7 +42,7 @@ func (h Handlers) RegenerateContactBrief(w http.ResponseWriter, r *http.Request,
 func (h Handlers) serve(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, force bool) {
 	brief, err := h.svc.Get(r.Context(), ids.From[ids.ContactKind](ids.UUID(id)), force)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, brief)

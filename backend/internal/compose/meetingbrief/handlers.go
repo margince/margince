@@ -10,6 +10,8 @@ package meetingbrief
 import (
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -34,7 +36,7 @@ func (h Handlers) GetMeetingBrief(w http.ResponseWriter, r *http.Request, id crm
 	}
 	brief, err := h.svc.GetScoped(r.Context(), ids.UUID(id), requested)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, brief)

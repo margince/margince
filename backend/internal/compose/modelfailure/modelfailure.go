@@ -3,9 +3,9 @@
 
 // Package modelfailure answers an HTTP request whose model lane ended without
 // an answer. It is a package of its own so a compose subpackage, which cannot
-// import the root, can answer the same way. Every root handler that can reach a
-// model is held to it by TestEveryHandlerReachingAModelAnswersThroughModelFailure;
-// the subpackages' handlers are not censused, and many still answer httperr.
+// import the root, can answer the same way. Every handler in compose or any
+// package beneath it that can reach a model is held to it by
+// TestEveryHandlerReachingAModelAnswersThroughModelFailure.
 package modelfailure
 
 import (
