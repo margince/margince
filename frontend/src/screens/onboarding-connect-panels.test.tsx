@@ -458,9 +458,7 @@ describe("OAuthReturnPanel reading a reader-typed outcome", () => {
       await screen.findByText("The connection could not be confirmed."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Connect again under Settings, then Connections.",
-      ),
+      screen.getByText("Connect again under Settings, then Connections."),
     ).toBeInTheDocument();
   });
 });

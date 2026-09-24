@@ -103,7 +103,7 @@ describe("ProjectScreen", () => {
     expect(screen.getByText("Started in Initiative")).toBeTruthy();
     expect(screen.getByText(/31d · current/)).toBeTruthy();
     expect(
-      screen.getByText(/No agreement is filed under this project/),
+      screen.getByText(/No contract is filed under this project/),
     ).toBeTruthy();
     expect(
       screen.getByText(/No file is attached to this project/),
@@ -198,7 +198,7 @@ describe("ProjectScreen", () => {
     // it withholds nothing.
     expect(withheld).toHaveLength(4);
     expect(
-      screen.queryByText(/No agreement is filed under this project/),
+      screen.queryByText(/No contract is filed under this project/),
     ).toBeNull();
     expect(screen.queryByTestId("project-coverage")).toBeNull();
     expect(screen.queryByTestId("project-coverage-withheld")).toBeNull();

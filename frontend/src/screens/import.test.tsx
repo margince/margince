@@ -174,7 +174,7 @@ describe("the import card", () => {
     expect(within(notes).getByText("25%")).toBeInTheDocument();
     const email = screen.getByRole("row", { name: /Email/ });
     expect(within(email).getByText(/ada@x.test/)).toBeInTheDocument();
-    expect(within(notes).getByText("empty")).toBeInTheDocument();
+    expect(within(notes).getByText("Empty")).toBeInTheDocument();
   });
 
   it("sends only the columns with a destination, and reports what it will do", async () => {
@@ -212,9 +212,7 @@ describe("the import card", () => {
     });
 
     // The prediction, and the row it cannot take, named by its line.
-    expect(
-      await screen.findByText("Import preview"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Import preview")).toBeInTheDocument();
     // The disclosure names the line to open in the file AND why, in one
     // sentence a human can act on.
     const issue = screen.getByRole("listitem");
@@ -285,7 +283,7 @@ describe("the import card", () => {
 
     expect(
       await screen.findByText(
-        /Map a column to email\. Without it no row can be recognized/,
+        /Map a column to email\. Without it, rows cannot be matched/,
       ),
     ).toBeInTheDocument();
     expect(
@@ -342,7 +340,7 @@ describe("the import card", () => {
     await screen.findByRole("row", { name: /Notes/ });
 
     await userEvent.click(
-      screen.getByRole("combobox", { name: "Where Full Name goes" }),
+      screen.getByRole("combobox", { name: "Field for Full Name" }),
     );
     await userEvent.click(
       await screen.findByRole("option", { name: "Do not import" }),
@@ -382,7 +380,7 @@ describe("the import card", () => {
     await upload();
 
     expect(
-      await screen.findByRole("combobox", { name: "Where Amount ($&) goes" }),
+      await screen.findByRole("combobox", { name: "Field for Amount ($&)" }),
     ).toBeInTheDocument();
   });
 
@@ -522,16 +520,14 @@ describe("the import card", () => {
       await screen.findByText("Import complete");
 
       const undoButton = screen.getByRole("button", {
-        name: "Undo this import (3 rows)",
+        name: "Undo import (3 rows)",
       });
       await userEvent.click(undoButton);
 
       await waitFor(() =>
         expect(sent.some((s) => s.path.includes("/undo"))).toBe(true),
       );
-      expect(
-        await screen.findByText("Import undone"),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("Import undone")).toBeInTheDocument();
       expect(screen.getByText("3 rows reversed.")).toBeInTheDocument();
       expect(
         screen.queryByText("Kept because they were edited after the import:"),
@@ -568,7 +564,7 @@ describe("the import card", () => {
       );
       await screen.findByText("Import complete");
       await userEvent.click(
-        screen.getByRole("button", { name: "Undo this import (3 rows)" }),
+        screen.getByRole("button", { name: "Undo import (3 rows)" }),
       );
 
       expect(await screen.findByText("2 rows reversed.")).toBeInTheDocument();
@@ -598,11 +594,11 @@ describe("the import card", () => {
       );
       await screen.findByText("Import complete");
       await userEvent.click(
-        screen.getByRole("button", { name: "Undo this import (3 rows)" }),
+        screen.getByRole("button", { name: "Undo import (3 rows)" }),
       );
 
       expect(
-        await screen.findByText(/undo was interrupted partway through/),
+        await screen.findByText(/undo was interrupted\. Continue resumes/),
       ).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Continue undo" }),
@@ -645,12 +641,10 @@ describe("the import card", () => {
       );
       await screen.findByText("Import complete");
       await userEvent.click(
-        screen.getByRole("button", { name: "Undo this import (3 rows)" }),
+        screen.getByRole("button", { name: "Undo import (3 rows)" }),
       );
 
-      expect(
-        await screen.findByText("Import undone"),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("Import undone")).toBeInTheDocument();
       expect(screen.getByText("2 rows reversed.")).toBeInTheDocument();
       expect(screen.getByText(/Could not be reversed/)).toBeInTheDocument();
       expect(screen.getByText(/019ff-stuck-lead/)).toBeInTheDocument();
@@ -697,18 +691,16 @@ describe("the import card", () => {
       const sent = stubRoutes(completedRunRoutes());
       render(<ImportCard />);
 
+      expect(await screen.findByText("Import result")).toBeInTheDocument();
       expect(
-        await screen.findByText("Import result"),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Undo this import (3 rows)" }),
+        screen.getByRole("button", { name: "Undo import (3 rows)" }),
       ).toBeInTheDocument();
       // Read back, not re-uploaded: nothing about the file is on this machine
       // any more, and the reader chose no file this time.
       expect(sent.some((s) => s.path === "POST /imports/sources")).toBe(false);
       // And it says where it came from. An outcome with no press behind it,
       // presented as a fresh one, reads as an import that ran by itself.
-      expect(screen.getByText(/Picked up from earlier/)).toBeInTheDocument();
+      expect(screen.getByText(/This import ran on/)).toBeInTheDocument();
     });
 
     // Behind a verb, a recovered run is only as visible as the reader's guess

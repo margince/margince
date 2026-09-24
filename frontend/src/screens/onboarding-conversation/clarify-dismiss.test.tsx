@@ -317,7 +317,7 @@ function render(ui: ReactNode) {
 
 async function submitWebsite() {
   const composer = await screen.findByRole("textbox", {
-    name: /Your website address/,
+    name: /Website address/,
   });
   await userEvent.type(composer, "gradion.com{Enter}");
 }
@@ -382,7 +382,9 @@ describe("dismissing a clarify in the company act", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
-      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
+      await screen.findByRole("radio", {
+        name: /Yes, I will work in Margince/,
+      }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(

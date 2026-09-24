@@ -76,7 +76,7 @@ describe("TeamAct", () => {
     expect(
       await screen.findByText("Invite the first user"),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(/New user's email/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Email/)).toBeInTheDocument();
     // One address is enough here; the name is derived from it.
     expect(screen.queryByLabelText(/New user's full name/)).toBeNull();
     // The form's own heading stays in the settings dialog: here the scene's
@@ -121,7 +121,7 @@ describe("TeamAct", () => {
     const user = userEvent.setup();
 
     await user.type(
-      await screen.findByLabelText(/New user's email/),
+      await screen.findByLabelText(/^Email/),
       "ada.byron@example.com",
     );
     await user.click(screen.getByRole("button", { name: "Invite" }));

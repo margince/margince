@@ -74,7 +74,7 @@ afterEach(() => {
 it("invites a reading on a project nobody has judged", async () => {
   stubFetch([]);
   render(<ProjectHealth projectId={PROJECT_ID} onRecord={() => {}} />);
-  expect(await screen.findByText(/Nobody has judged this yet/)).toBeTruthy();
+  expect(await screen.findByText(/No health reading yet/)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Record reading" })).toBeTruthy();
 });
 
@@ -138,7 +138,9 @@ it("counts a note the server would call empty as empty", async () => {
   await userEvent.paste(String.fromCodePoint(0x85));
   expect(box.value).not.toBe("");
   expect(
-    screen.getByRole("button", { name: "Record it" }).hasAttribute("disabled"),
+    screen
+      .getByRole("button", { name: "Record reading" })
+      .hasAttribute("disabled"),
   ).toBe(true);
 });
 
@@ -147,17 +149,23 @@ it("will not send a troubled reading without saying what is wrong", async () => 
   render(<ProjectHealthModal open onClose={() => {}} projectId={PROJECT_ID} />);
   // On track needs no note: a delivery going fine has nothing to explain.
   expect(
-    screen.getByRole("button", { name: "Record it" }).hasAttribute("disabled"),
+    screen
+      .getByRole("button", { name: "Record reading" })
+      .hasAttribute("disabled"),
   ).toBe(false);
   await userEvent.click(screen.getByRole("button", { name: "At risk" }));
   // The server refuses this too. Stating it here is what stops a reader
   // learning the rule from a 422 after writing their judgement.
   expect(
-    screen.getByRole("button", { name: "Record it" }).hasAttribute("disabled"),
+    screen
+      .getByRole("button", { name: "Record reading" })
+      .hasAttribute("disabled"),
   ).toBe(true);
   await userEvent.type(screen.getByRole("textbox"), "Partner is behind.");
   expect(
-    screen.getByRole("button", { name: "Record it" }).hasAttribute("disabled"),
+    screen
+      .getByRole("button", { name: "Record reading" })
+      .hasAttribute("disabled"),
   ).toBe(false);
 });
 

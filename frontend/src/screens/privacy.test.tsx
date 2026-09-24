@@ -242,7 +242,7 @@ describe("ConsentPurposesCard", () => {
     });
     render(<ConsentPurposesCard />);
     const posture = await screen.findByText(
-      /adding a purpose needs permission/i,
+      /adding a purpose needs a permission/i,
     );
     // On the registry ROW rather than as a paragraph of its own between the
     // card's description and the list: the posture is about the registry, and a
@@ -279,7 +279,7 @@ describe("ConsentPurposesCard", () => {
       await screen.findByRole("button", { name: /add purpose/i }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(/adding a purpose needs permission/i),
+      screen.queryByText(/adding a purpose needs a permission/i),
     ).not.toBeInTheDocument();
   });
 });
@@ -337,7 +337,7 @@ describe("PrivacyInboxCard", () => {
       "GET /me": () => jsonResponse(meFixture({ roles: ["ops"] })),
     });
     render(<PrivacyInboxCard />);
-    await screen.findByText(/subject requests needs permission/i);
+    await screen.findByText(/subject requests needs a permission/i);
     expect(screen.queryByText(/anna@acme.test/)).not.toBeInTheDocument();
     // And it never issued the call the server would only refuse.
     expect(
@@ -574,7 +574,9 @@ describe("PrivacyInboxCard", () => {
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.type(screen.getByLabelText(/resolution/i), "done");
     await userEvent.click(within(row).getByRole("button", { name: /reject/i }));
-    expect(await screen.findByText(/moved on/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/decided this request first/i),
+    ).toBeInTheDocument();
   });
 
   // A patch failure that is NOT the illegal-transition 422 must
@@ -610,7 +612,9 @@ describe("PrivacyInboxCard", () => {
       await screen.findByText(en["common.permissionDenied"]),
     ).toBeInTheDocument();
     expect(screen.queryByText(/data_subject_request/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/moved on/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/decided this request first/i),
+    ).not.toBeInTheDocument();
   });
 
   it("assigns from the roster", async () => {
@@ -813,7 +817,7 @@ describe("opening a DSR (G-2)", () => {
       await screen.findByRole("button", { name: /new request/i }),
     );
     await choose(screen.getByLabelText(/kind/i), "access");
-    expect(screen.getByText(/fulfilled by hand/i)).toBeInTheDocument();
+    expect(screen.getByText(/fulfilled manually/i)).toBeInTheDocument();
   });
 
   it("requires a due date — the statutory clock is not optional", async () => {
@@ -1019,7 +1023,7 @@ describe("fulfilling an erasure", () => {
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     const confirm = await screen.findByRole("button", {
-      name: /erase \+ suppress/i,
+      name: /erase and suppress/i,
     });
     expect(confirm).toBeDisabled();
     await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
@@ -1055,7 +1059,7 @@ describe("fulfilling an erasure", () => {
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
     await userEvent.click(
-      screen.getByRole("button", { name: /erase \+ suppress/i }),
+      screen.getByRole("button", { name: /erase and suppress/i }),
     );
     expect(await screen.findByText(/legal hold/i)).toBeInTheDocument();
     expect(screen.getByText(/no override/i)).toBeInTheDocument();
@@ -1096,10 +1100,12 @@ describe("fulfilling an erasure", () => {
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
-    const confirm = screen.getByRole("button", { name: /erase \+ suppress/i });
+    const confirm = screen.getByRole("button", { name: /erase and suppress/i });
     await userEvent.click(confirm);
 
-    expect(await screen.findByText(/moved on/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/decided this request first/i),
+    ).toBeInTheDocument();
     expect(confirm).toBeDisabled();
     // The refusal must trigger the same re-read as the row's own plain
     // PATCH race — a second GET beyond the initial page load — so the row
@@ -1138,7 +1144,7 @@ describe("fulfilling an erasure", () => {
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
     await userEvent.click(
-      screen.getByRole("button", { name: /erase \+ suppress/i }),
+      screen.getByRole("button", { name: /erase and suppress/i }),
     );
     await waitFor(() =>
       expect(
@@ -1188,7 +1194,7 @@ describe("fulfilling an erasure", () => {
     await userEvent.click(opener);
     await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
     await userEvent.click(
-      screen.getByRole("button", { name: /erase \+ suppress/i }),
+      screen.getByRole("button", { name: /erase and suppress/i }),
     );
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());

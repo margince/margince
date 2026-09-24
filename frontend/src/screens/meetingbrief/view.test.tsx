@@ -366,7 +366,7 @@ describe("the states a read can land in", () => {
       screen.getByText("That meeting is filed under a different engagement."),
     ).toBeTruthy();
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await user.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalled();
   });
 });

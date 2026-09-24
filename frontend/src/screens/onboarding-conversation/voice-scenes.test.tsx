@@ -174,9 +174,7 @@ describe("VoiceCollectScene", () => {
       screen.getByLabelText("Paste the text you wrote here"),
       "Something",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Discard it." }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Discard it." }));
 
     expect(onAddPaste).not.toHaveBeenCalled();
     expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();
@@ -228,7 +226,7 @@ describe("the collect scene's distilling panel", () => {
     expect(panel).not.toBeNull();
     // Decorative: the same numbers stand in the meter as real text.
     expect(panel?.getAttribute("aria-hidden")).toBe("true");
-    expect(panel?.textContent).toContain("Distilling");
+    expect(panel?.textContent).toContain("Analyzing");
     expect(panel?.textContent).toContain(
       "We should move the kickoff to Thursday",
     );
@@ -311,7 +309,7 @@ describe("the collect scene's corpus floor meter", () => {
       </LocaleProvider>,
     );
 
-    const ready = `${VOICE_MIN_WORDS} words — enough to build. More still sharpens it.`;
+    const ready = `${VOICE_MIN_WORDS} words: enough to build. More words improve it.`;
     expect(document.querySelector(".ob-voice-meter-line")?.textContent).toBe(
       ready,
     );

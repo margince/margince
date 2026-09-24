@@ -129,7 +129,7 @@ describe("LeadManualSignals", () => {
 
     await user.click(question("Company size?"));
     const size = screen.getByRole("listbox");
-    for (const band of ["1–10", "11–50", "51–200", "201+"]) {
+    for (const band of ["1 to 10", "11 to 50", "51 to 200", "201+"]) {
       expect(within(size).getByRole("option", { name: band })).toBeTruthy();
     }
     await user.keyboard("{Escape}");
@@ -195,7 +195,7 @@ describe("LeadManualSignals", () => {
     const writes: Write[] = [];
     await show(writes);
 
-    await pickOption(user, question("Company size?"), "51–200");
+    await pickOption(user, question("Company size?"), "51 to 200");
     await user.type(
       screen.getByRole("textbox", { name: "Evidence" }),
       "  Counted them on their team page.  ",

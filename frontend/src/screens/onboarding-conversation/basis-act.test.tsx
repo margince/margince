@@ -108,7 +108,9 @@ describe("BasisAct", () => {
     await user.type(currency, "eu");
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/three letters/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /3-letter currency code/,
+    );
     expect(dispatch).not.toHaveBeenCalled();
   });
 

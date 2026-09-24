@@ -248,7 +248,7 @@ describe("the read conclusion ordering contract", () => {
     stubApi([midRead, midRead, partialRead]);
     render(<OnboardingScreen />);
     const composer = await screen.findByRole("textbox", {
-      name: /Your website address/,
+      name: /Website address/,
     });
     await userEvent.type(composer, "gradion.com{Enter}");
 
@@ -276,7 +276,7 @@ describe("the read conclusion ordering contract", () => {
     stubApi([midRead, midRead, midRead, midRead, partialRead]);
     render(<OnboardingScreen />);
     await userEvent.type(
-      await screen.findByRole("textbox", { name: /Your website address/ }),
+      await screen.findByRole("textbox", { name: /Website address/ }),
       "gradion.com{Enter}",
     );
 
@@ -301,7 +301,7 @@ describe("the read conclusion ordering contract", () => {
     stubApi([midRead, 500, partialRead]);
     render(<OnboardingScreen />);
     const composer = await screen.findByRole("textbox", {
-      name: /Your website address/,
+      name: /Website address/,
     });
     await userEvent.type(composer, "gradion.com{Enter}");
 
@@ -326,7 +326,7 @@ describe("the read conclusion ordering contract", () => {
     stubApi([midRead, midRead, partialRead], { wizardStateWritable: false });
     render(<OnboardingScreen />);
     await userEvent.type(
-      await screen.findByRole("textbox", { name: /Your website address/ }),
+      await screen.findByRole("textbox", { name: /Website address/ }),
       "gradion.com{Enter}",
     );
 

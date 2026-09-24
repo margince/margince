@@ -171,7 +171,7 @@ it("separates an unusable app from a missing one", async () => {
   renderConnectAct();
 
   expect(
-    await screen.findByText(/Microsoft app cannot be opened right now/),
+    await screen.findByText(/Microsoft app cannot be opened/),
   ).toBeTruthy();
   expect(screen.queryByText(/has not registered/)).toBeNull();
 });
@@ -217,7 +217,7 @@ it("withholds every mail provider card until the roster load settles", async () 
   );
   renderConnectAct();
 
-  for (const name of [/Google/, /Microsoft/, /Any other mailbox/]) {
+  for (const name of [/Google/, /Microsoft/, /Other mailbox/]) {
     expect(screen.getByRole("button", { name })).toBeDisabled();
   }
 
@@ -243,9 +243,7 @@ it("withholds every mail provider card when the roster fetch fails", async () =>
     expect(screen.getByRole("button", { name: /Google/ })).toBeDisabled(),
   );
   expect(screen.getByRole("button", { name: /Microsoft/ })).toBeDisabled();
-  expect(
-    screen.getByRole("button", { name: /Any other mailbox/ }),
-  ).toBeDisabled();
+  expect(screen.getByRole("button", { name: /Other mailbox/ })).toBeDisabled();
 });
 
 // The mark is what tells a genuine return apart from a stale or bookmarked
@@ -549,7 +547,7 @@ describe("the LinkedIn card", () => {
 
   it("keeps the profile form closed until its card is clicked", () => {
     renderConnectAct();
-    expect(screen.getByText("save →")).toBeTruthy();
+    expect(screen.getByText("Save →")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Save profile" })).toBeNull();
   });
 
@@ -605,7 +603,7 @@ describe("the LinkedIn card", () => {
     expect(screen.getByText("Profile saved")).toBeTruthy();
     // A saved address is not a connected integration, and the tile's own
     // affordance must not call it one.
-    expect(screen.getByText("saved")).toBeTruthy();
+    expect(screen.getByText("Saved")).toBeTruthy();
     expect(screen.queryByText("connected")).toBeNull();
     expect(screen.getByRole("button", { name: /LinkedIn/ })).toBeDisabled();
   });
@@ -715,7 +713,7 @@ describe("the IMAP dialog", () => {
     );
     renderConnectAct();
     await userEvent.click(
-      screen.getByRole("button", { name: /Any other mailbox/ }),
+      screen.getByRole("button", { name: /Other mailbox/ }),
     );
 
     const dialog = await screen.findByRole("dialog");
@@ -743,7 +741,7 @@ describe("the IMAP dialog", () => {
     );
     const { dispatch, persist } = renderConnectAct();
     await userEvent.click(
-      screen.getByRole("button", { name: /Any other mailbox/ }),
+      screen.getByRole("button", { name: /Other mailbox/ }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Not now" }));
 
@@ -812,7 +810,7 @@ describe("dismissal during an in-flight connect request", () => {
     );
     renderConnectAct();
     await userEvent.click(
-      screen.getByRole("button", { name: /Any other mailbox/ }),
+      screen.getByRole("button", { name: /Other mailbox/ }),
     );
     await userEvent.type(screen.getByLabelText("Email"), "me@example.com");
     await userEvent.type(screen.getByLabelText("App password"), "secret");
@@ -922,9 +920,7 @@ it("keeps mail provider cards disabled during a roster refetch, not just its fir
     expect(screen.getByRole("button", { name: /Google/ })).not.toBeDisabled(),
   );
 
-  await userEvent.click(
-    screen.getByRole("button", { name: /Any other mailbox/ }),
-  );
+  await userEvent.click(screen.getByRole("button", { name: /Other mailbox/ }));
   await userEvent.type(screen.getByLabelText("Email"), "me@example.com");
   await userEvent.type(screen.getByLabelText("App password"), "secret");
   await userEvent.click(

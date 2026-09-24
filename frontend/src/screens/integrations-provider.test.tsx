@@ -382,9 +382,9 @@ describe("ProviderCard write posture", () => {
       // row's description printed it twice on the card and read it twice to a
       // screen reader, and a `getAllByText(...).length > 0` assertion passed
       // over exactly that.
-      expect(screen.getAllByText(/only alongside the work email/)).toHaveLength(
-        1,
-      );
+      expect(
+        screen.getAllByText(/only together with the work email/),
+      ).toHaveLength(1);
 
       // The row it depends on is unaffected — the dependency runs one way.
       expect(

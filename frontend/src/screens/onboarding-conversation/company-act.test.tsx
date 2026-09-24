@@ -434,7 +434,10 @@ describe("arriving at the review scene", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Choose facts to keep" }),
     );
-    await screen.findByRole("heading", { level: 2, name: /Correct me/ });
+    await screen.findByRole("heading", {
+      level: 2,
+      name: /Correct anything that is wrong/,
+    });
 
     // A background poll narrates again, live, while the review is already
     // on screen with the row now actually mounted — a fresh thread array

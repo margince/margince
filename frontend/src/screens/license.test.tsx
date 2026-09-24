@@ -301,7 +301,7 @@ describe("LicenseCard", () => {
     // The copy has to say both halves, because an admin acts on the difference:
     // nobody currently working loses anything (P7), and the next invitation is
     // the thing that will not go through.
-    expect(alert.textContent).toMatch(/nobody loses access/i);
+    expect(alert.textContent).toMatch(/no one loses access/i);
     expect(alert.textContent).toMatch(/no new member can be invited/i);
     // The reading still states both figures, and its detail says which side of
     // the grant the count is on rather than leaving a reader to subtract.

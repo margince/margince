@@ -191,7 +191,7 @@ describe("OnboardingGate", () => {
       />,
     );
     expect(
-      screen.getByRole("heading", { level: 1, name: /Hi Lars/ }),
+      screen.getByRole("heading", { level: 1, name: /Welcome, Lars/ }),
     ).toBeInTheDocument();
     unmount();
 
@@ -307,7 +307,7 @@ describe("the gate while a start is in flight", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: /Enter the details yourself/ }),
+      screen.getByRole("button", { name: /Enter details manually/ }),
     ).toBeInTheDocument();
 
     rerender(
@@ -321,7 +321,7 @@ describe("the gate while a start is in flight", () => {
       </LocaleProvider>,
     );
     expect(
-      screen.queryByRole("button", { name: /Enter the details yourself/ }),
+      screen.queryByRole("button", { name: /Enter details manually/ }),
     ).toBeNull();
   });
 });
@@ -339,7 +339,7 @@ describe("the gate-to-read handoff", () => {
     const core = document.querySelector(".core");
     const title = screen.getByRole("heading", { level: 1 });
     expect(core).not.toBeNull();
-    expect(screen.getByLabelText(/Your website address/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Website address/)).toBeInTheDocument();
 
     rerender(
       <LocaleProvider initial="en">
@@ -360,7 +360,7 @@ describe("the gate-to-read handoff", () => {
     expect(document.querySelector(".core")).toBe(core);
     expect(screen.getByRole("heading", { level: 1 })).toBe(title);
     // Only the tail changed: the question is gone, the read's regions are there.
-    expect(screen.queryByLabelText(/Your website address/)).toBeNull();
+    expect(screen.queryByLabelText(/Website address/)).toBeNull();
     expect(
       screen.getByRole("list", { name: "Pages read so far" }),
     ).toBeInTheDocument();

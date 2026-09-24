@@ -208,10 +208,10 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit financial year starts/i);
+    const dialog = await openFrom(user, /edit fiscal year starts/i);
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        within(dialog).getByLabelText(/financial year starts/i),
+        within(dialog).getByLabelText(/fiscal year starts/i),
       ),
     );
   });

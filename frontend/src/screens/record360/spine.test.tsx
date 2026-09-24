@@ -396,12 +396,7 @@ describe("the conversations behind the last word", () => {
     const titles = [...document.querySelectorAll(".co-spine-title")].map(
       (node) => node.textContent,
     );
-    expect(titles).toEqual([
-      "Kickoff",
-      "Last contact",
-      "Never replied",
-      TODAY,
-    ]);
+    expect(titles).toEqual(["Kickoff", "Last contact", "Never replied", TODAY]);
     expect(screen.getByText("2 messages")).toBeTruthy();
     expect(screen.getByText("Invoice query")).toBeTruthy();
   });
@@ -464,7 +459,7 @@ describe("the conversations behind the last word", () => {
       }),
     );
 
-    expect(screen.getByText("2 earlier conversations")).toBeTruthy();
+    expect(screen.getByText("2 earlier threads")).toBeTruthy();
     // The two it dropped are the OLDEST, and the roll-up is dated at the
     // oldest of them so the thread still starts where the account started.
     expect(screen.queryByText("First")).toBeNull();
@@ -507,7 +502,7 @@ describe("the conversations behind the last word", () => {
     );
 
     expect(screen.getByText("More threads before this")).toBeTruthy();
-    expect(screen.queryByText("One earlier conversation")).toBeNull();
+    expect(screen.queryByText("One earlier thread")).toBeNull();
     expect(screen.queryByText("1 Jul 2026")).toBeNull();
   });
 
@@ -562,7 +557,7 @@ describe("the conversations behind the last word", () => {
       }),
     );
 
-    expect(screen.getByText("1 earlier conversation")).toBeTruthy();
+    expect(screen.getByText("1 earlier thread")).toBeTruthy();
   });
 });
 
@@ -599,11 +594,7 @@ describe("the rows a conversation is recognised from", () => {
     const titles = [...document.querySelectorAll(".co-spine-title")].map(
       (node) => node.textContent,
     );
-    expect(titles).toEqual([
-      "Last contact",
-      "Never replied",
-      TODAY,
-    ]);
+    expect(titles).toEqual(["Last contact", "Never replied", TODAY]);
   });
 });
 
@@ -915,7 +906,7 @@ describe("who a conversation was with", () => {
         entityId === "p-early" ? "Early Adopter" : undefined,
     );
 
-    expect(screen.getByText("2 earlier conversations")).toBeTruthy();
+    expect(screen.getByText("2 earlier threads")).toBeTruthy();
     expect(screen.getByText("Early Adopter")).toBeTruthy();
   });
 });

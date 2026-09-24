@@ -54,10 +54,10 @@ describe("InviteAct", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("radio", { name: /Yes, I'll work in Margince/ }),
+      screen.getByRole("radio", { name: /Yes, I will work in Margince/ }),
     ).not.toBeChecked();
     expect(
-      screen.getByRole("radio", { name: /No, I'm only setting it up/ }),
+      screen.getByRole("radio", { name: /No, I am only setting it up/ }),
     ).not.toBeChecked();
     // Continue presses either way; with nothing picked it names what is
     // needed beside itself and moves nowhere.
@@ -73,7 +73,9 @@ describe("InviteAct", () => {
     const user = userEvent.setup();
 
     await user.click(
-      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
+      await screen.findByRole("radio", {
+        name: /Yes, I will work in Margince/,
+      }),
     );
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
@@ -85,7 +87,7 @@ describe("InviteAct", () => {
     const user = userEvent.setup();
 
     await user.click(
-      await screen.findByRole("radio", { name: /No, I'm only setting it up/ }),
+      await screen.findByRole("radio", { name: /No, I am only setting it up/ }),
     );
     await user.click(screen.getByRole("button", { name: "Continue" }));
 

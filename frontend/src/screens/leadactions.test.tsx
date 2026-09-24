@@ -209,7 +209,9 @@ describe("the Answer row's Reply verb", () => {
     const reply = await screen.findByRole("button", { name: "Reply" });
     await userEvent.click(reply);
 
-    const dialog = await screen.findByRole("dialog", { name: /Draft email/ });
+    const dialog = await screen.findByRole("dialog", {
+      name: /Send this email\?/,
+    });
     expect(
       within(dialog).getByRole("button", {
         name: "Remove jonas@nordwind.example",

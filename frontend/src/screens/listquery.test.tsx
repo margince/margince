@@ -700,7 +700,7 @@ describe("the owner dial — one question the server answers three ways", () => 
 
     await user.click(await screen.findByRole("button", { name: "Filter" }));
     await user.click(screen.getByRole("button", { name: "Owner" }));
-    await user.click(screen.getByRole("radio", { name: "My records" }));
+    await user.click(screen.getByRole("radio", { name: "Owned by you" }));
 
     // The option carries the parameter it sets, so the chip writes `owner_id`
     // rather than a filter named after the chip itself.
@@ -710,7 +710,7 @@ describe("the owner dial — one question the server answers three ways", () => 
     // And the chip reads back as chosen: a dial that narrows the list and then
     // renders as "Any owner" looks like a filter that did not take.
     expect(
-      screen.getByRole("group", { name: "Owner: My records" }),
+      screen.getByRole("group", { name: "Owner: Owned by you" }),
     ).toBeTruthy();
   });
 });

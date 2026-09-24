@@ -119,8 +119,7 @@ const MANY = Array.from({ length: 120 }, (_, index) =>
 
 // The ceiling as the reader is told it, spelled once: the claim is that this
 // sentence reaches a screen reader exactly one time per surface stack.
-const CAP_SENTENCE =
-  "You can save up to 100 facts. Clear one to make room for another.";
+const CAP_SENTENCE = "Up to 100 facts can be saved. Clear one to add another.";
 
 // Confidence RISES with wire position, so "the first N on the wire" and "the N
 // most certain" name different facts throughout: a seed that trusted the wire
@@ -757,7 +756,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     await user.click(row);
 
     expect(
-      screen.getByRole("textbox", { name: /What do you sell\?/ }),
+      screen.getByRole("textbox", { name: /Products and services/ }),
     ).toHaveValue(LONG_OFFER);
   });
 
@@ -925,7 +924,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     );
 
     const advisoryItem = within(nav).getByRole("button", {
-      name: /Register court.*Worth a check/,
+      name: /Register court.*To review/,
     });
     expect(advisoryItem.querySelector("span:not(.sr-only)")).toHaveTextContent(
       "Register court",
@@ -1146,9 +1145,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
   it("keeps the read's coverage honesty in the tail, since it is provenance, not a company fact", () => {
     renderTriage([], readWith([]));
 
-    expect(
-      screen.getByText("Pages read and skipped"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Pages read and skipped")).toBeInTheDocument();
     expect(screen.getByText("Background information")).toBeInTheDocument();
     expect(
       screen.queryByText("Everything else I found"),
@@ -1692,7 +1689,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     );
 
     await user.click(
-      screen.getByRole("checkbox", { name: "Save the fact: Founded 2011" }),
+      screen.getByRole("checkbox", { name: "Save fact: Founded 2011" }),
     );
 
     expect(setSelectedFactKeys).toHaveBeenCalledWith([

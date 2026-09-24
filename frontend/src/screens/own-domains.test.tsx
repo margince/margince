@@ -120,7 +120,7 @@ describe("OwnDomainsCard", () => {
     // The note about what registering a domain does travels with the row that
     // offers the acts it describes.
     expect(
-      within(managed).getByText(/takes effect from the next message/i),
+      within(managed).getByText(/applies from the next message/i),
     ).toBeTruthy();
     expect(
       within(managed).getByRole("button", { name: /remove brandt\.de/i }),
@@ -131,7 +131,7 @@ describe("OwnDomainsCard", () => {
     expect(
       screen.getByRole("button", { name: en["ownDomains.addOpen"] }),
     ).toBeTruthy();
-    expect(screen.queryByLabelText(/add an own domain/i)).toBeNull();
+    expect(screen.queryByLabelText(/add own domain/i)).toBeNull();
   });
 
   it("shows no company row when the company profile claims no domain", async () => {
@@ -159,7 +159,7 @@ describe("OwnDomainsCard", () => {
     );
     const dialog = screen.getByRole("dialog");
     await user.type(
-      within(dialog).getByLabelText(/add an own domain/i),
+      within(dialog).getByLabelText(/add own domain/i),
       "brandt.de",
     );
     await user.click(within(dialog).getByRole("button", { name: /^add$/i }));
@@ -189,7 +189,7 @@ describe("OwnDomainsCard", () => {
     expect(add.hasAttribute("disabled")).toBe(true);
     // One sentence, and both refused verbs point at it — a reason a screen
     // reader only reaches by wandering into the paragraph is no reason at all.
-    const denial = screen.getByText(/only an admin or ops/i);
+    const denial = screen.getByText(/only an administrator or ops user/i);
     expect(remove.getAttribute("aria-describedby")).toBe(denial.id);
     expect(add.getAttribute("aria-describedby")).toBe(denial.id);
   });

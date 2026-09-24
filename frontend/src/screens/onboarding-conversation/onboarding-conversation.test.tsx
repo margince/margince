@@ -295,7 +295,7 @@ function render(ui: ReactNode) {
 
 async function submitWebsite() {
   const composer = await screen.findByRole("textbox", {
-    name: /Your website address/,
+    name: /Website address/,
   });
   await userEvent.type(composer, "gradion.com{Enter}");
 }
@@ -446,7 +446,7 @@ describe("the conversational company act", () => {
     );
     expect(
       await screen.findByText(
-        "Still needed: Company name, What do you sell?, Ideal customer",
+        "Still needed: Company name, Products and services, Ideal customer",
       ),
     ).toBeTruthy();
     expect(requestsTo(calls, "/confirm", "POST")).toHaveLength(0);
@@ -552,10 +552,12 @@ describe("the conversational company act", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
-      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
+      await screen.findByRole("radio", {
+        name: /Yes, I will work in Margince/,
+      }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
+    expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
   });
 
   // The invariant the double-confirm dead end violated: a 409 always leaves
@@ -589,7 +591,7 @@ describe("the conversational company act", () => {
     // The dedicated notice, not the raw server detail glued into the
     // generic "I could not save" sentence.
     expect(
-      await screen.findByText(/Your review just picked up newer information/),
+      await screen.findByText(/Your review received newer information/),
     ).toBeTruthy();
     expect(screen.queryByText(/draft changed/)).toBeNull();
     // The read AND the proposal are both re-fetched so the NEXT retry sends
@@ -701,10 +703,12 @@ describe("the conversational company act", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
-      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
+      await screen.findByRole("radio", {
+        name: /Yes, I will work in Margince/,
+      }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await screen.findByText(/Teach me how you write\./);
+    await screen.findByText(/Train your writing voice/);
 
     // The next act mounts its own shell. The rail, the brand line, the orb and
     // the runtime chip are already on screen by now — they are the frame, so
@@ -760,11 +764,11 @@ describe("the conversational company act", () => {
     // another URL, or tell me directly") is now the two controls in front of
     // the reader rather than a second sentence repeating them.
     expect(
-      await screen.findByText(/I lost the connection while reading/),
+      await screen.findByText(/The connection dropped during reading/),
     ).toBeTruthy();
-    expect(await screen.findByLabelText(/Your website address/)).toBeTruthy();
+    expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: /Enter the details yourself/ }),
+      screen.getByRole("button", { name: /Enter details manually/ }),
     ).toBeTruthy();
   });
 

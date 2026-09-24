@@ -97,7 +97,7 @@ describe("MailSharingCard", () => {
     expect(toggle.getAttribute("aria-checked")).toBe("true");
     expect(toggle.disabled).toBe(false);
     // No unsaved change and nothing to warn about: the stored posture is ON.
-    expect(screen.queryByText(/make usage of the CRM difficult/)).toBeNull();
+    expect(screen.queryByText(/the CRM is hard to use/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
   });
 
@@ -113,9 +113,7 @@ describe("MailSharingCard", () => {
 
     // The flip alone writes nothing — the cost is said out loud and the
     // change waits for an explicit Save.
-    expect(
-      await screen.findByText(/make usage of the CRM difficult/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/the CRM is hard to use/)).toBeTruthy();
     expect(backend.getCapturedPatch()).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -167,6 +165,8 @@ describe("MailSharingCard", () => {
     // what the assertion can state: the sentence reaches the reader for the row
     // under test, and matching one of two identical strings by text alone would
     // not say which.
-    expect(screen.getAllByText(/Only an admin or ops/)).toHaveLength(2);
+    expect(
+      screen.getAllByText(/Only an administrator or ops user/),
+    ).toHaveLength(2);
   });
 });

@@ -174,17 +174,17 @@ describe("a field the read did not return", () => {
     expect(row("legal_name")).toHaveTextContent("Omitted, not guessed");
     expect(
       screen.getByText(
-        "Registered legal name: Not stated on your legal or imprint page. Yours to add.",
+        "Registered legal name: Not stated on your legal notice or imprint page. Add it manually.",
       ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Registered address: Not stated on your legal or imprint page. Yours to add.",
+        "Registered address: Not stated on your legal notice or imprint page. Add it manually.",
       ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Register / VAT ID: Not stated on your legal or imprint page. Yours to add.",
+        "Register and VAT ID: Not stated on your legal notice or imprint page. Add it manually.",
       ),
     ).toBeInTheDocument();
   });
@@ -198,7 +198,7 @@ describe("a field the read did not return", () => {
 
     expect(
       screen.getByText(
-        "Registered address: I did not find a legal or imprint page on your site to check. Yours to add.",
+        "Registered address: I found no legal notice or imprint page on your site. Add it manually.",
       ),
     ).toBeInTheDocument();
   });
@@ -216,7 +216,7 @@ describe("a field the read did not return", () => {
     expect(row("history")).not.toHaveTextContent(GATE_WARNING);
     // The reason the row CAN support is still there.
     expect(row("legal_name")).toHaveTextContent(
-      "Not stated on your legal or imprint page.",
+      "Not stated on your legal notice or imprint page.",
     );
   });
 
@@ -228,7 +228,7 @@ describe("a field the read did not return", () => {
     // account of what it could not settle sits below the board, one click
     // into the card that exists to carry it, whole and under its own heading.
     await user.click(
-      screen.getByRole("button", { name: /What I read, and what I skipped/ }),
+      screen.getByRole("button", { name: /Pages read and skipped/ }),
     );
 
     const quoted = screen.getByText(GATE_WARNING);
