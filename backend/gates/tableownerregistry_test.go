@@ -373,6 +373,9 @@ var tableOwners = map[string]string{
 	// user-visible fact and stays owned by activities)
 	"comms_outbound": "internal/modules/comms",
 	"scheduled_send": "internal/modules/activities",
+	// the rep's unsent message: composer state beside the scheduled send, and
+	// like it never an activity
+	"mail_draft": "internal/modules/activities",
 	// migration (the shared importer engine's run records, IEM-DDL-1;
 	// native rows land through injected Writers, so the record tables'
 	// owners are untouched)

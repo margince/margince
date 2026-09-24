@@ -12,7 +12,16 @@
 // activity_retention_evidence, transcript_read, attachment_extraction,
 // deal_document_hide, activity_sales_state, activity_reader_state,
 // worklist_pin, activity_review_template, activity_review_response,
-// activity_request_settlement, activity_identity.
+// activity_request_settlement, activity_identity, mail_draft.
+//
+// mail_draft is the composer's own state — a message the rep has started and
+// not sent — and it is here because sending it is: the transaction that sends
+// or schedules a message discards the draft it was composed in, so the two
+// are one fact rather than two writes that could disagree.
+// A draft leaves by that send, by its author's discard, by an erasure of the
+// contact it was written to, or by the mail_draft_retention job once nobody has
+// saved it for MailDraftRetention — the one way out for a draft whose anchor
+// is gone, since reading it back answers not found.
 //
 // The two review tables are here rather than in deals because a review is
 // something somebody WROTE, and this module is where the product keeps those:

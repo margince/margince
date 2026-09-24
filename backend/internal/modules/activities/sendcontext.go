@@ -154,10 +154,12 @@ func replySendInput(req crmcontracts.SendEmailRequest) (SendEmailInput, error) {
 	if err != nil {
 		return SendEmailInput{}, err
 	}
-	return claimed.applyTo(sendInputFrom(
+	in := claimed.applyTo(sendInputFrom(
 		req.To, req.Cc, req.Bcc, req.Subject, req.Body, req.HtmlBody, req.AttachmentIds,
 		legacyPurposeOf(req.ConsentPurpose), req.DraftRef,
-	)), nil
+	))
+	in.MailDraftID = mailDraftIDOf(req.MailDraftId)
+	return in, nil
 }
 
 // accountSendInput is the same decode for an account-started send, which names
@@ -169,10 +171,12 @@ func accountSendInput(req crmcontracts.SendCompanyEmailRequest) (SendEmailInput,
 	if err != nil {
 		return SendEmailInput{}, err
 	}
-	return claimed.applyTo(sendInputFrom(
+	in := claimed.applyTo(sendInputFrom(
 		req.To, req.Cc, req.Bcc, req.Subject, req.Body, req.HtmlBody, req.AttachmentIds,
 		legacyPurposeOf(req.ConsentPurpose), req.DraftRef,
-	)), nil
+	))
+	in.MailDraftID = mailDraftIDOf(req.MailDraftId)
+	return in, nil
 }
 
 // SendContextInput is what a NON-HTTP transport says about why it is writing.

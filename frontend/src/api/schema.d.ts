@@ -800,7 +800,8 @@ export interface paths {
          *     **It changes no record.** No field on the contact, no activity, no voice-learning
          *     signal, and nothing is sent. Sending stays `POST /emails`, with its own consent gate,
          *     approval token and idempotency key; the absence of those three parameters here is the
-         *     guarantee rather than a convenience.
+         *     guarantee rather than a convenience. Keeping the rep's unsent message is a separate,
+         *     explicit act at `PUT /mail-drafts`, which this route never performs.
          *
          *     Two things it does write, and both are about the CALL rather than the contact: the
          *     workspace's AI usage meter and the model-call audit row, exactly as every other
@@ -2382,7 +2383,8 @@ export interface paths {
          *     **It changes no record.** No field on the account, no activity, no voice-learning
          *     signal, and nothing is sent. Sending stays `POST /emails`, with its own consent
          *     gate, approval token and idempotency key; the absence of those three parameters
-         *     here is the guarantee rather than a convenience.
+         *     here is the guarantee rather than a convenience. Keeping the rep's unsent message
+         *     is a separate, explicit act at `PUT /mail-drafts`, which this route never performs.
          *
          *     Two things it does write, and both are about the CALL rather than the account:
          *     the workspace's AI usage meter and the model-call audit row, exactly as every
@@ -4333,7 +4335,9 @@ export interface paths {
         put?: never;
         /**
          * Draft a reply/follow-up email for context (the `draft_email` MCP verb).
-         * @description Drafting is 🟢 (never auto-sends). The draft is returned, not sent.
+         * @description Drafting is 🟢 (never auto-sends). The draft is returned, not sent. Keeping the rep's
+         *     unsent message is a separate, explicit act at `PUT /mail-drafts`, which this route
+         *     never performs.
          */
         post: operations["draftEmail"];
         delete?: never;
@@ -4611,6 +4615,62 @@ export interface paths {
          */
         post: operations["cancelScheduledSend"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mail-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's own unsent message for one place the composer opens.
+         * @description A draft is the composer's state, kept so that closing it does not lose a message. It
+         *     is not an activity, not a scheduled send and never on a timeline, and only the seat
+         *     that wrote it can read it. There is at most one per author and anchor.
+         *
+         *     The AI drafting routes still persist nothing: a draft exists only because the rep's
+         *     composer saved one here.
+         */
+        get: operations["getMailDraft"];
+        /**
+         * Save the caller's unsent message for one anchor, replacing what was saved before.
+         * @description An upsert keyed on the caller and the anchor. Without `If-Match` it creates the draft
+         *     and refuses 409 when one already exists; with `If-Match` it replaces the draft at that
+         *     version and refuses 409 when the draft has moved or gone. Either way two composers
+         *     open on one place cannot silently overwrite each other.
+         *
+         *     Addresses are kept as typed and checked only when the message is sent. Sending or
+         *     scheduling with `mail_draft_id` discards the draft in the same transaction; a refused
+         *     send keeps it.
+         */
+        put: operations["saveMailDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mail-drafts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Discard one of the caller's unsent messages. */
+        delete: operations["discardMailDraft"];
         options?: never;
         head?: never;
         patch?: never;
@@ -5599,7 +5659,9 @@ export interface paths {
          *     **It changes no record.** No field on the lead, no activity, no voice-learning signal,
          *     and nothing is sent. Sending stays `POST /emails`, with its own consent gate, approval
          *     token and idempotency key. The two writes that do happen are about the CALL rather
-         *     than the lead: the workspace's AI usage meter and the model-call audit row.
+         *     than the lead: the workspace's AI usage meter and the model-call audit row. Keeping the
+         *     rep's unsent message is a separate, explicit act at `PUT /mail-drafts`, which this
+         *     route never performs.
          *
          *     **Grounded, per viewer.** The draft stands on what the lead page stands on: who they
          *     are, the company they wrote from, where the lead sits on its ladder, and the recent
@@ -25842,6 +25904,15 @@ export interface components {
              */
             draft_ref?: string | null;
             /**
+             * Format: uuid
+             * @description The caller's saved draft (`PUT /mail-drafts`) this message was composed in. The
+             *     send, or the scheduling, discards it in the SAME transaction, so a message that
+             *     left the composer leaves no draft behind; a refused send commits nothing and the
+             *     draft stays. Only a human caller's own draft for this message's anchor is
+             *     discarded — any other id is ignored — and omitting it discards nothing.
+             */
+            mail_draft_id?: string | null;
+            /**
              * @description What kind of communication this is. The caller CLAIMS a category; the engine
              *     resolves the one the evidence actually supports and records both, so a claim
              *     that the evidence does not carry is visible rather than silently honoured.
@@ -26040,6 +26111,48 @@ export interface components {
              *     this id still gets 404 if the review is not theirs to see.
              */
             review_id?: string | null;
+            /** Format: int64 */
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /**
+         * @description What the composer opened against: `activity` for a reply to that message, or the
+         *     record a new conversation starts from.
+         * @enum {string}
+         */
+        MailDraftAnchorType: "activity" | "contact" | "company" | "deal" | "lead" | "project";
+        /**
+         * @description The composer's fields as they stand. Every content field is optional and an omitted
+         *     one saves as empty, because a draft is whatever the rep had typed so far.
+         */
+        MailDraftInput: {
+            anchor_type: components["schemas"]["MailDraftAnchorType"];
+            /** Format: uuid */
+            anchor_id: string;
+            to?: string[];
+            cc?: string[];
+            bcc?: string[];
+            subject?: string;
+            body?: string;
+            /** @description The editor's markup beside the plain body, so reopening restores the formatting. */
+            html_body?: string | null;
+        };
+        /** @description One rep's unsent message, readable by its author and nobody else. Not an activity. */
+        MailDraft: {
+            /** Format: uuid */
+            id: string;
+            anchor_type: components["schemas"]["MailDraftAnchorType"];
+            /** Format: uuid */
+            anchor_id: string;
+            to: string[];
+            cc: string[];
+            bcc: string[];
+            subject: string;
+            body: string;
+            html_body?: string | null;
             /** Format: int64 */
             version: number;
             /** Format: date-time */
@@ -26275,6 +26388,12 @@ export interface components {
              *     Omit for independently composed mail.
              */
             draft_ref?: string | null;
+            /**
+             * Format: uuid
+             * @description The caller's saved draft this message was composed in, discarded in the same
+             *     transaction as the send or the scheduling, exactly as on `send_email`.
+             */
+            mail_draft_id?: string | null;
             /**
              * @description What kind of communication this is. The caller CLAIMS a category; the engine
              *     resolves the one the evidence actually supports and records both, so a claim
@@ -44206,6 +44325,130 @@ export interface operations {
             };
             /** @description It already fired or was already cancelled. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getMailDraft: {
+        parameters: {
+            query: {
+                anchor_type: components["schemas"]["MailDraftAnchorType"];
+                anchor_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's draft for this anchor. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailDraft"];
+                };
+            };
+            /**
+             * @description No draft of the caller's for this anchor, or an anchor the caller can no longer
+             *     see. The two are one answer, so a draft is never read back past its author's
+             *     access to what it was written about. Such a draft is not kept forever: every draft
+             *     not saved for ninety days is deleted, as is one whose message is sent or scheduled,
+             *     or whose addressee is erased.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveMailDraft: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailDraftInput"];
+            };
+        };
+        responses: {
+            /** @description The saved draft, at its new version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailDraft"];
+                };
+            };
+            /** @description The anchor does not exist or is outside the caller's row scope. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description `code: version_skew` — the draft is not at the version you last read: another
+             *     composer saved or discarded it, or one exists and you sent no `If-Match`.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    discardMailDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Discarded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such draft for this caller. Somebody else's is not found rather than forbidden. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

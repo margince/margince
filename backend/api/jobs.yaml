@@ -1065,6 +1065,22 @@ kinds:
       without a second migration; a narrower one would have to be widened by
       changing history nobody kept.
 
+  mail_draft_retention:
+    role: worker
+    go_type: MailDraftRetentionArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      Hourly, because each pass is capped (mailDraftRetentionBatch) and the
+      cadence is what drains a backlog deeper than one batch — the shape
+      stored_object_reap takes. It is the only way out for a draft whose
+      anchor was deleted or fell out of its author's scope — reading one
+      answers not found, so nobody can find it to discard it — and a draft
+      holds a subject's address and the words written to them.
+
   idempotency_retention:
     role: worker
     fleet: true
