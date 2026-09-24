@@ -141,6 +141,9 @@ func (t queryWorkspace) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["plan"],"properties":{
 			"plan":{"type":"object","description":"A query plan, in the grammar published at margince://schema/query. That document, not this description, holds the record types, fields, operators and relationships this workspace admits: a name outside it is refused by name, never guessed at."}},
 			"additionalProperties":false}`),
+		UnkeyedArguments: map[string]string{
+			"$.plan": "the plan is a document in a grammar derived per caller from the live column catalog",
+		},
 		OutputSchema: schemaFor[QueryWorkspaceResult](),
 	}
 }

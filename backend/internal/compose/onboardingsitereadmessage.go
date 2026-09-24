@@ -35,17 +35,6 @@ const (
 	companyProductTerm                = "product"
 )
 
-var companyReadMessageSchema = json.RawMessage(`{
-  "type":"object","additionalProperties":false,
-  "required":["kind","message","proposed_changes","source_ids"],
-  "properties":{
-    "kind":{"type":"string","enum":["status","answer","recommendation","correction","confirmation","clarification","off_topic"]},
-    "message":{"type":"string"},
-    "proposed_changes":{"type":"array","maxItems":5,"items":{"type":"object","additionalProperties":false,"required":["field","value","reason","source_ids"],"properties":{"field":{"type":"string"},"value":{"type":"string"},"reason":{"type":"string"},"source_ids":{"type":"array","items":{"type":"string"},"uniqueItems":true}}}},
-    "source_ids":{"type":"array","items":{"type":"string"},"uniqueItems":true}
-  }
-}`)
-
 const companyReadMessageSystem = `You are Margince, the professional AI helping an administrator configure their company.
 Answer the administrator's question using only the supplied dossier evidence and the administrator's own statement.
 Conversation history exists only to resolve follow-up references; it is not dossier evidence.
@@ -339,16 +328,6 @@ func looksLikeQuestion(message string) bool {
 		}
 	}
 	return false
-}
-
-func companyConversationKindValid(kind string) bool {
-	switch kind {
-	case companyConversationStatus, "answer", companyConversationRecommendation, companyConversationCorrection,
-		"confirmation", "clarification", "off_topic":
-		return true
-	default:
-		return false
-	}
 }
 
 func companyReadConversation(turns *[]crmcontracts.CompanySiteReadConversationTurn) ([]model.Message, error) {

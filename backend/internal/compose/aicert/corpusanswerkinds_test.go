@@ -206,16 +206,29 @@ func reportUncoveredKinds(t *testing.T, recognised map[string]*vocabulary) {
 	}
 }
 
-// siteEnums unions the enums of the request EVERY scenario in the group builds,
-// keyed by members.
+// siteEnums is the enums EVERY scenario in the group sends, keyed by members.
 //
 // Every scenario rather than the first: a response schema may be built per call
-// from its own fixture — site_extract's citation enum is that call's passage ids
-// — so one scenario's schema does not stand for the site's. Reading only the
-// first would also make the answer depend on which filename sorts first, a
+// from its own fixture — site_extract's citation enum is that call's passage
+// ids, stage_evidence_extract's criterion enum is that call's criteria — so one
+// scenario's schema does not stand for the site's. Reading only the first
+// would also make the answer depend on which filename sorts first, a
 // dependency the corpus never agreed to.
+//
+// An enum is kept only when every scenario's request carries it, because that
+// is what separates the site's answer vocabulary from a per-call one: a closed
+// set of kinds is the same in every call, while an enum built from the call's
+// own fixture changes with the fixture. A per-call enum whose members an answer
+// names (a criterion key is the claim's subject) would otherwise be read as a
+// vocabulary each fixture's criteria had to cover.
+//
+// Both ways this can misjudge are loud rather than silent. A static enum some
+// scenario's request lacks drops out, and its owner then goes missing from
+// recognisedOwners; a per-call enum every fixture happens to share stays in,
+// and its owner appears there unannounced.
 func siteEnums(group []Scenario, census *aitasks.Registry) (map[string][]string, error) {
 	enums := map[string][]string{}
+	carriedBy := map[string]int{}
 	for _, sc := range group {
 		request, err := firstBuiltRequest(context.Background(), sc, census)
 		if err != nil {
@@ -225,6 +238,7 @@ func siteEnums(group []Scenario, census *aitasks.Registry) (map[string][]string,
 		if err != nil {
 			return nil, fmt.Errorf("scenario %q: %w", sc.Name, err)
 		}
+		carried := map[string]bool{}
 		for _, enum := range members {
 			// Keyed on the SORTED members: enum order does not change which
 			// answers a schema admits, so two orderings of one vocabulary are one
@@ -232,7 +246,17 @@ func siteEnums(group []Scenario, census *aitasks.Registry) (map[string][]string,
 			// the owners comparison for a difference that means nothing.
 			key := append([]string(nil), enum...)
 			sort.Strings(key)
-			enums[strings.Join(key, "\x00")] = enum
+			joined := strings.Join(key, "\x00")
+			enums[joined] = enum
+			carried[joined] = true
+		}
+		for key := range carried {
+			carriedBy[key]++
+		}
+	}
+	for key := range enums {
+		if carriedBy[key] < len(group) {
+			delete(enums, key)
 		}
 	}
 	return enums, nil

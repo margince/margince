@@ -1145,18 +1145,26 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "string"
           },
           "reply": {
-            "enum": [
-              "positive",
-              "negative",
-              "neutral"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "enum": [
+                  "positive",
+                  "negative",
+                  "neutral"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "id",
           "label",
-          "confidence"
+          "confidence",
+          "reply"
         ],
         "type": "object"
       },
@@ -1543,6 +1551,27 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
         "additionalProperties": false,
         "properties": {
           "field": {
+            "enum": [
+              "display_name",
+              "offer_summary",
+              "icp",
+              "value_proposition",
+              "usp",
+              "customer_pains",
+              "desired_outcomes",
+              "buying_center",
+              "buying_intents",
+              "common_objections",
+              "sales_motion",
+              "legal_name",
+              "registered_address",
+              "register_vat",
+              "legal_form",
+              "register_court",
+              "register_number",
+              "industry",
+              "history"
+            ],
             "type": "string"
           },
           "reason": {
@@ -1552,8 +1581,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "uniqueItems": true
+            "type": "array"
           },
           "value": {
             "type": "string"
@@ -1567,15 +1595,13 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
         ],
         "type": "object"
       },
-      "maxItems": 5,
       "type": "array"
     },
     "source_ids": {
       "items": {
         "type": "string"
       },
-      "type": "array",
-      "uniqueItems": true
+      "type": "array"
     }
   },
   "required": [
@@ -1657,6 +1683,27 @@ what it refers to.
         "additionalProperties": false,
         "properties": {
           "field": {
+            "enum": [
+              "display_name",
+              "offer_summary",
+              "icp",
+              "value_proposition",
+              "usp",
+              "customer_pains",
+              "desired_outcomes",
+              "buying_center",
+              "buying_intents",
+              "common_objections",
+              "sales_motion",
+              "legal_name",
+              "registered_address",
+              "register_vat",
+              "legal_form",
+              "register_court",
+              "register_number",
+              "industry",
+              "history"
+            ],
             "type": "string"
           },
           "reason": {
@@ -1666,8 +1713,7 @@ what it refers to.
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "uniqueItems": true
+            "type": "array"
           },
           "value": {
             "type": "string"
@@ -1681,15 +1727,13 @@ what it refers to.
         ],
         "type": "object"
       },
-      "maxItems": 5,
       "type": "array"
     },
     "source_ids": {
       "items": {
         "type": "string"
       },
-      "type": "array",
-      "uniqueItems": true
+      "type": "array"
     }
   },
   "required": [
@@ -1847,6 +1891,27 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
         "additionalProperties": false,
         "properties": {
           "field": {
+            "enum": [
+              "display_name",
+              "offer_summary",
+              "icp",
+              "value_proposition",
+              "usp",
+              "customer_pains",
+              "desired_outcomes",
+              "buying_center",
+              "buying_intents",
+              "common_objections",
+              "sales_motion",
+              "legal_name",
+              "registered_address",
+              "register_vat",
+              "legal_form",
+              "register_court",
+              "register_number",
+              "industry",
+              "history"
+            ],
             "type": "string"
           },
           "reason": {
@@ -1856,8 +1921,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "uniqueItems": true
+            "type": "array"
           },
           "value": {
             "type": "string"
@@ -1871,15 +1935,13 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
         ],
         "type": "object"
       },
-      "maxItems": 5,
       "type": "array"
     },
     "source_ids": {
       "items": {
         "type": "string"
       },
-      "type": "array",
-      "uniqueItems": true
+      "type": "array"
     }
   },
   "required": [
@@ -2338,20 +2400,45 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ```json
 {
+  "additionalProperties": false,
   "properties": {
     "body": {
       "type": "string"
     },
     "reasoning": {
       "items": {
+        "additionalProperties": false,
         "properties": {
           "entity_id": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "entity_type": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "kind": {
+            "enum": [
+              "intent",
+              "recipient",
+              "relationship",
+              "deal",
+              "commitment",
+              "conversation",
+              "dossier"
+            ],
             "type": "string"
           },
           "label": {
@@ -2360,7 +2447,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
         },
         "required": [
           "kind",
-          "label"
+          "label",
+          "entity_type",
+          "entity_id"
         ],
         "type": "object"
       },
@@ -2372,7 +2461,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
   },
   "required": [
     "subject",
-    "body"
+    "body",
+    "reasoning"
   ],
   "type": "object"
 }
@@ -2528,20 +2618,44 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ```json
 {
+  "additionalProperties": false,
   "properties": {
     "body": {
       "type": "string"
     },
     "reasoning": {
       "items": {
+        "additionalProperties": false,
         "properties": {
           "entity_id": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "entity_type": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "kind": {
+            "enum": [
+              "intent",
+              "recipient",
+              "relationship",
+              "deal",
+              "commitment",
+              "conversation"
+            ],
             "type": "string"
           },
           "label": {
@@ -2550,7 +2664,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
         },
         "required": [
           "kind",
-          "label"
+          "label",
+          "entity_type",
+          "entity_id"
         ],
         "type": "object"
       },
@@ -2562,7 +2678,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
   },
   "required": [
     "subject",
-    "body"
+    "body",
+    "reasoning"
   ],
   "type": "object"
 }
@@ -2713,13 +2830,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
   "additionalProperties": false,
   "properties": {
     "body": {
-      "maxLength": 50000,
-      "minLength": 1,
       "type": "string"
     },
     "subject": {
-      "maxLength": 998,
-      "minLength": 1,
       "type": "string"
     }
   },
@@ -3013,13 +3126,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
   "additionalProperties": false,
   "properties": {
     "body": {
-      "maxLength": 50000,
-      "minLength": 1,
       "type": "string"
     },
     "subject": {
-      "maxLength": 998,
-      "minLength": 1,
       "type": "string"
     }
   },
@@ -3934,6 +4043,10 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "number"
           },
           "criterion_key": {
+            "enum": [
+              "problem_confirmed",
+              "budget_confirmed"
+            ],
             "type": "string"
           },
           "met": {
@@ -3947,11 +4060,14 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "string"
           },
           "source_id": {
+            "enum": [
+              "<id minted for this call>"
+            ],
             "type": "string"
           },
           "source_lines": {
             "items": {
-              "type": "number"
+              "type": "integer"
             },
             "type": "array"
           }
@@ -4300,7 +4416,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           },
           "source_lines": {
             "items": {
-              "type": "number"
+              "type": "integer"
             },
             "type": "array"
           },
@@ -4352,13 +4468,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
   "additionalProperties": false,
   "properties": {
     "body": {
-      "maxLength": 50000,
-      "minLength": 1,
       "type": "string"
     },
     "subject": {
-      "maxLength": 998,
-      "minLength": 1,
       "type": "string"
     }
   },
@@ -4519,13 +4631,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
   "additionalProperties": false,
   "properties": {
     "body": {
-      "maxLength": 50000,
-      "minLength": 1,
       "type": "string"
     },
     "subject": {
-      "maxLength": 998,
-      "minLength": 1,
       "type": "string"
     }
   },
@@ -4563,8 +4671,6 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
   "properties": {
     "scores": {
       "items": {
-        "maximum": 1,
-        "minimum": 0,
         "type": "number"
       },
       "type": "array"

@@ -24,12 +24,13 @@ import (
 // can be prevented is before it is generated.
 //
 // HAND-WRITTEN, against shared/schema's own instruction to compose instead —
-// and the exception is measured, not preferred. That package builds Properties
-// from a Go map, and encoding/json sorts a map's keys, so it can only ever emit
-// args, final, tool. Property ORDER is load-bearing under grammar-constrained
-// decoding: converted to the builder, agent_loop fell 0.78→0.18 on one binding
-// and 0.53→0.31 on another, and no tool call in the failing run carried args at
-// all. Do not "fix" it back without re-certifying agent_loop on two bindings.
+// because each branch's `args` is the tool's own registered input schema,
+// carried verbatim, which is raw JSON rather than a builder node. Property
+// ORDER is load-bearing here too: converted to a builder that sorted keys into
+// args, final, tool, agent_loop fell 0.78→0.18 on one binding and 0.53→0.31 on
+// another, and no tool call in the failing run carried args at all. Any
+// rewrite must keep tool before args, and re-certify agent_loop on two
+// bindings.
 //
 // NO OBJECT HERE MAY BE DECLARED WITHOUT ITS KEYS. Gemini's decoder admits no
 // key into an object whose schema lists no properties, open or not, and pads it

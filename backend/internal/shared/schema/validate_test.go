@@ -72,3 +72,37 @@ func TestValidateJSONRejectsMalformedValueJSON(t *testing.T) {
 		t.Fatal("want an error for output that is not valid JSON, got nil")
 	}
 }
+
+func TestValidateJSONHoldsAnIntegerToAWholeNumber(t *testing.T) {
+	sch := schema.Must(schema.Array(schema.Integer()))
+	if err := schema.ValidateJSON(sch, `[1, 2, 3.0]`); err != nil {
+		t.Fatalf("whole numbers refused: %v", err)
+	}
+	for _, value := range []string{`[1, 2.5]`, `["3"]`} {
+		if err := schema.ValidateJSON(sch, value); err == nil {
+			t.Errorf("%s accepted as a list of integers", value)
+		}
+	}
+}
+
+func TestValidateJSONAdmitsAnOptionalAsItsValueOrNull(t *testing.T) {
+	sch := schema.Must(schema.Record(
+		schema.Field("reply", schema.Optional(schema.Enum("positive", "negative"))),
+	))
+	for _, value := range []string{`{"reply":"positive"}`, `{"reply":null}`} {
+		if err := schema.ValidateJSON(sch, value); err != nil {
+			t.Errorf("%s refused: %v", value, err)
+		}
+	}
+	for _, value := range []string{`{"reply":"maybe"}`, `{"reply":3}`, `{}`} {
+		if err := schema.ValidateJSON(sch, value); err == nil {
+			t.Errorf("%s accepted", value)
+		}
+	}
+}
+
+func TestValidateJSONRefusesANodeThatDescribesNothing(t *testing.T) {
+	if err := schema.ValidateJSON([]byte(`{}`), `"anything"`); err == nil {
+		t.Fatal("a schema node with neither a type nor anyOf admitted a value")
+	}
+}

@@ -62,29 +62,6 @@ func draftSystemFor(fence promptfence.Fence, voiced bool) string {
 	return system + "\n" + fence.Rule("account summary")
 }
 
-// draftSchema is the response shape the validated lane enforces.
-const draftSchema = `{
-  "type": "object",
-  "required": ["subject", "body"],
-  "properties": {
-    "subject": {"type": "string"},
-    "body": {"type": "string"},
-    "reasoning": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["kind", "label"],
-        "properties": {
-          "kind": {"type": "string"},
-          "label": {"type": "string"},
-          "entity_type": {"type": "string"},
-          "entity_id": {"type": "string"}
-        }
-      }
-    }
-  }
-}`
-
 // groundedWithoutCitation reports whether this reason is honest with no record
 // behind it.
 //
@@ -160,23 +137,17 @@ func contentWords(text string) map[string]bool {
 	return out
 }
 
-// parseKind narrows the model's string to the contract's closed vocabulary. An
-// unknown kind is dropped rather than passed through: the composer groups
-// reasons by kind, and one it does not know would render as an unlabelled chip.
-func parseKind(raw string) (crmcontracts.AccountDraftReasonKind, bool) {
-	kind := crmcontracts.AccountDraftReasonKind(strings.TrimSpace(raw))
-	switch kind {
-	case crmcontracts.AccountDraftReasonKindIntent,
-		crmcontracts.AccountDraftReasonKindRecipient,
-		crmcontracts.AccountDraftReasonKindRelationship,
-		crmcontracts.AccountDraftReasonKindDeal,
-		crmcontracts.AccountDraftReasonKindCommitment,
-		crmcontracts.AccountDraftReasonKindConversation,
-		crmcontracts.AccountDraftReasonKindDossier:
-		return kind, true
-	default:
-		return "", false
-	}
+// reasonKinds is the contract's closed vocabulary as this surface serves it:
+// all of it, because an account draft is the one surface with a dossier to
+// cite.
+var reasonKinds = []crmcontracts.AccountDraftReasonKind{
+	crmcontracts.AccountDraftReasonKindIntent,
+	crmcontracts.AccountDraftReasonKindRecipient,
+	crmcontracts.AccountDraftReasonKindRelationship,
+	crmcontracts.AccountDraftReasonKindDeal,
+	crmcontracts.AccountDraftReasonKindCommitment,
+	crmcontracts.AccountDraftReasonKindConversation,
+	crmcontracts.AccountDraftReasonKindDossier,
 }
 
 // knownRecords maps every id this draft's own input carried to the KIND that
@@ -239,8 +210,7 @@ func surface(in Input) draftcore.Surface {
 	return draftcore.Surface{
 		Name:   "account draft",
 		System: draftSystemFor,
-		Schema: draftSchema,
-		Kind:   parseKind,
+		Kinds:  reasonKinds,
 		// Two kinds are honest with nothing cited here. The caller's own intent
 		// cites nothing by design, and a dossier fact is a sentence about what
 		// the company IS with no record of ours behind it — checked against the

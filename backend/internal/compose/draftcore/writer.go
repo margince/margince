@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
@@ -35,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // Completer is the model seam: the draft lane, or nil.
@@ -111,12 +113,12 @@ type Surface struct {
 	// System is the prompt, assembled for THIS call — the fence's rule and the
 	// voice block are both call-dependent, so it is a function rather than text.
 	System func(fence promptfence.Fence, voiced bool) string
-	// Schema is the response schema, as raw JSON.
-	Schema string
-	// Kind admits a reason kind this surface can serve, or refuses one the
-	// model invented. The two allowlists genuinely differ: only an account
-	// draft has a dossier to cite.
-	Kind func(raw string) (crmcontracts.AccountDraftReasonKind, bool)
+	// Kinds are the reason kinds this surface can serve. The response
+	// schema's enum and the parse's allowlist are both read from it, so a
+	// kind the model may write is exactly a kind the parse keeps. The two
+	// surfaces' lists genuinely differ: only an account draft has a dossier
+	// to cite.
+	Kinds []crmcontracts.AccountDraftReasonKind
 	// KeepUncited decides whether a reason that cited NO record is still
 	// honest. A contact draft admits only the caller's own intent; an account
 	// draft also admits a dossier line, which is a fact about the company with
@@ -126,6 +128,36 @@ type Surface struct {
 	// so a citation can be checked against the type the model claimed. Empty
 	// means "no such record here", which drops the chip.
 	Cites func(entityID string) string
+}
+
+// schema is the answer's shape: closed at every level, subject then body then
+// the reasons, and each reason's kind closed to this surface's own Kinds.
+//
+// A citation is optional, and spelled as a nullable pair rather than two
+// unrequired keys: the strict profile refuses an object with an unrequired
+// property. A null entity_id decodes to the empty string, which is "no
+// citation" to keepGroundedReasons; a null entity_type beside a real id is a
+// pair that resolves to nothing, and the reason is dropped.
+func (s Surface) schema() json.RawMessage {
+	return schema.Must(schema.Record(
+		schema.Field("subject", schema.String()),
+		schema.Field("body", schema.String()),
+		schema.Field("reasoning", schema.Array(schema.Record(
+			schema.Field("kind", schema.Enum(schema.Names(s.Kinds...)...)),
+			schema.Field("label", schema.String()),
+			schema.Field("entity_type", schema.Optional(schema.String())),
+			schema.Field("entity_id", schema.Optional(schema.String())),
+		))),
+	))
+}
+
+// kind admits a reason kind this surface serves, or refuses one outside its
+// list. An unknown kind is dropped rather than passed through: the composer
+// groups reasons by kind, and one it does not know would render as an
+// unlabelled chip.
+func (s Surface) kind(raw string) (crmcontracts.AccountDraftReasonKind, bool) {
+	kind := crmcontracts.AccountDraftReasonKind(strings.TrimSpace(raw))
+	return kind, slices.Contains(s.Kinds, kind)
 }
 
 // modelDraft is the answer's wire shape.
@@ -267,7 +299,7 @@ func BuildRequest(surface Surface, in Input, voice draftvoice.Context) (model.Re
 		// visible text. The reply site has always set this; these two never did,
 		// which is why raising the tier failed here and not there.
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: json.RawMessage(surface.Schema),
+		ResponseSchema: surface.schema(),
 		SecretStripper: ai.NewSecretStripper(),
 	}, nil
 }
@@ -315,7 +347,7 @@ func ParseDraft(surface Surface, raw string, in Input) (Draft, error) {
 func keepGroundedReasons(surface Surface, reasons []modelReason) []Reason {
 	out := make([]Reason, 0, len(reasons))
 	for _, reason := range reasons {
-		kind, ok := surface.Kind(reason.Kind)
+		kind, ok := surface.kind(reason.Kind)
 		label := strings.TrimSpace(reason.Label)
 		if !ok || label == "" {
 			continue
@@ -326,7 +358,12 @@ func keepGroundedReasons(surface Surface, reasons []modelReason) []Reason {
 			// deal id come back labelled as a contact, and the chip then opens
 			// the wrong record's page rather than nothing at all — the worse of
 			// the two failures, because it looks like it worked.
-			if surface.Cites(reason.EntityID) != reason.EntityType {
+			//
+			// An id this draft never read resolves to "", and so does a null
+			// type — so the id must resolve before the pair is compared, or a
+			// made-up id with no type would match nothing to nothing.
+			cited := surface.Cites(reason.EntityID)
+			if cited == "" || cited != reason.EntityType {
 				continue
 			}
 			keep.EntityType = reason.EntityType

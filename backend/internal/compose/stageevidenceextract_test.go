@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 var evidenceCriteria = []stageEvidenceCriterion{
@@ -74,7 +75,7 @@ func TestAGroundedClaimIsAccepted(t *testing.T) {
 // function's call, made from the whole ledger — not one conversation's.
 func TestTheReplyMayNotNameAStage(t *testing.T) {
 	for _, forbidden := range []string{"stage", "stage_id", "to_stage", "advance"} {
-		if strings.Contains(string(stageEvidenceSchema()), forbidden) {
+		if strings.Contains(string(stageEvidenceSchema(evidenceCriteria, evidenceSpans)), forbidden) {
 			t.Errorf("the reply schema names %q; a reader that can name a stage "+
 				"is deciding the move on one conversation's evidence", forbidden)
 		}
@@ -82,8 +83,29 @@ func TestTheReplyMayNotNameAStage(t *testing.T) {
 	// author_side belongs to the same family: it is computed from the
 	// activity's participants, so a reply asserting it would be claiming
 	// authorship of a span whose author this site already knows.
-	if strings.Contains(string(stageEvidenceSchema()), "author_side") {
+	if strings.Contains(string(stageEvidenceSchema(evidenceCriteria, evidenceSpans)), "author_side") {
 		t.Error("the reply schema names author_side, which is computed and never claimed")
+	}
+}
+
+// The shape closes a claim's two citations to what THIS call offered, and its
+// lines to whole numbers — so a decoder holding the schema cannot write a
+// criterion nobody asked about, a record nobody supplied, or line 1.5. The
+// grounded claim is the control: without it a schema refusing everything
+// would pass the refusals.
+func TestTheReplySchemaClosesCitationsToThisCallsOwn(t *testing.T) {
+	shape := stageEvidenceSchema(evidenceCriteria, evidenceSpans)
+	if err := schema.ValidateJSON(shape, oneClaim(t, groundedClaim())); err != nil {
+		t.Fatalf("the schema refused the grounded claim: %v", err)
+	}
+	for name, reply := range map[string]string{
+		"an unlisted criterion": strings.Replace(oneClaim(t, groundedClaim()), "security_review", "legal_review", 1),
+		"an unsupplied source":  strings.Replace(oneClaim(t, groundedClaim()), evidenceSpans[0].SourceID, "01a07000-0000-7000-8000-00000000dead", 1),
+		"a fractional line":     strings.Replace(oneClaim(t, groundedClaim()), `"source_lines":[1]`, `"source_lines":[1.5]`, 1),
+	} {
+		if err := schema.ValidateJSON(shape, reply); err == nil {
+			t.Errorf("the schema admitted %s: %s", name, reply)
+		}
 	}
 }
 

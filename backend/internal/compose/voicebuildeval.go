@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 const (
@@ -323,12 +324,15 @@ func evaluateVoiceCandidate(ctx context.Context, brain completer, artifact ai.Vo
 	return scoreVoiceCandidate(artifact, drafts, hardFailures, structuredValid, predecessor), nil
 }
 
-// voiceEvalJudgeSchema bounds the judge to one number per draft in [0,1]. The
-// count is not expressible here — a schema cannot see how many drafts this call
-// carries — which is why readVoiceJudgeScores checks it.
-var voiceEvalJudgeSchema = json.RawMessage(
-	`{"type":"object","additionalProperties":false,"required":["scores"],` +
-		`"properties":{"scores":{"type":"array","items":{"type":"number","minimum":0,"maximum":1}}}}`)
+// voiceEvalJudgeSchema is the judge's answer: a list of scores.
+//
+// Its bounds are readVoiceJudgeScores' — exactly one score per draft judged,
+// each clamped into [0,1] — and not the schema's: the count changes per call,
+// and `minItems`, `maxItems`, `minimum` and `maximum` are all keywords
+// Anthropic refuses a schema for.
+var voiceEvalJudgeSchema = schema.Must(schema.Record(
+	schema.Field("scores", schema.Array(schema.Number())),
+))
 
 // voiceEvalJudgeRequest is ONE judging call: the held-out original and every
 // repeat drafted against it, each inside the marker this call's system prompt

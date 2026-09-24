@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // draftSystem names which of this task's system prompts a call is made under.
@@ -64,15 +65,25 @@ Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - Say one thing and ask for one thing. Three short paragraphs at most.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.`
 
-var replyDraftSchema = json.RawMessage(`{
-  "type":"object",
-  "additionalProperties":false,
-  "required":["subject","body"],
-  "properties":{
-    "subject":{"type":"string","minLength":1,"maxLength":998},
-    "body":{"type":"string","minLength":1,"maxLength":50000}
-  }
-}`)
+// replyDraftSchema is the answer's shape, subject first: the order the model
+// writes it in.
+//
+// It carries no length bound: Anthropic refuses a schema holding minLength or
+// maxLength and the strict profile does not take one. validateReplyDraft holds
+// the bounds, from the constants below.
+var replyDraftSchema = schema.Must(schema.Record(
+	schema.Field("subject", schema.String()),
+	schema.Field("body", schema.String()),
+))
+
+const (
+	// replyDraftSubjectMaxRunes is RFC 5322's line limit: a Subject header is
+	// one line, and a longer one is folded or refused by the sending server.
+	replyDraftSubjectMaxRunes = 998
+	// replyDraftBodyMaxRunes bounds a body far above any email a sender
+	// writes, so it only ever catches a runaway generation.
+	replyDraftBodyMaxRunes = 50_000
+)
 
 type replyDraft struct {
 	Subject string `json:"subject"`
@@ -253,7 +264,7 @@ func validateReplyDraft(draft replyDraft) error {
 	if strings.TrimSpace(draft.Body) == "" {
 		return fmt.Errorf("compose: reply draft body is empty")
 	}
-	if len([]rune(draft.Subject)) > 998 || len([]rune(draft.Body)) > 50_000 {
+	if len([]rune(draft.Subject)) > replyDraftSubjectMaxRunes || len([]rune(draft.Body)) > replyDraftBodyMaxRunes {
 		return fmt.Errorf("compose: reply draft exceeds the supported length")
 	}
 	return nil

@@ -41,6 +41,9 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
 			  "description":"A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For contacts an address already held is refused either way — an email is a real key, a company name is not."}},
 			"additionalProperties":false}`),
+		UnkeyedArguments: map[string]string{
+			"$.mapping": "the mapping is keyed by the uploaded file's own column headers",
+		},
 		OutputSchema: schemaFor[ImportPreviewResult](),
 	}
 }

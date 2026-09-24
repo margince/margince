@@ -5,8 +5,9 @@ package schema
 
 // ValidateJSON checks that value parses as JSON conforming to schemaJSON.
 // This is deliberately NOT a general JSON Schema implementation: it walks
-// only the restricted vocabulary Object/Array/String/Number/Enum builds
-// (type, properties+required, additionalProperties, items, enum) — the one
+// only the restricted vocabulary the constructors in schema.go build (type,
+// properties+required, additionalProperties, items, enum, and the value-or-null
+// anyOf Optional writes) — the one
 // shape every provider adapter in this codebase can both emit a
 // ResponseSchema for and produce output against. A corpus's json_schema
 // check exercises exactly that shape, so a bespoke draft-07/2020-12
@@ -14,7 +15,9 @@ package schema
 // vocabulary here only alongside a new Node constructor above.
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"math"
 	"slices"
 )
 
@@ -57,6 +60,20 @@ func (n Node) validate(v any, path string) error {
 			return fmt.Errorf("%s: want number, got %T", path, v)
 		}
 		return nil
+	case typeInteger:
+		// JSON has one number type, so an integer is a number with no
+		// fractional part — 3.0 is one, as JSON Schema itself counts it.
+		if f, ok := v.(float64); !ok || f != math.Trunc(f) {
+			return fmt.Errorf("%s: want integer, got %v", path, v)
+		}
+		return nil
+	case typeNull:
+		if v != nil {
+			return fmt.Errorf("%s: want null, got %T", path, v)
+		}
+		return nil
+	case "":
+		return n.validateAnyOf(v, path)
 	default:
 		return fmt.Errorf("%s: unsupported schema type %q", path, n.Type)
 	}
@@ -107,4 +124,24 @@ func (n Node) validateArray(v any, path string) error {
 		}
 	}
 	return nil
+}
+
+// validateAnyOf admits v when any branch does. A node with neither a type nor
+// branches describes nothing this package builds, and is refused rather than
+// read as "anything goes".
+//
+//craft:ignore naked-any same decoded-JSON contract as validate
+func (n Node) validateAnyOf(v any, path string) error {
+	if len(n.AnyOf) == 0 {
+		return fmt.Errorf("%s: schema node declares neither a type nor anyOf", path)
+	}
+	var refusals []error
+	for _, branch := range n.AnyOf {
+		err := branch.validate(v, path)
+		if err == nil {
+			return nil
+		}
+		refusals = append(refusals, err)
+	}
+	return fmt.Errorf("%s: matches no allowed shape: %w", path, errors.Join(refusals...))
 }

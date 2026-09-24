@@ -153,3 +153,28 @@ func TestClassifyValidationMessagesDoNotEchoUnboundedModelText(t *testing.T) {
 		})
 	}
 }
+
+// The reply verdict is optional, and under a strict decoder the ONLY way to
+// leave it out is null: the key must be present. So an outbound message
+// answered with `"reply":null` has to satisfy both the schema and the site's
+// own validator, exactly as an omitted key did — and a verdict that is not one
+// of the three still fails the schema.
+func TestAnAbsentReplyVerdictIsSpelledNull(t *testing.T) {
+	outbound := unlabeledMessage{ID: ids.NewV7()}
+	answer := `{"results":[{"id":"` + outbound.ID.String() + `","label":"noise","confidence":0.9,"reply":null}]}`
+	if err := schema.ValidateJSON(classifySchema(), answer); err != nil {
+		t.Fatalf("the schema refused a null reply: %v", err)
+	}
+	if err := classifyShapeValid([]unlabeledMessage{outbound})(answer); err != nil {
+		t.Fatalf("the site refused a null reply on an outbound message: %v", err)
+	}
+	for name, reply := range map[string]string{"an invented verdict": `"maybe"`, "an omitted key": ""} {
+		body := `{"id":"` + outbound.ID.String() + `","label":"noise","confidence":0.9`
+		if reply != "" {
+			body += `,"reply":` + reply
+		}
+		if err := schema.ValidateJSON(classifySchema(), `{"results":[`+body+`}]}`); err == nil {
+			t.Errorf("the schema admitted %s", name)
+		}
+	}
+}

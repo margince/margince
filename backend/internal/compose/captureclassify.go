@@ -398,12 +398,14 @@ func classifySchema() json.RawMessage {
 					"id":                    schema.String(),
 					"label":                 schema.Enum("commitment", "meeting", "noise"),
 					extractionConfidenceKey: schema.Number(),
-					// Not in the required list: an outbound message has no reply
-					// verdict to give, and a schema demanding one would push the
-					// model to invent a judgement about our own mail.
-					"reply": schema.Enum("positive", "negative", "neutral"),
+					// Optional, because an outbound message has no reply verdict
+					// to give and a schema demanding one would push the model to
+					// invent a judgement about our own mail. Spelled as null
+					// rather than left out of required: the strict profile
+					// refuses an object with an unrequired property.
+					"reply": schema.Optional(schema.Enum("positive", "negative", "neutral")),
 				},
-				"id", "label", "confidence",
+				"id", "label", extractionConfidenceKey, "reply",
 			)),
 		},
 		"results",

@@ -93,9 +93,9 @@ func TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 	// The response schema's enum is the third copy: a word the database accepts
 	// and the schema omits is one no model may ever return, so the column could
 	// hold a value nothing can produce.
-	schemaEnum := between(string(engine), `"reply": schema.Enum(`, ")")
+	schemaEnum := between(string(engine), `"reply": schema.Optional(schema.Enum(`, ")")
 	if schemaEnum == "" {
-		t.Fatal(`no "reply": schema.Enum(...) in the classify engine — ` +
+		t.Fatal(`no "reply": schema.Optional(schema.Enum(...)) in the classify engine — ` +
 			"the response schema this gate measures has moved")
 	}
 	// And the PROMPT has to offer every word too. Read from the system prompt

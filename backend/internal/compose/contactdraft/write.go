@@ -9,7 +9,6 @@ package contactdraft
 
 import (
 	"context"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
@@ -66,49 +65,18 @@ func draftSystemFor(fence promptfence.Fence, voiced bool) string {
 	return system + "\n" + fence.Rule("contact summary")
 }
 
-// draftSchema is the response shape the validated lane enforces.
-const draftSchema = `{
-  "type": "object",
-  "required": ["subject", "body"],
-  "properties": {
-    "subject": {"type": "string"},
-    "body": {"type": "string"},
-    "reasoning": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["kind", "label"],
-        "properties": {
-          "kind": {"type": "string"},
-          "label": {"type": "string"},
-          "entity_type": {"type": "string"},
-          "entity_id": {"type": "string"}
-        }
-      }
-    }
-  }
-}`
-
-// parseKind narrows the model's string to the contract's closed vocabulary. An
-// unknown kind is dropped rather than passed through: the composer groups
-// reasons by kind, and one it does not know would render as an unlabelled chip.
+// reasonKinds is the contract's closed vocabulary as this surface serves it.
 //
 // `dossier` is absent on purpose. It names a company's recorded facts, and this
-// draft never reads them — accepting it would let the model label a contact's
+// draft never reads them — admitting it would let the model label a contact's
 // claim as something the company published.
-func parseKind(raw string) (crmcontracts.AccountDraftReasonKind, bool) {
-	kind := crmcontracts.AccountDraftReasonKind(strings.TrimSpace(raw))
-	switch kind {
-	case crmcontracts.AccountDraftReasonKindIntent,
-		crmcontracts.AccountDraftReasonKindRecipient,
-		crmcontracts.AccountDraftReasonKindRelationship,
-		crmcontracts.AccountDraftReasonKindDeal,
-		crmcontracts.AccountDraftReasonKindCommitment,
-		crmcontracts.AccountDraftReasonKindConversation:
-		return kind, true
-	default:
-		return "", false
-	}
+var reasonKinds = []crmcontracts.AccountDraftReasonKind{
+	crmcontracts.AccountDraftReasonKindIntent,
+	crmcontracts.AccountDraftReasonKindRecipient,
+	crmcontracts.AccountDraftReasonKindRelationship,
+	crmcontracts.AccountDraftReasonKindDeal,
+	crmcontracts.AccountDraftReasonKindCommitment,
+	crmcontracts.AccountDraftReasonKindConversation,
 }
 
 // knownRecords maps every id this draft's own input carried to the KIND that id
@@ -171,8 +139,7 @@ func surface(in Input) draftcore.Surface {
 	return draftcore.Surface{
 		Name:   "contact draft",
 		System: draftSystemFor,
-		Schema: draftSchema,
-		Kind:   parseKind,
+		Kinds:  reasonKinds,
 		// Only the caller's own intent is honest with nothing cited: they typed
 		// it. An uncited "deal" or "conversation" is a claim about a record with
 		// no record behind it.
