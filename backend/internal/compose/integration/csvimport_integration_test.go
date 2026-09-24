@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -459,24 +460,62 @@ func TestCSVImportPredictsUnchangedRatherThanUpdatingEverything(t *testing.T) {
 // A run whose validation could not finish is recorded as failed. Left in
 // `validating` it would be an orphan: approve refuses it, resume refuses it,
 // and nothing else could ever move it.
+//
+// The two ways staging can fail on the file are asserted together, because they
+// differ in whether a run exists to orphan. A header that cannot be read is
+// caught before the run row is written, so there is nothing to record; a file
+// that breaks PAST its header is only discovered by the walk, which is the case
+// the failed-run record exists for.
 func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 	e, store := setupImportAppWithStore(t)
 
+	// Readable header, unreadable rows: the mapping check passes and the walk
+	// is what fails. Written over the stored upload, because profiling would
+	// have refused this file at the door.
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	if err := store.Delete(context.Background(), profile.SourceRef); err != nil {
+	const brokenRows = "Email,First Name\na@x.test,\"unterminated\n"
+	if err := store.Put(context.Background(), profile.SourceRef,
+		strings.NewReader(brokenRows), int64(len(brokenRows)), "text/csv"); err != nil {
+		t.Fatalf("replacing the stored upload: %v", err)
+	}
+	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+		"connector": "csv", "object": "lead",
+		"source_ref": profile.SourceRef, "mapping": map[string]string{"Email": "email"},
+	}, nil, nil); status != http.StatusUnprocessableEntity {
+		t.Fatalf("a file that breaks past its header → %d, want 422", status)
+	}
+
+	runs := importRuns(t, e)
+	if len(runs) != 1 {
+		t.Fatalf("runs = %+v, want the one this attempt opened", runs)
+	}
+	if runs[0].Status != "failed" {
+		t.Fatalf("status = %q, want failed — a validating run nothing can move is an orphan", runs[0].Status)
+	}
+
+	// A vanished upload cannot be read at all, so it is refused before a run
+	// row is written. Nothing is left behind to orphan — and a run recorded
+	// against a file that no longer exists could never be resumed anyway.
+	second, _ := uploadCSV(t, e, "lead", prospectCSV)
+	if err := store.Delete(context.Background(), second.SourceRef); err != nil {
 		t.Fatalf("removing the stored upload: %v", err)
 	}
-
-	status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
-		"source_ref": profile.SourceRef, "mapping": profile.SuggestedMapping,
-	}, nil, nil)
-	if status != http.StatusNotFound {
+		"source_ref": second.SourceRef, "mapping": second.SuggestedMapping,
+	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("a vanished upload → %d, want 404", status)
 	}
+	if after := importRuns(t, e); len(after) != 1 {
+		t.Fatalf("runs = %+v, want only the first attempt's: a refusal before staging writes no run", after)
+	}
+}
 
-	// The run row exists — it was created before the file was read — and it
-	// must not be sitting in validating.
+// importRuns reads the csv runs this installation holds, straight from the
+// table: what the assertions above need is the row a read surface would not
+// show, including one sitting in a state nothing can move.
+func importRuns(t *testing.T, e *apptest.AppEnv) []importRunDTO {
+	t.Helper()
 	var runs []importRunDTO
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `SELECT id::text, status FROM import_run WHERE connector = 'csv'`)
@@ -495,12 +534,7 @@ func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("reading the runs: %v", err)
 	}
-	if len(runs) != 1 {
-		t.Fatalf("runs = %+v, want the one this attempt opened", runs)
-	}
-	if runs[0].Status != "failed" {
-		t.Fatalf("status = %q, want failed — a validating run nothing can move is an orphan", runs[0].Status)
-	}
+	return runs
 }
 
 // Every run response carries who opened it. The database stamps it; a surface
