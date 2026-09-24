@@ -256,6 +256,60 @@ func TestTheAccessTokenIsReusedUntilFiveMinutesBeforeItExpires(t *testing.T) {
 	}
 }
 
+func TestAFailedEarlyRefreshKeepsTheTokenGoogleStillHonours(t *testing.T) {
+	t.Parallel()
+	clock := &fixedClock{now: time.Date(2026, 9, 24, 10, 0, 0, 0, time.UTC)}
+	var refuse atomic.Bool
+	endpoint := &tokenEndpoint{respond: func(req *http.Request) tokenReply {
+		if refuse.Load() {
+			return tokenReply{status: http.StatusServiceUnavailable, body: `{}`}
+		}
+		return grantedToken("ya29.first")(req)
+	}}
+	source := testTokenSource(t, endpoint, clock)
+	if _, err := source.accessToken(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	refuse.Store(true)
+	clock.now = clock.now.Add(57 * time.Minute)
+	if token, err := source.accessToken(context.Background()); err != nil || token != "ya29.first" {
+		t.Fatalf("inside the headway a failed refresh answered %q, %v; want the unexpired token", token, err)
+	}
+	if got := endpoint.exchanges.Load(); got != 2 {
+		t.Errorf("exchanges = %d, want 2: the refresh must still have been tried", got)
+	}
+	clock.now = clock.now.Add(3 * time.Minute)
+	if _, err := source.accessToken(context.Background()); err == nil {
+		t.Error("an expired token was served after the refresh failed")
+	}
+}
+
+func TestAShortLivedTokenIsRefreshedAtHalfItsLifetime(t *testing.T) {
+	t.Parallel()
+	clock := &fixedClock{now: time.Date(2026, 9, 24, 10, 0, 0, 0, time.UTC)}
+	endpoint := &tokenEndpoint{respond: func(*http.Request) tokenReply {
+		return tokenReply{status: http.StatusOK, body: `{"access_token":"ya29.brief","expires_in":240}`}
+	}}
+	source := testTokenSource(t, endpoint, clock)
+	for _, step := range []struct {
+		advance time.Duration
+		want    int32
+	}{
+		{0, 1},
+		{time.Second, 1},
+		{2*time.Minute - 2*time.Second, 1},
+		{time.Second, 2},
+	} {
+		clock.now = clock.now.Add(step.advance)
+		if _, err := source.accessToken(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		if got := endpoint.exchanges.Load(); got != step.want {
+			t.Fatalf("after %s the source had exchanged %d times, want %d", step.advance, got, step.want)
+		}
+	}
+}
+
 func TestABurstOfCallersSharesOneExchange(t *testing.T) {
 	t.Parallel()
 	arrived, release := make(chan struct{}), make(chan struct{})

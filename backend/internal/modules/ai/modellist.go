@@ -220,10 +220,10 @@ func openAIWireModels(
 // ---- gemini ----
 
 // ListModels reports the transport's model collection. On AI Studio that is
-// GET /v1beta/models, the one vendor list that says what each model is FOR: `supportedGenerationMethods` names `embedContent` for an
-// embedder and `generateContent` for a chat model, so the embeddings lane can
-// be offered real suggestions here where the other vendors leave it to the
-// sheet.
+// GET /v1beta/models, the one vendor list that says what each model is FOR:
+// `supportedGenerationMethods` names `embedContent` for an embedder and
+// `generateContent` for a chat model, so the embeddings lane can be offered
+// real suggestions here where the other vendors leave it to the sheet.
 //
 // Paginated, and the pages are followed: the catalog runs past one page and a
 // reader who stopped at the first would be told a current model does not exist.
@@ -245,10 +245,10 @@ func (c *geminiClient) ListModels(ctx context.Context) ([]model.Info, error) {
 		if err != nil {
 			return nil, err
 		}
-		models = append(models, page...)
+		models = append(models, page[:min(len(page), modelListLimit-len(models))]...)
 		// Stopping on the cap as well as on the last page: a vendor that keeps
 		// handing back a token must not turn this into an unbounded loop.
-		if next == "" || len(models) >= modelListLimit {
+		if next == "" || len(models) == modelListLimit {
 			return models, nil
 		}
 		pageToken = next

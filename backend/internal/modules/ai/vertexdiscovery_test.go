@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -23,13 +22,19 @@ import (
 // included, before googleFixture answers or reroutes it.
 type countingGoogle struct {
 	googleFixture
-	requests atomic.Int32
+	requests, exchanges atomic.Int32
 }
 
 func (g *countingGoogle) RoundTrip(req *http.Request) (*http.Response, error) {
 	g.requests.Add(1)
+	if req.URL.String() == vertexTokenURI {
+		g.exchanges.Add(1)
+	}
 	return g.googleFixture.RoundTrip(req)
 }
+
+// probes is the requests that asked a model, the token exchanges aside.
+func (g *countingGoogle) probes() int32 { return g.requests.Load() - g.exchanges.Load() }
 
 // googleAt serves handler as every Google host, and returns the selector a
 // store builds its clients through.
@@ -135,7 +140,7 @@ func servedAt(t *testing.T) http.HandlerFunc {
 		switch {
 		case !served:
 			w.WriteHeader(http.StatusNotFound)
-			writeBody(t, w, `{"error":{"code":404,"status":"NOT_FOUND","message":"Publisher model not found."}}`)
+			writeBody(t, w, `{"error":{"code":404,"status":"NOT_FOUND","message":"Publisher Model `+"`projects/margince-eu-1/locations/eu/publishers/google/models/x`"+` was not found or your project does not have access to it."}}`)
 		case strings.HasSuffix(r.URL.Path, ":embedContent"):
 			writeBody(t, w, `{"embedding":{"values":[0.5]}}`)
 		default:
@@ -153,11 +158,10 @@ func TestAProbeSaysWhetherALocationServesOneModel(t *testing.T) {
 		q    AvailableModelsQuery
 		want ModelAvailability
 	}{
-		"served chat":             {AvailableModelsQuery{Tier: "premium", Location: "europe-west4", Model: "gemini-3.5-flash"}, AvailabilityOK},
-		"served embedder":         {AvailableModelsQuery{Tier: "embeddings", Location: "europe-west4", Model: "gemini-embedding-001"}, AvailabilityOK},
-		"not served here":         {AvailableModelsQuery{Tier: "premium", Location: "eu", Model: "gemini-3.5-flash"}, AvailabilityNoEndpoint},
-		"an unknown model":        {AvailableModelsQuery{Tier: "premium", Location: "europe-west4", Model: "gemini-0"}, AvailabilityNoEndpoint},
-		"embedder on a chat lane": {AvailableModelsQuery{Tier: "premium", Location: "europe-west4", Model: "gemini-embedding-001"}, AvailabilityNoEndpoint},
+		"served chat":      {AvailableModelsQuery{Tier: "premium", Location: "europe-west4", Model: "gemini-3.5-flash"}, AvailabilityOK},
+		"served embedder":  {AvailableModelsQuery{Tier: "embeddings", Location: "europe-west4", Model: "gemini-embedding-001"}, AvailabilityOK},
+		"not served here":  {AvailableModelsQuery{Tier: "premium", Location: "eu", Model: "gemini-3.5-flash"}, AvailabilityNoEndpoint},
+		"an unknown model": {AvailableModelsQuery{Tier: "premium", Location: "europe-west4", Model: "gemini-0"}, AvailabilityNoEndpoint},
 	} {
 		tc.q.Provider = providerGeminiVertex
 		got := store.availableModels(context.Background(), cfg, tc.q)
@@ -219,60 +223,5 @@ func vertexRouting(location string) RoutingConfig {
 			TierLocalSmall: {Provider: providerOllama, Model: "gemma3"},
 		},
 		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerGeminiVertex, Location: location, Model: "gemini-embedding-001"}},
-	}
-}
-
-// Saving re-asks each gemini_vertex binding's location, and a model it does
-// not serve is the admin's 422 naming the tier, the model and the location —
-// refused before the write, so nothing unservable is stored.
-func TestSavingRefusesAVertexModelItsLocationDoesNotServe(t *testing.T) {
-	t.Parallel()
-	selector, _ := googleAt(t, servedAt(t))
-	admin := keySeatCtx(principal.ObjectGrant{Read: true, Update: true})
-	for name, tc := range map[string]struct {
-		keys  config.Lookup
-		cfg   RoutingConfig
-		names []string
-	}{
-		"not served":  {allCloudKeys(t), vertexRouting("eu"), []string{"tier premium", `"gemini-3.5-flash"`, `"eu"`, "does not serve"}},
-		"no key held": {noCloudKeys(), vertexRouting("europe-west4"), []string{"tier premium", "holds no service-account key"}},
-	} {
-		store := &RoutingStore{keys: tc.keys, selectBrain: selector}
-		_, err := store.ReplaceIfVersion(admin, tc.cfg, "")
-		var invalid settings.InvalidValue
-		if !errors.As(err, &invalid) {
-			t.Fatalf("%s: want a 422-shaped refusal, got %v", name, err)
-		}
-		for _, want := range tc.names {
-			if !strings.Contains(invalid.Reason, want) {
-				t.Errorf("%s: %q does not say %s", name, invalid.Reason, want)
-			}
-		}
-	}
-	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
-	if err := store.probeVertexBindings(context.Background(), vertexRouting("europe-west4")); err != nil {
-		t.Errorf("a served model and embedder were refused: %v", err)
-	}
-	embeddingsOnly := vertexRouting("europe-west4")
-	embeddingsOnly.Embeddings.Model = "gemini-embedding-000"
-	if err := store.probeVertexBindings(context.Background(), embeddingsOnly); err == nil || !strings.Contains(err.Error(), "embeddings") {
-		t.Errorf("an unserved embedder was admitted: %v", err)
-	}
-}
-
-// A binding with no gemini_vertex lane is never probed, so every save that
-// was valid before this check is valid now and makes no call.
-func TestSavingABindingWithoutVertexProbesNothing(t *testing.T) {
-	t.Parallel()
-	store := &RoutingStore{selectBrain: func(ProviderConfig, config.Lookup) (model.Client, error) {
-		t.Error("a binding without gemini_vertex built a client on save")
-		return nil, errors.New("unreachable")
-	}}
-	cfg := RoutingConfig{
-		Tiers:      map[Tier]ProviderConfig{TierPremium: {Provider: providerAnthropic, Model: "m"}},
-		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake, Model: "e"}},
-	}
-	if err := store.probeVertexBindings(context.Background(), cfg); err != nil {
-		t.Errorf("probing a binding without vertex: %v", err)
 	}
 }

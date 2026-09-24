@@ -66,15 +66,10 @@ export function useBindModels() {
         throwProblem(error);
       }
     },
-    // NO invalidation here, unlike every other write onboarding makes. Re-reading the setup report is what moves the screen on, and the
-    // binding is the moment the ignition exists to mark — invalidating on
-    // success would swap the step out from under a sequence the reader is
-    // watching. The refetch happens when they press past it (`onDone`), which
-    // means the screen is theirs to leave rather than the query's to take.
-    //
-    // The write has already landed either way: a reload mid-sequence finds the
-    // server saying `ai_models` is configured and opens the next question, which
-    // is correct and loses nothing but the ceremony.
+    // No invalidation: re-reading the setup report moves the screen on, and
+    // the binding is the moment the ignition marks. The refetch waits for the
+    // reader to press past it (`onDone`); a reload mid-sequence finds
+    // `ai_models` configured and loses nothing but the ceremony.
   });
 }
 

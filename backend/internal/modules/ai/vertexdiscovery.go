@@ -239,47 +239,127 @@ func (s *RoutingStore) probeAvailability(ctx context.Context, bound ProviderConf
 
 // probeBinding builds the binding's client and asks it about one model.
 func (s *RoutingStore) probeBinding(ctx context.Context, bound ProviderConfig, id, lane string) error {
-	client, err := s.selectBrain.build(bound, s.resolvedKeys(ctx))
+	gemini, err := s.vertexProbeClient(ctx, bound.Location)
 	if err != nil {
 		return err
 	}
-	gemini, ok := client.(*geminiClient)
-	if !ok {
-		return fmt.Errorf("ai: %s has no model probe", bound.Provider)
-	}
-	asked, cancel := context.WithTimeout(ctx, listTimeout)
-	defer cancel()
-	return gemini.probeModel(asked, id, lane)
+	return probeOnce(ctx, gemini, vertexProbe{location: bound.Location, model: id, lane: lane})
 }
 
-// probeVertexBindings asks each gemini_vertex binding's location for its
-// model before the binding is stored: a model the location does not serve
-// would otherwise be found by the first real call.
-func (s *RoutingStore) probeVertexBindings(ctx context.Context, cfg RoutingConfig) error {
-	for _, tier := range sortedTiers(cfg.Tiers) {
-		if binding := cfg.Tiers[tier]; binding.Provider == providerGeminiVertex {
-			if err := s.refuseUnserved(ctx, "tier "+string(tier), binding, binding.Model, model.LaneChat); err != nil {
-				return err
-			}
+// vertexProbeClient is built per request, so each discovery click mints its
+// own token: a source kept across requests would outlive a replaced key.
+func (s *RoutingStore) vertexProbeClient(ctx context.Context, location string) (*geminiClient, error) {
+	client, err := s.selectBrain.build(ProviderConfig{Provider: providerGeminiVertex, Location: location}, s.resolvedKeys(ctx))
+	if err != nil {
+		return nil, err
+	}
+	gemini, ok := client.(*geminiClient)
+	if !ok {
+		return nil, fmt.Errorf("ai: %s has no model probe", providerGeminiVertex)
+	}
+	return gemini, nil
+}
+
+// relocated is this client addressed to another location. It shares the
+// token source, so asking several locations spends one token exchange.
+func (c *geminiClient) relocated(location string) *geminiClient {
+	vertex, ok := c.transport.(vertexTransport)
+	if !ok {
+		return c
+	}
+	vertex.host, vertex.location = vertexHost(location), location
+	moved := *c
+	moved.transport = vertex
+	return &moved
+}
+
+// vertexProbe is one question a save can ask Google: does this location
+// serve this model on this lane.
+type vertexProbe struct {
+	location, model, lane string
+}
+
+type labelledProbe struct {
+	vertexProbe
+	label string
+}
+
+// vertexProbesOf lists the distinct questions a config's gemini_vertex
+// bindings raise, each under the first lane that raised it.
+func vertexProbesOf(cfg RoutingConfig) []labelledProbe {
+	var out []labelledProbe
+	seen := map[vertexProbe]bool{}
+	add := func(label string, binding ProviderConfig, id, lane string) {
+		probe := vertexProbe{location: binding.Location, model: id, lane: lane}
+		if binding.Provider == providerGeminiVertex && !seen[probe] {
+			seen[probe] = true
+			out = append(out, labelledProbe{vertexProbe: probe, label: label})
 		}
 	}
-	if embeddings := cfg.Embeddings.ProviderConfig; embeddings.Provider == providerGeminiVertex {
-		return s.refuseUnserved(ctx, "embeddings", embeddings, defaulted(embeddings.Model, geminiEmbedModel), model.LaneEmbeddings)
+	for _, tier := range sortedTiers(cfg.Tiers) {
+		binding := cfg.Tiers[tier]
+		add("tier "+string(tier), binding, binding.Model, model.LaneChat)
+	}
+	embeddings := cfg.Embeddings.ProviderConfig
+	add("embeddings", embeddings, defaulted(embeddings.Model, geminiEmbedModel), model.LaneEmbeddings)
+	return out
+}
+
+// probeVertexBindings asks Google, before the binding is stored, about each
+// gemini_vertex binding the save introduces: a model its location does not
+// serve would otherwise be found by the first real call. A binding stored
+// already was asked when it was saved, so an unrelated edit asks nothing.
+//
+// Only a definite answer refuses the save. Google failing to answer is
+// logged and the save admitted without asking further, because an outage
+// there must not freeze, or stall, every routing edit here.
+func (s *RoutingStore) probeVertexBindings(ctx context.Context, stored, next RoutingConfig) error {
+	asked := map[vertexProbe]bool{}
+	for _, p := range vertexProbesOf(stored) {
+		asked[p.vertexProbe] = true
+	}
+	var client *geminiClient
+	for _, p := range vertexProbesOf(next) {
+		if asked[p.vertexProbe] {
+			continue
+		}
+		var err error
+		if client == nil {
+			client, err = s.vertexProbeClient(ctx, p.location)
+		}
+		if err == nil {
+			err = probeOnce(ctx, client.relocated(p.location), p.vertexProbe)
+		}
+		if refusal := refuseUnserved(p, err); refusal != nil {
+			return refusal
+		}
+		if err != nil {
+			s.logger().WarnContext(ctx, "ai: routing saved with a gemini_vertex model unchecked: Google did not answer the probe",
+				"lane", p.label, "location", p.location, "model", p.model, "error", err.Error())
+			return nil
+		}
 	}
 	return nil
 }
 
-func (s *RoutingStore) refuseUnserved(ctx context.Context, label string, binding ProviderConfig, id, lane string) error {
-	err := s.probeBinding(ctx, binding, id, lane)
+func probeOnce(ctx context.Context, client *geminiClient, p vertexProbe) error {
+	asked, cancel := context.WithTimeout(ctx, listTimeout)
+	defer cancel()
+	return client.probeModel(asked, p.model, p.lane)
+}
+
+// refuseUnserved is the save's refusal for an answer that settles the
+// question, and nil for one that does not.
+func refuseUnserved(p labelledProbe, err error) error {
 	switch {
-	case err == nil:
-		return nil
 	case errors.Is(err, errModelNotFound):
-		return fmt.Errorf("ai: routing config: %s: gemini_vertex does not serve model %q in location %q", label, id, binding.Location)
+		return fmt.Errorf("ai: routing config: %s: gemini_vertex does not serve model %q in location %q", p.label, p.model, p.location)
 	case errors.Is(err, errNoProviderKey):
-		return fmt.Errorf("ai: routing config: %s: gemini_vertex holds no service-account key, so model %q in location %q cannot be checked — add the key first", label, id, binding.Location)
+		return fmt.Errorf("ai: routing config: %s: gemini_vertex holds no service-account key, so model %q in location %q cannot be checked — add the key first", p.label, p.model, p.location)
+	case errors.Is(err, errInvalidServiceAccount):
+		return fmt.Errorf("ai: routing config: %s: the stored gemini_vertex service-account key is not usable (%w) — replace it under Provider keys", p.label, err)
 	default:
-		return fmt.Errorf("ai: routing config: %s: Google could not be asked whether location %q serves model %q — check the service-account key and try again", label, binding.Location, id)
+		return nil
 	}
 }
 

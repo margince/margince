@@ -58,9 +58,9 @@ const (
 	AvailabilityNotPublished ModelAvailability = "not_published"
 	// AvailabilityUnreachable means the vendor was asked and did not answer.
 	AvailabilityUnreachable ModelAvailability = "unreachable"
-	// AvailabilityNoEndpoint means an OpenAI-wire binding names no host, so
-	// there is no address to ask. Only openai_compatible can be in this state:
-	// every other adapter has a compiled default.
+	// AvailabilityNoEndpoint means there is no address to ask: an OpenAI-wire
+	// binding with no host, or a gemini_vertex one with no location. A probe
+	// also answers it for a location that does not serve the model.
 	AvailabilityNoEndpoint ModelAvailability = "no_endpoint"
 )
 
@@ -124,6 +124,9 @@ func (s *RoutingStore) ListAvailableModels(ctx context.Context, q AvailableModel
 	if q.Location != "" && !vertexLocationShape.MatchString(q.Location) {
 		return AvailableModels{}, fmt.Errorf("%w: location must be eu, us, global, or a region such as europe-west4", apperrors.ErrInvalidArgument)
 	}
+	if q.Model != "" && !vertexModelShape.MatchString(q.Model) {
+		return AvailableModels{}, fmt.Errorf("%w: model must be a publisher model id such as gemini-3.5-flash", apperrors.ErrInvalidArgument)
+	}
 	cfg, err := s.Get(ctx)
 	if err != nil {
 		return AvailableModels{}, err
@@ -152,6 +155,10 @@ func (s *RoutingStore) availableModels(ctx context.Context, cfg RoutingConfig, q
 	bound := boundProviderConfig(cfg, provider, q.Tier)
 	if provider == providerGeminiVertex && q.Location != "" {
 		bound.Location = q.Location
+	}
+	if provider == providerGeminiVertex && bound.Location == "" {
+		out.Unavailable = AvailabilityNoEndpoint
+		return out
 	}
 	if !ProviderIsLocal(provider) && RequireResidency(cfg.Profile, bound) != nil {
 		out.Unavailable = AvailabilityProfileForbids
@@ -201,8 +208,8 @@ func (s *RoutingStore) availableModels(ctx context.Context, cfg RoutingConfig, q
 // unavailableFor reads why a binding could not be turned into a client.
 //
 // The two states a reader can act on are told apart: a vendor with no
-// credential is a key to paste, and an OpenAI-wire binding with no host is an
-// address to fill in.
+// usable credential is a key to paste, and an OpenAI-wire binding with no host
+// is an address to fill in.
 //
 // Everything else is a name this surface cannot ask AT ALL — an adapter that
 // does not exist, or a binding with no provider on it — and that is
@@ -210,7 +217,7 @@ func (s *RoutingStore) availableModels(ctx context.Context, cfg RoutingConfig, q
 // `unreachable` says the vendor was asked and did not answer, which would have
 // a reader chasing a network fault for a provider nothing ever called.
 func unavailableFor(err error) ModelAvailability {
-	if errors.Is(err, errNoProviderKey) {
+	if errors.Is(err, errNoProviderKey) || errors.Is(err, errInvalidServiceAccount) {
 		return AvailabilityNoKey
 	}
 	if errors.Is(err, errNoBaseURL) {
@@ -250,12 +257,12 @@ func boundProviderConfig(cfg RoutingConfig, provider, tier string) ProviderConfi
 	}
 	for _, t := range sortedTiers(cfg.Tiers) {
 		binding := cfg.Tiers[t]
-		if binding.Provider == provider && binding.BaseURL != "" {
-			return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL}
+		if binding.Provider == provider && (binding.BaseURL != "" || binding.Location != "") {
+			return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL, Location: binding.Location}
 		}
 	}
-	if cfg.Embeddings.Provider == provider && cfg.Embeddings.BaseURL != "" {
-		return ProviderConfig{Provider: provider, BaseURL: cfg.Embeddings.BaseURL}
+	if emb := cfg.Embeddings; emb.Provider == provider && (emb.BaseURL != "" || emb.Location != "") {
+		return ProviderConfig{Provider: provider, BaseURL: emb.BaseURL, Location: emb.Location}
 	}
 	return ProviderConfig{Provider: provider}
 }

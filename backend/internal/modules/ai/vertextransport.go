@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -19,6 +20,10 @@ import (
 // vertexLocationShape admits the two multi-regions, global, and a region
 // name. The host is built from the location, so nothing else may reach it.
 var vertexLocationShape = regexp.MustCompile(`^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$`)
+
+// vertexModelShape is a publisher model id. The id is a path segment of
+// every model call, so a separator or a query character may not reach it.
+var vertexModelShape = regexp.MustCompile(`^[a-z0-9][a-z0-9._@-]{0,199}$`)
 
 // vertexPublisherModelsURL lists Google's publisher models. It is metadata
 // only, carries no customer data, and is served from the global host alone.
@@ -53,7 +58,13 @@ func validateVertexPlacement(label string, binding ProviderConfig) error {
 	if binding.BaseURL != "" {
 		return fmt.Errorf("ai: routing config: %s: gemini_vertex takes no base_url — its host follows from `location`", label)
 	}
-	return vertexLocationError(label, binding.Location)
+	if err := vertexLocationError(label, binding.Location); err != nil {
+		return err
+	}
+	if binding.Model != "" && !vertexModelShape.MatchString(binding.Model) {
+		return fmt.Errorf("ai: routing config: %s: gemini_vertex model %q is not a publisher model id such as gemini-3.5-flash", label, binding.Model)
+	}
+	return nil
 }
 
 func vertexLocationError(label, location string) error {
@@ -103,7 +114,7 @@ type vertexTransport struct {
 }
 
 func (t vertexTransport) modelURL(model, verb string) string {
-	return t.host + "/v1/projects/" + t.projectID + "/locations/" + t.location + "/publishers/google/models/" + model + ":" + verb
+	return t.host + "/v1/projects/" + t.projectID + "/locations/" + t.location + "/publishers/google/models/" + url.PathEscape(model) + ":" + verb
 }
 
 func (t vertexTransport) modelsURL() string { return vertexPublisherModelsURL }

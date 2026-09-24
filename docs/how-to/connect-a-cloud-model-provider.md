@@ -194,8 +194,11 @@ binds every lane at `eu`.
 
 **Not every model is served at every location.** Settings → AI lists the
 locations the key can reach and the models the chosen one serves, and checks a
-model once you pick it; saving asks Google again, so a binding the location does
-not serve is refused rather than stored.
+model once you pick it. Saving asks Google again about every `gemini_vertex`
+binding the save adds or changes, so one the location does not serve is refused
+rather than stored. If Google cannot be asked at that moment, the save goes
+through and the API logs a warning naming the unchecked binding: an outage at
+Google does not block routing edits.
 
 **What `eu_resident` enforces.** Every tier and the embeddings lane must be a
 local model or `gemini_vertex` at an EU location. Anything else is refused when
@@ -263,6 +266,7 @@ followed, one that changes host or downgrades to http is refused.
 | 422 *"the service-account key was not accepted by Google: … invalid_grant"* | The key was revoked, the account deleted, or the machine clock is off. Create a new JSON key on the account. |
 | 422 *"invalid service account key: …"* | Not a service-account JSON key file — the message names the field. Paste the whole downloaded file. |
 | 422 *"gemini_vertex does not serve model … in location …"* | That location has no endpoint for the model (`no_endpoint`; Settings shows *Not served in …*). Pick a model the location lists, or another location. |
-| 422 *"Google could not be asked whether location … serves model …"* | The probe could not run (`unreachable`): Google unreachable, or the key lacks `roles/aiplatform.user` or the project the Vertex AI API. Fix the grant, then save again. |
+| Log warning *"routing saved with a gemini_vertex model unchecked"* | The save probe could not run (`unreachable`): Google unreachable, or the key lacks `roles/aiplatform.user` or the project the Vertex AI API. The binding is stored; fix the grant and pick the model again in Settings to check it. |
+| 422 *"the stored gemini_vertex service-account key is not usable"* | The held key file cannot be parsed. Replace it under Model provider keys (§5). |
 | 422 *"profile eu_resident refuses gemini_vertex at location …"* | London, Zürich, `global` and `us` are not EU-resident. Choose `eu` or an EU region (§5). |
 | Log says *"offline fake"* despite a cloud binding | Two causes, and the log line distinguishes them. Either nothing is bound — bind a tier under Settings → AI, or `make dev-fresh` to consume a `seeds.ai_routing` you just declared — or a binding EXISTS and could not be built, which with `--ai-fake` on the command line falls back to the fake and warns "the stored model binding cannot be served". That second one is almost always a bound vendor whose key is missing: supply it under Settings → AI → Model provider keys. |

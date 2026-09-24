@@ -142,10 +142,10 @@ type vertexTokenSource struct {
 	http    *http.Client
 	clock   Clock
 
-	mu        sync.Mutex
-	token     string
-	refreshAt time.Time
-	inFlight  *tokenExchange
+	mu                   sync.Mutex
+	token                string
+	refreshAt, expiresAt time.Time
+	inFlight             *tokenExchange
 }
 
 func newVertexTokenSource(account vertexServiceAccount, httpc *http.Client, clock Clock) *vertexTokenSource {
@@ -190,13 +190,27 @@ func (s *vertexTokenSource) complete(caller context.Context, call *tokenExchange
 	issuedAt := s.clock.Now()
 	token, lifetime, err := s.exchange(ctx, issuedAt)
 	s.mu.Lock()
-	if err == nil {
-		s.token, s.refreshAt = token, issuedAt.Add(lifetime-vertexRefreshHeadway)
+	switch {
+	case err == nil:
+		s.token, s.refreshAt, s.expiresAt = token, issuedAt.Add(refreshAfter(lifetime)), issuedAt.Add(lifetime)
+	case s.token != "" && s.clock.Now().Before(s.expiresAt):
+		// A refresh is early by design, so a failed one leaves a token Google
+		// still honours; the next call tries the exchange again.
+		token, err = s.token, nil
 	}
 	s.inFlight = nil
 	s.mu.Unlock()
 	call.token, call.err = token, err
 	close(call.done)
+}
+
+// refreshAfter is how long a token is used before it is replaced: the
+// headway before expiry, or half the lifetime of one too short to spare it.
+func refreshAfter(lifetime time.Duration) time.Duration {
+	if lifetime <= vertexRefreshHeadway {
+		return lifetime / 2
+	}
+	return lifetime - vertexRefreshHeadway
 }
 
 // exchange posts one assertion for an access token. Its errors keep the HTTP

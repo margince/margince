@@ -45,13 +45,10 @@ func geminiError(resp *http.Response) error {
 			}
 		}
 		refused := fmt.Errorf("ai: gemini: %s: %s (http %d)", apiErr.Error.Status, apiErr.Error.Message, resp.StatusCode)
-		if apiErr.Error.Status == "NOT_FOUND" {
+		if publisherModelMissing(apiErr.Error.Status, apiErr.Error.Message) {
 			refused = fmt.Errorf("%w: %w", errModelNotFound, refused)
 		}
 		return providerRefusal(resp, limit, refused)
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("%w: ai: gemini: http %d", errModelNotFound, resp.StatusCode)
 	}
 	return providerRefusal(resp, "", fmt.Errorf("ai: gemini: http %d", resp.StatusCode))
 }
@@ -59,6 +56,13 @@ func geminiError(resp *http.Response) error {
 // errModelNotFound is Google saying the addressed model does not exist at
 // this host, which on Vertex means the location does not serve it.
 var errModelNotFound = errors.New("ai: gemini: the model is not served here")
+
+// publisherModelMissing reads a NOT_FOUND as Vertex naming the model itself.
+// A project or location Google cannot find is NOT_FOUND too, and says so in
+// other words; that is a fault to report, not a model to clear.
+func publisherModelMissing(status, message string) bool {
+	return status == "NOT_FOUND" && strings.Contains(strings.ToLower(message), "publisher model")
+}
 
 // geminiRetryableLimit is the limit-source name a RetryInfo detail stands for.
 // Spelled as a rate limit because that is what refusalKind reads it as, and
