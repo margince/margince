@@ -15,11 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // whenStaged is a fixed instant: the lane carries the approval's own time, and a
@@ -39,7 +39,7 @@ func (s stubDecisions) PendingApprovals(
 
 func stagedApproval(kind string) crmcontracts.Approval {
 	return crmcontracts.Approval{
-		Id:         openapi_types.UUID(uuid.New()),
+		Id:         openapi_types.UUID(ids.NewV7()),
 		CreatedAt:  whenStaged,
 		Kind:       kind,
 		ProposedBy: "agent:overnight",
@@ -225,7 +225,7 @@ func TestAProposalThatRanOutOfTimeIsNotWaitingOnAnybody(t *testing.T) {
 
 // Whose standing authority the proposal binds, where it binds one.
 func TestAProposalStagedUnderARepsAuthoritySaysWhose(t *testing.T) {
-	seat := openapi_types.UUID(uuid.New())
+	seat := openapi_types.UUID(ids.NewV7())
 	approval := stagedApproval("advance_deal")
 	approval.OnBehalfOf = &seat
 	lines := decisionsWaiting(t, approval)
@@ -251,7 +251,7 @@ func TestAProposalWithNoTargetNamesNoRecord(t *testing.T) {
 		}(),
 		"an id with no type": func() crmcontracts.Approval {
 			a := stagedApproval("promote_lead")
-			id := openapi_types.UUID(uuid.New())
+			id := openapi_types.UUID(ids.NewV7())
 			a.TargetEntityId = &id
 			return a
 		}(),
@@ -273,7 +273,7 @@ func TestAProposalWithNoTargetNamesNoRecord(t *testing.T) {
 // Both halves present, and the frozen caption travels with them.
 func TestATargetedProposalNamesTheRecordAndItsCaption(t *testing.T) {
 	targetType, label := "deal", "Northwind renewal"
-	id := openapi_types.UUID(uuid.New())
+	id := openapi_types.UUID(ids.NewV7())
 	approval := stagedApproval("advance_deal")
 	approval.TargetEntityType = &targetType
 	approval.TargetEntityId = &id
