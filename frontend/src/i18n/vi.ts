@@ -8209,6 +8209,9 @@ export const vi = {
     "Trạng thái dựng lại chỉ mục của kho embedding — chỉ quản trị và vận hành, kể cả việc xem.",
   "embedreindex.withheld":
     "Chỉ quản trị viên hoặc ops mới thấy được chỉ mục tìm kiếm. Dựng lại nó tiêu tốn token của cả bản cài đặt, nên trạng thái của nó không được hiển thị rộng hơn.",
+  "embedreindex.unbound":
+    "Chưa gắn mô hình nhúng nào, nên không có chỉ mục tìm kiếm để dựng lại.",
+  "embedreindex.unboundLink": "Gắn một mô hình trong cài đặt AI",
   "embedreindex.statusLabel": "Trạng thái chỉ mục",
   "embedreindex.reindexLabel": "Lập lại chỉ mục phần đã thay đổi",
   "embedreindex.reindexHelp":

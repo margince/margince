@@ -51,6 +51,33 @@ func TestMeReportsTheCompanyContextAvailabilityItWasGiven(t *testing.T) {
 	}
 }
 
+// /me reports the reindex surface it was injected with, and absent when nothing
+// injected one — a role that wired no embeddings lane must not offer its settings.
+func TestMeReportsTheEmbedReindexAvailabilityItWasGiven(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		h    Handlers
+		want bool
+	}{
+		{"nothing injected", NewHandlers(&Service{}), false},
+		{"injected available", NewHandlers(&Service{}).WithEmbedReindexAvailable(true), true},
+		{"injected unavailable", NewHandlers(&Service{}).WithEmbedReindexAvailable(false), false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.h.meResponse(context.Background(), Identity{})
+			if got.SettingsAvailability == nil {
+				t.Fatal("/me carries no settings_availability")
+			}
+			if got.SettingsAvailability.EmbeddingReindex != tt.want {
+				t.Errorf("embedding_reindex = %v, want %v", got.SettingsAvailability.EmbeddingReindex, tt.want)
+			}
+			if got.SettingsAvailability.CompanyContext {
+				t.Error("injecting the reindex surface leaked into company_context")
+			}
+		})
+	}
+}
+
 // The row scope /me publishes is the one the principal actually holds, and an
 // unresolved scope publishes the narrowest rather than an empty enum value.
 //

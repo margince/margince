@@ -35,7 +35,7 @@ type RbacAction = components["schemas"]["RbacAction"];
  * to tell them apart: the first is not a destination at all, the second is a
  * destination that explains itself.
  */
-export type SettingsAvailabilityKey = "company_context";
+export type SettingsAvailabilityKey = "company_context" | "embedding_reindex";
 
 /**
  * What a page requires, as a value.

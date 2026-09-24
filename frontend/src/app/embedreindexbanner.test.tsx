@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { EmbedReindexBanner } from "./embedreindexbanner";
@@ -11,6 +11,13 @@ import { type GrantSpec, meFixture } from "./mefixture";
 // that happen to hold it today.
 const REINDEX_READER: GrantSpec = { embedding_reindex: ["read"] };
 
+const MISMATCH = {
+  configured_identity: "anthropic/voyage-3@1024",
+  populated_identity: "anthropic/voyage-2@1024",
+  reindex_needed: true,
+  entities_pending: 42,
+};
+
 function mount(
   allow: GrantSpec,
   status: {
@@ -20,6 +27,12 @@ function mount(
     entities_pending: number;
     status?: string;
   },
+  me: {
+    settingsAvailability?: NonNullable<
+      Parameters<typeof meFixture>[0]
+    >["settingsAvailability"];
+    pending?: true;
+  } = {},
 ) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const path = new URL(
@@ -27,9 +40,15 @@ function mount(
       "https://test",
     ).pathname;
     if (path.endsWith("/me")) {
-      return new Response(JSON.stringify(meFixture({ allow })), {
-        headers: { "Content-Type": "application/json" },
-      });
+      if (me.pending) {
+        return new Promise<Response>(() => {});
+      }
+      return new Response(
+        JSON.stringify(
+          meFixture({ allow, settingsAvailability: me.settingsAvailability }),
+        ),
+        { headers: { "Content-Type": "application/json" } },
+      );
     }
     return new Response(
       JSON.stringify({
@@ -51,7 +70,24 @@ function mount(
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { fetchMock };
+  return { fetchMock, client };
+}
+
+function statusRequests(fetchMock: ReturnType<typeof vi.fn>): number {
+  return fetchMock.mock.calls.filter(([input]) =>
+    String(input instanceof Request ? input.url : input).includes(
+      "/embeddings/reindex/status",
+    ),
+  ).length;
+}
+
+// Settled means /me answered AND the render that reads it committed, so an
+// observer it enabled would already have issued its request.
+async function settleMe(client: QueryClient) {
+  await waitFor(() =>
+    expect(client.getQueryState(["me"])?.status).toBe("success"),
+  );
+  await act(async () => {});
 }
 
 afterEach(() => {
@@ -172,5 +208,42 @@ it("renders nothing while the status probe is pending or errors", async () => {
     </QueryClientProvider>,
   );
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  expect(screen.queryByText("Reindex needed")).toBeNull();
+});
+
+it("asks for the status on a bound lane and the read grant, and draws the mismatch", async () => {
+  const { fetchMock } = mount(REINDEX_READER, MISMATCH, {
+    settingsAvailability: { embedding_reindex: true },
+  });
+  expect(await screen.findByText("Reindex needed")).toBeTruthy();
+  expect(statusRequests(fetchMock)).toBe(1);
+});
+
+it("asks nothing while /me has not answered", async () => {
+  const { fetchMock } = mount(REINDEX_READER, MISMATCH, { pending: true });
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+  await act(async () => {});
+  expect(statusRequests(fetchMock)).toBe(0);
+  expect(screen.queryByText("Reindex needed")).toBeNull();
+});
+
+// No embeddings model bound: the status read answers 501 there, so a grant
+// holder asking for it would log a refusal on every shell route.
+it("asks nothing when the installation binds no embeddings model", async () => {
+  const { fetchMock, client } = mount(REINDEX_READER, MISMATCH, {
+    settingsAvailability: { embedding_reindex: false },
+  });
+  await settleMe(client);
+  expect(statusRequests(fetchMock)).toBe(0);
+  expect(screen.queryByText("Reindex needed")).toBeNull();
+});
+
+// A /me older than the field says nothing about the lane, which is not a yes.
+it("asks nothing when /me carries no settings availability at all", async () => {
+  const { fetchMock, client } = mount(REINDEX_READER, MISMATCH, {
+    settingsAvailability: null,
+  });
+  await settleMe(client);
+  expect(statusRequests(fetchMock)).toBe(0);
   expect(screen.queryByText("Reindex needed")).toBeNull();
 });

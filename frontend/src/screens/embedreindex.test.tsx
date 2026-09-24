@@ -71,6 +71,7 @@ function mount(
   allow: GrantSpec,
   routes: Record<string, Handler>,
   requests: { method: string; url: string; body: unknown }[] = [],
+  embedLaneBound = true,
 ) {
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -94,7 +95,12 @@ function mount(
       const path = url.pathname.replace(/^\/v1/, "");
       requests.push({ method, url: path, body });
       if (path.endsWith("/me")) {
-        return json(meFixture({ allow }));
+        return json(
+          meFixture({
+            allow,
+            settingsAvailability: { embedding_reindex: embedLaneBound },
+          }),
+        );
       }
       const key = `${method} ${path}`;
       const handler = routes[key];
@@ -347,6 +353,49 @@ it("says the search index is withheld, and asks the server for nothing", async (
   expect(screen.queryByText("Review & reindex")).toBeNull();
   expect(screen.queryByText("Rebuild index")).toBeNull();
   expect(screen.queryByText("Rebuild the whole index")).toBeNull();
+  expect(requests.some((r) => r.url === "/embeddings/reindex/status")).toBe(
+    false,
+  );
+});
+
+// Disabled, not absent: the grant is held and nothing refuses it, but no
+// embeddings model is bound, so the card names what would make it live.
+it("says no embeddings model is bound, links to AI settings, and asks for no status", async () => {
+  const { requests } = mount(
+    REINDEX_OPERATOR,
+    { "GET /embeddings/reindex/status": () => json(STATUS_NEEDED) },
+    [],
+    false,
+  );
+
+  expect(
+    await screen.findByText(/No embeddings model is bound/),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Bind one in AI settings" }),
+  ).toHaveAttribute("href", "#/settings/models");
+  expect(screen.getByText("Search index")).toBeInTheDocument();
+  expect(screen.queryByText("Index status")).toBeNull();
+  expect(screen.queryByRole("button", { name: /Rebuild/ })).toBeNull();
+  expect(requests.some((r) => r.url === "/embeddings/reindex/status")).toBe(
+    false,
+  );
+});
+
+// The permission is the first thing a reader is told: a seat that may not see
+// the index learns nothing about how this installation is bound.
+it("says the index is withheld rather than unbound when both hold", async () => {
+  const { requests } = mount(
+    {},
+    { "GET /embeddings/reindex/status": () => json(STATUS_NEEDED) },
+    [],
+    false,
+  );
+
+  expect(
+    await screen.findByText(/only an admin or ops can see the search index/i),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/No embeddings model is bound/)).toBeNull();
   expect(requests.some((r) => r.url === "/embeddings/reindex/status")).toBe(
     false,
   );
