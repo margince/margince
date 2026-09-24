@@ -400,7 +400,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
      right label, the right record, no invented facts, fast enough.
    - *Is it good?* A second AI model, chosen so that it is not the one being tested,
      scores the answer from 0 to 100 against a written description of a good answer.
-     8 older results were scored by the same model they tested; the next re-check
+     4 older results were scored by the same model they tested; the next re-check
      replaces them.
 4. **A low score is double-checked.** When the quality score is below the bar, the
    scoring model is asked 2 more times and the middle of the 3 scores counts, so
@@ -451,7 +451,7 @@ A judge score below `certified_min` is asked for 2 more times, and the run is
 scored at the median of the 3. The grades map to the record's words as
 ✅ Ready = `certified`, ⚠️ Usable with care = `supported_degraded`, ❌ Not reliable yet = `not_supported`, and ❔ Not measured = no record for that model.
 
-8 of the committed records were nonetheless graded by the model they measured
+4 of the committed records were nonetheless graded by the model they measured
 (`self_judged` in the record file).
 
 </details>
@@ -473,8 +473,8 @@ Everything the grades above are computed from, folded so the page stays short.
 | … best state `stale` | 45 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 152 |
-| Committed records | 136 |
-| Bindings measured | 16 |
+| Committed records | 132 |
+| Bindings measured | 15 |
 
 #### Why the stale records went stale
 
@@ -544,11 +544,11 @@ Which model to run each site on, and what that choice rests on.
 | [`account_scan/company_scan`](#account_scancompany_scan) | - | - | - | `stale` | 2 | 4 |
 | [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 1 |
 | [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 1 |
-| [`brief_ranking/rank`](#brief_rankingrank) | - | - | - | `stale` | 1 | 6 |
+| [`brief_ranking/rank`](#brief_rankingrank) | - | - | - | `stale` | 1 | 5 |
 | [`capture_classify/classify`](#capture_classifyclassify) | - | - | - | `stale` | 5 | 5 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | - | - | - | `stale` | 14 | 4 |
 | [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | - | - | - | `stale` | 19 | 5 |
-| [`cert_judge/judge`](#cert_judgejudge) | - | - | - | `stale` | 2 | 7 |
+| [`cert_judge/judge`](#cert_judgejudge) | - | - | - | `stale` | 2 | 6 |
 | [`cold_start/acts`](#cold_startacts) | - | - | - | `stale` | 5 | 5 |
 | [`cold_start/company_message`](#cold_startcompany_message) | - | - | - | `stale` | 1 | 5 |
 | [`cold_start/field_extract`](#cold_startfield_extract) | - | - | - | `stale` | 1 | 5 |
@@ -567,11 +567,11 @@ Which model to run each site on, and what that choice rests on.
 | [`offer_draft/draft`](#offer_draftdraft) | - | - | - | `stale` | 5 | 5 |
 | [`owed_verdict/owed`](#owed_verdictowed) | - | - | - | `stale` | 4 | 4 |
 | [`propose_roles/committee`](#propose_rolescommittee) | - | - | - | `stale` | 3 | 4 |
-| [`rate_extract/fx`](#rate_extractfx) | - | - | - | `stale` | 2 | 6 |
-| [`rate_extract/pricing`](#rate_extractpricing) | - | - | - | `stale` | 1 | 6 |
+| [`rate_extract/fx`](#rate_extractfx) | - | - | - | `stale` | 2 | 5 |
+| [`rate_extract/pricing`](#rate_extractpricing) | - | - | - | `stale` | 1 | 5 |
 | [`request_settlement/request_settle`](#request_settlementrequest_settle) | - | - | - | `stale` | 4 | 4 |
 | [`signal_extract/thread_events`](#signal_extractthread_events) | - | - | - | `stale` | 4 | 4 |
-| [`site_extract/profile`](#site_extractprofile) | - | - | - | `stale` | 5 | 7 |
+| [`site_extract/profile`](#site_extractprofile) | - | - | - | `stale` | 5 | 6 |
 | [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | - | - | - | `stale` | 3 | 5 |
 | [`site_triage/triage`](#site_triagetriage) | - | - | - | `stale` | 5 | 4 |
 | [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | - | - | - | `stale` | 9 | 4 |
@@ -617,15 +617,14 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 41 | 2 | 0 | 39 | 405 | 367 | 0.91 | 6994ms | 23 | 7 | 11 |
 | `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
 | `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 13 | 0 | 0 | 13 | 96 | 92 | 0.96 | 26168ms | 9 | 0 | 4 |
-| `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
+| `openai_compatible` | `anthropic/claude-haiku-4.5` | `cloud_frontier` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 0 | 0 | 6 | 141 | 127 | 0.90 | 73147ms | 2 | 0 | 4 |
 | `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 38 | 0 | 0 | 38 | 285 | 238 | 0.84 | 237887ms | 19 | 7 | 12 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 10 | 0 | 0 | 10 | 45 | 39 | 0.87 | 20620ms | 8 | 0 | 2 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 32 | 0 | 0 | 32 | 237 | 153 | 0.65 | 86185ms | 7 | 8 | 17 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 0 | 0 | 6 | 141 | 122 | 0.87 | 12585ms | 2 | 0 | 4 |
-| `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
-| `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 0 | 0 | 6 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
+| `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 6 | 0 | 0 | 6 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
 | `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 1 | 0 | 0 | 1 | 15 | 15 | 1.00 | 10068ms | 1 | 0 | 0 |
 | `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 6 | 0 | 0 | 6 | 48 | 42 | 0.88 | 3826ms | 5 | 0 | 1 |
 | `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 39 | 0 | 0 | 39 | 384 | 310 | 0.81 | 140306ms | 13 | 7 | 19 |
@@ -660,8 +659,7 @@ model, real network).
 | `account_scan/company_scan` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `brief_ranking/rank` | `gemini · gemini-3.5-flash · cloud_frontier` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
-| `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
+| `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `capture_classify/classify` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
@@ -680,8 +678,7 @@ model, real network).
 | `capture_counterparty_verdict/verdict` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
 | `cert_judge/judge` | `gemini · gemini-3.5-flash · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
 | `cert_judge/judge` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
-| `cert_judge/judge` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `cert_judge/judge` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
+| `cert_judge/judge` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
 | `cert_judge/judge` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
 | `cert_judge/judge` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
 | `cert_judge/judge` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -708,7 +705,7 @@ model, real network).
 | `corpus_ask/corpus_ask` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `gemini · gemini-3.5-flash · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `deal_health/deal_status` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
@@ -777,14 +774,12 @@ model, real network).
 | `propose_roles/committee` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
 | `rate_extract/fx` | `gemini · gemini-3.5-flash · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
 | `rate_extract/fx` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
-| `rate_extract/fx` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `rate_extract/fx` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
+| `rate_extract/fx` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
 | `rate_extract/fx` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
 | `rate_extract/fx` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `rate_extract/pricing` | `gemini · gemini-3.5-flash · cloud_frontier` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
 | `rate_extract/pricing` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
-| `rate_extract/pricing` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `rate_extract/pricing` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
+| `rate_extract/pricing` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
 | `rate_extract/pricing` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
 | `rate_extract/pricing` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `request_settlement/request_settle` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
@@ -796,10 +791,9 @@ model, real network).
 | `signal_extract/thread_events` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
 | `signal_extract/thread_events` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
 | `site_extract/profile` | `gemini · gemini-3.5-flash · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
-| `site_extract/profile` | `openai_compatible · anthropic/claude-haiku-4.5 · eu_hosted` | 5 scenarios it scored have changed since (the case and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
+| `site_extract/profile` | `openai_compatible · anthropic/claude-haiku-4.5 · cloud_frontier` | 5 scenarios it scored have changed since (the case and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
 | `site_extract/profile` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
-| `site_extract/profile` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `site_extract/profile` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
+| `site_extract/profile` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
 | `site_extract/profile` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
 | `site_extract/profile` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `site_fact_extract/page_facts` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
@@ -961,7 +955,7 @@ Records (1):
 #### `brief_ranking`
 
 <details>
-<summary><code>brief_ranking/rank</code> — 1 scenario(s), 6 record(s), best state stale</summary>
+<summary><code>brief_ranking/rank</code> — 1 scenario(s), 5 record(s), best state stale</summary>
 
 ##### `brief_ranking/rank`
 
@@ -973,14 +967,13 @@ Scenarios (1):
 |---|---|---|
 | `reorder_two_candidates_by_momentum` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/brief_ranking/basic_01.yaml) |
 
-Records (6):
+Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 3634ms | 3646ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 3020ms | 4943ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1856ms | 1899ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1806ms | 2443ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1806ms | 2443ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1530ms | 1907ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 9126ms | 18372ms | 3 | 0 | 0 | 0 |
 
@@ -1104,7 +1097,7 @@ Records (5):
 #### `cert_judge`
 
 <details>
-<summary><code>cert_judge/judge</code> — 2 scenario(s), 7 record(s), best state stale</summary>
+<summary><code>cert_judge/judge</code> — 2 scenario(s), 6 record(s), best state stale</summary>
 
 ##### `cert_judge/judge`
 
@@ -1117,14 +1110,13 @@ Scenarios (2):
 | `grades_a_fabricated_answer_poorly` | `accepted` | [basic_02_low_score.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_02_low_score.yaml) |
 | `grades_a_well_grounded_answer_highly` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_01.yaml) |
 
-Records (7):
+Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1841ms | 2407ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 13560ms | 19444ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 1319ms | 1966ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1462ms | 2040ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1462ms | 2040ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1015ms | 1734ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 4767ms | 8813ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 2425ms | 2800ms | 6 | 0 | 0 | 0 |
@@ -1264,7 +1256,7 @@ Records (6):
 | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 9 | 9 | 1.00 | 1084ms | 1265ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 5046ms | 11613ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 4638ms | 12933ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `stale` | 0/5 | `supported_degraded` | 9 | 8 | 0.89 | 1030ms | 2714ms | 8 | 0 | 1 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 9 | 8 | 0.89 | 1030ms | 2714ms | 8 | 0 | 1 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 2040ms | 10068ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 2034ms | 3826ms | 15 | 0 | 0 | 0 |
 
@@ -1639,7 +1631,7 @@ Records (4):
 #### `rate_extract`
 
 <details>
-<summary><code>rate_extract/fx</code> — 2 scenario(s), 6 record(s), best state stale</summary>
+<summary><code>rate_extract/fx</code> — 2 scenario(s), 5 record(s), best state stale</summary>
 
 ##### `rate_extract/fx`
 
@@ -1652,21 +1644,20 @@ Scenarios (2):
 | `fx_rates_json_api_grounded` | `accepted` | [fx_json_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_json_grounded.yaml) |
 | `fx_rates_two_pairs_grounded` | `accepted` | [fx_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_grounded.yaml) |
 
-Records (6):
+Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 2820ms | 5340ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 3575ms | 10573ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 2384ms | 3001ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1848ms | 2482ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1848ms | 2482ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1150ms | 1950ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 4206ms | 5262ms | 6 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>rate_extract/pricing</code> — 1 scenario(s), 6 record(s), best state stale</summary>
+<summary><code>rate_extract/pricing</code> — 1 scenario(s), 5 record(s), best state stale</summary>
 
 ##### `rate_extract/pricing`
 
@@ -1678,14 +1669,13 @@ Scenarios (1):
 |---|---|---|
 | `pricing_table_two_models_grounded` | `accepted` | [pricing_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/pricing_grounded.yaml) |
 
-Records (6):
+Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 2820ms | 5340ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 3575ms | 10573ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 2384ms | 3001ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1848ms | 2482ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1848ms | 2482ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1150ms | 1950ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 4206ms | 5262ms | 3 | 0 | 0 | 0 |
 
@@ -1752,7 +1742,7 @@ Records (4):
 #### `site_extract`
 
 <details>
-<summary><code>site_extract/profile</code> — 5 scenario(s), 7 record(s), best state stale</summary>
+<summary><code>site_extract/profile</code> — 5 scenario(s), 6 record(s), best state stale</summary>
 
 ##### `site_extract/profile`
 
@@ -1768,15 +1758,14 @@ Scenarios (5):
 | `one_legal_page_naming_two_entities` | `abstained` | [legal_abstention.yaml](../../backend/internal/compose/aicert/corpus/site_extract/legal_abstention.yaml) |
 | `services_page_profile_fields_grounded` | `accepted` | [offering_facts.yaml](../../backend/internal/compose/aicert/corpus/site_extract/offering_facts.yaml) |
 
-Records (7):
+Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 12 | 0.80 | 4221ms | 6569ms | 12 | 0 | 0 | 3 |
-| `openai_compatible · anthropic/claude-haiku-4.5 · eu_hosted` | `stale` | 0/5 | `not_supported` | 15 | 9 | 0.60 | 2566ms | 3731ms | 6 | 6 | 0 | 3 |
+| `openai_compatible · anthropic/claude-haiku-4.5 · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 9 | 0.60 | 2566ms | 3731ms | 6 | 6 | 0 | 3 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 15 | 15 | 1.00 | 4239ms | 13390ms | 9 | 0 | 0 | 6 |
-| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | - | `not_supported` | 12 | 9 | 0.75 | 2481ms | 4574ms | 6 | 3 | 0 | 3 |
-| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `stale` | 0/5 | `not_supported` | 15 | 12 | 0.80 | 3163ms | 4313ms | 9 | 3 | 0 | 3 |
+| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 12 | 0.80 | 3163ms | 4313ms | 9 | 3 | 0 | 3 |
 | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/5 | `not_supported` | 15 | 9 | 0.60 | 1714ms | 2191ms | 6 | 6 | 0 | 3 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `not_supported` | 12 | 10 | 0.83 | 7831ms | 17213ms | 4 | 2 | 0 | 6 |
 

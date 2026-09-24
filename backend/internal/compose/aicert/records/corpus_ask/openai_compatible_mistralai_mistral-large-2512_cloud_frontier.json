@@ -2,7 +2,7 @@
   "task": "corpus_ask",
   "provider": "openai_compatible",
   "served_model": "mistralai/mistral-large-2512",
-  "env_class": "eu_hosted",
+  "env_class": "cloud_frontier",
   "prompt_version": "pa87c0994b2b32ad68775513c11c3bd2b",
   "corpus_version": "v1",
   "verdict": "supported_degraded",

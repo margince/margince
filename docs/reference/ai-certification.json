@@ -6,9 +6,9 @@
     "sites_best_stale": 45,
     "sites_absent": 0,
     "scenarios": 152,
-    "records": 136,
-    "bindings": 16,
-    "self_judged_records": 8
+    "records": 132,
+    "bindings": 15,
+    "self_judged_records": 4
   },
   "presets": [
     {
@@ -2077,7 +2077,7 @@
       "binding": {
         "provider": "openai_compatible",
         "model": "anthropic/claude-haiku-4.5",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 1,
       "sites_current": 0,
@@ -2218,26 +2218,6 @@
         "provider": "openai_compatible",
         "model": "mistralai/mistral-large-2512",
         "env": "cloud_frontier"
-      },
-      "sites": 5,
-      "sites_current": 0,
-      "sites_partial": 0,
-      "sites_stale": 5,
-      "runs": 30,
-      "passed": 27,
-      "reliability": 0.9,
-      "slowest_p95_ms": 4574,
-      "bands": {
-        "certified": 4,
-        "supported_degraded": 0,
-        "not_supported": 1
-      }
-    },
-    {
-      "binding": {
-        "provider": "openai_compatible",
-        "model": "mistralai/mistral-large-2512",
-        "env": "eu_hosted"
       },
       "sites": 6,
       "sites_current": 0,
@@ -2683,29 +2663,6 @@
             "provider": "openai_compatible",
             "model": "mistralai/mistral-large-2512",
             "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": null,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 1856,
-          "latency_p95_ms": 1899,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
           },
           "state": "stale",
           "band": "certified",
@@ -3645,29 +3602,6 @@
             "provider": "openai_compatible",
             "model": "mistralai/mistral-large-2512",
             "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": null,
-          "scenarios_total": 2,
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "latency_p50_ms": 1319,
-          "latency_p95_ms": 1966,
-          "reported": {
-            "accepted": 6,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
           },
           "state": "stale",
           "band": "certified",
@@ -4632,7 +4566,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -7208,29 +7142,6 @@
           },
           "state": "stale",
           "band": "certified",
-          "scenarios_measured": null,
-          "scenarios_total": 2,
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "latency_p50_ms": 2384,
-          "latency_p95_ms": 3001,
-          "reported": {
-            "accepted": 6,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "certified",
           "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
@@ -7383,29 +7294,6 @@
             "provider": "openai_compatible",
             "model": "mistralai/mistral-large-2512",
             "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": null,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 2384,
-          "latency_p95_ms": 3001,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
           },
           "state": "stale",
           "band": "certified",
@@ -7892,7 +7780,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "anthropic/claude-haiku-4.5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -7964,29 +7852,6 @@
             "provider": "openai_compatible",
             "model": "mistralai/mistral-large-2512",
             "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": null,
-          "scenarios_total": 5,
-          "runs": 12,
-          "passed": 9,
-          "reliability": 0.75,
-          "latency_p50_ms": 2481,
-          "latency_p95_ms": 4574,
-          "reported": {
-            "accepted": 6,
-            "wrong_answer": 3,
-            "invalid": 0,
-            "abstained": 3
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
           },
           "state": "stale",
           "band": "not_supported",
