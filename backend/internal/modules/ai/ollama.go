@@ -424,7 +424,9 @@ func (c *ollamaClient) post(ctx context.Context, path string, payload []byte) (i
 		if readErr != nil {
 			return nil, providerRefusal(resp, "", fmt.Errorf("ai: ollama: http %d", resp.StatusCode))
 		}
-		return nil, providerRefusal(resp, "", fmt.Errorf("ai: ollama: http %d: %s", resp.StatusCode, bytes.TrimSpace(raw)))
+		// Ollama's {"error": "..."} is one free-text sentence with no code, so
+		// it is logged redacted and never read as a rejected request.
+		return nil, providerRefusal(resp, "", fmt.Errorf("ai: ollama: http %d: %s", resp.StatusCode, safeProviderText(ctx, string(raw))))
 	}
 	return resp.Body, nil
 }

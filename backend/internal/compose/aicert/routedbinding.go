@@ -116,8 +116,7 @@ func refuseSelfJudgedTasks(cfg RunnerConfig, tasks []ai.Task) error {
 
 // errSelfJudged is judgeFor's refusal: the candidate is the judge.
 var errSelfJudged = errors.New("a model grading itself is certified by construction, and one judge " +
-	"grades every task of a run — pick a judge this run does not certify, e.g. " +
-	"JUDGE=gemini:gemini-3.1-flash-lite (MARGINCE_AICERT_JUDGE_MODEL)")
+	"grades every task of a run — pick a judge this run does not certify with JUDGE= (MARGINCE_AICERT_JUDGE_MODEL)")
 
 // judgeFor is the judge that grades a task certified against candidate, and the
 // one place the candidate-is-not-the-judge rule is spelled: both validations and

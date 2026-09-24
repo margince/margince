@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package aicert
+
+import (
+	"errors"
+	"fmt"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
+)
+
+// The upstream preferences a record names are the ones the router applied.
+// ParseRouting runs the ai package's own defaulting, so a parsed config is the
+// production answer for each binding; this fails if the two ever disagree, in
+// either direction — a default the record omits, or one it invents.
+func TestARecordNamesTheUpstreamPreferencesTheRouterApplies(t *testing.T) {
+	t.Parallel()
+	cfg, err := ai.ParseRouting([]byte(`
+profile: cloud_frontier
+tiers:
+  cheap_cloud: {provider: openai_compatible, model: z-ai/glm-5.2, base_url: "https://openrouter.ai/api"}
+  premium: {provider: openai_compatible, model: m, base_url: "https://api.example.com"}
+  local_small: {provider: gemini, model: gemini-flash}
+  local_large: {provider: openai_compatible, model: z-ai/glm-5.2, base_url: "https://openrouter.ai/api", routing: {}}
+embeddings: {provider: gemini, model: e}
+`))
+	if err != nil {
+		t.Fatalf("parsing the routing: %v", err)
+	}
+	for tier, applied := range cfg.Tiers {
+		declared := applied
+		if tier != ai.TierLocalLarge {
+			declared.Routing = nil
+		}
+		if got := effectiveUpstream(declared); !reflect.DeepEqual(got, applied.Routing) {
+			t.Errorf("tier %s (%s at %q): record says %+v, the router applies %+v",
+				tier, applied.Provider, applied.BaseURL, got, applied.Routing)
+		}
+	}
+	if cfg.Tiers[ai.TierCheapCloud].Routing == nil {
+		t.Fatal("the broker tier inherited no default, so this test compares nothing on the case it exists for")
+	}
+}
+
+// errNoHostMatches is a broker's answer when its upstream filter leaves no host.
+var errNoHostMatches = errors.New("ai: openai-compat: : No endpoints found that can handle the requested parameters. (http 404)")
+
+// A preference no host can meet fails the same way on every attempt, so it is
+// not re-driven as an outage, and the refusal names the variable that lifts it.
+func TestAnUpstreamNoHostMeetsAbortsNamingTheVariable(t *testing.T) {
+	for name, tc := range map[string]struct {
+		candidate, judge *ai.FakeClient
+		names            string
+	}{
+		"candidate": {candidate: candidateFailingEveryCall(t, errNoHostMatches), judge: ai.NewFakeClient(), names: "UPSTREAM="},
+		"judge": {
+			candidate: ai.NewFakeClient().Script(containsWidget, containsWidget, containsWidget),
+			judge:     candidateFailingEveryCall(t, errNoHostMatches), names: "JUDGE_UPSTREAM=",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			waited := recordSleeps(t)
+			_, err := certifyAgainst(t, tc.candidate, tc.judge)
+			if err == nil || !strings.Contains(err.Error(), tc.names) {
+				t.Fatalf("err = %v, want a refusal naming %s", err, tc.names)
+			}
+			if len(*waited) != 0 {
+				t.Errorf("waited %v — no host appears for a filter that matched none", *waited)
+			}
+		})
+	}
+}
+
+// The pre-flight asks each binding one small question before the corpus, so a
+// binding that cannot be served costs seconds rather than a paid scenario.
+func TestThePreflightAsksEachBindingOnceBeforeTheCorpus(t *testing.T) {
+	cfg := RunnerConfig{
+		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		Profile:      ai.ProfileEUHosted,
+	}
+	tasks := []ai.Task{ai.TaskSummarize, ai.TaskColdStart}
+	t.Run("healthy", func(t *testing.T) {
+		candidate, judge := ai.NewFakeClient(), ai.NewFakeClient()
+		if err := preflight(wsContext(t), cfg, tasks, fakeHooks(candidate, judge), quietLogger()); err != nil {
+			t.Fatalf("a servable pair failed its pre-flight: %v", err)
+		}
+		if len(candidate.Calls()) != 1 || len(judge.Calls()) != 1 {
+			t.Errorf("candidate=%d judge=%d calls, want one each — one candidate binding serves both tasks",
+				len(candidate.Calls()), len(judge.Calls()))
+		}
+	})
+	for name, tc := range map[string]struct {
+		candidate, judge *ai.FakeClient
+		names            []string
+	}{
+		"judge has no host": {ai.NewFakeClient(), candidateFailingEveryCall(t, errNoHostMatches), []string{"judge", "JUDGE_UPSTREAM="}},
+		"candidate rejected": {
+			candidateFailingEveryCall(t, fmt.Errorf("%w: bad key", model.ErrRequestRejected)), ai.NewFakeClient(),
+			[]string{"candidate", "rejected"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := preflight(wsContext(t), cfg, tasks, fakeHooks(tc.candidate, tc.judge), quietLogger())
+			if err == nil {
+				t.Fatal("an unservable binding passed its pre-flight")
+			}
+			for _, want := range tc.names {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("err = %v, want it to name %q", err, want)
+				}
+			}
+		})
+	}
+}
+
+func fakeHooks(candidate, judge *ai.FakeClient) *certifyHooks {
+	return &certifyHooks{
+		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
+		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
+	}
+}
+
+// A preference block on a binding it cannot reach would be accepted and then
+// applied to nothing, so the run refuses it naming the variable that set it.
+func TestUpstreamPreferencesOnANonBrokerBindingAreRefused(t *testing.T) {
+	t.Parallel()
+	cfg := RunnerConfig{
+		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge", Routing: &ai.OpenRouterRouting{}},
+		Profile:      ai.ProfileEUHosted,
+	}
+	err := validateBindings(cfg, []ai.Task{ai.TaskSummarize}, quietLogger())
+	if err == nil || !strings.Contains(err.Error(), "MARGINCE_AICERT_JUDGE_UPSTREAM") {
+		t.Fatalf("err = %v, want the judge's preferences refused by name", err)
+	}
+}

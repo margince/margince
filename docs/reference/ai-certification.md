@@ -104,37 +104,37 @@ Your data goes to: global cloud. 11 of 29 features ready (re-check pending). Pre
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
-| Task | Served on | Model | Band | State |
+| Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `stale` |
-| `agent_loop` | `cheap_cloud` | `google/gemma-4-31b-it` | `untested` | - |
-| `brief_ranking` | `premium` | `google/gemma-4-31b-it` | `certified` | `stale` |
-| `capture_classify` | `local_small` | `google/gemma-4-26b-a4b-it` | `not_supported` | `stale` |
-| `capture_confidentiality_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | `certified` | `stale` |
-| `capture_counterparty_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | `not_supported` | `stale` |
-| `cert_judge` | `premium` | `google/gemma-4-31b-it` | `certified` | `stale` |
-| `cold_start` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `stale` |
-| `corpus_ask` | `premium` | `google/gemma-4-31b-it` | `certified` | `stale` |
-| `deal_health` | `cheap_cloud` | `google/gemma-4-31b-it` | `certified` | `stale` |
-| `document_extract` | `premium` | `google/gemma-4-31b-it` | `untested` | - |
-| `draft_reply` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `stale` |
-| `enrich` | `local_small` | `google/gemma-4-26b-a4b-it` | `certified` | `stale` |
-| `growth_fit` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `stale` |
-| `offer_draft` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `stale` |
-| `owed_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | `not_supported` | `stale` |
-| `propose_roles` | `cheap_cloud` | `google/gemma-4-31b-it` | `certified` | `stale` |
-| `rate_extract` | `premium` | `google/gemma-4-31b-it` | `certified` | `stale` |
-| `request_settlement` | `local_small` | `google/gemma-4-26b-a4b-it` | `not_supported` | `stale` |
-| `signal_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | `certified` | `stale` |
-| `site_extract` | `premium` | `google/gemma-4-31b-it` | `supported_degraded` | `stale` |
-| `site_fact_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | `supported_degraded` | `stale` |
-| `site_triage` | `cheap_cloud` | `google/gemma-4-31b-it` | `certified` | `stale` |
-| `stage_evidence_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `stale` |
-| `summarize` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `stale` |
-| `transcript_propose` | `cheap_cloud` | `google/gemma-4-31b-it` | `certified` | `stale` |
-| `voice_build` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `stale` |
-| `weekly_learnings` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `stale` |
-| `weekly_review` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `stale` |
+| `account_scan` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
+| `agent_loop` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `brief_ranking` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
+| `capture_classify` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
+| `capture_confidentiality_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ✅ Ready | re-check pending |
+| `capture_counterparty_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
+| `cert_judge` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
+| `cold_start` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
+| `corpus_ask` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
+| `deal_health` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
+| `document_extract` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `draft_reply` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
+| `enrich` | `local_small` | `google/gemma-4-26b-a4b-it` | ✅ Ready | re-check pending |
+| `growth_fit` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
+| `offer_draft` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
+| `owed_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
+| `propose_roles` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
+| `rate_extract` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
+| `request_settlement` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
+| `signal_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
+| `site_extract` | `premium` | `google/gemma-4-31b-it` | ⚠️ Usable with care | re-check pending |
+| `site_fact_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | ⚠️ Usable with care | re-check pending |
+| `site_triage` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
+| `stage_evidence_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
+| `summarize` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
+| `transcript_propose` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
+| `voice_build` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
+| `weekly_learnings` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
+| `weekly_review` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
 
 </details>
 
@@ -187,37 +187,37 @@ Your data goes to: EU-hosted cloud. 12 of 29 features ready (re-check pending). 
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
-| Task | Served on | Model | Band | State |
+| Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `brief_ranking` | `premium` | `gemini-3.5-flash` | `certified` | `stale` |
-| `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `stale` |
-| `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `stale` |
-| `capture_counterparty_verdict` | `local_small` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `cert_judge` | `premium` | `gemini-3.5-flash` | `certified` | `stale` |
-| `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `corpus_ask` | `premium` | `gemini-3.5-flash` | `certified` | `stale` |
-| `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | `certified` | `stale` |
-| `document_extract` | `premium` | `gemini-3.5-flash` | `certified` | `stale` |
-| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `enrich` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `stale` |
-| `growth_fit` | `cheap_cloud` | `gemini-3.1-flash-lite` | `supported_degraded` | `stale` |
-| `offer_draft` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `owed_verdict` | `local_small` | `gemini-3.1-flash-lite` | `supported_degraded` | `stale` |
-| `propose_roles` | `cheap_cloud` | `gemini-3.1-flash-lite` | `certified` | `stale` |
-| `rate_extract` | `premium` | `gemini-3.5-flash` | `certified` | `stale` |
-| `request_settlement` | `local_small` | `gemini-3.1-flash-lite` | `supported_degraded` | `stale` |
-| `signal_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `site_extract` | `premium` | `gemini-3.5-flash` | `not_supported` | `stale` |
-| `site_fact_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | `certified` | `stale` |
-| `site_triage` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `stage_evidence_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `summarize` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `transcript_propose` | `cheap_cloud` | `gemini-3.1-flash-lite` | `certified` | `stale` |
-| `voice_build` | `cheap_cloud` | `gemini-3.1-flash-lite` | `supported_degraded` | `stale` |
-| `weekly_learnings` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
-| `weekly_review` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
+| `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `brief_ranking` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
+| `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
+| `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
+| `capture_counterparty_verdict` | `local_small` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `cert_judge` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
+| `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `corpus_ask` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
+| `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
+| `document_extract` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
+| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `enrich` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
+| `growth_fit` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
+| `offer_draft` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `owed_verdict` | `local_small` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
+| `propose_roles` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
+| `rate_extract` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
+| `request_settlement` | `local_small` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
+| `signal_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `site_extract` | `premium` | `gemini-3.5-flash` | ❌ Not reliable yet | re-check pending |
+| `site_fact_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
+| `site_triage` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `stage_evidence_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `summarize` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `transcript_propose` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
+| `voice_build` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
+| `weekly_learnings` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `weekly_review` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
 
 </details>
 
@@ -270,37 +270,37 @@ Your data goes to: EU-hosted cloud. 6 of 29 features ready (re-check pending). P
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
-| Task | Served on | Model | Band | State |
+| Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `openai/gpt-oss-120b` | `certified` | `stale` |
-| `agent_loop` | `cheap_cloud` | `openai/gpt-oss-120b` | `untested` | - |
-| `brief_ranking` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
-| `capture_classify` | `local_small` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `capture_confidentiality_verdict` | `local_small` | `openai/gpt-oss-120b` | `supported_degraded` | `stale` |
-| `capture_counterparty_verdict` | `local_small` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `cert_judge` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
-| `cold_start` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `corpus_ask` | `premium` | `mistralai/mistral-medium-3-5` | `certified` | `stale` |
-| `deal_health` | `cheap_cloud` | `openai/gpt-oss-120b` | `certified` | `stale` |
-| `document_extract` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
-| `draft_reply` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `enrich` | `local_small` | `openai/gpt-oss-120b` | `certified` | `stale` |
-| `growth_fit` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `offer_draft` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `owed_verdict` | `local_small` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `propose_roles` | `cheap_cloud` | `openai/gpt-oss-120b` | `supported_degraded` | `stale` |
-| `rate_extract` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
-| `request_settlement` | `local_small` | `openai/gpt-oss-120b` | `certified` | `stale` |
-| `signal_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `site_extract` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
-| `site_fact_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | `certified` | `stale` |
-| `site_triage` | `cheap_cloud` | `openai/gpt-oss-120b` | `supported_degraded` | `stale` |
-| `stage_evidence_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `summarize` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `transcript_propose` | `cheap_cloud` | `openai/gpt-oss-120b` | `supported_degraded` | `stale` |
-| `voice_build` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `weekly_learnings` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
-| `weekly_review` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `stale` |
+| `account_scan` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
+| `agent_loop` | `cheap_cloud` | `openai/gpt-oss-120b` | ❔ Not measured | not measured |
+| `brief_ranking` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
+| `capture_classify` | `local_small` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `capture_confidentiality_verdict` | `local_small` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
+| `capture_counterparty_verdict` | `local_small` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `cert_judge` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
+| `cold_start` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `corpus_ask` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | re-check pending |
+| `deal_health` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
+| `document_extract` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
+| `draft_reply` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `enrich` | `local_small` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
+| `growth_fit` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `offer_draft` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `owed_verdict` | `local_small` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `propose_roles` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
+| `rate_extract` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
+| `request_settlement` | `local_small` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
+| `signal_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `site_extract` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
+| `site_fact_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
+| `site_triage` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
+| `stage_evidence_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `summarize` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `transcript_propose` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
+| `voice_build` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `weekly_learnings` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `weekly_review` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
 
 </details>
 
@@ -353,37 +353,37 @@ Your data goes to: EU-hosted cloud. 10 of 29 features ready (re-check pending). 
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
-| Task | Served on | Model | Band | State |
+| Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `certified` | `stale` |
-| `agent_loop` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
-| `brief_ranking` | `premium` | `mistralai/mistral-small-2603` | `certified` | `stale` |
-| `capture_classify` | `local_small` | `mistralai/ministral-8b-2512` | `not_supported` | `stale` |
-| `capture_confidentiality_verdict` | `local_small` | `mistralai/ministral-8b-2512` | `not_supported` | `stale` |
-| `capture_counterparty_verdict` | `local_small` | `mistralai/ministral-8b-2512` | `not_supported` | `stale` |
-| `cert_judge` | `premium` | `mistralai/mistral-small-2603` | `certified` | `stale` |
-| `cold_start` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `stale` |
-| `corpus_ask` | `premium` | `mistralai/mistral-small-2603` | `certified` | `stale` |
-| `deal_health` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `supported_degraded` | `stale` |
-| `document_extract` | `premium` | `mistralai/mistral-small-2603` | `untested` | - |
-| `draft_reply` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `stale` |
-| `enrich` | `local_small` | `mistralai/ministral-8b-2512` | `certified` | `stale` |
-| `growth_fit` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `stale` |
-| `offer_draft` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `stale` |
-| `owed_verdict` | `local_small` | `mistralai/ministral-8b-2512` | `not_supported` | `stale` |
-| `propose_roles` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `certified` | `stale` |
-| `rate_extract` | `premium` | `mistralai/mistral-small-2603` | `certified` | `stale` |
-| `request_settlement` | `local_small` | `mistralai/ministral-8b-2512` | `certified` | `stale` |
-| `signal_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `stale` |
-| `site_extract` | `premium` | `mistralai/mistral-small-2603` | `not_supported` | `stale` |
-| `site_fact_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `stale` |
-| `site_triage` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `certified` | `stale` |
-| `stage_evidence_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `stale` |
-| `summarize` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `stale` |
-| `transcript_propose` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `certified` | `stale` |
-| `voice_build` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `stale` |
-| `weekly_learnings` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `stale` |
-| `weekly_review` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `stale` |
+| `account_scan` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | re-check pending |
+| `agent_loop` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❔ Not measured | not measured |
+| `brief_ranking` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | re-check pending |
+| `capture_classify` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
+| `capture_confidentiality_verdict` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
+| `capture_counterparty_verdict` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
+| `cert_judge` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | re-check pending |
+| `cold_start` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `corpus_ask` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | re-check pending |
+| `deal_health` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ⚠️ Usable with care | re-check pending |
+| `document_extract` | `premium` | `mistralai/mistral-small-2603` | ❔ Not measured | not measured |
+| `draft_reply` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `enrich` | `local_small` | `mistralai/ministral-8b-2512` | ✅ Ready | re-check pending |
+| `growth_fit` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `offer_draft` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `owed_verdict` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
+| `propose_roles` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | re-check pending |
+| `rate_extract` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | re-check pending |
+| `request_settlement` | `local_small` | `mistralai/ministral-8b-2512` | ✅ Ready | re-check pending |
+| `signal_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `site_extract` | `premium` | `mistralai/mistral-small-2603` | ❌ Not reliable yet | re-check pending |
+| `site_fact_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `site_triage` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | re-check pending |
+| `stage_evidence_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `summarize` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `transcript_propose` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | re-check pending |
+| `voice_build` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `weekly_learnings` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `weekly_review` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
 
 </details>
 
@@ -484,7 +484,7 @@ Counted per record — one (task, binding) pair — over the 116 stale record(s)
 |---|---:|---|
 | the case | 5 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
 | **the prompt this build sends** | 13 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| how a run is graded | 115 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
+| how a run is graded | 116 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -658,8 +658,8 @@ model, real network).
 | `account_scan/company_scan` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `account_scan/company_scan` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `account_scan/company_scan` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
-| `agent_loop/morning_brief` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
-| `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
 | `brief_ranking/rank` | `gemini · gemini-3.5-flash · eu_hosted` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |

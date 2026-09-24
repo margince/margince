@@ -13,7 +13,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // ErrBudgetDeferred identifies a background model call that its durable
@@ -69,14 +68,7 @@ var errProviderRefused = errors.New("ai: the configured AI provider turned the c
 // EVERY branch carries errProviderRefused, so "did we reach the model?" is one
 // question with one answer whatever the cause turned out to be. A caller that
 // needs the cause asks for the specific sentinel on top.
-//
-// A status that is a verdict on the request's content (rejectsTheRequest) is
-// marked model.ErrRequestRejected here too, because this is already the one place
-// every adapter hands its HTTP failure to.
 func providerRefusal(resp *http.Response, limitSource string, err error) error {
-	if resp != nil && rejectsTheRequest(resp.StatusCode) {
-		return fmt.Errorf("%w: %w", model.ErrRequestRejected, err)
-	}
 	if resp == nil || resp.StatusCode != http.StatusTooManyRequests {
 		return err
 	}

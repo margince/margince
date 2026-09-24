@@ -24,15 +24,19 @@ var updateGradingRule = flag.Bool("update-grading-rule", false,
 
 const gradingRuleGolden = "testdata/grading_rule.golden"
 
-// gradingRuleOwners are the declarations that turn a judge's replies into a verdict,
-// so an edit to any of them changes what a committed record would score today.
+// gradingRuleOwners are the declarations that decide which runs enter the tally
+// and turn a judge's replies into a verdict, so an edit to any of them changes
+// what a committed record would score today. defaultRepeats is not one: a record
+// stores its own run counts and the verdict is recomputed from them.
 var gradingRuleOwners = []struct {
 	file  string
 	names []string
 }{
 	{"score.go", []string{"Verdict", "judgeBand", "verdictOver", "majorityOf", "judgeMedianAndMin", "medianOf"}},
-	{"judge.go", []string{"judgeScore", "foldOpinions"}},
-	{"thresholds.go", []string{"certifiedPassPercent", "majorityNumerator", "majorityDenominator", "defaultRepeats", "rejudgeOpinions"}},
+	{"run.go", []string{"runEntry"}},
+	{"judge.go", []string{"judgeScore", "foldOpinions", "judgeVerdict"}},
+	{"../certjudge.go", []string{"ParseJudgeVerdict"}},
+	{"thresholds.go", []string{"certifiedPassPercent", "majorityNumerator", "majorityDenominator", "rejudgeOpinions"}},
 }
 
 // gradingRuleDigest hashes each owner's gofmt'd source with comments and blank

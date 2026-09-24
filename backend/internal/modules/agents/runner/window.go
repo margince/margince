@@ -252,7 +252,7 @@ func (w *window) bounded(promptWindow int) []model.Message {
 	if promptWindow <= 0 {
 		return msgs
 	}
-	for estimateTokens(w.system, msgs)+len(w.schema)/4 > promptWindow && len(msgs) > 2 {
+	for requestTokens(w.system, w.schema, msgs) > promptWindow && len(msgs) > 2 {
 		oldest := 1
 		if msgs[1].Content == elisionMarker {
 			oldest = 2
@@ -263,16 +263,6 @@ func (w *window) bounded(promptWindow int) []model.Message {
 		msgs = trimmed
 	}
 	return msgs
-}
-
-// estimateTokens is the ~4-bytes-per-token heuristic — coarse, but the
-// ceiling exists to stop runaway growth, not to bill by it.
-func estimateTokens(system string, msgs []model.Message) int {
-	total := len(system)
-	for _, m := range msgs {
-		total += len(m.Content)
-	}
-	return total / 4
 }
 
 // systemPrompt is the §2.0 shared frame plus the tool surface: JSON-only

@@ -111,7 +111,7 @@ func TestValidateRoutedBindingsCatchesAJudgeCollisionUpFront(t *testing.T) {
 	}
 	// The message has to name the colliding tasks and a judge to switch to, or an
 	// operator cannot tell whether to move the judge or rebind a rung.
-	for _, want := range []string{"vendor/big-1", "document_extract", "JUDGE=gemini:gemini-3.1-flash-lite"} {
+	for _, want := range []string{"vendor/big-1", "document_extract", "MARGINCE_AICERT_JUDGE_MODEL"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the refusal must name %q, got %q", want, err)
 		}
@@ -210,7 +210,7 @@ func TestASingleCandidateThatIsTheJudgeIsRefused(t *testing.T) {
 	if err == nil {
 		t.Fatal("a candidate that is the judge was accepted; it would grade itself")
 	}
-	for _, want := range []string{"summarize", "JUDGE=gemini:gemini-3.1-flash-lite"} {
+	for _, want := range []string{"summarize", "MARGINCE_AICERT_JUDGE_MODEL"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the refusal must name %q, got %q", want, err)
 		}

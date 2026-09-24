@@ -232,8 +232,13 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 // The per-call commit IS the checkpoint. A message below the floor is re-asked
 // on its own — which escalates the routing ladder by being its own structured
 // call — and one still below it afterwards is left unjudged rather than guessed.
+// A batch the models decline is asked message by message, so the one message
+// they will not judge stays unjudged and the rest of the batch proceeds.
 func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, readAt time.Time) (int, error) {
 	verdicts, err := c.ask(ctx, batch)
+	if ai.ModelDeclined(err) {
+		return c.judgeEach(ctx, batch, readAt)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -260,19 +265,34 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 			judged++
 		}
 	}
-	for _, msg := range retry {
+	solo, err := c.judgeEach(ctx, retry, readAt)
+	return judged + solo, err
+}
+
+// judgeEach asks about each message in its own call and commits a verdict
+// above the floor. A message every rung declines is that message's outcome:
+// it stays unjudged and the next one is asked.
+func (c *OwedClassifier) judgeEach(ctx context.Context, msgs []owedCandidate, readAt time.Time) (int, error) {
+	judged := 0
+	for _, msg := range msgs {
 		solo, err := c.ask(ctx, []owedCandidate{msg})
+		if ai.ModelDeclined(err) {
+			c.log.WarnContext(ctx, "owed classify: the models declined one message, which stays unjudged",
+				"activity_id", msg.ID, "err", err)
+			continue
+		}
 		if err != nil {
 			return judged, err
 		}
-		if len(solo) == 1 && solo[0].Confidence >= owedConfidenceFloor {
-			applied, err := c.store.SetOwedVerdict(ctx, msg.ID, solo[0].Verdict, owedverdict.Ruleset, readAt)
-			if err != nil {
-				return judged, err
-			}
-			if applied {
-				judged++
-			}
+		if len(solo) != 1 || solo[0].Confidence < owedConfidenceFloor {
+			continue
+		}
+		applied, err := c.store.SetOwedVerdict(ctx, msg.ID, solo[0].Verdict, owedverdict.Ruleset, readAt)
+		if err != nil {
+			return judged, err
+		}
+		if applied {
+			judged++
 		}
 	}
 	return judged, nil

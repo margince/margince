@@ -145,12 +145,37 @@ func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.R
 	if err := json.NewDecoder(body).Decode(&out); err != nil {
 		return model.Response{}, fmt.Errorf("ai: openai: decode response: %w", err)
 	}
-	cutOff := openaiCutOff(out)
-	if err := openaiTerminalStatus(out); err != nil && !cutOff {
-		return model.Response{}, err
+	resp := model.Response{
+		InputTokens:     out.Usage.InputTokens,
+		OutputTokens:    out.Usage.OutputTokens,
+		CachedTokens:    out.Usage.InputTokenDetails.CachedTokens,
+		ReasoningTokens: out.Usage.OutputTokenDetails.ReasoningTokens,
+		ServedModel:     out.Model,
 	}
-	// Walk output[]: a type:"reasoning" item can precede the message, and a
-	// type:"refusal" part is a first-class outcome — never output[0].content[0].
+	cutOff := openaiCutOff(out)
+	if err := openaiTerminalStatus(ctx, out); err != nil && !cutOff {
+		return model.Response{}, withSpend(err, resp)
+	}
+	text, err := openaiReplyText(ctx, out)
+	if err != nil {
+		return model.Response{}, withSpend(err, resp)
+	}
+	resp.Text = text
+	if cutOff {
+		resp.FinishReason = model.FinishReasonLength
+	}
+	if out.ID != "" {
+		if meta, err := json.Marshal(map[string]string{"response_id": out.ID}); err == nil {
+			resp.ProviderMetadata = map[string]json.RawMessage{"openai": meta}
+		}
+	}
+	return resp, nil
+}
+
+// openaiReplyText walks output[]: a type:"reasoning" item can precede the
+// message, and a type:"refusal" part is a first-class outcome — never
+// output[0].content[0].
+func openaiReplyText(ctx context.Context, out openaiResponse) (string, error) {
 	var text strings.Builder
 	for _, item := range out.Output {
 		if item.Type != "message" {
@@ -161,27 +186,11 @@ func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.R
 			case "output_text":
 				text.WriteString(part.Text)
 			case finishRefusal:
-				return model.Response{}, withheldError{wire: providerOpenAI, reason: finishRefusal, detail: safeProviderText(ctx, part.Refusal)}
+				return "", withheldError{wire: providerOpenAI, reason: finishRefusal, detail: safeProviderText(ctx, part.Refusal)}
 			}
 		}
 	}
-	resp := model.Response{
-		Text:            text.String(),
-		InputTokens:     out.Usage.InputTokens,
-		OutputTokens:    out.Usage.OutputTokens,
-		CachedTokens:    out.Usage.InputTokenDetails.CachedTokens,
-		ReasoningTokens: out.Usage.OutputTokenDetails.ReasoningTokens,
-		ServedModel:     out.Model,
-	}
-	if cutOff {
-		resp.FinishReason = model.FinishReasonLength
-	}
-	if out.ID != "" {
-		if meta, err := json.Marshal(map[string]string{"response_id": out.ID}); err == nil {
-			resp.ProviderMetadata = map[string]json.RawMessage{"openai": meta}
-		}
-	}
-	return resp, nil
+	return text.String(), nil
 }
 
 //nolint:ireturn // model.Client.Stream returns the port's TokenStream interface by contract
@@ -335,38 +344,40 @@ func (c *openaiClient) postRaw(ctx context.Context, path string, payload []byte)
 	if resp.StatusCode != http.StatusOK {
 		//craft:ignore swallowed-errors best-effort close on the error path — the API status error is the answer
 		defer func() { _ = resp.Body.Close() }()
-		return nil, openaiError(resp)
+		return nil, openaiError(ctx, resp)
 	}
 	return resp.Body, nil
 }
 
 // openaiError surfaces the API's error type and message — and only those, so a
-// logged failure can never echo the request (or the key).
-func openaiError(resp *http.Response) error {
+// logged failure can never echo the request (or the key). Both are redacted,
+// and the code decides whether the request itself was malformed.
+func openaiError(ctx context.Context, resp *http.Response) error {
 	var apiErr struct {
 		Error struct {
-			Type    string `json:"type"`
-			Message string `json:"message"`
+			Type    string          `json:"type"`
+			Message string          `json:"message"`
+			Code    json.RawMessage `json:"code"`
 		} `json:"error"`
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil && apiErr.Error.Type != "" {
-		return providerRefusal(resp, "", fmt.Errorf("ai: openai: %s: %s (http %d)", apiErr.Error.Type, apiErr.Error.Message, resp.StatusCode))
+		err := providerRefusal(resp, "", fmt.Errorf("ai: openai: %s: %s (http %d)",
+			safeProviderText(ctx, apiErr.Error.Type), safeProviderText(ctx, apiErr.Error.Message), resp.StatusCode))
+		if openAIRejectsTheRequest(apiErr.Error.Code) {
+			return rejectedRequest(err)
+		}
+		return err
 	}
 	return providerRefusal(resp, "", fmt.Errorf("ai: openai: http %d", resp.StatusCode))
 }
 
 // openaiCutOff reports a response the output ceiling stopped: an answer,
 // truncated, rather than a failed call. Only Complete reads it — TokenStream
-// has no terminal to carry the truncation, so a stream still ends on the
-// incomplete error.
+// has no terminal to carry the truncation, so a stream ends on truncatedError.
 func openaiCutOff(out openaiResponse) bool {
-	return out.Status == "incomplete" && out.IncompleteDetails.Reason == "max_output_tokens"
+	return out.Status == "incomplete" && out.IncompleteDetails.Reason == openaiMaxOutputTokens
 }
-
-// openaiContentFilter is the incomplete_details reason for an answer a filter
-// stopped part-way, which is withheld rather than truncated.
-const openaiContentFilter = "content_filter"
 
 // openaiTerminalStatus maps a non-completed Responses object to an error: a
 // failed call carries the API's error, an incomplete one names why generation
@@ -374,23 +385,37 @@ const openaiContentFilter = "content_filter"
 // body was not a terminal Responses object at all. Any of them read as a clean
 // answer would silently hand the caller a truncated or filtered result —
 // "completed" is the only success.
-func openaiTerminalStatus(out openaiResponse) error {
+func openaiTerminalStatus(ctx context.Context, out openaiResponse) error {
 	switch out.Status {
 	case "completed":
 		return nil
 	case "failed":
-		return fmt.Errorf("ai: openai: response failed: %s: %s", out.Error.Code, out.Error.Message)
-	case "incomplete":
-		if out.IncompleteDetails.Reason == openaiContentFilter {
-			return withheldError{wire: providerOpenAI, reason: openaiContentFilter}
+		if openaiPolicyCodes[out.Error.Code] {
+			return withheldError{wire: providerOpenAI, reason: out.Error.Code, detail: safeProviderText(ctx, out.Error.Message)}
 		}
-		return fmt.Errorf("ai: openai: response incomplete: %s", out.IncompleteDetails.Reason)
+		return fmt.Errorf("ai: openai: response failed: %s: %s", safeProviderText(ctx, out.Error.Code), safeProviderText(ctx, out.Error.Message))
+	case "incomplete":
+		switch out.IncompleteDetails.Reason {
+		case finishContentFilter:
+			return withheldError{wire: providerOpenAI, reason: finishContentFilter}
+		case openaiMaxOutputTokens:
+			return truncatedError{wire: providerOpenAI}
+		}
+		return fmt.Errorf("ai: openai: response incomplete: %s", safeProviderText(ctx, out.IncompleteDetails.Reason))
 	case "":
 		return fmt.Errorf("ai: openai: response carries no terminal status")
 	default:
-		return fmt.Errorf("ai: openai: response ended with status %q", out.Status)
+		return fmt.Errorf("ai: openai: response ended with status %q", safeProviderText(ctx, out.Status))
 	}
 }
+
+// openaiPolicyCodes are the failed-response codes that are a policy decision
+// about the content, so the answer is withheld rather than the call failed.
+var openaiPolicyCodes = map[string]bool{"invalid_prompt": true, "bio_policy": true}
+
+// openaiMaxOutputTokens is the incomplete reason for a reply the output
+// ceiling cut off.
+const openaiMaxOutputTokens = "max_output_tokens"
 
 // openaiStream parses the Responses SSE stream, yielding text deltas from
 // response.output_text.delta events. response.completed is the ONLY clean
@@ -429,14 +454,14 @@ func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
 		case "response.completed":
 			return "", false, nil
 		case "response.failed", "response.incomplete":
-			if err := openaiTerminalStatus(ev.Response); err != nil {
+			if err := openaiTerminalStatus(ctx, ev.Response); err != nil {
 				return "", false, err
 			}
 			// The embedded response object omitted its status — the event
 			// type itself is still the authority that this is a failure.
 			return "", false, fmt.Errorf("ai: openai: stream ended with %s", ev.Type)
 		case "error":
-			return "", false, fmt.Errorf("ai: openai: stream error: %s: %s", ev.Code, ev.Message)
+			return "", false, fmt.Errorf("ai: openai: stream error: %s: %s", safeProviderText(ctx, ev.Code), safeProviderText(ctx, ev.Message))
 		}
 	}
 	if err := s.scanner.Err(); err != nil {

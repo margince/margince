@@ -94,7 +94,7 @@ type RunnerConfig struct {
 	Routing    *ai.RoutingConfig // MARGINCE_AICERT_ROUTING
 	Profile    ai.Profile        // MARGINCE_AICERT_PROFILE
 	TaskFilter string            // MARGINCE_AICERT_TASK ("" = all tasks with a corpus)
-	Repeats    int               // MARGINCE_AICERT_RUNS, default 3, must be odd
+	Repeats    int               // MARGINCE_AICERT_RUNS, default defaultRepeats, must be odd
 	RecordDir  string
 	CorpusDir  string
 	// TraceDir, when non-empty, turns on the opt-in payload trace
@@ -122,6 +122,9 @@ func validateBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger) error
 		return errors.New("both MARGINCE_AICERT_ROUTING and MARGINCE_AICERT_MODEL are set — " +
 			"the first certifies the models a deployment binds, the second one model you name; " +
 			"a run cannot report both, so pick one")
+	}
+	if err := refuseUnreachableUpstream(cfg); err != nil {
+		return err
 	}
 	if cfg.Routing != nil {
 		return validateRoutedBindings(cfg, tasks, log)
@@ -182,6 +185,9 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	}
 
 	ctx = ensureWorkspace(ctx)
+	if err := preflight(ctx, cfg, sortedTasks(byTask), nil, log); err != nil {
+		return nil, fmt.Errorf("aicert: runner: %w", err)
+	}
 
 	// TraceDir empty ⇒ tracing off: trace stays nil and every method no-ops.
 	var trace *payloadTrace
@@ -320,7 +326,9 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	}
 	taskVerdict, _ := Verdict(sets...)
 
-	return buildRecord(task, taskVerdict, acc, profile, promptVersion), nil
+	rec := buildRecord(task, taskVerdict, acc, profile, promptVersion)
+	rec.CandidateUpstream, rec.JudgeUpstream = effectiveUpstream(binding), effectiveUpstream(judgeBinding)
+	return rec, nil
 }
 
 // taskAccumulation collects the pooled stats certifyTask folds across
@@ -366,7 +374,8 @@ type taskAccumulation struct {
 // an error — voiding the whole task's record — when a later run's
 // provider or served model diverges from that baseline.
 func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, outcome runOutcome) error {
-	if acc.identitySet && !outcome.Unanswered && (outcome.Provider != acc.provider || outcome.ServedModel != acc.servedModel) {
+	withheld := outcome.Withheld != ""
+	if acc.identitySet && !withheld && (outcome.Provider != acc.provider || outcome.ServedModel != acc.servedModel) {
 		return fmt.Errorf(
 			"aicert: task %s scenario %s run %d: candidate served by %s:%s, but run 1 was served by %s:%s — refusing to certify a mixed run set",
 			task, sc.Name, runIndex+1, outcome.Provider, outcome.ServedModel, acc.provider, acc.servedModel,
@@ -378,12 +387,12 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 	acc.tokensOutTotal += outcome.TokensOut
 	acc.cachedTokensTotal += outcome.CachedTokens
 	acc.cacheWriteTokensTotal += outcome.CacheWriteTokens
-	// An unanswered run names the binding, which stands in only until a served
-	// run supplies the identity that actually answered.
-	if !outcome.Unanswered || !acc.identitySet {
+	// A withheld run names the binding, which stands in only until a served run
+	// supplies the identity that actually answered.
+	if !withheld || !acc.identitySet {
 		acc.provider, acc.servedModel, acc.identitySource = outcome.Provider, outcome.ServedModel, outcome.ServedIdentitySource
 	}
-	acc.identitySet = acc.identitySet || !outcome.Unanswered
+	acc.identitySet = acc.identitySet || !withheld
 	acc.certifiedScope = aitasks.NarrowerScope(acc.certifiedScope, outcome.CertifiedScope)
 	// A run no judge saw says nothing about the judge. Capturing its empty
 	// identity would let one truncated run at the END of a set erase the grader

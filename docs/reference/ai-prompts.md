@@ -214,7 +214,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `agent_loop` / `morning_brief`
 
-`system 9,470 B (~2,367 tok)` — rules 9,188 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
+`system 9,524 B (~2,381 tok)` — rules 9,242 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
 
 <details><summary>system prompt</summary>
 
@@ -253,7 +253,7 @@ Available tools:
 - catch_me_up_on — Answer "what has been going on with this?" for one contact, company, deal, lead, project or meeting: the recent activity and related records in one picture, with the evidence each part rests on. Built around ONE record you name; everything it reports carries a source, and what cannot be evidenced is absent rather than inferred. prep_for_meeting when a meeting is about to happen, read_record for the record's own stored fields, search_records when you do not yet know which record you mean. Each item carries the record_type and record_id a follow-up call acts on. occurred_at is when an item happened, in UTC — prefer it over a date the prose recalls, and convert before naming a day.
   input schema: {"properties":{"max_items":{"maximum":20,"minimum":1,"type":"integer"},"project_id":{"description":"Keep only what is filed under this project or under none","format":"uuid","type":"string"},"record_id":{"format":"uuid","type":"string"},"record_type":{"enum":["contact","company","deal","lead","project","activity"],"type":"string"}},"required":["record_type","record_id"],"type":"object"}
 - list_records — Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one contact owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one.
-  input schema: {"properties":{"cursor":{"description":"Keyset cursor from a previous page's next_cursor","type":"string"},"filters":{"description":"Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.","properties":{"acquisition_source":{"type":"string"},"commercial_motion":{"type":"string"},"company_id":{"type":"string"},"domain":{"type":"string"},"forecast_category":{"type":"string"},"key":{"type":"string"},"lifecycle":{"type":"string"},"min_score":{"type":"string"},"owner_id":{"type":"string"},"partner_attribution":{"type":"string"},"partner_company_id":{"type":"string"},"partner_sourced":{"type":"string"},"phase":{"type":"string"},"pipeline_id":{"type":"string"},"priority":{"type":"string"},"project_id":{"type":"string"},"relationship_type":{"type":"string"},"stage_id":{"type":"string"},"stalled":{"type":"string"},"status":{"type":"string"},"tag_id":{"type":"string"},"tag_mode":{"type":"string"}},"type":"object"},"limit":{"maximum":50,"minimum":1,"type":"integer"},"record_type":{"enum":["contact","company","deal","lead","project"],"type":"string"}},"required":["record_type"],"type":"object"}
+  input schema: {"properties":{"cursor":{"description":"Keyset cursor from a previous page's next_cursor","type":"string"},"filters":{"description":"Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.","properties":{"acquisition_source":{"type":"string"},"commercial_motion":{"type":"string"},"company_id":{"type":"string"},"domain":{"type":"string"},"forecast_category":{"type":"string"},"key":{"type":"string"},"lifecycle":{"type":"string"},"min_score":{"type":"string"},"owner_id":{"type":"string"},"partner_attribution":{"type":"string"},"partner_company_id":{"type":"string"},"partner_sourced":{"type":"string"},"phase":{"type":"string"},"pipeline_id":{"type":"string"},"priority":{"type":"string"},"project_id":{"type":"string"},"relationship_type":{"type":"string"},"stage_id":{"type":"string"},"stalled":{"type":"string"},"status":{"type":"string"},"tag_id":{"type":"string"},"tag_mode":{"type":"string"}},"type":"object"},"limit":{"maximum":50,"minimum":1,"type":"integer"},"record_type":{"enum":["contact","company","deal","lead","project"],"type":"string"}},"required":["record_type"],"type":"object"}
 - read_brief — Read the ranked queue the contact you act for sees when they open their morning brief — the deals the workspace decided are worth their attention today, in order, with the rows behind each ranking. It re-reads the last assembled run rather than building a new one, so its as_of says how current it is, and it is that contact's own queue: it cannot be asked for anyone else's. Acting on, dismissing or snoozing an item is theirs alone. Use whats_slipping_this_week when the question is which deals are losing momentum regardless of what today's brief chose, and read_record for what one of these deals currently says. Each item names a deal_id and its evidence_ids; read those to cite what the ranking rested on rather than restating the item's own summary.
   input schema: {"properties":{},"type":"object"}
 - read_record — Read one record's own stored fields — the values a reader would see on its detail page — when you already know which record you mean. It returns that record and nothing around it: no timeline, no related contacts, no deals on the company. Use catch_me_up_on when the goal is what has been happening on the record rather than what it currently says. Keep the version from the result and pass it back as if_version on a later update, so a write is refused rather than silently overwriting a change made in between.
@@ -273,6 +273,7 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {
             "idempotency_key": {
               "maxLength": 255,
@@ -280,6 +281,7 @@ Available tools:
             },
             "items": {
               "items": {
+                "additionalProperties": false,
                 "properties": {
                   "cited_evidence": {
                     "description": "Evidence ids this item already carries, at least one. A finding citing nothing is refused: the whole point is that the claim is grounded in a record you read.",
@@ -333,6 +335,7 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {
             "max_items": {
               "maximum": 20,
@@ -383,13 +386,15 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {
             "cursor": {
               "description": "Keyset cursor from a previous page's next_cursor",
               "type": "string"
             },
             "filters": {
-              "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+              "additionalProperties": false,
+              "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
               "properties": {
                 "acquisition_source": {
                   "type": "string"
@@ -498,6 +503,7 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
@@ -518,6 +524,7 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {
             "id": {
               "format": "uuid",
@@ -584,7 +591,7 @@ Available tools:
 
 ### `agent_loop` / `overnight_at_risk_sweep`
 
-`system 12,966 B (~3,241 tok)` — rules 12,684 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
+`system 13,020 B (~3,255 tok)` — rules 12,738 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
 
 <details><summary>system prompt</summary>
 
@@ -623,7 +630,7 @@ Available tools:
 - catch_me_up_on — Answer "what has been going on with this?" for one contact, company, deal, lead, project or meeting: the recent activity and related records in one picture, with the evidence each part rests on. Built around ONE record you name; everything it reports carries a source, and what cannot be evidenced is absent rather than inferred. prep_for_meeting when a meeting is about to happen, read_record for the record's own stored fields, search_records when you do not yet know which record you mean. Each item carries the record_type and record_id a follow-up call acts on. occurred_at is when an item happened, in UTC — prefer it over a date the prose recalls, and convert before naming a day.
   input schema: {"properties":{"max_items":{"maximum":20,"minimum":1,"type":"integer"},"project_id":{"description":"Keep only what is filed under this project or under none","format":"uuid","type":"string"},"record_id":{"format":"uuid","type":"string"},"record_type":{"enum":["contact","company","deal","lead","project","activity"],"type":"string"}},"required":["record_type","record_id"],"type":"object"}
 - list_records — Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one contact owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one.
-  input schema: {"properties":{"cursor":{"description":"Keyset cursor from a previous page's next_cursor","type":"string"},"filters":{"description":"Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.","properties":{"acquisition_source":{"type":"string"},"commercial_motion":{"type":"string"},"company_id":{"type":"string"},"domain":{"type":"string"},"forecast_category":{"type":"string"},"key":{"type":"string"},"lifecycle":{"type":"string"},"min_score":{"type":"string"},"owner_id":{"type":"string"},"partner_attribution":{"type":"string"},"partner_company_id":{"type":"string"},"partner_sourced":{"type":"string"},"phase":{"type":"string"},"pipeline_id":{"type":"string"},"priority":{"type":"string"},"project_id":{"type":"string"},"relationship_type":{"type":"string"},"stage_id":{"type":"string"},"stalled":{"type":"string"},"status":{"type":"string"},"tag_id":{"type":"string"},"tag_mode":{"type":"string"}},"type":"object"},"limit":{"maximum":50,"minimum":1,"type":"integer"},"record_type":{"enum":["contact","company","deal","lead","project"],"type":"string"}},"required":["record_type"],"type":"object"}
+  input schema: {"properties":{"cursor":{"description":"Keyset cursor from a previous page's next_cursor","type":"string"},"filters":{"description":"Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.","properties":{"acquisition_source":{"type":"string"},"commercial_motion":{"type":"string"},"company_id":{"type":"string"},"domain":{"type":"string"},"forecast_category":{"type":"string"},"key":{"type":"string"},"lifecycle":{"type":"string"},"min_score":{"type":"string"},"owner_id":{"type":"string"},"partner_attribution":{"type":"string"},"partner_company_id":{"type":"string"},"partner_sourced":{"type":"string"},"phase":{"type":"string"},"pipeline_id":{"type":"string"},"priority":{"type":"string"},"project_id":{"type":"string"},"relationship_type":{"type":"string"},"stage_id":{"type":"string"},"stalled":{"type":"string"},"status":{"type":"string"},"tag_id":{"type":"string"},"tag_mode":{"type":"string"}},"type":"object"},"limit":{"maximum":50,"minimum":1,"type":"integer"},"record_type":{"enum":["contact","company","deal","lead","project"],"type":"string"}},"required":["record_type"],"type":"object"}
 - log_activity — Record something that happened — a call, a meeting, a note, a message — on the records it was about: name every one of them in this call. A meeting is with a contact, and also concerns their company and the deal it is for. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a second call — relink_activity — which a human has to approve when it files under a project. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it.
   input schema: {"properties":{"body":{"description":"Prose a colleague reads. Same language rule as subject.","type":"string"},"channel_provider":{"description":"Required when kind is \"message\", else refused; a provider list_channel_providers names.","type":"string"},"direction":{"enum":["inbound","outbound"],"type":"string"},"due_at":{"description":"RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.","format":"date-time","type":"string"},"idempotency_key":{"maxLength":255,"type":"string"},"kind":{"enum":["email","call","meeting","note","task","message"],"type":"string"},"links":{"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.","items":{"properties":{"entity_id":{"format":"uuid","type":"string"},"entity_type":{"enum":["contact","company","deal","lead","project"],"type":"string"}},"required":["entity_type","entity_id"],"type":"object"},"type":"array"},"occurred_at":{"description":"RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.","format":"date-time","type":"string"},"source_id":{"type":"string"},"source_system":{"type":"string"},"subject":{"description":"Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.","type":"string"}},"required":["kind"],"type":"object"}
 - read_record — Read one record's own stored fields — the values a reader would see on its detail page — when you already know which record you mean. It returns that record and nothing around it: no timeline, no related contacts, no deals on the company. Use catch_me_up_on when the goal is what has been happening on the record rather than what it currently says. Keep the version from the result and pass it back as if_version on a later update, so a write is refused rather than silently overwriting a change made in between.
@@ -647,6 +654,7 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
@@ -667,6 +675,7 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {
             "max_items": {
               "maximum": 20,
@@ -717,13 +726,15 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {
             "cursor": {
               "description": "Keyset cursor from a previous page's next_cursor",
               "type": "string"
             },
             "filters": {
-              "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+              "additionalProperties": false,
+              "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
               "properties": {
                 "acquisition_source": {
                   "type": "string"
@@ -832,6 +843,7 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {
             "body": {
               "description": "Prose a colleague reads. Same language rule as subject.",
@@ -871,6 +883,7 @@ Available tools:
             "links": {
               "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
               "items": {
+                "additionalProperties": false,
                 "properties": {
                   "entity_id": {
                     "format": "uuid",
@@ -933,6 +946,7 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {
             "id": {
               "format": "uuid",
@@ -975,6 +989,7 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {
             "assignee_id": {
               "description": "Narrow to one owner's promises; omit for everyone's",
@@ -1012,6 +1027,7 @@ Available tools:
       "additionalProperties": false,
       "properties": {
         "args": {
+          "additionalProperties": false,
           "properties": {
             "limit": {
               "description": "Cap the ranked set; omit for the full evidenced set",

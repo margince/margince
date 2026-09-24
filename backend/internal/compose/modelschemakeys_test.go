@@ -67,6 +67,11 @@ func TestNoRequestAModelIsSentCarriesAnObjectWithoutKeys(t *testing.T) {
 	schemaless := publishedSchemalessSites(t)
 	zeroArgument := zeroArgumentTools(servedSpecs())
 
+	// A census that read nothing passes having inspected no request at all.
+	if len(census.All()) == 0 || len(scenarios) == 0 {
+		t.Fatalf("the census holds %d sites and the corpus %d scenarios, so no request is inspected",
+			len(census.All()), len(scenarios))
+	}
 	for _, site := range census.All() {
 		key := string(site.Task) + "/" + site.Variant
 		t.Run(key, func(t *testing.T) {
@@ -144,6 +149,9 @@ func publishedSchemalessSites(t *testing.T) map[string]bool {
 
 func TestEveryServedToolNamesTheKeysOfItsObjects(t *testing.T) {
 	specs := servedSpecs()
+	if len(specs) == 0 {
+		t.Fatal("the served surface lists no tool, so no schema is walked")
+	}
 	zeroArgument := zeroArgumentTools(specs)
 	attached := attachedTools(t)
 

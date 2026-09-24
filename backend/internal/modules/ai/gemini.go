@@ -144,8 +144,17 @@ func (c *geminiClient) Complete(ctx context.Context, req model.Request) (model.R
 	if err := json.NewDecoder(body).Decode(&out); err != nil {
 		return model.Response{}, fmt.Errorf("ai: gemini: decode response: %w", err)
 	}
-	if err := geminiResponseError(out); err != nil {
-		return model.Response{}, err
+	spent := model.Response{
+		InputTokens: out.UsageMetadata.PromptTokenCount,
+		// candidatesTokenCount EXCLUDES thinking tokens, but the port's
+		// OutputTokens invariant is reasoning-inclusive (model.Response) so the
+		// budget meter charges true spend on every provider — add them here.
+		OutputTokens:    out.UsageMetadata.CandidatesTokenCount + out.UsageMetadata.ThoughtsTokenCount,
+		CachedTokens:    out.UsageMetadata.CachedContentTokenCount,
+		ReasoningTokens: out.UsageMetadata.ThoughtsTokenCount,
+	}
+	if err := geminiResponseError(ctx, out); err != nil {
+		return model.Response{}, withSpend(err, spent)
 	}
 	// A non-stream response is terminal by definition, so it must name its
 	// terminal — a candidate with no finishReason is a body cut short in
@@ -164,18 +173,10 @@ func (c *geminiClient) Complete(ctx context.Context, req model.Request) (model.R
 			}
 		}
 	}
-	resp := model.Response{
-		Text:        text.String(),
-		InputTokens: out.UsageMetadata.PromptTokenCount,
-		// candidatesTokenCount EXCLUDES thinking tokens, but the port's
-		// OutputTokens invariant is reasoning-inclusive (model.Response) so the
-		// budget meter charges true spend on every provider — add them here.
-		OutputTokens:    out.UsageMetadata.CandidatesTokenCount + out.UsageMetadata.ThoughtsTokenCount,
-		CachedTokens:    out.UsageMetadata.CachedContentTokenCount,
-		ReasoningTokens: out.UsageMetadata.ThoughtsTokenCount,
-		ServedModel:     out.ModelVersion,
-		FinishReason:    geminiFinishReason(finish),
-	}
+	resp := spent
+	resp.Text = text.String()
+	resp.ServedModel = out.ModelVersion
+	resp.FinishReason = geminiFinishReason(finish)
 	if len(signatures) > 0 {
 		if meta, err := json.Marshal(map[string][]string{"thought_signatures": signatures}); err == nil {
 			resp.ProviderMetadata = map[string]json.RawMessage{"gemini": meta}
@@ -381,7 +382,7 @@ func (c *geminiClient) post(ctx context.Context, path string, payload []byte) (i
 	if resp.StatusCode != http.StatusOK {
 		//craft:ignore swallowed-errors best-effort close on the error path — the API status error is the answer
 		defer func() { _ = resp.Body.Close() }()
-		return nil, geminiError(resp)
+		return nil, geminiError(ctx, resp)
 	}
 	return resp.Body, nil
 }
@@ -392,7 +393,7 @@ func (c *geminiClient) post(ctx context.Context, path string, payload []byte) (i
 // chunk. sawTerminal remembers the terminal so an EOF without one (a
 // connection dropped mid-generation) surfaces as an error, not a complete
 // answer. TokenStream has no terminal to carry a truncation, so a stream cut
-// off at MAX_TOKENS delivers its text and then ends on stoppedError.
+// off at MAX_TOKENS delivers its text and then ends on truncatedError.
 type geminiStream struct {
 	body        io.ReadCloser
 	scanner     *bufio.Scanner
@@ -402,7 +403,7 @@ type geminiStream struct {
 
 func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
 	if s.cutOff {
-		return "", false, stoppedError{reason: geminiMaxTokens}
+		return "", false, truncatedError{wire: providerGemini}
 	}
 	for s.scanner.Scan() {
 		if err := ctx.Err(); err != nil {
@@ -420,7 +421,7 @@ func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
 		// A mid-stream error object or a withholding finishReason (SAFETY, …)
 		// arrives inside a 200 chunk — surface it instead of letting a
 		// zero-text chunk fall through to a clean-looking EOF.
-		if err := geminiResponseError(ev); err != nil {
+		if err := geminiResponseError(ctx, ev); err != nil {
 			return "", false, err
 		}
 		if finish, terminal := geminiTerminal(ev); terminal {
@@ -437,7 +438,7 @@ func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
 			return chunk.String(), true, nil
 		}
 		if s.cutOff {
-			return "", false, stoppedError{reason: geminiMaxTokens}
+			return "", false, truncatedError{wire: providerGemini}
 		}
 	}
 	if err := s.scanner.Err(); err != nil {

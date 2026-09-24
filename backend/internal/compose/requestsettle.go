@@ -65,6 +65,10 @@ const (
 	settleThreadMessages = 8
 )
 
+// settleDeclinedBy is what an UNSURE verdict records as its judge when no model
+// judged the conversation: every rung declined it (ai.ModelDeclined).
+const settleDeclinedBy = "declined"
+
 // settleCandidate is one answered request with the conversation behind it.
 type settleCandidate struct {
 	Request  activities.RepliedRequest
@@ -272,6 +276,9 @@ func requestConversation(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 // not re-read until somebody writes on it again.
 func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate) (int, error) {
 	verdicts, err := s.ask(ctx, batch)
+	if ai.ModelDeclined(err) {
+		return s.judgeEach(ctx, batch)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -295,13 +302,27 @@ func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate
 		}
 		judged++
 	}
-	for _, candidate := range retry {
-		solo, err := s.ask(ctx, []settleCandidate{candidate})
-		if err != nil {
-			return judged, err
-		}
+	solo, err := s.judgeEach(ctx, retry)
+	return judged + solo, err
+}
+
+// judgeEach asks about each conversation in its own call. One still below the
+// floor is recorded UNSURE, and so is one every rung declines, judged by
+// settleDeclinedBy: either way the request stays owed and is not re-read until
+// somebody writes on it again, so the next conversation is asked.
+func (s *RequestSettler) judgeEach(ctx context.Context, candidates []settleCandidate) (int, error) {
+	judged := 0
+	for _, candidate := range candidates {
 		result := settleResult{ID: candidate.Request.RequestID.String(), Verdict: activities.RequestUnsure}
-		if len(solo.results) == 1 && solo.results[0].Confidence >= settleConfidenceFloor {
+		solo, err := s.ask(ctx, []settleCandidate{candidate})
+		switch {
+		case ai.ModelDeclined(err):
+			s.log.WarnContext(ctx, "request settle: the models declined one conversation, recorded unsure",
+				"request_id", candidate.Request.RequestID, "err", err)
+			solo.judge = settleDeclinedBy
+		case err != nil:
+			return judged, err
+		case len(solo.results) == 1 && solo.results[0].Confidence >= settleConfidenceFloor:
 			result = solo.results[0]
 		}
 		if err := s.commit(ctx, candidate, result, solo.judge); err != nil {

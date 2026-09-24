@@ -150,6 +150,10 @@ Other knobs: `RUNS=5` (odd repeat count), `PROFILE=` (environment class),
 `JUDGE_BASE_URL=` for an `openai_compatible` judge you name — the OpenRouter host
 is the default only for the default judge, and unset it falls back to
 `BASE_URL=`, since a judge on the candidate's broker is the common case.
+A broker binding is served under production's upstream default (fp16/bf16 hosts
+only); `UPSTREAM='{}'` and `JUDGE_UPSTREAM='{}'` lift it, and each record names
+what applied. One small pre-flight call per binding runs before the corpus, so a
+key, slug or preference no host can serve fails in seconds, not mid-corpus.
 
 ## 3. Read the readiness report
 
@@ -285,7 +289,9 @@ Two things now stand in the way.
 **The run is re-driven** when the router comes back having failed on every bound
 tier — three attempts, waiting 2s then 8s. Only an exhausted ladder is retried: a
 validator failure or a caps miss is a *measurement*, and an exhausted account is
-a human's to fix. It is re-driven whole, because a site may turn a multi-turn
+a human's to fix. A withheld answer is a measurement too — the run fails,
+ungraded, and the record names the filter — while a rejected request stops the
+task with no record, because it measures the binding, not the model. It is re-driven whole, because a site may turn a multi-turn
 conversation or a tool loop and there is no resuming one mid-way.
 
 **Every scored run is journaled** to `.tmp/aicert/resume/` as it is scored, so a
@@ -309,19 +315,13 @@ every whole run before the cut. One run owns a directory at a time — parallel
 Each run either **HardPasses** — the site's own production validator accepted
 the reply, the reply is the answer the scenario expects, and the run stayed
 inside its token/latency caps — or fails. The judge scores the answer 0–100
-against the rubric. One rule gives a scenario's row and the task's record their
-verdict; `N` is all runs, `n` one scenario's, each held to its own bands:
-
-| Verdict | Rule |
-|---|---|
-| `certified` | ≥ 90% of all `N` runs HardPass ∧ every scenario HardPasses ≥ ⌈2n/3⌉ of its `n` ∧ every scenario's median score ≥ its `certified_min` and min score ≥ its `floor` |
-| `supported_degraded` | ≥ ⌈2N/3⌉ of all runs HardPass ∧ every scenario's median score ≥ its `degraded_min` |
-| `not_supported` | otherwise, including any scenario no judge scored |
-
-A pass **rate**, so the bar does not rise with the corpus (at 99% per run, 57 of
-57 happens barely half the time); the per-scenario majority keeps one case that
-always fails from hiding in the pool. Every threshold — rate, majority, default
-repeats, re-judge count — lives in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go):
+against the rubric. `certified` takes a pooled pass **rate** (so the bar does not
+rise with the corpus), a majority of every scenario's own runs (so one case that
+always fails cannot hide in the pool), and every scenario's median and minimum
+score at its bands; `supported_degraded` a pooled majority and medians at
+`degraded_min`; anything else, including a scenario no judge scored, is
+`not_supported`. The numbers are in [The exact rule](../reference/ai-certification.md#how-the-scoring-works),
+and every one lives in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go):
 edit it there, bump `gradingRule`, and regenerate the page. **reliability** is the
 fraction of runs that HardPassed (0–1), the number to trend. A run whose served
 model is not uniform (a fallback, between runs or calls) **voids** the record: you cannot certify a moving target.

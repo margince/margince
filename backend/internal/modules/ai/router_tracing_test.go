@@ -210,11 +210,11 @@ func TestCompleteRecordsFailure(t *testing.T) {
 
 // A failed attempt has no Response to read the terminal off, so an abnormal
 // finishReason reaches the trace only from the error. SAFETY and RECITATION
-// share the single `provider_error` sentinel, so a blank finish_reason leaves
+// share the single `output_withheld` sentinel, so a blank finish_reason leaves
 // the stored row unable to say which occurred.
 func TestCompleteRecordsFinishReasonCarriedByTheError(t *testing.T) {
 	fcs := &fakeCallStore{}
-	r := newTracingRouter(t, stubClient{err: stoppedError{reason: "SAFETY"}}, fcs)
+	r := newTracingRouter(t, stubClient{err: withheldError{wire: providerGemini, reason: "SAFETY"}}, fcs)
 	if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud}, model.Request{}); err == nil {
 		t.Fatal("expected error when the only tier fails")
 	}
@@ -225,11 +225,10 @@ func TestCompleteRecordsFinishReasonCarriedByTheError(t *testing.T) {
 	if got.FinishReason != "SAFETY" {
 		t.Fatalf("finish_reason lost on the failure path: %+v", got)
 	}
-	// The sentinel stays put: carrying the terminal is additive, and moving
-	// an abnormal finish out of `provider_error` would change what every
-	// error rate over this counter means.
-	if got.ErrorSentinel != "provider_error" {
-		t.Fatalf("classification moved, which would change every error rate: %q", got.ErrorSentinel)
+	// A withheld answer is an outcome, so it is not counted as a provider
+	// failure on the error-rate panels.
+	if got.ErrorSentinel != "output_withheld" {
+		t.Fatalf("a withheld answer was stored as %q, want output_withheld", got.ErrorSentinel)
 	}
 }
 
@@ -241,7 +240,7 @@ func TestAFallenBackRungRecordsItsFinishReason(t *testing.T) {
 	fcs := &fakeCallStore{}
 	r := assembleRouter(
 		map[Tier]model.Client{
-			TierCheapCloud: stubClient{err: stoppedError{reason: "SAFETY"}},
+			TierCheapCloud: stubClient{err: withheldError{wire: providerGemini, reason: "SAFETY"}},
 			TierPremium:    stubClient{resp: model.Response{Text: "served"}},
 		},
 		stubClient{}, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, fcs,

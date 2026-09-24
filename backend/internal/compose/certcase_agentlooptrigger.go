@@ -6,10 +6,11 @@ package compose
 // The shape a fixture's trigger ref must have, DERIVED from the writer that
 // mints one in production rather than restated here.
 //
-// The agent_loop corpus certifies only the window a scheduled run is handed.
-// The scheduler is the only writer of a runner job, so a trigger ref it could
-// not have minted is a window nothing builds — and no assertion fails when a
-// fixture drifts to one: the suite reports PASS about a different system.
+// The agent_loop corpus certifies only the window a scheduled run is handed,
+// and a scheduled run's trigger ref is what AgentSpec.TriggerRef mints. A ref it
+// could not have minted is a window no scheduled run is handed — and no
+// assertion fails when a fixture drifts to one: the suite reports PASS about a
+// different system.
 
 import (
 	"fmt"
@@ -30,8 +31,8 @@ import (
 func refuseUnmintableTriggerRef(agent runner.AgentSpec, ref string) error {
 	if kind, _, _ := strings.Cut(ref, ":"); kind != agent.Name {
 		return fmt.Errorf(
-			"%s/%s: trigger ref %q names %q — the scheduler is the only writer of a runner job, and it names "+
-				"every occurrence after the agent that runs it", agentLoopSite, agent.Name, ref, kind)
+			"%s/%s: trigger ref %q names %q — a scheduled run's trigger ref names the agent that runs it",
+			agentLoopSite, agent.Name, ref, kind)
 	}
 	return refuseDriftedFrom(agent.TriggerRef(referenceTriggerDay, referenceTriggerSeat), ref)
 }

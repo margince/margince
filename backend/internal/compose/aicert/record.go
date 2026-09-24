@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // Record is one task×provider×model×environment certification outcome —
@@ -114,7 +116,14 @@ type Record struct {
 	JudgeServedModel     string `json:"judge_served_model"`
 	SelfJudged           bool   `json:"self_judged"`
 	ServedIdentitySource string `json:"served_identity_source"`
-	RanAt                string `json:"ran_at"`
+	// CandidateUpstream and JudgeUpstream are the broker upstream preferences
+	// each binding was served under, absent for a binding none reach. They
+	// change which hosts may answer — the precision, the ceiling, the tail — so
+	// two records of one model are comparable only where these agree; a broker
+	// record without them predates the product default being applied here.
+	CandidateUpstream *ai.OpenRouterRouting `json:"candidate_upstream,omitempty"`
+	JudgeUpstream     *ai.OpenRouterRouting `json:"judge_upstream,omitempty"`
+	RanAt             string                `json:"ran_at"`
 	// Scenarios is every scenario this record pooled, with its own verdict and
 	// its own counts. A record is written per TASK and a task is not one
 	// scenario or even one site — cold_start ships four sites — so the pooled
@@ -157,6 +166,11 @@ type ScenarioRecord struct {
 	ReportedWrongAnswer int `json:"reported_wrong_answer"`
 	ReportedInvalid     int `json:"reported_invalid"`
 	ReportedAbstained   int `json:"reported_abstained"`
+	// Withheld is how many of these runs the provider withheld an answer from,
+	// and WithheldReasons the distinct filters it named, so a reader can tell a
+	// safety stop from a model that answered badly.
+	Withheld        int      `json:"withheld,omitempty"`
+	WithheldReasons []string `json:"withheld_reasons,omitempty"`
 }
 
 // SiteTally is one SITE's share of a task's record, folded from the scenario

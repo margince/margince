@@ -283,19 +283,19 @@ func TestEveryProviderAdapterClassifiesItsRefusal(t *testing.T) {
 			name:     "gemini",
 			quota:    `{"error":{"status":"RESOURCE_EXHAUSTED","message":"Your project has exceeded its monthly spending cap."}}`,
 			throttle: `{"error":{"status":"RESOURCE_EXHAUSTED","message":"Rate limit exceeded for this model."}}`,
-			read:     geminiError,
+			read:     func(resp *http.Response) error { return geminiError(t.Context(), resp) },
 		},
 		{
 			name:     "openai",
 			quota:    `{"error":{"type":"insufficient_quota","message":"You exceeded your current quota, please check your plan and billing details."}}`,
 			throttle: `{"error":{"type":"rate_limit_exceeded","message":"Rate limit reached for gpt-4o."}}`,
-			read:     openaiError,
+			read:     func(resp *http.Response) error { return openaiError(t.Context(), resp) },
 		},
 		{
 			name:     "anthropic",
 			quota:    `{"error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the API."}}`,
 			throttle: `{"error":{"type":"rate_limit_error","message":"Number of requests has exceeded your rate limit."}}`,
-			read:     anthropicError,
+			read:     func(resp *http.Response) error { return anthropicError(t.Context(), resp) },
 		},
 		{
 			// The broker shape: its OWN message says nothing, and the vendor's
@@ -405,7 +405,7 @@ func TestGeminiQuotaWordingDoesNotHideARetryableLimit(t *testing.T) {
 				t.Errorf("closing the provider response: %v", closeErr)
 			}
 		}()
-		return geminiError(resp)
+		return geminiError(t.Context(), resp)
 	}
 
 	perMinute := read(retryable)

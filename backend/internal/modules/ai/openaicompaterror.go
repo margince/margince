@@ -39,8 +39,9 @@ func openAICompatError(ctx context.Context, resp *http.Response) error {
 		Type    string `json:"type"`
 		Message string `json:"message"`
 		Error   struct {
-			Type     string `json:"type"`
-			Message  string `json:"message"`
+			Type     string          `json:"type"`
+			Message  string          `json:"message"`
+			Code     json.RawMessage `json:"code"`
 			Metadata struct {
 				Raw          string `json:"raw"`
 				ProviderName string `json:"provider_name"`
@@ -51,8 +52,12 @@ func openAICompatError(ctx context.Context, resp *http.Response) error {
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil {
 		if detail := compatErrorDetail(ctx, apiErr.Error.Message, apiErr.Error.Metadata.Raw, apiErr.Error.Metadata.ProviderName); detail != "" {
-			return providerRefusal(resp, apiErr.Error.Metadata.LimitSource,
+			err := providerRefusal(resp, apiErr.Error.Metadata.LimitSource,
 				fmt.Errorf("ai: openai-compat: %s: %s (http %d)", safeProviderText(ctx, apiErr.Error.Type), detail, resp.StatusCode))
+			if openAIRejectsTheRequest(apiErr.Error.Code) {
+				return rejectedRequest(err)
+			}
+			return err
 		}
 		if apiErr.Message != "" {
 			return providerRefusal(resp, "", fmt.Errorf("ai: openai-compat: %s: %s (http %d)",

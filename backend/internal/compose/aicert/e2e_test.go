@@ -124,7 +124,7 @@ func TestE2ECertify(t *testing.T) {
 		if perr != nil {
 			t.Fatalf("MARGINCE_AICERT_MODEL: %v", perr)
 		}
-		parsed.Routing = candidateRouting(t)
+		parsed.Routing = upstreamFromEnv(t, "MARGINCE_AICERT_UPSTREAM")
 		binding = parsed
 	}
 
@@ -135,10 +135,13 @@ func TestE2ECertify(t *testing.T) {
 	if err != nil {
 		t.Fatalf("MARGINCE_AICERT_JUDGE_MODEL: %v", err)
 	}
+	// Read under ROUTING= too: the judge is never resolved from the routing, so
+	// its preferences have no other door.
+	judge.Routing = upstreamFromEnv(t, "MARGINCE_AICERT_JUDGE_UPSTREAM")
 
-	// repeats stays 0 (Run's own "default to 3" per RunnerConfig.Repeats'
-	// own doc) when MARGINCE_AICERT_RUNS is unset — this lane restates no
-	// default the runner already owns.
+	// repeats stays 0 (Run's own default, per RunnerConfig.Repeats' own doc)
+	// when MARGINCE_AICERT_RUNS is unset — this lane restates no default the
+	// runner already owns.
 	var repeats int
 	if raw := os.Getenv("MARGINCE_AICERT_RUNS"); raw != "" {
 		n, err := strconv.Atoi(raw)
@@ -197,10 +200,12 @@ func TestE2ECertify(t *testing.T) {
 	}
 }
 
-// candidateRouting reads MARGINCE_AICERT_UPSTREAM: the broker upstream-selection
-// preferences to certify the candidate under, as the JSON of one
-// ai.OpenRouterRouting. Nil when unset, which measures the broker's own default
-// choice — the baseline every tuned run is compared against.
+// upstreamFromEnv reads one binding's broker upstream-selection preferences —
+// MARGINCE_AICERT_UPSTREAM for the candidate, MARGINCE_AICERT_JUDGE_UPSTREAM for
+// the judge — as the JSON of one ai.OpenRouterRouting. Nil when unset, which
+// serves a broker binding under the product default (ai.DefaultOpenRouterRouting)
+// exactly as production would; `{}` opts out of it and measures the broker's
+// own price-weighted choice. The record names whichever applied.
 //
 // An env var rather than a config field because that is exactly what is being
 // decided: the field set worth making operator-facing is the OUTPUT of these
@@ -208,11 +213,11 @@ func TestE2ECertify(t *testing.T) {
 // shape before measuring whether it is the right one.
 //
 // Unknown keys are refused. A misspelt preference would otherwise be dropped in
-// silence and the run would report the baseline's numbers under a tuned run's
+// silence and the run would report the default's numbers under a tuned run's
 // name, which is the one way this measurement can lie without failing.
-func candidateRouting(t *testing.T) *ai.OpenRouterRouting {
+func upstreamFromEnv(t *testing.T, name string) *ai.OpenRouterRouting {
 	t.Helper()
-	raw := os.Getenv("MARGINCE_AICERT_UPSTREAM")
+	raw := os.Getenv(name)
 	if raw == "" {
 		return nil
 	}
@@ -226,27 +231,27 @@ func candidateRouting(t *testing.T) *ai.OpenRouterRouting {
 	// function's unknown-key refusal exists to prevent.
 	var routing *ai.OpenRouterRouting
 	if err := decoder.Decode(&routing); err != nil {
-		t.Fatalf("MARGINCE_AICERT_UPSTREAM=%s is not one ai.OpenRouterRouting as JSON: %v", raw, err)
+		t.Fatalf("%s=%s is not one ai.OpenRouterRouting as JSON: %v", name, raw, err)
 	}
 	if routing == nil {
-		t.Fatalf("MARGINCE_AICERT_UPSTREAM=%s decodes to null; unset the variable to measure the "+
-			"broker's own choice, or write {} to say explicitly that this run wants no preferences", raw)
+		t.Fatalf("%s=%s decodes to null; unset the variable for the product default, "+
+			"or write {} to say explicitly that this run wants the broker's own choice", name, raw)
 	}
 	// And exactly ONE value. A second is otherwise ignored, so
 	// `{"sort":"throughput"} {"sort":"price"}` would run under the first and
 	// read as though both had been considered.
 	if err := decoder.Decode(new(json.RawMessage)); !errors.Is(err, io.EOF) {
-		t.Fatalf("MARGINCE_AICERT_UPSTREAM=%s carries more than one JSON value; pass exactly one object", raw)
+		t.Fatalf("%s=%s carries more than one JSON value; pass exactly one object", name, raw)
 	}
 	// Unknown keys are refused above; the VALUES have to be checked too, and by
 	// the same reasoning. A misspelt sort ("thruput") or quantization ("fp5")
 	// decodes cleanly, the broker drops what it does not recognise in silence,
-	// and the run then reports the baseline's numbers under a tuned run's name —
+	// and the run then reports the default's numbers under a tuned run's name —
 	// the exact way this measurement can lie without failing. ai.ParseRouting
 	// applies the same check to a config file; this is the env var's door to it.
 	if err := routing.Validate(); err != nil {
-		t.Fatalf("MARGINCE_AICERT_UPSTREAM=%s: %v", raw, err)
+		t.Fatalf("%s=%s: %v", name, raw, err)
 	}
-	t.Logf("candidate upstream preferences: %s", raw)
+	t.Logf("%s: %s", name, raw)
 	return routing
 }

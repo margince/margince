@@ -25,19 +25,18 @@ import (
 // declaration and ai cannot read the catalog. Compose is where the edge is
 // injected, which is what compose is for.
 
-// scheduledAgents is the catalog every production path reads: each runner
-// AgentSpec with its declared allowlist attached.
+// scheduledAgents is the scheduled catalog: each runner AgentSpec with its
+// declared allowlist attached.
 //
-// It is the ONLY assembly of the two halves — RunnerService takes its default
-// specByName from here and Tick seeds from here — because the alternative is
-// a path that skipped the join. The runner refuses a Job with empty Tools
-// (runner/job.go), so a production path left reading the bare runner.Catalog()
-// would build jobs the runner degrades before their first model call, and
-// that agent would never run.
+// RunnerService takes its default specByName from here and Tick seeds from
+// here, because the alternative is a path that skipped the join. The runner
+// refuses a Job with empty Tools (runner/job.go), so a production path left
+// reading the bare runner.Catalog() would build jobs the runner degrades before
+// their first model call, and that agent would never run.
 //
 // TestTheScheduledCatalogIsTotalAgainstTheContract holds both halves total
-// against each other. It does NOT hold that this is the only assembly of them —
-// no test does, so this comment does not claim it. What is gated is narrower
+// against each other. No test holds that this is the only assembly of them, so
+// this comment does not claim it. What is gated is narrower
 // and is the part that matters: TestOnlySanctionedFilesBuildARunnerJob names
 // the only three files that may construct a Job at all, so a second assembly
 // would have nowhere to deliver its result.

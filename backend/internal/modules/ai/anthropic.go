@@ -128,19 +128,20 @@ func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (mode
 			text.Write(blockJSON)
 		}
 	}
-	finish, err := anthropicFinishReason(out.StopReason)
-	if err != nil {
-		return model.Response{}, err
-	}
-	return model.Response{
+	resp := model.Response{
 		Text:             text.String(),
 		InputTokens:      out.Usage.InputTokens + out.Usage.CacheReadInputTokens + out.Usage.CacheCreationInputTokens,
 		OutputTokens:     out.Usage.OutputTokens,
 		CachedTokens:     out.Usage.CacheReadInputTokens,
 		CacheWriteTokens: out.Usage.CacheCreationInputTokens,
 		ServedModel:      out.Model,
-		FinishReason:     finish,
-	}, nil
+	}
+	finish, err := anthropicFinishReason(out.StopReason)
+	if err != nil {
+		return model.Response{}, withSpend(err, resp)
+	}
+	resp.FinishReason = finish
+	return resp, nil
 }
 
 // anthropicFinishReason is a stop_reason in the port's vocabulary. Both ceilings
@@ -221,9 +222,13 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 			text.WriteString(ev.Delta.PartialJSON)
 		case "message_delta":
 			resp.OutputTokens = ev.Usage.OutputTokens
+			// A delta may carry usage alone, with stop_reason null.
+			if ev.Delta.StopReason == "" {
+				continue
+			}
 			finish, err := anthropicFinishReason(ev.Delta.StopReason)
 			if err != nil {
-				return model.Response{}, err
+				return model.Response{}, withSpend(err, resp)
 			}
 			resp.FinishReason = finish
 		case "message_stop":
@@ -342,14 +347,18 @@ func (c *anthropicClient) sendOnce(ctx context.Context, req model.Request, strea
 	if resp.StatusCode != http.StatusOK {
 		//craft:ignore swallowed-errors best-effort close on the error path — the API status error is the answer
 		defer func() { _ = resp.Body.Close() }()
-		return nil, resp.StatusCode, anthropicError(resp)
+		return nil, resp.StatusCode, anthropicError(ctx, resp)
 	}
 	return resp.Body, resp.StatusCode, nil
 }
 
 // anthropicError surfaces the API's error type and message — and only
 // those, so a logged failure can never echo the request (or the key).
-func anthropicError(resp *http.Response) error {
+//
+// It never marks the request rejected: Anthropic answers invalid_request_error
+// for a malformed body, a prompt too long for the model, a parameter the model
+// does not take and a spend limit alike, so no type here means "malformed".
+func anthropicError(ctx context.Context, resp *http.Response) error {
 	var apiErr struct {
 		Error struct {
 			Type    string `json:"type"`
@@ -358,7 +367,8 @@ func anthropicError(resp *http.Response) error {
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil && apiErr.Error.Type != "" {
-		return providerRefusal(resp, "", fmt.Errorf("ai: anthropic: %s: %s (http %d)", apiErr.Error.Type, apiErr.Error.Message, resp.StatusCode))
+		return providerRefusal(resp, "", fmt.Errorf("ai: anthropic: %s: %s (http %d)",
+			safeProviderText(ctx, apiErr.Error.Type), safeProviderText(ctx, apiErr.Error.Message), resp.StatusCode))
 	}
 	return providerRefusal(resp, "", fmt.Errorf("ai: anthropic: http %d", resp.StatusCode))
 }

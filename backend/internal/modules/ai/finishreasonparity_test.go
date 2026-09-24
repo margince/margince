@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -330,77 +329,5 @@ func TestEveryAdapterReportsAWithheldAnswerAsWithheld(t *testing.T) {
 				}
 			})
 		}
-	}
-}
-
-// A request the provider refused as malformed is the request's fault, and a
-// 4xx is how every wire says so. It must not read as an outage, and it must
-// not read as a quota refusal either: the two want different remedies.
-func TestEveryAdapterReportsARejectedRequestAsRejected(t *testing.T) {
-	const body = `{"error":{"type":"invalid_request_error","status":"INVALID_ARGUMENT","message":"bad field"}}`
-	for name, wire := range finishWires(t) {
-		for status, wantRejected := range map[int]bool{
-			http.StatusBadRequest: true, http.StatusRequestEntityTooLarge: true, http.StatusUnprocessableEntity: true,
-			// Credentials, a missing model and payment are the binding's, and a
-			// timeout is transient: none is a verdict on the request itself.
-			http.StatusUnauthorized: false, http.StatusForbidden: false, http.StatusNotFound: false,
-			http.StatusPaymentRequired: false, http.StatusRequestTimeout: false,
-			http.StatusTooManyRequests: false, http.StatusInternalServerError: false,
-		} {
-			t.Run(fmt.Sprintf("%s/%d", name, status), func(t *testing.T) {
-				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(status)
-					if _, err := w.Write([]byte(body)); err != nil {
-						t.Errorf("writing fixture reply: %v", err)
-					}
-				}))
-				t.Cleanup(srv.Close)
-				client, err := selectLocalBrain(ProviderConfig{Provider: wire.provider, BaseURL: srv.URL, Model: "m"}, allCloudKeys())
-				if err != nil {
-					t.Fatalf("building the %s adapter: %v", wire.provider, err)
-				}
-				_, err = client.Complete(context.Background(), model.Request{
-					MaxTokens: wire.maxTokens, Messages: []model.Message{{Role: "user", Content: "q"}},
-				})
-				if err == nil {
-					t.Fatal("an HTTP error status was accepted as an answer")
-				}
-				if got := errors.Is(err, model.ErrRequestRejected); got != wantRejected {
-					t.Errorf("errors.Is(err, model.ErrRequestRejected) = %v, want %v: %v", got, wantRejected, err)
-				}
-			})
-		}
-	}
-}
-
-// The ladder stops at a rejected request and walks past a withheld answer, and
-// NEITHER ends as ErrAllTiersFailed: that sentinel says no model was reached,
-// and a caller re-drives on it as an outage.
-func TestTheLadderTreatsAnOutcomeAsAnOutcome(t *testing.T) {
-	for name, tc := range map[string]struct {
-		cause     error
-		want      error
-		wantCalls int
-	}{
-		// A different model may answer what one withheld, so the walk goes on.
-		"withheld": {withheldError{wire: "fake", reason: "refusal"}, model.ErrOutputWithheld, 2},
-		// The same request fails the same way on every rung, and each is billed.
-		"rejected": {fmt.Errorf("%w: bad field", model.ErrRequestRejected), model.ErrRequestRejected, 1},
-	} {
-		t.Run(name, func(t *testing.T) {
-			fake := NewFakeClient().ScriptSteps(FakeStep{Err: tc.cause}, FakeStep{Err: tc.cause})
-			r := testRouter(map[Tier]model.Client{TierCheapCloud: fake, TierPremium: fake}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
-			_, _, err := r.Complete(wsContext(t), TaskColdStart, model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
-			if !errors.Is(err, tc.want) {
-				t.Fatalf("err = %v, want %v", err, tc.want)
-			}
-			if errors.Is(err, ErrAllTiersFailed) {
-				t.Errorf("an outcome was reported as every tier failing, which the cert lane re-drives as an outage: %v", err)
-			}
-			if got := len(fake.Calls()); got != tc.wantCalls {
-				t.Errorf("the ladder made %d call(s), want %d", got, tc.wantCalls)
-			}
-		})
 	}
 }

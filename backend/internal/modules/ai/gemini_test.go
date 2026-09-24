@@ -328,11 +328,9 @@ func TestGeminiAbnormalFinishReasonIsAnError(t *testing.T) {
 }
 
 // The terminal has to survive as DATA, not only inside the message: every
-// withholding finishReason classifies to the one `provider_error` sentinel, so
+// withholding finishReason classifies to the one `output_withheld` sentinel, so
 // without an accessor the stored row cannot separate a refused answer (SAFETY —
 // retrying is pointless) from a recited one (RECITATION — change the prompt).
-// The message is asserted byte-for-byte because callers and the test above
-// match on its text, so carrying the reason must not reword it.
 func TestGeminiAbnormalFinishReasonCarriesTheTerminalAsData(t *testing.T) {
 	for _, reason := range []string{"SAFETY", "RECITATION", "PROHIBITED_CONTENT"} {
 		t.Run(reason, func(t *testing.T) {
@@ -343,8 +341,8 @@ func TestGeminiAbnormalFinishReasonCarriesTheTerminalAsData(t *testing.T) {
 			if err == nil {
 				t.Fatal("want an error for an abnormal finishReason")
 			}
-			if want := "ai: gemini: generation stopped: " + reason; err.Error() != want {
-				t.Fatalf("message changed:\n got %q\nwant %q", err.Error(), want)
+			if !errors.Is(err, model.ErrOutputWithheld) || !strings.Contains(err.Error(), reason) {
+				t.Fatalf("want a withheld answer naming %s, got %v", reason, err)
 			}
 			var stopped interface{ FinishReason() string }
 			if !errors.As(err, &stopped) {
@@ -416,8 +414,16 @@ func TestGeminiStreamCutOffDeliversItsTextThenSaysSo(t *testing.T) {
 		}
 	}
 	_, ok, err := stream.Next(context.Background())
-	if ok || err == nil || !strings.Contains(err.Error(), "MAX_TOKENS") {
-		t.Fatalf("a cut-off stream ended as %v %v, want an error naming MAX_TOKENS", ok, err)
+	if ok || err == nil {
+		t.Fatalf("a cut-off stream ended as %v %v, want an error saying it was cut off", ok, err)
+	}
+	// Stored as Complete stores the same truncation, so one terminal is one
+	// value in the trace whichever path served it.
+	if got := finishReasonFor("", err); got != model.FinishReasonLength {
+		t.Errorf("finish reason = %q, want %q", got, model.FinishReasonLength)
+	}
+	if errors.Is(err, model.ErrOutputWithheld) || errors.Is(err, model.ErrRequestRejected) {
+		t.Errorf("a truncation was classified as an outcome: %v", err)
 	}
 }
 

@@ -41,12 +41,11 @@ type runCalls struct {
 	// for its reason: one cut-off attempt leaves the run without an answer to
 	// score, whichever attempt it was.
 	Truncated bool
-	// Unanswered is the provider's own reason there is no answer: it withheld
-	// one, or rejected the request. Like Truncated, a measurement of the
-	// binding rather than an outage, so the run is recorded and not re-driven.
-	// Text rather than an error, because it is a finding to record, not a
-	// failure for any caller to handle.
-	Unanswered                                  string
+	// Withheld is the provider's reason it withheld the answer. Like Truncated,
+	// a measurement of the binding rather than an outage, so the run is
+	// recorded and not re-driven. Text rather than an error, because it is a
+	// finding to record, not a failure for any caller to handle.
+	Withheld                                    string
 	Provider, ServedModel, ServedIdentitySource string
 	TokensIn, TokensOut                         int
 	CachedTokens, CacheWriteTokens              int
@@ -102,12 +101,16 @@ func (r runCalls) servedUniformly() error {
 	return nil
 }
 
-// unansweredReason is a failed candidate call's text when the failure is the
-// provider's answer about this request — withheld or rejected — and empty when
-// it is a failure to reach one.
-func unansweredReason(err error) string {
-	if errors.Is(err, model.ErrOutputWithheld) || errors.Is(err, model.ErrRequestRejected) {
-		return err.Error()
+// withheldReason is the filter or stop a withheld candidate call named, and
+// empty for any other outcome. A rejected request is not one: it is refused the
+// same way on every run, so it stops the task instead (unservable).
+func withheldReason(err error) string {
+	if !errors.Is(err, model.ErrOutputWithheld) {
+		return ""
 	}
-	return ""
+	var named interface{ FinishReason() string }
+	if errors.As(err, &named) && named.FinishReason() != "" {
+		return named.FinishReason()
+	}
+	return err.Error()
 }

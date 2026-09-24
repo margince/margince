@@ -16,11 +16,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/modelreply"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -362,52 +360,6 @@ func suspend(acc Result, approvalID ids.ApprovalID, step modelStep, win *window,
 		OutputTokens:      acc.OutputTokens,
 	}
 	return acc
-}
-
-// modelStep is the step protocol: exactly one of tool-call or final.
-type modelStep struct {
-	Tool  string          `json:"tool"`
-	Args  json.RawMessage `json:"args"`
-	Final json.RawMessage `json:"final"`
-}
-
-func parseStep(text string) (modelStep, error) {
-	// SoleDocument, not Unfence: this channel executes what it reads, so a
-	// reply holding two candidate documents is refused rather than resolved by
-	// size. See modelreply.SoleDocument — largest-wins hands back an injected
-	// step that the model quoted while refusing it.
-	cleaned := modelreply.SoleDocument(text)
-
-	var step modelStep
-	dec := json.NewDecoder(strings.NewReader(cleaned))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&step); err != nil {
-		return modelStep{}, fmt.Errorf(`expected {"tool":..., "args":{...}} or {"final":{...}}: %w`, err)
-	}
-	// A step is the WHOLE document. json.Decoder stops at the first value and
-	// discards what follows it unread, so a reply that LEADS with a quoted
-	// injection — `{…} — I will not do that` — decodes the quotation and the
-	// refusal after it is never seen. The reduction cannot help here: the
-	// document really is at the start of the reply.
-	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
-		return modelStep{}, errors.New("a step must be the whole reply, and this one carries text after the document")
-	}
-	hasTool := step.Tool != ""
-	hasFinal := step.Final != nil
-	if hasTool == hasFinal {
-		return modelStep{}, errors.New(`exactly one of "tool" or "final" must be set`)
-	}
-	if hasTool && len(step.Tool) > maxToolNameLen {
-		// A tool name is a registry identifier, so a long one is not a typo —
-		// it is the model writing a payload into a field the trace persists and
-		// the refusal path echoes. Bound it here, at the one place model output
-		// becomes a step, rather than at each place it is later printed.
-		return modelStep{}, fmt.Errorf("tool name is longer than %d characters", maxToolNameLen)
-	}
-	if hasTool && step.Args == nil {
-		step.Args = json.RawMessage(`{}`)
-	}
-	return step, nil
 }
 
 // retryWithApproval re-makes one step's call presenting the approval a human has

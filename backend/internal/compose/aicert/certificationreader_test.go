@@ -89,8 +89,11 @@ func loadAICertVerdictRule(t *testing.T) string {
 	if percent := fmt.Sprintf("%d%%", aicert.CertifiedPassPercent); !strings.Contains(joined, percent) {
 		t.Fatalf("Verdict's documented rule does not state the %s pass rate the code applies:\n%s", percent, joined)
 	}
-	if majority := fmt.Sprintf("⌈%dn/%d⌉", aicert.MajorityNumerator, aicert.MajorityDenominator); !strings.Contains(joined, majority) {
-		t.Fatalf("Verdict's documented rule does not state the %s case majority the code applies:\n%s", majority, joined)
+	for _, majority := range []struct{ of, runs string }{{"n", "case"}, {"N", "degraded pooled"}} {
+		want := fmt.Sprintf("⌈%d%s/%d⌉", aicert.MajorityNumerator, majority.of, aicert.MajorityDenominator)
+		if !strings.Contains(joined, want) {
+			t.Fatalf("Verdict's documented rule does not state the %s %s majority the code applies:\n%s", want, majority.runs, joined)
+		}
 	}
 	return joined
 }
@@ -270,11 +273,11 @@ func writeAICertPresetDetail(page *strings.Builder, p aiCertPreset) {
 	}
 	page.WriteString("\nEach feature walks its own ladder of tiers until it reaches one this preset\n")
 	page.WriteString("binds; this is the rung and the model it lands on, and the record behind its grade.\n\n")
-	page.WriteString("| Task | Served on | Model | Band | State |\n|---|---|---|---|---|\n")
+	page.WriteString("| Task | Served on | Model | Grade | Measurement |\n|---|---|---|---|---|\n")
 	for _, row := range p.Tasks {
 		fmt.Fprintf(page, "| `%s` | %s | %s | %s | %s |\n",
 			row.Task, aiCertCell(row.Tier), aiCertCell(row.Model.Model),
-			aiCertBandCell(row), aiCertCell(row.State))
+			aiCertGrade(row), aiCertStateWords(row))
 	}
 	page.WriteString("\n</details>\n\n")
 }
@@ -504,14 +507,26 @@ func aiCertCell(value string) string {
 	return "`" + value + "`"
 }
 
-func aiCertBandCell(row aiCertPresetTask) string {
-	if row.Tier == "" {
-		return "`unbound`"
+// aiCertStateWords says in plain words whether a grade is the product as it
+// ships, so no record vocabulary reaches the part of the page above the
+// engineers' section.
+func aiCertStateWords(row aiCertPresetTask) string {
+	switch {
+	case row.Tier == "":
+		return "off"
+	case row.Band == "":
+		return "not measured"
 	}
-	if row.Band == "" {
-		return "`untested`"
+	switch row.State {
+	case aicert.StatusCurrent:
+		return "current"
+	case aicert.StatusStale:
+		return "re-check pending"
+	case aicert.StatusPartial:
+		return "newer test cases not tried yet"
+	default:
+		return "not measured"
 	}
-	return "`" + row.Band + "`"
 }
 
 // A preset's bottom line counts ready features from whatever grades it has, so it

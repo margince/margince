@@ -60,6 +60,9 @@ type RunResult struct {
 	// given; more than one means the first fell below certified_min and Score is
 	// their median, so a reader can see a contested grade.
 	JudgeScores []int `json:"judge_scores,omitempty"`
+	// Withheld is the provider's reason it withheld this run's answer — the
+	// filter or stop that fired — and empty for a run that was answered.
+	Withheld string `json:"withheld,omitempty"`
 }
 
 // judgeMedianAndMin answers the median and minimum of the scores a judge

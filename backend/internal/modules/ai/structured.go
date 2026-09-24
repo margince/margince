@@ -29,11 +29,12 @@ import (
 // reply this site will not act on is owed a decision.
 var ErrOutputRejected = errors.New("ai: model output rejected by the validator")
 
-// ModelDeclined reports whether a call ended on the models' own verdict about
-// this input: the validator refused every attempt (ErrOutputRejected), or every
-// rung withheld its answer (model.ErrOutputWithheld). Both are terminal in the
-// same way — asked again, the same words meet the same refusal — so a site that
-// decides "retry or give up" asks this rather than either sentinel alone.
+// ModelDeclined reports whether a call ended on a verdict about this input
+// rather than an outage: the validator refused every answer the models gave
+// (ErrOutputRejected), or the walk ended on a withheld answer
+// (model.ErrOutputWithheld). Both are terminal in the same way — asked again,
+// the same words meet the same refusal — so a site that decides "retry or give
+// up" asks this rather than either sentinel alone.
 func ModelDeclined(err error) bool {
 	return errors.Is(err, ErrOutputRejected) || errors.Is(err, model.ErrOutputWithheld)
 }

@@ -10,7 +10,6 @@ package runner
 import (
 	"encoding/json"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -33,21 +32,20 @@ import (
 // all. Do not "fix" it back without re-certifying agent_loop on two bindings.
 //
 // NO OBJECT HERE MAY BE DECLARED WITHOUT ITS KEYS. Gemini's decoder admits no
-// key into an object whose schema lists no properties, open or not: a model
-// that wanted to write arguments padded `"args": {` with whitespace to the
-// output ceiling, and a closing step wrote `"final": { }`. So args is the named
-// tool's own input schema and final declares its summary.
+// key into an object whose schema lists no properties, open or not, and pads it
+// with whitespace to the output ceiling instead. So args is the named tool's
+// own input schema, closed wherever the tool closes it because decodeArgs
+// refuses an unknown key, and final declares its summary.
 //
-// ONE BRANCH PER OFFERED TOOL, pairing `tool` with that tool's own `args`. A
-// single tool-call branch whose args was an anyOf over every tool let
-// `{"tool":"read_record","args":{}}` through — a zero-argument tool's schema
-// admits `{}` — so no tool's `required` was enforced, and `tool` was any string.
-// `enum`, not `const`: Gemini's documented keyword subset has no `const`.
+// ONE BRANCH PER OFFERED TOOL, pairing `tool` with that tool's own `args`, so
+// each tool's `required` is enforced and `tool` is one offered name. Under a
+// single branch whose args is an anyOf over every tool, a zero-argument tool's
+// `{}` satisfies every name. `enum`, not `const`: Gemini's documented keyword
+// subset has no `const`.
 //
-// Each branch REQUIRES its keys, because an optional args was simply skipped:
-// the same decoder closed the object after "tool" in every measured call. The
-// branches are also the exactly-one-of rule parseStep holds, and each is closed
-// to mirror its DisallowUnknownFields.
+// Each branch REQUIRES its keys, because Gemini's decoder skips an optional
+// args and closes the object after "tool". The branches are the exactly-one-of
+// rule parseStep holds, and each is closed as parseStep's envelope is.
 //
 // The schema is O(offered tools) and rides every step, so window.bounded counts
 // it against the prompt window with the rest of the request.
@@ -80,8 +78,20 @@ func toolCallBranches(offered []mcp.ToolSpec) []string {
 	branches := make([]string, 0, len(sorted))
 	for _, spec := range sorted {
 		branches = append(branches, `{"type":"object","properties":{"tool":{"type":"string","enum":[`+
-			strconv.Quote(spec.Name)+`]},"args":`+CompactSchema(spec)+
+			jsonString(spec.Name)+`]},"args":`+stepArguments(spec)+
 			`},"required":["tool","args"],"additionalProperties":false}`)
 	}
 	return branches
+}
+
+// jsonString is name as a JSON string literal. Go's own quoting is not JSON's:
+// strconv.Quote writes a control byte as `\a` or `\x07`, which no JSON parser
+// reads. Marshalling a string cannot fail; an empty enum member would admit no
+// tool, which is the side to err on.
+func jsonString(name string) string {
+	encoded, err := json.Marshal(name)
+	if err != nil {
+		return `""`
+	}
+	return string(encoded)
 }

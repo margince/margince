@@ -12,8 +12,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-// agentLoopFirstStepOnly is the phrase an agent_loop rubric uses to tell the judge
-// what it is shown.
+// agentLoopFirstStepOnly is the phrase every agent_loop rubric carries: the case
+// grades one step of a multi-step turn, and a judge not told so marks a right
+// first call down for the steps it never saw.
 const agentLoopFirstStepOnly = "FIRST step only"
 
 // An agent_loop case grades one step of a multi-step turn, so a rubric that does

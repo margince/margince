@@ -606,9 +606,9 @@ func TestFencedJSONAndUnknownFieldHandling(t *testing.T) {
 	if _, err := parseStep(`{"thought":"hmm"}`); err == nil {
 		t.Fatal("unknown fields must be rejected")
 	}
-	step, err := parseStep(`{"tool":"read_record"}`)
-	if err != nil || string(step.Args) != `{}` {
-		t.Fatalf("missing args must default to {}: %v %s", err, step.Args)
+	if _, err := parseStep(`{"tool":"read_record"}`); err == nil {
+		t.Fatal("a call without args must be refused: the step schema requires them, so a " +
+			"constrained model never writes one and an unconstrained one is asked again")
 	}
 }
 
@@ -618,7 +618,7 @@ func TestWindowBoundingElidesOldestKeepsGoal(t *testing.T) {
 		win.observe("read_record", strings.Repeat("x", 4000)+fmt.Sprintf("-%d", i))
 	}
 	req := win.asRequest(1000, MinimumPromptWindow)
-	if got := estimateTokens(req.System, req.Messages); got > MinimumPromptWindow {
+	if got := requestTokens(req.System, req.ResponseSchema, req.Messages); got > MinimumPromptWindow {
 		t.Fatalf("window not bounded: %d tokens", got)
 	}
 	if !strings.Contains(req.Messages[0].Content, "the goal survives") {

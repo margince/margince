@@ -43,10 +43,9 @@ func TestClassifyError(t *testing.T) {
 				errors.New("http 429")),
 			"provider_refused",
 		},
-		// The two outcomes stay on the published fallback code: error_sentinel
-		// names what an operator does next, and for both it is "read the call".
-		{"an answer the model withheld", withheldError{wire: providerAnthropic, reason: finishRefusal}, "provider_error"},
-		{"a request the provider rejected", fmt.Errorf("%w: http 400", model.ErrRequestRejected), "provider_error"},
+		// Outcomes, not provider failures: a model was reached and decided.
+		{"an answer the model withheld", withheldError{wire: providerAnthropic, reason: finishRefusal}, "output_withheld"},
+		{"a request the provider rejected", fmt.Errorf("%w: http 400", model.ErrRequestRejected), "request_rejected"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

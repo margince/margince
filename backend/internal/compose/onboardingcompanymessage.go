@@ -6,12 +6,11 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -119,10 +118,7 @@ func (a *onboardingCompanyAssistant) message(w http.ResponseWriter, r *http.Requ
 
 	answer, clarify, actAction, err := a.converse(r.Context(), req, act, message, history, conversation, research, read, comparisons, runID)
 	if err != nil {
-		if answerModelFailure(w, r, err) {
-			return
-		}
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	runtime, err := a.runtime.Get(r.Context(), runID)
@@ -432,56 +428,3 @@ func (h onboardingStateHandlers) MessageOnboardingCompany(w http.ResponseWriter,
 	}
 	h.assistant.message(w, r)
 }
-
-// answerModelFailure answers a model lane that produced no draft, and reports
-// whether it did; anything else is left for httperr.Write.
-//
-// A model this installation cannot reach is a DEPENDENCY that is down, not a
-// fault in the request — and httperr.Write has no sentinel for it, so it would
-// fall through to an opaque 500 whose body names nothing. It names the way
-// through instead: every required field can be typed by hand, so a model outage
-// blocks the assistant and not onboarding, and the wizard is the first thing
-// anybody sees.
-func answerModelFailure(w http.ResponseWriter, r *http.Request, err error) bool {
-	if !modelUnreachable(err) {
-		return false
-	}
-	// Our own request refused is a defect the wizard's reader can do nothing
-	// about, and this answer hides it from them, so the log is where it is found.
-	if errors.Is(err, model.ErrRequestRejected) {
-		slog.ErrorContext(r.Context(), "onboarding: the model provider rejected the assistant's request", "err", err)
-	}
-	// A CODE, because this sentence has a reader: the wizard renders it in their
-	// language, and a detail written here would arrive in English. The detail
-	// stays for a caller with no catalog.
-	//
-	// It says the assistant did not ANSWER, and does not say why: a provider
-	// that is down, a credential it refused, a model nobody bound, an answer it
-	// withheld, a request it rejected. Naming one would be a guess most of the
-	// time, so Settings → AI is offered as the place to look, not the diagnosis.
-	httperr.Unavailable(w, r, codeAssistantUnavailable,
-		"the assistant did not answer — an administrator can check the model binding under "+
-			"Settings → AI. The company details can be entered by hand; nothing here needs the assistant")
-	return true
-}
-
-// modelUnreachable reports whether err is the model lane ending without a
-// draft rather than this request being wrong.
-//
-// Matched by sentinel, never by message: ai.ErrAllTiersFailed when the walk
-// reached the end of the bound rungs, and the three outcomes that stop it
-// sooner — an answer withheld, a request rejected, an account out of budget.
-func modelUnreachable(err error) bool {
-	return errors.Is(err, ai.ErrAllTiersFailed) ||
-		errors.Is(err, model.ErrOutputWithheld) ||
-		errors.Is(err, model.ErrRequestRejected) ||
-		errors.Is(err, ai.ErrProviderQuota)
-}
-
-// codeAssistantUnavailable is the problem code the onboarding client reads to
-// pick its own copy, rather than rendering this handler's English detail at a
-// reader who set another language.
-//
-// Held by: TestEveryReaderFacingProblemCodeHasClientCopy
-// (backend/gates/frontendoauthoutcomes_test.go)
-const codeAssistantUnavailable = "assistant_unavailable"

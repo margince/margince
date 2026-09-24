@@ -130,20 +130,21 @@ func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (m
 	if len(out.Choices) == 0 {
 		return model.Response{}, fmt.Errorf("ai: openai-compat: response has no choices")
 	}
-	choice := out.Choices[0]
-	finish, err := choice.terminal(ctx)
-	if err != nil {
-		return model.Response{}, err
-	}
-	return model.Response{
-		Text:            completionText(choice.Message.Content, choice.Message.Reasoning, finish),
+	resp := model.Response{
 		InputTokens:     out.Usage.PromptTokens,
 		OutputTokens:    out.Usage.CompletionTokens,
 		ReasoningTokens: reasoningWithin(out.Usage.CompletionTokens, out.Usage.CompletionTokensDetails.ReasoningTokens),
 		ServedModel:     out.Model,
 		ServedProvider:  out.Provider,
-		FinishReason:    finish,
-	}, nil
+	}
+	choice := out.Choices[0]
+	finish, err := choice.terminal(ctx)
+	if err != nil {
+		return model.Response{}, withSpend(err, resp)
+	}
+	resp.Text = completionText(choice.Message.Content, choice.Message.Reasoning, finish)
+	resp.FinishReason = finish
+	return resp, nil
 }
 
 // reasoningWithin bounds a reported reasoning count by the completion it is a

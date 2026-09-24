@@ -290,6 +290,8 @@ JUDGE                          ?= $(MARGINCE_AICERT_JUDGE_MODEL)
 JUDGE_BASE_URL                 ?= $(MARGINCE_AICERT_JUDGE_BASE_URL)
 MARGINCE_AICERT_PROFILE        ?= eu_hosted
 MARGINCE_AICERT_UPSTREAM       ?=
+MARGINCE_AICERT_JUDGE_UPSTREAM ?=
+JUDGE_UPSTREAM                 ?= $(MARGINCE_AICERT_JUDGE_UPSTREAM)
 
 # TRACE names a directory for the payload trace — every candidate and judge
 # call's post-stripper request+response (the ai_call_payload shape), dumped to
@@ -341,7 +343,7 @@ AICERT_TIMEOUT ?= 90m
 # itself a task and leads at premium, so a config binding claude-haiku-4.5 there
 # makes the grader collide with every premium-led candidate — the run checks that
 # for every resolved task up front rather than failing mid-corpus after paying.
-e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=openai_compatible:openai/gpt-oss-120b by default, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies that model. BYOK key auto-loaded from .env.local. TASK=x RUNS=3 BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' PROFILE=eu_hosted (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
+e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=openai_compatible:openai/gpt-oss-120b by default, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies that model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<odd n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=eu_hosted (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
 	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \
@@ -349,6 +351,7 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 	  MARGINCE_AICERT_JUDGE_MODEL=$(JUDGE) MARGINCE_AICERT_JUDGE_BASE_URL=$(JUDGE_BASE_URL) \
 	  MARGINCE_AICERT_PROFILE=$(if $(PROFILE),$(PROFILE),$(MARGINCE_AICERT_PROFILE)) \
 	  MARGINCE_AICERT_UPSTREAM='$(if $(UPSTREAM),$(UPSTREAM),$(MARGINCE_AICERT_UPSTREAM))' \
+	  MARGINCE_AICERT_JUDGE_UPSTREAM='$(JUDGE_UPSTREAM)' \
 	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" \
 	  $(GOWORK_COMPOSED) $(GO) test -tags e2e_llm ./internal/compose/aicert/ -run TestE2ECertify -v -count=1 -timeout $(AICERT_TIMEOUT)
 

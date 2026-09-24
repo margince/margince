@@ -186,9 +186,10 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			// is unusable and nobody is told. A throttle keeps escalating,
 			// because it clears by itself and names no account to fix.
 			//
-			// A rejected request stops here for the same reason and one more:
-			// the rung above is sent the same request, and refuses it the same way.
-			if errors.Is(callErr, ErrProviderQuota) || errors.Is(callErr, model.ErrRequestRejected) {
+			// A rejected request stops only when the next rung is the same
+			// provider and model: only then is the identical request re-sent to
+			// the API that refused it. Any other rung may accept it.
+			if errors.Is(callErr, ErrProviderQuota) || rejectedAgainAbove(b, callErr, boundRungs[i:]) {
 				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
 				// Not an exhausted ladder — the rungs above were never tried.
 				// Reported as the refusal alone so a caller cannot read "every
@@ -196,13 +197,17 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 				return model.Response{}, t, false, callErr
 			}
 			// A withheld answer walks on: a different model may answer what this
-			// one declined, and the content is the caller's own to send it.
+			// one declined, and the content is the caller's own to send it. The
+			// tokens it spent are billed all the same, so they are metered.
+			if meterErr := r.meterWithheld(ctx, task, t, callErr); meterErr != nil {
+				return model.Response{}, t, false, meterErr
+			}
 			if i < len(boundRungs)-1 {
 				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
 			}
 			continue
 		}
-		if meterErr := r.meter.Record(ctx, Usage{Task: task, Tier: t, TokensIn: out.InputTokens, TokensOut: out.OutputTokens, CachedTokens: out.CachedTokens, ReasoningTokens: out.ReasoningTokens, CacheWriteTokens: out.CacheWriteTokens}); meterErr != nil {
+		if meterErr := r.meter.Record(ctx, usageOf(task, t, out)); meterErr != nil {
 			// Return the served response and tier even though the call fails:
 			// provider tokens were spent, and the trace must bill them to the
 			// tier that answered. errMeteringFailed keeps classifyError from
@@ -228,15 +233,51 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		// different HTTP answers, and a caller that cannot separate them has to
 		// report a dependency being down as an internal fault.
 		//
-		// Except when the last rung WITHHELD: a model was reached and decided,
-		// so the walk ended on an outcome, and ErrAllTiersFailed would send a
-		// caller to re-drive it as an outage.
-		if errors.Is(lastErr, model.ErrOutputWithheld) {
+		// Except when the last rung withheld or rejected: a model was reached
+		// and decided, so the walk ended on an outcome, and ErrAllTiersFailed
+		// would send a caller to re-drive it as an outage.
+		if errors.Is(lastErr, model.ErrOutputWithheld) || errors.Is(lastErr, model.ErrRequestRejected) {
 			return model.Response{}, lastTier, false, lastErr
 		}
 		return model.Response{}, lastTier, false, fmt.Errorf("%w for %s: %w", ErrAllTiersFailed, task, lastErr)
 	}
 	return model.Response{}, "", false, nil
+}
+
+// rejectedAgainAbove reports whether callErr rejected the request and the next
+// rung of rest (rest[0] is the rung that answered) is the same known binding.
+func rejectedAgainAbove(b *binding, callErr error, rest []Tier) bool {
+	if !errors.Is(callErr, model.ErrRequestRejected) || len(rest) < 2 {
+		return false
+	}
+	here, above := b.routeMeta[rest[0]], b.routeMeta[rest[1]]
+	return here.provider != "" && here == above
+}
+
+// usageOf is one served or withheld reply's spend as the meter records it.
+func usageOf(task Task, tier Tier, out model.Response) Usage {
+	return Usage{
+		Task: task, Tier: tier, TokensIn: out.InputTokens, TokensOut: out.OutputTokens, CachedTokens: out.CachedTokens,
+		ReasoningTokens: out.ReasoningTokens, CacheWriteTokens: out.CacheWriteTokens,
+	}
+}
+
+// meterWithheld records what a withheld rung reported spending. A rung whose
+// error names no spend has nothing to meter.
+func (r *Router) meterWithheld(ctx context.Context, task Task, tier Tier, callErr error) error {
+	var withheld interface{ Spent() model.Response }
+	if !errors.As(callErr, &withheld) {
+		return nil
+	}
+	spent := withheld.Spent()
+	if spent.InputTokens+spent.OutputTokens == 0 {
+		return nil
+	}
+	if err := r.meter.Record(ctx, usageOf(task, tier, spent)); err != nil {
+		return fmt.Errorf("ai: a withheld answer's spend could not be metered: %w", errors.Join(errMeteringFailed, err))
+	}
+	r.spendAgentTokens(ctx, spent.InputTokens+spent.OutputTokens)
+	return nil
 }
 
 // traceForFailedRung builds the non-terminal Call for a ladder rung the
@@ -272,7 +313,7 @@ func (r *Router) traceForFailedRung(b *binding, base Call, t Tier, callErr error
 // value, and it is how a truncation arrives: a cut-off reply is a Response
 // carrying model.FinishReasonLength on every wire, never a failure. A failed
 // attempt has no Response to read, so a withholding terminal arrives on the
-// error instead (gemini.go's stoppedError).
+// error instead (withheldError, truncatedError).
 //
 // Without this the stored row is blank on exactly the calls finish_reason
 // exists to describe: SAFETY and RECITATION both classify to the single

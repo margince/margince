@@ -291,10 +291,11 @@ func TestAJournaledRunCarriesEveryFieldOfARunOutcome(t *testing.T) {
 			Output: "the widget is blue", Outcome: "accepted", LatencyMS: 1234,
 			TokensIn: 11, TokensOut: 22, CachedTokens: 33, CacheWriteTokens: 44,
 			Degraded: true, HardPass: true, Score: 87, Ungraded: true, JudgeScores: []int{12, 87, 90},
+			Withheld: "SAFETY",
 		},
 		Provider: "openai_compatible", ServedModel: "z-ai/glm-5.2",
 		ServedIdentitySource: "provider_reported", JudgeServedModel: "claude-haiku-4.5",
-		CertifiedScope: "full_invocation", JudgeDegraded: true, Unanswered: true,
+		CertifiedScope: "full_invocation", JudgeDegraded: true,
 	}
 	assertNoZeroField(t, reflect.ValueOf(want), "runOutcome")
 

@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
@@ -166,10 +167,11 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 // returns the refusal alone, never ErrAllTiersFailed, so a spending cap can
 // never be retried into — and one place decides what "the ladder ran out" means.
 // A throttle keeps the sentinel and stays retryable, because backoff is exactly
-// what it asks for. A withheld answer and a rejected request never carry it:
-// driveCandidate records them as the run's outcome before this is asked.
+// what it asks for. A withheld answer never carries it: driveCandidate records
+// it as the run's outcome before this is asked. A rejected request and a
+// preference no host meets may, and are excluded: both fail every attempt alike.
 func worthRedriving(err error) bool {
-	return errors.Is(err, ai.ErrAllTiersFailed)
+	return errors.Is(err, ai.ErrAllTiersFailed) && !errors.Is(err, model.ErrRequestRejected) && !noHostServes(err)
 }
 
 // scenarioRow is what this scenario's own runs did, for the record to carry
@@ -195,7 +197,14 @@ func scenarioRow(sc Scenario, stamp string, results []RunResult) ScenarioRecord 
 		if r.HardPass {
 			row.Passed++
 		}
+		if r.Withheld != "" {
+			row.Withheld++
+			if !slices.Contains(row.WithheldReasons, r.Withheld) {
+				row.WithheldReasons = append(row.WithheldReasons, r.Withheld)
+			}
+		}
 	}
+	slices.Sort(row.WithheldReasons)
 	return row
 }
 
@@ -218,9 +227,6 @@ type runOutcome struct {
 	JudgeServedModel     string `json:"judge_served_model"`
 	CertifiedScope       string `json:"certified_scope"`
 	JudgeDegraded        bool   `json:"judge_degraded"`
-	// Unanswered says no model served this run, so its identity is the binding
-	// it was sent to and is not compared against the runs that were served.
-	Unanswered bool `json:"unanswered,omitempty"`
 }
 
 // runOnce drives exactly one prepared case and its judge score, cache off, so
@@ -258,24 +264,66 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	if pooled.Degraded {
 		return runOutcome{RunResult: RunResult{Degraded: true}}, nil
 	}
-	// Recorded as the site's own path would read it — no usable reply — and
-	// never sent to the judge, which would be grading an absence.
-	if pooled.Unanswered != "" {
-		log.WarnContext(ctx, "aicert: the provider withheld the answer or rejected the request, so this run fails ungraded",
-			"task", string(task), "scenario", sc.Name, "site", sc.Site, "err", pooled.Unanswered)
-		out := candidateSideRun(candidateSide{
-			outcome: aitasks.OutcomeInvalid, passed: false, scope: aitasks.ScopeOf(factory), pooled: pooled,
-		})
-		out.Ungraded, out.Unanswered = true, true
-		return out, nil
+	// A withheld run has no reply to validate: the site's own path reads it as
+	// no usable answer, which runEntry records as invalid.
+	var validated validation
+	if pooled.Withheld == "" {
+		if validated, err = validateRun(ctx, prepared, caseTrace, sc, task, pooled, log); err != nil {
+			return runOutcome{}, err
+		}
+	}
+	entry := runEntry(pooled, validated)
+	outcome := candidateSideRun(candidateSide{
+		output: validated.output, outcome: entry.outcome, passed: entry.passed,
+		scope: aitasks.ScopeOf(factory), pooled: pooled,
+	})
+	if !entry.graded {
+		log.WarnContext(ctx, "aicert: this run has no whole answer, so it fails and is not sent to the judge",
+			"task", string(task), "scenario", sc.Name, "site", sc.Site, "withheld", pooled.Withheld, "truncated", pooled.Truncated)
+		outcome.Ungraded = true
+		return outcome, nil
 	}
 
-	// The site's own validator, over the site's own trace: Evaluate reports a
-	// measurement, so a refused reply and a wrong answer stay distinguishable
-	// instead of collapsing into one failed run.
+	judgeMark := judgeRec.mark()
+	judged, err := judgeScore(ctx, judge, judgeRec, sc, caseTrace, validated.output, log)
+	if err != nil {
+		// The same debt the candidate side settles: a judge call that failed
+		// still spent, and driveRun may discard this whole attempt, so the
+		// trace is the only place its cost and its prompt can still be read.
+		traceSpentCalls(ctx, trace, "judge", task, sc, run, attempt, judgeRec, judgeMark, log)
+		return runOutcome{}, fmt.Errorf("judge: %w", unservable(judgeRole, err))
+	}
+	judgeCalls, err := judgeRec.terminalsSince(judgeMark)
+	if err != nil {
+		return runOutcome{}, fmt.Errorf("judge: %w", err)
+	}
+	traceCalls(ctx, trace, "judge", task, sc, run, attempt, judgeCalls, log)
+
+	outcome.Score = judged.score
+	outcome.JudgeScores = judged.scores
+	outcome.Ungraded = judged.ungraded
+	outcome.JudgeServedModel = judged.servedModel
+	outcome.JudgeDegraded = judged.degraded
+	return outcome, nil
+}
+
+// validation is what the site's own validator and the scenario's caps made of
+// a run's reply.
+type validation struct {
+	output, outcome string
+	// asExpected is the outcome the scenario named, inside its caps.
+	asExpected bool
+}
+
+// validateRun runs the site's own validator over the site's own trace: Evaluate
+// reports a measurement, so a refused reply and a wrong answer stay
+// distinguishable instead of collapsing into one failed run.
+func validateRun(ctx context.Context, prepared aitasks.PreparedCase, caseTrace aitasks.Trace, sc Scenario, task ai.Task,
+	pooled runCalls, log *slog.Logger,
+) (validation, error) {
 	evaluated := prepared.Evaluate(caseTrace)
 	if !aitasks.KnownOutcome(evaluated.Result) {
-		return runOutcome{}, fmt.Errorf(
+		return validation{}, fmt.Errorf(
 			"the case for site %s/%s evaluated to %q, which is not one of the outcomes a reply can have — a run counted under no outcome would leave the record's own totals unable to add up",
 			task, sc.Site, evaluated.Result,
 		)
@@ -292,72 +340,49 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 			"outcome", evaluated.Result, "want_outcome", sc.Expect.Outcome,
 			"detail", evaluated.Detail, "cap_failures", capFailures)
 	}
-
 	// The judge reads what production's parsers read: the unfenced text (every
 	// serving path strips markdown fences before json.Unmarshal, so a fence is
 	// presentation, not a defect).
-	output := ai.Unfence(caseTrace.Output)
+	return validation{
+		output: ai.Unfence(caseTrace.Output), outcome: evaluated.Result, asExpected: outcomeAsExpected && capsOK,
+	}, nil
+}
 
-	// A cut-off answer is not graded. The judge's score is a model's opinion OF
-	// AN ANSWER, and a run that stopped at the output ceiling does not have
-	// one: asked anyway, the judge read the fragment that arrived and returned
-	// 0 with an entirely positive reason, which is a number that reads like
-	// quality and is not. Skipping it also stops paying a second model to form
-	// an opinion about a truncation the candidate side already recorded.
-	//
-	// The run still counts, and counts as whatever the site's validator made of
-	// it — the mechanical grade is what the verdict rests on, and it judged the
-	// same incomplete text production would have.
-	if pooled.Truncated {
-		log.WarnContext(ctx, "aicert: the candidate was cut off at the output ceiling, so this run is not sent to the judge",
-			"task", string(task), "scenario", sc.Name, "site", sc.Site, "outcome", evaluated.Result)
-		// NOT a pass, whatever the validator made of the fragment. An answer
-		// that did not finish is not a correct answer, and a run that counted
-		// toward reliability while withholding its score would raise a
-		// certified median above what the binding earned — the model is the
-		// only actor, so that is a number flattering itself.
-		out := candidateSideRun(candidateSide{
-			output: output, outcome: evaluated.Result, passed: false,
-			scope: aitasks.ScopeOf(factory), pooled: pooled,
-		})
-		out.Ungraded = true
-		return out, nil
-	}
+// tallyEntry is how one run enters its scenario's tally: the outcome counted,
+// whether it passed, and whether a judge is asked about it.
+type tallyEntry struct {
+	outcome        string
+	passed, graded bool
+}
 
-	judgeMark := judgeRec.mark()
-	judged, err := judgeScore(ctx, judge, judgeRec, sc, caseTrace, output, log)
-	if err != nil {
-		// The same debt the candidate side settles: a judge call that failed
-		// still spent, and driveRun may discard this whole attempt, so the
-		// trace is the only place its cost and its prompt can still be read.
-		traceSpentCalls(ctx, trace, "judge", task, sc, run, attempt, judgeRec, judgeMark, log)
-		return runOutcome{}, fmt.Errorf("judge: %w", err)
+// runEntry decides how a run enters the tally, which is part of the grading
+// rule: only a run with a whole answer is graded or can pass.
+//
+// A withheld answer counts as invalid, which is what the site's own path reads
+// it as. A cut-off answer counts as whatever the validator made of the fragment
+// and is NOT a pass, however it read: a run that counted toward reliability
+// while withholding its score would raise a certified median above what the
+// binding earned. Neither is sent to the judge, whose score is an opinion OF AN
+// ANSWER — asked about a fragment, it returned 0 with an entirely positive
+// reason, a number that reads like quality and is not.
+func runEntry(pooled runCalls, validated validation) tallyEntry {
+	switch {
+	case pooled.Withheld != "":
+		return tallyEntry{outcome: aitasks.OutcomeInvalid}
+	case pooled.Truncated:
+		return tallyEntry{outcome: validated.outcome}
+	default:
+		return tallyEntry{outcome: validated.outcome, passed: validated.asExpected, graded: true}
 	}
-	judgeCalls, err := judgeRec.terminalsSince(judgeMark)
-	if err != nil {
-		return runOutcome{}, fmt.Errorf("judge: %w", err)
-	}
-	traceCalls(ctx, trace, "judge", task, sc, run, attempt, judgeCalls, log)
-
-	graded := candidateSideRun(candidateSide{
-		output: output, outcome: evaluated.Result, passed: outcomeAsExpected && capsOK,
-		scope: aitasks.ScopeOf(factory), pooled: pooled,
-	})
-	graded.Score = judged.score
-	graded.JudgeScores = judged.scores
-	graded.Ungraded = judged.ungraded
-	graded.JudgeServedModel = judged.servedModel
-	graded.JudgeDegraded = judged.degraded
-	return graded, nil
 }
 
 // candidateSideRun is one run's outcome with everything the CANDIDATE side
 // knows and nothing the judge does. The judged path adds what the judge gave,
-// which may be no opinion; the truncated path asks for none and marks itself
-// Ungraded.
+// which may be no opinion; an ungraded run asks for none.
 //
-// One builder for both rather than two, because a second copy is where a field
-// added to the record later reaches the judged runs and misses the cut-off ones.
+// One builder for every run rather than one per path, because a second copy is
+// where a field added to the record later reaches the judged runs and misses
+// the cut-off ones.
 func candidateSideRun(in candidateSide) runOutcome {
 	return runOutcome{
 		RunResult: RunResult{
@@ -369,6 +394,7 @@ func candidateSideRun(in candidateSide) runOutcome {
 			CachedTokens:     in.pooled.CachedTokens,
 			CacheWriteTokens: in.pooled.CacheWriteTokens,
 			HardPass:         in.passed,
+			Withheld:         in.pooled.Withheld,
 		},
 		Provider:             in.pooled.Provider,
 		ServedModel:          in.pooled.ServedModel,
@@ -400,12 +426,12 @@ func driveCandidate(ctx context.Context, prepared aitasks.PreparedCase, candidat
 ) (aitasks.Trace, runCalls, error) {
 	mark := candidateRec.mark()
 	caseTrace, runErr := prepared.Run(ctx, routedCompleter{router: candidate, task: task})
-	unanswered := unansweredReason(runErr)
+	withheld := withheldReason(runErr)
 	if runErr != nil {
 		traceSpentCalls(ctx, trace, "candidate", task, sc, run, attempt, candidateRec, mark, log)
 	}
-	if runErr != nil && unanswered == "" {
-		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", runErr)
+	if runErr != nil && withheld == "" {
+		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", unservable(candidateRole, runErr))
 	}
 	calls, err := candidateRec.terminalsSince(mark)
 	if err != nil {
@@ -417,8 +443,8 @@ func driveCandidate(ctx context.Context, prepared aitasks.PreparedCase, candidat
 	}
 	// Already traced above, and exempt from the uniformity check: a call that
 	// delivered nothing names the binding it was sent to, not a model that served.
-	if unanswered != "" {
-		pooled.Unanswered = unanswered
+	if withheld != "" {
+		pooled.Withheld = withheld
 		return aitasks.Trace{}, pooled, nil
 	}
 	traceCalls(ctx, trace, "candidate", task, sc, run, attempt, calls, log)

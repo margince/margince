@@ -4,7 +4,9 @@
 package aicert
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -199,68 +201,116 @@ func TestATaskCutOffOnEveryAttemptIsRecordedNotAborted(t *testing.T) {
 	}
 }
 
-// A candidate the provider withheld an answer from, or whose request it
-// rejected, is a MEASUREMENT of that binding: each run counts, fails and goes
-// ungraded, exactly as a truncation does. Neither is an outage, so none is
-// re-driven and the task still gets its record.
-func TestAWithheldOrRejectedCandidateIsRecordedNotAborted(t *testing.T) {
-	for name, cause := range map[string]error{
-		"withheld": fmt.Errorf("%w: refusal", model.ErrOutputWithheld),
-		"rejected": fmt.Errorf("%w: bad field (http 400)", model.ErrRequestRejected),
-	} {
-		t.Run(name, func(t *testing.T) {
-			waited := recordSleeps(t)
-			steps := make([]ai.FakeStep, 12)
-			for i := range steps {
-				steps[i] = ai.FakeStep{Err: cause}
-			}
-			candidate := ai.NewFakeClient().ScriptSteps(steps...)
-			judge := ai.NewFakeClient()
+// withheldBy is a withholding terminal that names its filter, the shape the
+// adapters hand over (ai's withheldError): the reason is what a record keeps.
+type withheldBy string
 
-			rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
-				ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-				ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
-					candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
-					judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
-				})
-			if err != nil {
-				t.Fatalf("a provider's answer about this content aborted the task with no record: %v", err)
-			}
-			if rec.Runs != 3 || rec.Reliability != 0 || rec.Verdict != VerdictNotSupported {
-				t.Errorf("runs=%d reliability=%v verdict=%q, want 3 failed runs and %q", rec.Runs, rec.Reliability, rec.Verdict, VerdictNotSupported)
-			}
-			if len(*waited) != 0 {
-				t.Errorf("waited %v — an outcome is not an outage to back off from", *waited)
-			}
-			if got := len(judge.Calls()); got != 0 {
-				t.Errorf("the judge was called %d time(s) on runs with no answer", got)
-			}
+func (w withheldBy) Error() string        { return "answer withheld: " + string(w) }
+func (w withheldBy) FinishReason() string { return string(w) }
+func (w withheldBy) Unwrap() error        { return model.ErrOutputWithheld }
+
+// candidateFailingEveryCall scripts every call a whole three-run set can make
+// to fail with cause, so no re-drive or ladder walk can reach an answer.
+func candidateFailingEveryCall(t *testing.T, cause error) *ai.FakeClient {
+	t.Helper()
+	steps := make([]ai.FakeStep, 0, 3*runAttempts*ladderRungs(t))
+	for range cap(steps) {
+		steps = append(steps, ai.FakeStep{Err: cause})
+	}
+	return ai.NewFakeClient().ScriptSteps(steps...)
+}
+
+// certifyAgainst certifies the one-scenario summarize task on scripted fakes.
+func certifyAgainst(t *testing.T, candidate, judge *ai.FakeClient) (Record, error) {
+	t.Helper()
+	return certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 		})
+}
+
+// A candidate the provider withheld every answer from is a MEASUREMENT of that
+// binding: each run counts, reports invalid, fails and goes ungraded, and the
+// record says which filter fired. It is not an outage, so none is re-driven.
+func TestAWithheldCandidateIsRecordedAsFailedUngradedRuns(t *testing.T) {
+	waited := recordSleeps(t)
+	judge := ai.NewFakeClient()
+	rec, err := certifyAgainst(t, candidateFailingEveryCall(t, withheldBy("SAFETY")), judge)
+	if err != nil {
+		t.Fatalf("a provider's answer about this content aborted the task with no record: %v", err)
+	}
+	if rec.Runs != 3 || rec.Reliability != 0 || rec.Verdict != VerdictNotSupported || rec.ReportedInvalid != 3 {
+		t.Errorf("runs=%d reliability=%v verdict=%q invalid=%d, want 3 failed invalid runs and %q",
+			rec.Runs, rec.Reliability, rec.Verdict, rec.ReportedInvalid, VerdictNotSupported)
+	}
+	// No judge graded any run, so the record names no grader and cannot call
+	// the set self-judged — the observable half of every run being Ungraded.
+	if rec.JudgeServedModel != "" || rec.SelfJudged {
+		t.Errorf("judge_served_model=%q self_judged=%v on a set no judge saw", rec.JudgeServedModel, rec.SelfJudged)
+	}
+	if len(rec.Scenarios) != 1 || rec.Scenarios[0].Withheld != 3 ||
+		len(rec.Scenarios[0].WithheldReasons) != 1 || rec.Scenarios[0].WithheldReasons[0] != "SAFETY" {
+		t.Errorf("scenario rows = %+v, want 3 withheld runs and the one reason SAFETY", rec.Scenarios)
+	}
+	if len(*waited) != 0 {
+		t.Errorf("waited %v — an outcome is not an outage to back off from", *waited)
+	}
+	if got := len(judge.Calls()); got != 0 {
+		t.Errorf("the judge was called %d time(s) on runs with no answer", got)
 	}
 }
 
-// An unanswered run names the binding it was sent to, which is not the identity
+// A REJECTED candidate request is the binding or the request shape, not the
+// model: the same request is refused on every run, so filing it as a failing
+// record would publish a wrong key as a model that cannot do the task. The
+// task stops with no record, as a rejected judge does, and says what to check.
+func TestARejectedCandidateAbortsTheTaskWithNoRecord(t *testing.T) {
+	waited := recordSleeps(t)
+	judge := ai.NewFakeClient()
+	_, err := certifyAgainst(t, candidateFailingEveryCall(t, fmt.Errorf("%w: bad field", model.ErrRequestRejected)), judge)
+	if err == nil {
+		t.Fatal("a rejected candidate request was recorded as a measurement")
+	}
+	if !errors.Is(err, model.ErrRequestRejected) || !strings.Contains(err.Error(), "MARGINCE_AICERT_MODEL") {
+		t.Errorf("err = %v, want the rejection kept and the binding named as what to check", err)
+	}
+	if len(*waited) != 0 {
+		t.Errorf("waited %v — the same request is refused on every attempt", *waited)
+	}
+	if got := len(judge.Calls()); got != 0 {
+		t.Errorf("the judge was called %d time(s) for a request the provider refused", got)
+	}
+}
+
+// A withheld run names the binding it was sent to, which is not the identity
 // a served run reports — a native vendor answers with a dated version of the
 // model id it was asked for. Compared as though it had served, it would void a
 // set whose served runs were all one model.
-func TestAnUnansweredRunNeitherSetsNorBreaksTheServedIdentity(t *testing.T) {
+func TestAWithheldRunNeitherSetsNorBreaksTheServedIdentity(t *testing.T) {
 	t.Parallel()
-	unanswered := runOutcome{Provider: "gemini", ServedModel: "gemini-flash", Unanswered: true}
+	withheld := runOutcome{RunResult: RunResult{Withheld: "SAFETY"}, Provider: "gemini", ServedModel: "gemini-flash"}
 	served := runOutcome{Provider: "gemini", ServedModel: "gemini-flash-001"}
-	for name, order := range map[string][]runOutcome{
-		"unanswered first": {unanswered, served, unanswered},
-		"served first":     {served, unanswered, served},
+	for name, tc := range map[string]struct {
+		order []runOutcome
+		want  string
+	}{
+		"withheld first": {[]runOutcome{withheld, served, withheld}, served.ServedModel},
+		"served first":   {[]runOutcome{served, withheld, served}, served.ServedModel},
+		// Nothing served, so the binding is the only identity there is.
+		"every run withheld": {[]runOutcome{withheld, withheld, withheld}, withheld.ServedModel},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			acc := &taskAccumulation{}
-			for i, outcome := range order {
+			for i, outcome := range tc.order {
 				if err := acc.addRun(ai.TaskSummarize, testScenario("basic", wideBands), i, outcome); err != nil {
 					t.Fatalf("run %d: %v", i+1, err)
 				}
 			}
-			if acc.servedModel != served.ServedModel {
-				t.Errorf("record identity = %q, want the model that served, %q", acc.servedModel, served.ServedModel)
+			if acc.servedModel != tc.want {
+				t.Errorf("record identity = %q, want %q", acc.servedModel, tc.want)
 			}
 		})
 	}

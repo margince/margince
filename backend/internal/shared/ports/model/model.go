@@ -53,10 +53,12 @@ var ErrAttachmentMislabelled = errors.New("model: attachment bytes are not the t
 // package.
 var ErrOutputWithheld = errors.New("model: the provider withheld the answer")
 
-// ErrRequestRejected marks a request the provider refused as malformed or
-// unacceptable (HTTP 400, 413 or 422). The fault is the request's, so it is a
-// defect to log rather than an answer to show, and a router stops at it: the
-// same request fails the same way on every rung.
+// ErrRequestRejected marks a request the provider's own error code names as
+// malformed: a schema or field the API refuses. A status alone never makes it,
+// because a 400 also means a context too long for one model, a parameter one
+// model lacks, a key, an account or a region. The fault is the request's, so it
+// is a defect to log rather than an answer to show, and a router stops at it
+// when the next rung would send the same request to the same model.
 var ErrRequestRejected = errors.New("model: the provider rejected the request")
 
 // Attachment is one cross-provider input part. Bytes XOR URI: Bytes for inline

@@ -2528,9 +2528,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
           "stale_cause": {
             "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ],
+            "grader_changed": [
               "morning_brief_a_retrieved_deal_is_not_the_queue",
               "morning_brief_reads_its_queue_first",
               "morning_brief_retrieved_text_is_not_an_instruction"
@@ -2591,9 +2596,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
           "stale_cause": {
             "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ],
+            "grader_changed": [
               "overnight_sweep_one_quiet_deal_is_not_the_book",
               "overnight_sweep_reads_what_is_slipping_before_it_logs",
               "overnight_sweep_retrieved_text_is_not_an_instruction"

@@ -183,11 +183,13 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 	}
 }
 
-// The tool listing may take at most listingBudgetNumerator/listingBudgetDenominator
-// of the runner's prompt ceiling. The listing lives in the system prompt, which
-// elision never touches — only the transcript gives way — so a catalog that grew
-// past this would not overflow, it would quietly leave the run less and less
-// room for the observations it is reasoning over.
+// What every step pays before its transcript — the frame, the tool listing and
+// the step schema, runner.FixedStepCost — may take at most
+// listingBudgetNumerator/listingBudgetDenominator of the runner's prompt
+// ceiling. Elision never touches any of the three — only the transcript gives
+// way — so a catalog that grew past this would not overflow, it would quietly
+// leave the run less and less room for the observations it is reasoning over.
+// The history below measured the listing alone.
 //
 // It was 1/2, and the comment there said half was "generous next to where the
 // surface sits today". That stopped being true at 33 tools: the catalog reached
@@ -265,11 +267,10 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 // compose refuses to assemble one that does not, the runner refuses a Job with
 // no Tools, and no file outside the three sanctioned ones may build a Job.
 //
-// So the fraction bounds a DECLARED agent's listing, and the fattest agent that
-// runs is an order of magnitude inside it. The figures are NOT written here — they moved with every
-// change that touched a description, and two of them sat wrong in this comment
-// for weeks. docs/reference/agent-tool-budget.md is regenerated from the served
-// surface and is the place that carries them.
+// So the fraction bounds a DECLARED agent's step, and the fattest agent that
+// runs is well inside it. The figures are not written here, because every change
+// to a description moves them: docs/reference/agent-tool-budget.md is
+// regenerated from the served surface and is the place that carries them.
 //
 // The fraction itself is deliberately UNCHANGED at 17/24. Re-tightening it in
 // the change that creates the room would spend the room before anyone can argue
@@ -375,19 +376,19 @@ func TestTheOneToolBudgetRefusesADescriptionThatFillsTheWindow(t *testing.T) {
 // listingOverBudget names what is wrong with an agent's listing, or "" when
 // nothing is. It is a function over one agent's specs rather than a loop body
 // so the refusal can be proved against a listing that breaks it — no shipped
-// agent is anywhere near the bound (the fattest is under a seventh of it), so a
+// agent is anywhere near the bound (agent-tool-budget.md carries the figures), so a
 // gate written inline here would never once have been seen to fire.
 func listingOverBudget(agent string, specs []mcp.ToolSpec) string {
 	budget := runner.MinimumPromptWindow * listingBudgetNumerator / listingBudgetDenominator
-	tokens := len(runner.ToolListing(specs)) / 4
-	if tokens <= budget {
+	cost := runner.FixedStepCost(specs)
+	if cost.Tokens <= budget {
 		return ""
 	}
 	return fmt.Sprintf(
-		"agent %q offers a tool listing of ~%d tokens against the %d it may take of a %d-token "+
-			"window — the listing is never elided, so what grows here comes out of the observations "+
-			"this run is reasoning over",
-		agent, tokens, budget, runner.MinimumPromptWindow)
+		"agent %q pays ~%d tokens on every step before its transcript (a %d-token listing and a "+
+			"%d-token step schema beside the frame) against the %d it may take of a %d-token window — "+
+			"neither is ever elided, so what grows here comes out of the observations this run is reasoning over",
+		agent, cost.Tokens, cost.Listing, cost.Schema, budget, runner.MinimumPromptWindow)
 }
 
 // The bound is only worth having if it fires. No shipped agent comes near it —
@@ -401,6 +402,30 @@ func TestTheAgentListingBudgetRefusesAListingThatWouldFillTheWindow(t *testing.T
 	}
 	if over := listingOverBudget("morning_brief", specsNamed(t, []string{"read_record"})); over != "" {
 		t.Errorf("a one-tool listing was reported over budget: %s", over)
+	}
+}
+
+// The budget holds what every step PAYS, and a tool's schema is paid twice: once
+// in the listing and again as its branch of the step schema the provider
+// enforces. A tool whose listing alone fits and whose step does not is over.
+func TestTheAgentListingBudgetCountsTheStepSchemaBesideTheListing(t *testing.T) {
+	budget := runner.MinimumPromptWindow * listingBudgetNumerator / listingBudgetDenominator
+	var properties strings.Builder
+	for i := 0; properties.Len()/4 < budget*3/5; i++ {
+		fmt.Fprintf(&properties, `"member_%d":{"type":"string"},`, i)
+	}
+	wide := mcp.ToolSpec{
+		Name: "takes_every_member", Description: "Takes many members.",
+		InputSchema: json.RawMessage(`{"type":"object","properties":{` +
+			strings.TrimSuffix(properties.String(), ",") + `}}`),
+	}
+
+	if listing := len(runner.ToolListing([]mcp.ToolSpec{wide})) / 4; listing > budget {
+		t.Fatalf("the probe's listing alone is %d tokens against %d, so it proves nothing about the schema", listing, budget)
+	}
+	if listingOverBudget("an_agent_with_one_wide_tool", []mcp.ToolSpec{wide}) == "" {
+		t.Error("a tool whose listing fits and whose step schema doubles it was reported within budget, " +
+			"so the bound misses what rides every step beside the listing")
 	}
 }
 

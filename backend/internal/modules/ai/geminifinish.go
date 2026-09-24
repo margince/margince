@@ -7,31 +7,42 @@ package ai
 // same way by Complete and by the stream.
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// geminiResponseError maps an in-body error object or a withholding
-// finishReason to an error. Gemini delivers SAFETY, RECITATION, … inside a 200
-// body, so unchecked they would pass for a complete answer. STOP and
+// geminiResponseError maps an in-body error object or a finishReason that
+// delivers no answer to an error. Gemini delivers SAFETY, RECITATION, … inside
+// a 200 body, so unchecked they would pass for a complete answer. STOP and
 // MAX_TOKENS are not errors: both carry the text generated, and absent is a
 // non-final stream chunk.
-func geminiResponseError(out geminiResponse) error {
+func geminiResponseError(ctx context.Context, out geminiResponse) error {
 	if out.Error.Message != "" || out.Error.Status != "" {
-		return fmt.Errorf("ai: gemini: %s: %s", out.Error.Status, out.Error.Message)
+		return fmt.Errorf("ai: gemini: %s: %s", safeProviderText(ctx, out.Error.Status), safeProviderText(ctx, out.Error.Message))
 	}
 	// A blocked PROMPT has no candidate to carry a finishReason at all: the
 	// reason is under promptFeedback, and without reading it the reply looks
 	// like a body cut short in transit.
 	if len(out.Candidates) == 0 && out.PromptFeedback.BlockReason != "" {
-		return withheldError{wire: providerGemini, reason: "PROMPT_BLOCKED_" + out.PromptFeedback.BlockReason, detail: "the prompt was blocked"}
+		reason := out.PromptFeedback.BlockReason
+		if !terminalCode.MatchString(reason) {
+			reason = "OTHER"
+		}
+		return withheldError{wire: providerGemini, reason: geminiPromptBlocked + reason, detail: "the prompt was blocked"}
 	}
 	for _, cand := range out.Candidates {
-		switch cand.FinishReason {
-		case "", geminiStop, geminiMaxTokens:
+		switch reason := cand.FinishReason; {
+		case reason == "", reason == geminiStop, reason == geminiMaxTokens:
+		case geminiWithholds(reason):
+			return withheldError{wire: providerGemini, reason: reason}
 		default:
-			return stoppedError{reason: cand.FinishReason}
+			// OTHER, MALFORMED_FUNCTION_CALL, MISSING_THOUGHT_SIGNATURE and the
+			// rest are this reply going wrong, not a decision about the
+			// content, so they fail the call and the ladder walks on.
+			return fmt.Errorf("ai: gemini: generation stopped: %s", safeProviderText(ctx, reason))
 		}
 	}
 	return nil
@@ -42,10 +53,23 @@ func geminiResponseError(out geminiResponse) error {
 const (
 	geminiStop      = "STOP"
 	geminiMaxTokens = "MAX_TOKENS"
-	// geminiMissingThoughtSignature is the terminal for a multi-turn request
-	// that dropped the signature a thinking model's earlier turn carried.
-	geminiMissingThoughtSignature = "MISSING_THOUGHT_SIGNATURE"
+	// geminiPromptBlocked prefixes a promptFeedback blockReason, so a blocked
+	// prompt and a blocked answer are separate terminals in a stored call.
+	geminiPromptBlocked = "PROMPT_BLOCKED_"
 )
+
+// geminiWithheldReasons are the finishReasons that are a filter's decision
+// about the content. Positive on purpose: a terminal Google adds later is a
+// failed call that walks, not an outcome that ends one.
+var geminiWithheldReasons = map[string]bool{
+	"SAFETY": true, "RECITATION": true, "BLOCKLIST": true, "PROHIBITED_CONTENT": true, "SPII": true,
+	"IMAGE_SAFETY": true, "IMAGE_PROHIBITED_CONTENT": true, "IMAGE_RECITATION": true,
+}
+
+// geminiWithholds reports whether a terminal withheld the answer.
+func geminiWithholds(reason string) bool {
+	return geminiWithheldReasons[reason] || strings.HasPrefix(reason, geminiPromptBlocked)
+}
 
 // geminiFinishReason is Gemini's terminal in the port's vocabulary: a cut-off
 // reply is model.FinishReasonLength on every wire, because the structured
@@ -55,42 +79,6 @@ func geminiFinishReason(reason string) string {
 		return model.FinishReasonLength
 	}
 	return reason
-}
-
-// stoppedError is a withholding finishReason as an error that still NAMES the
-// terminal.
-//
-// Carrying it as data is what keeps the distinction recoverable: every
-// withheld answer classifies to the one `provider_error` sentinel, so a refused
-// one (SAFETY) and a recited one (RECITATION) are indistinguishable in a stored
-// call unless the reason itself survives. A truncation is not one of them on
-// Complete — it is a Response — and only a stream, whose port has no terminal
-// to carry it, still ends on this error at MAX_TOKENS.
-//
-// The message is byte-identical to the plain error it replaces: callers and
-// tests match on the text, so the reason is additive rather than a reword.
-type stoppedError struct{ reason string }
-
-func (e stoppedError) Error() string { return "ai: gemini: generation stopped: " + e.reason }
-
-// FinishReason satisfies the accessor tracing.go probes for with errors.As,
-// so the terminal reaches the trace without this package's error type
-// leaking into the tracing path's imports.
-func (e stoppedError) FinishReason() string { return e.reason }
-
-// Unwrap classifies the terminal. Every reason but the two that deliver text is
-// the provider's decision about this reply, so it is withheld; the exception is
-// a thought signature the REQUEST failed to echo back, which is ours to fix and
-// fails the same way on every retry.
-func (e stoppedError) Unwrap() error {
-	switch e.reason {
-	case geminiMaxTokens:
-		return nil
-	case geminiMissingThoughtSignature:
-		return model.ErrRequestRejected
-	default:
-		return model.ErrOutputWithheld
-	}
 }
 
 // geminiTerminal returns the terminal a candidate finished with, when one

@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -215,5 +216,24 @@ func TestTheFrameOffersStoppingAsAMoveAndNotOnlyAsCompletion(t *testing.T) {
 	// and the two new ones are offered beside it rather than as a footnote.
 	if !strings.Contains(prompt, "the goal is done") {
 		t.Error("the frame no longer names completion as a reason to end the turn")
+	}
+}
+
+// The published per-step cost is the part of a real step request that is not
+// transcript: the same system prompt and the same step schema the window sends,
+// so the budget gate holds the bytes a run pays rather than a model of them.
+func TestTheFixedStepCostIsWhatAStepRequestCarriesBesideItsTranscript(t *testing.T) {
+	offered := []mcp.ToolSpec{readRecordSpec(), zeroArgumentSpec()}
+	req := newWindow(Job{Goal: "prep the meeting", TriggerRef: triggerRef}, offered, nil).asRequest(1000, 0)
+
+	cost := FixedStepCost(offered)
+	if want := requestTokens(req.System, req.ResponseSchema, nil); cost.Tokens != want {
+		t.Errorf("FixedStepCost is %d tokens and a real step request carries %d beside its transcript", cost.Tokens, want)
+	}
+	if want := len(req.ResponseSchema) / 4; cost.Schema != want || want == 0 {
+		t.Errorf("the step schema is %d tokens on the wire and FixedStepCost reports %d", want, cost.Schema)
+	}
+	if cost.Listing+cost.Schema > cost.Tokens {
+		t.Errorf("the listing (%d) and the schema (%d) outweigh the whole fixed cost (%d)", cost.Listing, cost.Schema, cost.Tokens)
 	}
 }

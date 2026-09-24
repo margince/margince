@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"maps"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -224,6 +225,22 @@ func TestTheDescriptionCarriesThePerTypeVocabulary(t *testing.T) {
 	} {
 		if !strings.Contains(described, want) {
 			t.Errorf("the filter description lacks %q:\n%s", want, described)
+		}
+	}
+}
+
+// Every abbreviated operand type the description prints is explained in it. A
+// bare `tag_id (a)` leaves a caller to guess that the operand is a
+// comma-separated list, which is the spelling it gets wrong.
+func TestEveryOperandCodeTheDescriptionPrintsIsExplained(t *testing.T) {
+	described := listRecords{filters: bindableFilters(probeVocabulary{})}.describeFilters()
+	codes := regexp.MustCompile(`\(([a-z])\)`).FindAllStringSubmatch(described, -1)
+	if len(codes) == 0 {
+		t.Fatalf("the description abbreviates no operand type, so this reads nothing:\n%s", described)
+	}
+	for _, code := range codes {
+		if strings.Count(described, code[0]) < 2 || !strings.Contains(described, code[0]+" is ") {
+			t.Errorf("the description prints %s and never says what it means:\n%s", code[0], described)
 		}
 	}
 }

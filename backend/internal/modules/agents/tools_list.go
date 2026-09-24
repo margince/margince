@@ -159,13 +159,14 @@ func (t listRecords) publishedFilterNames() []string {
 // describeFilters writes the per-type vocabulary into the one place a caller
 // reads it: which record type takes which key, and the operand each takes.
 func (t listRecords) describeFilters() string {
-	lines := make([]string, 0, len(listRecordTypes)+1)
-	lines = append(lines, "Narrow the list. Every operand is a string, booleans included (\"true\"). "+
-		"Each record_type takes only its own:")
+	lines := make([]string, 0, len(listRecordTypes)+2)
+	lines = append(lines, "Narrow the list. Every operand is a string. Each record_type takes only its own:")
+	used := map[string]bool{}
 	for _, recordType := range listRecordTypes {
 		names := make([]string, 0, len(t.filters[recordType]))
 		for _, filter := range t.filters[recordType] {
 			names = append(names, filter.describe())
+			used[filter.Type] = true
 		}
 		if len(names) == 0 {
 			lines = append(lines, recordType+" — none; it can only be listed whole")
@@ -173,7 +174,32 @@ func (t listRecords) describeFilters() string {
 		}
 		lines = append(lines, recordType+" — "+strings.Join(names, ", "))
 	}
+	lines = append(lines, operandKey(used)...)
 	return strings.Join(append(lines, t.sourceOfStageIDs()...), " ")
+}
+
+// operandCodes abbreviates the non-string operand types, and says what each
+// code means, because the code alone does not: `(a)` is a comma-separated list.
+var operandCodes = []struct{ schemaType, code, meaning string }{
+	{schemaArray, "(a)", "a comma-separated list"},
+	{schemaBoolean, "(b)", `"true" or "false"`},
+	{schemaInteger, "(i)", "a whole number"},
+	{schemaNumber, "(n)", "a number"},
+}
+
+// operandKey states the meaning of each code the vocabulary uses, and nothing
+// for a code it does not.
+func operandKey(used map[string]bool) []string {
+	var key []string
+	for _, operand := range operandCodes {
+		if used[operand.schemaType] {
+			key = append(key, operand.code+" is "+operand.meaning)
+		}
+	}
+	if len(key) == 0 {
+		return nil
+	}
+	return []string{strings.Join(key, ", ") + "."}
 }
 
 // sourceOfStageIDs says where a pipeline or stage id comes from, when the
@@ -201,20 +227,23 @@ func (t listRecords) sourceOfStageIDs() []string {
 // is not a string — every operand travels as a string on this wire, so `true`
 // and `3` are the two a caller would otherwise have to guess the spelling of.
 //
-// The non-string types are abbreviated to their first letter. The whole listing
-// rides in every Surface-B prompt against a hard ceiling, and the sentence above
-// this vocabulary already says booleans travel as "true" — so spelling the word
-// out on each of them buys nothing a caller did not already read, while the
-// closed vocabularies, which nothing else states, stay in full.
+// The non-string types are abbreviated to an operandCodes code, which
+// operandKey explains once: the whole listing rides in every Surface-B prompt
+// against a hard ceiling, so the meaning is paid once rather than per filter. A
+// type with no code is spelled out, so no code is ever printed unexplained.
 func (f listFilter) describe() string {
 	switch {
 	case len(f.Enum) > 0:
 		return f.Name + " (" + strings.Join(f.Enum, "|") + ")"
-	case f.Type != "" && f.Type != schemaString:
-		return f.Name + " (" + f.Type[:1] + ")"
-	default:
+	case f.Type == "" || f.Type == schemaString:
 		return f.Name
 	}
+	for _, operand := range operandCodes {
+		if operand.schemaType == f.Type {
+			return f.Name + " " + operand.code
+		}
+	}
+	return f.Name + " (" + f.Type + ")"
 }
 
 func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

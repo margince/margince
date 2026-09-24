@@ -204,6 +204,10 @@ would certify a window no run is handed. The expectation is the step the turn
 should take, and `Prepare` refuses one naming a tool this agent is not offered.
 Reference: `certcase_agentloop.go`.
 
+The judge is shown that one step, so an `agent_loop` rubric must say it grades
+the turn's `FIRST step only` — the phrase `corpusagentloop_test.go` requires —
+or the judge marks a right first call down for the steps it never saw.
+
 ## The scenario file
 
 `internal/compose/aicert/corpus/<task>/<name>.yaml`:

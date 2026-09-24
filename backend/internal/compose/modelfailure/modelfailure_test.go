@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package modelfailure
 
-// A model lane that cannot answer is a dependency being down, and the onboarding
-// wizard is the first screen anybody ever sees.
+// A model lane that cannot answer is a dependency being down, and the handler
+// waiting on it says so rather than answering an opaque 500.
 
 import (
 	"bytes"
@@ -17,10 +17,11 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// THE AGGREGATE IS RECOGNISABLE, which is what lets the wizard answer 503 with
+// THE AGGREGATE IS RECOGNISABLE, which is what lets the handler answer 503 with
 // a way through rather than an opaque 500.
 //
 // Matched by sentinel and not by string: the message carries the task name and
@@ -31,14 +32,14 @@ func TestAModelLaneThatFailedEveryTierIsRecognisable(t *testing.T) {
 
 	served := fmt.Errorf("%w for %s: %w", ai.ErrAllTiersFailed, "cold_start",
 		errors.New("openai-compat: response has no choices"))
-	if !modelUnreachable(served) {
-		t.Error("the every-tier-failed aggregate was not recognised, so the wizard answers 500 and names no remedy")
+	if !unanswered(served) {
+		t.Error("the every-tier-failed aggregate was not recognised, so the handler answers 500 and names no remedy")
 	}
 
 	// A fault in the REQUEST is not the lane being down, and must not be
 	// reported as one: telling somebody the assistant is unavailable when their
 	// input was rejected sends them to check a binding that is fine.
-	if modelUnreachable(errors.New("history: too many messages")) {
+	if unanswered(errors.New("history: too many messages")) {
 		t.Error("an ordinary error was reported as the model lane being unreachable")
 	}
 }
@@ -48,7 +49,7 @@ func TestAModelLaneThatFailedEveryTierIsRecognisable(t *testing.T) {
 //
 // The sentinel marks the walk reaching its end, whatever killed the last rung:
 // a provider that is down, a credential it refused, a request every rung
-// rejected. From the wizard's seat those are one fact — no draft — and the
+// rejected. From the reader's seat those are one fact — no draft — and the
 // answer it gives is true of all of them, which is why the message says the
 // assistant did not ANSWER and names Settings → AI as a place to look rather
 // than as the cause.
@@ -66,16 +67,16 @@ func TestAnOrdinaryProviderFailureStillDegradesRatherThanFallingThrough(t *testi
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if !modelUnreachable(fmt.Errorf("%w: %w", ai.ErrAllTiersFailed, cause)) {
-				t.Error("the walk ended with no answer and the wizard would still report an opaque 500")
+			if !unanswered(fmt.Errorf("%w: %w", ai.ErrAllTiersFailed, cause)) {
+				t.Error("the walk ended with no answer and the handler would still report an opaque 500")
 			}
 		})
 	}
 }
 
-// A WALK THAT STOPPED EARLY still left the wizard with no draft. A withheld
+// A WALK THAT STOPPED EARLY still left the reader with no draft. A withheld
 // answer, a rejected request and an empty account each end the walk without
-// the every-tier aggregate, and each is the same fact from the wizard's seat:
+// the every-tier aggregate, and each is the same fact from the reader's seat:
 // the assistant did not answer, and the fields can be typed by hand.
 func TestAWalkThatEndedOnAnOutcomeIsAnsweredAsTheAssistantNotAnswering(t *testing.T) {
 	const providerText = "I can't help with that PROVIDER-OWN-WORDS"
@@ -83,9 +84,10 @@ func TestAWalkThatEndedOnAnOutcomeIsAnsweredAsTheAssistantNotAnswering(t *testin
 		cause     error
 		wantLevel string
 	}{
-		"a withheld answer":    {cause: model.ErrOutputWithheld, wantLevel: ""},
-		"a rejected request":   {cause: model.ErrRequestRejected, wantLevel: "level=ERROR"},
-		"an exhausted account": {cause: ai.ErrProviderQuota, wantLevel: ""},
+		"a withheld answer":         {cause: model.ErrOutputWithheld, wantLevel: ""},
+		"a reply that never passed": {cause: ai.ErrOutputRejected, wantLevel: ""},
+		"a rejected request":        {cause: model.ErrRequestRejected, wantLevel: "level=ERROR"},
+		"an exhausted account":      {cause: ai.ErrProviderQuota, wantLevel: ""},
 	} {
 		t.Run(name, func(t *testing.T) {
 			var logged bytes.Buffer
@@ -95,8 +97,8 @@ func TestAWalkThatEndedOnAnOutcomeIsAnsweredAsTheAssistantNotAnswering(t *testin
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/onboarding/company/messages", nil)
-			if !answerModelFailure(rec, req, fmt.Errorf("ai: anthropic: %s: %w", providerText, tc.cause)) {
-				t.Fatal("the walk ended with no answer and the wizard would still report an opaque 500")
+			if !answered(rec, req, fmt.Errorf("ai: anthropic: %s: %w", providerText, tc.cause)) {
+				t.Fatal("the walk ended with no answer and the handler would still report an opaque 500")
 			}
 			if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), codeAssistantUnavailable) {
 				t.Errorf("want 503 %s, got %d %s", codeAssistantUnavailable, rec.Code, rec.Body.String())
@@ -111,7 +113,7 @@ func TestAWalkThatEndedOnAnOutcomeIsAnsweredAsTheAssistantNotAnswering(t *testin
 				return
 			}
 			// Our own request being refused is a defect nobody sees on the
-			// wizard, so the operator log is the only place it can be found.
+			// screen, so the operator log is the only place it can be found.
 			if entry := logged.String(); !strings.Contains(entry, tc.wantLevel) || !strings.Contains(entry, "PROVIDER-OWN-WORDS") {
 				t.Errorf("a rejected request must reach the operator log at %s, log was: %q", tc.wantLevel, entry)
 			}
@@ -123,7 +125,12 @@ func TestAWalkThatEndedOnAnOutcomeIsAnsweredAsTheAssistantNotAnswering(t *testin
 func TestAnErrorThatIsNotTheModelLaneIsNotAnsweredAsOne(t *testing.T) {
 	t.Parallel()
 	rec := httptest.NewRecorder()
-	if answerModelFailure(rec, httptest.NewRequest(http.MethodPost, "/", nil), errors.New("history: too many messages")) {
+	if answered(rec, httptest.NewRequest(http.MethodPost, "/", nil), errors.New("history: too many messages")) {
 		t.Errorf("an ordinary error was answered as the assistant being unavailable: %d", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	Write(rec, httptest.NewRequest(http.MethodPost, "/", nil), apperrors.ErrNotFound)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("a missing record reached Write and was answered %d rather than httperr's 404", rec.Code)
 	}
 }

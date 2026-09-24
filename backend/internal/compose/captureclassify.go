@@ -131,8 +131,8 @@ type classifyPayload struct {
 
 // RunWorkspace drains up to cap backlog messages in the workspace already
 // bound in ctx. A budget stop ends the pass cleanly — the remainder requeues
-// implicitly (it is simply still unlabeled). Only infrastructure faults return
-// an error; per-batch model trouble is logged and skipped.
+// implicitly (it is simply still unlabeled). A message the models decline stays
+// unlabeled and the pass goes on (classifyBatch); any other failure fails it.
 //
 // The cap is PER WORKSPACE, matching capture_counterparty_verdict, whose own
 // counter is declared inside its workspace loop for a stated reason: a shared
@@ -162,15 +162,13 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 			return nil
 		}
 		if err != nil {
-			// This workspace's pass FAILS. Before the fan-out a bad batch was
-			// logged and skipped so it could not starve the rest of the fleet;
-			// each workspace now has its own row, so there is no fleet left to
-			// starve and swallowing it would put the green row back.
+			// This workspace's pass FAILS. Each workspace has its own row, so
+			// there is no fleet to starve and swallowing it would report green.
 			//
 			// The cost is named rather than hidden: the backlog read re-selects
-			// the same rows, so a message that reliably breaks a batch is asked
-			// about MaxAttempts times per tick instead of once. The capped
-			// ladder and the workspace's model budget are what bound it.
+			// the same rows, so a fault that reliably breaks a batch is met
+			// MaxAttempts times per tick instead of once. The capped ladder and
+			// the workspace's model budget are what bound it.
 			return fmt.Errorf("classify: draining the backlog: %w", err)
 		}
 		if n == 0 {
@@ -187,9 +185,14 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 // labels — the per-call commit IS the checkpoint (AIRT-PARAM-35). Items
 // below the confidence floor are re-asked solo; a solo re-ask that still
 // fails floors leaves the row unlabeled for the next cycle rather than
-// guessing. Returns how many rows were labeled.
+// guessing. A batch the models decline is asked message by message, so the
+// one message they will not label stays unlabeled and the rest proceed.
+// Returns how many rows were labeled.
 func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeledMessage) (int, error) {
 	verdicts, judge, err := c.ask(ctx, batch)
+	if ai.ModelDeclined(err) {
+		return c.classifyEach(ctx, batch)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -205,38 +208,55 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 			retry = append(retry, msg)
 			continue
 		}
-		applied, err := c.store.SetCaptureLabel(ctx, msg.ID, v.Label)
+		applied, err := c.commitLabel(ctx, msg, v, judge)
 		if err != nil {
 			return labeled, err
 		}
 		if applied {
 			labeled++
 		}
-		if err := c.recordReply(ctx, msg, v, judge); err != nil {
-			return labeled, err
-		}
 	}
-	for _, msg := range retry {
-		// The solo re-ask escalates the ladder (L-S → C-C) by being its
-		// own structured call; still below the floor = still unlabeled.
+	solo, err := c.classifyEach(ctx, retry)
+	return labeled + solo, err
+}
+
+// classifyEach asks about each message in its own call, which escalates the
+// ladder (L-S → C-C), and commits a label above the floor. A message every
+// rung declines is that message's outcome: it stays unlabeled and the next one
+// is asked.
+func (c *CaptureClassifier) classifyEach(ctx context.Context, msgs []unlabeledMessage) (int, error) {
+	labeled := 0
+	for _, msg := range msgs {
 		solo, soloJudge, err := c.ask(ctx, []unlabeledMessage{msg})
+		if ai.ModelDeclined(err) {
+			c.log.WarnContext(ctx, "capture classify: the models declined one message, which stays unlabeled",
+				"activity_id", msg.ID, "err", err)
+			continue
+		}
 		if err != nil {
 			return labeled, err
 		}
-		if len(solo) == 1 && solo[0].Confidence >= classifyConfidenceFloor {
-			applied, err := c.store.SetCaptureLabel(ctx, msg.ID, solo[0].Label)
-			if err != nil {
-				return labeled, err
-			}
-			if applied {
-				labeled++
-			}
-			if err := c.recordReply(ctx, msg, solo[0], soloJudge); err != nil {
-				return labeled, err
-			}
+		if len(solo) != 1 || solo[0].Confidence < classifyConfidenceFloor {
+			continue
+		}
+		applied, err := c.commitLabel(ctx, msg, solo[0], soloJudge)
+		if err != nil {
+			return labeled, err
+		}
+		if applied {
+			labeled++
 		}
 	}
 	return labeled, nil
+}
+
+// commitLabel writes one label and the reply verdict riding it.
+func (c *CaptureClassifier) commitLabel(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) (bool, error) {
+	applied, err := c.store.SetCaptureLabel(ctx, msg.ID, v.Label)
+	if err != nil {
+		return false, err
+	}
+	return applied, c.recordReply(ctx, msg, v, judge)
 }
 
 // recordReply stores the reply verdict this call also produced, when it produced
