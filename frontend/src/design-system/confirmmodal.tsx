@@ -121,16 +121,29 @@ export function ConfirmModal({
             unavailable rather than busy. Backing out of an act that is already
             on its way to the server would leave the reader believing they
             stopped something they did not. */}
-        <Button onClick={onClose} disabled={pending}>
-          {t("create.cancel")}
-        </Button>
-        {/* The compound this dialog used to carry — `pending || confirmDisabled`
+        <span className="actions-pair">
+          <Button onClick={onClose} disabled={pending}>
+            {t("create.cancel")}
+          </Button>
+          {/* The compound this dialog used to carry — `pending || confirmDisabled`
             — folded two unrelated facts into one attribute: a write in flight
             and a precondition the caller has not met. Split, each is drawn as
             what it is, and the twenty-eight surfaces built on this dialog get
             it without changing a line. */}
-        {confirmMenu ? (
-          <span className="actions-split">
+          {confirmMenu ? (
+            <span className="actions-split">
+              <Button
+                variant={confirmVariant}
+                onClick={onConfirm}
+                pending={pending}
+                disabled={confirmDisabled}
+                reason={confirmReason}
+              >
+                {confirmLabel}
+              </Button>
+              {confirmMenu}
+            </span>
+          ) : (
             <Button
               variant={confirmVariant}
               onClick={onConfirm}
@@ -140,19 +153,8 @@ export function ConfirmModal({
             >
               {confirmLabel}
             </Button>
-            {confirmMenu}
-          </span>
-        ) : (
-          <Button
-            variant={confirmVariant}
-            onClick={onConfirm}
-            pending={pending}
-            disabled={confirmDisabled}
-            reason={confirmReason}
-          >
-            {confirmLabel}
-          </Button>
-        )}
+          )}
+        </span>
       </div>
     </Modal>
   );
