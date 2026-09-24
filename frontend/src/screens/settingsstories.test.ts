@@ -118,8 +118,8 @@ describe("the settings stories are filed where the product files them", () => {
   // `AI/Automations/Date field picker`; 90 → 91 for `Governance/System
   // health/Connector records refused`; 91 → 93 for `Across pages/Units offered
   // in settings` and `Governance/System health/Health card shell`; 93 → 94 for
-  // `Sales/Pipelines/Retired pipeline`; 94 → 96 for `AI/Models &
-  // routing/Service-account key` and `AI/Models & routing/Vertex location`.
+  // `Sales/Pipelines/Retired pipeline`; 94 → 96 for `AI/Models and
+  // routing/Service-account key` and `AI/Models and routing/Vertex location`.
   it("reads every settings story, and says how many that is", () => {
     expect(settingsStories.length).toBe(96);
   });

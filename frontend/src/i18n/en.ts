@@ -8201,7 +8201,7 @@ export const en = {
   "serviceAccountKey.fileEmpty":
     "Drop the .json key file here, or click to choose it",
   "serviceAccountKey.empty":
-    "Paste the key file's contents, or choose the file.",
+    "Paste the contents of the key file, or choose the file.",
   "serviceAccountKey.notJson":
     "This is not JSON. Paste the whole key file exactly as Google Cloud downloaded it.",
   "serviceAccountKey.notServiceAccount":
@@ -8209,7 +8209,8 @@ export const en = {
   "serviceAccountKey.unreadable":
     "The file could not be read. Choose it again, or paste its contents.",
   "aiRouting.location.label": "Location",
-  "aiRouting.location.help": "Where Google processes this lane's calls.",
+  "aiRouting.location.help":
+    "Where Google processes the calls this lane makes.",
   "aiRouting.location.residentHelp":
     "EU data residency admits only the locations marked EU resident.",
   "aiRouting.location.forbidden":
@@ -8235,7 +8236,7 @@ export const en = {
   "aiRouting.probe.notServed":
     "Not served in {location}. Choose another model or location.",
   "aiRouting.probe.unverified":
-    "Couldn't verify this model in {location}. Saving asks Google again.",
+    "Could not verify this model in {location}. Saving asks Google again.",
   "aiRouting.probe.cleared":
     "{model} is not served in {location}, so the field was cleared.",
   "firstRun.ai.euResidency": "EU data residency",

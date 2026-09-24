@@ -67,7 +67,7 @@ function story(profile: string, body: unknown = LOCATIONS, initial = "eu") {
 }
 
 const meta: Meta<typeof VertexLocationField> = {
-  title: "Settings/AI/Models & routing/Vertex location",
+  title: "Settings/AI/Models and routing/Vertex location",
   component: VertexLocationField,
 };
 export default meta;

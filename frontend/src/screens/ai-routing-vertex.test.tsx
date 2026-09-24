@@ -364,7 +364,7 @@ describe("a gemini_vertex lane", () => {
       /^gemini-4\.0-flash/,
     );
     expect(
-      await within(lane).findByText(/couldn't verify this model in eu/i),
+      await within(lane).findByText(/could not verify this model in eu/i),
     ).toBeInTheDocument();
     expect(within(lane).queryByText(/not served/i)).toBeNull();
   });
