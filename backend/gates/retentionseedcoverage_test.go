@@ -31,9 +31,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/gatekit"
-
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // deliberatelyUnseeded names a scope the engine can act on that a fresh
