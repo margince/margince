@@ -178,24 +178,31 @@ that asked nothing would be a change nobody requested.
 
 ### `agent_loop` — a cumulative, tool-fed window
 
-There is no single buildable request, and forcing one would make the case lie
-about what it exercises. Instead `Run` drives the **real loop** with a recording
-brain, and `Evaluate` replays the reply through the same loop to see which step
-it took:
+`agent_loop` is an engine; each of its sites is one scheduled agent, and each
+site gets its own case (`agentLoopCases{agent: name}`, registered per site from
+`ai.AgentsFor`). There is no single buildable request, and forcing one would make
+the case lie about what it exercises. Instead `Run` drives the **real loop** with
+a recording brain, and `Evaluate` replays the reply through the same loop to see
+which step it took.
 
-```go
-recorder := &agentLoopRecorder{completer: completer}
-job := c.job
-job.Budget = agentLoopTurnBudget()          // one turn, so the run stays measurable
-_, err := runner.New(agentLoopToolSurface{specs: c.specs}, recorder).Run(ctx, job)
-trace := aitasks.Trace{Requests: recorder.requests}
-// … recorder.failed (the call never completed) and err (the run never reached a
-// reply) are distinct failures and reported separately …
-trace.Output = recorder.reply
+The window is the agent's own. `Prepare` resolves the agent through
+`ScheduledAgentSpecByName` — the resolver the runner service uses — so the goal,
+the tool allowlist and the language rule are production's, and the runner narrows
+the registry to the allowlist itself. A fixture carries only what varies between
+runs of one agent:
+
+```yaml
+fixture:
+  trigger_ref: morning_brief:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202  # as the scheduler mints it
+  grounding:                         # what retrieval seeded; every seed enters at T2
+    - source_id: deal:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07
+      content: Heat recovery — renewal due Friday.
 ```
 
-The expectation is the step the turn should take, and `Prepare` refuses one no
-tool in the fixture's surface could produce. Reference: `certcase_agentloop.go`.
+A `goal`, a `tools` surface or a per-seed `trust_tier` is refused by name: each
+would certify a window no run is handed. The expectation is the step the turn
+should take, and `Prepare` refuses one naming a tool this agent is not offered.
+Reference: `certcase_agentloop.go`.
 
 ## The scenario file
 

@@ -173,8 +173,8 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 		t.Fatalf("loading the corpus: %v", err)
 	}
 	// EVERY scenario, not the first per site. A site's instruction can differ
-	// between scenarios — agent_loop's 24 carry different tool surfaces, and
-	// the surface is IN the system prompt — so publishing one scenario's prompt
+	// between scenarios — a scenario's grounding can change what the window
+	// carries, and the window is IN the prompt — so publishing one scenario's prompt
 	// would leave the others unpublished and their drift unnoticed. That is the
 	// same fail-short this page exists to refuse.
 	bySite := map[string][]aicert.Scenario{}

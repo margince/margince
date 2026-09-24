@@ -396,7 +396,7 @@ and the case's pass rate belongs to the set rather than to this row — which is
 
 | Tool | Tokens | Required as one of a set by | Permitted in | Graded by | Attached to |
 |---|---:|---|---|---|---|
-| `run_report` | 1010 | `case7_ask_for_a_number` | `case20_put_it_in_the_board_pack`, `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | `agent_loop` | — |
+| `run_report` | 1010 | `case7_ask_for_a_number` | `case20_put_it_in_the_board_pack`, `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — | — |
 
 ## 4. What no use case requires
 
@@ -404,36 +404,36 @@ and the case's pass rate belongs to the set rather than to this row — which is
 corpus tests the tool anyway — that lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 39 tools no use case requires, **18 are graded elsewhere** and 21 are untried by any lane.
+So of the 39 tools no use case requires, **10 are graded elsewhere** and 29 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
 | `send_company_email` | 823 | — | — | — |
-| `send_email` | 754 | `agent_loop` | — | — |
+| `send_email` | 754 | — | — | — |
 | `send_message` | 603 | — | — | — |
-| `list_records` | 541 | — | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
-| `progress_deal` | 505 | `agent_loop` | — | — |
-| `resolve_entities` | 493 | `agent_loop` | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` | — |
+| `list_records` | 541 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
+| `progress_deal` | 505 | — | — | — |
+| `resolve_entities` | 493 | — | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` | — |
 | `forecast_movement` | 453 | — | — | — |
-| `advance_deal` | 446 | `agent_loop` | — | — |
+| `advance_deal` | 446 | — | — | — |
 | `book_meeting` | 423 | — | — | — |
-| `annotate_brief` | 418 | — | — | `morning_brief` |
-| `review_commitments` | 401 | `agent_loop` | `case41_close_the_project` | `overnight_at_risk_sweep` |
-| `enrich` | 391 | `agent_loop`, `enrich` | — | — |
+| `annotate_brief` | 418 | `agent_loop` | — | `morning_brief` |
+| `review_commitments` | 401 | — | `case41_close_the_project` | `overnight_at_risk_sweep` |
+| `enrich` | 391 | `enrich` | — | — |
 | `describe_report_vocabulary` | 349 | — | `case20_put_it_in_the_board_pack`, `case7_ask_for_a_number` | — |
 | `describe_record_fields` | 345 | — | — | — |
 | `forecast_input_checks` | 324 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |
-| `prep_for_meeting` | 324 | `agent_loop` | `case23_find_us_a_slot`, `case5_before_the_meeting` | — |
+| `prep_for_meeting` | 324 | — | `case23_find_us_a_slot`, `case5_before_the_meeting` | — |
 | `demote_lead` | 317 | — | — | — |
 | `describe_analytics_vocabulary` | 286 | — | `case7_ask_for_a_number` | — |
 | `catch_me_up_on` | 279 | `agent_loop` | `case23_find_us_a_slot`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case5_before_the_meeting`, `case6_ask_the_company`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
-| `draft_email` | 278 | `agent_loop`, `draft_reply` | — | — |
+| `draft_email` | 278 | `draft_reply` | — | — |
 | `draft_follow_ups_for` | 274 | — | — | — |
-| `prepare_handoff` | 267 | `agent_loop` | `case41_close_the_project` | — |
+| `prepare_handoff` | 267 | — | `case41_close_the_project` | — |
 | `describe_query_vocabulary` | 266 | — | `case4_use_the_moment` | — |
-| `company_coverage` | 246 | `agent_loop` | `case5_before_the_meeting` | — |
+| `company_coverage` | 246 | — | `case5_before_the_meeting` | — |
 | `describe_report_blocks` | 245 | — | `case20_put_it_in_the_board_pack` | — |
 | `decide_approval_bundle` | 236 | — | — | — |
 | `create_task` | 221 | `deal_health` | `case42_can_i_answer_on_whatsapp` | — |
@@ -441,11 +441,11 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `whats_slipping_this_week` | 211 | `agent_loop` | — | `overnight_at_risk_sweep` |
 | `at_risk_relationships` | 209 | `agent_loop` | — | `overnight_at_risk_sweep` |
 | `list_input_checks` | 209 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |
-| `read_brief` | 206 | — | — | `morning_brief` |
+| `read_brief` | 206 | `agent_loop` | — | `morning_brief` |
 | `relink_thread` | 196 | — | — | — |
-| `who_knows` | 196 | `agent_loop` | `case33_two_cards_for_one_company`, `case5_before_the_meeting` | — |
-| `list_pipelines` | 191 | `agent_loop` | `case1_log_it`, `case20_put_it_in_the_board_pack` | — |
-| `intro_path_to` | 187 | `agent_loop` | — | — |
+| `who_knows` | 196 | — | `case33_two_cards_for_one_company`, `case5_before_the_meeting` | — |
+| `list_pipelines` | 191 | — | `case1_log_it`, `case20_put_it_in_the_board_pack` | — |
+| `intro_path_to` | 187 | — | — | — |
 | `check_location_support` | 156 | — | — | — |
 | `whoami` | 129 | — | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp` | — |
 | `read_import_run` | 67 | — | `case10_finish_the_import`, `case3_spreadsheet` | — |

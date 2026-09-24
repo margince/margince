@@ -3,81 +3,45 @@
 
 package main
 
-// The agents{} declaration: which tools each scheduled agent of a tool-fed
-// task attaches, and the three ways that can be wrong.
+// The tools an agent_loop site attaches, and the ways that declaration can be
+// wrong. agent_loop is the engine; each of its sites is one scheduled agent,
+// and the site's tools are the only tools that run is ever offered.
 
 import (
 	"fmt"
 	"sort"
-
-	"gopkg.in/yaml.v3"
 )
 
-// agentDef is one entry of a task's agents{}: a scheduled agent and the tools
-// it attaches. It exists because the tool listing rides in EVERY step of a
-// tool-fed window, so what a run may call is also what that run pays for in
-// prompt — and only the agent's own goal knows which tools that is.
+// validateSiteTools holds every site's tools to the things a runtime cannot
+// recover from on its own: an agent_loop site with no allowlist, the same tool
+// attached twice, and a tool list on a site that assembles no tool-fed window.
 //
-// Tools is required and non-empty. Downstream, an empty allowlist is read as
-// "no narrowing", so an agent that lost its list would silently regain the
-// whole catalog — the opposite of what declaring it was for.
-type agentDef struct {
-	Tools []string `yaml:"tools"`
-}
-
-// UnmarshalYAML re-reads the mapping through the strict decoder. Without it a
-// typo'd `tool:` would leave Tools empty, which is the one failure this
-// declaration cannot afford (see strictdecode.go).
-func (a *agentDef) UnmarshalYAML(node *yaml.Node) error {
-	var raw struct {
-		Tools []string `yaml:"tools"`
-	}
-	if err := decodeMapping(node, &raw); err != nil {
-		return fmt.Errorf("agent: %w", err)
-	}
-	a.Tools = raw.Tools
-	return nil
-}
-
-// validateAgents holds the agents{} mapping to the three things a runtime
-// cannot recover from on its own: an allowlist that is empty, an agent
-// declared on a task that assembles no tool-fed window, and a name the Go
-// side could not carry.
+// An empty allowlist is refused rather than defaulted because the runner
+// refuses a job carrying none, and a build defect discovered at boot is the
+// shape ADR-0074 asks every field in this contract to avoid.
 //
-// The tool NAMES are deliberately not checked here. This generator has no
-// registry to check them against — that is a composition-time gate, and
+// The tool NAMES, and whether a list covers the whole catalog, are checked at
+// composition time: this generator has no registry to check them against, and
 // splitting the check would mean two half-answers to one question.
-func validateAgents(task string, def taskDef) error {
-	if len(def.Agents) == 0 {
-		// A tool-fed task with no agents declared is the absent-by-accident
-		// case, and it must fail HERE. Left to the runtime it surfaces as a
-		// panic when the service reads the join at construction — a build
-		// defect discovered at boot, which is the shape ADR-0074 asks every
-		// field in this contract to avoid.
-		if declaresAnAgentLoopSite(def) && def.Status == statusShipped {
+func validateSiteTools(task string, def taskDef) error {
+	for _, site := range def.Sites {
+		if site.Kind != kindAgentLoop {
+			if len(site.Tools) > 0 {
+				return fmt.Errorf(
+					"task %q: site %q attaches tools but is %s — only an agent_loop site has a tool listing to attach "+
+						"them to, so this allowlist would never be assembled", task, site.Name, site.Kind)
+			}
+			continue
+		}
+		if len(site.Tools) == 0 {
 			return fmt.Errorf(
-				"task %q ships an agent_loop site but declares no agents — every scheduled agent needs its "+
-					"tool allowlist here, or its run is narrowed by its passport alone", task)
+				"task %q: agent_loop site %q declares no tools — every run attaches the tools its goal needs, "+
+					"and the runner refuses a job with none", task, site.Name)
 		}
-		return nil
-	}
-	if !declaresAnAgentLoopSite(def) {
-		return fmt.Errorf(
-			"task %q: declares agents but no agent_loop site — only a tool-fed window has a tool listing to attach to, so this allowlist would never be assembled", task)
-	}
-	for _, agent := range sortedAgentNames(def.Agents) {
-		if !siteNameRE.MatchString(agent) {
-			return fmt.Errorf("task %q: agent name %q must match %s", task, agent, siteNameRE.String())
-		}
-		tools := def.Agents[agent].Tools
-		if len(tools) == 0 {
-			return fmt.Errorf(
-				"task %q: agent %q declares no tools — an empty allowlist is read as no narrowing, so this agent would be offered the whole catalog", task, agent)
-		}
-		seen := make(map[string]bool, len(tools))
-		for _, tool := range tools {
+		seen := make(map[string]bool, len(site.Tools))
+		for _, tool := range site.Tools {
 			if seen[tool] {
-				return fmt.Errorf("task %q: agent %q attaches %q twice", task, agent, tool)
+				return fmt.Errorf("task %q: site %q attaches %q twice", task, site.Name, tool)
 			}
 			seen[tool] = true
 		}
@@ -85,25 +49,16 @@ func validateAgents(task string, def taskDef) error {
 	return nil
 }
 
-// declaresAnAgentLoopSite reports whether this task assembles a tool-fed
-// window at all — the only kind of site an allowlist has meaning for.
-func declaresAnAgentLoopSite(def taskDef) bool {
-	for _, s := range def.Sites {
-		if s.Kind == kindAgentLoop {
-			return true
+// agentLoopSites is a task's agent_loop sites in name order — the one place
+// that order is decided, for the reason sortedTaskNames exists: a generated
+// file that moves between runs cannot be drift-gated.
+func agentLoopSites(def taskDef) []siteDef {
+	var sites []siteDef
+	for _, site := range def.Sites {
+		if site.Kind == kindAgentLoop {
+			sites = append(sites, site)
 		}
 	}
-	return false
-}
-
-// sortedAgentNames is the one place agent iteration order is decided, for the
-// reason sortedTaskNames exists: a map has none, and a generated file that
-// moves between runs cannot be drift-gated.
-func sortedAgentNames(agents map[string]agentDef) []string {
-	names := make([]string, 0, len(agents))
-	for name := range agents {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	sort.Slice(sites, func(i, j int) bool { return sites[i].Name < sites[j].Name })
+	return sites
 }

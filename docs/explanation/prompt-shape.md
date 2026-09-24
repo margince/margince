@@ -173,6 +173,15 @@ That move was right and it is not what the dashboard is waiting for. `agent_loop
 ran **four times in seven days** on staging; there is no volume there for a
 percentage to move.
 
+**The ~97 KB catalog above was never a run's.** It was the certification
+window, which then offered every served tool. `agent_loop` is an engine, and
+each of its sites is one scheduled agent that lists only the tools it attaches —
+a few KB, not ninety — and the certification lane now drives exactly those
+windows. So the figures in this section, and the `agent_loop` row in the table
+below, describe a prompt no run sends; the current per-site sizes are in
+[ai-prompts.json](../reference/ai-prompts.json) and what each run's listing
+costs is in [agent-tool-budget.md](../reference/agent-tool-budget.md).
+
 ### The floor — why almost nothing is reused
 
 A provider will not cache a prefix below a minimum number of tokens, and the two

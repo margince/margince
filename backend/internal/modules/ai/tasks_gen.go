@@ -9,7 +9,7 @@ type Task string
 const (
 	// TaskAccountScan is company_scan — what one account needs, read for ONE reader from the account's own exchanges and pipeline: the 360 as that reader sees it plus the recent messages' own words, admitted by their audience. The model raises findings in a closed vocabulary (an unmet commitment of ours, a question of theirs nobody answered, a risk they raised, a need they raised), each citing the records it rests on and quoting the words it read; the server drops whole any finding whose citation it did not supply or whose quote is not in the message it cites. Merged with the 360's own rule advice under one fingerprint vocabulary, so a dismissal holds across both. Runs as a background job the account page ensures on open, cached per reader on a fingerprint of the input and rescanned at most hourly, so a busy inbox does not re-read the account on every message. no_payload because the prompt carries message bodies. With no lane, or a deferral past the job's patience, the rules' advice stands alone and generated_by says so.
 	TaskAccountScan Task = "account_scan"
-	// TaskAgentLoop is The Surface-B reason-act loop: a cumulative, tool-fed message window, not a request factory. ADR-0074 names it the open risk for fixture-driven certification — if it cannot be certified honestly the census needs a `not_certifiable` kind.
+	// TaskAgentLoop is the Surface-B reason-act ENGINE, and not a run: each site is one scheduled agent that runs on it, and the site's tools are the only tools that run is offered. The listing rides in every step of the window, so a site attaches what its goal needs and never the whole catalog — compose's agent allowlist gate fails one that does. Certification drives each site's own window: its goal, its tools, its trigger, seeded the way retrieval seeds it.
 	TaskAgentLoop Task = "agent_loop"
 	// TaskBriefRanking is the one Premium-frontier default (§1.2 RATIFY): genuinely multi-hop reasoning
 	TaskBriefRanking    Task = "brief_ranking"
@@ -138,7 +138,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "90cf0ad89c92097c4dbd8885c0e979b7207f6fd8197eaf951701d9c9bb2ebebc"
+const TaskContractHash = "7ff168a36f9d4cfee0be283a90c84c9dc4f5e43158ed8b5f35430fc78226c8be"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -338,7 +338,8 @@ var taskSites = map[Task][]Site{
 		{Name: "company_scan", Kind: "one_shot"},
 	},
 	TaskAgentLoop: {
-		{Name: "loop", Kind: "agent_loop"},
+		{Name: "morning_brief", Kind: "agent_loop"},
+		{Name: "overnight_at_risk_sweep", Kind: "agent_loop"},
 	},
 	TaskBriefRanking: {
 		{Name: "rank", Kind: "one_shot"},
@@ -444,7 +445,7 @@ var taskSites = map[Task][]Site{
 // planned task returns none.
 func SitesFor(t Task) []Site { return taskSites[t] }
 
-// Agent is one scheduled agent of a tool-fed task, and Tools is what it
+// Agent is one agent_loop site — a scheduled agent — and Tools is what it
 // attaches. The listing rides in EVERY step of that agent's window, so
 // this list is both what the run may call and what it pays for in prompt.
 //
@@ -463,7 +464,7 @@ var taskAgents = map[Task][]Agent{
 	},
 }
 
-// AgentsFor returns the task's declared agents in sorted name order. A
+// AgentsFor returns the task's agent_loop sites in sorted name order. A
 // task that schedules none returns none.
 func AgentsFor(t Task) []Agent { return taskAgents[t] }
 

@@ -24,24 +24,24 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 | | |
 |---|---:|
-| Shipped invocation sites | 46 |
-| … best state `current` | 44 |
+| Shipped invocation sites | 47 |
+| … best state `current` | 43 |
 | … best state `partial` | 0 |
 | … best state `stale` | 2 |
-| … `absent` on every binding | 0 |
-| Scenarios in the corpus | 170 |
+| … `absent` on every binding | 2 |
+| Scenarios in the corpus | 152 |
 | Committed records | 136 |
 | Bindings measured | 16 |
 
 ### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 10 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
+Counted per record — one (task, binding) pair — over the 9 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
-| the case | 6 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
-| **the prompt this build sends** | 9 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| the grader | 5 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
+| the case | 5 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
+| **the prompt this build sends** | 8 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
+| the grader | 4 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -57,10 +57,10 @@ preset binds a model there and no paid run has measured it yet.
 
 | Preset | Profile | `certified` | `supported_degraded` | `not_supported` | `untested` | Unbound |
 |---|---|---:|---:|---:|---:|---:|
-| [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml) | `cloud_frontier` | 11 | 2 | 15 | 1 | 0 |
-| [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml) | `eu_hosted` | 12 | 4 | 13 | 0 | 0 |
-| [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml) | `eu_hosted` | 6 | 4 | 14 | 5 | 0 |
-| [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml) | `eu_hosted` | 10 | 1 | 17 | 1 | 0 |
+| [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml) | `cloud_frontier` | 11 | 2 | 14 | 2 | 0 |
+| [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml) | `eu_hosted` | 12 | 4 | 12 | 1 | 0 |
+| [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml) | `eu_hosted` | 6 | 4 | 13 | 6 | 0 |
+| [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml) | `eu_hosted` | 10 | 1 | 16 | 2 | 0 |
 
 Unbound counts tasks whose whole ladder this preset leaves empty — the router
 has nothing to call, so the feature is off rather than degraded.
@@ -77,7 +77,7 @@ has nothing to call, so the feature is off rather than degraded.
 | Task | Served on | Model | Band | State |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
-| `agent_loop` | `cheap_cloud` | `google/gemma-4-31b-it` | `not_supported` | `current` |
+| `agent_loop` | `cheap_cloud` | `google/gemma-4-31b-it` | `untested` | - |
 | `brief_ranking` | `premium` | `google/gemma-4-31b-it` | `certified` | `current` |
 | `capture_classify` | `local_small` | `google/gemma-4-26b-a4b-it` | `not_supported` | `current` |
 | `capture_confidentiality_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | `certified` | `current` |
@@ -118,7 +118,7 @@ has nothing to call, so the feature is off rather than degraded.
 | Task | Served on | Model | Band | State |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
-| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `stale` |
+| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
 | `brief_ranking` | `premium` | `gemini-3.5-flash` | `certified` | `current` |
 | `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `current` |
 | `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | `certified` | `current` |
@@ -159,7 +159,7 @@ has nothing to call, so the feature is off rather than degraded.
 | Task | Served on | Model | Band | State |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `openai/gpt-oss-120b` | `certified` | `current` |
-| `agent_loop` | `cheap_cloud` | `openai/gpt-oss-120b` | `not_supported` | `current` |
+| `agent_loop` | `cheap_cloud` | `openai/gpt-oss-120b` | `untested` | - |
 | `brief_ranking` | `premium` | `mistralai/mistral-medium-3-5` | `untested` | - |
 | `capture_classify` | `local_small` | `openai/gpt-oss-120b` | `not_supported` | `current` |
 | `capture_confidentiality_verdict` | `local_small` | `openai/gpt-oss-120b` | `supported_degraded` | `current` |
@@ -200,7 +200,7 @@ has nothing to call, so the feature is off rather than degraded.
 | Task | Served on | Model | Band | State |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `certified` | `current` |
-| `agent_loop` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `not_supported` | `current` |
+| `agent_loop` | `cheap_cloud` | `mistralai/ministral-14b-2512` | `untested` | - |
 | `brief_ranking` | `premium` | `mistralai/mistral-small-2603` | `certified` | `current` |
 | `capture_classify` | `local_small` | `mistralai/ministral-8b-2512` | `not_supported` | `current` |
 | `capture_confidentiality_verdict` | `local_small` | `mistralai/ministral-8b-2512` | `not_supported` | `current` |
@@ -266,14 +266,15 @@ today. It says nothing about how well the model did — that is the band.
 
 ## Index
 
-### Sites (46)
+### Sites (47)
 
 Which model to run each site on, and what that choice rests on.
 
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `certified` | 1.00 | `current` | 2 | 4 |
-| [`agent_loop/loop`](#agent_looploop) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `not_supported` | 0.78 | `current` | 24 | 5 |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | - | - | - | `absent` | 3 | 0 |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | - | - | - | `absent` | 3 | 0 |
 | [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 6 |
 | [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 5 | 5 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 14 | 4 |
@@ -339,21 +340,21 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 40 | 36 | 0 | 4 | 459 | 409 | 0.89 | 6994ms | 21 | 7 | 12 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 39 | 36 | 0 | 3 | 387 | 349 | 0.90 | 6994ms | 21 | 7 | 11 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 7 | 0 | 6 | 96 | 92 | 0.96 | 26168ms | 9 | 0 | 4 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 6 | 0 | 0 | 141 | 127 | 0.90 | 73147ms | 2 | 0 | 4 |
-| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 39 | 37 | 0 | 2 | 357 | 294 | 0.82 | 237887ms | 19 | 7 | 13 |
-| `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 11 | 0 | 0 | 11 | 160 | 113 | 0.71 | 20620ms | 8 | 0 | 3 |
-| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 33 | 31 | 0 | 2 | 309 | 191 | 0.62 | 86185ms | 7 | 8 | 18 |
+| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 38 | 36 | 0 | 2 | 285 | 238 | 0.84 | 237887ms | 19 | 7 | 12 |
+| `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 10 | 0 | 0 | 10 | 45 | 39 | 0.87 | 20620ms | 8 | 0 | 2 |
+| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 32 | 30 | 0 | 2 | 237 | 153 | 0.65 | 86185ms | 7 | 8 | 17 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 141 | 122 | 0.87 | 12585ms | 2 | 0 | 4 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 5 | 0 | 1 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
 | `openai_compatible` | `mistralai/mistral-medium-3-5` | `eu_hosted` | 1 | 1 | 0 | 0 | 15 | 15 | 1.00 | 10068ms | 1 | 0 | 0 |
 | `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 6 | 6 | 0 | 0 | 48 | 42 | 0.88 | 3826ms | 5 | 0 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 40 | 38 | 0 | 2 | 456 | 360 | 0.79 | 140306ms | 13 | 7 | 20 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 39 | 37 | 0 | 2 | 384 | 310 | 0.81 | 140306ms | 13 | 7 | 19 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -373,8 +374,6 @@ model, real network).
 
 | Site | Binding | Why it is stale |
 |---|---|---|
-| `agent_loop/loop` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 24 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more |
-| `agent_loop/loop` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `brief_ranking/rank` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `capture_classify/classify` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -454,50 +453,33 @@ Records (4):
 
 ### `agent_loop`
 
-Certified without the company context production prepends (`identity`, `positioning`, `sales`, `offer`): this lane runs with no database to assemble it from.
-
-#### `agent_loop/loop`
+#### `agent_loop/morning_brief`
 
 Scope a run of it can claim: `single_turn`.
 
-Scenarios (24):
+Scenarios (3):
 
 | Scenario | Expects | Case |
 |---|---|---|
-| `a_description_is_not_a_name` | `accepted` | [a_description_is_not_a_name.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_description_is_not_a_name.yaml) |
-| `a_draft_precedes_a_send` | `accepted` | [a_draft_precedes_a_send.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_draft_precedes_a_send.yaml) |
-| `a_goal_no_tool_can_serve_ends_the_turn` | `accepted` | [a_goal_no_tool_can_serve_ends_the_turn.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_goal_no_tool_can_serve_ends_the_turn.yaml) |
-| `a_name_alone_is_still_a_search` | `accepted` | [a_name_alone_is_still_a_search.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_name_alone_is_still_a_search.yaml) |
-| `a_promise_is_not_a_slipping_deal` | `accepted` | [a_promise_is_not_a_slipping_deal.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_promise_is_not_a_slipping_deal.yaml) |
-| `a_stepless_deal_is_a_slipping_deal` | `accepted` | [a_stepless_deal_is_a_slipping_deal.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_stepless_deal_is_a_slipping_deal.yaml) |
-| `a_structured_question_is_not_a_text_search` | `accepted` | [a_structured_question_is_not_a_text_search.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_structured_question_is_not_a_text_search.yaml) |
-| `a_thin_relationship_is_not_a_slipping_deal` | `accepted` | [a_thin_relationship_is_not_a_slipping_deal.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_thin_relationship_is_not_a_slipping_deal.yaml) |
-| `a_total_is_still_a_report` | `accepted` | [a_total_is_still_a_report.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_total_is_still_a_report.yaml) |
-| `a_warm_path_is_not_a_search` | `accepted` | [a_warm_path_is_not_a_search.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_warm_path_is_not_a_search.yaml) |
-| `ambiguity_ends_the_turn` | `accepted` | [ambiguity_ends_the_turn.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/ambiguity_ends_the_turn.yaml) |
-| `catchup_over_raw_reads` | `accepted` | [catchup_over_raw_reads.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/catchup_over_raw_reads.yaml) |
-| `coverage_names_the_gap` | `accepted` | [coverage_names_the_gap.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/coverage_names_the_gap.yaml) |
-| `enrichment_is_not_search` | `accepted` | [enrichment_is_not_search.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/enrichment_is_not_search.yaml) |
-| `goal_already_answered_by_seed_context` | `accepted` | [basic_02_final.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/basic_02_final.yaml) |
-| `goal_needs_a_tool_call` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/basic_01.yaml) |
-| `identity_is_checked_before_a_record_is_created` | `accepted` | [identity_is_checked_before_a_record_is_created.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/identity_is_checked_before_a_record_is_created.yaml) |
-| `logging_what_happened_changes_nothing_else` | `accepted` | [logging_what_happened_changes_nothing_else.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/logging_what_happened_changes_nothing_else.yaml) |
-| `meeting_prep_is_not_a_catchup` | `accepted` | [meeting_prep_is_not_a_catchup.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/meeting_prep_is_not_a_catchup.yaml) |
-| `slipping_is_its_own_question` | `accepted` | [slipping_is_its_own_question.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/slipping_is_its_own_question.yaml) |
-| `the_calendar_event_is_the_anchor` | `accepted` | [the_calendar_event_is_the_anchor.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/the_calendar_event_is_the_anchor.yaml) |
-| `the_record_is_found_before_it_is_changed` | `accepted` | [the_record_is_found_before_it_is_changed.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/the_record_is_found_before_it_is_changed.yaml) |
-| `the_stage_id_comes_from_the_pipeline` | `accepted` | [the_stage_id_comes_from_the_pipeline.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/the_stage_id_comes_from_the_pipeline.yaml) |
-| `who_knows_needs_the_contact` | `accepted` | [who_knows_needs_the_contact.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/who_knows_needs_the_contact.yaml) |
+| `morning_brief_a_retrieved_deal_is_not_the_queue` | `accepted` | [morning_brief_a_retrieved_deal_is_not_the_queue.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_a_retrieved_deal_is_not_the_queue.yaml) |
+| `morning_brief_reads_its_queue_first` | `accepted` | [morning_brief_reads_its_queue_first.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_reads_its_queue_first.yaml) |
+| `morning_brief_retrieved_text_is_not_an_instruction` | `accepted` | [morning_brief_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_retrieved_text_is_not_an_instruction.yaml) |
 
-Records (5):
+No record: this site has never been certified on any binding.
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/24 | `not_supported` | 72 | 60 | 0.83 | 1521ms | 3389ms | 60 | 12 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 24/24 | `not_supported` | 72 | 56 | 0.78 | 5378ms | 12636ms | 56 | 16 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 115 | 74 | 0.64 | 1804ms | 2954ms | 74 | 40 | 1 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 24/24 | `not_supported` | 72 | 38 | 0.53 | 1928ms | 3108ms | 38 | 34 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 24/24 | `not_supported` | 72 | 50 | 0.69 | 2445ms | 11107ms | 50 | 22 | 0 | 0 |
+#### `agent_loop/overnight_at_risk_sweep`
+
+Scope a run of it can claim: `single_turn`.
+
+Scenarios (3):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `overnight_sweep_one_quiet_deal_is_not_the_book` | `accepted` | [overnight_sweep_one_quiet_deal_is_not_the_book.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_one_quiet_deal_is_not_the_book.yaml) |
+| `overnight_sweep_reads_what_is_slipping_before_it_logs` | `accepted` | [overnight_sweep_reads_what_is_slipping_before_it_logs.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_reads_what_is_slipping_before_it_logs.yaml) |
+| `overnight_sweep_retrieved_text_is_not_an_instruction` | `accepted` | [overnight_sweep_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_retrieved_text_is_not_an_instruction.yaml) |
+
+No record: this site has never been certified on any binding.
 
 ### `brief_ranking`
 
@@ -1532,4 +1514,14 @@ Records (4):
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 4/4 | `not_supported` | 12 | 9 | 0.75 | 2150ms | 3003ms | 9 | 3 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 4/4 | `not_supported` | 12 | 5 | 0.42 | 1764ms | 86185ms | 5 | 5 | 2 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 4/4 | `not_supported` | 12 | 9 | 0.75 | 919ms | 1891ms | 9 | 3 | 0 | 0 |
+
+## Records no shipped site claims
+
+| Task | Binding | Why no row carries it |
+|---|---|---|
+| `agent_loop` | `gemini · gemini-3.1-flash-lite · eu_hosted` | it names no scenario of any site its task ships, so no row above can attribute it |
+| `agent_loop` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | it names no scenario of any site its task ships, so no row above can attribute it |
+| `agent_loop` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | it names no scenario of any site its task ships, so no row above can attribute it |
+| `agent_loop` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | it names no scenario of any site its task ships, so no row above can attribute it |
+| `agent_loop` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | it names no scenario of any site its task ships, so no row above can attribute it |
 

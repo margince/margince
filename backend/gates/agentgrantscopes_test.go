@@ -31,6 +31,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestEveryGrantFundsTheToolsItsAgentDeclares(t *testing.T) {
@@ -93,29 +95,36 @@ func grantedScopes(t *testing.T) map[string]map[string]bool {
 }
 
 // agentToolLists reads each scheduled agent's declared tools from the contract
-// that owns them.
+// that owns them: every agent_loop site is one agent, and its tools are the
+// site's own. Decoded rather than scraped, so a reshaped contract fails to
+// parse instead of matching nothing.
 func agentToolLists(t *testing.T) map[string][]string {
 	t.Helper()
-	src := readFile(t, filepath.Join("api", "ai-tasks.yaml"))
-	body := between(src, "      morning_brief:", "    company_context:")
+	var contract struct {
+		Tasks map[string]struct {
+			Sites []yaml.Node `yaml:"sites"`
+		} `yaml:"tasks"`
+	}
+	if err := yaml.Unmarshal([]byte(readFile(t, filepath.Join("api", "ai-tasks.yaml"))), &contract); err != nil {
+		t.Fatalf("parsing api/ai-tasks.yaml: %v", err)
+	}
 	out := map[string][]string{}
-	var current string
-	for _, line := range strings.Split("      morning_brief:"+body, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if name := strings.TrimSuffix(trimmed, ":"); name != trimmed && !strings.Contains(trimmed, " ") {
-			current = name
-			continue
-		}
-		if current == "" {
-			continue
-		}
-		// `tools: [a, b,` and its continuation lines both contribute names.
-		if idx := strings.Index(trimmed, "tools:"); idx >= 0 {
-			trimmed = trimmed[idx+len("tools:"):]
-		}
-		for _, raw := range strings.Split(strings.Trim(trimmed, "[]"), ",") {
-			if name := strings.TrimSpace(raw); name != "" && !strings.Contains(name, ":") {
-				out[current] = append(out[current], strings.Trim(name, "[]"))
+	for _, task := range contract.Tasks {
+		for _, node := range task.Sites {
+			var site struct {
+				Name  string   `yaml:"name"`
+				Kind  string   `yaml:"kind"`
+				Tools []string `yaml:"tools"`
+			}
+			// A bare-string site is a one_shot, which attaches no tools.
+			if node.Kind != yaml.MappingNode {
+				continue
+			}
+			if err := node.Decode(&site); err != nil {
+				t.Fatalf("decoding a site of api/ai-tasks.yaml: %v", err)
+			}
+			if site.Kind == "agent_loop" {
+				out[site.Name] = site.Tools
 			}
 		}
 	}

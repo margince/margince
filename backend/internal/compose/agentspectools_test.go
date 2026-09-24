@@ -4,9 +4,11 @@
 package compose
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -19,9 +21,9 @@ import (
 //
 //   - a misspelt verb silently drops the one tool a goal depends on. The run
 //     still starts, reads what it can, and reports a thin answer.
-//   - an EMPTY set reads as "no narrowing" at the Job seam (see Job.Tools), so a
-//     spec that loses its list quietly regains the whole catalog — the opposite
-//     of what the entry is for.
+//   - an EMPTY set, or one naming every served tool, is a run offered the whole
+//     catalog: every verb paid for on every step, and callable. The runner
+//     refuses the first; nothing but this gate refuses the second.
 //
 // Derived from the live registry rather than from a list kept beside it, so a
 // tool that is renamed or retired fails here instead of at 02:00 in a sweep.
@@ -32,9 +34,13 @@ func TestEveryAgentSpecNamesRegisteredTools(t *testing.T) {
 	}
 	for _, spec := range mustScheduledAgents() {
 		if len(spec.Tools) == 0 {
-			t.Errorf("agent %q names no tools — an empty allowlist is read as NO narrowing, "+
-				"which hands this goal every verb its passport admits", spec.Name)
+			t.Errorf("agent %q names no tools, so the runner refuses its every job — a run attaches "+
+				"the tools its goal needs", spec.Name)
 			continue
+		}
+		if len(spec.Tools) >= len(registered) {
+			t.Errorf("agent %q attaches %d tools against the %d this build serves — a run attaches what "+
+				"its goal needs and is never offered the whole catalog", spec.Name, len(spec.Tools), len(registered))
 		}
 		seen := map[string]bool{}
 		for _, name := range spec.Tools {
@@ -51,62 +57,96 @@ func TestEveryAgentSpecNamesRegisteredTools(t *testing.T) {
 }
 
 // The allowlist only binds a run if the job CARRIES it, and nothing in the type
-// system says it must: Job.Tools is an ordinary field whose zero value means "no
-// narrowing", so a call site that forgets it produces a working run with the
-// whole passport surface — the exact failure the entry exists to prevent, and
-// invisible in review because the diff looks complete.
+// system says it must: Job.Tools is an ordinary field, and a call site that
+// forgets it builds a job the runner refuses — or, set by hand, a job offered
+// whatever that call site typed.
 //
 // So the obligation is derived from the source: every runner.Job built in this
-// package sets Tools. It is a source read for the same reason the migration
-// tenant-scope gate is one — the property belongs to the construction site, and
-// there is no runtime seam to observe it through that would not mean adding an
-// interface with one implementation.
+// package's production files sets Tools from an entry's own allowlist. Every
+// file, not a named one: the run, the resume and the certification case each
+// build a Job, and a census that read one file would pass while a second
+// builder drifted. It is a source read because the property belongs to the
+// construction site, and there is no runtime seam to observe it through.
 func TestEveryRunnerJobBuiltHereCarriesAnAllowlist(t *testing.T) {
-	const file = "runnerservice.go"
-	fset := token.NewFileSet()
-	parsed, err := parser.ParseFile(fset, file, nil, parser.ParseComments)
+	files, err := filepath.Glob("*.go")
 	if err != nil {
-		t.Fatalf("parse %s: %v", file, err)
+		t.Fatalf("listing this package: %v", err)
 	}
-
+	fset := token.NewFileSet()
 	found := 0
+	for _, file := range files {
+		if strings.HasSuffix(file, "_test.go") {
+			continue
+		}
+		parsed, err := parser.ParseFile(fset, file, nil, parser.ParseComments)
+		if err != nil {
+			t.Fatalf("parse %s: %v", file, err)
+		}
+		builds, findings := runnerJobAllowlistFindings(fset, parsed)
+		found += builds
+		for _, finding := range findings {
+			t.Error(finding)
+		}
+	}
+	// The run and the resume are the two production builders; fewer means the
+	// scan is reading the wrong directory.
+	if found < 2 {
+		t.Fatalf("found %d runner.Job literals in this package — this gate is reading the wrong files, "+
+			"which is worse than not having it", found)
+	}
+}
+
+// The census above only means something if it can say no. A Job with no Tools
+// and a Job whose Tools were typed at the call site must both be named.
+func TestTheAllowlistCensusNamesAJobThatCarriesNone(t *testing.T) {
+	const planted = `package compose
+func build(spec runner.AgentSpec) {
+	_ = runner.Job{Goal: spec.Goal}
+	_ = runner.Job{Goal: spec.Goal, Tools: []string{"read_record"}}
+	_ = runner.Job{Goal: spec.Goal, Tools: spec.Tools}
+}`
+	fset := token.NewFileSet()
+	parsed, err := parser.ParseFile(fset, "planted.go", planted, 0)
+	if err != nil {
+		t.Fatalf("parse the planted file: %v", err)
+	}
+	builds, findings := runnerJobAllowlistFindings(fset, parsed)
+	if builds != 3 || len(findings) != 2 {
+		t.Errorf("the census saw %d jobs and named %d, want 3 jobs and the 2 without an entry's allowlist: %q",
+			builds, len(findings), findings)
+	}
+}
+
+// runnerJobAllowlistFindings counts the runner.Job literals in one file and names
+// each that does not take its Tools from an entry's own allowlist.
+func runnerJobAllowlistFindings(fset *token.FileSet, parsed *ast.File) (builds int, findings []string) {
 	ast.Inspect(parsed, func(n ast.Node) bool {
 		lit, ok := n.(*ast.CompositeLit)
 		if !ok || !isRunnerJob(lit.Type) {
 			return true
 		}
-		found++
+		builds++
 		for _, elt := range lit.Elts {
 			kv, ok := elt.(*ast.KeyValueExpr)
 			if !ok {
 				continue
 			}
-			ident, ok := kv.Key.(*ast.Ident)
-			if !ok || ident.Name != "Tools" {
+			if ident, ok := kv.Key.(*ast.Ident); !ok || ident.Name != "Tools" {
 				continue
 			}
-			// PRESENT IS NOT ENOUGH. `Tools: nil` and `Tools: []string{}` both
-			// satisfy "the field is set" and both apply no narrowing, so a
-			// future change could switch the boundary off and leave this gate
-			// green — the same "empty means everything" reading AgentSpec.Tools
-			// refuses one seam over.
+			// PRESENT IS NOT ENOUGH: `Tools: nil` satisfies "the field is set",
+			// and a hand-typed list is a second allowlist nobody declared.
 			if !isAllowlistFromASpec(kv.Value) {
-				t.Errorf("%s: the runner.Job at %s sets Tools to something that is not an entry's own "+
-					"allowlist — nil and an empty literal both read as NO narrowing, so this switches the "+
-					"catalog boundary off while looking like it honours it",
-					file, fset.Position(kv.Pos()))
+				findings = append(findings, fmt.Sprintf("the runner.Job at %s sets Tools to something that is "+
+					"not an entry's own allowlist", fset.Position(kv.Pos())))
 			}
 			return true
 		}
-		t.Errorf("%s: the runner.Job built at %s sets no Tools — the run is then narrowed by the "+
-			"passport alone, and the agent's catalog entry binds nothing",
-			file, fset.Position(lit.Pos()))
+		findings = append(findings, fmt.Sprintf("the runner.Job built at %s sets no Tools, so the runner "+
+			"refuses it and the agent's declared allowlist binds nothing", fset.Position(lit.Pos())))
 		return true
 	})
-	if found == 0 {
-		t.Fatalf("%s builds no runner.Job — this gate is reading the wrong file, "+
-			"which is worse than not having it", file)
-	}
+	return builds, findings
 }
 
 // isAllowlistFromASpec reports whether an expression reads a spec's own Tools —

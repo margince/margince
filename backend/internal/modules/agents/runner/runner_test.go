@@ -145,7 +145,8 @@ func TestARunIsOfferedOnlyTheToolsItsAuthorityAdmits(t *testing.T) {
 	surface.offered = surface.scopedTo(principal.ScopeRead)
 
 	brain := &scriptedBrain{texts: []string{`{"final":{"summary":"done"}}`}}
-	if _, err := New(surface, brain).Run(context.Background(), Job{Goal: "g"}); err != nil {
+	job := Job{Goal: "g", Tools: []string{"read_record"}}
+	if _, err := New(surface, brain).Run(context.Background(), job); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	if len(brain.requests) == 0 {
@@ -163,16 +164,16 @@ func TestARunIsOfferedOnlyTheToolsItsAuthorityAdmits(t *testing.T) {
 // The defect the two-catalog split exists to prevent: a run's own history must
 // not be rewritten because its author's authority changed after the fact.
 //
-// A passport's scopes can narrow between suspension and resume — a seat change,
-// a re-issued passport. What may be CALLED from here narrows with them. What was
+// A run's entry can narrow between suspension and resume — a re-declared agent,
+// a re-issued passport. What may be CALLED from here narrows with it. What was
 // already ANSWERED keeps its name: filtering the attribution vocabulary by the
-// current scopes too would relabel every observation the transcript already
+// current offer too would relabel every observation the transcript already
 // holds as an unrecognized tool, which is the runner telling the model its own
 // past did not happen.
 func TestAResumedRunKeepsAttributingAToolItMayNoLongerCall(t *testing.T) {
 	// The pre-narrow leg does real work BEFORE it sends, so the suspended
 	// snapshot carries genuine historical turns — one of them (update_record)
-	// write-scoped, and so outside what the narrowed passport may still call.
+	// write-scoped, and so outside what the narrowed entry may still call.
 	//
 	// What those turns prove is narrower than it looks, and the distinction is
 	// worth stating because it is easy to claim too much here. A snapshot holds
@@ -197,7 +198,7 @@ func TestAResumedRunKeepsAttributingAToolItMayNoLongerCall(t *testing.T) {
 		`{"tool":"read_record","args":{"record_type":"deal","id":"x"}}`,
 		`{"tool":"update_record","args":{"record_type":"deal","id":"x"}}`,
 		`{"tool":"send_email","args":{"to":"a@b.c"}}`,
-	}}).Run(context.Background(), Job{Goal: "follow up"})
+	}}).Run(context.Background(), Job{Goal: "follow up", Tools: []string{"read_record", "update_record", "send_email"}})
 	if err != nil {
 		t.Fatalf("run: %v", err)
 	}
@@ -205,29 +206,28 @@ func TestAResumedRunKeepsAttributingAToolItMayNoLongerCall(t *testing.T) {
 		t.Fatalf("expected a suspension to resume from: %+v", suspended)
 	}
 
-	// The authority narrowed while the approval sat. The staged call is still
-	// PRESENTED on resume, and the gate decides: Registry.Invoke admits before it
-	// redeems, so a scope the passport no longer carries fails with
-	// ErrScopeExceeded and the approval is never spent — an approval does not
-	// outlive the grant behind it. That refusal is an observation like any
-	// other, and it is still attributed to the tool that earned it.
-	narrowed := &fakeSurface{errs: map[string]error{
-		"send_email": fmt.Errorf("gate: send_email needs scope %q: %w",
-			principal.ScopeSend, apperrors.ErrScopeExceeded),
-	}}
+	// The entry and its passport narrowed to reads while the approval sat. The
+	// staged call is still PRESENTED on resume, and the allowlist refuses it
+	// before the surface is reached — an approval does not outlive the entry
+	// behind it. That refusal is an observation like any other, and it is still
+	// attributed to the tool that earned it.
+	narrowed := &fakeSurface{}
 	narrowed.offered = narrowed.scopedTo(principal.ScopeRead)
 
 	brain := &scriptedBrain{texts: []string{`{"final":{"summary":"the send was refused"}}`}}
-	if _, err := New(narrowed, brain).Resume(context.Background(), Job{Goal: "follow up"},
+	if _, err := New(narrowed, brain).Resume(context.Background(), Job{Goal: "follow up", Tools: []string{"read_record"}},
 		Decision{Pending: *suspended.Pending, Approved: true}); err != nil {
 		t.Fatalf("resume: %v", err)
+	}
+	if len(narrowed.calls) != 0 {
+		t.Fatalf("a send the narrowed entry no longer names reached the surface: %+v", narrowed.calls)
 	}
 	if len(brain.requests) == 0 {
 		t.Fatal("the model was never asked, so nothing was attributed to assert on")
 	}
 	req := brain.requests[0]
 
-	// The listing narrowed with the authority...
+	// The listing narrowed with the entry...
 	if strings.Contains(req.System, "send_email") {
 		t.Errorf("the resumed run is still offered send_email after its scopes narrowed:\n%s", req.System)
 	}
@@ -247,7 +247,7 @@ func TestAResumedRunKeepsAttributingAToolItMayNoLongerCall(t *testing.T) {
 	}
 	// The assertion the two-catalog split actually turns on: this observation is
 	// written on the resume leg, through sourceLabel, for a tool the narrowed
-	// passport cannot call. A vocabulary filtered to the offered set anonymises
+	// entry cannot call. A vocabulary filtered to the offered set anonymises
 	// it; the whole catalog keeps its name.
 	if !strings.Contains(observations, "observation from send_email") {
 		t.Errorf("the refused redemption was not attributed to send_email:\n%s", observations)
@@ -256,16 +256,16 @@ func TestAResumedRunKeepsAttributingAToolItMayNoLongerCall(t *testing.T) {
 
 func TestStepRecordsModelIdentity(t *testing.T) {
 	surface := &fakeSurface{results: map[string]json.RawMessage{
-		"noop": json.RawMessage(`{"ok":true}`),
+		"read_record": json.RawMessage(`{"ok":true}`),
 	}}
 	brain := &scriptedBrain{
-		texts:      []string{`{"tool":"noop","args":{}}`},
+		texts:      []string{`{"tool":"read_record","args":{}}`},
 		inTokens:   7,
 		perCallOut: 4,
 		meta:       Meta{ModelID: "gpt-x", Tier: "cheap_cloud"},
 	}
 	// Cap steps at 1 so the run terminates after one tool call for the assertion.
-	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Budget: Budget{MaxSteps: 1}})
+	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Tools: []string{"read_record"}, Budget: Budget{MaxSteps: 1}})
 	if err != nil {
 		t.Fatalf("run: %v", err)
 	}
@@ -286,7 +286,7 @@ func TestRunToolCallThenFinal(t *testing.T) {
 		`{"tool":"read_record","args":{"record_type":"deal","id":"x"}}`,
 		`{"final":{"summary":"Acme reviewed"}}`,
 	}}
-	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "review the deal", TriggerRef: "deal:x"})
+	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "review the deal", TriggerRef: "deal:x", Tools: []string{"read_record"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -322,12 +322,15 @@ func TestRefusalFedBackAsObservation(t *testing.T) {
 		`{"tool":"read_record","args":{}}`,
 		`{"final":{"summary":"done without the read"}}`,
 	}}
-	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g"})
+	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Tools: []string{"read_record"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if res.Outcome != OutcomeCompleted {
 		t.Fatalf("refusal must not end the run: %+v", res)
+	}
+	if len(surface.calls) != 1 {
+		t.Fatalf("the refusal must come from the governed surface, not the allowlist: %+v", surface.calls)
 	}
 	last := brain.requests[len(brain.requests)-1]
 	joined := ""
@@ -345,19 +348,24 @@ func TestRefusalFedBackAsObservation(t *testing.T) {
 // model legitimately may route around.
 func TestUnsupportedBySoRIsObservedAsTerminal(t *testing.T) {
 	surface := &fakeSurface{errs: map[string]error{
-		"run_report": fmt.Errorf("reports: %w", apperrors.ErrUnsupportedBySoR),
+		"read_record": fmt.Errorf("records: %w", apperrors.ErrUnsupportedBySoR),
 	}}
 	brain := &scriptedBrain{texts: []string{
-		`{"tool":"run_report","args":{}}`,
-		`{"final":{"summary":"answered without the report"}}`,
+		`{"tool":"read_record","args":{}}`,
+		`{"final":{"summary":"answered without the record"}}`,
 	}}
 
-	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g"})
+	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Tools: []string{"read_record"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if res.Outcome != OutcomeCompleted {
 		t.Fatalf("a declared refusal must not end the run: %+v", res)
+	}
+	// An allowlist refusal says "do not call it again" too, so the gap is only
+	// measured once the call is known to have reached the surface.
+	if len(surface.calls) != 1 {
+		t.Fatalf("the capability gap must come from the governed surface: %+v", surface.calls)
 	}
 	last := brain.requests[len(brain.requests)-1]
 	joined := ""
@@ -406,7 +414,7 @@ func TestConfirmationRequiredStagingSuspendsRun(t *testing.T) {
 		"send_email": &workflow.StagedApprovalError{ApprovalID: approvalID},
 	}}
 	brain := &scriptedBrain{texts: []string{`{"tool":"send_email","args":{"to":"a@b.c"}}`}}
-	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "follow up"})
+	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "follow up", Tools: []string{"send_email"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -435,7 +443,8 @@ func TestResumeApprovedRedeemsWithApprovalID(t *testing.T) {
 		Fence:     promptfence.New(),
 		StepsUsed: 3, OutputTokens: 100,
 	}
-	res, err := New(surface, brain).Resume(context.Background(), Job{Goal: "follow up"}, Decision{Pending: pending, Approved: true})
+	res, err := New(surface, brain).Resume(context.Background(), Job{Goal: "follow up", Tools: []string{"send_email"}},
+		Decision{Pending: pending, Approved: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -464,7 +473,8 @@ func TestResumeRejectedObservesAndReplans(t *testing.T) {
 		Window: []model.Message{{Role: "user", Content: "Goal: follow up"}},
 		Fence:  promptfence.New(),
 	}
-	res, err := New(surface, brain).Resume(context.Background(), Job{Goal: "follow up"}, Decision{Pending: pending, Approved: false})
+	res, err := New(surface, brain).Resume(context.Background(), Job{Goal: "follow up", Tools: []string{"send_email"}},
+		Decision{Pending: pending, Approved: false})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -495,7 +505,8 @@ func TestResumeApprovedVersionSkewIsObservedNotFatal(t *testing.T) {
 		Window: []model.Message{{Role: "user", Content: "Goal: follow up"}},
 		Fence:  promptfence.New(),
 	}
-	res, err := New(surface, brain).Resume(context.Background(), Job{Goal: "g"}, Decision{Pending: pending, Approved: true})
+	res, err := New(surface, brain).Resume(context.Background(), Job{Goal: "g", Tools: []string{"send_email"}},
+		Decision{Pending: pending, Approved: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -521,7 +532,7 @@ func TestStepBudgetDegradesGracefully(t *testing.T) {
 		"read_record": json.RawMessage(`{"ok":true}`),
 	}}
 	brain := &scriptedBrain{exhausted: `{"tool":"read_record","args":{}}`}
-	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Budget: Budget{MaxSteps: 3}})
+	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Tools: []string{"read_record"}, Budget: Budget{MaxSteps: 3}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -541,7 +552,7 @@ func TestOutputTokenBudgetDegrades(t *testing.T) {
 		"read_record": json.RawMessage(`{"ok":true}`),
 	}}
 	brain := &scriptedBrain{exhausted: `{"tool":"read_record","args":{}}`, perCallOut: 600}
-	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Budget: Budget{MaxOutputTokens: 1000}})
+	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Tools: []string{"read_record"}, Budget: Budget{MaxOutputTokens: 1000}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -553,7 +564,7 @@ func TestOutputTokenBudgetDegrades(t *testing.T) {
 func TestInvalidModelOutputRetriesThenDegrades(t *testing.T) {
 	surface := &fakeSurface{}
 	brain := &scriptedBrain{exhausted: "I think I should probably read the deal first."}
-	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g"})
+	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Tools: []string{"read_record"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -576,7 +587,7 @@ func TestInvalidModelOutputRetriesThenDegrades(t *testing.T) {
 func TestWallClockCancellationDegrades(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	res, err := New(&fakeSurface{}, &scriptedBrain{}).Run(ctx, Job{Goal: "g"})
+	res, err := New(&fakeSurface{}, &scriptedBrain{}).Run(ctx, Job{Goal: "g", Tools: []string{"read_record"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -656,7 +667,7 @@ func TestACraftedToolNameNeverReachesThePromptFrame(t *testing.T) {
 		`{"tool":` + mustJSON(t, forged) + `,"args":{}}`,
 		`{"final":{"summary":"done"}}`,
 	}}
-	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g"})
+	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Tools: []string{"read_record"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -753,7 +764,7 @@ func TestResumeRefusesASnapshotWithNoBoundary(t *testing.T) {
 	}
 	surface := &fakeSurface{results: map[string]json.RawMessage{"send_email": json.RawMessage(`{"sent":true}`)}}
 	brain := &scriptedBrain{texts: []string{`{"final":{"summary":"never reached"}}`}}
-	_, err := New(surface, brain).Resume(context.Background(), Job{Goal: "follow up"},
+	_, err := New(surface, brain).Resume(context.Background(), Job{Goal: "follow up", Tools: []string{"send_email"}},
 		Decision{Pending: pending, Approved: true})
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("a boundaryless snapshot resumed instead of being refused: %v", err)
@@ -849,7 +860,8 @@ func TestResumeRefusesATranscriptWrittenBeforeObservationsWereNeutralised(t *tes
 	surface := &fakeSurface{results: map[string]json.RawMessage{"send_email": json.RawMessage(`{"sent":true}`)}}
 	brain := &scriptedBrain{texts: []string{`{"final":{"summary":"x"}}`}}
 	_, err := New(surface, brain).Resume(
-		context.Background(), Job{Goal: "follow up"}, Decision{Pending: stale, Approved: true})
+		context.Background(), Job{Goal: "follow up", Tools: []string{"send_email"}},
+		Decision{Pending: stale, Approved: true})
 
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("resuming a pre-neutralisation transcript returned %v, want ErrConflict", err)
@@ -868,9 +880,10 @@ func TestARunSuspendedByThisBuildResumes(t *testing.T) {
 	staging := &fakeSurface{errs: map[string]error{
 		"send_email": &workflow.StagedApprovalError{ApprovalID: approvalID},
 	}}
+	job := Job{Goal: "follow up", Tools: []string{"send_email"}}
 	suspended, err := New(staging, &scriptedBrain{
 		texts: []string{`{"tool":"send_email","args":{"to":"a@b.c"}}`},
-	}).Run(context.Background(), Job{Goal: "follow up"})
+	}).Run(context.Background(), job)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -881,7 +894,7 @@ func TestARunSuspendedByThisBuildResumes(t *testing.T) {
 	// Resume the snapshot the runner itself produced, not one written by hand.
 	redeeming := &fakeSurface{results: map[string]json.RawMessage{"send_email": json.RawMessage(`{"sent":true}`)}}
 	res, err := New(redeeming, &scriptedBrain{texts: []string{`{"final":{"summary":"sent"}}`}}).Resume(
-		context.Background(), Job{Goal: "follow up"}, Decision{Pending: *suspended.Pending, Approved: true})
+		context.Background(), job, Decision{Pending: *suspended.Pending, Approved: true})
 	if err != nil {
 		t.Fatalf("a run this build suspended could not be resumed: %v", err)
 	}

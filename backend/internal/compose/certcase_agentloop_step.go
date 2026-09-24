@@ -3,25 +3,15 @@
 
 package compose
 
-// The two places an agent-loop scenario has more than one thing to say, and the
-// spellings that let it say them.
+// The step a scenario expects the turn to take, and the spellings that let it
+// say how much of that step it means.
 //
-// THE WINDOW. A scenario about which step a turn takes is a scenario about the
-// surface the turn chose from. Spelling two tools by hand is the right fixture
-// when the point is the choice BETWEEN those two — but the product offers the
-// workspace's whole governed surface, and a choice made among two neighbours is
-// not the choice made among thirty. So `tools` also takes the word `catalog`,
-// which resolves to the registry the composition actually builds. Nothing is
-// copied: a tool added, renamed or withdrawn reaches these scenarios the same
-// commit it reaches the surface, which is what a hand-spelled catalog could
-// never promise.
-//
-// THE STEP. `answer` is a step name, and for most scenarios that is the whole
-// claim: the turn had to read before it wrote, and which arguments it read with
-// is the model's business. A scenario that DOES care — the goal names a record
-// the grounding identifies, so a call omitting it is a call that guessed — needs
-// somewhere to put that, and pinning it inside the step name would make every
-// other scenario carry an assertion it does not mean.
+// `answer` is a step name, and for most scenarios that is the whole claim: the
+// turn had to read before it wrote, and which arguments it read with is the
+// model's business. A scenario that DOES care — the grounding identifies a
+// record, so a call omitting it is a call that guessed — needs somewhere to put
+// that, and pinning it inside the step name would make every other scenario
+// carry an assertion it does not mean.
 
 import (
 	"bytes"
@@ -35,87 +25,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// agentLoopCatalogSpelling is the word a fixture uses in place of a tool list to
-// say "the surface this installation actually registers".
-const agentLoopCatalogSpelling = "catalog"
-
-// agentLoopToolWindow is the surface one run was offered, in whichever of the
-// two spellings the scenario used. It is unexported state behind a decoder
-// rather than two fixture keys because the fixture's key set is what production
-// hands the runner — one window, named once — and a second key would read as a
-// second input.
-type agentLoopToolWindow struct {
-	listed  []agentLoopTool
-	catalog bool
-}
-
-// UnmarshalJSON reads either spelling and refuses anything else in the words a
-// corpus author needs: the field is a list of tools or one known word, and a
-// third thing is a scenario describing a window that has no meaning.
-func (w *agentLoopToolWindow) UnmarshalJSON(b []byte) error {
-	// A fixture that omits the field offers no window, and the refusal for that
-	// belongs to the site rather than to this decoder. It is handled first
-	// because null decodes into a string WITHOUT error, so the spelling branch
-	// below would otherwise read an absent surface as an unknown word.
-	if bytes.Equal(bytes.TrimSpace(b), []byte("null")) {
-		return nil
-	}
-	var spelling string
-	if err := json.Unmarshal(b, &spelling); err == nil {
-		if spelling != agentLoopCatalogSpelling {
-			return fmt.Errorf(
-				"%s: the fixture offers the tool surface %q, and the only word this site knows is %q "+
-					"(spell the tools out to offer a narrower window)",
-				agentLoopSite, spelling, agentLoopCatalogSpelling)
-		}
-		w.catalog = true
-		return nil
-	}
-	if err := json.Unmarshal(b, &w.listed); err != nil {
-		return fmt.Errorf(
-			"%s: the fixture's tool surface is neither a list of tools nor the word %q: %w",
-			agentLoopSite, agentLoopCatalogSpelling, err)
-	}
-	return nil
-}
-
-// MarshalJSON writes back the spelling that was read, so a fixture survives the
-// round trip the corpus gates take it through.
-func (w agentLoopToolWindow) MarshalJSON() ([]byte, error) {
-	if w.catalog {
-		return json.Marshal(agentLoopCatalogSpelling)
-	}
-	return json.Marshal(w.listed)
-}
-
-// specs resolves the window into the tool surface the run is offered.
-//
-// The catalog is built from the same NewRegistry every other sweep over this
-// surface builds, with no pool: registration is composition-time and needs no
-// database, and a certification turn executes nothing, so a nil pool is the
-// honest dependency rather than a stub of one.
-func (w agentLoopToolWindow) specs() ([]mcp.ToolSpec, error) {
-	if !w.catalog {
-		if len(w.listed) == 0 {
-			return nil, fmt.Errorf(
-				"%s: the fixture offers no tools, and a run is always offered the workspace's governed "+
-					"tool surface", agentLoopSite)
-		}
-		return agentLoopToolSpecs(w.listed)
-	}
-	specs := agentLoopCatalog()
-	if len(specs) == 0 {
-		return nil, fmt.Errorf(
-			"%s: the composed registry offers no tools, so a scenario naming %q would grade a choice "+
-				"between nothing", agentLoopSite, agentLoopCatalogSpelling)
-	}
-	return specs, nil
-}
-
-// agentLoopCatalog is the registered surface, resolved once. Every scenario
-// naming the catalog is offered the same window, and building it per scenario
-// would differ only in cost.
-var agentLoopCatalog = sync.OnceValue(func() []mcp.ToolSpec {
+// agentLoopRegistry is the registered surface, resolved once: the set a
+// passport admitting every scope is offered, which the runner then narrows to
+// the agent's allowlist. Built from the same NewRegistry every other sweep over
+// this surface builds, with no pool — registration is composition-time and
+// needs no database, and a certification turn executes nothing.
+var agentLoopRegistry = sync.OnceValue(func() []mcp.ToolSpec {
 	return NewRegistry(nil, SendPath{}).Specs()
 })
 

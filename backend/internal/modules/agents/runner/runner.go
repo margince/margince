@@ -107,8 +107,13 @@ type Step struct {
 	Tier        string
 	TokensIn    int
 	TokensOut   int
-	Admission   string // "executed" | "refused" | "staged" | "rejected"
+	Admission   string // "executed" | AdmissionRefused | "staged" | "rejected"
 }
+
+// AdmissionRefused marks a step the gate or the allowlist refused. Exported
+// because the certification case grades a refused first step as the step the
+// turn took, and must read the same word this package writes.
+const AdmissionRefused = "refused"
 
 // Pending snapshots a run suspended on a 🟡 staging: the approval to
 // watch, the exact call to re-submit, the window to resume from, and
@@ -153,6 +158,9 @@ func New(tools Invoker, brain Brain) *Runner {
 // Run executes a fresh job until terminal answer, suspension, or a
 // budget guarantee fires.
 func (r *Runner) Run(ctx context.Context, job Job) (Result, error) {
+	if len(job.Tools) == 0 {
+		return r.degrade(Result{}, unscopedJobReason), nil
+	}
 	admitted := r.tools.Offered(ctx)
 	if missing := unfundedTools(job, admitted); len(missing) > 0 {
 		// Before the first completion, so a misconfigured agent costs no
@@ -160,7 +168,7 @@ func (r *Runner) Run(ctx context.Context, job Job) (Result, error) {
 		return r.degrade(Result{}, "this agent's passport does not admit "+
 			strings.Join(missing, ", ")+" — grant the scope those tools need, or narrow the agent's catalog entry"), nil
 	}
-	win := newWindow(job, offeredToJob(job, admitted), r.tools.Specs())
+	win := newWindow(job, job.Narrow(admitted), r.tools.Specs())
 	return r.loop(ctx, job, win, Result{})
 }
 
@@ -176,6 +184,10 @@ type Decision struct {
 // silently changed under an approved diff). Rejected: the refusal is
 // observed and the model re-plans without that action.
 func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, error) {
+	if len(job.Tools) == 0 {
+		return r.degrade(Result{StepsUsed: dec.Pending.StepsUsed, OutputTokens: dec.Pending.OutputTokens},
+			unscopedJobReason), nil
+	}
 	admitted := r.tools.Offered(ctx)
 	// The same shortfall check Run makes, at the same strength. A resumed run
 	// whose entry the passport can no longer fund is as misconfigured as a
@@ -186,7 +198,7 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 			"this agent's passport does not admit "+strings.Join(missing, ", ")+
 				" — the run cannot resume under an entry its passport cannot fund"), nil
 	}
-	win, err := windowFromSnapshot(job, offeredToJob(job, admitted), r.tools.Specs(),
+	win, err := windowFromSnapshot(job, job.Narrow(admitted), r.tools.Specs(),
 		dec.Pending.Window, dec.Pending.Fence, dec.Pending.TranscriptVersion)
 	if err != nil {
 		return Result{}, err
@@ -226,7 +238,7 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 		// "refused" — replay must never claim a mutation that the gate did
 		// not apply.
 		observation = "approved action could not be applied: " + err.Error()
-		admission = "refused"
+		admission = AdmissionRefused
 	}
 	win.observe(dec.Pending.Tool, observation)
 	// The approved staged call redeems here with no fresh model completion —
@@ -273,7 +285,7 @@ func observeRefusal(win *window, step modelStep, err error, meta Meta, resp mode
 	return Step{
 		Tool: step.Tool, Args: step.Args, Observation: recorded,
 		ModelID: meta.ModelID, Tier: meta.Tier, TokensIn: resp.InputTokens, TokensOut: resp.OutputTokens,
-		Admission: "refused",
+		Admission: AdmissionRefused,
 	}
 }
 

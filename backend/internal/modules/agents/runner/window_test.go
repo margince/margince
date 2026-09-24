@@ -93,7 +93,7 @@ func TestAResumedRunIsStillToldWhereARecordIdComesFrom(t *testing.T) {
 	staging := &fakeSurface{errs: map[string]error{
 		"send_email": &workflow.StagedApprovalError{ApprovalID: ids.New[ids.ApprovalKind]()},
 	}}
-	job := Job{Goal: "follow up after the meeting", TriggerRef: triggerRef}
+	job := Job{Goal: "follow up after the meeting", TriggerRef: triggerRef, Tools: []string{"send_email"}}
 	suspended, err := New(staging, &scriptedBrain{texts: []string{
 		`{"tool":"send_email","args":{"to":"a@b.c"}}`,
 	}}).Run(context.Background(), job)
