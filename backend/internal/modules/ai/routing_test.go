@@ -151,12 +151,13 @@ func TestSovereignRefusesNativeCloudProviders(t *testing.T) {
 }
 
 // eu_resident is an enforced promise, so it admits nothing it cannot vouch for:
-// every cloud provider is refused on a chat tier and on the embeddings lane,
-// and what sovereign accepts still parses.
-func TestEUResidentAdmitsOnlyWhatSovereignDoes(t *testing.T) {
+// every cloud provider but Vertex is refused on a chat tier and on the
+// embeddings lane, and what sovereign accepts still parses. Vertex's locations
+// are residency_test.go's subject.
+func TestEUResidentRefusesEveryCloudProviderButVertex(t *testing.T) {
 	const local = "{provider: ollama, model: bge-m3}"
 	for _, provider := range knownProviders {
-		if localProviders[provider] {
+		if localProviders[provider] || provider == providerGeminiVertex {
 			continue
 		}
 		cloud := "{provider: " + provider + ", model: m, base_url: https://api.mistral.ai}"

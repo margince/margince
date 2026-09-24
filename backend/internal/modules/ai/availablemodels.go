@@ -133,7 +133,8 @@ func (s *RoutingStore) ListAvailableModels(
 	// discovering that at the first call is too late. OpenRouter is cloud
 	// egress like any other broker, so it is refused here too rather than
 	// falling through to the unauthenticated read below.
-	if cfg.Profile.localOnly() && !ProviderIsLocal(provider) {
+	bound := boundProviderConfig(cfg, provider, tier)
+	if !ProviderIsLocal(provider) && RequireResidency(cfg.Profile, bound) != nil {
 		out.Unavailable = AvailabilityProfileForbids
 		return out, nil
 	}
@@ -148,7 +149,7 @@ func (s *RoutingStore) ListAvailableModels(
 		}
 		return s.catalogue.List(ctx, top), nil
 	}
-	client, err := SelectBrain(boundProviderConfig(cfg, provider, tier), s.resolvedKeys(ctx))
+	client, err := SelectBrain(bound, s.resolvedKeys(ctx))
 	if err != nil {
 		out.Unavailable = unavailableFor(err)
 		return out, nil
@@ -220,10 +221,10 @@ func boundProviderConfig(cfg RoutingConfig, provider, tier string) ProviderConfi
 	// nothing" fell through to a sibling lane's override and asked the wrong
 	// host — the defect naming the lane exists to prevent, inverted.
 	if binding, ok := cfg.Tiers[Tier(tier)]; ok && binding.Provider == provider {
-		return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL}
+		return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL, Location: binding.Location}
 	}
 	if tier == string(LaneEmbeddings) && cfg.Embeddings.Provider == provider {
-		return ProviderConfig{Provider: provider, BaseURL: cfg.Embeddings.BaseURL}
+		return ProviderConfig{Provider: provider, BaseURL: cfg.Embeddings.BaseURL, Location: cfg.Embeddings.Location}
 	}
 	for _, t := range sortedTiers(cfg.Tiers) {
 		binding := cfg.Tiers[t]

@@ -290,12 +290,6 @@ func (p Profile) Valid() bool {
 	return slices.Contains(declaredProfiles, p)
 }
 
-// localOnly reports whether p admits only same-host inference. eu_resident is
-// among them because no cloud provider bound here guarantees EU processing.
-func (p Profile) localOnly() bool {
-	return p == ProfileSovereign || p == ProfileEUResident
-}
-
 func (cfg RoutingConfig) validate() error {
 	if cfg.Profile == "" {
 		return fmt.Errorf("ai: routing config: profile is required (eu_hosted | eu_resident | sovereign | cloud_frontier)")
@@ -332,16 +326,11 @@ func (cfg RoutingConfig) validate() error {
 	if cfg.Embeddings.Input != nil {
 		return fmt.Errorf("ai: routing config: the embeddings lane takes no `input` — it sends no attachments; declare it on the chat tier that reads documents")
 	}
-	if cfg.Profile.localOnly() {
-		if !localProviders[cfg.Embeddings.Provider] {
-			return fmt.Errorf("ai: routing config: profile %s forbids cloud provider %q on the embeddings lane", cfg.Profile, cfg.Embeddings.Provider)
-		}
-		// The embed lane egresses the same text the chat lanes do — a document's
-		// content reaches it as the thing being embedded — so it carries the same
-		// endpoint rule rather than a weaker one.
-		if err := requireSovereignEndpoint("the embeddings lane", cfg.Embeddings.Provider, cfg.Embeddings.BaseURL); err != nil {
-			return err
-		}
+	// The embed lane egresses the same text the chat lanes do — a document's
+	// content reaches it as the thing being embedded — so it carries the same
+	// residency rule rather than a weaker one.
+	if err := refuseNonResident(cfg.Profile, "the embeddings lane", cfg.Embeddings.ProviderConfig); err != nil {
+		return err
 	}
 	if err := validateVertexPlacement("the embeddings lane", cfg.Embeddings.ProviderConfig); err != nil {
 		return err
@@ -401,14 +390,9 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 	// Sovereign means zero egress BY CONSTRUCTION, which takes both halves:
 	// a cloud provider in any chat tier is a config error, and so is a local
 	// provider pointed at somebody else's host (sovereignendpoint.go).
-	// Neither is a runtime surprise.
-	if profile.localOnly() {
-		if !localProviders[binding.Provider] {
-			return fmt.Errorf("ai: routing config: profile %s forbids cloud provider %q on tier %s", profile, binding.Provider, tier)
-		}
-		if err := requireSovereignEndpoint(fmt.Sprintf("tier %s", tier), binding.Provider, binding.BaseURL); err != nil {
-			return err
-		}
+	// eu_resident adds Vertex at an EU location. Neither is a runtime surprise.
+	if err := refuseNonResident(profile, fmt.Sprintf("tier %s", tier), binding); err != nil {
+		return err
 	}
 	if err := validateVertexPlacement(fmt.Sprintf("tier %s", tier), binding); err != nil {
 		return err

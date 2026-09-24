@@ -157,8 +157,9 @@ The refusal is bound to the provider _name_, not a config flag, so pointing
 `openai_compatible` at a localhost URL is still refused: only `ollama`, `vllm`,
 and `fake` are sovereign-eligible. Use `eu_hosted` (cloud-hosted, no residency
 guarantee) or `cloud_frontier` for a BYOK cloud binding. `eu_resident` enforces
-EU processing and refuses every binding that cannot guarantee it, which today
-leaves only what `sovereign` accepts.
+EU processing and refuses every binding that cannot guarantee it: it accepts
+what `sovereign` accepts, plus `gemini_vertex` at an EU location (`eu` or an EU
+region — London `europe-west2` and Zürich `europe-west6` are outside the EU).
 
 The endpoint is checked too, because a local provider name is not on its own a
 local endpoint: `ollama` and `vllm` take a `base_url`, and one pointed at a
