@@ -175,17 +175,36 @@ answer."
 If two colleagues open the same request, the second is told "This request moved on —
 someone else decided it first" rather than being allowed to decide it twice.
 
-### Access requests are done by hand
+### Access requests: the product assembles the package, no screen offers it
 
-This is the most important thing on this page for anyone planning their process,
-and the product states it without softening:
+The product **does** assemble a subject-access package. It is a comprehensive
+Article 15 report for one contact — their record, their correspondence, their
+consent history, and things the subject could not otherwise know they were in,
+such as the evidence recording why a contact exists at all.
 
-> An access request is fulfilled by hand: record what you sent in the
-> resolution. **This system does not assemble or export the data for you.**
+What is missing is the button. The package is served by the request's own
+endpoint, `GET /data-subject-requests/{id}/package`, and nothing in the
+interface calls it yet — which is why the privacy inbox still says the export
+is manual. Until a screen offers it, reaching the package means calling that
+endpoint directly.
 
-There is no "download everything about this contact" button. If you need to
-answer a subject access request, you gather the data yourself and record what
-you sent. Plan for that.
+Three things bound it, and they are the reason it is not simply a button
+everywhere:
+
+- **It is privileged.** Assembly admits an unbounded human holding the contact
+  delete grant. The request queue's own gate is narrower still — admin, human,
+  contact read — and it stays in front, so the package is never reachable by a
+  role the queue itself would refuse.
+- **It answers access requests only.** An erasure or a rectification request
+  has no package; answering one with a subject's whole record would export
+  everything to close a request that asked for something else.
+- **It does not close the request.** Producing the export and deciding the
+  request is answered are two acts. You still mark it fulfilled yourself, once
+  you have actually sent it — a request must not close on a download that never
+  reached anybody.
+
+Record what you sent in the resolution either way. That part of the process
+does not change.
 
 ### Erasure requests
 
@@ -302,6 +321,10 @@ retention floor by hand.
 There is one export in the product, and it is worth knowing exactly what it is
 so you do not promise more than it does.
 
+There are two exports, and they answer different questions.
+
+#### The list export
+
 From a list you can press **Export CSV** or **Export JSON**. Those are the only
 two formats.
 
@@ -317,5 +340,19 @@ Three things about it:
   copy of what, and when.
 
 This is a record export, not a contact export. It does not assemble everything
-held about one individual — see the access-request section above for why that is
-a manual job.
+held about one individual — that is the subject-access package, described in the
+access-request section above.
+
+#### The whole-workspace bundle
+
+The installation's data handover: every object as CSV, the relationships as
+JSON, and manifests describing both, in the open `margince-export/1` format.
+This is the export to reach for when the question is "give us our data",
+whether for a migration, an audit, or a portability request.
+
+It is admin and ops only, it writes an audit entry like every other export, and
+it is row-scoped to whoever asks — so a bundle can never hand out rows that
+person's own lists would hide.
+
+As with the subject-access package, no screen offers it yet: it is served by
+`GET /exports/bundle`.
