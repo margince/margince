@@ -1343,6 +1343,7 @@ construction, naming what is missing.
 | `openai_compatible` | `OPENAI_COMPATIBLE_API_KEY` | **required** | BYOK cloud, generic OpenAI wire (OpenAI, Mistral, DeepSeek, Groq, Together, OpenRouter, …) |
 | `openai` | `OPENAI_API_KEY` | optional (default `api.openai.com`) | BYOK cloud, native Responses API |
 | `gemini` | `GEMINI_API_KEY` | optional (default `generativelanguage.googleapis.com/v1beta`) | BYOK cloud, native `generateContent` |
+| `gemini_vertex` | `GEMINI_VERTEX_SA_JSON` (the service-account key file's JSON) | **refused** — the host follows from `location` | BYOK cloud, the `gemini` wire served by Vertex AI; **`location` required**; the one cloud provider `eu_resident` admits |
 
 `base_url` for the OpenAI-wire providers (`openai_compatible`, `openai`, and
 `vllm`) is the vendor **host root with no version segment** — the adapter
@@ -1350,6 +1351,20 @@ appends `/v1/chat/completions` (or `/v1/responses`), so a base ending in `/v1`
 would double it (`…/v1/v1/…` → 404). Use `https://api.mistral.ai`, not
 `https://api.mistral.ai/v1`. `gemini` is the mirror: its default base keeps the
 `/v1beta` segment and the paths are version-relative.
+
+`location` is a field of a `gemini_vertex` binding only, on a tier or on
+`embeddings:`, and refused on any other provider. It names the Vertex AI
+location that serves the call and processes the prompt: `eu`, `us`, `global`, or
+a region such as `europe-west4`. The API host follows from it, so no `base_url`
+is accepted. Under `profile: eu_resident` it must be `eu` or an EU region
+(`europe-west1`, `-west3`, `-west4`, `-west8`, `-west9`, `-west12`, `-north1`,
+`-central2`, `-southwest1`); London `europe-west2`, Zürich `europe-west6`,
+`global` and `us` are refused. Saving a `gemini_vertex` binding asks Google
+whether the location serves the model and refuses it with a 422 if not.
+The key is a service account's JSON key file, whose account holds
+`roles/aiplatform.user`; `GEMINI_VERTEX_SA_JSON` carries the file's contents,
+not a path. [how-to/connect-a-cloud-model-provider.md](../how-to/connect-a-cloud-model-provider.md) §5
+walks through it.
 
 #### What a binding can be handed (documents, scans, photographed forms)
 

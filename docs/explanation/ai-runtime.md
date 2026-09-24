@@ -24,9 +24,9 @@ the model runtime itself.
    (compiled task/tier/ladder)         (bound at boot, validated)               ▼
                                                                           provider adapter
    task cold_start                                                        (anthropic | openai |
-     ladder [cheap_cloud, premium]   ──walk on error/schema-fail──►       gemini | ollama |
-     on_budget_exhausted: degrade                                          vllm | openai_compatible
-                                                                           | fake)
+     ladder [cheap_cloud, premium]   ──walk on error/schema-fail──►       gemini | gemini_vertex |
+     on_budget_exhausted: degrade                                          ollama | vllm |
+                                                                           openai_compatible | fake)
 ```
 
 **Four principles hold this together:**
@@ -159,7 +159,8 @@ embeddings:    {provider: gemini}
 
 - **`profile`** is the §4 location ladder — the privacy choice of *where* the
   model runs: `sovereign` (zero egress by construction), `eu_resident` (every
-  binding must keep processing inside the EU, refused at save otherwise),
+  tier and the embeddings lane must keep processing inside the EU — a local
+  model, or `gemini_vertex` at an EU `location` — refused at save otherwise),
   `eu_hosted` (cloud-hosted with no residency guarantee — the spelling is
   historical) and `cloud_frontier`. The first two constrain; the last two are
   labels. None of them leaks.
@@ -551,9 +552,9 @@ writing the case that certifies one:
 | Task contract (tasks, tiers, ladders, budget posture, status/sites/context/cost unit) | `backend/api/ai-tasks.yaml` → `tasks_gen.go` (via `tools/gen-aitasks`, `make gen`) |
 | Invocation-site census (which sites this build ships, and the case certifying each) | `internal/compose/aitaskregistry.go` (`NewTaskCensus`) · `internal/compose/aitasks` |
 | Runtime binding (tier → provider/model, profile) | the `ai.routing` setting — seeded from `seeds.ai_routing`, changed under Settings → AI. Shape declared under `$defs.aiRouting` in `config/margince.schema.json` |
-| BYOK keys | the key vault, set under Settings → AI → Model provider keys. The conventional environment variables (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`) are read once, to seal a key into the vault on first boot |
+| BYOK keys | the key vault, set under Settings → AI → Model provider keys. The conventional environment variables (`GEMINI_API_KEY`, `GEMINI_VERTEX_SA_JSON`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`) are read once, to seal a key into the vault on first boot |
 | The gate | `internal/modules/ai` — `ai.Router` / `ai.NewLocalRouter`; `--ai-fake` flag |
-| Providers | `anthropic`, `openai`, `gemini` (native) · `ollama`, `vllm`, `openai_compatible` · `fake` |
+| Providers | `anthropic`, `openai`, `gemini`, `gemini_vertex` (native; `gemini_vertex` is the `gemini` wire on Vertex AI, bound by `location`) · `ollama`, `vllm`, `openai_compatible` · `fake` |
 | Tracing | `ai_call` / `ai_call_payload` / `ai_call_config` (migrations `0088`, `0089`, `0100`, `0102`) |
 | Cost rates | `ai_model_rate` (per provider/model, effective-dated, micro-USD) · seeded by `SeedModelRates` |
 | Pricer (actuals) | `PriceCall` + `RateStore` (`internal/modules/ai`) → `/ai/usage` `cost_est_minor` |

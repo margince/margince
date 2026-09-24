@@ -184,6 +184,7 @@ const envTemplate = `# Margince settings.
 # ANTHROPIC_API_KEY=
 # OPENAI_API_KEY=
 # GEMINI_API_KEY=
+# GEMINI_VERTEX_SA_JSON=
 # OPENAI_COMPATIBLE_API_KEY=
 
 # ---------------------------------------------------------------------------

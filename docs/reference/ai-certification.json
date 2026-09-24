@@ -721,6 +721,361 @@
       "unrecognised": 0
     },
     {
+      "file": "gemini_vertex_eu.yaml",
+      "profile": "eu_resident",
+      "tiers": [
+        {
+          "tier": "local_small",
+          "provider": "gemini_vertex",
+          "model": "gemini-3.1-flash-lite"
+        },
+        {
+          "tier": "cheap_cloud",
+          "provider": "gemini_vertex",
+          "model": "gemini-3.1-flash-lite"
+        },
+        {
+          "tier": "premium",
+          "provider": "gemini_vertex",
+          "model": "gemini-3.5-flash"
+        },
+        {
+          "tier": "frontier",
+          "provider": "gemini_vertex",
+          "model": "gemini-3.1-pro-preview"
+        }
+      ],
+      "tasks": [
+        {
+          "task": "account_scan",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "agent_loop",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "brief_ranking",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "capture_classify",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "capture_confidentiality_verdict",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "capture_counterparty_verdict",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "cert_judge",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "cold_start",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "corpus_ask",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "deal_health",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "document_extract",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "draft_reply",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "enrich",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "growth_fit",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "offer_draft",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "owed_verdict",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "propose_roles",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "rate_extract",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "request_settlement",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "signal_extract",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "site_extract",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "site_fact_extract",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "site_triage",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "stage_evidence_extract",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "summarize",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "transcript_propose",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "voice_build",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "weekly_learnings",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        },
+        {
+          "task": "weekly_review",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_resident"
+          },
+          "band": "",
+          "state": ""
+        }
+      ],
+      "bands": {
+        "certified": 0,
+        "supported_degraded": 0,
+        "not_supported": 0
+      },
+      "untested": 29,
+      "unbound": 0,
+      "unrecognised": 0
+    },
+    {
       "file": "openrouter_cloud.yaml",
       "profile": "eu_hosted",
       "tiers": [

@@ -299,6 +299,7 @@ func aiCertBandCell(row aiCertPresetTask) string {
 func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc aiCertDoc) {
 	t.Helper()
 	tasks := aiCertTasksOf(doc)
+	recorded := aiCertRecordedModels(doc)
 	for _, p := range presets {
 		if len(p.Tasks) != len(tasks) {
 			t.Errorf("preset %s reports %d tasks and the page ships %d", p.File, len(p.Tasks), len(tasks))
@@ -312,10 +313,33 @@ func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc 
 		// PER PRESET, not summed across them. A total hides the failure this
 		// asks about: attribution keys a preset's profile against a record's
 		// env, so one typo'd `profile:` turns that preset entirely `untested`
-		// while every other preset keeps the sum comfortably positive.
-		if measured := p.Bands.Certified + p.Bands.SupportedDegraded + p.Bands.NotSupported; measured == 0 {
+		// while every other preset keeps the sum comfortably positive. A preset
+		// none of whose models any record names is honestly untested instead.
+		measured := p.Bands.Certified + p.Bands.SupportedDegraded + p.Bands.NotSupported
+		if measured == 0 && bindsAMeasuredModel(p, recorded) {
 			t.Errorf("preset %s reaches no measured band at all — every task reads untested or unbound, "+
 				"which is a claim about the product if true and a broken join if not", p.File)
 		}
 	}
+}
+
+// aiCertRecordedModels answers whether some record measured a provider and
+// model, under any profile.
+func aiCertRecordedModels(doc aiCertDoc) map[string]bool {
+	recorded := map[string]bool{}
+	for _, site := range doc.Sites {
+		for _, rec := range site.Records {
+			recorded[rec.Binding.Provider+"\x00"+rec.Binding.Model] = true
+		}
+	}
+	return recorded
+}
+
+func bindsAMeasuredModel(p aiCertPreset, recorded map[string]bool) bool {
+	for _, tier := range p.Tiers {
+		if recorded[tier.Provider+"\x00"+tier.Model] {
+			return true
+		}
+	}
+	return false
 }

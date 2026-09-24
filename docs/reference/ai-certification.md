@@ -59,6 +59,7 @@ preset binds a model there and no paid run has measured it yet.
 |---|---|---:|---:|---:|---:|---:|
 | [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml) | `cloud_frontier` | 11 | 2 | 15 | 1 | 0 |
 | [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml) | `eu_hosted` | 12 | 4 | 13 | 0 | 0 |
+| [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml) | `eu_resident` | 0 | 0 | 0 | 29 | 0 |
 | [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml) | `eu_hosted` | 6 | 4 | 14 | 5 | 0 |
 | [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml) | `eu_hosted` | 10 | 1 | 17 | 1 | 0 |
 
@@ -146,6 +147,47 @@ has nothing to call, so the feature is off rather than degraded.
 | `voice_build` | `cheap_cloud` | `gemini-3.1-flash-lite` | `supported_degraded` | `current` |
 | `weekly_learnings` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
 | `weekly_review` | `cheap_cloud` | `gemini-3.1-flash-lite` | `not_supported` | `current` |
+
+### `gemini_vertex_eu.yaml`
+
+| Tier | Provider | Model |
+|---|---|---|
+| `local_small` | `gemini_vertex` | `gemini-3.1-flash-lite` |
+| `cheap_cloud` | `gemini_vertex` | `gemini-3.1-flash-lite` |
+| `premium` | `gemini_vertex` | `gemini-3.5-flash` |
+| `frontier` | `gemini_vertex` | `gemini-3.1-pro-preview` |
+
+| Task | Served on | Model | Band | State |
+|---|---|---|---|---|
+| `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `brief_ranking` | `premium` | `gemini-3.5-flash` | `untested` | - |
+| `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | `untested` | - |
+| `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | `untested` | - |
+| `capture_counterparty_verdict` | `local_small` | `gemini-3.1-flash-lite` | `untested` | - |
+| `cert_judge` | `premium` | `gemini-3.5-flash` | `untested` | - |
+| `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `corpus_ask` | `premium` | `gemini-3.5-flash` | `untested` | - |
+| `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `document_extract` | `premium` | `gemini-3.5-flash` | `untested` | - |
+| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `enrich` | `local_small` | `gemini-3.1-flash-lite` | `untested` | - |
+| `growth_fit` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `offer_draft` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `owed_verdict` | `local_small` | `gemini-3.1-flash-lite` | `untested` | - |
+| `propose_roles` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `rate_extract` | `premium` | `gemini-3.5-flash` | `untested` | - |
+| `request_settlement` | `local_small` | `gemini-3.1-flash-lite` | `untested` | - |
+| `signal_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `site_extract` | `premium` | `gemini-3.5-flash` | `untested` | - |
+| `site_fact_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `site_triage` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `stage_evidence_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `summarize` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `transcript_propose` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `voice_build` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `weekly_learnings` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
+| `weekly_review` | `cheap_cloud` | `gemini-3.1-flash-lite` | `untested` | - |
 
 ### `openrouter_cloud.yaml`
 

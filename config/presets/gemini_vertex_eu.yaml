@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=../margince.schema.json
+# config/presets/gemini_vertex_eu.yaml — every lane on Gemini served by Vertex AI
+# at the `eu` multi-region, under the enforced eu_resident profile.
+#
+# What it guarantees: Google processes every prompt, and every text embedded,
+# in EU member states. The `eu` multi-region excludes the UK (europe-west2) and
+# Switzerland (europe-west6); eu_resident refuses those, `global` and `us` at save.
+# It covers AI inference only — docs/how-to/connect-a-cloud-model-provider.md §5.
+#
+# Needs one service-account JSON key, from GEMINI_VERTEX_SA_JSON or Settings →
+# Provider keys, on an account holding roles/aiplatform.user in a project with the
+# Vertex AI API enabled. Not loaded automatically — see README.md.
+version: 1
+
+seeds:
+  ai_routing:
+    profile: eu_resident        # eu_hosted | eu_resident | sovereign | cloud_frontier
+    # The same models as gemini_cloud.yaml, each served in the `eu` multi-region.
+    tiers:
+      local_small: { provider: gemini_vertex, location: eu, model: gemini-3.1-flash-lite }
+      cheap_cloud: { provider: gemini_vertex, location: eu, model: gemini-3.1-flash-lite }
+      premium:     { provider: gemini_vertex, location: eu, model: gemini-3.5-flash }
+      frontier:    { provider: gemini_vertex, location: eu, model: gemini-3.1-pro-preview }
+    # gemini_vertex speaks the gemini wire, so 1536 is a request for that output
+    # width exactly as it is in gemini_cloud.yaml.
+    embeddings:
+      provider: gemini_vertex
+      location: eu
+      model: gemini-embedding-001
+      dimensions: 1536

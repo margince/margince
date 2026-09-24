@@ -16,7 +16,8 @@ Two different promises, and a task can make either without the other:
   it is enforced — validation refuses a cloud binding for either tier
   outright, so no cloud client for one is ever constructed. Under
   `eu_resident` a hosted binding is admitted only where it keeps processing
-  inside the EU, so the text may leave the machine but not the EU. Under
+  inside the EU — today `gemini_vertex` at an EU location — so the text may
+  leave the machine but not the EU. Under
   `eu_hosted` (cloud-hosted, with no residency guarantee) and
   `cloud_frontier` it is unenforced: an operator's own binding can point
   `local_small` or `local_large` at a hosted provider, and a task

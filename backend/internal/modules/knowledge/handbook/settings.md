@@ -188,8 +188,17 @@ Changes take effect without a restart: a running process picks up a saved
 binding within about a minute, and a call already in flight keeps the one it
 started with.
 
-**Provider keys** — your own keys for whichever provider you use. Margince can
-also run entirely against a local model with no cloud key at all.
+A binding to **Gemini on Vertex AI** also asks for a **Location** — where Google
+processes that work. Each option is marked EU resident or not; under the **EU
+data residency** profile only the resident ones can be chosen. The model list
+follows the location, a model the location does not serve is flagged, and saving
+asks Google once more before anything is stored.
+
+**Provider keys** — your own keys for whichever provider you use. Most take an
+API key; Gemini on Vertex AI takes a Google Cloud **service-account key**, pasted
+or chosen as its `.json` file, and the row then reads "Service account key
+configured". Margince can also run entirely against a local model with no cloud
+key at all.
 
 **Automations** — the trigger-and-action catalogue.
 
