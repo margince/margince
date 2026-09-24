@@ -10016,8 +10016,9 @@ export const vi = {
   "magic.noRecord": "Không nêu bản ghi nào",
   "magic.undo.fromHistory": "Có thể hoàn tác từ lịch sử của bản ghi",
   "magic.undoReason.noCompletedChange":
-    "Không có gì thay đổi nên không có gì để hoàn tác",
-  "magic.undoReason.notEvaluated": "Bản cài đặt này chưa kiểm tra",
+    "Không có gì thay đổi nên không có gì để hoàn tác.",
+  "magic.undoReason.notEvaluated":
+    "Bản cài đặt này chưa kiểm tra xem có thể hoàn tác hay không.",
   "magic.notShown_one": "{count} thay đổi không được hiển thị: {reason}",
   "magic.notShown_other": "{count} thay đổi không được hiển thị: {reason}",
   "magic.notShown.unadmittedAction": "việc bảo trì không có ý nghĩa với bạn",

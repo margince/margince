@@ -10110,8 +10110,9 @@ export const de = {
   "magic.undo.fromHistory":
     "Lässt sich über den Verlauf des Datensatzes zurücknehmen",
   "magic.undoReason.noCompletedChange":
-    "Es hat sich nichts geändert, also gibt es nichts zurückzunehmen",
-  "magic.undoReason.notEvaluated": "Diese Installation hat es nicht geprüft",
+    "Es hat sich nichts geändert, also gibt es nichts zurückzunehmen.",
+  "magic.undoReason.notEvaluated":
+    "Diese Installation hat nicht geprüft, ob sich das zurücknehmen lässt.",
   "magic.notShown_one": "{count} Änderung wird nicht gezeigt: {reason}",
   "magic.notShown_other": "{count} Änderungen werden nicht gezeigt: {reason}",
   "magic.notShown.unadmittedAction": "Routinearbeit ohne Aussage für dich",

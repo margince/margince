@@ -28,11 +28,9 @@ import (
 // A DECISION WAITING REACHES THE RECEIPT THROUGH THE ENGINE THAT HOLDS IT.
 //
 // One engine stages the proposal and serves the lane, so the row drawn here is
-// the row the inbox decides from rather than a second reading of the queue. The
-// lane's read also runs INSIDE this page's own transaction on a second
-// connection, which no unit test exercises at all, and the row it returns is
-// shaped by the engine's authority filter and its target-label freeze rather
-// than by a fixture's idea of them.
+// the row the inbox decides from rather than a second reading of the queue, and
+// the row it returns is shaped by the engine's authority filter and its
+// target-label freeze rather than by a fixture's idea of them.
 func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testing.T) {
 	e := integration.Setup(t)
 	since := time.Now().Add(-time.Hour)

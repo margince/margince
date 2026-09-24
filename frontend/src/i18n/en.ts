@@ -10314,8 +10314,9 @@ export const en = {
   "magic.noRecord": "No record named",
   "magic.undo.fromHistory": "Can be put back from the record’s history",
   "magic.undoReason.noCompletedChange":
-    "Nothing changed, so there is nothing to put back",
-  "magic.undoReason.notEvaluated": "This installation has not checked",
+    "Nothing changed, so there is nothing to put back.",
+  "magic.undoReason.notEvaluated":
+    "This installation has not checked whether this can be put back.",
   "magic.notShown_one": "{count} change is not shown: {reason}",
   "magic.notShown_other": "{count} changes are not shown: {reason}",
   "magic.notShown.unadmittedAction": "housekeeping with nothing to tell you",

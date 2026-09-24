@@ -301,7 +301,12 @@ describe("the receipt draws every lane it promises", () => {
       }),
     );
     renderMagic();
-    await screen.findByText("Needs restoring");
+    // The row, not its heading: the heading is drawn while the read is in
+    // flight, so an absent date under it is the empty page rather than a line
+    // that reported none.
+    await within(lane("Needs restoring")).findByText(
+      "google needs to be connected again",
+    );
     expect(screen.queryByText(/Failing since/)).toBeNull();
   });
 

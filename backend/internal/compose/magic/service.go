@@ -142,13 +142,10 @@ func (s *Service) Read(
 		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
 	}
 	// THE TOTALS COUNT WHAT IS DRAWN, and say so by being derived from the
-	// drawn lines rather than from the fetch behind them.
-	//
-	// An earlier version used len(entries), which is neither the page nor the
-	// window: each of the six arms applies the same LIMIT separately, so a bound
-	// of 100 could fetch 600 rows and report that as the total while the page
-	// held 100. A figure wrong in both directions is worse than no figure,
-	// because a client draws "5 of 23" from it and the 23 means nothing.
+	// drawn lines rather than from the fetch behind them. The fetch is neither
+	// the page nor the window: each of the six arms applies the same LIMIT
+	// separately, so a bound of 100 can pull 600 rows while the page holds 100,
+	// and a client drawing "5 of 23" from that reads a 23 that means nothing.
 	//
 	// A true window count needs its own COUNT per arm without the bound. That
 	// arrives with the cursor, which is the thing that makes a window total
