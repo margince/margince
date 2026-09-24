@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // localReference refuses a `$ref` the decoder cannot resolve: anything but a
@@ -31,6 +32,12 @@ func (f *anthropicSchemaFitter) localReference(value json.RawMessage) error {
 
 // rootDefinitions is the root's local reference targets, keyed by the pointer
 // a `$ref` spells to reach each one ("#/$defs/name", "#/definitions/name").
+//
+// The name is escaped as a JSON Pointer token (RFC 6901: "~" as "~0", "/" as
+// "~1"), because that is how a reference spells it: "#/$defs/a~1b" names the
+// definition "a/b", while "#/$defs/a/b" is a pointer two levels into $defs —
+// no definition at all. Keying on the escaped name resolves exactly the
+// references RFC 6901 resolves, and a malformed escape matches none.
 func rootDefinitions(raw json.RawMessage) (map[string]json.RawMessage, error) {
 	root, err := decodeSchemaObject(raw)
 	if err != nil {
@@ -47,11 +54,15 @@ func rootDefinitions(raw json.RawMessage) (map[string]json.RawMessage, error) {
 			return nil, err
 		}
 		for _, definition := range byName {
-			definitions["#/"+block+"/"+definition.key] = definition.value
+			definitions["#/"+block+"/"+pointerTokenReplacer.Replace(definition.key)] = definition.value
 		}
 	}
 	return definitions, nil
 }
+
+// pointerTokenReplacer escapes a name into one JSON Pointer token. "~" first,
+// so the "~" a "/" becomes is not escaped a second time.
+var pointerTokenReplacer = strings.NewReplacer("~", "~0", "/", "~1")
 
 // refuseRecursion refuses definitions whose references lead back to where they
 // started, which the decoder does not take. Only the definitions can recurse:
