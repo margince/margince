@@ -65,9 +65,9 @@ func TestTheLocationListIsGooglesOptionsStampedWithThisBuildsResidency(t *testin
 	})
 	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
 
-	got, err := store.ListProviderLocations(routingReader(), providerGeminiVertex)
-	if err != nil || got.Unavailable != AvailabilityOK {
-		t.Fatalf("listing: %+v, %v", got, err)
+	got := store.providerLocations(routingReader(), ProfileCloudHosted, providerGeminiVertex)
+	if got.Unavailable != AvailabilityOK {
+		t.Fatalf("listing: %+v", got)
 	}
 	byID := map[string]ProviderLocation{}
 	for _, l := range got.Locations {
@@ -108,13 +108,28 @@ func TestTheLocationListSaysWhyItIsEmpty(t *testing.T) {
 		"an unknown asker": {"nobody", allCloudKeys(t), AvailabilityNotPublished},
 	} {
 		store := &RoutingStore{keys: tc.keys, selectBrain: selector}
-		got, err := store.ListProviderLocations(routingReader(), tc.provider)
-		if err != nil || got.Unavailable != tc.want || len(got.Locations) != 0 {
-			t.Errorf("%s: %+v, %v; want %q and no locations", name, got, err, tc.want)
+		got := store.providerLocations(routingReader(), ProfileCloudHosted, tc.provider)
+		if got.Unavailable != tc.want || len(got.Locations) != 0 {
+			t.Errorf("%s: %+v; want %q and no locations", name, got, tc.want)
 		}
 	}
 	if google.requests.Load() == 0 {
 		t.Error("the refusing case never reached Google, so it proves nothing about unreachable")
+	}
+}
+
+// Asking Google for locations is egress to a cloud vendor, which sovereign
+// forbids even with a key stored from before the profile changed.
+func TestASovereignInstallationDoesNotAskGoogleForLocations(t *testing.T) {
+	t.Parallel()
+	selector, google := googleAt(t, servesEverything(t))
+	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
+	got := store.providerLocations(routingReader(), ProfileSovereign, providerGeminiVertex)
+	if got.Unavailable != AvailabilityProfileForbids || len(got.Locations) != 0 {
+		t.Errorf("sovereign: %+v; want profile_forbids and no locations", got)
+	}
+	if n := google.requests.Load(); n != 0 {
+		t.Errorf("sovereign sent %d requests to Google", n)
 	}
 }
 

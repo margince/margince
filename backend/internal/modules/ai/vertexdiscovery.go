@@ -49,39 +49,57 @@ type ProviderLocations struct {
 }
 
 // ListProviderLocations asks Google which locations the stored key's project
-// can reach. Answered under every profile: the list is metadata on the global
-// host, and under eu_resident the non-resident options are still shown, marked
-// so, because the screen explains the refusal rather than hiding the choice.
+// can reach. Sovereign refuses it, because asking is egress to a cloud vendor.
+// Every other profile is answered: the list is metadata on the global host, and
+// under eu_resident the non-resident options are still shown, marked so,
+// because the screen explains the refusal rather than hiding the choice.
 func (s *RoutingStore) ListProviderLocations(ctx context.Context, provider string) (ProviderLocations, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
 		return ProviderLocations{}, err
 	}
+	// Only Vertex asks anyone, so only it needs the stored profile.
+	var profile Profile
+	if provider == providerGeminiVertex {
+		cfg, err := s.Get(ctx)
+		if err != nil {
+			return ProviderLocations{}, err
+		}
+		profile = cfg.Profile
+	}
+	return s.providerLocations(ctx, profile, provider), nil
+}
+
+func (s *RoutingStore) providerLocations(ctx context.Context, profile Profile, provider string) ProviderLocations {
 	out := ProviderLocations{Provider: provider}
 	if provider != providerGeminiVertex {
 		out.Unavailable = AvailabilityNotPublished
-		return out, nil
+		return out
+	}
+	if profile == ProfileSovereign {
+		out.Unavailable = AvailabilityProfileForbids
+		return out
 	}
 	client, err := s.selectBrain.build(
 		ProviderConfig{Provider: providerGeminiVertex, Location: vertexMetadataLocation}, s.resolvedKeys(ctx),
 	)
 	if err != nil {
 		out.Unavailable = unavailableFor(err)
-		return out, nil
+		return out
 	}
 	vertex, ok := vertexOf(client)
 	if !ok {
 		out.Unavailable = AvailabilityNotPublished
-		return out, nil
+		return out
 	}
 	asked, cancel := context.WithTimeout(ctx, listTimeout)
 	defer cancel()
 	fetched, err := vertex.listLocations(asked)
 	if err != nil {
 		out.Unavailable = AvailabilityUnreachable
-		return out, nil
+		return out
 	}
 	out.Locations = placedLocations(fetched)
-	return out, nil
+	return out
 }
 
 // vertexMultiRegions are offered whether or not Google's list names them:
@@ -229,7 +247,7 @@ func (s *RoutingStore) probeAvailability(ctx context.Context, bound ProviderConf
 		out.Models = []AvailableModel{{Info: model.Info{ID: q.Model, Lane: lane}}}
 	case errors.Is(err, errModelNotFound):
 		out.Unavailable = AvailabilityNoEndpoint
-	case errors.Is(err, errNoProviderKey), errors.Is(err, errInvalidServiceAccount):
+	case isKeyFault(err):
 		out.Unavailable = AvailabilityNoKey
 	default:
 		out.Unavailable = AvailabilityUnreachable
@@ -349,7 +367,8 @@ func probeOnce(ctx context.Context, client *geminiClient, p vertexProbe) error {
 }
 
 // refuseUnserved is the save's refusal for an answer that settles the
-// question, and nil for one that does not.
+// question, and nil for one that does not. The two key faults isKeyFault
+// joins are split here because each tells the admin to do something else.
 func refuseUnserved(p labelledProbe, err error) error {
 	switch {
 	case errors.Is(err, errModelNotFound):

@@ -218,9 +218,8 @@ func TestAVertexListWithNoLocationHasNoEndpoint(t *testing.T) {
 func TestAnUnusableServiceAccountKeyReadsAsNoKey(t *testing.T) {
 	t.Parallel()
 	store := &RoutingStore{keys: cloudKeyFor(providerGeminiVertex, `{"type":"authorized_user"}`)}
-	got, err := store.ListProviderLocations(routingReader(), providerGeminiVertex)
-	if err != nil || got.Unavailable != AvailabilityNoKey {
-		t.Errorf("locations: %+v, %v; want no_key", got, err)
+	if got := store.providerLocations(routingReader(), ProfileCloudHosted, providerGeminiVertex); got.Unavailable != AvailabilityNoKey {
+		t.Errorf("locations: %+v; want no_key", got)
 	}
 	bound := ProviderConfig{Provider: providerGeminiVertex, Location: "eu"}
 	q := AvailableModelsQuery{Provider: providerGeminiVertex, Location: "eu", Model: "gemini-3.5-flash"}

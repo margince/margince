@@ -205,6 +205,12 @@ func (s *RoutingStore) availableModels(ctx context.Context, cfg RoutingConfig, q
 	return out
 }
 
+// isKeyFault reports whether the held credential, not the vendor, is why a
+// provider cannot be asked: no key, or a key that cannot be used.
+func isKeyFault(err error) bool {
+	return errors.Is(err, errNoProviderKey) || errors.Is(err, errInvalidServiceAccount)
+}
+
 // unavailableFor reads why a binding could not be turned into a client.
 //
 // The two states a reader can act on are told apart: a vendor with no
@@ -217,7 +223,7 @@ func (s *RoutingStore) availableModels(ctx context.Context, cfg RoutingConfig, q
 // `unreachable` says the vendor was asked and did not answer, which would have
 // a reader chasing a network fault for a provider nothing ever called.
 func unavailableFor(err error) ModelAvailability {
-	if errors.Is(err, errNoProviderKey) || errors.Is(err, errInvalidServiceAccount) {
+	if isKeyFault(err) {
 		return AvailabilityNoKey
 	}
 	if errors.Is(err, errNoBaseURL) {
