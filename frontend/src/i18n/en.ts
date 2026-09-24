@@ -315,7 +315,7 @@ export const en = {
   "history.field.channel_identity": "Channel account",
   "history.field.channel_username": "Channel handle",
   "history.field.cohort_linked": "Messages linked",
-  "history.field.cohort_promoted": "Messages promoted",
+  "history.field.cohort_promoted": "Messages attributed",
   "history.field.corrected": "Result corrected",
   "history.field.disposition": "Disposition",
   "history.field.domain": "Domain",
@@ -366,7 +366,7 @@ export const en = {
   "history.field.research_claims_accepted": "Research claims accepted",
   "history.field.scope": "Scope",
   "history.field.stopped": "Stopped",
-  "history.field.stops_carried": "Stops carried over",
+  "history.field.stops_carried": "Stops copied",
   "history.field.submission_decision": "Submission decision",
   "history.field.vat_checked_at": "VAT checked",
   "history.field.vat_consultation_number": "VAT consultation number",
@@ -773,7 +773,7 @@ export const en = {
   "partner.stage.contacted": "Contacted",
   "partner.stage.inConversation": "In conversation",
   "partner.stage.fitConfirmed": "Fit confirmed",
-  "partner.stage.agreementPending": "Agreement pending",
+  "partner.stage.agreementPending": "Contract pending",
   "partner.stage.active": "Active",
   "partner.stage.activeReferring": "Active, referring",
   "partner.stage.dormant": "Dormant",
@@ -855,14 +855,14 @@ export const en = {
   // internals, which the reader can neither read nor act on. Two sentences,
   // no dash (VOICE-RULE-5).
   "app.errorTitle": "View stopped working",
-  "app.errorBody": "Try again. If it fails again, reload the page.",
-  "app.errorRetry": "Try again",
+  "app.errorBody": "Retry. If it fails again, reload the page.",
+  "app.errorRetry": "Retry",
 
   // The card-level render boundary (design-system/cardboundary.tsx). It says
   // less than the app-level one because it has taken less: the page and its
   // navigation are still there, and only this card is gone.
   "card.errorTitle": "This card stopped working",
-  "card.errorRetry": "Try again",
+  "card.errorRetry": "Retry",
 
   // The nine-state honesty vocabulary (design-system/surfacestate.tsx). These
   // words belong to the STATE and to no particular surface, which is why they
@@ -874,7 +874,7 @@ export const en = {
     "Some data did not load, so this view may be incomplete.",
   "state.failed": "This section did not load.",
   "state.loading": "Loading this section…",
-  "state.retry": "Try again",
+  "state.retry": "Retry",
   "state.stale": "Last known values, not refreshed",
   "state.staleAsOf": "Last known values, as of {when}",
   "state.partial": "Showing part of the list",
@@ -1263,7 +1263,7 @@ export const en = {
   "roompage.banner.closed":
     "Closed. Buyers can still read the room; nothing more is accepted.",
   "roompage.banner.expired": "Expired. Buyer links no longer work.",
-  "roompage.banner.archived": "Archived. Nobody can enter this room.",
+  "roompage.banner.archived": "Archived. No one can enter this room.",
   "roompage.banner.liveUntil": "Live. Access ends on {when}.",
   "roompage.text.title": "Title and welcome",
   "roompage.text.titleLabel": "Room title",
@@ -1278,9 +1278,9 @@ export const en = {
     "Your access to this deal does not include the buyer preview.",
   "access.title": "Access",
   "access.invite": "Invite",
-  "access.empty": "Nobody has been invited yet.",
+  "access.empty": "No one has been invited yet.",
   "access.cap.view": "Read-only",
-  "access.cap.viewHint": "Can read the documents and the conversation.",
+  "access.cap.viewHint": "Can read the documents and the threads.",
   "access.cap.comment": "Read and comment",
   "access.cap.commentHint": "Can also ask questions and reply.",
   "access.state.invited": "invited",
@@ -1352,7 +1352,7 @@ export const en = {
   "co.since.first": "You have not opened this company before.",
   "co.partial":
     "Some sections could not be loaded, so this page may be incomplete.",
-  "evidence.explain": 'Where "{value}" came from',
+  "evidence.explain": "Where “{value}” came from",
   "evidence.fullHistory": "Full history",
   "co.section.unavailable":
     "Could not be loaded. This section may be incomplete.",
@@ -1378,7 +1378,7 @@ export const en = {
   "billing.saveAdd": "Add contact",
   "billing.saveChange": "Save change",
   "billing.versionUnresolved":
-    "The billing contact could not be read back, so the change was not sent. Reload and try again.",
+    "The billing contact could not be read back, so the change was not sent. Reload and retry.",
   "finance.title": "Finance",
   "finance.titleHistorical": "Finance · historical",
   "finance.none": "Nothing recorded.",
@@ -1475,7 +1475,7 @@ export const en = {
   "contracts.rowMenu": "Contract actions",
   "contracts.renew.title": "Renew contract",
   "contracts.renew.hint":
-    "Creates a new contract with its own terms and marks this one superseded. Only the counterparty carries over.",
+    "Creates a new contract with its own terms and marks this one superseded. Only the counterparty is kept.",
   "contracts.renew.deal": "Deal",
   "contracts.renew.dealHint":
     "The deal that won this term, if any. Never the previous contract’s deal.",
@@ -1565,7 +1565,7 @@ export const en = {
   "co.growthFit.unavailable":
     "Assessment could not be loaded. The company record is unchanged.",
   "co.growthFit.assembling":
-    "Assessing this company. The first assessment reads the record and takes a moment.",
+    "Assessing this company. The first assessment reads the whole record, so it takes longer.",
   "co.growthFit.reassess": "Assess again",
   "co.growthFit.reassessing": "Assessing…",
   "co.growthFit.band.strong": "Strong fit",
@@ -1726,7 +1726,7 @@ export const en = {
   "co.ask.q.meeting_prep": "Prepare for a meeting",
   "co.ask.q.whats_changed": "What changed recently?",
   "co.ask.nothing": "No records you can access answer that question.",
-  "co.ask.failed": "The question could not be answered. Try again.",
+  "co.ask.failed": "The question could not be answered. Retry.",
   "co.suggest.title": "Margince suggests",
   "co.suggest.kind.no_reply": "No reply",
   "co.suggest.kind.stalled_deal": "Stalled deal",
@@ -1741,10 +1741,10 @@ export const en = {
   "co.cite.open": "Open record",
   "co.suggest.dismiss": "Not now",
   "co.suggest.byline": "Margince suggests",
-  "co.suggest.dismissFailed": "Suggestion was not dismissed. Try again.",
+  "co.suggest.dismissFailed": "Suggestion was not dismissed. Retry.",
   // Said plainly, because the reader's next move depends on it: a step they
   // believe was written is a step nobody goes looking for again.
-  "co.suggest.addTaskFailed": "Next step was not saved. Try again.",
+  "co.suggest.addTaskFailed": "Next step was not saved. Retry.",
   "co.suggest.viewTasks": "View tasks",
   "co.suggest.commitment.overdueCount": "{count} overdue",
   "co.suggest.commitment.openCount": "{count} open",
@@ -1782,9 +1782,9 @@ export const en = {
   "linkedinImport.profileLabel": "Your LinkedIn profile URL",
   "linkedinImport.profilePlaceholder": "https://www.linkedin.com/in/…",
   "linkedinImport.saveProfile": "Save profile",
-  "linkedinImport.saveFailed": "Profile URL was not saved. Try again.",
+  "linkedinImport.saveFailed": "Profile URL was not saved. Retry.",
   "linkedinImport.profileReadFailed": "Your profile URL could not be loaded.",
-  "linkedinImport.importFailed": "The export was not imported. Try again.",
+  "linkedinImport.importFailed": "The export was not imported. Retry.",
   "linkedinImport.editProfile": "Edit",
   "linkedinImport.editProfileTitle": "Your LinkedIn profile",
   "linkedinImport.profileNotSet": "Not recorded yet",
@@ -1831,8 +1831,8 @@ export const en = {
   "chronology.changes": "Changes",
   "filter.label": "Filter",
   "chronology.all": "All",
-  "chronology.conversations": "Conversations",
-  "chronology.conversationsEmpty": "No conversations yet.",
+  "chronology.conversations": "Threads",
+  "chronology.conversationsEmpty": "No threads yet.",
   "convo.yourMove": "Needs reply",
   "convo.waitingOnThem": "Awaiting reply",
   "chronology.changesEmpty":
@@ -2113,7 +2113,7 @@ export const en = {
   "co.vat.status.valid": "Valid",
   "co.vat.status.invalid": "Not valid",
   "co.vat.noReceipt":
-    "None issued. The register issues a consultation number only for checks made under your own VAT ID. Add yours in Settings so later checks carry proof a tax authority accepts.",
+    "None issued. The register issues a consultation number only for checks made under your own VAT ID. Add it in Settings so later checks include proof a tax authority accepts.",
   "co.vat.never":
     "This company’s VAT ID has not been checked. It is checked automatically when read from the company’s imprint, or you can check it now.",
   "co.vat.askNow": "Check with the register",
@@ -2175,7 +2175,7 @@ export const en = {
   "co.recent.reNamed": "on {name}",
   "tagAdmin.title": "Tags",
   "tagAdmin.sub":
-    "Tags this company files records under. Anyone can apply a tag; only admin and ops users can add, rename or retire tags.",
+    "Tags this company files records under. Anyone can apply a tag; only administrators and operations users can add, rename or retire tags.",
   "tagAdmin.listLabel": "Tag list",
   "tagAdmin.empty": "No tags yet. Add the first tag.",
   "import.contextTag": "Tag for this import",
@@ -2223,13 +2223,13 @@ export const en = {
     "{moved} records moved to the kept tag. {collapsed} already had both, so the duplicate was removed.",
   "tagAdmin.countUsage": "Count records",
   "tagAdmin.noVersion":
-    "This tag loaded without a version and cannot be saved. Reload the page and try again.",
+    "This tag loaded without a version and cannot be saved. Reload the page and retry.",
   "tagAdmin.withheld": "You do not have access to this company’s tags.",
   "tagAdmin.truncatedTitle": "List shortened",
   "tagAdmin.truncated":
     "Tags past the limit are not shown and cannot be edited or merged into.",
   "tagAdmin.usageFailed": "Count unavailable",
-  "tagAdmin.changeFailed": "The tag was not changed. Try again.",
+  "tagAdmin.changeFailed": "The tag was not changed. Retry.",
   "tagAdmin.done": "Done",
   "tags.archived": "archived",
   "tags.columnHeader": "Tags",
@@ -2305,9 +2305,9 @@ export const en = {
   "leadSources.sub":
     "Where leads come from. Used in the New lead form, in filters and in scoring.",
   "leadSources.readOnly":
-    "Only an admin or operations user can change this list.",
+    "Only an administrator or operations user can change this list.",
   "leadSources.readOnlyTitle":
-    "Only an admin or operations user can change this list",
+    "Only an administrator or operations user can change this list",
   "leadSources.notSaved": "Change was not saved",
   "leadSources.notAdded": "Source was not added",
   "leadSources.labelFor": "Label of source {key}",
@@ -2328,7 +2328,7 @@ export const en = {
   "leadSources.remove": "Remove",
   "leadSources.removeTitle": "Remove this source?",
   "leadSources.removeBody":
-    '"{label}" is not used by any lead and will disappear from the list.',
+    "“{label}” is not used by any lead and is removed from the list.",
   "leadSources.newLabel": "New source",
   "leadSources.labelField": "Label",
   "leadSources.addOpen": "New source",
@@ -2350,7 +2350,7 @@ export const en = {
   "leadReasons.add": "Add reason",
   "leadReasons.removeTitle": "Remove this reason?",
   "leadReasons.removeBody":
-    '"{label}" is not used by any lead and will disappear from the list.',
+    "“{label}” is not used by any lead and is removed from the list.",
   "leadHandling.title": "Lead handling",
   "leadHandling.sub": "How new leads are handled.",
   "leadHandling.firstResponse": "First-response target",
@@ -2473,7 +2473,7 @@ export const en = {
   "lead.shortfall.titleNotSenior":
     "“{title}” is not a senior title the model recognizes.",
   "lead.shortfall.sourceNoIntent":
-    "Source “{source}” carries no buying intent on its own.",
+    "Source “{source}” does not indicate buying intent on its own.",
   "lead.scoreNotStoredYet":
     "The breakdown for this score is not stored yet. The next update shows it.",
   "lead.scoreLoading": "Loading score factors…",
@@ -2669,7 +2669,7 @@ export const en = {
   "deal.pulse.nothingFlaggedWhy":
     "No inbound message on this deal is flagged for an answer.",
   "deal.pulse.wroteOn": "They last wrote on {date}, {days} days ago.",
-  "deal.pulse.wroteUnknown": "They wrote and nobody has replied.",
+  "deal.pulse.wroteUnknown": "They wrote and no one has replied.",
   "deal.timeline.empty": "No activity on this deal yet.",
   "acqSources.title": "Acquisition sources",
   "acqSources.sub":
@@ -2708,7 +2708,7 @@ export const en = {
   "outcomeReview.save": "Save review",
   "outcomeReview.empty": "No review written yet",
   "outcomeReview.emptyDetail":
-    "Record why this deal went the way it did, while the reasons are still fresh.",
+    "Record the reasons for this outcome while they are recent.",
   "outcomeReview.earlier": "From an earlier close",
   "outcomeReview.earlierMark": "earlier close",
   "outcomeReview.outcomeWon": "Won",
@@ -2750,7 +2750,7 @@ export const en = {
   "assignments.title": "Responsible",
   "assignments.noAccessNote":
     "Records who is accountable. It does not grant access to this record.",
-  "assignments.empty": "Nobody is assigned yet",
+  "assignments.empty": "No one is assigned yet",
   "assignments.emptyDetail":
     "Assign a colleague or a team to record who is accountable for this work.",
   "assignments.roleRetired": "(retired role)",
@@ -3403,7 +3403,7 @@ export const en = {
   "vcardImport.working": "Reading cards…",
   "vcardImport.done": "Close",
   "vcardImport.noCards": "The file contains no cards.",
-  "vcardImport.failed": "The cards were not imported. Try again.",
+  "vcardImport.failed": "The cards were not imported. Retry.",
   "vcardImport.outcome.created": "Added",
   "vcardImport.outcome.updated": "Missing fields added",
   "vcardImport.outcome.needsReview": "Possible duplicate",
@@ -3540,7 +3540,7 @@ export const en = {
   "acctCoverage.columnCap":
     "Showing {cap} colleagues. Deselect one to add another.",
   "acctCoverage.partial":
-    "Built from a partial read, so a blank cell may mean the read stopped early, not that nobody tried.",
+    "Built from a partial read, so a blank cell may mean the read stopped early, not that no one tried.",
   "acctCoverage.noneButPartial":
     "No connections returned, but the read was capped. The company may still have coverage.",
   "acctCoverage.noneAtAll":
@@ -3549,7 +3549,7 @@ export const en = {
   "docs.empty": "No documents for this company yet.",
   "docs.noneInCategory": "No documents in this category.",
   "docs.allOnAgreements":
-    "Every document here is filed under an agreement above.",
+    "Every document here is filed under a contract above.",
   "docs.allSuperseded":
     "Only superseded documents remain. Show them to see the history.",
   "docs.superseded.show": "Show superseded",
@@ -3793,11 +3793,11 @@ export const en = {
   "compose.filesLoading": "Loading record files…",
   "compose.filesNone": "No files on this record yet.",
   "compose.filesFull":
-    "A message can carry at most {most} files. Send the rest in a second message.",
+    "A message can include at most {most} files. Send the rest in a second message.",
   "compose.fileRemove": "Remove {filename}",
   "compose.fileUpload": "Upload file",
   "compose.fileUploadHint":
-    "The file is stored on this record first, so the history keeps what the message carried.",
+    "The file is stored on this record first, so the history keeps every attachment sent.",
   "compose.fileUploadEmpty": "Drop a file here, or choose one",
   "compose.fileUploading": "Uploading…",
   "compose.fileStoredUnnamed":
@@ -3823,7 +3823,7 @@ export const en = {
   "compose.scheduleAfternoon": "Tomorrow afternoon",
   "compose.rewrite": "Rewrite",
   "compose.rewriteShorter": "Shorter",
-  "compose.rewriteShorterAsk": "Say the same thing in fewer words.",
+  "compose.rewriteShorterAsk": "Keep the meaning and use fewer words.",
   "compose.rewriteWarmer": "Warmer",
   "compose.rewriteWarmerAsk": "Warmer in tone, without getting familiar.",
   "compose.rewriteFormal": "More formal",
@@ -4075,7 +4075,7 @@ export const en = {
     "Recalculated on each open, limited to what the reader may see. Figures change as deals change.",
   "analytics.share.snapshotLabel": "Snapshot",
   "analytics.share.snapshotHelp":
-    "Figures as they stood when the snapshot was taken. They do not change, and the link names the moment.",
+    "Figures as they stood when the snapshot was taken. They do not change, and the link names the time it was taken.",
   "analytics.share.snapshotUnavailable":
     "No snapshot exists for this period yet.",
   "analytics.share.expiryNote":
@@ -4783,7 +4783,7 @@ export const en = {
   "notice.emptyOwed":
     "Nothing is owed. Every contact obtained has been told, or the duty was excused.",
   "notice.readOnlyForPrivacy":
-    "These duties name contacts and how they were obtained, so only the privacy inbox can see them.",
+    "These duties name contacts and how they were obtained, so only users with access to privacy requests can see them.",
   "notice.dueAt": "Due {date}",
   "notice.overdue": "Overdue",
   "privacynotice.title": "What we hold about you",
@@ -4795,8 +4795,8 @@ export const en = {
   "privacynotice.source.customerContract":
     "You are a contact on a business relationship with us.",
   "privacynotice.source.requested": "You asked us for a quote or a meeting.",
-  "privacynotice.source.inPerson": "Somebody recorded a conversation with you.",
-  "privacynotice.source.referral": "Somebody else gave us your details.",
+  "privacynotice.source.inPerson": "Someone recorded a conversation with you.",
+  "privacynotice.source.referral": "Someone else gave us your details.",
   "privacynotice.source.eventOrForm":
     "You filled in a form or registered for something.",
   "privacynotice.source.publicSource":
@@ -4862,13 +4862,13 @@ export const en = {
   "privacy.erasureConfirm": "Erase and suppress",
   "privacy.legalHoldTitle": "Blocked by legal hold",
   "privacy.legalHold":
-    "This contact is inside a statutory retention window, so erasure does not take precedence here (Art. 17(3)(b)). The block applies to every role, including admin, with no override. The attempt was audited.",
+    "This contact is inside a statutory retention window, so erasure does not take precedence here (Art. 17(3)(b)). The block applies to every role, including administrators, with no override. The attempt was audited.",
 
   "restricted.title": "Restricted records",
   "restricted.sub":
     "Records a statutory retention obligation holds after an erasure: which record, why and until when. The correspondence itself is hidden so that it is not read.",
   "restricted.withheld":
-    "Only an admin or ops can see which records a statutory obligation holds. The same permission applies as for retention policies.",
+    "Only an administrator or operations user can see which records a statutory obligation holds. The same permission applies as for retention policies.",
   "restricted.empty":
     "No records held. Every erasure so far was completed in full.",
   "restricted.heldLabel": "Records held now",
@@ -4913,9 +4913,10 @@ export const en = {
   "retention.retainOnly": "Retain-only mode",
   "retention.retainOnlyHelp":
     "While on, this installation destroys nothing: no anonymizing and no erasing, whatever a policy below says. Archiving still runs; an archived record is kept, not destroyed.",
-  "retention.adminOnly": "Only an admin or ops can change retention.",
+  "retention.adminOnly":
+    "Only an administrator or operations user can change retention.",
   "retention.withheld":
-    "Only an admin or ops can see retention policies. They set what this installation keeps for everyone.",
+    "Only an administrator or operations user can see retention policies. They set what this installation keeps for everyone.",
   "retention.addPolicy": "Add policy",
   "retention.create": "Create policy",
   "retention.scope": "Applies to",
@@ -5233,7 +5234,7 @@ export const en = {
     "Concerns that often slow or stop a purchase.",
   "ob.manual.sales_motion": "How does a typical sale happen?",
   "ob.manual.sales_motionHint":
-    "The path from first conversation to decision, including trials or procurement where relevant.",
+    "The path from first contact to decision, including trials or procurement where relevant.",
 
   "ob.field.display_name": "Company name",
   "ob.field.offer_summary": "Products and services",
@@ -5277,7 +5278,7 @@ export const en = {
   "ob.fieldHint.common_objections":
     "The concern that most often slows or stops a deal.",
   "ob.fieldHint.sales_motion":
-    "The path from first conversation to signed deal, including any trial or procurement step.",
+    "The path from first contact to signed deal, including any trial or procurement step.",
   "ob.fieldHint.legal_name":
     "The name as registered, including the legal form. Used on invoices.",
   "ob.fieldHint.registered_address":
@@ -5304,8 +5305,8 @@ export const en = {
   "ob.fieldEg.buying_center": "Head of Operations, with Finance approving.",
   "ob.fieldEg.value_proposition":
     "Cuts stock-out incidents by half within a quarter.",
-  "ob.fieldEg.usp": "Only vendor offering same-day, on-site support.",
-  "ob.fieldEg.customer_pains": "We keep running out of stock without noticing.",
+  "ob.fieldEg.usp": "Only supplier offering same-day, on-site support.",
+  "ob.fieldEg.customer_pains": "Stock runs out before anyone notices.",
   "ob.fieldEg.desired_outcomes": "Never miss a reorder deadline again.",
   "ob.fieldEg.buying_intents": "A new warehouse opening within 90 days.",
   "ob.fieldEg.common_objections": "Worried about migrating off the old system.",
@@ -5326,7 +5327,7 @@ export const en = {
   "ob.s4.microsoftHint":
     "Reads your mail and can send from it. Both are granted on Microsoft’s screen; disconnect at any time.",
   "ob.s4.microsoftUnverified":
-    'You may see an "unverified app" notice — that\'s this self-hosted install, not a third party.',
+    "An “unverified app” notice may appear. It refers to this self-hosted installation, not a third party.",
   "ob.s4.microsoftFailed": "Microsoft connection not completed",
   "ob.s4.connectOkTitle": "Mailbox connected",
   "ob.s4.connectOkBody": "Capture starts on the next sync.",
@@ -5567,7 +5568,7 @@ export const en = {
   "connectors.polled": "Polled on a schedule (no push subscription)",
   "connectors.pushRenewal": "Push renewal by {at}",
   "connectors.notConfigured":
-    "Mail capture is not configured on this deployment.",
+    "Mail capture is not configured on this installation.",
   "connectors.reconnect": "Reconnect",
   "connectors.disconnect": "Disconnect",
   "connectors.signatureEnrich.label": "Read contact details from this mailbox",
@@ -5658,7 +5659,7 @@ export const en = {
   "connectors.oauthRejected":
     "The provider declined the connection. Accept every requested permission, then connect again.",
   "connectors.oauthMisconfigured":
-    "This deployment cannot complete the connection because the provider’s API is not enabled. An administrator must enable it; the server log names the API.",
+    "This installation cannot complete the connection because the provider’s API is not enabled. An administrator must enable it; the server log names the API.",
   "connectors.oauthBadClient":
     "The provider refused this installation’s app credentials. An administrator must check the client ID and secret under Settings → General; reconnecting does not fix this.",
   "connectors.dismissOutcome": "Dismiss",
@@ -5690,7 +5691,7 @@ export const en = {
   "connectors.addTestMailboxBrings":
     "Test mailbox for QC. No real mail is sent or received.",
   "connectors.providerNotConfigured":
-    "{provider} is not configured on this deployment.",
+    "{provider} is not configured on this installation.",
 
   // The inline IMAP connect form (Task 6): first-connect and reconnect for
   // the one credential provider, done in Settings instead of bouncing to
@@ -5722,7 +5723,7 @@ export const en = {
   "connectors.telegramSub":
     "One bot receives and sends messages for the whole company.",
   "connectors.telegramNotConfigured":
-    "Messaging channels are not configured on this deployment.",
+    "Messaging channels are not configured on this installation.",
   "connectors.telegramConnectCta": "Connect Telegram bot",
   "connectors.telegramRosterLabel": "Connected bot",
   "connectors.telegramEmpty": "No bot connected.",
@@ -5781,14 +5782,14 @@ export const en = {
   "blockedDomains.record": "Record a decision",
   "blockedDomains.recordOpen": "Record a decision",
   "blockedDomains.domainLabel": "Domain",
-  "blockedDomains.domainPlaceholder": "vendor.example",
+  "blockedDomains.domainPlaceholder": "supplier.example",
   "blockedDomains.admissionLabel": "Decision",
   "blockedDomains.admission.suppressed": "Never a company",
   "blockedDomains.admission.admitted": "Allowed",
   "blockedDomains.admission.undecided": "Undecided",
   "blockedDomains.reasonLabel": "Reason",
   "blockedDomains.reasonHint": "One sentence a later reviewer can act on.",
-  "blockedDomains.reasonPlaceholder": "Vendor tool, not a customer",
+  "blockedDomains.reasonPlaceholder": "Supplier, not a customer",
   "blockedDomains.save": "Save decision",
   "blockedDomains.stored": "Saved: {domain}, {admission}",
   "blockedDomains.saveFailed": "Decision not saved",
@@ -5896,7 +5897,7 @@ export const en = {
     "I could not parse that file as text or a transcript. Nothing was counted.",
   "ob.conv.voice.ingestFailed": "I could not add that source: {detail}",
   "ob.conv.voice.ingestUnexpected":
-    "I could not add that source. Try again in a moment.",
+    "I could not add that source. Retry shortly.",
   "ob.conv.voice.pasteAdd": "Add it to my corpus.",
   "ob.conv.voice.pasteDiscard": "Discard it.",
   "ob.conv.voice.pasteSource": "Pasted text",
@@ -5943,10 +5944,10 @@ export const en = {
     "I could not record that choice: {detail} Select it again.",
   "ob.conv.clarify.applyMissing":
     "The server did not confirm that choice. Select it again.",
-  "ob.conv.loadFailed": "I could not check your setup. Try again.",
-  "ob.conv.retry": "Try again",
+  "ob.conv.loadFailed": "I could not check your setup. Retry.",
+  "ob.conv.retry": "Retry",
   "ob.conv.connect.persistFailed":
-    "I could not save the setup completion. Try again.",
+    "I could not save the setup completion. Retry.",
   "ob.conv.review.title":
     "This is everything I found. Correct anything that is wrong.",
   "ob.conv.review.showLess": "Show less",
@@ -6059,7 +6060,7 @@ export const en = {
   "ob.conv.connect.linkedinSkippedNote": "Skipped: add it later in Settings",
   "ob.conv.connect.rosterFailedTitle": "Mailboxes could not be checked",
   "ob.conv.connect.rosterFailedBody":
-    "Connection status did not load. Try again before selecting a provider.",
+    "Connection status did not load. Retry before selecting a provider.",
   "ob.conv.voice.sceneTitle": "Train your writing voice",
   "ob.conv.voice.sceneSub": "Margince drafts every email in your own words.",
   "ob.conv.voice.heroBody":
@@ -6120,12 +6121,12 @@ export const en = {
   "ob.conv.review.confirmVersionSkew":
     "Your review received newer information. Check it, then select Continue again.",
   "ob.conv.review.confirmVersionSkewStuck":
-    "Nothing has changed yet, so Continue would fail again. Review again, or retry in a moment.",
+    "Nothing has changed yet, so Continue would fail again. Review again, or retry shortly.",
   "ob.conv.review.refusalTitle": "Continue did not finish",
   "ob.conv.review.confirmNotReady":
     "This read has no draft to confirm yet. Check again when it finishes, or start a new read.",
   "ob.conv.review.confirmCheckFailed":
-    "This read is confirmed, but I could not load the company it created. Try again shortly.",
+    "This read is confirmed, but I could not load the company it created. Retry shortly.",
   "ob.conv.artifact.empty":
     "Nothing read yet. Enter a website to fill this panel with sourced findings.",
   "ob.conv.results.continue": "Continue",
@@ -6205,7 +6206,7 @@ export const en = {
   "ob.conv.team.done":
     "Setup is complete. Each user you add can train their voice and connect their accounts in Settings.",
   "ob.conv.team.persistFailed":
-    "I could not record that setup is complete. Try again, or finish later from Settings.",
+    "I could not record that setup is complete. Retry, or finish later from Settings.",
   // Reporting settings are settled after the company is confirmed.
   "ob.conv.basis.title": "Set the reporting basis",
   "ob.conv.basis.body":
@@ -6334,7 +6335,7 @@ export const en = {
     "The mailbox is not changed. Imported emails and contacts appear as the import progresses.",
   "ob.backread.start": "Connect and import",
   "ob.backread.startFailed":
-    "The mailbox history import did not start: {detail} Try again, or continue and start it later in Settings.",
+    "The mailbox history import did not start: {detail} Retry, or continue and start it later in Settings.",
   "ob.backread.running": "Importing mailbox history",
   "ob.backread.runningNote":
     "The import continues while you work and resumes where it stopped.",
@@ -6355,7 +6356,7 @@ export const en = {
   "ob.backread.cancelledPartial":
     "Import stopped. Records already captured stay and wait for review in the Worklist.",
   "ob.backread.cancelFailed":
-    "The import could not be stopped: {detail} Try again; it keeps running meanwhile.",
+    "The import could not be stopped: {detail} It keeps running meanwhile. Retry.",
   "ob.backread.detailUnavailable": "An unexpected error occurred.",
   "ob.backread.cancel": "Stop import",
   "ob.backread.explore": "Continue during import",
@@ -6430,12 +6431,11 @@ export const en = {
   "auth.signIn": "Sign in",
   "auth.failed": "Sign-in failed",
   "auth.errCredentials":
-    "Sign-in failed. Check the email and password and try again.",
-  "auth.errRateLimited":
-    "Too many sign-in attempts. Wait a moment and try again.",
+    "Sign-in failed. Check the email and password and retry.",
+  "auth.errRateLimited": "Too many sign-in attempts. Retry later.",
   "auth.errUnreachable":
-    "Margince could not be reached. Check the connection and try again.",
-  "auth.retry": "Try again",
+    "Margince could not be reached. Check the connection and retry.",
+  "auth.retry": "Retry",
   "auth.noticeSignedOut": "You have been signed out.",
   "auth.noticeSessionExpired":
     "The session expired. Sign in again to continue.",
@@ -6443,7 +6443,7 @@ export const en = {
     "Sign-in with Google failed. If you were invited, open the link in the invitation email to complete account setup.",
   "auth.connectionTitle": "Margince could not be reached",
   "auth.connectionBody":
-    "Check the connection and try again. If the problem continues, the server may be restarting.",
+    "Check the connection and retry. If the problem continues, the server may be restarting.",
   "auth.unavailableTitle": "Installation not ready",
   "auth.unavailableBody":
     "This Margince installation is not ready for sign-in. An operator must complete or repair the setup.",
@@ -6476,7 +6476,7 @@ export const en = {
   // Deliberately says nothing about WHICH field: this is the fallback for a
   // refusal the server did not explain, and naming the current password would
   // send someone hunting a mistake that may not be theirs.
-  "password.errorGeneric": "No cause was reported. Try again.",
+  "password.errorGeneric": "No cause was reported. Retry.",
   "setup.pageTitle": "Set up Margince",
   "setup.title": "Claim this installation",
   "setup.body":
@@ -6509,11 +6509,11 @@ export const en = {
     "This setup token is not valid for this installation. Check the token file named in the server log at first start.",
   "setup.errorAlready":
     "This installation already has a company. Sign in, or ask the operator to reset it.",
-  "setup.errorFields": "Some fields are invalid. Correct them and try again.",
+  "setup.errorFields": "Some fields are invalid. Correct them and retry.",
   "setup.errorServer":
-    "Setup did not complete and nothing was created. Try again in a moment; if it fails again, check the server log.",
+    "Setup did not complete and nothing was created. Retry shortly, and check the server log if it fails again.",
   "setup.errorNetwork":
-    "Margince could not be reached. Check the connection and try again.",
+    "Margince could not be reached. Check the connection and retry.",
   "auth.forgotLink": "Forgot password?",
   "auth.forgotTitle": "Reset password",
   // Two sentences, sentence-cased, with no dash. VOICE-RULE-5 forbids an em or
@@ -6537,12 +6537,11 @@ export const en = {
   // Neither the link's fault nor the user's: the token is untouched, so retrying
   // the same one is the right advice. Two sentences, no dash (VOICE-RULE-5).
   "auth.resetServerFailed":
-    "The password was not set. The link is still valid; try again in a moment.",
+    "The password was not set. The link is still valid; retry shortly.",
   // Its own key rather than auth.errRateLimited, which says "sign-in attempts":
   // this user is setting a password, not signing in, and copy that names the
   // wrong action reads as the wrong error.
-  "auth.resetRateLimited":
-    "Too many attempts. Wait a moment, then set the password again.",
+  "auth.resetRateLimited": "Too many attempts. Set the password again later.",
   "auth.requestNewLink": "Request a new link",
   "auth.askAdminForNewLink":
     "Ask an administrator for a new set-password link.",
@@ -6553,7 +6552,7 @@ export const en = {
   "auth.signOut": "Sign out",
 
   "client.back": "Back to Margince",
-  "client.title": "Margince alongside your inbox",
+  "client.title": "Margince alongside your mailbox",
   "client.sender": "Sender",
   "client.lookup": "Look up",
   "client.open360": "Open 360 view",
@@ -6604,7 +6603,7 @@ export const en = {
   "prefs.unsub.lockedTitle": "These messages cannot be switched off",
   "prefs.unsub.lockedBody":
     "They are needed for something you requested, such as a password reset or a confirmation.",
-  "prefs.unsub.retry": "Try again",
+  "prefs.unsub.retry": "Retry",
   "prefs.unsub.unknownPurposeTitle": "This link matches no email type",
   "prefs.unsub.unknownPurpose":
     "Open your preferences to see every type of email sent.",
@@ -6631,7 +6630,7 @@ export const en = {
   "buyer.emailLabel": "Your email address",
   "buyer.emailHint": "The address the invitation was sent to.",
   "buyer.requestLink": "Send new link",
-  "buyer.linkRequestedTitle": "Check your inbox",
+  "buyer.linkRequestedTitle": "Check your email",
   "buyer.linkRequested":
     "If that address was invited, a new link is on its way.",
   "buyer.pausedTitle": "Access is paused",
@@ -6675,7 +6674,7 @@ export const en = {
   "buyer.docs.empty": "No documents yet.",
   "buyer.docs.download": "Download {title}",
   "buyer.docs.downloadFailed":
-    "The download did not start. Try again, or ask your contact.",
+    "The download did not start. Retry, or ask your contact.",
   "buyer.docs.downloadShort": "Download",
   "buyer.poweredBy": "Powered by",
   "buyer.poweredByMargince": "Powered by Margince",
@@ -6781,20 +6780,20 @@ export const en = {
   "prefs.confirmationSent":
     "Check your email and click the link to confirm {purposes}. The subscription does not start until you confirm.",
   "prefs.confirmationUnavailable":
-    "The confirmation email for {purposes} could not be sent, so the subscription has not started. Try again later.",
+    "The confirmation email for {purposes} could not be sent, so the subscription has not started. Retry later.",
   "prefs.partialSave":
     "Saving stopped partway. Some of your choices may have been saved; your current settings were reloaded so you can see exactly what applies.",
   "prefs.wording.business_correspondence":
     "“Send me replies and direct messages about our conversations.”",
   "prefs.wording.transactional":
     "“Send me what I need for something I asked for.”",
-  "prefs.wordingGeneric": '"Send me {label}."',
+  "prefs.wordingGeneric": "“Send me {label}.”",
   "prefs.wording.marketing_email":
-    '"Send me product updates & occasional marketing email."',
-  "prefs.wording.events": '"Send me event & webinar invitations."',
+    "“Send me product updates and occasional marketing email.”",
+  "prefs.wording.events": "“Send me event and webinar invitations.”",
   "prefs.unsubscribeAll": "Stop all marketing",
   "prefs.unsubscribeAllHint":
-    "Switches off every marketing purpose above. Replies to your own inquiries and anything you requested continue, because nobody subscribed you to those.",
+    "Switches off every marketing purpose above. Replies to your own inquiries and anything you requested continue, because no one subscribed you to those.",
   "prefs.oneClickDone":
     "You are unsubscribed from marketing email. This applies immediately to every campaign.",
   "prefs.oneClickAlreadyOff": "These were already off. Nothing changed.",
@@ -6805,7 +6804,7 @@ export const en = {
   "auto.tier.runs": "Runs",
   "auto.tier.approval": "Approval",
   "auto.sub":
-    'A rule marked "runs" acts on its own. One marked "approval" stages into the approval inbox.',
+    "A rule marked “runs” acts on its own. A rule marked “approval” sends its actions to Approvals.",
   "auto.readOnly":
     "Read-only: you do not have permission to change automations.",
   "auto.catalog": "Starter library",
@@ -6917,7 +6916,7 @@ export const en = {
   "cf.col.type": "Type",
   "cf.col.addedBy": "Added by",
   "cf.addedByYou": "You",
-  "cf.addedByAdmin": "Admin",
+  "cf.addedByAdmin": "Administrator",
   "cf.empty.deal":
     "No custom fields on Deal yet. Add one to track data the core fields do not cover.",
   "cf.empty.company":
@@ -6925,7 +6924,7 @@ export const en = {
   "cf.empty.contact":
     "No custom fields on Contact yet. Core fields cover the contact record; add one to track more.",
   "cf.empty.lead":
-    "No custom fields on Lead yet. A field added here also appears after a lead is promoted to a contact.",
+    "No custom fields on Lead yet. A field added here also appears after a lead is qualified as a contact.",
   "cf.empty.project":
     "No custom fields on Project yet. Add one to track delivery data the core fields do not cover.",
   "cf.empty.contract":
@@ -6965,13 +6964,14 @@ export const en = {
     "Route it through development: your own engineers, an implementation partner or Margince services.",
   "cf.confirm": "Add field",
   "cf.writing": "Saving…",
-  "cf.added": 'Field "{label}" added — live on 360, filters, export & API',
+  "cf.added":
+    "Field “{label}” added. It appears on records, in filters, export and the API.",
   "cf.edit": "Edit label",
   "cf.archive": "Archive field",
   "cf.archived":
-    '"{label}" archived — hidden from new records, retained in audit & history (reversible)',
+    "“{label}” archived. It is hidden from new records, kept in audit and history, and can be restored.",
   "cf.renamePrompt": "New label",
-  "cf.renamed": 'Renamed to "{label}"',
+  "cf.renamed": "Renamed to “{label}”",
   "cf.audit.title": "Recent field changes",
   "cf.audit.empty": "No custom field changes yet.",
   "cf.audit.footer":
@@ -7123,12 +7123,12 @@ export const en = {
   "corpusAsk.byModel": "Written by Margince from your documents",
   "corpusAsk.byPassages": "Source passages only. No answer was written.",
   "corpusAsk.notReady":
-    "This set is still being read: {embedded} of {total} passages are searchable. Try again shortly.",
+    "This set is still being read: {embedded} of {total} passages are searchable. Retry shortly.",
   "corpusAsk.retrievalUnavailable":
     "Nothing was searched. This installation has no search index configured.",
   "corpusAsk.unreviewed":
     "These passages are closest to your question. They have not been reviewed for whether they answer it.",
-  "corpusAsk.failed": "The question was not answered. Try again.",
+  "corpusAsk.failed": "The question was not answered. Retry.",
   "corpusAsk.unreviewedTitle": "Passages not reviewed",
   "corpusAsk.notReadyTitle": "This set is still being read",
   "corpusAsk.retrievalUnavailableTitle": "No search index is configured",
@@ -7164,12 +7164,12 @@ export const en = {
   "knowledge.documents": "Documents",
   "knowledge.noDocuments": "No documents yet.",
   "knowledge.archive": "Archive set",
-  "knowledge.archiveFailed": "The set was not archived. Try again.",
+  "knowledge.archiveFailed": "The set was not archived. Retry.",
   "knowledge.archiveConfirm.title": "Archive this document set?",
   "knowledge.archiveConfirm.body":
     "The set and its documents are no longer searchable. Nothing is deleted.",
   "knowledge.deleteDocument": "Delete",
-  "knowledge.deleteFailed": "The document was not deleted. Try again.",
+  "knowledge.deleteFailed": "The document was not deleted. Retry.",
   "knowledge.deleteConfirm.title": "Delete this document?",
   "knowledge.deleteConfirm.body":
     "The file, its extracted text and its search index are permanently deleted.",
@@ -7193,7 +7193,7 @@ export const en = {
   "knowledge.new.topicHint":
     "One sentence. It is shown to anyone whose question this set does not cover.",
   "knowledge.new.submit": "Create set",
-  "knowledge.new.failed": "The set was not created. Try again.",
+  "knowledge.new.failed": "The set was not created. Retry.",
   "settings.tab.privacy": "Privacy and retention",
   "settings.tab.capture-activity": "Capture activity",
   "verdictPass.subject.senders": "Senders",
@@ -7324,7 +7324,7 @@ export const en = {
   "pipeline.reason.judged_noise":
     "this sender was judged noise, so no record was made",
   "pipeline.reason.judged_rejected":
-    "somebody declined this sender, so no record was made",
+    "this sender was declined, so no record was made",
   "pipeline.reason.judged_suppressed":
     "this sender was suppressed, so no record was made",
   "pipeline.reason.no_open_question":
@@ -7393,10 +7393,10 @@ export const en = {
   "license.state.refused": "License refused",
   "license.absent.title": "This installation has no license",
   "license.absent.body":
-    "Everything keeps working and nothing is capped. Configure a license token in the deployment to count seats against a grant.",
+    "Everything keeps working and nothing is capped. Configure a license token for this installation to count seats against a grant.",
   "license.refused.title": "This installation’s license was refused",
   "license.refused.body":
-    "The license token in the deployment was presented and rejected. Everything keeps working, uncapped, until it is replaced. Check the token and the installation’s clock.",
+    "The license token configured for this installation was presented and rejected. Everything keeps working, uncapped, until it is replaced. Check the token and the installation’s clock.",
   "license.seats.capacityOnly":
     "Full seats this installation is using. The entitlement is not visible to this role.",
   "license.seats.title": "Seats",
@@ -7406,7 +7406,7 @@ export const en = {
   "license.seats.over": "{count} over the grant",
   "license.over.title": "Seats in use exceed the entitlement",
   "license.over.body":
-    "{used} seats are in use and the license grants {granted}. Nobody loses access and no seat is removed, but no new member can be invited until the count is within the entitlement. Deactivate a member or raise the entitlement.",
+    "{used} seats are in use and the license grants {granted}. No one loses access and no seat is removed, but no new member can be invited until the count is within the entitlement. Deactivate a member or raise the entitlement.",
   "license.holder.title": "Licensed to",
   "license.holder.company": "Company",
   "license.holder.contact": "Contact",
@@ -7531,7 +7531,7 @@ export const en = {
   "voice.candidate.reason.malformed":
     "The scoring check could not read some sample drafts, so the score is based on fewer samples than usual.",
   "voice.candidate.reason.lowScore":
-    "Sample drafts in this voice scored {score} against your writing, below the {floor} this installation requires for automatic activation.",
+    "Sample drafts in this voice scored {score} against your writing, below the minimum of {floor} this installation requires for automatic activation.",
   "voice.candidate.reason.hardFailures":
     "{n} phrases this voice should avoid appeared in the sample drafts.",
   "voice.candidate.reason.rulesRemoved":
@@ -7572,7 +7572,7 @@ export const en = {
   "settings.voice.floorLabel": "Progress to first build ({min} words)",
   "settings.voice.floorProgress": "{words} of {min} words for a first build",
   "settings.voice.speakerQuestion":
-    "“{name}” is a conversation. Which speaker is you?",
+    "“{name}” has several speakers. Which speaker are you?",
   "settings.voice.speakerWhy":
     "Only your turns are kept. Other speakers’ words are dropped.",
   "settings.voice.speakerDetail": "{words} words, {turns} turns",
@@ -7594,7 +7594,7 @@ export const en = {
   "settings.voice.noticeFailed": "{name} could not be added: {detail}",
   "settings.voice.noticeUnexpected": "{name} could not be added.",
   "settings.voice.refusalUnattributed":
-    "{name} is a conversation and none of it could be attributed to you, so nothing was added.",
+    "{name} has several speakers and none of the text could be attributed to you, so nothing was added.",
   "settings.voice.refusalSpeaker":
     "That speaker was not found in {name}, so nothing was added.",
   "settings.voice.refusalUnsupported": "{name} is in an unsupported format.",
@@ -7610,7 +7610,7 @@ export const en = {
   "settings.voice.buildProvisional":
     "Enough to build. About {n} more words give a fuller picture of your writing.",
   "settings.voice.buildStatus.succeeded": "Voice DNA updated",
-  "settings.voice.buildStatus.failed": "Build did not finish. Try again.",
+  "settings.voice.buildStatus.failed": "Build did not finish. Retry.",
   "settings.voice.buildStatus.deferred":
     "Queued. This page updates when the build finishes.",
   "settings.voice.buildStatus.pending":
@@ -7745,8 +7745,8 @@ export const en = {
   "users.link.failed":
     "The member exists but cannot sign in until they receive a link.",
   "users.link.offline":
-    "The server could not be reached. Check the connection and try again.",
-  "users.link.retry": "Try again",
+    "The server could not be reached. Check the connection and retry.",
+  "users.link.retry": "Retry",
   "users.link.done": "Done",
   "settings.companyTitle": "Company profile",
   "settings.companyReadOnly":
@@ -8049,7 +8049,7 @@ export const en = {
     "How people can sign in. The list shows the providers this installation has credentials for: an administrator can turn one off but cannot add one.",
   "signInMethods.password": "Email and password",
   "signInMethods.passwordAlways":
-    "Always available. Every account can sign in this way, so the other methods can be turned off safely.",
+    "Always available. Every user can sign in this way, so the other methods can be turned off safely.",
   "signInMethods.passwordReason":
     "Password sign-in cannot be turned off. It keeps the installation accessible.",
   "signInMethods.providerHint":
@@ -8082,7 +8082,7 @@ export const en = {
     "The client secret cannot be read back, so restoring the app requires re-entering the client ID and secret from the Entra portal. Outlook mail and calendar connections use this app; Google and IMAP mailboxes are unaffected. First-run setup asks for an app again.",
   "oauthApp.configured": "In use: {clientId}",
   "oauthApp.fromEnvironment":
-    "In use from this deployment’s configuration: {clientId}. An app stored here replaces it while stored.",
+    "In use from this installation’s configuration: {clientId}. An app stored here replaces it while stored.",
   "oauthApp.pinnedToDirectory": "Pinned to directory {tenant}.",
   "oauthApp.replaceHint":
     "A new pair replaces the stored one. Existing connections keep working until reconnected.",
@@ -8187,11 +8187,11 @@ export const en = {
     "Model lists come from the price sheet, which your role cannot read. Any model ID the provider serves works; type it.",
   "aiRouting.unboundTitle": "No models bound",
   "aiRouting.unboundUnkeyed":
-    "No models are bound, so AI features are off. Add a provider key below, then bind the tiers here. A deployment can also set its first binding under seeds.ai_routing in margince.yaml, read once when the company is created.",
+    "No models are bound, so AI features are off. Add a provider key below, then bind the tiers here. An installation can also set its first binding under seeds.ai_routing in margince.yaml, read once when the company is created.",
   "aiRouting.unboundKeyed":
     "No models are bound, so AI features are off. Start from a provider’s defaults, adjust as needed and save.",
   "aiRouting.unboundStart": "Start from {provider}",
-  "aiRouting.profile.card": "Deployment profile",
+  "aiRouting.profile.card": "Installation profile",
   "aiRouting.profile.label": "Location",
   "aiRouting.profile.help":
     "Where inference runs. Sovereign means no egress: only models on your own hosts; others are refused when saving.",
@@ -8210,7 +8210,7 @@ export const en = {
   "aiRouting.models.noEndpoint":
     "Price sheet only: enter the host above to request this provider’s model list. Any model ID it serves still works; type it.",
   "aiRouting.models.profileForbids":
-    "Price sheet only: this deployment profile does not allow access to this provider.",
+    "Price sheet only: this installation profile does not allow access to this provider.",
   "aiRouting.models.notPublished":
     "Price sheet only: this provider publishes no model list.",
   "aiRouting.models.unreachable":
@@ -8355,7 +8355,7 @@ export const en = {
     "Outbound subscriptions that receive signed HTTP POSTs for chosen events.",
   "webhooks.new": "New subscription",
   "webhooks.notConfigured":
-    "Outbound webhooks are not enabled on this deployment. Configure a signing key first.",
+    "Outbound webhooks are not enabled on this installation. Configure a signing key first.",
   "webhooks.state.active": "Active",
   "webhooks.state.paused": "Paused",
   "webhooks.updated": "Updated {date}",
@@ -8437,7 +8437,7 @@ export const en = {
   "embedreindex.estimateTokens": "Estimated AI tokens:",
   "embedreindex.estimateCost": "Estimated cost:",
   "embedreindex.estimateQualityHeuristic":
-    "Heuristic estimate: a baseline floor, not observed spend.",
+    "Heuristic estimate: a minimum baseline, not observed spend.",
   "embedreindex.utilizationTitle": "Budget impact",
   "embedreindex.impact.normal": "Normal",
   "embedreindex.impact.degraded": "Would enter economy mode",
@@ -8634,13 +8634,12 @@ export const en = {
   "contact.intro.askTitle": "Ask for an introduction to {name}",
   "contact.intro.cancel": "Cancel",
   "contact.intro.askAction": "Request introduction",
-  "contact.intro.askFailed":
-    "Introduction request was not recorded. Try again.",
+  "contact.intro.askFailed": "Introduction request was not recorded. Retry.",
   "contact.intro.reasonLabel": "Reason for request",
   "contact.intro.reasonHint":
     "Your colleague reads this, not the contact. State why the introduction is worth making.",
   "contact.intro.valueLabel": "Value for the contact",
-  "contact.intro.valueHint": "Why the contact would want this conversation.",
+  "contact.intro.valueHint": "Why the contact would want this introduction.",
   "contact.intro.noteLabel": "Forwardable note",
   "contact.intro.noteHint":
     "The only part the contact reads. Write it so it can be pasted as is.",
@@ -8658,7 +8657,7 @@ export const en = {
   "contact.intro.decideTitle": "Introduction to {name}",
   "contact.intro.decideLegend": "Your answer",
   "contact.intro.decideAction": "Record answer",
-  "contact.intro.decideFailed": "The answer was not recorded. Try again.",
+  "contact.intro.decideFailed": "The answer was not recorded. Retry.",
   "contact.intro.decideReasonLabel": "Comment",
   "contact.intro.decideReasonHint": "Your colleague sees this as written.",
   "contact.intro.noteByModel": "Drafted by Margince",
@@ -8679,9 +8678,9 @@ export const en = {
   "contact.intro.answerAction": "Answer",
   "contact.intro.completeIntroducedAction": "Mark introduced",
   "contact.intro.completeNameDroppedAction": "Mark name used",
-  "contact.intro.completeFailed": "The outcome was not recorded. Try again.",
+  "contact.intro.completeFailed": "The outcome was not recorded. Retry.",
   "contact.intro.withdrawAction": "Withdraw",
-  "contact.intro.withdrawFailed": "The request was not withdrawn. Try again.",
+  "contact.intro.withdrawFailed": "The request was not withdrawn. Retry.",
   "contact.intro.stateRequested": "Awaiting reply",
   "contact.intro.stateAccepted": "Intro agreed",
   "contact.intro.stateNameDropApproved": "Name approved",
@@ -8766,7 +8765,7 @@ export const en = {
   // write — the row is not saved unpinned, so the reader is told to reload
   // rather than left to think the edit landed.
   "contact.rail.employmentVersionUnresolved":
-    "This row’s current version could not be loaded. Reload and try again.",
+    "This row’s current version could not be loaded. Reload and retry.",
   // The employers section: every employment edge this contact holds, current
   // one first — a contact can work at more than one company at once.
   "contact.rail.employmentTitle": "Companies",
@@ -8960,7 +8959,7 @@ export const en = {
   // contact-data vocabulary (provider.profile.*), and using it here told a
   // reader nothing was connected while eight purchased claims sat above it.
   "contact.research.notConnected":
-    "No research provider is connected, so no public source was read for this contact. This is separate from any purchased contact data above. Margince never researches a contact on its own authority, and deep research needs a licensed provider that carries the lawful basis for it.",
+    "No research provider is connected, so no public source was read for this contact. This is separate from any purchased contact data above. Margince never researches a contact on its own authority, and deep research needs a licensed provider that holds the lawful basis for it.",
   "contact.research.staged":
     "Research is staged. {name}’s record does not change until you review and save.",
   "contact.research.stats": "{sources} sources read · {claims} cited claims",
@@ -8994,7 +8993,7 @@ export const en = {
   "contact.meeting.brief": "Prepare brief",
   "contact.meeting.empty": "Nothing recorded for this meeting yet.",
   "contact.meeting.loading": "Preparing brief…",
-  "contact.meeting.assembledNow": "Prepared just now from the latest data",
+  "contact.meeting.assembledNow": "Prepared from the latest data",
   "contact.meeting.header": "At a glance",
   "contact.meeting.what_changed": "Since you last spoke",
   "contact.meeting.goal": "Goal for this meeting",
@@ -9556,11 +9555,11 @@ export const en = {
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Pair was not resolved. Retry.",
   "worklist.pair.refused":
-    "You cannot resolve this pair. It needs edit access to both records, which an admin or sales lead has.",
+    "You cannot resolve this pair. It needs edit access to both records, which an administrator or sales lead has.",
   "worklist.pair.alreadySettled":
     "Pair was not resolved: someone may have decided first, or the records changed. Reload the list.",
   "worklist.pair.stewardOnly":
-    "Only a user who can edit both records can resolve this: an admin or a sales lead.",
+    "Only a user who can edit both records can resolve this: an administrator or a sales lead.",
   "worklist.needsPrep": "Needs prep",
   "worklist.pane.title": "Record details",
   "worklist.pane.openRow": "Show details for {position}, {title}",
@@ -9714,7 +9713,7 @@ export const en = {
   "worklist.hidden.count": "{count} waiting",
   "worklist.hidden.pastHorizon": "Too old for the Worklist",
   "worklist.hidden.pastHorizon.detail":
-    "Nobody decided this. The sender wrote months ago and got no answer.",
+    "No one decided this. The sender wrote months ago and got no answer.",
   "worklist.hidden.unlinked": "Not linked to a record",
   "worklist.hidden.unlinked.detail":
     "Usually not sales. Sometimes an unfiled customer.",
@@ -10082,7 +10081,7 @@ export const en = {
     "Add each URI to the app before saving here. Sign-in adds the sign-in button to the login page; Mailbox and Calendar let people connect theirs. A missing URI fails at the provider’s consent screen.",
   "firstRun.google.helpToggle": "Where to find these",
   "firstRun.google.helpStep1":
-    "In the Google Cloud console, open a project and go to APIs & Services → Credentials → Create credentials → OAuth client ID, and choose Web application.",
+    "In the Google Cloud console, open a project and go to “APIs & Services” → Credentials → Create credentials → OAuth client ID, and choose Web application.",
   "firstRun.google.helpStep2":
     "Enable the Gmail API and add both the gmail.readonly and gmail.send scopes to the consent screen. They share 1 consent because Google does not add a scope to an issued refresh token; requesting send later means connecting the mailbox again.",
   "firstRun.google.helpStep3":
@@ -10102,7 +10101,7 @@ export const en = {
   "firstRun.microsoft.note":
     "Register an app in Microsoft Entra with the redirect URIs above, then paste its client ID and secret here. Pin it to your directory: that directory’s mailboxes connect through it and its people sign in with it.",
   "firstRun.microsoft.helpSignIn":
-    "The directory puts Microsoft on the login page, so it is required here. To register an app without one (any company can connect a mailbox, nobody signs in with Microsoft), use Settings instead.",
+    "The directory puts Microsoft on the login page, so it is required here. To register an app without one (any company can connect a mailbox, no one signs in with Microsoft), use Settings instead.",
   "firstRun.microsoft.tenantHint":
     "The Entra directory your people belong to. Mailboxes connect through it and Microsoft sign-in runs on it.",
   "firstRun.ai.rankedHint":
@@ -10193,7 +10192,7 @@ export const en = {
   "stageAutomation.open": "Still open",
   "stageAutomation.expired": "Expired",
   "stageAutomation.expiredHint":
-    "Nobody answered before the window closed. This is not a rejection.",
+    "No one answered before the window closed. This is not a rejection.",
   "stageAutomation.cleanAcceptance": "Accepted as proposed",
   "stageAutomation.edits": "Accepted after edits",
   "stageAutomation.rejections": "Rejected",

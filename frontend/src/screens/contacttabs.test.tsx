@@ -210,7 +210,7 @@ describe("the timeline tab", () => {
     const user = userEvent.setup();
     withProviders(<ContactTimelineTab contactId="p-1" view={view} />);
 
-    await user.click(screen.getByRole("button", { name: "Conversations" }));
+    await user.click(screen.getByRole("button", { name: "Threads" }));
 
     // Waited on the settled cut rather than asserted straight after the press:
     // the mail is on screen under BOTH cuts, so what says the cut took is the
@@ -230,7 +230,7 @@ describe("the timeline tab", () => {
     const user = userEvent.setup();
     withProviders(<ContactTimelineTab contactId="p-1" view={view} />);
 
-    await user.click(screen.getByRole("button", { name: "Conversations" }));
+    await user.click(screen.getByRole("button", { name: "Threads" }));
     await user.click(screen.getByLabelText("Activity kind"));
 
     const listbox = await screen.findByRole("listbox");
@@ -249,7 +249,7 @@ describe("the timeline tab", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={view} />);
 
     await pickOption(user, screen.getByLabelText("Activity kind"), "Meetings");
-    await user.click(screen.getByRole("button", { name: "Conversations" }));
+    await user.click(screen.getByRole("button", { name: "Threads" }));
 
     await waitFor(() =>
       expect(screen.getByLabelText("Activity kind").textContent).toContain(
@@ -274,7 +274,7 @@ describe("the timeline tab", () => {
     const user = userEvent.setup();
     withProviders(<ContactTimelineTab contactId="p-1" view={withheld} />);
 
-    await user.click(screen.getByRole("button", { name: "Conversations" }));
+    await user.click(screen.getByRole("button", { name: "Threads" }));
 
     expect(screen.queryByText(/No conversations with them yet/)).toBeNull();
     expect(

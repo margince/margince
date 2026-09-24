@@ -424,7 +424,7 @@ describe("AI disclosure/diff banner (OP-11)", () => {
       ...baseOffer,
       status: "sent",
       ai_generated: true,
-      ai_disclosure: "This offer revision was drafted with AI assistance.",
+      ai_disclosure: "Drafted with AI assistance. Review before sending.",
       diff_from_previous: {
         added: [{ ...existingLine, id: "li-added", description: "Onboarding" }],
         removed: [
@@ -445,7 +445,7 @@ describe("AI disclosure/diff banner (OP-11)", () => {
     await screen.findByText("ANG-2026-0007");
 
     expect(
-      screen.getByText("This offer revision was drafted with AI assistance."),
+      screen.getByText("Drafted with AI assistance. Review before sending."),
     ).toBeTruthy();
     // ONE of each, so the singular is what the summary must say. It said
     // "1 line(s) added" and this test asserted it verbatim — the defect with a
@@ -484,7 +484,7 @@ describe("regenerate action (OP-11)", () => {
       revision: 3,
       status: "draft",
       ai_generated: true,
-      ai_disclosure: "This offer revision was drafted with AI assistance.",
+      ai_disclosure: "Drafted with AI assistance. Review before sending.",
       diff_from_previous: { added: [], removed: [], changed: [] },
     };
     stubOfferWithRegenerate(

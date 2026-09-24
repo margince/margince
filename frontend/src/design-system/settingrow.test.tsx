@@ -113,7 +113,7 @@ describe("SettingRow", () => {
           <Switch
             label="Retain-only mode"
             labelHidden
-            reason="Only an admin or ops can change retention."
+            reason="Only an administrator or operations user can change retention."
             checked={false}
             onChange={() => undefined}
           />

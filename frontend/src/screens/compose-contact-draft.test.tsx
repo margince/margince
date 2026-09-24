@@ -59,7 +59,7 @@ const CONTACT_DRAFT = {
   body: "Guten Tag Frau Malherbe,\n\nfür das Beispiel brauchen wir zwei Produkte.",
   generated_by: "model",
   ai_generated: true,
-  ai_disclosure: "This message was drafted with AI assistance.",
+  ai_disclosure: "Drafted with AI assistance. Review before sending.",
 };
 
 function stubRoutes(
@@ -218,7 +218,7 @@ describe("drafting to a contact", () => {
       (c) => c.key === "POST /contacts/c-1/draft-email",
     )[1];
     expect(rewrite.body).toEqual({
-      intent: "Say the same thing in fewer words.",
+      intent: "Keep the meaning and use fewer words.",
       rewrite_of: CONTACT_DRAFT.body,
     });
   });

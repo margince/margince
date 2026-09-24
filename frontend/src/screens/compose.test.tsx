@@ -520,7 +520,7 @@ describe("ComposeModal", () => {
           subject: "Re: Q3 numbers",
           body: "Thanks for the note.",
           ai_generated: true,
-          ai_disclosure: "AI-assisted draft (Art. 50): reviewed by a human.",
+          ai_disclosure: "Drafted with AI assistance. Review before sending.",
           draft_ref: null,
         }),
     });
@@ -540,7 +540,7 @@ describe("ComposeModal", () => {
 
     await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(
-      screen.getByText("AI-assisted draft (Art. 50): reviewed by a human."),
+      screen.getByText("Drafted with AI assistance. Review before sending."),
     ).toBeTruthy();
   });
 
@@ -616,7 +616,7 @@ describe("ComposeModal", () => {
           subject: "Re: Q3 numbers",
           body: "Thanks for the note.",
           ai_generated: true,
-          ai_disclosure: "AI-assisted draft (Art. 50).",
+          ai_disclosure: "Drafted with AI assistance. Review before sending.",
           voice_profile_version: 3,
           draft_ref: "vd-1",
         }),
@@ -646,7 +646,7 @@ describe("ComposeModal", () => {
           subject: "Re: Q3 numbers",
           body: "Thanks for the note.",
           ai_generated: true,
-          ai_disclosure: "AI-assisted draft (Art. 50).",
+          ai_disclosure: "Drafted with AI assistance. Review before sending.",
           voice_profile_version: null,
           draft_ref: null,
           voice_degraded: true,
@@ -676,7 +676,7 @@ describe("ComposeModal", () => {
           subject: "Re: Q3 numbers",
           body: "Thanks for the note.",
           ai_generated: true,
-          ai_disclosure: "AI-assisted draft (Art. 50).",
+          ai_disclosure: "Drafted with AI assistance. Review before sending.",
           voice_profile_version: null,
           draft_ref: null,
           voice_degraded: false,
@@ -714,7 +714,7 @@ describe("ComposeModal", () => {
           subject: "Re: Q3 numbers",
           body: "Thanks for the note.",
           ai_generated: true,
-          ai_disclosure: "AI-assisted draft (Art. 50).",
+          ai_disclosure: "Drafted with AI assistance. Review before sending.",
           voice_profile_version: 3,
           draft_ref: "vd-1",
         }),
@@ -964,7 +964,7 @@ function voiceDraft(
     body,
     to: ["buyer@acme.test"],
     ai_generated: true,
-    ai_disclosure: "AI-assisted draft (Art. 50).",
+    ai_disclosure: "Drafted with AI assistance. Review before sending.",
     voice_profile_version: voiceVersion,
     draft_ref: ref,
   };
@@ -2377,7 +2377,7 @@ describe("ComposeModal started from an account", () => {
           to: ["sarah@acme.test"],
           generated_by: "model",
           ai_generated: true,
-          ai_disclosure: "This message was drafted with AI assistance.",
+          ai_disclosure: "Drafted with AI assistance. Review before sending.",
           reasoning: [{ kind: "recipient", label: "Sarah Cole" }],
         }),
     });

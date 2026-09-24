@@ -342,7 +342,7 @@ describe("BuyerRoomScreen", () => {
 
     expect(
       await screen.findByText(
-        "The download did not start. Try again, or ask your contact.",
+        "The download did not start. Retry, or ask your contact.",
       ),
     ).toBeTruthy();
   });

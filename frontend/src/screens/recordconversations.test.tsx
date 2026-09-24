@@ -295,13 +295,13 @@ describe("a record with no conversations", () => {
   it("says so honestly rather than drawing an empty list", () => {
     draw([group("call-1", [entry("call", { id: "call-1" })])]);
 
-    expect(screen.getByText("No conversations yet.")).toBeTruthy();
+    expect(screen.getByText("No threads yet.")).toBeTruthy();
   });
 
   it("says so for a record with no chronology at all", () => {
     draw([]);
 
-    expect(screen.getByText("No conversations yet.")).toBeTruthy();
+    expect(screen.getByText("No threads yet.")).toBeTruthy();
   });
 });
 

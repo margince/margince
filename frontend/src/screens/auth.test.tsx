@@ -148,7 +148,7 @@ describe("AuthScreen login", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain(
-      "Sign-in failed. Check the email and password and try again.",
+      "Sign-in failed. Check the email and password and retry.",
     );
     expect(screen.getByLabelText("Email")).toHaveProperty(
       "value",
@@ -169,7 +169,7 @@ describe("AuthScreen login", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain(
-      "Too many sign-in attempts. Wait a moment and try again.",
+      "Too many sign-in attempts. Retry later.",
     );
   });
 
@@ -511,7 +511,7 @@ describe("AuthScreen reset deep link", () => {
 
     expect(
       await screen.findByText(
-        "Too many attempts. Wait a moment, then set the password again.",
+        "Too many attempts. Set the password again later.",
       ),
     ).toBeTruthy();
     // The link is untouched by a rate limit, so replacing it is still wrong.
@@ -563,7 +563,7 @@ describe("AuthScreen reset deep link", () => {
 
     expect(
       await screen.findByText(
-        "The password was not set. The link is still valid; try again in a moment.",
+        "The password was not set. The link is still valid; retry shortly.",
       ),
     ).toBeTruthy();
     expect(screen.queryByText("Request a new link")).toBeNull();

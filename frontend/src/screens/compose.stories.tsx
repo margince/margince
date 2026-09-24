@@ -53,7 +53,7 @@ const DRAFT: components["schemas"]["EmailDraft"] = {
   body: "Thanks for the note — following up as promised.",
   to: ["buyer@acme.test"],
   ai_generated: true,
-  ai_disclosure: "AI-assisted draft (Art. 50): reviewed and sent by a human.",
+  ai_disclosure: "Drafted with AI assistance. Review before sending.",
   // A voice-styled draft: the profile version is the provenance the banner
   // reports, and the reference is what a send or a discard binds its outcome
   // to. Both are null on a draft no voice profile shaped.

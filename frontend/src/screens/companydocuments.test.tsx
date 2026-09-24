@@ -157,7 +157,7 @@ describe("the account's document library", () => {
     // has one: the file is upstairs, and the copy has to say so.
     expect(
       await screen.findByText(
-        "Every document here is filed under an agreement above.",
+        "Every document here is filed under a contract above.",
       ),
     ).toBeTruthy();
   });
