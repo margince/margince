@@ -189,7 +189,9 @@ describe("OwnDomainsCard", () => {
     expect(add.hasAttribute("disabled")).toBe(true);
     // One sentence, and both refused verbs point at it — a reason a screen
     // reader only reaches by wandering into the paragraph is no reason at all.
-    const denial = screen.getByText(/only an administrator or ops user/i);
+    const denial = screen.getByText(
+      /only an administrator or operations user/i,
+    );
     expect(remove.getAttribute("aria-describedby")).toBe(denial.id);
     expect(add.getAttribute("aria-describedby")).toBe(denial.id);
   });

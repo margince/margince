@@ -417,7 +417,7 @@ describe("what the ranked queue tells a reader", () => {
     );
     const { container } = renderWorklist();
 
-    await screen.findAllByText(en["worklist.untitled.task"]);
+    await screen.findAllByText(en["worklist.category.tasks"]);
     expect(container.textContent).not.toContain("customer_escalated");
     expect(container.textContent).not.toContain("worklist.because");
   });
@@ -517,7 +517,7 @@ describe("what the ranked queue tells a reader", () => {
     );
     const { container } = renderWorklist();
 
-    await screen.findAllByText(en["worklist.untitled.task"]);
+    await screen.findAllByText(en["worklist.category.tasks"]);
     expect(container.textContent).toContain(en["worklist.because.unassigned"]);
     expect(
       container.querySelector("details.worklist-row-because-fold"),

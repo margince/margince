@@ -249,7 +249,7 @@ describe("WebhooksCard", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          /only an administrator or ops user can change subscriptions/i,
+          /only an administrator or operations user can change subscriptions/i,
         ),
       ).toBeTruthy(),
     );
@@ -276,7 +276,7 @@ describe("WebhooksCard", () => {
     );
     expect(
       screen.queryByText(
-        /only an administrator or ops user can change subscriptions/i,
+        /only an administrator or operations user can change subscriptions/i,
       ),
     ).toBeNull();
   });
@@ -299,7 +299,7 @@ describe("WebhooksCard", () => {
     );
     expect(
       screen.queryByText(
-        /only an administrator or ops user can change subscriptions/i,
+        /only an administrator or operations user can change subscriptions/i,
       ),
     ).toBeNull();
     expect(screen.queryByTestId("new-webhook-subscription")).toBeNull();

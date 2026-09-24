@@ -210,7 +210,7 @@ describe("the Answer row's Reply verb", () => {
     await userEvent.click(reply);
 
     const dialog = await screen.findByRole("dialog", {
-      name: /Send this email\?/,
+      name: /Send email/,
     });
     expect(
       within(dialog).getByRole("button", {

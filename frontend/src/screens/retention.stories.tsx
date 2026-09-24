@@ -96,7 +96,7 @@ function retention(
 }
 
 const meta: Meta<typeof RetentionCard> = {
-  title: "Settings/Governance/Privacy & retention/Retention",
+  title: "Settings/Governance/Privacy and retention/Retention",
   component: RetentionCard,
 };
 export default meta;

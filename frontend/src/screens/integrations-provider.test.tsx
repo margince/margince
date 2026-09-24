@@ -195,7 +195,7 @@ const HELD_REFETCH_TEST_MS = SETTLE_MS + WRITE_TEST_MS;
 // the server admits neither for a manager, a rep or a read_only seat.
 describe("ProviderCard write posture", () => {
   const READ_ONLY =
-    "Read-only: connecting a provider costs money, so only an administrator or ops user can do it.";
+    "Read-only: connecting a provider costs money, so only an administrator or operations user can do it.";
   const CONNECT = "Replace API key";
   const DISCONNECT = "Disconnect";
   const DELETE_DATA = "Delete purchased data";

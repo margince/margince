@@ -69,7 +69,7 @@ describe("Switch", () => {
       <Switch
         label="Auto-enrich"
         hint="Looks a company up on first capture."
-        reason="Only an administrator or ops user can change this."
+        reason="Only an administrator or operations user can change this."
         checked={false}
         disabled
         onChange={() => undefined}
@@ -85,7 +85,9 @@ describe("Switch", () => {
       .map((id) => document.getElementById(id)?.textContent)
       .join(" ");
     expect(text).toContain("Looks a company up on first capture.");
-    expect(text).toContain("Only an administrator or ops user can change this.");
+    expect(text).toContain(
+      "Only an administrator or operations user can change this.",
+    );
   });
 
   // `reason` is the sentence for a change this reader may not make, so the
@@ -100,7 +102,7 @@ describe("Switch", () => {
         <Switch
           label="Auto-enrich"
           checked
-          reason="Only an administrator or ops user can change this."
+          reason="Only an administrator or operations user can change this."
           onChange={() => undefined}
         />,
       );
@@ -111,7 +113,7 @@ describe("Switch", () => {
       const described = control.getAttribute("aria-describedby");
       expect(described).toBeTruthy();
       expect(document.getElementById(described ?? "")?.textContent).toBe(
-        "Only an administrator or ops user can change this.",
+        "Only an administrator or operations user can change this.",
       );
     });
 
@@ -122,7 +124,7 @@ describe("Switch", () => {
         <Switch
           label="Auto-enrich"
           checked
-          reason="Only an administrator or ops user can change this."
+          reason="Only an administrator or operations user can change this."
           onChange={onChange}
         />,
       );
@@ -135,7 +137,7 @@ describe("Switch", () => {
         <Switch
           label="Auto-enrich"
           checked
-          reason="Only an administrator or ops user can change this."
+          reason="Only an administrator or operations user can change this."
           disabled={false}
           onChange={() => undefined}
         />,
@@ -162,7 +164,7 @@ describe("Switch", () => {
             label="Email sharing"
             describedBy="what-it-does"
             checked
-            reason="Only an administrator or ops user can change this."
+            reason="Only an administrator or operations user can change this."
             onChange={() => undefined}
           />
         </>,
@@ -175,7 +177,7 @@ describe("Switch", () => {
       expect(named[0]).toBe("what-it-does");
       expect(named).toHaveLength(2);
       expect(document.getElementById(named[1] ?? "")?.textContent).toBe(
-        "Only an administrator or ops user can change this.",
+        "Only an administrator or operations user can change this.",
       );
     });
 

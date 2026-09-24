@@ -81,7 +81,7 @@ describe("WriteToHost", () => {
     );
 
     const dialog = await screen.findByRole("dialog", {
-      name: /Send this email\?/,
+      name: /Send email/,
     });
     // The To line carries the pressed address as a token — the one the
     // reader can take out again — rather than an empty field to retype it in.
@@ -126,7 +126,7 @@ describe("WriteToHost", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "dung.ly@newsky.example" }),
     );
-    await screen.findByRole("dialog", { name: /Send this email\?/ });
+    await screen.findByRole("dialog", { name: /Send email/ });
 
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
 

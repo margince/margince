@@ -168,7 +168,7 @@ describe("PassportCard — minting", () => {
     const describedBy = submit.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
     expect(document.getElementById(describedBy ?? "")?.textContent).toMatch(
-      /select at least 1 permission/i,
+      /select at least one permission/i,
     );
   });
 

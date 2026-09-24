@@ -140,7 +140,7 @@ function story(
 }
 
 const meta: Meta<typeof AiRoutingCard> = {
-  title: "Settings/AI/Models & routing/Model routing",
+  title: "Settings/AI/Models and routing/Model routing",
   component: AiRoutingCard,
   subcomponents: { AdapterFields, EmbeddingWidthField },
 };

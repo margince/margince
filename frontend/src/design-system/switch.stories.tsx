@@ -50,7 +50,7 @@ export const WithReason: Story = {
     <Switch
       label="Auto-enrich captured companies"
       hint="Looks up a company the first time it is captured."
-      reason="Only an administrator or ops user can change this."
+      reason="Only an administrator or operations user can change this."
       checked
       disabled
       onChange={() => undefined}
@@ -71,7 +71,7 @@ export const ReasonWithoutDisabled: Story = {
     <Switch
       label="Auto-enrich captured companies"
       hint="Looks up a company the first time it is captured."
-      reason="Only an administrator or ops user can change this."
+      reason="Only an administrator or operations user can change this."
       checked
       onChange={() => undefined}
     />

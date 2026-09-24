@@ -139,7 +139,7 @@ describe("InstallationSettingsCard", () => {
     // aria-describedby — so the sentence reaches a reader who lands on the
     // refused control, not only one who happens past the paragraph.
     const reason = screen.getByText(
-      "Only an administrator or operator can change these settings.",
+      "Only an administrator or operations user can change these settings.",
     );
     expect(reason.id).not.toBe("");
     for (const fact of [

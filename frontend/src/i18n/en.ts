@@ -455,7 +455,7 @@ export const en = {
   // question a contact most reasonably has about an agent working over their
   // data. Held by AC-shell-8.
   "shell.agent.scope": "Margince reads only what you can see.",
-  "shell.capture.importing": "Importing mailbox history…",
+  "shell.capture.importing": "Importing mailbox history",
   "shell.capture.share": "{percent} · {scanned} of {total} messages",
   "shell.capture.count": "{scanned} messages so far",
   "shell.capture.open": "Open import",
@@ -997,7 +997,8 @@ export const en = {
     "This history records consent for each purpose. Communication permission may also depend on other recorded grounds; the message is checked again before sending.",
   "consent.basis": "Basis: {basis}",
   "consent.proofLog": "Proof log",
-  "consent.proofEmpty": "No consent decision recorded for this purpose.",
+  "consent.proofEmpty":
+    "No consent decision recorded for this purpose. An empty log means no consent event was recorded, not that one is missing.",
   "consent.sourceUnknown": "source not recorded",
   "consent.actorHuman": "Human",
   "consent.actorAgent": "Agent",
@@ -2260,7 +2261,7 @@ export const en = {
   "tags.catalogTruncated":
     "A tag may be missing. Search by name before requesting a new one.",
   "tags.noMatch":
-    "No tag with that name. An administrator or ops user can add one.",
+    "No tag with that name. An administrator or operations user can add one.",
   "tagResult.gone":
     "This tag no longer exists. It may have been merged into another.",
   "tagResult.totalVisible": "{count} visible assignments",
@@ -3209,7 +3210,7 @@ export const en = {
   "brief.glance.afternoonAnon": "Good afternoon.",
   "brief.glance.evening": "Good evening, {name}.",
   "brief.glance.eveningAnon": "Good evening.",
-  "brief.glance.night": "Good evening, {name}.",
+  "brief.glance.night": "Working late, {name}.",
   "brief.glance.nightAnon": "Good evening.",
   "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.glance.intro": "Your day at a glance.",
@@ -3879,7 +3880,7 @@ export const en = {
   "compose.derivedReply":
     "This replies to the recipient’s own message, so no reason is needed.",
   "compose.send": "Send",
-  "compose.sendConfirmTitle": "Send this email?",
+  "compose.sendConfirmTitle": "Send email",
   "compose.threadHeading": "This thread",
   "compose.continueHeading": "Continue thread?",
   "compose.threadLeave": "New email",
@@ -3902,7 +3903,7 @@ export const en = {
   // claim the send is happening NOW and is irreversible; a scheduled message is
   // neither, and it can be moved or withdrawn until it goes.
   "compose.schedule": "Schedule send",
-  "compose.scheduleConfirmTitle": "Schedule this email?",
+  "compose.scheduleConfirmTitle": "Schedule email",
   // The composer computed that it had scheduled a send and said nothing —
   // it closed the way a SENT message closes it. The confirm dialog above
   // promises a place to move or withdraw the message from; these two are how a
@@ -3911,7 +3912,7 @@ export const en = {
   "compose.scheduledOpenQueue": "Scheduled messages",
   "compose.scheduleBody":
     "The email is sent at the selected time, and the consent and mailbox checks run again then. Until then it can be moved or canceled from Scheduled messages.",
-  "compose.sendMessageConfirmTitle": "Send this message?",
+  "compose.sendMessageConfirmTitle": "Send message",
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
   "compose.consentBlockedTitle": "Send blocked: no consent",
@@ -4262,9 +4263,9 @@ export const en = {
   "settings.mintOpen": "New passport",
   "settings.passportScopes": "Agent permissions",
   "settings.passportScopesHint":
-    "Select at least 1. An agent can never do more than you can.",
+    "Select at least one. An agent can never do more than you can.",
   "settings.passportScopesRequired":
-    "Select at least 1 permission for this agent.",
+    "Select at least one permission for this agent.",
   // What the scheduled agent is doing for this reader, one line per (kind,
   // state). First contact for what Margince did, result first, and never a word
   // that reads as finished on a run that stopped part-way.
@@ -4552,7 +4553,8 @@ export const en = {
   "settings.revoke": "Revoke",
   "settings.revokeConfirm":
     "The passport’s credential is invalidated immediately. The agent loses access on its next call.",
-  "import.withheld": "Only an administrator or ops user can import files.",
+  "import.withheld":
+    "Only an administrator or operations user can import files.",
   "import.title": "Import file",
   "import.sub":
     "Import a CSV of prospects, contacts or companies. Nothing is written until you review what the import will do.",
@@ -4647,7 +4649,7 @@ export const en = {
   "settings.resetDataResult":
     "Cleared {tables} tables, {jobs} job rows, {streams} event streams, {keys} cache keys and {objects} stored files.",
   "settings.resetDataDrainWarning":
-    "A background job was running when the reset began. It fails against the deleted data and logs 1 harmless error.",
+    "A background job was running when the reset began. It fails against the deleted data and logs one harmless error.",
 
   "settings.jobs": "Background jobs",
   "settings.jobsSub": "Queued background jobs and failed jobs by owner.",
@@ -5794,7 +5796,7 @@ export const en = {
   "blockedDomains.stored": "Saved: {domain}, {admission}",
   "blockedDomains.saveFailed": "Decision not saved",
   "blockedDomains.adminOnly":
-    "Only an administrator or ops seat can change domain decisions. The list is read-only for you.",
+    "Only an administrator or operations user can change domain decisions. The list is read-only for you.",
   "blockedDomains.none":
     "No domains refused yet. Bulk-sender results and manual refusals appear here.",
   "blockedDomains.unit": "domain decisions",
@@ -6034,12 +6036,12 @@ export const en = {
   "ob.conv.connect.imapBrings":
     "Mail from any host, with your email address and an app password",
   "ob.conv.connect.linkedinAuth": "Profile link, saved to your account",
-  "ob.conv.connect.saveCta": "Save →",
+  "ob.conv.connect.saveCta": "Save",
   "ob.conv.connect.dialogDone": "Done",
   "ob.conv.connect.scopeGoogle": "OAuth, read and send scopes",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
   "ob.conv.connect.scopeImap": "Mail address and password",
-  "ob.conv.connect.connectCta": "Connect →",
+  "ob.conv.connect.connectCta": "Connect",
   "ob.conv.connect.connectedCta": "Connected",
   "ob.conv.connect.savedCta": "Saved",
   "ob.conv.connect.blockedCard":
@@ -6937,7 +6939,7 @@ export const en = {
   "cf.type.picklist": "Picklist",
   "cf.type.boolean": "Yes/No",
   "cf.builder.addTo": "Add field to {object}",
-  "cf.builder.open": "Add field",
+  "cf.builder.open": "New field",
   "cf.builder.noCode": "No code",
   "cf.builder.intro":
     "A new field is a real column on the existing table. It works in filters, reports, exports and the API like any core field. It is not a new object.",
@@ -7123,7 +7125,7 @@ export const en = {
   "corpusAsk.byModel": "Written by Margince from your documents",
   "corpusAsk.byPassages": "Source passages only. No answer was written.",
   "corpusAsk.notReady":
-    "This set is still being read: {embedded} of {total} passages are searchable. Retry shortly.",
+    "This set is still being read: {embedded} of {total} passages are searchable. Retry shortly. The question is not the problem.",
   "corpusAsk.retrievalUnavailable":
     "Nothing was searched. This installation has no search index configured.",
   "corpusAsk.unreviewed":
@@ -7426,9 +7428,9 @@ export const en = {
   "settings.rates.fxIntro":
     "Exchange rates that convert foreign-currency amounts to the base currency. New rates take effect today or later; past rates never change.",
   "settings.rates.fxWithheld":
-    "Only an administrator or operator can see currency rates. Every roll-up in the installation is converted with them.",
+    "Only an administrator or operations user can see currency rates. Every roll-up in the installation is converted with them.",
   "settings.rates.modelWithheld":
-    "Only an administrator or operator can see model prices.",
+    "Only an administrator or operations user can see model prices.",
   "settings.rates.readOnly": "Read-only. Your role cannot change rates.",
   "settings.rates.fxTableLabel": "Rates in force",
   "settings.rates.fxAdd": "Set rate",
@@ -7659,7 +7661,7 @@ export const en = {
   "users.teamNobodyToAdd": "No users to add.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
-    "Named groups that records can be shared with. For most roles, membership grants no access. A Team Lead added to a team can read and edit that team’s records without a share.",
+    "Named groups that records can be shared with. For most roles, membership grants no access. A team lead added to a team can read and edit that team’s records without a share.",
   "users.teamsAdminOnly": "Your role cannot manage teams.",
   "users.deactivated": "{name} deactivated",
   "users.reactivated": "{name} reactivated",
@@ -8039,7 +8041,7 @@ export const en = {
     "Language AI writes in when the whole team reads the text. Display language is separate, and customer replies follow the language of the thread.",
   "installationSettings.saveFailed": "Settings not saved",
   "installationSettings.readOnly":
-    "Only an administrator or operator can change these settings.",
+    "Only an administrator or operations user can change these settings.",
   "installationSettings.edit": "Edit",
   "installationSettings.editField": "Edit {field}",
   "installationSettings.save": "Save",
@@ -8160,7 +8162,7 @@ export const en = {
   "aiProviderKeys.field": "API key",
   "aiProviderKeys.save": "Save key",
   "aiProviderKeys.adminOnly":
-    "Only an administrator or operator can change a provider key.",
+    "Only an administrator or operations user can change a provider key.",
   "aiProviderKeys.saveFailed": "Provider not updated",
   "aiProviderKeys.configured": "Configured",
   "aiProviderKeys.absent": "Not set",
@@ -8278,7 +8280,7 @@ export const en = {
   "captureSettings.removeFailed": "Exclusion not removed",
   "captureSettings.addFailed": "Exclusion not added",
   "captureSettings.adminOnly":
-    "Only an administrator or ops user can change this.",
+    "Only an administrator or operations user can change this.",
   "captureSettings.updateFailed": "Setting not changed",
 
   "ownDomains.companyTitle": "Company domains",
@@ -8350,7 +8352,7 @@ export const en = {
 
   "webhooks.title": "Webhooks",
   "webhooks.readOnly":
-    "Read-only: only an administrator or ops user can change subscriptions.",
+    "Read-only: only an administrator or operations user can change subscriptions.",
   "webhooks.sub":
     "Outbound subscriptions that receive signed HTTP POSTs for chosen events.",
   "webhooks.new": "New subscription",
@@ -8409,9 +8411,9 @@ export const en = {
 
   "embedreindex.title": "Search index",
   "embedreindex.sub":
-    "Reindex status of the search index. Visible to administrators and ops only.",
+    "Reindex status of the search index. Visible to administrators and operations users only.",
   "embedreindex.withheld":
-    "Only an administrator or ops user can see the search index. Rebuilding it spends tokens for the whole installation.",
+    "Only an administrator or operations user can see the search index. Rebuilding it spends tokens for the whole installation.",
   "embedreindex.statusLabel": "Index status",
   "embedreindex.reindexLabel": "Reindex changes",
   "embedreindex.reindexHelp":
@@ -8499,7 +8501,7 @@ export const en = {
   "contact.enriched.replaced": "Replaced the older value “{was}”.",
   "contact.enriched.correctedByYou": "Corrected by you",
   "contact.enriched.confirmed": "Confirmed",
-  "contact.enriched.confirm": "Confirm",
+  "contact.enriched.confirm": "Confirm value",
   "contact.enriched.save": "Save correction",
   "contact.enriched.cancel": "Cancel",
   "contact.graph.loading": "Loading contact network…",
@@ -9050,7 +9052,7 @@ export const en = {
   "today.scan.resumes": "Analysis resumes {when}. Paused by the AI budget.",
   "provider.title": "Contact data",
   "provider.readOnly":
-    "Read-only: connecting a provider costs money, so only an administrator or ops user can do it.",
+    "Read-only: connecting a provider costs money, so only an administrator or operations user can do it.",
   "provider.sub":
     "Buy verified contact details for your contacts. The provider charges credits; spend is shown below.",
   "provider.notConfigured":
@@ -9612,7 +9614,7 @@ export const en = {
   "worklist.scope.all": "All",
   "worklist.owner.visibleLabel": "Viewing",
   "worklist.manager.cancel": "Cancel",
-  "worklist.owner.mine": "Your Worklist",
+  "worklist.owner.mine": "My Worklist",
   "worklist.owner.backToMine": "Back to your Worklist",
   "worklist.manager.reassign": "Reassign",
   "worklist.manager.reassignTo": "Reassign to",
@@ -9669,7 +9671,7 @@ export const en = {
   "worklist.exceptions.owner": "Owner",
   "worklist.exceptions.basis": "Basis",
   "worklist.exceptions.intervene": "Action",
-  "worklist.exceptions.nobody": "Unassigned",
+  "worklist.exceptions.nobody": "No owner",
   "worklist.exceptions.ownerWithheld": "Hidden",
   "worklist.exceptions.truncated": "List truncated. More items exist.",
   "worklist.exceptions.kind.response_breached": "First reply overdue",
@@ -9836,14 +9838,14 @@ export const en = {
   "worklist.consequence.data_drifts": "Otherwise, the records go out of date.",
   "worklist.untitled.approval": "Approval waiting",
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
-  "worklist.untitled.task": "Task",
+  "worklist.untitled.task": "Untitled task",
   "worklist.untitled.brief_item": "Deal to review",
   "worklist.untitled.conversation_claim": "Promise you made",
   "worklist.untitled.customer_waiting": "Customer awaiting reply",
-  "worklist.untitled.lead_response": "Lead",
+  "worklist.untitled.lead_response": "Untitled lead",
   "worklist.untitled.deal_at_risk": "Deal drifting",
-  "worklist.untitled.meeting": "Meeting",
-  "worklist.untitled.meeting_outcome": "Meeting",
+  "worklist.untitled.meeting": "Untitled meeting",
+  "worklist.untitled.meeting_outcome": "Meeting outcome",
   "worklist.untitled.relationship_decay": "Relationship going quiet",
   "worklist.untitled.failed_approval": "Approved action did not run",
   "worklist.untitled.dsr": "Open privacy request",

@@ -163,7 +163,7 @@ describe("a mailbox import", () => {
     });
     await waitFor(() =>
       expect(container.querySelector(".arline")?.textContent).toBe(
-        "Importing mailbox history…",
+        "Importing mailbox history",
       ),
     );
     expect(block(container).getAttribute("data-core-state")).toBe("ingest");

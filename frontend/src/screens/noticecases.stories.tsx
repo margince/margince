@@ -96,7 +96,7 @@ function duties(rows: NoticeCase[], allow: GrantSpec = WORKS_DUTIES) {
 }
 
 const meta: Meta<typeof NoticeCasesCard> = {
-  title: "Settings/Governance/Privacy & retention/Notice duties",
+  title: "Settings/Governance/Privacy and retention/Notice duties",
   component: NoticeCasesCard,
 };
 export default meta;

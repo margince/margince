@@ -521,6 +521,7 @@ describe("AskMarginceModal", () => {
     expect(
       screen.getByText(/passages are searchable\. Retry shortly/i),
     ).toBeTruthy();
+    expect(screen.getByText(/The question is not the problem\./)).toBeTruthy();
     expect(screen.queryByText(/not covered by this set/i)).toBeNull();
   });
 

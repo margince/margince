@@ -178,7 +178,9 @@ describe("the Data & tools tab's added capabilities", () => {
     // Both buttons are gated on the caller's own grant, off a SEPARATE query
     // (/me) than the field's own read — findByRole waits it out rather than
     // catching the render before that query has settled.
-    expect(await screen.findByRole("button", { name: "Confirm" })).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: "Confirm value" }),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
   });
 });
@@ -223,7 +225,7 @@ describe("a moment action that opens the composer", () => {
     await user.click(within(header).getByRole("button", { name: "Email" }));
 
     expect(
-      await screen.findByRole("dialog", { name: /Send this email\?/ }),
+      await screen.findByRole("dialog", { name: /Send email/ }),
     ).toBeTruthy();
     // The steer field is here, and EMPTY: pressing the generic verb must not
     // inherit the reason the last rung left behind.
@@ -247,7 +249,7 @@ describe("a moment action that opens the composer", () => {
     await user.click(address);
 
     expect(
-      await screen.findByRole("dialog", { name: /Send this email\?/ }),
+      await screen.findByRole("dialog", { name: /Send email/ }),
     ).toBeTruthy();
     expect(screen.getAllByRole("dialog").length).toBe(1);
   });

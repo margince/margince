@@ -547,7 +547,7 @@ describe("the LinkedIn card", () => {
 
   it("keeps the profile form closed until its card is clicked", () => {
     renderConnectAct();
-    expect(screen.getByText("Save →")).toBeTruthy();
+    expect(screen.getByText("Save")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Save profile" })).toBeNull();
   });
 

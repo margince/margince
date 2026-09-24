@@ -19,8 +19,8 @@ afterEach(() => {
 
 // What a lead is shown, and the two things the panel must not do.
 
-// The condition column can say "Unassigned" too, so an owner claim reads the
-// owner column of the subject's own row.
+// The condition column can say "Unassigned", so an owner claim reads the owner
+// column of the subject's own row.
 async function ownerCellOf(subject: string): Promise<HTMLElement> {
   const row = (await screen.findByText(subject)).closest("tr");
   if (row === null) throw new Error(`${subject} is not in a table row`);

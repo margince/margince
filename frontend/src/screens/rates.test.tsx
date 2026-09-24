@@ -315,7 +315,7 @@ describe("the rate sheets", () => {
       ).toBeTruthy();
     }
     expect(
-      screen.queryByText(/only an administrator or operator can see/i),
+      screen.queryByText(/only an administrator or operations user can see/i),
     ).toBeNull();
   });
 
@@ -333,7 +333,7 @@ describe("the rate sheets", () => {
     expect(await screen.findByText("claude-opus-4-8")).toBeTruthy();
     expect(
       screen.getByText(
-        /only an administrator or operator can see currency rates/i,
+        /only an administrator or operations user can see currency rates/i,
       ),
     ).toBeTruthy();
     const fx = rateCard("Currency rates");
@@ -360,7 +360,7 @@ describe("the rate sheets", () => {
     expect(await screen.findByText("USD")).toBeTruthy();
     expect(
       screen.getByText(
-        /only an administrator or operator can see model prices/i,
+        /only an administrator or operations user can see model prices/i,
       ),
     ).toBeTruthy();
     const model = rateCard("AI model costs");
@@ -387,7 +387,7 @@ describe("the rate sheets", () => {
     expect(screen.getByText("claude-opus-4-8")).toBeTruthy();
 
     expect(
-      screen.queryByText(/only an administrator or operator can see/i),
+      screen.queryByText(/only an administrator or operations user can see/i),
     ).toBeNull();
     for (const title of ["Currency rates", "AI model costs"]) {
       const card = rateCard(title);

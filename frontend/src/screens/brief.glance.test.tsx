@@ -46,8 +46,8 @@ describe("BriefGlance — the greeting follows the reader's own hour", () => {
     expect(greetingAt(17, "Ada")).toBe("Good afternoon, Ada.");
     expect(greetingAt(18, "Ada")).toBe("Good evening, Ada.");
     expect(greetingAt(21, "Ada")).toBe("Good evening, Ada.");
-    expect(greetingAt(22, "Ada")).toBe("Good evening, Ada.");
-    expect(greetingAt(4, "Ada")).toBe("Good evening, Ada.");
+    expect(greetingAt(22, "Ada")).toBe("Working late, Ada.");
+    expect(greetingAt(4, "Ada")).toBe("Working late, Ada.");
   });
 
   // The hour is known before the name is. Greeting nobody until /me answers

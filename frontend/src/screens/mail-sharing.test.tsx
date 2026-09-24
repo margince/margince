@@ -166,7 +166,7 @@ describe("MailSharingCard", () => {
     // under test, and matching one of two identical strings by text alone would
     // not say which.
     expect(
-      screen.getAllByText(/Only an administrator or ops user/),
+      screen.getAllByText(/Only an administrator or operations user/),
     ).toHaveLength(2);
   });
 });
