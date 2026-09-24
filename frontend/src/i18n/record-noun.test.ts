@@ -160,9 +160,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
-    "analytics.share.liveHelp",
-    "approval.kind.capture_counterparty",
-    "auth.loginSub",
     "common.permissionDenied",
     "confirm.done.body",
     "coverage.risk.single_threaded_ours",
@@ -178,7 +175,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.notYoursToChange",
     "project.notYoursToChange",
     "record.notYoursToChange",
-    "release.skewBody",
     "retention.lawfulBasisHint",
     "settings.auditAdminOnly",
     "settings.page.authentication.sub",
@@ -196,14 +192,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "users.deactivateConfirmBody",
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
-    "access.capabilityLegend",
     "access.issued.oneTime",
     "book.tellThemYourself",
     "captureSettings.signatureEnrich.help",
     "compose.audienceParticipantsHint",
     "compose.audienceSelected",
     "compose.audienceSelectedHint",
-    "compose.threadStillHeld",
     "email.access.sentence.selected",
     "timeline.group.bulk_one",
     "timeline.group.bulk_other",

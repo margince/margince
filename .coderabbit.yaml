@@ -77,6 +77,28 @@ reviews:
         (dashes, exclamation marks, straight quotes, ellipsis, double spaces,
         Latin abbreviations, "please", contractions, "we", "I", ampersands,
         British spelling, retired words).
+    - path: "frontend/src/i18n/de.ts"
+      instructions: |
+        German is translated from frontend/src/i18n/en.ts. Read
+        docs/reference/ui-copy-style-de.md and review every added or changed
+        value against it and against the English value of the same key:
+        - Meaning and claim strength match the English: nothing added, no
+          qualifier dropped, no claim strengthened.
+        - Address: du only, never Sie/Ihr/Ihnen, except the four outsider
+          families (privacynotice., confirm., buyer., prefs.); no mixed
+          address inside one surface.
+        - Natural German word order, not English syntax.
+        - Grammar by slot: infinitive buttons, du imperative for instructions,
+          impersonal statements, the message shapes.
+        - The Vocabulary table: the German word for each concept.
+        - Inclusive plurals (Nutzende, Mitarbeitende) and no gendered
+          singular.
+        - The length ceilings, a compound counting as one word.
+        Do not flag what frontend/src/i18n/copy-style-de.test.ts and
+        address-register.test.ts already enforce (long dashes, quotes,
+        ellipsis, double spaces, exclamation marks, "bitte", abbreviations,
+        contractions, percent spacing, gender marks, ich, wir, retired words,
+        Sie outside the outsider families, capitalised du mid-sentence).
   auto_review:
     enabled: true
     # Draft PRs get no review — matches the CI path-filter's draft skip (the

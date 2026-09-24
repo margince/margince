@@ -67,7 +67,7 @@ describe("FieldBuilder", () => {
   it("mirrors the label into the immutable disabled api key", async () => {
     builder();
     await userEvent.type(screen.getByLabelText(/Label/i), "Contract end date");
-    const key = screen.getByLabelText(/API key/i) as HTMLInputElement;
+    const key = screen.getByLabelText(/API name/i) as HTMLInputElement;
     expect(key.value).toBe("company.cf_contract_end_date");
     expect(key).toBeDisabled();
   });

@@ -70,7 +70,7 @@ describe("suggestionsFor", () => {
     expect(suggestionsFor(SHEET, "anthropic", "chat", "de")).toEqual([
       {
         value: "claude-opus-4-8",
-        hint: "Eingabe 5,00\u00a0$ · Ausgabe 25,00\u00a0$ pro 1 Mio. Tokens",
+        hint: "Eingabe 5,00\u00a0$ · Ausgabe 25,00\u00a0$ pro Million Tokens",
       },
     ]);
   });

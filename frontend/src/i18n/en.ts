@@ -6957,7 +6957,7 @@ export const en = {
   "cf.builder.intro":
     "A new field is a real column on the existing table. It works in filters, reports, exports and the API like any core field. It is not a new object.",
   "cf.label": "Label",
-  "cf.apiKey": "API key",
+  "cf.apiKey": "API name",
   "cf.apiKeyHint":
     "Derived automatically and fixed once live. The cf_ prefix prevents collisions with core fields.",
   "cf.typeLabel": "Type",
