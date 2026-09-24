@@ -15,7 +15,7 @@
 | Betroffene | Beschäftigte; deren Korrespondenzpartner |
 | Datenkategorien | Absender, Empfänger, Betreff, Text, Anhänge, Zeitpunkt |
 | Rechtsgrundlage | Art. 6 Abs. 1 lit. b, f DSGVO; § 26 Abs. 1 BDSG; bei Privatnutzung zusätzlich lit. a |
-| Empfänger | keine Übermittlung an Dritte |
+| Empfänger | Auftragsverarbeiter: Hosting (AVV); KI-Anbieter gemäß `docs/reference/ai-egress.md`; weitere vom Betreiber konfigurierte Dienste [eintragen]. Keine Übermittlung an Dritte zu deren eigenen Zwecken |
 | Löschfrist | Handelsbriefe [Frist]; übrige [Frist] |
 | Durchsetzung | `capture/sinkactivity.go` schreibt jede Nachricht mit der Sichtbarkeit, die das Postfach verlangt |
 
@@ -39,7 +39,7 @@
 | Besonderheit | **Nicht verfügbar oder ohne Budget bedeutet zurückgehalten.** Ein Ausfall führt nie zu einer Freigabe |
 | Durchsetzung | `compose/captureverdict.go`, `compose/confidentialityverdict.go`; die Vorrangregel in `capture/senderoverride.go` |
 
-### A.4 Vernichtung auf Verlangen der beschäftigten Contact
+### A.4 Vernichtung auf Verlangen der beschäftigten Person
 
 | Feld | Angabe |
 | --- | --- |
