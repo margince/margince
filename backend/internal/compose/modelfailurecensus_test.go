@@ -17,10 +17,10 @@ package compose
 import (
 	"fmt"
 	"go/ast"
-	"go/token"
 	"go/types"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -28,12 +28,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// modelHandlersThatDegrade are handlers that reach a model and deliberately
-// answer without it in their own body, so a model failure never becomes their
-// error. A handler whose callee degrades needs no entry: a call that returns no
-// error has none to lose.
+// modelHandlersThatDegrade are the functions that catch a model call's error
+// and deliberately answer without the model, so the failure never reaches
+// modelfailure.Write. An entry names the function that drops the error — the
+// handler when it drops it inline, the helper when a helper does — so the two
+// shapes need the same entry and one helper several handlers share needs one.
 var modelHandlersThatDegrade = gatekit.Waive(map[string]string{
-	"(compose.Server).RegenerateOffer": "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
+	"(compose.Server).RegenerateOffer":               "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
+	"compose.AnswerCorpus":                           "a failed lane serves the retrieved passages with their citations as unreviewed, never as answered, and logs which lane failed",
+	"(*compose.onboardingCompanyAssistant).converse": "a clicked option was proved against the read before any model was asked, so it is recorded and confirmed in a server-written sentence; with no option clicked the error is returned",
+	"(compose/briefs.briefL2Ranker).reorder":         "the model re-rank is advisory over the deterministic composite order, which the brief keeps when the lane fails, with a warning logged",
+	"compose/company360.writeIntroRequest":           "the template floor states every fact of the ask honestly, so the reader gets a sendable message and generated_by says the floor wrote it",
+	"compose/companybrief.Answer":                    "the deterministic answer is the declared on_budget_exhausted degrade; generated_by tells the reader the floor answered",
+	"compose/companybrief.Write":                     "the deterministic card is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
+	"compose/companydossier.WriteDossier":            "the floor dossier is the declared degrade, labelled as the floor's, and the lane-failed flag stops it overwriting a written dossier",
+	"compose/companydossier.WriteGrowthFit":          "the floor's abstention is the declared degrade, labelled as the floor's, and the lane-failed flag stops it overwriting a real assessment",
+	"compose/contactbrief.Write":                     "the deterministic card is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
+	"(*compose/dealstatus.Service).write":            "the deterministic card is the declared degrade, and a warning names the lane that failed so the fallback is not silent",
+	"compose/meetingbrief.Write":                     "the floor brief is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
+	"compose/meetingbrief.WritePlan":                 "the floor plan is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
+	"compose/network.writeIntroNote":                 "the template floor states every fact of the introduction honestly, and generated_by says the floor wrote it",
 })
 
 func TestEveryHandlerReachingAModelAnswersThroughModelFailure(t *testing.T) {
@@ -70,10 +84,15 @@ func modelFailureCensus(t *testing.T, checked []*typeCheckedSources) modelFailur
 				continue
 			}
 			got.reaching++
-			if unit.answered() || modelHandlersThatDegrade.Waived(t, unit.name) {
+			if unit.modelCalls == 0 && modelHandlersThatDegrade.Waived(t, unit.name) {
 				continue
 			}
-			got.findings = append(got.findings, unit.finding())
+			unit.unanswered = slices.DeleteFunc(unit.unanswered, func(drop modelDropSite) bool {
+				return modelHandlersThatDegrade.Waived(t, drop.owner)
+			})
+			if !unit.answered() {
+				got.findings = append(got.findings, unit.finding())
+			}
 		}
 		if got.reaching > before {
 			got.packages++
@@ -176,10 +195,15 @@ type handlerUnit struct {
 	name         string
 	reachesModel bool
 	// modelCalls counts the calls in the handler that can reach a model, and
-	// unanswered names where each one whose error misses modelfailure.Write is.
+	// unanswered names each model call, here or in a helper beneath, whose
+	// error misses modelfailure.Write.
 	modelCalls int
-	unanswered []string
+	unanswered []modelDropSite
 }
+
+// modelDropSite is where a model call's error is dropped, and the function —
+// the handler, or a helper beneath it — that drops it.
+type modelDropSite struct{ at, owner string }
 
 // answered reports whether the handler reaches a model and answers every
 // model-reaching call's error through modelfailure.Write. A handler that
@@ -194,9 +218,14 @@ func (u handlerUnit) finding() string {
 		return u.name + " reaches a model through no call whose error the census can follow — " +
 			"call the model-reaching function directly and answer its error through modelfailure.Write"
 	}
-	return u.name + " reaches a model, and the error of the call at " + strings.Join(u.unanswered, ", ") +
+	sites := make([]string, 0, len(u.unanswered))
+	for _, drop := range u.unanswered {
+		sites = append(sites, drop.at+" (in "+drop.owner+")")
+	}
+	return u.name + " reaches a model, and the error of the call at " + strings.Join(sites, ", ") +
 		" never reaches modelfailure.Write, so a provider that is down reaches its client as an " +
-		"opaque 500 — write that error through modelfailure.Write"
+		"opaque 500 — write that error through modelfailure.Write, or name the function dropping it in " +
+		"modelHandlersThatDegrade with why its answer without the model is honest"
 }
 
 // modelHandlerUnits finds every handler in the checked package and follows its
@@ -214,11 +243,17 @@ func modelHandlerUnits(checked *typeCheckedSources) []handlerUnit {
 			for _, callee := range graph.refs(body) {
 				unit.reachesModel = unit.reachesModel || graph.visit(callee).model
 			}
-			var unanswered []token.Pos
+			var unanswered []modelDrop
 			unit.modelCalls, unanswered = graph.unansweredModelCalls(body, sig)
-			for _, pos := range unanswered {
-				at := checked.fset.Position(pos)
-				unit.unanswered = append(unit.unanswered, fmt.Sprintf("%s:%d", filepath.Base(at.Filename), at.Line))
+			for _, drop := range unanswered {
+				at := checked.fset.Position(drop.at)
+				owner := name
+				if drop.owner != nil {
+					owner = drop.owner.FullName()
+				}
+				unit.unanswered = append(unit.unanswered, modelDropSite{
+					at: fmt.Sprintf("%s:%d", filepath.Base(at.Filename), at.Line), owner: owner,
+				})
 			}
 			units = append(units, unit)
 			return true
@@ -254,18 +289,25 @@ type modelCallGraph struct {
 	memo    map[*types.Func]*reach
 	sinks   map[sinkKey]bool
 	flows   map[*ast.BlockStmt]*modelErrorFlow
+	// declared holds the bodies of declared functions, the only ones whose
+	// return has a caller the census can follow; swallowed memoises, per
+	// function, the model calls in it whose error goes nowhere.
+	declared  map[*ast.BlockStmt]bool
+	swallowed map[*types.Func][]modelDrop
 }
 
 func newModelCallGraph(checked *typeCheckedSources) *modelCallGraph {
 	g := &modelCallGraph{
 		checked: checked, bodies: map[*types.Func]*ast.BlockStmt{}, memo: map[*types.Func]*reach{},
 		sinks: map[sinkKey]bool{}, flows: map[*ast.BlockStmt]*modelErrorFlow{},
+		declared: map[*ast.BlockStmt]bool{}, swallowed: map[*types.Func][]modelDrop{},
 	}
 	for _, file := range checked.files {
 		for _, decl := range file.Decls {
 			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
 				if obj, ok := checked.info.Defs[fn.Name].(*types.Func); ok {
 					g.bodies[obj] = fn.Body
+					g.declared[fn.Body] = true
 				}
 			}
 		}

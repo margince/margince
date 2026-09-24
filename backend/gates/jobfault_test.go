@@ -334,11 +334,13 @@ func (pkg *packageFuncs) method(recv, name string) *ast.FuncDecl {
 // package, that makes an error or warn log call, or "" when none does. Calls
 // are followed without a depth limit; seen stops a recursive pair from looping.
 //
-// A call is followed when nothing fn returns carries its result: one made as
-// a statement — plain, deferred or spawned — or one whose assigned variables no
-// return statement reads. That is the call a failure disappears into. A helper
-// whose error fn returns has handed the failure back, and whatever it logged on
-// the way is the same failure Work then reports through jobs.Fault.
+// A call is followed when some path of fn does not return its result: one made
+// as a statement — plain, deferred or spawned — or one assigned to variables
+// that a path from the assignment leaves fn without returning. That is the call
+// a failure disappears into. A helper whose error fn returns on every path has
+// handed the failure back, and whatever it logged on the way is the same
+// failure Work then reports through jobs.Fault; a path on which a check proves
+// the error nil has nothing to hand back.
 //
 // Variables and calls are resolved by type, not by name: a shadowing `err`
 // that is never returned is not the `err` a later return reads, and a method
@@ -350,7 +352,6 @@ func (pkg *packageFuncs) loggerIn(fn *ast.FuncDecl, seen map[*ast.FuncDecl]bool)
 		return ""
 	}
 	seen[fn] = true
-	returned := pkg.returnedValues(fn)
 	var logger string
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		if logger != "" {
@@ -366,9 +367,11 @@ func (pkg *packageFuncs) loggerIn(fn *ast.FuncDecl, seen map[*ast.FuncDecl]bool)
 				logger = pkg.loggerThrough(call, seen)
 			}
 		case *ast.AssignStmt:
-			if call, ok := singleCall(v.Rhs); ok && !pkg.assignsAny(v.Lhs, returned) {
+			if call, ok := singleCall(v.Rhs); ok && !pkg.handsBack(fn, v, v.Lhs) {
 				logger = pkg.loggerThrough(call, seen)
 			}
+		case *ast.DeclStmt:
+			logger = pkg.loggerThroughDecl(fn, v, seen)
 		case *ast.DeferStmt:
 			logger = pkg.loggerThrough(v.Call, seen)
 		case *ast.GoStmt:
@@ -379,29 +382,109 @@ func (pkg *packageFuncs) loggerIn(fn *ast.FuncDecl, seen map[*ast.FuncDecl]bool)
 	return logger
 }
 
-// returnedValues holds the variables fn hands back: those a return statement
-// reads, and fn's named results when a bare return hands those back.
-func (pkg *packageFuncs) returnedValues(fn *ast.FuncDecl) map[types.Object]bool {
-	returned := map[types.Object]bool{}
-	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		ret, ok := n.(*ast.ReturnStmt)
+// loggerThroughDecl is loggerThrough for each `var x = call()` in decl whose
+// value some path of fn does not return.
+func (pkg *packageFuncs) loggerThroughDecl(fn *ast.FuncDecl, decl *ast.DeclStmt, seen map[*ast.FuncDecl]bool) string {
+	gen, ok := decl.Decl.(*ast.GenDecl)
+	if !ok {
+		return ""
+	}
+	for _, spec := range gen.Specs {
+		value, ok := spec.(*ast.ValueSpec)
 		if !ok {
+			continue
+		}
+		names := make([]ast.Expr, len(value.Names))
+		for i, name := range value.Names {
+			names[i] = name
+		}
+		if call, ok := singleCall(value.Values); ok && !pkg.handsBack(fn, decl, names) {
+			if logger := pkg.loggerThrough(call, seen); logger != "" {
+				return logger
+			}
+		}
+	}
+	return ""
+}
+
+// handsBack reports whether every path of fn from stmt, which assigns lhs,
+// returns one of the variables it assigns — by reading it in a return, or by a
+// bare return of a named result — or returns a failure of its own, before that
+// variable is assigned again. A path on which a check proves an assigned error
+// nil owes nothing. A path returning a different failure has not turned the
+// row green, which is the shape this census is after: River records a failure
+// either way, and whatever the helper logged is not a failure hidden.
+func (pkg *packageFuncs) handsBack(fn *ast.FuncDecl, stmt ast.Stmt, lhs []ast.Expr) bool {
+	assigned := map[types.Object]bool{}
+	for _, expr := range lhs {
+		if obj := pkg.assignedObject(expr); obj != nil {
+			assigned[obj] = true
+		}
+	}
+	if len(assigned) == 0 {
+		return false
+	}
+	returnsBare := false
+	for obj := range pkg.namedResults(fn) {
+		returnsBare = returnsBare || assigned[obj]
+	}
+	paths := gatekit.Paths{
+		Body: fn.Body,
+		Step: func(s ast.Stmt) gatekit.Step {
+			switch s := s.(type) {
+			case *ast.ReturnStmt:
+				if pkg.reads(s.Results, assigned) || (len(s.Results) == 0 && returnsBare) || pkg.returnsAFailure(s) {
+					return gatekit.Settles
+				}
+			case *ast.AssignStmt:
+				if pkg.assignsAny(s.Lhs, assigned) && !pkg.reads(s.Rhs, assigned) {
+					return gatekit.Drops
+				}
+			}
+			return gatekit.Passes
+		},
+		Owed: func(cond ast.Expr, outcome bool) bool {
+			return !gatekit.ErrorSettled(cond, outcome, pkg.info, func(e ast.Expr) bool {
+				ident, ok := ast.Unparen(e).(*ast.Ident)
+				return ok && assigned[pkg.info.Uses[ident]] && types.Implements(pkg.info.TypeOf(e), errorType)
+			})
+		},
+	}
+	return !paths.Unsettled(stmt)
+}
+
+// returnsAFailure reports whether ret hands back an error that is not the nil
+// identifier: a jobs.Fault or river control return, read by its spelling since
+// those packages stand in empty, or any other value typed as an error.
+func (pkg *packageFuncs) returnsAFailure(ret *ast.ReturnStmt) bool {
+	for _, result := range ret.Results {
+		if ident, ok := ast.Unparen(result).(*ast.Ident); ok && ident.Name == "nil" {
+			continue
+		}
+		if sanctionedWorkerReturn(result) {
 			return true
 		}
-		ast.Inspect(ret, func(m ast.Node) bool {
-			if ident, ok := m.(*ast.Ident); ok && pkg.info.Uses[ident] != nil {
-				returned[pkg.info.Uses[ident]] = true
-			}
+		if t := pkg.info.TypeOf(result); t != nil && types.Implements(t, errorType) {
 			return true
+		}
+	}
+	return false
+}
+
+var errorType = types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
+
+// reads reports whether any of exprs reads any of objs.
+func (pkg *packageFuncs) reads(exprs []ast.Expr, objs map[types.Object]bool) bool {
+	found := false
+	for _, expr := range exprs {
+		ast.Inspect(expr, func(n ast.Node) bool {
+			if ident, ok := n.(*ast.Ident); ok && objs[pkg.info.Uses[ident]] {
+				found = true
+			}
+			return !found
 		})
-		if len(ret.Results) == 0 {
-			for obj := range pkg.namedResults(fn) {
-				returned[obj] = true
-			}
-		}
-		return true
-	})
-	return returned
+	}
+	return found
 }
 
 // namedResults is fn's named results, the blank one aside.
@@ -635,6 +718,30 @@ func check() error { slog.Error("x"); return errors.New("x") }`, ""},
 func (e *engine) run() { slog.Error("x") }
 type worker struct{ engine *engine }
 func (w *worker) Work() error { w.engine.run(); return nil }`, "run"},
+		"a helper's failure returned on one path only": {`type worker struct{ retry bool }
+func (w *worker) Work() error { err := logFailure(); if w.retry { return jobs.Fault(err) }; return nil }
+func logFailure() error { slog.Error("x"); return errors.New("x") }`, "logFailure"},
+		"a helper's failure returned once it is known not nil": {`type worker struct{}
+func (w *worker) Work() error { err := check(); if err != nil { return jobs.Fault(err) }; return nil }
+func check() error { slog.Error("x"); return errors.New("x") }`, ""},
+		"a helper's failure wrapped, then returned": {`type worker struct{}
+func (w *worker) Work() error { err := check(); err = fmt.Errorf("checking: %w", err); return jobs.Fault(err) }
+func check() error { slog.Error("x"); return errors.New("x") }`, ""},
+		"a helper's failure overwritten before any return": {`type worker struct{}
+func (w *worker) Work() error { err := logFailure(); err = check(); if err != nil { return jobs.Fault(err) }; return nil }
+func logFailure() error { slog.Error("x"); return errors.New("x") }
+func check() error { return nil }`, "logFailure"},
+		"a helper's failure replaced by another failure returned": {`type worker struct{ retry bool }
+func (w *worker) Work() error {
+	err := check()
+	if err == nil { return nil }
+	if w.retry { return jobs.Fault(errors.New("recording the failure")) }
+	return jobs.Fault(err)
+}
+func check() error { slog.Error("x"); return errors.New("x") }`, ""},
+		"a helper declared with var and never returned": {`type worker struct{}
+func (w *worker) Work() error { var n = sweep(); _ = n; return nil }
+func sweep() int { slog.Error("x"); return 0 }`, "sweep"},
 		"another package's function of the same name": {`type worker struct{}
 func (w *worker) Work() error { other.logFailure(); return nil }
 func logFailure() { slog.Error("x") }`, ""},

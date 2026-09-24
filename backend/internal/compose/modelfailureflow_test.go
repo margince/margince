@@ -11,15 +11,25 @@ package compose
 // handler the census follows every model-reaching call's error from where the
 // call binds it to where it goes.
 //
-// The following is by position and block, not by full control flow: a use of
-// a variable reads a value assigned before it unless a later assignment, made
-// in a block that also holds the use, has replaced it. An assignment in one
-// branch of an if does not replace the value for a use after the if. An error is answered
+// The error is followed along EVERY path of control from where it is bound to
+// the end of the function (gatekit.Paths): an answer on one arm of an if does
+// not answer the other arm, a return that skips the answer leaves it
+// unanswered, and a later assignment over the variable loses it. A path on
+// which a condition proves the error nil, or recognises its kind through
+// errors.Is or errors.As, owes nothing: an error the handler named is one it
+// answers on that kind's own terms, and a lane that is down is not among them.
+// An error is answered
 // when it reaches modelfailure.Write, or a parameter of a function of this
-// package that hands that parameter there; wrapping it, or storing it in a
-// value that is then handed there, carries it along. One returned through an
-// error result is its caller's to answer, and the caller is held to the same
-// rule. Anything else — dropped, logged, passed to httperr.Write — is not.
+// package that hands that parameter there, on every path; wrapping it, or
+// storing it in a value that is then handed there, carries it along.
+//
+// One returned through an error result is its caller's to answer, and the
+// caller is held to the same rule — but only a return that leaves a declared
+// function which is not itself a handler has a caller the census can see. A
+// handler's own error result goes to whatever adapter wraps it, and a function
+// literal's to whoever runs it, an errgroup or a retry loop, neither of which
+// the census follows, so neither return answers. Anything else — dropped,
+// logged, passed to httperr.Write — is not an answer either.
 
 import (
 	"fmt"
@@ -29,77 +39,173 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// Each planted handler marks the model call the census must name with
-// "// unanswered"; a handler with no mark must be answered. A census that
-// asked only whether a model and modelfailure.Write both appear somewhere in
-// the handler passes the first three.
-func TestTheModelFailureCensusFollowsEachModelErrorToItsAnswer(t *testing.T) {
-	prelude := "package planted\nimport (\n\t\"fmt\"\n\t\"net/http\"\n" +
-		"\t\"github.com/margince/margince/backend/internal/modules/ai\"\n" +
-		"\t\"github.com/margince/margince/backend/internal/compose/modelfailure\"\n" +
-		"\t\"github.com/margince/margince/backend/internal/platform/httperr\"\n" +
-		"\tmodel \"" + modelPortPath + "\"\n)\n" +
-		"var _ = fmt.Errorf\nvar _ = modelfailure.Write\nvar _ = httperr.Write\n" +
-		"func decode(r *http.Request) error { return nil }\n" +
-		"func ask(r *http.Request, c model.Client) error { _, err := ai.Ask(r.Context(), c, model.Request{}, nil); return err }\n"
-	for name, body := range map[string]string{
-		"a model error to httperr beside an unrelated modelfailure": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+// plantedModelHandlers are the handlers the flow test plants, each marking
+// the model call the census must name with "// unanswered"; a handler with no
+// mark must be answered. A census that asked only whether a model and
+// modelfailure.Write both appear somewhere in the handler passes the first
+// three.
+var plantedModelHandlers = map[string]string{
+	"a model error to httperr beside an unrelated modelfailure": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
 	if _, err := ai.Ask(r.Context(), c, model.Request{}, nil); err != nil { // unanswered
-		httperr.Write(w, r, err)
-		return
+	httperr.Write(w, r, err)
+	return
 	}
 	if err := decode(r); err != nil { modelfailure.Write(w, r, err) }
 }`,
-		"one variable reused for an unrelated error": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	"one variable reused for an unrelated error": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
 	_, err := ai.Ask(r.Context(), c, model.Request{}, nil) // unanswered
 	if err != nil { httperr.Write(w, r, err); return }
 	err = decode(r)
 	if err != nil { modelfailure.Write(w, r, err) }
 }`,
-		"a model error dropped": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	"a model error dropped": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
 	_, _ = ai.Ask(r.Context(), c, model.Request{}, nil) // unanswered
 	modelfailure.Write(w, r, decode(r))
 }`,
-		"a helper handed the error that answers it as a 500": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	"a helper handed the error that answers it as a 500": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
 	if err := ask(r, c); err != nil { fail(w, r, err) } // unanswered
 }
 func fail(w http.ResponseWriter, r *http.Request, err error) { httperr.Write(w, r, err) }`,
-		"an error carried out in a struct and answered as a 500": `type result struct{ err error }
+	"an error carried out in a struct and answered as a 500": `type result struct{ err error }
 func carry(r *http.Request, c model.Client) result { return result{err: ask(r, c)} }
 func h(w http.ResponseWriter, r *http.Request, c model.Client) {
 	res := carry(r, c) // unanswered
 	httperr.Write(w, r, res.err)
 }`,
-		"a wrapped error answered": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	"a wrapped error answered": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
 	err := ask(r, c)
 	if err != nil { err = fmt.Errorf("drafting: %w", err); modelfailure.Write(w, r, err) }
 }`,
-		"a helper handed the error that answers it": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	"a helper handed the error that answers it": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
 	if err := ask(r, c); err != nil { fail(w, r, err) }
 }
 func fail(w http.ResponseWriter, r *http.Request, err error) { modelfailure.Write(w, r, err) }`,
-		"a struct carrying the error answered": `type result struct{ err error }
+	"a struct carrying the error answered": `type result struct{ err error }
 func carry(r *http.Request, c model.Client) result { return result{err: ask(r, c)} }
 func h(w http.ResponseWriter, r *http.Request, c model.Client) {
 	res := carry(r, c)
 	modelfailure.Write(w, r, res.err)
 }`,
-		"an error assigned in either branch and answered after both": `func h(w http.ResponseWriter, r *http.Request, c model.Client, cached bool) {
+	"an error assigned in either branch and answered after both": `func h(w http.ResponseWriter, r *http.Request, c model.Client, cached bool) {
 	var err error
 	if cached {
-		err = decode(r)
+	err = decode(r)
 	} else {
-		err = ask(r, c)
+	err = ask(r, c)
 	}
 	if err != nil { modelfailure.Write(w, r, err) }
 }`,
-		"a named result handed back by a bare return": `func h(w http.ResponseWriter, r *http.Request, c model.Client) (err error) {
-	_, err = ai.Ask(r.Context(), c, model.Request{}, nil)
+	"a model error answered on one arm and a 500 on the other": `func h(w http.ResponseWriter, r *http.Request, c model.Client, quiet bool) {
+	_, err := ai.Ask(r.Context(), c, model.Request{}, nil) // unanswered
+	if err != nil {
+	if quiet {
+		httperr.Write(w, r, err)
+	} else {
+		modelfailure.Write(w, r, err)
+	}
+	}
+}`,
+	"a model error returned past on one path": `func h(w http.ResponseWriter, r *http.Request, c model.Client, quiet bool) {
+	err := ask(r, c) // unanswered
+	if quiet { return }
+	if err != nil { modelfailure.Write(w, r, err) }
+}`,
+	"a handler's own error result handing it back": `func h(w http.ResponseWriter, r *http.Request, c model.Client) (err error) {
+	_, err = ai.Ask(r.Context(), c, model.Request{}, nil) // unanswered
 	return
 }`,
-	} {
+	"a model error returned from a closure and answered as a 500": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	run := func() error {
+	_, err := ai.Ask(r.Context(), c, model.Request{}, nil) // unanswered
+	return err
+	}
+	if err := run(); err != nil { httperr.Write(w, r, err) }
+}`,
+	"a model error returned through an errgroup and answered as a 500": `type group struct{}
+func (g *group) Go(f func() error) {}
+func (g *group) Wait() error { return nil }
+func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	var g group
+	g.Go(func() error {
+	_, err := ai.Ask(r.Context(), c, model.Request{}, nil) // unanswered
+	return err
+	})
+	if err := g.Wait(); err != nil { httperr.Write(w, r, err) }
+}`,
+	"a helper swallowing the model error it caught": `func quietly(r *http.Request, c model.Client) string {
+	if err := ask(r, c); err != nil { // unanswered
+	return ""
+	}
+	return "drafted"
+}
+func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	httperr.WriteJSON(w, http.StatusOK, quietly(r, c))
+}`,
+	"a model error overwritten before it is answered": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	_, err := ai.Ask(r.Context(), c, model.Request{}, nil) // unanswered
+	err = decode(r)
+	if err != nil { modelfailure.Write(w, r, err) }
+}`,
+	"a helper dropping what the closure it runs returned": `func draft(r *http.Request, c model.Client) error {
+	run := func() error {
+	_, err := ai.Ask(r.Context(), c, model.Request{}, nil) // unanswered
+	return err
+	}
+	_ = run()
+	return decode(r)
+}
+func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	if err := draft(r, c); err != nil { modelfailure.Write(w, r, err) }
+}`,
+	"a model error answered on every arm": `func h(w http.ResponseWriter, r *http.Request, c model.Client, quiet bool) {
+	err := ask(r, c)
+	if err == nil { return }
+	if quiet { modelfailure.Write(w, r, fmt.Errorf("quiet: %w", err)); return }
+	modelfailure.Write(w, r, err)
+}`,
+	"a helper handing its model error back on every path": `func twice(r *http.Request, c model.Client) error {
+	if err := ask(r, c); err != nil { return err }
+	return ask(r, c)
+}
+func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	if err := twice(r, c); err != nil { modelfailure.Write(w, r, err) }
+}`,
+	"an error recognised by kind and answered on its own terms": `type unreadable struct{}
+func (unreadable) Error() string { return "unreadable" }
+func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	err := ask(r, c)
+	var u unreadable
+	switch {
+	case errors.As(err, &u), errors.Is(err, http.ErrHandlerTimeout):
+	httperr.Write(w, r, err)
+	case err != nil:
+	modelfailure.Write(w, r, err)
+	}
+}`,
+	"an error recognised as any error at all": `func h(w http.ResponseWriter, r *http.Request, c model.Client) {
+	err := ask(r, c) // unanswered
+	var any error
+	if errors.As(err, &any) { httperr.Write(w, r, err); return }
+	modelfailure.Write(w, r, err)
+}`,
+}
+
+// Each planted handler is read for the model calls whose error misses
+// modelfailure.Write, and must name exactly the marked ones.
+func TestTheModelFailureCensusFollowsEachModelErrorToItsAnswer(t *testing.T) {
+	prelude := "package planted\nimport (\n\t\"errors\"\n\t\"fmt\"\n\t\"net/http\"\n" +
+		"\t\"github.com/margince/margince/backend/internal/modules/ai\"\n" +
+		"\t\"github.com/margince/margince/backend/internal/compose/modelfailure\"\n" +
+		"\t\"github.com/margince/margince/backend/internal/platform/httperr\"\n" +
+		"\tmodel \"" + modelPortPath + "\"\n)\n" +
+		"var _ = fmt.Errorf\nvar _ = errors.Is\nvar _ = modelfailure.Write\nvar _ = httperr.Write\n" +
+		"func decode(r *http.Request) error { return nil }\n" +
+		"func ask(r *http.Request, c model.Client) error { _, err := ai.Ask(r.Context(), c, model.Request{}, nil); return err }\n"
+	for name, body := range plantedModelHandlers {
 		t.Run(name, func(t *testing.T) {
 			src := prelude + body
 			var want []string
@@ -112,9 +218,13 @@ func h(w http.ResponseWriter, r *http.Request, c model.Client) {
 				if unit.name != "planted.h" {
 					continue
 				}
-				if !unit.reachesModel || unit.modelCalls == 0 || !slices.Equal(unit.unanswered, want) {
+				var got []string
+				for _, drop := range unit.unanswered {
+					got = append(got, drop.at)
+				}
+				if !unit.reachesModel || unit.modelCalls == 0 || !slices.Equal(got, want) {
 					t.Errorf("reaches a model = %v through %d call(s), unanswered at %q; want the calls at %q",
-						unit.reachesModel, unit.modelCalls, unit.unanswered, want)
+						unit.reachesModel, unit.modelCalls, got, want)
 				}
 				return
 			}
@@ -123,15 +233,47 @@ func h(w http.ResponseWriter, r *http.Request, c model.Client) {
 	}
 }
 
+// A dropped model error belongs to the function that drops it, which is what
+// a waiver names: the handler when it drops the error inline, the helper when a
+// helper catches it and answers without the model.
+func TestAModelErrorDropBelongsToTheFunctionDroppingIt(t *testing.T) {
+	src := "package planted\nimport (\n\t\"net/http\"\n" +
+		"\t\"github.com/margince/margince/backend/internal/modules/ai\"\n" +
+		"\tmodel \"" + modelPortPath + "\"\n)\n" +
+		`func quietly(r *http.Request, c model.Client) string {
+	if _, err := ai.Ask(r.Context(), c, model.Request{}, nil); err != nil { return "" }
+	return "drafted"
+}
+func viaHelper(w http.ResponseWriter, r *http.Request, c model.Client) { _ = quietly(r, c) }
+func inline(w http.ResponseWriter, r *http.Request, c model.Client) {
+	_, _ = ai.Ask(r.Context(), c, model.Request{}, nil)
+}`
+	want := map[string]string{"planted.viaHelper": "planted.quietly", "planted.inline": "planted.inline"}
+	for _, unit := range modelHandlerUnits(typeCheckPlanted(t, src)) {
+		owner, ok := want[unit.name]
+		if !ok {
+			continue
+		}
+		delete(want, unit.name)
+		if len(unit.unanswered) != 1 || unit.unanswered[0].owner != owner {
+			t.Errorf("%s drops %+v; want one drop owned by %s", unit.name, unit.unanswered, owner)
+		}
+	}
+	if len(want) > 0 {
+		t.Errorf("the census did not see the planted handlers %v", want)
+	}
+}
+
 // modelErrorFlow is one function body read for where its values go.
 type modelErrorFlow struct {
 	g       *modelCallGraph
 	sig     *types.Signature
+	body    *ast.BlockStmt
 	parents map[ast.Node]ast.Node
 	uses    map[types.Object][]*ast.Ident
-	// assigned is, per variable, every statement assigning it.
-	assigned map[types.Object][]*ast.AssignStmt
-	bare     []*ast.ReturnStmt
+	// handsBack is whether a return from this body has a caller the census
+	// holds to the rule: the body is a declared function, not a handler.
+	handsBack bool
 }
 
 // flowOf reads body, whose own signature is sig, once.
@@ -140,8 +282,8 @@ func (g *modelCallGraph) flowOf(body *ast.BlockStmt, sig *types.Signature) *mode
 		return flow
 	}
 	flow := &modelErrorFlow{
-		g: g, sig: sig, parents: map[ast.Node]ast.Node{},
-		uses: map[types.Object][]*ast.Ident{}, assigned: map[types.Object][]*ast.AssignStmt{},
+		g: g, sig: sig, body: body, parents: map[ast.Node]ast.Node{},
+		uses: map[types.Object][]*ast.Ident{}, handsBack: g.declared[body] && !isHandlerSignature(sig),
 	}
 	var stack []ast.Node
 	ast.Inspect(body, func(n ast.Node) bool {
@@ -160,45 +302,99 @@ func (g *modelCallGraph) flowOf(body *ast.BlockStmt, sig *types.Signature) *mode
 	return flow
 }
 
-// record notes what one node tells the flow: a use, an assignment, a bare return.
+// record notes a use of a variable.
 func (f *modelErrorFlow) record(n ast.Node) {
-	info := f.g.checked.info
-	switch n := n.(type) {
-	case *ast.Ident:
-		if obj, ok := info.Uses[n].(*types.Var); ok {
-			f.uses[obj] = append(f.uses[obj], n)
-		}
-	case *ast.AssignStmt:
-		for _, lhs := range n.Lhs {
-			if obj := f.rootObject(lhs); obj != nil {
-				f.assigned[obj] = append(f.assigned[obj], n)
-			}
-		}
-	case *ast.ReturnStmt:
-		if len(n.Results) == 0 {
-			f.bare = append(f.bare, n)
+	if ident, ok := n.(*ast.Ident); ok {
+		if obj, ok := f.g.checked.info.Uses[ident].(*types.Var); ok {
+			f.uses[obj] = append(f.uses[obj], ident)
 		}
 	}
 }
 
-// unansweredModelCalls counts the model-reaching calls in body and lists the
-// position of each whose error is not answered.
-func (g *modelCallGraph) unansweredModelCalls(body *ast.BlockStmt, sig *types.Signature) (int, []token.Pos) {
+// modelDrop is one model call whose error is not answered, and the function
+// that drops it: the body being read when owner is nil, or a helper beneath it.
+type modelDrop struct {
+	at    token.Pos
+	owner *types.Func
+}
+
+// unansweredModelCalls counts the model-reaching calls in body and lists each
+// whose error is not answered, and each model call inside this package's
+// functions they reach whose error goes nowhere. A handler literal nested in
+// body is a handler of its own, read on its own.
+func (g *modelCallGraph) unansweredModelCalls(body *ast.BlockStmt, sig *types.Signature) (int, []modelDrop) {
 	flow := g.flowOf(body, sig)
 	calls := 0
-	var unanswered []token.Pos
+	var unanswered []modelDrop
 	ast.Inspect(body, func(n ast.Node) bool {
+		if lit, ok := n.(*ast.FuncLit); ok {
+			litSig, ok := g.checked.info.TypeOf(lit).(*types.Signature)
+			return !ok || !isHandlerSignature(litSig)
+		}
 		call, ok := n.(*ast.CallExpr)
 		if !ok || !g.isModelCall(call) {
 			return true
 		}
 		calls++
 		if !flow.answered(call) {
-			unanswered = append(unanswered, call.Pos())
+			unanswered = append(unanswered, modelDrop{at: call.Pos()})
+		}
+		for _, helper := range g.helpersOf(call) {
+			unanswered = append(unanswered, g.swallowedIn(helper)...)
 		}
 		return true
 	})
-	return calls, unanswered
+	slices.SortFunc(unanswered, func(a, b modelDrop) int { return int(a.at - b.at) })
+	return calls, slices.CompactFunc(unanswered, func(a, b modelDrop) bool { return a.at == b.at })
+}
+
+// helpersOf lists this package's functions a model call runs: its callee —
+// every implementation here when that is an interface method — and each
+// function it is handed by name.
+func (g *modelCallGraph) helpersOf(call *ast.CallExpr) []*types.Func {
+	var helpers []*types.Func
+	if callee := g.calleeOf(call); callee != nil {
+		helpers = append(append(helpers, callee), implementationsOf(callee, g.checked.pkg)...)
+	}
+	for _, arg := range call.Args {
+		var ident *ast.Ident
+		switch arg := ast.Unparen(arg).(type) {
+		case *ast.Ident:
+			ident = arg
+		case *ast.SelectorExpr:
+			ident = arg.Sel
+		}
+		if f, ok := g.checked.info.Uses[ident].(*types.Func); ident != nil && ok {
+			helpers = append(helpers, f.Origin())
+		}
+	}
+	return helpers
+}
+
+// swallowedIn lists the model calls in helper, and beneath it, whose error
+// neither reaches modelfailure.Write nor is handed back to helper's caller —
+// the error a helper catches and drops, owned by the helper that drops it just
+// as an error dropped inline is owned by its handler. A helper that is itself
+// a handler is read as one, and one outside this package is trusted to hand
+// its model error back.
+func (g *modelCallGraph) swallowedIn(helper *types.Func) []modelDrop {
+	if got, ok := g.swallowed[helper]; ok {
+		return got
+	}
+	// Entered before the walk, so a recursive helper reads "nothing" rather than looping.
+	g.swallowed[helper] = nil
+	body, ok := g.bodies[helper]
+	if !ok || isHandlerSignature(helper.Signature()) {
+		return nil
+	}
+	_, got := g.unansweredModelCalls(body, helper.Signature())
+	for i := range got {
+		if got[i].owner == nil {
+			got[i].owner = helper
+		}
+	}
+	g.swallowed[helper] = got
+	return got
 }
 
 // isModelCall reports whether call can reach a model: its callee can, or a
@@ -267,11 +463,17 @@ func (f *modelErrorFlow) carried(expr ast.Expr, slots []int) bool {
 	case *ast.ReturnStmt:
 		return f.returnsError(p, child, slots)
 	case *ast.AssignStmt:
-		return f.assignsOnward(p.Lhs, p.Rhs, child, slots, p.End())
+		return f.assignsOnward(p.Lhs, p.Rhs, child, slots, p)
 	case *ast.ValueSpec:
-		return f.assignsOnward(identExprs(p.Names), p.Values, child, slots, p.End())
+		return f.assignsOnward(identExprs(p.Names), p.Values, child, slots, f.declaring(p))
 	}
 	return false
+}
+
+// declaring is the declaration statement holding spec.
+func (f *modelErrorFlow) declaring(spec *ast.ValueSpec) ast.Stmt {
+	decl, _ := f.parents[f.parents[spec]].(*ast.DeclStmt)
+	return decl
 }
 
 // climb walks up from expr through the expressions that only hold its value —
@@ -292,7 +494,7 @@ func (f *modelErrorFlow) climb(expr ast.Expr) (ast.Node, ast.Node) {
 
 // assignsOnward follows each error slot of value, assigned to lhs, from the end
 // of the statement to wherever the variable it lands in goes.
-func (f *modelErrorFlow) assignsOnward(lhs, rhs []ast.Expr, value ast.Node, slots []int, from token.Pos) bool {
+func (f *modelErrorFlow) assignsOnward(lhs, rhs []ast.Expr, value ast.Node, slots []int, from ast.Stmt) bool {
 	targets := make([]ast.Expr, 0, len(slots))
 	if len(rhs) == 1 && len(lhs) > 1 {
 		for _, slot := range slots {
@@ -313,36 +515,55 @@ func (f *modelErrorFlow) assignsOnward(lhs, rhs []ast.Expr, value ast.Node, slot
 	return true
 }
 
-// flowKey is one variable's value from one assignment on.
+// flowKey is one variable's value from one statement on.
 type flowKey struct {
 	obj  types.Object
-	from token.Pos
+	from ast.Stmt
 }
 
-// reaches reports whether the value obj holds from the assignment ending at
-// from reaches an answer through a use no later assignment replaced it for. A
-// return answers it
-// only when returns is set — a caller then answers it — which a sink parameter
-// does not accept, since there the caller has handed the error over.
-func (f *modelErrorFlow) reaches(obj types.Object, from token.Pos, returns bool, seen map[flowKey]bool) bool {
+// reaches reports whether the value obj holds from the statement from — nil
+// for a parameter, from the top of the body — reaches an answer on every path
+// of control. A return answers it only when returns is set — a caller then
+// answers it — which a sink parameter does not accept, since there the caller
+// has handed the error over.
+func (f *modelErrorFlow) reaches(obj types.Object, from ast.Stmt, returns bool, seen map[flowKey]bool) bool {
 	key := flowKey{obj, from}
 	if seen[key] {
 		return false
 	}
 	seen[key] = true
+	paths := gatekit.Paths{
+		Body: f.body,
+		Step: func(stmt ast.Stmt) gatekit.Step { return f.step(stmt, obj, returns, seen) },
+		Owed: func(cond ast.Expr, outcome bool) bool {
+			return !gatekit.ErrorSettled(cond, outcome, f.g.checked.info, func(e ast.Expr) bool {
+				return f.rootObject(e) == obj && carriesError(f.g.checked.info.TypeOf(e))
+			})
+		},
+	}
+	return !paths.Unsettled(from)
+}
+
+// step is what one statement does to obj's value: it answers it through a use,
+// hands it back by a bare return, or loses it to an assignment over it.
+func (f *modelErrorFlow) step(stmt ast.Stmt, obj types.Object, returns bool, seen map[flowKey]bool) gatekit.Step {
 	for _, use := range f.uses[obj] {
-		if use.Pos() > from && !f.replaced(obj, from, use) && f.useAnswers(use, returns, seen) {
-			return true
+		if stmt.Pos() <= use.Pos() && use.End() <= stmt.End() && f.useAnswers(use, returns, seen) {
+			return gatekit.Settles
 		}
 	}
-	if returns && f.isNamedErrorResult(obj) {
-		for _, ret := range f.bare {
-			if ret.Pos() > from && !f.replaced(obj, from, ret) {
-				return true
+	if ret, ok := stmt.(*ast.ReturnStmt); ok && len(ret.Results) == 0 && returns &&
+		f.isNamedErrorResult(obj) && f.handsBackFrom(ret) {
+		return gatekit.Settles
+	}
+	if assign, ok := stmt.(*ast.AssignStmt); ok {
+		for _, lhs := range assign.Lhs {
+			if ident, ok := ast.Unparen(lhs).(*ast.Ident); ok && f.rootObject(ident) == obj {
+				return gatekit.Drops
 			}
 		}
 	}
-	return false
+	return gatekit.Passes
 }
 
 // useAnswers reports whether one read of a variable hands its value to an
@@ -359,9 +580,9 @@ func (f *modelErrorFlow) useAnswers(use *ast.Ident, returns bool, seen map[flowK
 		case *ast.ReturnStmt:
 			return returns && f.returnsError(p, child, []int{0})
 		case *ast.AssignStmt:
-			return f.propagates(p.Lhs, p.Rhs, child, p.End(), returns, seen)
+			return f.propagates(p.Lhs, p.Rhs, child, p, returns, seen)
 		case *ast.ValueSpec:
-			return f.propagates(identExprs(p.Names), p.Values, child, p.End(), returns, seen)
+			return f.propagates(identExprs(p.Names), p.Values, child, f.declaring(p), returns, seen)
 		case ast.Stmt, nil:
 			return false
 		}
@@ -372,7 +593,7 @@ func (f *modelErrorFlow) useAnswers(use *ast.Ident, returns bool, seen map[flowK
 // propagates follows a value read on the right of an assignment into the
 // variable, or every variable, it is assigned to. A target on the left is
 // written, not read, and carries nothing.
-func (f *modelErrorFlow) propagates(lhs, rhs []ast.Expr, value ast.Node, from token.Pos, returns bool, seen map[flowKey]bool) bool {
+func (f *modelErrorFlow) propagates(lhs, rhs []ast.Expr, value ast.Node, from ast.Stmt, returns bool, seen map[flowKey]bool) bool {
 	index := nodeIndex(rhs, value)
 	if index < 0 {
 		return false
@@ -389,36 +610,13 @@ func (f *modelErrorFlow) propagates(lhs, rhs []ast.Expr, value ast.Node, from to
 	return false
 }
 
-// replaced reports whether the value obj holds from from has been replaced by
-// the time use reads it: an assignment between the two, in a block that also
-// holds use, so every path to use ran it.
-func (f *modelErrorFlow) replaced(obj types.Object, from token.Pos, use ast.Node) bool {
-	for _, stmt := range f.assigned[obj] {
-		if stmt.End() <= from || stmt.End() > use.Pos() {
-			continue
-		}
-		if block := f.enclosingBlock(stmt); block.Pos() <= use.Pos() && use.End() <= block.End() {
-			return true
-		}
-	}
-	return false
-}
-
-// enclosingBlock is the innermost block, case or select clause holding n.
-func (f *modelErrorFlow) enclosingBlock(n ast.Node) ast.Node {
-	for parent := f.parents[n]; parent != nil; parent = f.parents[parent] {
-		switch parent.(type) {
-		case *ast.BlockStmt, *ast.CaseClause, *ast.CommClause:
-			return parent
-		}
-	}
-	return n
-}
-
 // returnsError reports whether value, one result of ret, lands in an
-// error-carrying result of the function ret returns from.
+// error-carrying result of a function whose caller answers it.
 func (f *modelErrorFlow) returnsError(ret *ast.ReturnStmt, value ast.Node, slots []int) bool {
-	results := f.enclosingSignature(ret).Results()
+	if !f.handsBackFrom(ret) {
+		return false
+	}
+	results := f.sig.Results()
 	indexes := slots
 	if index := nodeIndex(ret.Results, value); index >= 0 && len(ret.Results) == results.Len() {
 		indexes = []int{index}
@@ -431,16 +629,18 @@ func (f *modelErrorFlow) returnsError(ret *ast.ReturnStmt, value ast.Node, slots
 	return false
 }
 
-// enclosingSignature is the signature of the innermost function holding n.
-func (f *modelErrorFlow) enclosingSignature(n ast.Node) *types.Signature {
-	for parent := f.parents[n]; parent != nil; parent = f.parents[parent] {
-		if lit, ok := parent.(*ast.FuncLit); ok {
-			if sig, ok := f.g.checked.info.TypeOf(lit).(*types.Signature); ok {
-				return sig
-			}
+// handsBackFrom reports whether ret returns to a caller the census holds to
+// the rule: it leaves this body's own declared function, not a literal in it.
+func (f *modelErrorFlow) handsBackFrom(ret *ast.ReturnStmt) bool {
+	if !f.handsBack {
+		return false
+	}
+	for parent := f.parents[ret]; parent != nil; parent = f.parents[parent] {
+		if _, ok := parent.(*ast.FuncLit); ok {
+			return false
 		}
 	}
-	return f.sig
+	return true
 }
 
 // isNamedErrorResult reports whether obj is a named error result of the body's
@@ -511,7 +711,7 @@ func (g *modelCallGraph) isSinkArg(call *ast.CallExpr, index int) bool {
 		return false
 	}
 	flow := g.flowOf(body, callee.Signature())
-	answered := flow.reaches(params.At(index), body.Lbrace, false, map[flowKey]bool{})
+	answered := flow.reaches(params.At(index), nil, false, map[flowKey]bool{})
 	g.sinks[key] = answered
 	return answered
 }
