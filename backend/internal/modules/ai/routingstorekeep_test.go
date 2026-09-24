@@ -54,3 +54,32 @@ func TestAWriteKeepsTheStoredUpstreamOfTheSameBindingOnly(t *testing.T) {
 		t.Error("the caller's own tier map was written through; the carry must work on a copy")
 	}
 }
+
+// The endpoint is matched as an endpoint, not as a string: a trailing slash or
+// an upper-case host is the same broker and keeps the lane's pin, while a
+// different path on that host is a different endpoint and does not.
+func TestAWriteKeepsTheStoredUpstreamAcrossSpellingsOfOneEndpoint(t *testing.T) {
+	t.Parallel()
+	eu := &OpenRouterRouting{Only: []string{"mistral/eu"}}
+	stored := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierPremium: {Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://openrouter.ai/api", Routing: eu},
+	}}
+	for _, tc := range []struct {
+		baseURL string
+		keeps   bool
+	}{
+		{"https://openrouter.ai/api/", true},
+		{"HTTPS://OpenRouter.AI/api", true},
+		{" https://openrouter.ai/api// ", true},
+		{"https://openrouter.ai/api/v2", false},
+		{"https://openrouter.ai.example/api", false},
+	} {
+		next := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+			TierPremium: {Provider: providerOpenAICompatible, Model: "m", BaseURL: tc.baseURL},
+		}}
+		got := next.keepingStoredUpstream(stored).Tiers[TierPremium].Routing
+		if kept := got != nil && slices.Equal(got.Only, eu.Only); kept != tc.keeps {
+			t.Errorf("base_url %q: pin kept = %v, want %v", tc.baseURL, kept, tc.keeps)
+		}
+	}
+}

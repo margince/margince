@@ -12,6 +12,8 @@ package ai
 
 import (
 	"context"
+	"net/url"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -165,7 +167,7 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 func (next RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingConfig {
 	carry := func(lane, kept ProviderConfig) ProviderConfig {
 		if lane.Routing == nil && kept.Routing != nil &&
-			lane.Provider == kept.Provider && lane.BaseURL == kept.BaseURL && lane.Model == kept.Model {
+			lane.Provider == kept.Provider && sameEndpoint(lane.BaseURL, kept.BaseURL) && lane.Model == kept.Model {
 			lane.Routing = kept.Routing
 		}
 		return lane
@@ -177,4 +179,29 @@ func (next RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingCon
 	next.Tiers = tiers
 	next.Embeddings.ProviderConfig = carry(next.Embeddings.ProviderConfig, stored.Embeddings.ProviderConfig)
 	return next
+}
+
+// sameEndpoint reports whether two base URLs name one endpoint, ignoring the
+// spellings a form or a hand edit varies without meaning to: surrounding
+// space, a trailing slash, and the case of scheme and host (URLs are
+// case-insensitive in both). Compared byte for byte, re-saving
+// "https://openrouter.ai/api/" over a stored "https://openrouter.ai/api" would
+// silently drop the lane's residency pin.
+func sameEndpoint(a, b string) bool {
+	return canonicalEndpoint(a) == canonicalEndpoint(b)
+}
+
+func canonicalEndpoint(raw string) string {
+	raw = strings.TrimSpace(raw)
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		// Unparseable is compared as written: it cannot be dialled, so the
+		// only question left is whether it is literally the stored value.
+		return raw
+	}
+	parsed.Scheme = strings.ToLower(parsed.Scheme)
+	parsed.Host = strings.ToLower(parsed.Host)
+	parsed.Path = strings.TrimRight(parsed.Path, "/")
+	parsed.RawPath = strings.TrimRight(parsed.RawPath, "/")
+	return parsed.String()
 }
