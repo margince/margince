@@ -316,8 +316,8 @@ func (cfg RoutingConfig) validate() error {
 	// — refuse it here, where the parser is the gate. The generated schema omits
 	// it from embeddingsBinding for the same reason, but the schema is editor
 	// tooling and cannot be the thing that holds this.
-	if cfg.Embeddings.Routing != nil {
-		return fmt.Errorf("ai: routing config: the embeddings lane takes no `routing` — upstream selection bounds a completion's tail, and an embedding is one forward pass; declare it on the chat tier that needs it")
+	if err := validateEmbeddingsRouting(cfg.Embeddings.ProviderConfig); err != nil {
+		return err
 	}
 	if cfg.Embeddings.Input != nil {
 		return fmt.Errorf("ai: routing config: the embeddings lane takes no `input` — it sends no attachments; declare it on the chat tier that reads documents")

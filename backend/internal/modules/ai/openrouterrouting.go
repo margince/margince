@@ -383,6 +383,33 @@ func validateUpstreamPreferences(tier string, binding ProviderConfig) error {
 	return nil
 }
 
+// validateEmbeddingsRouting admits on the embeddings lane only the preferences
+// that say WHICH hosts may read the text: `only`, `ignore` and
+// `allow_fallbacks`. The lane embeds the same text the chat tiers send, so a
+// residency pin that the chat tiers carry and the embeddings lane could not
+// would leave the one lane that sees every document free to leave the region.
+// The rest bound a completion's tail or its thinking, and an embedding is one
+// forward pass with neither — written there, they would be sent and ignored.
+func validateEmbeddingsRouting(binding ProviderConfig) error {
+	r := binding.Routing
+	if r == nil {
+		return nil
+	}
+	if err := validateUpstreamPreferences(string(TierEmbedLane), binding); err != nil {
+		return err
+	}
+	// An allowlist, not a list of what is refused: a preference added to
+	// OpenRouterRouting later is refused here until somebody decides it belongs,
+	// which is what the generated schema's additionalProperties:false says too.
+	rest := *r
+	rest.Only, rest.Ignore, rest.AllowFallbacks = nil, nil, nil
+	if !rest.IsEmpty() {
+		return fmt.Errorf("ai: routing config: the embeddings lane takes only `only`, `ignore` and `allow_fallbacks` — " +
+			"they say which hosts may read the text; the other preferences bound a completion, and an embedding is one forward pass")
+	}
+	return nil
+}
+
 // refuseEmptyOrRepeated holds a preference list to the shape the schema
 // declares: written means non-empty, and each entry said once.
 //

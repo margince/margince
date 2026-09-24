@@ -231,7 +231,7 @@ func (c *openAICompatClient) Embed(ctx context.Context, req model.EmbedRequest) 
 	// outright on models that aren't MRL-trained (a 400 on every embed call).
 	// Omit it — the store's width check catches a genuinely mismatched model.
 	req.Dimensions = 0
-	return openAIWireEmbed(ctx, c.post, c.defaultModel, req)
+	return openAIWireEmbed(ctx, c.post, c.defaultModel, req, c.routing.providerWire())
 }
 
 // isFetchableURL reports whether an attachment's URI is a URL the vendor can

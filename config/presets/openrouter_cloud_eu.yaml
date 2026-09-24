@@ -1,6 +1,12 @@
 # yaml-language-server: $schema=../margince.schema.json
-# config/presets/openrouter_cloud_eu.yaml — every CHAT tier on Mistral's EU
-# endpoint. The embeddings lane cannot carry the pin; see the gap noted below.
+# config/presets/openrouter_cloud_eu.yaml — every lane, chat and embeddings, on
+# Mistral's EU endpoint.
+#
+# The `_eu` in the name is a promise, and TestAResidencyPresetPinsEveryLaneToAnEURegion
+# holds it: every lane here must name an EU-region endpoint in `only:`. A lane
+# that inherits the product default or writes `routing: {}` lets the broker serve
+# the model from any region — including a model with no EU endpoint at all, which
+# it then serves from somewhere else without failing.
 #
 # The sibling openrouter_cloud.yaml picks the best model per tier and lets the
 # broker choose a host. This file inverts that: the host is fixed first, and the
@@ -10,9 +16,20 @@
 # location one.
 #
 # What the pin costs, stated plainly: mistralai/mistral-medium-3-5 is Mistral's
-# strongest current model and has NO EU endpoint, so `premium` and `frontier`
-# both name mistral-small-2603. Two tiers naming one model is the honest
-# reading of a region whose top rung does not exist in it.
+# strongest current model and has NO EU endpoint (the broker lists `mistral` and
+# `mistral/zdr` for it, read 2026-09-24), so it cannot be bound here at all —
+# `premium` and `frontier` both name mistral-small-2603. Two tiers naming one
+# model is the honest reading of a region whose top rung does not exist in it,
+# and it has a price: the two rungs share one upstream endpoint, so a 429 there
+# is met by both.
+#
+# That 429 is rarely ours. Without a key of its own the broker serves Mistral
+# from ITS key, one capacity pool shared by every account on it, and
+# mistral-small-2603's pool is the one that saturates. No binding here can move
+# the model to a pool of its own — it has exactly one EU endpoint — so the pool
+# is an account setting: attach a Mistral API key to the OpenRouter account
+# (its "bring your own key" integration) and calls draw on that key's limits.
+# A deployment on this preset should, before it relies on premium or frontier.
 #
 # `cheap_cloud` deliberately does NOT join them — see the note on that tier.
 #
@@ -87,12 +104,10 @@ seeds:
         routing:
           only: [mistral/eu]
           require_parameters: true
-    # KNOWN GAP: the embeddings lane cannot carry the pin. `routing:` is not a
-    # field on an embeddings binding and the parser refuses one there, so this
-    # lane reaches Mistral the vendor and the broker picks which of its regions
-    # serves the call. A deployment that needs the embedding text to stay in
-    # region binds this lane straight to https://api.mistral.ai instead of to
-    # the broker, and accepts a second credential for it.
+    # The embeddings lane carries the same pin. It reads every document the
+    # chat tiers do, so a lane left to the broker's choice of region would be
+    # the one place the preset's promise did not reach. Only the host-selection
+    # fields are legal on this lane; the pin is all it needs.
     #
     # KNOWN GAP: like its sibling, this preset cannot serve document_extract.
     # That task sends a PDF, and the OpenAI-compatible wire's declarable
@@ -104,3 +119,5 @@ seeds:
       model: mistralai/mistral-embed-2312
       base_url: https://openrouter.ai/api
       dimensions: 1024
+      routing:
+        only: [mistral/eu]

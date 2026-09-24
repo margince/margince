@@ -204,7 +204,7 @@ func (c *openaiClient) Stream(ctx context.Context, req model.Request) (model.Tok
 }
 
 func (c *openaiClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
-	return openAIWireEmbed(ctx, c.postRaw, c.defaultModel, req)
+	return openAIWireEmbed(ctx, c.postRaw, c.defaultModel, req, nil)
 }
 
 func (c *openaiClient) Caps() model.Capabilities {

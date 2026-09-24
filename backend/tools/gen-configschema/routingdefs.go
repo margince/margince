@@ -148,14 +148,35 @@ const routingDefsTemplate = `{
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
       "base_url": { "type": "string", "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default." },
-      "dimensions": { "type": "integer", "minimum": 0, "maximum": 2000, "description": "Vector width the provider is asked to emit. Optional; 0 or omitted defaults to 1536." }
+      "dimensions": { "type": "integer", "minimum": 0, "maximum": 2000, "description": "Vector width the provider is asked to emit. Optional; 0 or omitted defaults to 1536." },
+      "routing": { "$ref": "#/$defs/embeddingsRouting" }
     },
     "allOf": [
       {
         "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
         "then": { "required": ["base_url"] }
+      },
+      {
+        "if": { "required": ["routing"] },
+        "then": {
+          "properties": {
+            "provider": { "const": "openai_compatible" },
+            "base_url": { "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://([^/]*\\.)?[Oo][Pp][Ee][Nn][Rr][Oo][Uu][Tt][Ee][Rr]\\.[Aa][Ii](:[0-9]+)?(/|$)" }
+          },
+          "required": ["provider", "base_url"]
+        }
       }
     ]
+  },
+  "embeddingsRouting": {
+    "description": "Which of a broker's upstream hosts may read the text this lane embeds. Only the host-selection fields: the lane embeds the same text the chat tiers send, so a residency pin must reach it too, and the other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to leave the broker's own choice of host.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "only":            { "$ref": "#/$defs/upstreamRouting/properties/only" },
+      "ignore":          { "$ref": "#/$defs/upstreamRouting/properties/ignore" },
+      "allow_fallbacks": { "$ref": "#/$defs/upstreamRouting/properties/allow_fallbacks" }
+    }
   }
 }`
 

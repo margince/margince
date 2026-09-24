@@ -121,6 +121,25 @@ Three states, and the last two are different:
 The distinction survives the settings store, because an omitted key and a
 written `{}` are different JSON.
 
+### Pinning a region
+
+Neither the default nor `{}` says anything about *where* a call is served. The
+broker lists each model's endpoints by slug, and a region is part of the slug:
+`mistral/eu` is Mistral's EU endpoint, while the base slug `mistral` matches
+every region Mistral serves from and a variant such as `mistral/zdr` names a
+retention policy rather than a place. Only `only: [<provider>/<region>]` keeps a
+call in a region, and OpenRouter answers 404 when no endpoint matches rather
+than falling back elsewhere. Read a model's endpoints at
+`https://openrouter.ai/api/v1/models/<model id>/endpoints` before binding it: a
+model with no EU endpoint (`mistral-medium-3-5`, when this was written) cannot
+be pinned to the EU at all.
+
+The embeddings lane takes `only`, `ignore` and `allow_fallbacks` — the fields
+that choose hosts — and refuses the rest, which bound a completion's tail. A
+preset whose name ends in `_eu.yaml` must pin every lane, embeddings included,
+to an EU-region slug; `TestAResidencyPresetPinsEveryLaneToAnEURegion` fails one
+that does not.
+
 ## 3b. Validated through the config path
 
 The figures in §3 were taken with the preferences injected by hand. They were
