@@ -122,14 +122,14 @@ describe("the receipt draws every lane it promises", () => {
     renderMagic();
     expect(
       await screen.findByText(
-        "A source is hidden from your account: Proposals",
+        "Source not available to you: Proposals",
       ),
     ).toBeTruthy();
     // The lane the refusal belongs to is EMPTY, and saying so would report a
     // clear queue over an answer nobody could read.
     expect(screen.queryByText("No decision is waiting on you.")).toBeNull();
     expect(
-      within(lane("Waiting on you")).getByText(/could not be loaded/i),
+      within(lane("Waiting on you")).getByText(/may be incomplete/i),
     ).toBeTruthy();
   });
 
@@ -206,7 +206,7 @@ describe("the receipt draws every lane it promises", () => {
     );
     renderMagic();
     expect(
-      await screen.findByText("This change has already been put back."),
+      await screen.findByText("This change was already undone."),
     ).toBeTruthy();
   });
 
