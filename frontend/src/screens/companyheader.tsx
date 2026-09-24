@@ -112,8 +112,8 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
   // reason, and folding them in again would answer "no grant" as though it were
   // a fact about the record.
   const mine = company.writable ?? false;
-  // Archived first: it is the reason a reader can act on, by restoring the
-  // record. Ownership comes last because it is the standing state — a company
+  // Archived first: no grant or owner can lift it, because an archived company
+  // has no way back to live. Ownership comes last because it is the standing state — a company
   // that is simply somebody else's is not a problem to solve, it is who owns it.
   if (company.archived_at) {
     return t("record.archivedReadOnly");

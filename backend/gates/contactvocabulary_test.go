@@ -248,6 +248,9 @@ var retired = gatekit.Waive(map[string]string{
 	"docs/compliance/de": "German legal prose about the employees whose mail is captured — " +
 		"die beschäftigte Person is a human being, and these documents never name this record",
 
+	"scripts/handbook-ask/questions.txt": "questions in the words users type — \"add a new " +
+		"contact\" is not what they say — and the bank exists to prove the handbook answers them anyway",
+
 	"scripts/fe-file-length-waivers.txt": "its note explains which two words got wider, which it " +
 		"cannot do without saying them",
 

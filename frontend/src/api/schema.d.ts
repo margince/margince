@@ -5544,7 +5544,7 @@ export interface paths {
          *       A deal attaches to a contact by ADR-0008 §5, and un-contacting it would strand the
          *       deal's counterparty.
          *     - Original outcome `created` ⇒ `unwind='reversed'`: the lead un-archives to
-         *       `status=working` and the created contact is archived. **Activities captured after
+         *       `status=engaged` and the created contact is archived. **Activities captured after
          *       promotion stay on the contact's timeline** — they are real history, not something
          *       to rewrite backwards.
          *     - Original outcome `merged` ⇒ `unwind='merge_lineage_only'`: the pre-existing contact
@@ -26768,7 +26768,7 @@ export interface components {
             lead: components["schemas"]["Lead"];
             /**
              * @description `reversed` — the promotion had created a contact, which is now archived and the
-             *     lead restored to `working`. `merge_lineage_only` — the promotion had merged into
+             *     lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
              *     a pre-existing contact, which is left untouched; only the lineage pointers are
              *     nulled (formulas §26).
              * @enum {string}

@@ -39,9 +39,12 @@ maps the codebase and links everything below.
 The only tree here written for the contact using Margince rather than building it:
 no code, no API, just the app.
 
-- [handbook/README.md](handbook/README.md) — eleven pages covering records, the
-  pipeline, capture, what the AI does and does not do, approvals, documents,
-  retention, seats and settings.
+- [handbook/README.md](handbook/README.md) — twenty-three pages covering records,
+  the pipeline, capture, mail, what the AI does and does not do, approvals,
+  offers, documents, retention, seats and settings. It is also the default
+  document set behind **Ask your documents**, so
+  [how-to/update-the-handbook.md](how-to/update-the-handbook.md) says how to
+  write a page that can answer a question, and how to measure it.
 
 ### Compliance — the German pack a customer signs
 
@@ -110,6 +113,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [run-a-project.md](how-to/run-a-project.md) — the project page section by section, phase moves, and every rule by which an email finds its project — including what filing does to retention; no code.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md) — run ONE production AI invocation site against input you supply (`make ai-probe`), and read every boundary between that input and the verdict as numbers.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md) — build the self-contained folder that runs the whole stack with no Docker, on macOS (`make desktop`) or Windows (`make desktop-win`), then run, configure and update an installation.
+- [update-the-handbook.md](how-to/update-the-handbook.md) — change the operator handbook so the in-app ask can answer from it: how a page is cut and read, the task-section rules, the probe (`scripts/handbook-ask/probe.sh`) to run before and after, and the checklist.
 - [cut-a-release.md](how-to/cut-a-release.md) — push a `v*` tag and get a GitHub release with both desktop bundles attached: what the tag's shelf decides, what a failed or re-run lane leaves behind, and why this is not the constellation dist release.
 
 ### Reference — look it up

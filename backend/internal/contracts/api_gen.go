@@ -28545,14 +28545,14 @@ type DemoteLeadResponse struct {
 	Lead Lead `json:"lead"`
 
 	// Unwind `reversed` — the promotion had created a contact, which is now archived and the
-	// lead restored to `working`. `merge_lineage_only` — the promotion had merged into
+	// lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
 	// a pre-existing contact, which is left untouched; only the lineage pointers are
 	// nulled (formulas §26).
 	Unwind DemoteLeadResponseUnwind `json:"unwind"`
 }
 
 // DemoteLeadResponseUnwind `reversed` — the promotion had created a contact, which is now archived and the
-// lead restored to `working`. `merge_lineage_only` — the promotion had merged into
+// lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
 // a pre-existing contact, which is left untouched; only the lineage pointers are
 // nulled (formulas §26).
 type DemoteLeadResponseUnwind string
