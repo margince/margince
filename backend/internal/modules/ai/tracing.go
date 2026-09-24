@@ -257,13 +257,15 @@ func (r *Router) traceForFailedRung(b *binding, base Call, t Tier, callErr error
 //
 // `reported` is what the Response said, and it wins whenever it is set: a
 // provider that stated its terminal outranks anything inferred from an error
-// value. A failed attempt has no Response to read, so an abnormal terminal
-// arrives on the error instead (gemini.go's stoppedError).
+// value, and it is how a truncation arrives: a cut-off reply is a Response
+// carrying model.FinishReasonLength on every wire, never a failure. A failed
+// attempt has no Response to read, so a withholding terminal arrives on the
+// error instead (gemini.go's stoppedError).
 //
 // Without this the stored row is blank on exactly the calls finish_reason
-// exists to describe: MAX_TOKENS, SAFETY and RECITATION all classify to the
-// single `provider_error` sentinel and are separable only by this field,
-// though they call for opposite responses.
+// exists to describe: SAFETY and RECITATION both classify to the single
+// `provider_error` sentinel and are separable only by this field, though they
+// call for different responses.
 func finishReasonFor(reported string, callErr error) string {
 	if reported != "" {
 		return reported

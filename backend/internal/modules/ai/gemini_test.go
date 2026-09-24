@@ -314,26 +314,27 @@ func TestGeminiThoughtSignatureRoundTrips(t *testing.T) {
 	}
 }
 
-// SAFETY / MAX_TOKENS / RECITATION arrive inside a 200 body — an abnormal
-// finishReason must surface as an error, never as a clean (truncated) answer.
+// SAFETY / RECITATION arrive inside a 200 body — a withholding finishReason
+// must surface as an error, never as a clean answer. MAX_TOKENS is not one:
+// finishreasonparity_test.go holds it to a truncated Response.
 func TestGeminiAbnormalFinishReasonIsAnError(t *testing.T) {
 	client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"trunc"}]},"finishReason":"MAX_TOKENS"}]}`))
+		_, _ = w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"withheld"}]},"finishReason":"SAFETY"}]}`))
 	})
 	_, err := client.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
-	if err == nil || !strings.Contains(err.Error(), "MAX_TOKENS") {
-		t.Fatalf("want error naming MAX_TOKENS, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "SAFETY") {
+		t.Fatalf("want error naming SAFETY, got %v", err)
 	}
 }
 
 // The terminal has to survive as DATA, not only inside the message: every
-// abnormal finishReason classifies to the one `provider_error` sentinel, so
-// without an accessor the stored row cannot separate a truncated answer
-// (MAX_TOKENS — retry smaller) from a refused one (SAFETY — retrying is
-// pointless). The message is asserted byte-for-byte because callers and the
-// test above match on its text, so carrying the reason must not reword it.
+// withholding finishReason classifies to the one `provider_error` sentinel, so
+// without an accessor the stored row cannot separate a refused answer (SAFETY —
+// retrying is pointless) from a recited one (RECITATION — change the prompt).
+// The message is asserted byte-for-byte because callers and the test above
+// match on its text, so carrying the reason must not reword it.
 func TestGeminiAbnormalFinishReasonCarriesTheTerminalAsData(t *testing.T) {
-	for _, reason := range []string{"MAX_TOKENS", "SAFETY", "RECITATION"} {
+	for _, reason := range []string{"SAFETY", "RECITATION", "PROHIBITED_CONTENT"} {
 		t.Run(reason, func(t *testing.T) {
 			client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
 				_, _ = w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"x"}]},"finishReason":"` + reason + `"}]}`))
@@ -389,6 +390,34 @@ func TestGeminiStreamSurfacesErrorChunkAndAbnormalFinish(t *testing.T) {
 				t.Fatalf("want error naming %q, got %v", tc.want, err)
 			}
 		})
+	}
+}
+
+// A stream cut off at MAX_TOKENS delivers the text it generated, then ends on
+// an error: TokenStream has no terminal to carry "length", and a clean EOF
+// would pass the half-written answer off as a complete one.
+func TestGeminiStreamCutOffDeliversItsTextThenSaysSo(t *testing.T) {
+	client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `data: {"candidates":[{"content":{"parts":[{"text":"he"}]}}]}`+"\n\n")
+		_, _ = io.WriteString(w, `data: {"candidates":[{"content":{"parts":[{"text":"llo"}]},"finishReason":"MAX_TOKENS"}]}`+"\n\n")
+	})
+	stream, err := client.Stream(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "hi"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := stream.Close(); err != nil {
+			t.Errorf("closing stream: %v", err)
+		}
+	}()
+	for _, want := range []string{"he", "llo"} {
+		if chunk, ok, err := stream.Next(context.Background()); err != nil || !ok || chunk != want {
+			t.Fatalf("chunk %q: got %q %v %v — the cut-off chunk's own text was generated and billed", want, chunk, ok, err)
+		}
+	}
+	_, ok, err := stream.Next(context.Background())
+	if ok || err == nil || !strings.Contains(err.Error(), "MAX_TOKENS") {
+		t.Fatalf("a cut-off stream ended as %v %v, want an error naming MAX_TOKENS", ok, err)
 	}
 }
 

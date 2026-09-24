@@ -92,8 +92,9 @@ func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (mode
 	//craft:ignore swallowed-errors best-effort close of a response body already read to completion — the decode result decides the outcome
 	defer func() { _ = body.Close() }()
 	var out struct {
-		Model   string `json:"model"`
-		Content []struct {
+		Model      string `json:"model"`
+		StopReason string `json:"stop_reason"`
+		Content    []struct {
 			Type  string          `json:"type"`
 			Text  string          `json:"text"`
 			Name  string          `json:"name"`
@@ -134,7 +135,19 @@ func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (mode
 		CachedTokens:     out.Usage.CacheReadInputTokens,
 		CacheWriteTokens: out.Usage.CacheCreationInputTokens,
 		ServedModel:      out.Model,
+		FinishReason:     anthropicFinishReason(out.StopReason),
 	}, nil
+}
+
+// anthropicFinishReason is a stop_reason in the port's vocabulary: a reply cut
+// off at max_tokens is model.FinishReasonLength on every wire, because the
+// structured retry and the cert lane's ungraded run read that value and no
+// other.
+func anthropicFinishReason(stopReason string) string {
+	if stopReason == "max_tokens" {
+		return model.FinishReasonLength
+	}
+	return stopReason
 }
 
 // completeStreamed is Complete over the SSE wire: text deltas (and
@@ -178,6 +191,7 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 				Type        string `json:"type"`
 				Text        string `json:"text"`
 				PartialJSON string `json:"partial_json"`
+				StopReason  string `json:"stop_reason"`
 			} `json:"delta"`
 			Usage struct {
 				OutputTokens int `json:"output_tokens"`
@@ -197,6 +211,7 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 			text.WriteString(ev.Delta.PartialJSON)
 		case "message_delta":
 			resp.OutputTokens = ev.Usage.OutputTokens
+			resp.FinishReason = anthropicFinishReason(ev.Delta.StopReason)
 		case "message_stop":
 			resp.Text = text.String()
 			return resp, nil

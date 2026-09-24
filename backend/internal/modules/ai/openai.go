@@ -99,10 +99,11 @@ type openaiResponse struct {
 	// Model is the Responses API's served-identity field: the specific model
 	// that generated this response.
 	Model string `json:"model"`
-	// Status is the terminal response state: "completed" is the only success;
+	// Status is the terminal response state: "completed" is the success;
 	// "failed" carries Error, "incomplete" carries IncompleteDetails (e.g.
-	// max_output_tokens, content_filter). Anything else must surface as an
-	// error — a truncated or filtered answer must never read as a clean one.
+	// max_output_tokens, content_filter). An answer cut off at
+	// max_output_tokens is a truncated Response (openaiCutOff); anything else
+	// surfaces as an error, so a filtered answer never reads as a clean one.
 	Status string `json:"status"`
 	Error  struct {
 		Code    string `json:"code"`
@@ -142,7 +143,8 @@ func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.R
 	if err := json.NewDecoder(body).Decode(&out); err != nil {
 		return model.Response{}, fmt.Errorf("ai: openai: decode response: %w", err)
 	}
-	if err := openaiTerminalStatus(out); err != nil {
+	cutOff := openaiCutOff(out)
+	if err := openaiTerminalStatus(out); err != nil && !cutOff {
 		return model.Response{}, err
 	}
 	// Walk output[]: a type:"reasoning" item can precede the message, and a
@@ -168,6 +170,9 @@ func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.R
 		CachedTokens:    out.Usage.InputTokenDetails.CachedTokens,
 		ReasoningTokens: out.Usage.OutputTokenDetails.ReasoningTokens,
 		ServedModel:     out.Model,
+	}
+	if cutOff {
+		resp.FinishReason = model.FinishReasonLength
 	}
 	if out.ID != "" {
 		if meta, err := json.Marshal(map[string]string{"response_id": out.ID}); err == nil {
@@ -346,6 +351,14 @@ func openaiError(resp *http.Response) error {
 		return providerRefusal(resp, "", fmt.Errorf("ai: openai: %s: %s (http %d)", apiErr.Error.Type, apiErr.Error.Message, resp.StatusCode))
 	}
 	return providerRefusal(resp, "", fmt.Errorf("ai: openai: http %d", resp.StatusCode))
+}
+
+// openaiCutOff reports a response the output ceiling stopped: an answer,
+// truncated, rather than a failed call. Only Complete reads it — TokenStream
+// has no terminal to carry the truncation, so a stream still ends on the
+// incomplete error.
+func openaiCutOff(out openaiResponse) bool {
+	return out.Status == "incomplete" && out.IncompleteDetails.Reason == "max_output_tokens"
 }
 
 // openaiTerminalStatus maps a non-completed Responses object to an error: a

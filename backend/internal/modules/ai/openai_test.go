@@ -318,16 +318,17 @@ func TestOpenAIWirePinsStoreFalse(t *testing.T) {
 	}
 }
 
-// A failed or incomplete terminal status must never read as a clean answer —
-// the caller would treat a content-filter abort or a max-token truncation as
-// the model's full reply.
+// A failed or filtered terminal status must never read as a clean answer —
+// the caller would treat a content-filter abort as the model's full reply. A
+// max_output_tokens stop is not one: finishreasonparity_test.go holds it to a
+// truncated Response.
 func TestOpenAICompleteNonCompletedStatusIsAnError(t *testing.T) {
 	cases := map[string]struct {
 		body string
 		want string
 	}{
 		"failed":     {`{"id":"r","status":"failed","error":{"code":"server_error","message":"boom"}}`, "server_error"},
-		"incomplete": {`{"id":"r","status":"incomplete","incomplete_details":{"reason":"max_output_tokens"}}`, "max_output_tokens"},
+		"incomplete": {`{"id":"r","status":"incomplete","incomplete_details":{"reason":"content_filter"}}`, "content_filter"},
 		"missing":    {`{"id":"r","output":[{"type":"message","content":[{"type":"output_text","text":"ok"}]}]}`, "no terminal status"},
 	}
 	for name, tc := range cases {

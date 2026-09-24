@@ -253,9 +253,12 @@ type ollamaChatEvent struct {
 	Message struct {
 		Content string `json:"content"`
 	} `json:"message"`
-	Done            bool `json:"done"`
-	PromptEvalCount int  `json:"prompt_eval_count"`
-	EvalCount       int  `json:"eval_count"`
+	Done bool `json:"done"`
+	// DoneReason is already the port's vocabulary: "length" when num_predict
+	// or the window cut the reply off, "stop" when it finished.
+	DoneReason      string `json:"done_reason"`
+	PromptEvalCount int    `json:"prompt_eval_count"`
+	EvalCount       int    `json:"eval_count"`
 }
 
 func (c *ollamaClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
@@ -274,6 +277,7 @@ func (c *ollamaClient) Complete(ctx context.Context, req model.Request) (model.R
 		InputTokens:  out.PromptEvalCount,
 		OutputTokens: out.EvalCount,
 		ServedModel:  out.Model,
+		FinishReason: out.DoneReason,
 	}, nil
 }
 

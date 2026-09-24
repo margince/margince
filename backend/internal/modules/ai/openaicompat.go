@@ -158,21 +158,6 @@ func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (m
 	}, nil
 }
 
-// completionText is the answer text, falling back to a reasoning model's
-// thinking when the answer itself is empty.
-//
-// The fallback exists because this wire's two text fields are not
-// alternatives — they are sequential. A reasoning model emits thinking first
-// and the answer after it, both charged to the same output budget, so a budget
-// that runs out mid-thought yields a response with every generated token in
-// Reasoning and Content null. Returning Content alone hands the caller an
-// empty string for a call that was generated and billed in full, with no error
-// to retry on and nothing in the trace to explain it.
-//
-// The thinking is not as good as the answer, and it is not pretended to be:
-// the caller's own schema validation will reject it, which is the honest
-// outcome. What changes is that the rejection carries the text that was paid
-// for, and FinishReason beside it says the budget was the cause.
 // reasoningWithin bounds a reported reasoning count by the completion it is a
 // breakdown of, because on this wire the two counts do not always agree.
 //
@@ -203,6 +188,21 @@ func reasoningWithin(completion, reasoning int) int {
 	return reasoning
 }
 
+// completionText is the answer text, falling back to a reasoning model's
+// thinking when the answer itself is empty.
+//
+// The fallback exists because this wire's two text fields are not
+// alternatives — they are sequential. A reasoning model emits thinking first
+// and the answer after it, both charged to the same output budget, so a budget
+// that runs out mid-thought yields a response with every generated token in
+// Reasoning and Content null. Returning Content alone hands the caller an
+// empty string for a call that was generated and billed in full, with no error
+// to retry on and nothing in the trace to explain it.
+//
+// The thinking is not as good as the answer, and it is not pretended to be:
+// the caller's own schema validation will reject it, which is the honest
+// outcome. What changes is that the rejection carries the text that was paid
+// for, and FinishReason beside it says the budget was the cause.
 func completionText(content, reasoning, finishReason string) string {
 	if content != "" {
 		return content
@@ -213,16 +213,11 @@ func completionText(content, reasoning, finishReason string) string {
 	// entirely, so handing it back as the answer would dress a refusal up as a
 	// reply. Those keep their empty text, which is what the caller's own schema
 	// check is there to reject.
-	if finishReason == finishReasonLength {
+	if finishReason == model.FinishReasonLength {
 		return reasoning
 	}
 	return ""
 }
-
-// finishReasonLength is the stop reason that means the output budget bound
-// before the model was done — the one case where the thinking is all that got
-// generated and is worth handing back.
-const finishReasonLength = "length"
 
 //nolint:ireturn // model.Client.Stream returns the port's TokenStream interface by contract
 func (c *openAICompatClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {

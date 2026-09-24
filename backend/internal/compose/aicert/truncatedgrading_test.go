@@ -161,3 +161,39 @@ func TestATaskWhoseEveryRunWasCutOffIsNotCertified(t *testing.T) {
 			median, minimum, graded)
 	}
 }
+
+// A candidate cut off on every attempt still yields a record: each run counts,
+// fails and goes ungraded, and none is re-driven as though the provider were
+// down. What each adapter must hand over for this to hold — the partial text
+// and model.FinishReasonLength rather than an error — is held per wire by the
+// ai package's finish-reason parity tests; the cert lane refuses a loopback
+// vendor endpoint, so the real wire cannot be served here.
+func TestATaskCutOffOnEveryAttemptIsRecordedNotAborted(t *testing.T) {
+	waited := recordSleeps(t)
+	cutOff := ai.FakeStep{Text: "the widget is", FinishReason: model.FinishReasonLength}
+	candidate := ai.NewFakeClient().ScriptSteps(cutOff, cutOff, cutOff)
+	// Left unscripted: a cut-off answer is never sent to the judge.
+	judge := ai.NewFakeClient()
+
+	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
+		})
+	if err != nil {
+		t.Fatalf("a candidate that answered, if too long, aborted the task with no record: %v", err)
+	}
+	if rec.Runs != 3 || rec.Reliability != 0 || rec.Verdict != VerdictNotSupported {
+		t.Errorf("runs=%d reliability=%v verdict=%q, want 3 failed runs and %q", rec.Runs, rec.Reliability, rec.Verdict, VerdictNotSupported)
+	}
+	if got := len(candidate.Calls()); got != 3 {
+		t.Errorf("the candidate was called %d times, want 3 — one per run, with no ladder walk and no re-drive", got)
+	}
+	if len(*waited) != 0 {
+		t.Errorf("waited %v — a truncation is an answer, not an outage to back off from", *waited)
+	}
+	if got := len(judge.Calls()); got != 0 {
+		t.Errorf("the judge was called %d time(s) on answers that never finished", got)
+	}
+}
