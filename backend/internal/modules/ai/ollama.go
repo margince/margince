@@ -27,6 +27,8 @@ type ollamaClient struct {
 	// attachmentMIMEs is what THIS binding carries: the wire's own carriage,
 	// narrowed by any `input:` the operator declared (inputmodality.go).
 	attachmentMIMEs []string
+	// thinks is what /api/show said each model accepts for `think`.
+	thinks ollamaThinkCache
 }
 
 type ollamaWire struct {
@@ -35,6 +37,9 @@ type ollamaWire struct {
 	Tools    []ollamaToolWire `json:"tools,omitempty"`
 	Stream   bool             `json:"stream"`
 	Options  *ollamaOptions   `json:"options,omitempty"`
+	// Think is what ollamathink.go resolves for the model; absent means the
+	// model does not think.
+	Think json.RawMessage `json:"think,omitempty"`
 	// Format constrains decoding to a JSON Schema (Ollama's structured-output
 	// mode). Sent only when the request carries a ResponseSchema; omitted
 	// otherwise so ordinary free-text calls are unaffected.
@@ -123,7 +128,7 @@ const ollamaContextBucket = 4096
 // it, and neither is visible from the runner:
 //
 //   - ollamaWindowFor rounds a request UP by a whole bucket, so the largest
-//     estimate not clamped back to the cap is 32,767, not 32,768. Subtracting
+//     estimate not clamped back to the cap is 40,959, not 40,960. Subtracting
 //     alone gives a window one token too high.
 //   - contextWindow's estimate is BIGGER than a caller's for the same prompt.
 //     It also counts each message's role and an 8-byte per-message frame — a
@@ -222,8 +227,8 @@ func ollamaWindowFor(tokens int) int {
 // says done_reason: "length"; an embedding past its window is computed from the
 // head of the text and returns a vector of the right width that no caller can
 // tell apart from a whole one. And the window ALONE cannot say how much was
-// lost — it saturates at the cap, so a document at 33k tokens and one at a
-// million both report the same 32768. What was asked for is the half that
+// lost — it saturates at the cap, so a document at 41k tokens and one at a
+// million both report the same 40960. What was asked for is the half that
 // carries the magnitude, so both leave this function.
 func embedContextWindow(inputs []string) (window, estimatedTokens int) {
 	longest := 0
@@ -378,6 +383,11 @@ func (c *ollamaClient) sendChat(ctx context.Context, req model.Request, stream b
 	if wire.Model == "" {
 		wire.Model = c.defaultModel
 	}
+	think, err := c.think(ctx, wire.Model, req.ProviderOptions)
+	if err != nil {
+		return nil, err
+	}
+	wire.Think = think
 	if len(req.ResponseSchema) > 0 {
 		wire.Format = req.ResponseSchema
 	}
@@ -427,13 +437,27 @@ func (c *ollamaClient) post(ctx context.Context, path string, payload []byte) (i
 		defer func() { _ = resp.Body.Close() }()
 		raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		if readErr != nil {
-			return nil, providerRefusal(resp, "", fmt.Errorf("ai: ollama: http %d", resp.StatusCode))
+			return nil, providerRefusal(resp, "", &ollamaStatusError{code: resp.StatusCode})
 		}
 		// Ollama's {"error": "..."} is one free-text sentence with no code, so
 		// it is logged redacted and never read as a rejected request.
-		return nil, providerRefusal(resp, "", fmt.Errorf("ai: ollama: http %d: %s", resp.StatusCode, safeProviderText(ctx, string(raw))))
+		return nil, providerRefusal(resp, "", &ollamaStatusError{code: resp.StatusCode, body: safeProviderText(ctx, string(raw))})
 	}
 	return resp.Body, nil
+}
+
+// ollamaStatusError is a non-200 reply, kept typed so a caller can tell a
+// server that does not have an endpoint from one that refused the request.
+type ollamaStatusError struct {
+	code int
+	body string
+}
+
+func (e *ollamaStatusError) Error() string {
+	if e.body == "" {
+		return fmt.Sprintf("ai: ollama: http %d", e.code)
+	}
+	return fmt.Sprintf("ai: ollama: http %d: %s", e.code, e.body)
 }
 
 // ollamaStream reads the JSON-lines chat stream. The reply's terminal is the

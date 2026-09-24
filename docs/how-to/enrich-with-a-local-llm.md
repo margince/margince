@@ -20,6 +20,14 @@ ollama pull bge-m3           # only if you exercise search/retrieval (embeddings
 `mistral` follows the extraction JSON schema more reliably than `gemma3`; pull
 it too (`ollama pull mistral`) if enrich grounding is weak.
 
+For Gemma 4, pull `gemma4:12b` and bind it with
+[`config/presets/gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
+Gemma 4 reasons before it answers, which Ollama turns on by default, so the
+adapter sends `think: false` on every chat call unless the request asks for
+thinking. Left on, a short JSON answer takes tens of seconds and a small output
+budget is spent on the reasoning before the answer starts, so the reply comes
+back empty with `done_reason: "length"`.
+
 ## 2. Point the AI lanes at Ollama
 
 A dev stack is bound to one broker over `openai_compatible` on every tier and on

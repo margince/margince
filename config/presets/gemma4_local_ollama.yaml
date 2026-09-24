@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=../margince.schema.json
+# config/presets/gemma4_local_ollama.yaml — Gemma 4 on the operator's own box,
+# through Ollama on loopback. Zero egress.
+#
+# This is the SOVEREIGN counterpart of consumer_class_brokered.yaml: the same
+# open-weight family, but served here instead of brokered, so it files under a
+# different profile and the two records never share a filename. The brokered
+# preset answers "which weights are worth buying hardware for"; this one answers
+# "what does the hardware you bought actually do".
+#
+#     ollama pull gemma4:12b && ollama pull bge-m3
+#     make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml \
+#       JUDGE=ollama:gpt-oss:20b
+#
+# The judge is local because the profile is: `sovereign` refuses a cloud
+# provider on ANY binding the run validates, the judge's included. It is also
+# NOT resolved from this file — every tier below is Gemma 4, and a judge equal
+# to the candidate grades itself. gpt-oss:20b is a different family that fits
+# beside a 12b on a 24GB machine only by unloading it between calls, so the
+# latency a certification run records includes those reloads; measure serving
+# speed with a direct call, not from a record.
+#
+# The committed records cover twelve shipped tasks: the six that certified, and
+# the ones that fell short (request_settlement, owed_verdict, signal_extract,
+# account_scan, site_triage), so the readiness page shows both ends. The rest of
+# the corpus is uncertified under this binding, not failed.
+#
+# WHY 12b ON EVERY TIER. Sized for a 24GB Apple-silicon machine, the smallest
+# this preset is meant to run on, with Ollama 0.34 (its server log reports
+# about 17.8GiB of that memory usable by the GPU, and that budget picks the id):
+#
+#   e4b   27 tok/s   fast, but 5 of 15 capture_classify runs passed: it mangles
+#                    message ids and answers a reply for mail we sent. Not a
+#                    tier this product can lean on.
+#   12b   12 tok/s   8.3GB resident at a 12K window, all on the GPU. Passed
+#                    every capture_classify run.
+#   26b   10 tok/s   MoE, ~4B active per token, but 18GB of weights: 35% of it
+#                    ran on the CPU at the same window and a load took 21s.
+#                    Bind `premium` and `frontier` to it on a machine with
+#                    32GB or more; on 24GB it is slower than 12b, not better.
+#
+# The 31B is absent: it does not fit a 24GB machine at 4 bits.
+#
+# `document_extract` cannot be served: it sends a PDF and the Ollama wire carries
+# images only (internal/modules/ai/carriage.go). That task fails under this
+# preset by design; see README.md.
+#
+# Not loaded automatically — see README.md.
+version: 1
+
+seeds:
+  ai_routing:
+    # sovereign is enforced, not labelled: it refuses any cloud provider, and it
+    # refuses an Ollama base_url that is not loopback or a private range. Omitting
+    # base_url resolves to http://localhost:11434, which passes.
+    profile: sovereign
+    tiers:
+      local_small: { provider: ollama, model: "gemma4:12b" }
+      cheap_cloud: { provider: ollama, model: "gemma4:12b" }
+      premium:     { provider: ollama, model: "gemma4:12b" }
+      frontier:    { provider: ollama, model: "gemma4:12b" }
+    # bge-m3 is 1024-wide, the same column width the brokered preset's
+    # mistral-embed stand-in uses, so moving between the two changes no column.
+    # It does not make the vectors comparable — re-embed on any model change.
+    embeddings:
+      provider: ollama
+      model: bge-m3
+      dimensions: 1024
