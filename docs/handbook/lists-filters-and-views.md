@@ -42,6 +42,13 @@ To search a list in Margince, open the list in the sidebar — **Contacts**, **C
 **Deals** has no search box: find a deal with the command palette (⌘K or Ctrl+K), or filter by **Company** or **Stage**.
 Also called: find a contact, look up a customer, search the table.
 
+### How do I find a contact by email address?
+To find a contact by email address in Margince, open **Contacts** in the sidebar and paste the whole address into the **Search** box; it matches the exact address, whatever its capitals.
+1. Type or paste the full address, such as anna@example.com. Part of an address does not match.
+2. For a lead, do the same on **Leads**; for a company, type its domain on **Companies**.
+The command palette (⌘K or Ctrl+K) searches names and titles, not email addresses, so use the list's **Search** box for an address.
+Also called: look up by email, search by email, who is this address, find a sender.
+
 ### How do I filter a list?
 To filter a list in Margince, open the list and press **Filter** in the toolbar, pick what to filter by, then pick the value.
 1. Press **Filter**; **Search attributes** narrows the choices.
@@ -222,7 +229,7 @@ To reassign several deals or leads at once in Margince, tick them on the **Deals
 2. Press **Assign**. Rows that went through leave the selection.
 3. Refused rows stay ticked under "{count} not applied:" with a reason, such as "no permission to reassign". Press **Assign** to retry.
 Leads assigned away leave **Mine**; the notice offers **Show all**.
-Also called: bulk reassign, hand over accounts, transfer deals.
+Also called: bulk reassign, hand over accounts, transfer deals, a colleague left, reassign all their deals.
 
 ### What can I do to several deals or leads at once?
 The bulk bar on the Margince **Deals** table offers **Assign** (a new owner), **Move to stage** (open stages only) and **Archive**; the bulk bar on the **Leads** table offers **Assign** and **Disqualify** (with a **Reason**).

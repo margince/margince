@@ -11,13 +11,11 @@ Knowing which is which saves a lot of confusion.
    company can ask questions of.
 
 ### How do I upload a document?
-To upload a document in Margince, open the company, contact or deal, choose its **Documents** tab and click **Add document**.
-1. Open the record and choose the **Documents** tab.
-2. Click **Add document**.
-3. On a company, choose **About**: **This company** or **A deal** (then pick the deal under **Search company deals**).
-4. Choose a **Category**; it starts as Other. **Title** is optional and defaults to the filename.
-5. Drop the file on **File** ("Drop a file here, or click to choose one") and click **Upload**.
-Without write access to the record the button is not shown. A signed contract document is uploaded the same way, with **Category** set to **Contract**; the contract record itself is added separately, see [Contracts and invoices](contracts-and-invoices.md).
+To upload a document in Margince, such as a customer's signed contract, open the company, contact or deal, choose its **Documents** tab and click **Add document**.
+1. On a company, set **About** to **This company** or **A deal** and pick the deal.
+2. Choose a **Category** (a signed contract takes **Contract**); **Title** is optional.
+3. Drop the file on **File**, or click to choose one, and click **Upload**.
+Without write access the button is not shown. The contract record itself is added apart, see [Contracts and invoices](contracts-and-invoices.md).
 Also called: attach a file, add an attachment, add a PDF, upload a contract document.
 
 ### How do I attach a file to a contact?

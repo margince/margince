@@ -44,6 +44,13 @@ To bring back a deactivated colleague, open **Settings → Members**, open the *
 They must sign in again afterwards. Reactivating takes a full seat back, so it is refused when the licence is full.
 Also called: restore a user, re-enable an account.
 
+### A colleague left: who gets their deals, and how do I reassign their records?
+When a colleague leaves and is deactivated in Margince, their deals, leads, contacts and companies stay owned by them: nothing is reassigned automatically. Hand the work over before you deactivate them.
+1. List what they own: **Filters and views** → **Add clause** → **owner id**.
+2. **Deals** and **Leads**: tick the rows on the table and press **Assign** in the bulk bar; see [Lists, filters and views](lists-filters-and-views.md).
+3. **Contacts** and **Companies**: change **Owner** in each record's **Details** panel.
+Also called: offboarding, handover, a rep left, transfer a colleague's accounts.
+
 ### How do I reset someone's password?
 To reset a colleague's password in Margince, open **Settings → Members**, open the **Actions for {name}** menu on their row and choose **Get set-password link**.
 1. Choose **Get set-password link**.
@@ -91,10 +98,8 @@ is refused the same way.
 and never metered.
 
 Agents get seats too. An agent seat is always a full seat, and it is **not
-counted against your licence**. The licence defines a seat as one identified
-human being, and says that automated agents acting under the authority of a
-counted seat do not themselves count, so the meter follows the document a
-customer actually relies on.
+counted against your licence**: the licence defines a seat as one identified
+human being, and agents acting under a counted seat's authority do not count.
 
 That does not let an installation work without limit through agents: an agent
 may act only where it is attributable to a counted seat, so an installation with
@@ -106,9 +111,8 @@ from a role of its own. See [Agents, passports and what they may do](agents-and-
 
 ### The licence
 
-The licence page, **Settings → Seats and license**, shows the **Seats** in use
-as "{used} of {granted}". If nothing caps your seats, it says "No limit" rather
-than showing a zero.
+**Settings → Seats and license** shows the **Seats** in use as "{used} of
+{granted}", or "No limit" if nothing caps them.
 
 When seats in use exceed the licence, Margince says: "No one loses access and no
 seat is removed, but no new member can be invited until the count is within the
@@ -356,10 +360,9 @@ own, so there is no point retrying.
 them."
 
 **Deactivating** signs them out everywhere and revokes their agent passports
-immediately, in one step: "They are signed out everywhere and their agent
-passports are revoked immediately. They can be reactivated later and must then
-sign in again." Reactivating takes a seat back, so it can be refused if you are
-full; a read seat never is.
+in one step; they can be reactivated later and must then sign in again.
+Reactivating takes a seat back, so it can be refused if you are full; a read
+seat never is. Their records keep them as owner until someone reassigns them.
 
 The last active administrator cannot be deactivated or demoted.
 

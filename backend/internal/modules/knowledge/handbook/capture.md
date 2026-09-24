@@ -16,6 +16,13 @@ There is no forwarding address and no copy-paste step. Mail between colleagues i
 To bring in older mail, use **Import mailbox history**. To see what happened to one message, open **Settings → Capture activity**.
 Also called: email logging, sync email to CRM, auto-log emails.
 
+### How do I see emails I sent from Outlook or Gmail in Margince?
+Emails you send from Outlook or Gmail itself are captured into Margince too: a connected Gmail or Outlook mailbox is read in both your inbox and your sent mail, so each sent message lands on the recipients' contact timelines marked **Sent**.
+1. Connect the mailbox at **Settings → Connections**; mail sent before that comes in with **Import mailbox history**.
+2. Open the contact's **History** tab and pick **Threads** or **All** to see what you sent beside their replies.
+Mail sent only to colleagues is never stored. An IMAP mailbox reads only the one **Mailbox** it was set up with.
+Also called: sent items, outgoing mail, outbox, log sent emails.
+
 ## What happens to one message
 
 A captured message passes four stages, in order.

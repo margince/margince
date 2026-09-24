@@ -22,6 +22,13 @@ Every entry point opens the same composer, so the fields, checks and scheduling 
 A company page opens the composer with the company's contacts to choose from; with none on file it says "No contacts at this company yet. Write the message manually, or add a contact first."
 Also called: compose, new message, reply to an email.
 
+### How do I send a follow-up email?
+To send a follow-up email in Margince, open the contact's **History** tab and press **Reply** on the message to follow up, or press the suggested verb on its Worklist row.
+1. On the record, press **Reply** on the email. Following your own email, the composer reads "Following up on your email “{subject}”"; answering theirs, "Replying to “{subject}”".
+2. From **Home** → **Show Worklist**, press **Read and reply**, **Draft reply** or **Write email** on the row.
+3. Pick a **Reason for contact** (a reply to their own message needs none) and press **Send**, or schedule it.
+Also called: chase a customer, nudge, follow up, reply to a thread.
+
 ### What do the composer's error messages mean?
 The composer in Margince refuses to send until four things are filled in, and names each one under its field.
 - "Add at least one recipient." — **To** is empty.

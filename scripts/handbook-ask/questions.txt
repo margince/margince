@@ -176,3 +176,12 @@ can two users edit the same record at the same time
 how do I print an offer
 where is the audit log
 who can see my notes
+# history, handover and follow-up
+where can I see everything that happened with a customer
+a colleague left, who gets their deals
+how do I send a follow-up email
+how do I see emails I sent from Outlook in Margince
+can I undo what the AI changed
+how do I find a contact by email address
+how do I add a new organisation record
+how do I upload the signed contract for a customer

@@ -15,12 +15,12 @@ optionally the deal and project it belongs to. Around that sit the money, the
 dates and the paper.
 
 ### How do I create a contract?
-To create a contract in Margince, open the company's **Documents** tab and click **Add contract** in the **Contracts** panel.
-1. Open the company from **Companies** in the sidebar, choose **Documents**, then **Add contract**.
+To create a contract in Margince, or upload a customer's signed contract document, open the company's **Documents** tab, click **Add contract** in the **Contracts** panel, and drop the signed file on **Signed document**.
+1. Open the company, choose **Documents**, then **Add contract**.
 2. In **Record contract**, fill **Title** and **This value is** (both required); optionally **Value**, **Starts**, **Ends**, **Renews**, **Notice period (days)**, **Payment terms (days)** and **Signed**.
-3. Drop the signed PDF on **Signed document** and click **Record contract**.
-A new contract starts as **Draft**. Without the Create permission on contracts the button is not shown.
-Also called: add an agreement, upload a contract.
+3. Click **Record contract**.
+A new contract starts as **Draft**; without the Create permission there is no button.
+Also called: add an agreement, upload a signed contract.
 
 ### How do I make a contract active or change its status?
 To change a contract's status in Margince, open the company's **Documents** tab and use the contract row's **Contract actions** menu → **Change status**.

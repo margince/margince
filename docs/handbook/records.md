@@ -235,6 +235,13 @@ Also called: delete a company, remove a company, delete a contact, remove perman
 There is no separate "notes" feature in Margince. A note is an activity, and
 activities come in six kinds: **email, call, meeting, note, task, message.**
 
+### Where can I see everything that happened with a customer?
+To see everything that happened with a contact or company in Margince, open the record's **History** tab: one timeline of emails, meetings, calls, notes, tasks, messages and field changes.
+1. Under **Timeline filter**, pick **All**, **Threads** (email conversations), **Activities** or **Changes**.
+2. Narrow it with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and **From** and **To** dates.
+A company's History also holds what reached it through its deals and the contacts who work there.
+Also called: timeline, activity log, customer history, interaction history.
+
 ### How do I log a note, call or meeting on a record?
 To log an activity in Margince, open the contact, company, lead or deal and choose **Log activity** in its header.
 1. Pick the **Type**: Note, Task, Call or Meeting.
@@ -250,10 +257,9 @@ Enter a **Subject** (required), a **Due date** and an **Assignee** (or leave it 
 Open tasks have **Done** and **Snooze 1 day**.
 Also called: create a to-do, follow-up, reminder.
 
-One activity can link to several records at once — a contact and a deal, for
-example. An activity you log yourself with no links at all is visible to
-everyone in the company. A *captured* message with nothing to link to is the
-opposite: it stays held, because nothing has judged who it belongs to.
+One activity can link to several records at once — a contact and a deal, say.
+One you log with no links is visible to everyone; a *captured* message with
+nothing to link to stays held, because nothing has judged who it belongs to.
 
 A meeting carries a status: **booked, held, no-show, canceled.**
 
@@ -274,9 +280,9 @@ A note, call or meeting you log in Margince can be read by anyone who can open a
 Colleagues outside that audience see that it exists, not what it says, and an administrator's wider access does not override it. Captured mail works differently: see [Who can see an email](who-can-see-an-email.md).
 Also called: private note, who sees my notes, hide a call, make a note private.
 
-A captured message's audience in Margince comes from the importing mailbox, and a new
-mailbox holds its mail until a classifier judges the thread ordinary. You change
-it by sharing its thread, not by editing the row.
+A captured message's audience comes from the importing mailbox; a new mailbox
+holds its mail until a classifier judges the thread ordinary. Change it by
+sharing the thread, not by editing the row.
 
 ## Putting a change back
 
@@ -379,10 +385,9 @@ Two administrator actions are worth knowing:
 Margince stores amounts as whole minor units plus a currency code. There is no
 floating-point money anywhere in the product.
 
-Most currencies have two decimal places. Some have none — Japanese yen, Korean
-won, Vietnamese dong and others — and the product carries its own table rather
-than trusting the browser, because the two standards involved disagree on about
-ten currencies.
+Most currencies have two decimal places; some, such as yen, won and dong, have
+none. The product carries its own table, because two standards disagree on
+about ten currencies.
 
 **Two currencies are never added together.** A column holding more than one
 currency shows no total at all — it says "several currencies — no single total".

@@ -46,6 +46,13 @@ Also called: approver, who signs off, permission to approve.
 To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → Agents** and turn off the matching switch under **Automatic changes**. The switches apply to your work only. A switched-off kind comes back to your Worklist as an approval.
 Also called: autopilot, auto-apply, stop the AI editing my records.
 
+### Can I undo what the AI changed?
+Yes. To undo a change the AI or an agent made in Margince, press **Undo** on its row under **Handled for you** in the Worklist, or on the entry in the record's history.
+1. **Home** → **Show Worklist**: **Handled for you** lists the last 24 hours of actions taken for you, with **Undo** on deals.
+2. For a company name, a lifecycle stage or anything older, choose **Undo** in the record's history: **History** → **Changes** on a contact, lead or deal, **More actions** → **Full history** on a company.
+Only a human can undo; an agent cannot.
+Also called: revert the AI, roll back an agent edit, reverse an automatic change.
+
 ## What an approval card holds
 
 An approval card in Margince holds four things:

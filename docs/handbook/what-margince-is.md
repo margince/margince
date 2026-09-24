@@ -201,7 +201,7 @@ glossary gives the Margince name.
 
 An opportunity is called a **deal** in Margince. Deals are in the **Deals** row of the sidebar, and the pipeline is the board on that screen.
 
-An organisation, an account or a customer account is called a **company** in Margince. Companies are in the **Companies** row of the sidebar; to add one, open **Companies** and choose **New company**.
+An organisation, an organisation record, an account or a customer account is called a **company** in Margince. To add a new organisation record, open **Companies** in the sidebar, choose **New company**, enter the **Company name** and choose **Create**.
 
 A customer or a client is a **company** you do business with, and the individuals there are **contacts**. Margince has no separate customer or client record.
 
