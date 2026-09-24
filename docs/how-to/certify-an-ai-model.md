@@ -62,8 +62,8 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    ```
 
    `PROFILE=` names the environment class a record is filed under (`eu_hosted`,
-   the default, `sovereign` or `cloud_frontier`). It is enforced, not a label: a
-   cloud vendor under `sovereign` is refused rather than run. Under `ROUTING=` it
+   the default, `eu_resident`, `sovereign` or `cloud_frontier`). It is enforced:
+   a binding the profile forbids is refused rather than run. Under `ROUTING=` it
    is **ignored** and the profile is the config file's own — the profile is part
    of a record's identity and part of what the binding is validated against, so
    it has to come from the file that named the models.

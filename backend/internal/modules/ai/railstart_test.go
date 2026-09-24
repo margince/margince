@@ -100,7 +100,7 @@ func TestOneLeaseOutlastsOneModelCallAndTheFlush(t *testing.T) {
 // reopen and one request would report as several starts.
 func TestOneLogicalCallAnnouncesItsStartOnce(t *testing.T) {
 	starter := &countingStarter{claim: aClaim()}
-	r := assembleRouter(nil, nil, ProfileEUHosted, &memoryMeter{}, StaticBudget(0), starter, nil, false, nil)
+	r := assembleRouter(nil, nil, ProfileCloudHosted, &memoryMeter{}, StaticBudget(0), starter, nil, false, nil)
 	lc := newLogicalCall()
 	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 
@@ -125,7 +125,7 @@ func TestOneLogicalCallAnnouncesItsStartOnce(t *testing.T) {
 // no announcement rather than a no-op method they were forced to grow.
 func TestARecorderThatCannotAnnounceIsNotAskedTo(t *testing.T) {
 	starter := &countingStarter{}
-	r := assembleRouter(nil, nil, ProfileEUHosted, &memoryMeter{}, StaticBudget(0), &memCallStore{}, nil, false, nil)
+	r := assembleRouter(nil, nil, ProfileCloudHosted, &memoryMeter{}, StaticBudget(0), &memCallStore{}, nil, false, nil)
 	lc := newLogicalCall()
 	ctx := principal.WithCorrelationID(context.Background(), ids.NewV7())
 

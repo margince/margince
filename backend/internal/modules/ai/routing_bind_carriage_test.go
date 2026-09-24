@@ -34,7 +34,7 @@ func TestDeclaringInputOnOneRungOfATwoRungLadderCarriesNothing(t *testing.T) {
 				ProviderConfig: ProviderConfig{Provider: providerOpenAICompatible, BaseURL: "https://x", Model: "e"},
 				Dimensions:     defaultEmbedDimensions,
 			},
-		}.WithKeys(allCloudKeys())
+		}.WithKeys(allCloudKeys(t))
 	}
 
 	t.Run("one rung declared is not enough", func(t *testing.T) {
@@ -77,7 +77,7 @@ func TestAMixedVendorLadderCarriesWhatBothVendorsDecode(t *testing.T) {
 			ProviderConfig: ProviderConfig{Provider: providerGemini, Model: "e"},
 			Dimensions:     defaultEmbedDimensions,
 		},
-	}.WithKeys(allCloudKeys()), nil, nil, nil, false, nil)
+	}.WithKeys(allCloudKeys(t)), nil, nil, nil, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

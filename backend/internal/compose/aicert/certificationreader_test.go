@@ -27,8 +27,10 @@ import (
 // assertAICertProfilesAreNamed fails rather than letting a blank cell ship.
 func aiCertWhereDataGoes(p aiCertPreset) string {
 	switch ai.Profile(p.Profile) {
-	case ai.ProfileEUHosted:
+	case ai.ProfileCloudHosted:
 		return "EU-hosted cloud"
+	case ai.ProfileEUResident:
+		return "EU-resident cloud"
 	case ai.ProfileSovereign:
 		return "your own servers"
 	case ai.ProfileCloudFrontier:

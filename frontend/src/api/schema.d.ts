@@ -9404,6 +9404,10 @@ export interface paths {
          *     naming the fault, never a partially applied binding. An empty `tiers` is accepted and
          *     means unbound — the state an installation is in before anyone chooses models.
          *
+         *     A `gemini_vertex` binding is asked for at its location before it is stored: a model that
+         *     location does not serve is a 422 naming the tier, the model and the location, and so is
+         *     a location Google could not be asked about.
+         *
          *     Audit-only write (no event stream, EVT-NOEVT-3).
          */
         put: operations["replaceAiRouting"];
@@ -9458,6 +9462,10 @@ export interface paths {
                  *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
                  */
                 top?: number;
+                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_resident` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor. */
+                location?: string;
+                /** @description Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe. */
+                model?: string;
             };
             header?: never;
             path: {
@@ -9477,7 +9485,8 @@ export interface paths {
          *
          *     The vendor is named, and only the vendor: the host it is reached at comes from this
          *     installation's own stored binding, or from the adapter's default. There is no request
-         *     parameter that selects an endpoint.
+         *     parameter that selects an endpoint: a `gemini_vertex` `location` picks one of Google's
+         *     three host shapes and cannot name a host.
          *
          *     A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`
          *     naming the state. The model field on the routing form takes any id the vendor serves,
@@ -9488,6 +9497,40 @@ export interface paths {
          *     tier cannot serve a call.
          */
         get: operations["listAvailableModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/provider-locations/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Where one vendor can process a call (admin/ops).
+         * @description The locations a `gemini_vertex` binding may name, asked of Google with the stored
+         *     service-account key's project, plus the `eu` and `us` multi-regions and `global` when
+         *     Google's list omits them. A metadata call on Google's global host; it carries no customer
+         *     data, so it is answered under every profile.
+         *
+         *     `resident` and `jurisdiction` are this build's residency policy, never Google's words: a
+         *     location Google adds tomorrow appears as an option and is not resident until this build
+         *     says so. Under `eu_resident` every location is still listed, and a binding at one with
+         *     `resident: false` is refused on save.
+         *
+         *     A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`.
+         *     Every vendor but `gemini_vertex` answers `not_published`: it has no location to choose.
+         */
+        get: operations["listProviderLocations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -9510,8 +9553,14 @@ export interface paths {
         /**
          * Store or rotate one vendor's BYOK key (admin/ops).
          * @description Seals the key in the installation's key vault and records only an opaque, workspace-bound
-         *     reference. `api_key` is WRITE-ONLY: no read path returns it, and the setting that points
-         *     at it holds the reference and never the bytes.
+         *     reference. `api_key` and `service_account_json` are WRITE-ONLY: no read path returns
+         *     either, and the setting that points at one holds the reference and never the bytes.
+         *
+         *     Send exactly the one field the vendor takes, which `credential_kind` on the list names:
+         *     `service_account_json` for `gemini_vertex`, `api_key` for every other cloud vendor. A
+         *     service-account key is checked before it is sealed: it must be a Google key file for a
+         *     service account, and Google must exchange it for an access token. A key that fails
+         *     either is a 422 naming what is wrong, never echoing the key.
          *
          *     Sending a key for a vendor that already has one ROTATES it. The new credential is sealed
          *     before the reference moves, and the superseded one is destroyed only after the move
@@ -9524,8 +9573,9 @@ export interface paths {
          *     whatever the clipboard did and a key with a trailing newline authenticates nothing while
          *     looking exactly like one that would.
          *
-         *     422 for a vendor this build serves with no key at all (a local model needs none), and for
-         *     an empty key — removing a credential is DELETE, not an empty write.
+         *     422 for a vendor this build serves with no key at all (a local model needs none), for
+         *     an empty key — removing a credential is DELETE, not an empty write — for the field the
+         *     vendor does not take, and for both fields at once.
          *
          *     Requires a key vault. Without one there is nowhere to put the bytes, and the refusal says
          *     so rather than recording a reference to something that was never written.
@@ -16839,7 +16889,7 @@ export interface components {
             /** @description The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten. */
             ranked_by?: string;
             /**
-             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
              * @enum {string}
              */
             unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
@@ -16868,7 +16918,31 @@ export interface components {
             /** @description This model's score under the list's `ranked_by`, so a screen can show WHY a model is in a shortened list rather than asking a reader to trust the order. A decimal string for the same reason the prices are: it is displayed, never arithmetic. Absent where the vendor publishes no such measure, which is also when the list cannot be ranked. */
             rank_score?: string;
         };
-        /** @description What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
+        /** @description Where one vendor can process a call. An empty `locations` always carries `unavailable`. */
+        ProviderLocationList: {
+            /** @description The routing name of the vendor that was asked. */
+            provider: string;
+            locations: components["schemas"]["ProviderLocation"][];
+            /**
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer.
+             * @enum {string}
+             */
+            unavailable?: "no_key" | "not_published" | "unreachable";
+        };
+        ProviderLocation: {
+            /** @description The string a binding's `location` names, exactly as Google spells it. */
+            id: string;
+            /** @description Google's own label, or this build's for a multi-region Google did not list. */
+            display_name: string;
+            /**
+             * @description Whose law the processing happens under, by this build's policy: `eu` exactly when `resident`, `global` for the endpoint that may process anywhere, `us` for the US multi-region and US regions, and `other` for everything else — London and Zürich among them.
+             * @enum {string}
+             */
+            jurisdiction: "eu" | "us" | "other" | "global";
+            /** @description Whether the `eu_resident` profile admits a binding here. This build's list, never Google's: a location Google adds is not resident until this build names it. */
+            resident: boolean;
+        };
+        /** @description What may be known about one vendor's credential. Deliberately four facts and no fifth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
         AiProviderKeyStatus: {
             /** @description The routing name of the vendor, the same string a binding uses. */
             provider: string;
@@ -16876,10 +16950,18 @@ export interface components {
             configured: boolean;
             /** @description The variable the same key may arrive in. Named so an operator can see which export seeded a vendor; the names follow each vendor's own convention, which is why they carry no MARGINCE_ prefix. */
             env_var: string;
+            /**
+             * @description Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a service-account key file (`service_account_json`), `api_key` is a pasted key. A property of the vendor, not of what is stored.
+             * @enum {string}
+             */
+            credential_kind: "api_key" | "service_account";
         };
+        /** @description Exactly one of the two fields, the one the vendor's `credential_kind` names. The server refuses neither, both, or the other one with a 422. */
         AiProviderKeyInput: {
             /** @description The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
-            api_key: string;
+            api_key?: string;
+            /** @description A Google service-account key file's whole contents, for `gemini_vertex`. WRITE-ONLY, exactly as `api_key` is. Its `project_id` is the project every call is billed to. */
+            service_account_json?: string;
         };
         /**
          * @description The installation's tier-to-model binding. `tiers` is keyed by tier name; the closed set
@@ -16891,9 +16973,12 @@ export interface components {
             /**
              * @description The location ladder (§4). `sovereign` means zero egress by construction: a cloud
              *     provider on any tier is refused, and so is a local provider pointed at another host.
+             *     `eu_resident` is enforced: every tier and the embeddings lane must keep ML processing
+             *     inside the EU, and a binding that cannot is refused. `eu_hosted` is cloud-hosted with
+             *     no residency guarantee; the spelling is historical. `cloud_frontier` is BYOK cloud.
              * @enum {string}
              */
-            profile: "eu_hosted" | "sovereign" | "cloud_frontier";
+            profile: "eu_hosted" | "eu_resident" | "sovereign" | "cloud_frontier";
             /** @description Tier name to the model bound on it. Empty means no models are bound. */
             tiers: {
                 [key: string]: components["schemas"]["AiTierBinding"];
@@ -16903,13 +16988,20 @@ export interface components {
         AiTierBinding: {
             /**
              * @description The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-             *     | openai | gemini. The credential is never part of this document.
+             *     | openai | gemini | gemini_vertex. The credential is never part of this document.
              */
             provider: string;
             /** @description The provider-native model id. */
             model: string;
             /** @description Endpoint override; empty means the provider default. */
             base_url?: string;
+            /**
+             * @description The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
+             *     processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+             *     on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
+             *     On save, the model is asked for at this location, and one it does not serve is a 422.
+             */
+            location?: string;
             /**
              * @description What the bound model may be GIVEN, in the accepted-modality vocabulary. On the
              *     OpenAI-wire providers it IS the carriage; everywhere else it NARROWS the carriage
@@ -28089,7 +28181,7 @@ export interface components {
             /** @enum {string} */
             inference_mode: "cloud" | "local" | "hybrid" | "none" | "development";
             /** @description Distinct configured provider keys, sorted; fake is never returned. */
-            providers: ("anthropic" | "gemini" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
+            providers: ("anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
         };
         AiProfile: {
             /** @enum {string} */
@@ -28101,7 +28193,7 @@ export interface components {
             /** @enum {string} */
             inference_mode: "cloud" | "local" | "hybrid" | "none" | "development";
             /** @description Distinct configured provider keys, sorted; fake is never returned. */
-            providers: ("anthropic" | "gemini" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
+            providers: ("anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
             /** @description Authenticated tier-to-model bindings. Credentials and endpoints never appear here. */
             configured_models: components["schemas"]["AssistantConfiguredModel"][];
         };
@@ -28109,7 +28201,7 @@ export interface components {
             /** @enum {string} */
             tier: "local_small" | "cheap_cloud" | "premium" | "frontier" | "local_large";
             /** @enum {string} */
-            provider: "anthropic" | "gemini" | "ollama" | "openai" | "openai_compatible" | "vllm";
+            provider: "anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm";
             model: string;
         };
         AuthCapabilities: {
@@ -51353,6 +51445,10 @@ export interface operations {
                  *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
                  */
                 top?: number;
+                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_resident` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor. */
+                location?: string;
+                /** @description Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe. */
+                model?: string;
             };
             header?: never;
             path: {
@@ -51370,6 +51466,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AvailableModelList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    listProviderLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where the vendor can process a call, or why it could not be asked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderLocationList"];
                 };
             };
             401: components["responses"]["Unauthorized"];

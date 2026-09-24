@@ -441,6 +441,24 @@ func TestOllamaObeysTheListCap(t *testing.T) {
 	}
 }
 
+// A paginated vendor stops at the cap too, mid-page, rather than on the first
+// page boundary past it.
+func TestGeminiObeysTheListCapMidPage(t *testing.T) {
+	page := make([]map[string]any, 0, 99)
+	for i := range 99 {
+		page = append(page, map[string]any{"name": fmt.Sprintf("models/m%d", i)})
+	}
+	lister := listerFor(t, ProviderConfig{Provider: providerGemini}, "/models",
+		map[string]any{"models": page, "nextPageToken": "again"})
+	models, err := lister.ListModels(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models) != modelListLimit {
+		t.Fatalf("returned %d models, want the cap of %d", len(models), modelListLimit)
+	}
+}
+
 // A vendor's redirect must not carry the customer's credential to whatever host
 // answered it.
 //

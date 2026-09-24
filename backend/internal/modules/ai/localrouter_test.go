@@ -32,7 +32,7 @@ func (s *memCallStore) EnsureConfig(context.Context, ConfigSnapshot) error { ret
 // the shape every NewLocalRouter test starts from.
 func localFakeConfig() RoutingConfig {
 	return RoutingConfig{
-		Profile:    ProfileEUHosted,
+		Profile:    ProfileCloudHosted,
 		Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: ProviderFake}},
 		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}},
 	}
@@ -188,7 +188,7 @@ func TestALocalRouterSendsTheBrokerDefaultsProductionWould(t *testing.T) {
 			cfg := RoutingConfig{
 				Profile: ProfileCloudFrontier, Tiers: tiers,
 				Embeddings: EmbeddingsConfig{ProviderConfig: binding},
-			}.WithKeys(allCloudKeys())
+			}.WithKeys(allCloudKeys(t))
 			router, err := NewLocalRouter(cfg)
 			if err != nil {
 				t.Fatalf("building the router: %v", err)

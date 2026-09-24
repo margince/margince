@@ -54,11 +54,12 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	// The model providers. Each call carries the customer's own API key, which
 	// is the account the provider bills, rate-limits and revokes; an agent
 	// beside it names software the provider has no lever over.
-	"internal/modules/ai/anthropic.go:func sendOnce": "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/gemini.go:func post":        "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/ollama.go:func post":        "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
-	"internal/modules/ai/openai.go:func postRaw":     "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/openaicompat.go:func post":  "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/anthropic.go:func sendOnce":        "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/gemini.go:func post":               "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/ollama.go:func post":               "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
+	"internal/modules/ai/openai.go:func postRaw":            "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/openaicompat.go:func post":         "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/vertexcredential.go:func exchange": "presents an assertion signed by the customer's own service account, which is the identity Google checks",
 	// One builder for all five vendors' model-list endpoint, on the same ground
 	// as their completion calls above: the request that asks a vendor what it
 	// serves carries the same credential as the request that then calls it.

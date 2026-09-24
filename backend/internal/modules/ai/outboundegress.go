@@ -59,12 +59,13 @@ const (
 var providerEgress = map[string]egressClass{
 	// The fake adapter opens no socket, so its class is inert; it is listed
 	// because a provider missing from this map is the thing the census catches.
-	ProviderFake:      egressPublicOnly,
-	providerAnthropic: egressPublicOnly,
-	providerOpenAI:    egressPublicOnly,
-	providerGemini:    egressPublicOnly,
-	providerOllama:    egressOperatorEndpoint,
-	providerVLLM:      egressOperatorEndpoint,
+	ProviderFake:         egressPublicOnly,
+	providerAnthropic:    egressPublicOnly,
+	providerOpenAI:       egressPublicOnly,
+	providerGemini:       egressPublicOnly,
+	providerGeminiVertex: egressPublicOnly,
+	providerOllama:       egressOperatorEndpoint,
+	providerVLLM:         egressOperatorEndpoint,
 	// The one BYOK provider on the operator lane, and the only entry here that
 	// does not follow from ProviderIsLocal. `openai_compatible` is the adapter
 	// for "any vendor on the OpenAI wire", and a self-hosted gateway on the

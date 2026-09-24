@@ -88,6 +88,23 @@ func finishWires(t *testing.T) map[string]finishWire {
 		"a refusal under a stop": `{"model":"m","choices":[{"finish_reason":"stop",` +
 			`"message":{"content":null,"refusal":"I can't help with that."}}]}`,
 	}
+	gemini := finishWire{
+		provider: providerGemini, contentType: "application/json",
+		truncated: func(text string) string {
+			return `{"candidates":[{"content":{"parts":[{"text":` + q(text) + `}]},"finishReason":"MAX_TOKENS"}]}`
+		},
+		finished: func(text string) string {
+			return `{"candidates":[{"content":{"parts":[{"text":` + q(text) + `}]},"finishReason":"STOP"}]}`
+		},
+		withheld: map[string]string{
+			"a safety stop":    `{"candidates":[{"content":{"parts":[]},"finishReason":"SAFETY"}]}`,
+			"a recitation":     `{"candidates":[{"content":{"parts":[{"text":"par"}]},"finishReason":"RECITATION"}]}`,
+			"a blocked prompt": `{"promptFeedback":{"blockReason":"PROHIBITED_CONTENT"}}`,
+		},
+	}
+	// Vertex speaks the same generateContent reply; only the host and the key differ.
+	vertex := gemini
+	vertex.provider = providerGeminiVertex
 	return map[string]finishWire{
 		"openai": {
 			provider: providerOpenAI, contentType: "application/json",
@@ -146,20 +163,8 @@ func finishWires(t *testing.T) map[string]finishWire {
 			finished:  anthropicSSE("end_turn"),
 			withheld:  map[string]string{"a refusal": anthropicSSE("refusal")("I")},
 		},
-		"gemini": {
-			provider: providerGemini, contentType: "application/json",
-			truncated: func(text string) string {
-				return `{"candidates":[{"content":{"parts":[{"text":` + q(text) + `}]},"finishReason":"MAX_TOKENS"}]}`
-			},
-			finished: func(text string) string {
-				return `{"candidates":[{"content":{"parts":[{"text":` + q(text) + `}]},"finishReason":"STOP"}]}`
-			},
-			withheld: map[string]string{
-				"a safety stop":    `{"candidates":[{"content":{"parts":[]},"finishReason":"SAFETY"}]}`,
-				"a recitation":     `{"candidates":[{"content":{"parts":[{"text":"par"}]},"finishReason":"RECITATION"}]}`,
-				"a blocked prompt": `{"promptFeedback":{"blockReason":"PROHIBITED_CONTENT"}}`,
-			},
-		},
+		"gemini":        gemini,
+		"gemini_vertex": vertex,
 		"ollama": {
 			provider: providerOllama, contentType: "application/json",
 			truncated: func(text string) string {
@@ -180,7 +185,7 @@ func (w finishWire) client(t *testing.T, body string) (model.Client, func() []st
 	handler, received := replyWith(t, w.contentType, body)
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	client, err := selectLocalBrain(ProviderConfig{Provider: w.provider, BaseURL: srv.URL, Model: "m"}, allCloudKeys())
+	client, err := selectLocalBrain(ProviderConfig{Provider: w.provider, BaseURL: srv.URL, Model: "m"}, allCloudKeys(t))
 	if err != nil {
 		t.Fatalf("building the %s adapter: %v", w.provider, err)
 	}
@@ -259,7 +264,7 @@ func TestEveryAdapterEngagesTheBrieferRetryOnACutOffReply(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			client, received := wire.client(t, wire.truncated(partialAnswer))
 			r := testRouter(map[Tier]model.Client{TierCheapCloud: client, TierPremium: client},
-				&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+				&memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 			req := structuredReq()
 			req.MaxTokens = wire.maxTokens
 

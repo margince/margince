@@ -29,6 +29,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -45,6 +46,29 @@ type ProviderKeyStatus struct {
 	// EnvVar is the variable the key may also arrive in, so a screen can tell
 	// an operator which export seeded it.
 	EnvVar string
+	// CredentialKind is which ProviderCredential field this vendor takes.
+	CredentialKind string
+}
+
+// The two credential kinds. A property of the vendor, so List answers it
+// without opening the vault.
+const (
+	CredentialKindAPIKey         = "api_key"
+	CredentialKindServiceAccount = "service_account"
+)
+
+func credentialKindFor(provider string) string {
+	if provider == providerGeminiVertex {
+		return CredentialKindServiceAccount
+	}
+	return CredentialKindAPIKey
+}
+
+// ProviderCredential is what a caller sends to key one vendor: exactly the
+// field credentialKindFor names.
+type ProviderCredential struct {
+	APIKey             string
+	ServiceAccountJSON string
 }
 
 // ProviderKeyStore reads and changes the sealed BYOK credentials.
@@ -60,6 +84,9 @@ type ProviderKeyStore struct {
 	// log carries the one failure this store cannot report to its caller: a
 	// superseded blob it could not delete after the write already committed.
 	log *slog.Logger
+	// selectBrain builds the client a service-account key is checked through;
+	// the zero value is SelectBrain.
+	selectBrain brainSelector
 }
 
 // NewProviderKeyStore builds the store over the settings catalog and the vault.
@@ -107,9 +134,10 @@ func (s *ProviderKeyStore) List(ctx context.Context) ([]ProviderKeyStatus, error
 	out := make([]ProviderKeyStatus, 0, len(providers))
 	for _, provider := range providers {
 		out = append(out, ProviderKeyStatus{
-			Provider:   provider,
-			Configured: refs[provider] != "",
-			EnvVar:     KeyEnvVarFor(provider),
+			Provider:       provider,
+			Configured:     refs[provider] != "",
+			EnvVar:         KeyEnvVarFor(provider),
+			CredentialKind: credentialKindFor(provider),
 		})
 	}
 	return out, nil
@@ -121,25 +149,16 @@ func (s *ProviderKeyStore) List(ctx context.Context) ([]ProviderKeyStatus, error
 // The new blob is written BEFORE the ref is moved and the old one is retired
 // only after the move commits, so no window exists in which the recorded ref
 // names nothing. A failure part-way leaves the previous credential serving.
-func (s *ProviderKeyStore) Set(ctx context.Context, provider, apiKey string) error {
+func (s *ProviderKeyStore) Set(ctx context.Context, provider string, sent ProviderCredential) error {
 	if err := auth.Require(ctx, providerKeysObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	if _, cloud := cloudKeyEnv[provider]; !cloud {
-		return settings.InvalidValue{
-			Setting: ProviderKeysKey, Code: settings.CodeInvalidValue,
-			Reason: fmt.Sprintf("%q takes no api key", provider),
-		}
+		return keyRefused(fmt.Sprintf("%q takes no credential — it is served without one", provider))
 	}
-	// Trimmed because a pasted credential arrives with whatever whitespace the
-	// clipboard carried, and a key with a trailing newline authenticates
-	// nothing while looking exactly like one that would.
-	apiKey = strings.TrimSpace(apiKey)
-	if apiKey == "" {
-		return settings.InvalidValue{
-			Setting: ProviderKeysKey, Code: settings.CodeInvalidValue,
-			Reason: "the api key is empty — remove the credential instead of storing nothing",
-		}
+	secret, err := s.acceptedCredential(ctx, provider, sent)
+	if err != nil {
+		return err
 	}
 	if s.vault == nil {
 		return ErrVaultUnavailable
@@ -148,7 +167,7 @@ func (s *ProviderKeyStore) Set(ctx context.Context, provider, apiKey string) err
 	if err != nil {
 		return err
 	}
-	ref, err := s.vault.Put(ctx, ws, []byte(apiKey))
+	ref, err := s.vault.Put(ctx, ws, []byte(secret))
 	if err != nil {
 		return fmt.Errorf("ai: sealing the %s key: %w", provider, err)
 	}
@@ -158,6 +177,60 @@ func (s *ProviderKeyStore) Set(ctx context.Context, provider, apiKey string) err
 	}
 	s.retire(ctx, ws, previous, "provider key rotated")
 	return nil
+}
+
+// acceptedCredential is the one field this provider takes, trimmed, or a
+// refusal naming what was wrong without repeating any of it.
+//
+// Trimmed because a pasted credential arrives with whatever whitespace the
+// clipboard carried, and a key with a trailing newline authenticates nothing
+// while looking exactly like one that would.
+func (s *ProviderKeyStore) acceptedCredential(ctx context.Context, provider string, sent ProviderCredential) (string, error) {
+	apiKey, keyFile := strings.TrimSpace(sent.APIKey), strings.TrimSpace(sent.ServiceAccountJSON)
+	serviceAccount := credentialKindFor(provider) == CredentialKindServiceAccount
+	switch {
+	case apiKey != "" && keyFile != "":
+		return "", keyRefused("send api_key or service_account_json, not both")
+	case serviceAccount && apiKey != "":
+		return "", keyRefused(fmt.Sprintf("%q takes a service_account_json — the service-account key file — not an api_key", provider))
+	case !serviceAccount && keyFile != "":
+		return "", keyRefused(fmt.Sprintf("%q takes an api_key, not a service_account_json", provider))
+	case serviceAccount && keyFile == "":
+		return "", keyRefused("the service-account key is empty — remove the credential instead of storing nothing")
+	case !serviceAccount && apiKey == "":
+		return "", keyRefused("the api key is empty — remove the credential instead of storing nothing")
+	case !serviceAccount:
+		return apiKey, nil
+	}
+	if err := s.verifyServiceAccount(ctx, keyFile); err != nil {
+		return "", keyRefused(err.Error())
+	}
+	return keyFile, nil
+}
+
+// verifyServiceAccount parses the key file and has Google exchange it for an
+// access token, through a client SelectBrain builds over the candidate alone.
+// A key that cannot mint a token would only fail later, on a model call.
+func (s *ProviderKeyStore) verifyServiceAccount(ctx context.Context, keyFile string) error {
+	candidate := config.Static(map[string]string{cloudKeyEnv[providerGeminiVertex]: keyFile})
+	client, err := s.selectBrain.build(ProviderConfig{Provider: providerGeminiVertex, Location: vertexMetadataLocation}, candidate)
+	if err != nil {
+		return err
+	}
+	vertex, ok := vertexOf(client)
+	if !ok {
+		return errors.New("ai: gemini_vertex: the key could not be checked")
+	}
+	asked, cancel := context.WithTimeout(ctx, listTimeout)
+	defer cancel()
+	if err := vertex.verifyCredential(asked); err != nil {
+		return fmt.Errorf("the service-account key was not accepted by Google: %w", err)
+	}
+	return nil
+}
+
+func keyRefused(reason string) error {
+	return settings.InvalidValue{Setting: ProviderKeysKey, Code: settings.CodeInvalidValue, Reason: reason}
 }
 
 // swapRef moves one provider's ref inside a single locked transaction and

@@ -42,6 +42,7 @@ var servedSource = map[string]string{
 	providerAnthropic:        servedIdentitySourceResponse,
 	providerOllama:           servedIdentitySourceResponse,
 	providerGemini:           servedIdentitySourceResponse,
+	providerGeminiVertex:     servedIdentitySourceResponse,
 	providerOpenAI:           servedIdentitySourceResponse,
 	providerOpenAICompatible: servedIdentitySourceEcho,
 	providerVLLM:             servedIdentitySourceEcho,

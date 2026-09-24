@@ -169,7 +169,7 @@ func TestAWithheldRungMetersWhatItSpent(t *testing.T) {
 		`{"model":"claude-test","stop_reason":"refusal","content":[],"usage":{"input_tokens":7,"output_tokens":2}}`)
 	meter := &memMeter{}
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: refusing, TierPremium: NewFakeClient().Script("served")},
-		meter, DefaultMonthlyTokens, ProfileEUHosted)
+		meter, DefaultMonthlyTokens, ProfileCloudHosted)
 	if _, _, err := r.Complete(wsContext(t), TaskColdStart, model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}}); err != nil {
 		t.Fatal(err)
 	}

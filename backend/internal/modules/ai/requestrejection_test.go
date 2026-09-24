@@ -162,7 +162,7 @@ func refusingAdapter(t *testing.T, fixture refusalFixture) model.Client {
 	t.Helper()
 	client, err := selectLocalBrain(ProviderConfig{
 		Provider: fixture.provider, BaseURL: statusServer(t, fixture.status, fixture.body), Model: "m",
-	}, allCloudKeys())
+	}, allCloudKeys(t))
 	if err != nil {
 		t.Fatalf("building the %s adapter: %v", fixture.provider, err)
 	}
@@ -211,7 +211,7 @@ func TestAnExcludedRefusalWalksTheLadder(t *testing.T) {
 			next := NewFakeClient().Script("served")
 			same := routeMeta{provider: fixture.provider, model: "m"}
 			r := assembleRouter(map[Tier]model.Client{TierCheapCloud: refusingAdapter(t, fixture), TierPremium: next},
-				NewFakeClient(), ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens, nil,
+				NewFakeClient(), ProfileCloudHosted, &memMeter{}, DefaultMonthlyTokens, nil,
 				map[Tier]routeMeta{TierCheapCloud: same, TierPremium: same}, false, nil)
 			resp, _, err := r.Complete(wsContext(t), TaskColdStart, model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
 			if fixture.rejected {
@@ -247,7 +247,7 @@ func TestTheLadderTreatsAnOutcomeAsAnOutcome(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			fake := NewFakeClient().ScriptSteps(FakeStep{Err: tc.cause}, FakeStep{Err: tc.cause})
 			r := assembleRouter(map[Tier]model.Client{TierCheapCloud: fake, TierPremium: fake},
-				NewFakeClient(), ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens, nil,
+				NewFakeClient(), ProfileCloudHosted, &memMeter{}, DefaultMonthlyTokens, nil,
 				map[Tier]routeMeta{TierCheapCloud: {provider: "fake", model: "m"}, TierPremium: tc.above}, false, nil)
 			_, _, err := r.Complete(wsContext(t), TaskColdStart, model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
 			if !errors.Is(err, tc.want) {

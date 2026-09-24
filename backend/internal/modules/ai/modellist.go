@@ -60,14 +60,16 @@ func getListBody(
 	ctx context.Context,
 	httpc *http.Client,
 	vendor, endpoint string,
-	authorize func(*http.Request),
+	authorize func(*http.Request) error,
 ) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("ai: %s: build request: %w", vendor, err)
 	}
 	req.Header.Set("Accept", "application/json")
-	authorize(req)
+	if err := authorize(req); err != nil {
+		return nil, fmt.Errorf("ai: %s: %w", vendor, err)
+	}
 	resp, err := noRedirect(httpc).Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("ai: %s: %w", vendor, err)
@@ -129,9 +131,10 @@ func (c *anthropicClient) ListModels(ctx context.Context) ([]model.Info, error) 
 		} `json:"data"`
 	}
 	endpoint := c.baseURL + "/v1/models?limit=" + strconv.Itoa(modelListLimit)
-	raw, err := getListBody(ctx, c.http, "anthropic", endpoint, func(r *http.Request) {
+	raw, err := getListBody(ctx, c.http, "anthropic", endpoint, func(r *http.Request) error {
 		r.Header.Set("x-api-key", c.apiKey)
 		r.Header.Set("anthropic-version", anthropicAPIVersion)
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -188,12 +191,13 @@ func openAIWireModels(
 			Name string `json:"name"`
 		} `json:"data"`
 	}
-	raw, err := getListBody(ctx, httpc, vendor, baseURL+"/v1/models", func(r *http.Request) {
+	raw, err := getListBody(ctx, httpc, vendor, baseURL+"/v1/models", func(r *http.Request) error {
 		// Empty on a local vLLM, which takes no auth — the same condition the
 		// adapter's own post() applies.
 		if apiKey != "" {
 			r.Header.Set("Authorization", "Bearer "+apiKey)
 		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -215,11 +219,11 @@ func openAIWireModels(
 
 // ---- gemini ----
 
-// ListModels reports GET /v1beta/models, the one vendor list that says what
-// each model is FOR: `supportedGenerationMethods` names `embedContent` for an
-// embedder and `generateContent` for a chat model, so the embeddings lane can
-// be offered real suggestions here where the other vendors leave it to the
-// sheet.
+// ListModels reports the transport's model collection. On AI Studio that is
+// GET /v1beta/models, the one vendor list that says what each model is FOR:
+// `supportedGenerationMethods` names `embedContent` for an embedder and
+// `generateContent` for a chat model, so the embeddings lane can be offered
+// real suggestions here where the other vendors leave it to the sheet.
 //
 // Paginated, and the pages are followed: the catalog runs past one page and a
 // reader who stopped at the first would be told a current model does not exist.
@@ -227,44 +231,55 @@ func (c *geminiClient) ListModels(ctx context.Context) ([]model.Info, error) {
 	var models []model.Info
 	pageToken := ""
 	for {
-		var out struct {
-			Models []struct {
-				Name        string   `json:"name"`
-				DisplayName string   `json:"displayName"`                //nolint:tagliatelle // Google's wire format (camelCase)
-				Methods     []string `json:"supportedGenerationMethods"` //nolint:tagliatelle // Google's wire format (camelCase)
-			} `json:"models"`
-			NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google's wire format (camelCase)
-		}
-		endpoint := c.baseURL + "/models?pageSize=100"
+		endpoint := c.transport.modelsURL() + "?pageSize=100"
 		if pageToken != "" {
 			endpoint += "&pageToken=" + url.QueryEscape(pageToken)
 		}
-		raw, err := getListBody(ctx, c.http, "gemini", endpoint, func(r *http.Request) {
-			r.Header.Set("x-goog-api-key", c.apiKey)
+		raw, err := getListBody(ctx, c.http, "gemini", endpoint, func(r *http.Request) error {
+			return c.transport.authorize(ctx, r)
 		})
 		if err != nil {
 			return nil, err
 		}
-		if err := json.Unmarshal(raw, &out); err != nil {
-			return nil, fmt.Errorf("ai: gemini: decode model list: %w", err)
+		page, next, err := c.transport.readModelPage(raw)
+		if err != nil {
+			return nil, err
 		}
-		for _, m := range out.Models {
-			models = append(models, model.Info{
-				// The wire namespaces every id `models/gemini-…`; a binding
-				// names the bare id, which is what the adapter puts back when it
-				// builds a request path.
-				ID:          strings.TrimPrefix(m.Name, "models/"),
-				DisplayName: m.DisplayName,
-				Lane:        geminiLane(m.Methods),
-			})
-		}
+		models = append(models, page[:min(len(page), modelListLimit-len(models))]...)
 		// Stopping on the cap as well as on the last page: a vendor that keeps
 		// handing back a token must not turn this into an unbounded loop.
-		if out.NextPageToken == "" || len(models) >= modelListLimit {
+		if next == "" || len(models) == modelListLimit {
 			return models, nil
 		}
-		pageToken = out.NextPageToken
+		pageToken = next
 	}
+}
+
+// readModelPage decodes one page of GET /v1beta/models.
+func (t aiStudioTransport) readModelPage(raw []byte) ([]model.Info, string, error) {
+	var out struct {
+		Models []struct {
+			Name        string   `json:"name"`
+			DisplayName string   `json:"displayName"`                //nolint:tagliatelle // Google's wire format (camelCase)
+			Methods     []string `json:"supportedGenerationMethods"` //nolint:tagliatelle // Google's wire format (camelCase)
+		} `json:"models"`
+		NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google's wire format (camelCase)
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, "", fmt.Errorf("ai: gemini: decode model list: %w", err)
+	}
+	models := make([]model.Info, 0, len(out.Models))
+	for _, m := range out.Models {
+		models = append(models, model.Info{
+			// The wire namespaces every id `models/gemini-…`; a binding
+			// names the bare id, which is what the adapter puts back when it
+			// builds a request path.
+			ID:          strings.TrimPrefix(m.Name, "models/"),
+			DisplayName: m.DisplayName,
+			Lane:        geminiLane(m.Methods),
+		})
+	}
+	return models, out.NextPageToken, nil
 }
 
 // geminiLane reads what a Gemini model is for off the methods it supports.
@@ -296,10 +311,11 @@ func (c *ollamaClient) ListModels(ctx context.Context) ([]model.Info, error) {
 		} `json:"models"`
 	}
 	raw, err := getListBody(ctx, c.http, "ollama", c.baseURL+"/api/tags",
-		func(*http.Request) {
+		func(*http.Request) error {
 			// Nothing to sign. A model runner the operator runs themselves takes
 			// no credential, which is the same reason this adapter's own post()
 			// sets no auth header either.
+			return nil
 		})
 	if err != nil {
 		return nil, err

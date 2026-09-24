@@ -1178,6 +1178,7 @@ up)
       anthropic)         _env="ANTHROPIC_API_KEY" ;;
       openai)            _env="OPENAI_API_KEY" ;;
       gemini)            _env="GEMINI_API_KEY" ;;
+      gemini_vertex)     _env="GEMINI_VERTEX_SA_JSON" ;;
       openai_compatible) _env="OPENAI_COMPATIBLE_API_KEY" ;;
     esac
     if [[ -n "$_env" && -z "${!_env:-}" ]]; then

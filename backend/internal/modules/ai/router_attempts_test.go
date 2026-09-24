@@ -103,7 +103,7 @@ func TestStructuredRetryChainSharesOneLogicalCall(t *testing.T) {
 	fcs := &fakeCallStore{}
 	r := assembleRouter(
 		map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium},
-		nil, ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
+		nil, ProfileCloudHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
 		map[Tier]routeMeta{
 			TierCheapCloud: {provider: "fake", model: "fake-cheap"},
 			TierPremium:    {provider: "fake", model: "fake-premium"},
@@ -150,7 +150,7 @@ func TestEmbedRecordsOneTerminalEmbeddingCall(t *testing.T) {
 	fcs := &fakeCallStore{}
 	embedder := NewFakeClient()
 	r := assembleRouter(
-		map[Tier]model.Client{}, embedder, ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
+		map[Tier]model.Client{}, embedder, ProfileCloudHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
 		map[Tier]routeMeta{TierEmbedLane: {provider: "fake", model: "fake-embed"}},
 		false, nil,
 	)
@@ -186,7 +186,7 @@ func TestEmbedRecordsConfiguredDimensionInProviderParams(t *testing.T) {
 	fcs := &fakeCallStore{}
 	embedder := NewFakeClient()
 	r := assembleRouter(
-		map[Tier]model.Client{}, embedder, ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
+		map[Tier]model.Client{}, embedder, ProfileCloudHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
 		map[Tier]routeMeta{TierEmbedLane: {provider: "fake", model: "fake-embed"}},
 		false, nil,
 	)
@@ -222,7 +222,7 @@ func TestEmbedTraceTokensMatchMeteredUsage(t *testing.T) {
 	meter := &memMeter{}
 	embedder := NewFakeClient()
 	r := assembleRouter(
-		map[Tier]model.Client{}, embedder, ProfileEUHosted, meter, DefaultMonthlyTokens, fcs,
+		map[Tier]model.Client{}, embedder, ProfileCloudHosted, meter, DefaultMonthlyTokens, fcs,
 		map[Tier]routeMeta{TierEmbedLane: {provider: "gemini", model: "gemini-embedding-001"}},
 		false, nil,
 	)
@@ -265,7 +265,7 @@ func TestEmbedTraceStaysZeroUsageOnFailure(t *testing.T) {
 		// stubClient.Embed always errors regardless of its resp/err fields
 		// (router_tracing_test.go) — exactly the "never reaches the
 		// provider" case this test needs.
-		map[Tier]model.Client{}, stubClient{}, ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
+		map[Tier]model.Client{}, stubClient{}, ProfileCloudHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
 		map[Tier]routeMeta{TierEmbedLane: {provider: "gemini", model: "gemini-embedding-001"}},
 		false, nil,
 	)
@@ -289,7 +289,7 @@ func TestEmbedCapturesPayloadWhenEnabled(t *testing.T) {
 	fcs := &fakeCallStore{}
 	embedder := NewFakeClient()
 	r := assembleRouter(
-		map[Tier]model.Client{}, embedder, ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
+		map[Tier]model.Client{}, embedder, ProfileCloudHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
 		map[Tier]routeMeta{TierEmbedLane: {provider: "fake", model: "fake-embed"}},
 		true, nil, // capturePayloads = true
 	)
@@ -326,7 +326,7 @@ func TestEmbedPayloadCapsInputCountWhenBatchExceedsTheLimit(t *testing.T) {
 	fcs := &fakeCallStore{}
 	embedder := NewFakeClient()
 	r := assembleRouter(
-		map[Tier]model.Client{}, embedder, ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
+		map[Tier]model.Client{}, embedder, ProfileCloudHosted, &memMeter{}, DefaultMonthlyTokens, fcs,
 		map[Tier]routeMeta{TierEmbedLane: {provider: "fake", model: "fake-embed"}},
 		true, nil, // capturePayloads = true
 	)

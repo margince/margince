@@ -12,6 +12,7 @@ package ai
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
@@ -41,6 +42,11 @@ type RoutingStore struct {
 	// benchmark rather than by a stored binding. Optional: absent it, that
 	// vendor answers not_published like any adapter this build does not carry.
 	catalogue *ModelCatalogue
+	// selectBrain builds the client every vendor read and save-time probe
+	// calls through; the zero value is SelectBrain.
+	selectBrain brainSelector
+	// log hears a save admitted unchecked; nil is slog.Default.
+	log *slog.Logger
 }
 
 // NewRoutingStore builds the store over the settings catalog.
@@ -105,6 +111,26 @@ func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (Routing
 	return s.ReplaceIfVersion(ctx, next, "")
 }
 
+// storedBeforeProbe is what a save's probes are measured against, read only
+// when the save names gemini_vertex at all, so every other save is unchanged.
+func (s *RoutingStore) storedBeforeProbe(ctx context.Context, next RoutingConfig) (RoutingConfig, error) {
+	if len(vertexProbesOf(next)) == 0 {
+		return RoutingConfig{}, nil
+	}
+	return settings.Get(ctx, s.settings, Routing)
+}
+
+func invalidRouting(err error) error {
+	return settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
+}
+
+func (s *RoutingStore) logger() *slog.Logger {
+	if s.log == nil {
+		return slog.Default()
+	}
+	return s.log
+}
+
 // Revision identifies the editable binding independently of credentials.
 func (cfg RoutingConfig) Revision() string { return cfg.bindingDigest() }
 
@@ -120,9 +146,14 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 	if !next.Unconfigured() {
 		var err error
 		if next, err = next.finalize(); err != nil {
-			return RoutingConfig{}, settings.InvalidValue{
-				Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error(),
-			}
+			return RoutingConfig{}, invalidRouting(err)
+		}
+		stored, err := s.storedBeforeProbe(ctx, next)
+		if err != nil {
+			return RoutingConfig{}, err
+		}
+		if err := s.probeVertexBindings(ctx, stored, next); err != nil {
+			return RoutingConfig{}, invalidRouting(err)
 		}
 	}
 	if err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {

@@ -180,7 +180,7 @@ func TestATaskCutOffOnEveryAttemptIsRecordedNotAborted(t *testing.T) {
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+		ai.ProfileCloudHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 		})
@@ -225,7 +225,7 @@ func certifyAgainst(t *testing.T, candidate, judge *ai.FakeClient) (Record, erro
 	t.Helper()
 	return certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+		ai.ProfileCloudHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 		})

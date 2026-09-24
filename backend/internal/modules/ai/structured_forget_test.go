@@ -19,7 +19,7 @@ func TestValidationFailureEvictsTheCachedAnswer(t *testing.T) {
 	cheap := NewFakeClient().Script("not json", "still not json", `{"ok":true}`)
 	premium := NewFakeClient().Script("also not json")
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium},
-		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+		&memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 	ctx := wsContext(t)
 
 	// The first logical call burns retry and escalation on invalid output.
@@ -45,7 +45,7 @@ func TestSecondAttemptFailureAlsoEvictsItsCachedAnswer(t *testing.T) {
 	cheap := NewFakeClient().Script("not json", "still not json", `{"ok":true}`)
 	premium := NewFakeClient().Script(`{"ok":true}`)
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium},
-		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+		&memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 	resp, _, err := r.CompleteStructured(wsContext(t), TaskColdStart, structuredReq(), jsonObjectValidator)
 	if err != nil || resp.Text != `{"ok":true}` {
 		t.Fatalf("escalated success: %v %q", err, resp.Text)
@@ -57,7 +57,7 @@ func TestSecondAttemptFailureAlsoEvictsItsCachedAnswer(t *testing.T) {
 // workspace's valid answer.
 func TestForgetCachedToleratesAMissingWorkspace(t *testing.T) {
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient().Script("x")},
-		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+		&memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 	// Two entries stand in for what an unscoped eviction could reach: a real
 	// tenant's answer, and the one at the key a workspace-less call would
 	// derive if it computed a key at all.

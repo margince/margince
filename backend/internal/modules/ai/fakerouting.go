@@ -25,7 +25,7 @@ package ai
 func FakeRoutingConfig() RoutingConfig {
 	fake := ProviderConfig{Provider: ProviderFake}
 	return RoutingConfig{
-		Profile: ProfileEUHosted,
+		Profile: ProfileCloudHosted,
 		Tiers: map[Tier]ProviderConfig{
 			TierLocalSmall: fake,
 			TierCheapCloud: fake,

@@ -39,6 +39,7 @@ are waiting to be re-checked; each is marked below.
 |---|---|---:|---:|---:|---:|---|
 | [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 11 | 2 | 14 | 2 | 11 of 29 features ready (re-check pending) |
 | [`gemini_cloud`](#gemini_cloud) | EU-hosted cloud | 13 | 4 | 12 | 0 | 13 of 29 features ready (28 re-checks pending) |
+| [`gemini_vertex_eu`](#gemini_vertex_eu) | EU-resident cloud | 0 | 0 | 0 | 29 | 0 of 29 features ready |
 | [`openrouter_cloud`](#openrouter_cloud) | EU-hosted cloud | 6 | 4 | 13 | 6 | 6 of 29 features ready (re-check pending) |
 | [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 10 | 1 | 16 | 2 | 10 of 29 features ready (re-check pending) |
 
@@ -218,6 +219,89 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `voice_build` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
 | `weekly_learnings` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
 | `weekly_review` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+
+</details>
+
+### `gemini_vertex_eu`
+
+Your data goes to: EU-resident cloud. 0 of 29 features ready. Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
+
+| Feature | Can I use it? | In plain words |
+|---|---|---|
+| Agent reasoning loop <sub>`agent_loop`</sub> | ❔ Not measured | Not measured yet |
+| Buying-role reading <sub>`propose_roles`</sub> | ❔ Not measured | Not measured yet |
+| Certification judging <sub>`cert_judge`</sub> | ❔ Not measured | Not measured yet |
+| Company fit assessment <sub>`growth_fit`</sub> | ❔ Not measured | Not measured yet |
+| Deal status card <sub>`deal_health`</sub> | ❔ Not measured | Not measured yet |
+| Did our reply settle it <sub>`request_settlement`</sub> | ❔ Not measured | Not measured yet |
+| Document corpus question <sub>`corpus_ask`</sub> | ❔ Not measured | Not measured yet |
+| Document extraction <sub>`document_extract`</sub> | ❔ Not measured | Not measured yet |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❔ Not measured | Not measured yet |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ❔ Not measured | Not measured yet |
+| Message classification <sub>`capture_classify`</sub> | ❔ Not measured | Not measured yet |
+| Model pricing extraction <sub>`rate_extract`</sub> | ❔ Not measured | Not measured yet |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ❔ Not measured | Not measured yet |
+| Offer drafting <sub>`offer_draft`</sub> | ❔ Not measured | Not measured yet |
+| Onboarding read <sub>`cold_start`</sub> | ❔ Not measured | Not measured yet |
+| Reading what an account needs <sub>`account_scan`</sub> | ❔ Not measured | Not measured yet |
+| Record summary <sub>`summarize`</sub> | ❔ Not measured | Not measured yet |
+| Reply drafting <sub>`draft_reply`</sub> | ❔ Not measured | Not measured yet |
+| Signal extraction <sub>`signal_extract`</sub> | ❔ Not measured | Not measured yet |
+| Signature enrichment <sub>`enrich`</sub> | ❔ Not measured | Not measured yet |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❔ Not measured | Not measured yet |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❔ Not measured | Not measured yet |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ❔ Not measured | Not measured yet |
+| Voice DNA build <sub>`voice_build`</sub> | ❔ Not measured | Not measured yet |
+| Website deep read <sub>`site_extract`</sub> | ❔ Not measured | Not measured yet |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ❔ Not measured | Not measured yet |
+| Website triage <sub>`site_triage`</sub> | ❔ Not measured | Not measured yet |
+| Weekly review narrative <sub>`weekly_review`</sub> | ❔ Not measured | Not measured yet |
+| What last week taught <sub>`weekly_learnings`</sub> | ❔ Not measured | Not measured yet |
+
+<details>
+<summary>Which models this preset uses</summary>
+
+| Tier | Provider | Model |
+|---|---|---|
+| `local_small` | `gemini_vertex` | `gemini-3.1-flash-lite` |
+| `cheap_cloud` | `gemini_vertex` | `gemini-3.1-flash-lite` |
+| `premium` | `gemini_vertex` | `gemini-3.5-flash` |
+| `frontier` | `gemini_vertex` | `gemini-3.1-pro-preview` |
+
+Each feature walks its own ladder of tiers until it reaches one this preset
+binds; this is the rung and the model it lands on, and the record behind its grade.
+
+| Task | Served on | Model | Grade | Measurement |
+|---|---|---|---|---|
+| `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `brief_ranking` | `premium` | `gemini-3.5-flash` | ❔ Not measured | not measured |
+| `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `capture_counterparty_verdict` | `local_small` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `cert_judge` | `premium` | `gemini-3.5-flash` | ❔ Not measured | not measured |
+| `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `corpus_ask` | `premium` | `gemini-3.5-flash` | ❔ Not measured | not measured |
+| `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `document_extract` | `premium` | `gemini-3.5-flash` | ❔ Not measured | not measured |
+| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `enrich` | `local_small` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `growth_fit` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `offer_draft` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `owed_verdict` | `local_small` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `propose_roles` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `rate_extract` | `premium` | `gemini-3.5-flash` | ❔ Not measured | not measured |
+| `request_settlement` | `local_small` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `signal_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `site_extract` | `premium` | `gemini-3.5-flash` | ❔ Not measured | not measured |
+| `site_fact_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `site_triage` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `stage_evidence_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `summarize` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `transcript_propose` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `voice_build` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `weekly_learnings` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
+| `weekly_review` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
 
 </details>
 

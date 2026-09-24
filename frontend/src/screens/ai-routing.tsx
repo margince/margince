@@ -28,6 +28,7 @@ import { AdapterFields, EmbeddingWidthField } from "./ai-routing-fields";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { RefreshFromSources } from "./rate-refresh";
 import { SETUP_PROVIDERS } from "./setup-providers";
+import { savedVertexLocation } from "./vertex-location";
 import "./ai-settings.css";
 
 // Which vendor this installation's text is sent to (ai-operational-spec §1.4).
@@ -46,7 +47,12 @@ import "./ai-settings.css";
 type Routing = components["schemas"]["AiRouting"];
 type TierBinding = components["schemas"]["AiTierBinding"];
 
-const PROFILES = ["eu_hosted", "sovereign", "cloud_frontier"] as const;
+const PROFILES = [
+  "eu_hosted",
+  "eu_resident",
+  "sovereign",
+  "cloud_frontier",
+] as const;
 
 // The key the embedding lane is opened under. Not a tier name, and it cannot
 // collide with one: the tier vocabulary is the task contract's and this is the
@@ -296,6 +302,10 @@ function RoutingForm({
     setDraft((d) => ({ ...d, tiers: { ...d.tiers, [tier]: next } }));
   const busy = !canManage || replace.isPending || preview.isPending;
   const unkeyed = unkeyedProviders(keys.data?.providers);
+  const vertexLocation = savedVertexLocation([
+    ...Object.values(routing.tiers),
+    routing.embeddings,
+  ]);
 
   return (
     <>
@@ -390,6 +400,8 @@ function RoutingForm({
               name={tier}
               binding={draft.tiers[tier]}
               catalogue={catalogue.data}
+              profile={draft.profile}
+              vertexLocation={vertexLocation}
               unkeyed={unkeyed}
               disabled={busy}
               open={editing === tier}
@@ -415,6 +427,8 @@ function RoutingForm({
             testId="ai-routing-embeddings"
             binding={draft.embeddings}
             catalogue={catalogue.data}
+            profile={draft.profile}
+            vertexLocation={vertexLocation}
             unkeyed={unkeyed}
             disabled={busy}
             open={editing === EMBEDDINGS_LANE}
@@ -544,12 +558,19 @@ function RoutingForm({
 // an empty price sheet means the reader cannot read it rather than that nothing on
 // this installation is priced.
 function LaneRow<
-  B extends { provider: string; model: string; base_url?: string },
+  B extends {
+    provider: string;
+    model: string;
+    base_url?: string;
+    location?: string;
+  },
 >({
   name,
   lane,
   binding,
   catalogue,
+  profile,
+  vertexLocation,
   unkeyed,
   disabled,
   open,
@@ -562,6 +583,8 @@ function LaneRow<
   lane: ModelLane;
   binding: B;
   catalogue: ModelCatalogue;
+  profile: string;
+  vertexLocation: string;
   unkeyed: ReadonlySet<string> | null;
   disabled: boolean;
   open: boolean;
@@ -657,6 +680,8 @@ function LaneRow<
               laneName={name}
               binding={binding}
               catalogue={catalogue}
+              profile={profile}
+              vertexLocation={vertexLocation}
               disabled={disabled}
               onChange={onChange}
             />
@@ -677,9 +702,9 @@ function LaneRow<
 // The providers this installation could bind RIGHT NOW: keyed, and named by a
 // preset so the binding opens on real model ids rather than blank fields.
 //
-// Deliberately the onboarding list rather than every keyed vendor: those two
+// Deliberately the onboarding list rather than every keyed vendor: those
 // serve chat AND embeddings from one key, and a routing document REQUIRES an
-// embeddings binding, so a third would open a form nobody can complete.
+// embeddings binding, so any other would open a form nobody can complete.
 function startableProviders(
   providers: readonly { provider: string; configured: boolean }[] | undefined,
 ): readonly { id: keyof typeof SETUP_PROVIDERS; label: string }[] {
@@ -702,19 +727,15 @@ function startableProviders(
 // omits the lane and its tasks keep answering from the fake.
 function firstBinding(id: keyof typeof SETUP_PROVIDERS): Routing {
   const p = SETUP_PROVIDERS[id];
-  const lane = {
-    provider: p.provider,
-    model: p.chatModel,
+  const placement = {
     ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
+    ...(p.location ? { location: p.location } : {}),
   };
+  const lane = { provider: p.provider, model: p.chatModel, ...placement };
   return {
-    profile: "cloud_frontier",
+    profile: p.profile,
     tiers: Object.fromEntries(TIER_ORDER.map((t) => [t, { ...lane }])),
-    embeddings: {
-      provider: p.provider,
-      model: p.embedModel,
-      ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
-    },
+    embeddings: { provider: p.provider, model: p.embedModel, ...placement },
   } as Routing;
 }
 

@@ -46,7 +46,7 @@ const testRepeats = 3
 // exercise the replay it came to test.
 func withJournal(t *testing.T, dir string, now time.Time, fn func(*runJournal)) {
 	t.Helper()
-	j, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, now, quietLogger())
+	j, err := openRunJournal(context.Background(), dir, ai.ProfileCloudHosted, now, quietLogger())
 	if err != nil {
 		t.Fatalf("openRunJournal: %v", err)
 	}
@@ -80,7 +80,7 @@ func certifyOnce(t *testing.T, dir string, sc Scenario, candidate, judge *ai.Fak
 	var err error
 	withJournal(t, dir, fixedResumeNow, func(j *runJournal) {
 		rec, err = certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
-			testCandidateBinding, testJudgeBinding, ai.ProfileEUHosted, testRepeats, quietLogger(), &certifyHooks{
+			testCandidateBinding, testJudgeBinding, ai.ProfileCloudHosted, testRepeats, quietLogger(), &certifyHooks{
 				candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 				judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 				journal:       j.forTask(ai.TaskSummarize, testCandidateBinding, testJudgeBinding),
@@ -393,7 +393,7 @@ func TestAJournaledRunIsNotReplayedUnderADifferentProfile(t *testing.T) {
 		t.Fatalf("closing the other profile's journal: %v", cerr)
 	}
 	if replayed {
-		t.Fatalf("a run measured under %s was offered as a replay under %s", ai.ProfileEUHosted, ai.ProfileCloudFrontier)
+		t.Fatalf("a run measured under %s was offered as a replay under %s", ai.ProfileCloudHosted, ai.ProfileCloudFrontier)
 	}
 	if !replayable(t, dir, fixedResumeNow, sc, testCandidateBinding) {
 		t.Fatal("opening under another profile deleted this one's live runs")
@@ -486,7 +486,7 @@ func TestAJournaledRunIsNotReplayedByADifferentBinary(t *testing.T) {
 
 func TestASecondRunIsRefusedTheResumeDirectoryRatherThanDestroyingIt(t *testing.T) {
 	dir := t.TempDir()
-	first, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
+	first, err := openRunJournal(context.Background(), dir, ai.ProfileCloudHosted, fixedResumeNow, quietLogger())
 	if err != nil {
 		t.Fatalf("openRunJournal: %v", err)
 	}
@@ -501,7 +501,7 @@ func TestASecondRunIsRefusedTheResumeDirectoryRatherThanDestroyingIt(t *testing.
 	// compaction renames a fresh file over the first's, leaving the first
 	// appending into an unlinked inode — every run it journals from then on is
 	// written where nobody will read it, silently.
-	_, second := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
+	_, second := openRunJournal(context.Background(), dir, ai.ProfileCloudHosted, fixedResumeNow, quietLogger())
 	if second == nil {
 		t.Fatal("a second run took the same resume directory — the first's journal is now write-only garbage")
 	}
@@ -512,7 +512,7 @@ func TestASecondRunIsRefusedTheResumeDirectoryRatherThanDestroyingIt(t *testing.
 
 func TestTheResumeDirectoryIsReleasedForTheNextRun(t *testing.T) {
 	dir := t.TempDir()
-	first, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
+	first, err := openRunJournal(context.Background(), dir, ai.ProfileCloudHosted, fixedResumeNow, quietLogger())
 	if err != nil {
 		t.Fatalf("openRunJournal: %v", err)
 	}
@@ -521,7 +521,7 @@ func TestTheResumeDirectoryIsReleasedForTheNextRun(t *testing.T) {
 	}
 	// A claim that outlived its run would make resuming a one-shot feature and
 	// send every later run to the manual-cleanup message.
-	second, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
+	second, err := openRunJournal(context.Background(), dir, ai.ProfileCloudHosted, fixedResumeNow, quietLogger())
 	if err != nil {
 		t.Fatalf("the resume directory was not released by the run that closed it: %v", err)
 	}

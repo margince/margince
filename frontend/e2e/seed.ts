@@ -668,11 +668,21 @@ export const auditEntries = [
 // One provider keyed and one not, so the route the 390px and axe sweeps visit
 // renders BOTH row states. A list of only-configured or only-empty rows would
 // leave half the card's markup unvisited by the very sweeps that exist to see
-// it. `env_var` is required by AiProviderKeyStatus.
+// it. `env_var` and `credential_kind` are required by AiProviderKeyStatus.
 export const aiProviderKeys = {
   providers: [
-    { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-    { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
+    {
+      provider: "gemini",
+      configured: true,
+      env_var: "GEMINI_API_KEY",
+      credential_kind: "api_key",
+    },
+    {
+      provider: "anthropic",
+      configured: false,
+      env_var: "ANTHROPIC_API_KEY",
+      credential_kind: "api_key",
+    },
   ],
 };
 

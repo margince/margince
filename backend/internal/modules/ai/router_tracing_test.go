@@ -302,7 +302,7 @@ func TestCompleteEmitsSlog(t *testing.T) {
 	r := assembleRouter(
 		map[Tier]model.Client{TierCheapCloud: cheap},
 		NewFakeClient(),
-		ProfileEUHosted,
+		ProfileCloudHosted,
 		meter,
 		DefaultMonthlyTokens,
 		nil, // callStore
@@ -641,7 +641,7 @@ func TestCaptureOffRecordsNoPayload(t *testing.T) {
 // beside this holds that arm).
 func TestABudgetReadFailureIsTracedRatherThanSilent(t *testing.T) {
 	calls := &fakeCallStore{}
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &brokenMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &brokenMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 	r.calls = calls
 	_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
 	if err == nil {
@@ -660,7 +660,7 @@ func TestABudgetReadFailureIsTracedRatherThanSilent(t *testing.T) {
 // reached routing — never as a provider fault.
 func TestAnAnnouncedRequestFailureIsTracedUnderItsOwnSentinel(t *testing.T) {
 	calls := &fakeCallStore{}
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 	r.calls = calls
 	r.AnnounceRequestFailure(wsContext(t), TaskSummarize, errors.New("company context would not render"))
 	if len(calls.recorded) != 1 {

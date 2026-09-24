@@ -34,7 +34,7 @@ func TestVoiceLiveSmoke(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := ai.RoutingConfig{Profile: ai.ProfileEUHosted, Tiers: map[ai.Tier]ai.ProviderConfig{}}
+	cfg := ai.RoutingConfig{Profile: ai.ProfileCloudHosted, Tiers: map[ai.Tier]ai.ProviderConfig{}}
 	for _, tier := range ai.AllTiers() {
 		cfg.Tiers[tier] = binding
 	}

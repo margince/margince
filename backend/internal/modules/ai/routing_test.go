@@ -150,6 +150,35 @@ func TestSovereignRefusesNativeCloudProviders(t *testing.T) {
 	}
 }
 
+// eu_resident is an enforced promise, so it admits nothing it cannot vouch for:
+// every cloud provider but Vertex is refused on a chat tier and on the
+// embeddings lane, and what sovereign accepts still parses. Vertex's locations
+// are residency_test.go's subject.
+func TestEUResidentRefusesEveryCloudProviderButVertex(t *testing.T) {
+	const local = "{provider: ollama, model: bge-m3}"
+	for _, provider := range knownProviders {
+		if localProviders[provider] || provider == providerGeminiVertex {
+			continue
+		}
+		cloud := "{provider: " + provider + ", model: m, base_url: https://api.mistral.ai}"
+		for lane, doc := range map[string]string{
+			"tier premium":        "profile: eu_resident\ntiers:\n  premium: " + cloud + "\nembeddings: " + local + "\n",
+			"the embeddings lane": "profile: eu_resident\ntiers:\n  premium: " + local + "\nembeddings: " + cloud + "\n",
+		} {
+			t.Run(provider+" on "+lane, func(t *testing.T) {
+				_, err := ParseRouting([]byte(doc))
+				want := "profile eu_resident forbids cloud provider \"" + provider + "\" on " + lane
+				if err == nil || !strings.Contains(err.Error(), want) {
+					t.Fatalf("want %q, got %v", want, err)
+				}
+			})
+		}
+	}
+	if _, err := ParseRouting([]byte("profile: eu_resident\ntiers:\n  premium: " + local + "\nembeddings: " + local + "\n")); err != nil {
+		t.Fatalf("a same-host binding is resident and must parse: %v", err)
+	}
+}
+
 // LocalOnly (the runtime capability) and localProviders (the parse-time set)
 // are two encodings of "is this cloud"; they may never disagree.
 func TestLocalOnlyMatchesLocalProvidersForEveryProvider(t *testing.T) {
@@ -161,13 +190,14 @@ func TestLocalOnlyMatchesLocalProvidersForEveryProvider(t *testing.T) {
 		"openai_compatible": {Provider: "openai_compatible", BaseURL: "https://x", Model: "m"},
 		"openai":            {Provider: "openai", Model: "m"},
 		"gemini":            {Provider: "gemini", Model: "m"},
+		"gemini_vertex":     {Provider: "gemini_vertex", Location: "eu", Model: "m"},
 	}
 	for _, name := range knownProviders {
 		cfg, ok := built[name]
 		if !ok {
 			t.Fatalf("knownProviders has %q with no build recipe in this test — add one", name)
 		}
-		client, err := SelectBrain(cfg, allCloudKeys())
+		client, err := SelectBrain(cfg, allCloudKeys(t))
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -269,7 +299,7 @@ profile: sovereign
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg = cfg.WithKeys(allCloudKeys())
+	cfg = cfg.WithKeys(allCloudKeys(t))
 	if cfg.Profile != ProfileSovereign || len(cfg.Tiers) != 2 {
 		t.Fatalf("unexpected parse: %+v", cfg)
 	}
@@ -302,7 +332,7 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 		{
 			name: "a chat tier with no host",
 			cfg: RoutingConfig{
-				Profile:    ProfileEUHosted,
+				Profile:    ProfileCloudHosted,
 				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: broker},
 				Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}},
 			},
@@ -311,7 +341,7 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 		{
 			name: "the embeddings lane with no host",
 			cfg: RoutingConfig{
-				Profile:    ProfileEUHosted,
+				Profile:    ProfileCloudHosted,
 				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: ProviderFake}},
 				Embeddings: EmbeddingsConfig{ProviderConfig: broker},
 			},
@@ -334,7 +364,7 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 			// The other arm, so the rule cannot pass by refusing everything.
 			name: "the same binding with its host",
 			cfg: RoutingConfig{
-				Profile:    ProfileEUHosted,
+				Profile:    ProfileCloudHosted,
 				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: withHost},
 				Embeddings: EmbeddingsConfig{ProviderConfig: withHost},
 			},

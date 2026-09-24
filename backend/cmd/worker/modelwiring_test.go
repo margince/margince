@@ -16,7 +16,7 @@ import (
 func storedBinding() ai.RoutingConfig {
 	cloud := ai.ProviderConfig{Provider: "gemini", Model: "gemini-2.5-flash"}
 	return ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers: map[ai.Tier]ai.ProviderConfig{
 			ai.TierLocalSmall: cloud,
 			ai.TierCheapCloud: cloud,

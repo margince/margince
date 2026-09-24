@@ -116,7 +116,7 @@ func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 	for _, binding := range plan {
 		processing := "configured_endpoint"
 		switch binding.config.Provider {
-		case "anthropic", "openai", "gemini":
+		case providerAnthropic, providerOpenAI, providerGemini, providerGeminiVertex:
 			if binding.config.BaseURL == "" {
 				processing = "cloud_provider"
 			}

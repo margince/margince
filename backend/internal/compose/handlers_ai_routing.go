@@ -79,7 +79,7 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 	for tier, b := range cfg.Tiers {
 		tiers[string(tier)] = crmcontracts.AiTierBinding{
 			Provider: b.Provider, Model: b.Model,
-			BaseUrl: optionalString(b.BaseURL), Input: optionalStrings(b.Input),
+			BaseUrl: optionalString(b.BaseURL), Location: optionalString(b.Location), Input: optionalStrings(b.Input),
 		}
 	}
 	return crmcontracts.AiRouting{
@@ -87,8 +87,9 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 		Tiers:   tiers,
 		Embeddings: crmcontracts.AiEmbeddingsBinding{
 			Provider: cfg.Embeddings.Provider, Model: cfg.Embeddings.Model,
-			BaseUrl: optionalString(cfg.Embeddings.BaseURL),
-			Input:   optionalStrings(cfg.Embeddings.Input),
+			BaseUrl:  optionalString(cfg.Embeddings.BaseURL),
+			Location: optionalString(cfg.Embeddings.Location),
+			Input:    optionalStrings(cfg.Embeddings.Input),
 			// Reported as stored rather than as defaulted, so a round-trip of
 			// GET → PUT does not silently freeze today's compiled default into
 			// the document as though an operator had chosen it.
@@ -102,8 +103,11 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 // applies, so there is exactly one place a bad binding is refused.
 func fromContractAiRouting(req crmcontracts.AiRouting) ai.RoutingConfig {
 	cfg := ai.RoutingConfig{
-		Profile:    ai.Profile(req.Profile),
-		Embeddings: ai.EmbeddingsConfig{ProviderConfig: tierFromWire(req.Embeddings.Provider, req.Embeddings.Model, req.Embeddings.BaseUrl, req.Embeddings.Input)},
+		Profile: ai.Profile(req.Profile),
+		Embeddings: ai.EmbeddingsConfig{ProviderConfig: tierFromWire(crmcontracts.AiTierBinding{
+			Provider: req.Embeddings.Provider, Model: req.Embeddings.Model,
+			BaseUrl: req.Embeddings.BaseUrl, Location: req.Embeddings.Location, Input: req.Embeddings.Input,
+		})},
 	}
 	if req.Embeddings.Dimensions != nil {
 		cfg.Embeddings.Dimensions = *req.Embeddings.Dimensions
@@ -111,19 +115,22 @@ func fromContractAiRouting(req crmcontracts.AiRouting) ai.RoutingConfig {
 	if len(req.Tiers) > 0 {
 		cfg.Tiers = make(map[ai.Tier]ai.ProviderConfig, len(req.Tiers))
 		for name, b := range req.Tiers {
-			cfg.Tiers[ai.Tier(name)] = tierFromWire(b.Provider, b.Model, b.BaseUrl, b.Input)
+			cfg.Tiers[ai.Tier(name)] = tierFromWire(b)
 		}
 	}
 	return cfg
 }
 
-func tierFromWire(provider, model string, baseURL *string, input *[]string) ai.ProviderConfig {
-	out := ai.ProviderConfig{Provider: provider, Model: model}
-	if baseURL != nil {
-		out.BaseURL = *baseURL
+func tierFromWire(b crmcontracts.AiTierBinding) ai.ProviderConfig {
+	out := ai.ProviderConfig{Provider: b.Provider, Model: b.Model}
+	if b.BaseUrl != nil {
+		out.BaseURL = *b.BaseUrl
 	}
-	if input != nil {
-		out.Input = *input
+	if b.Location != nil {
+		out.Location = *b.Location
+	}
+	if b.Input != nil {
+		out.Input = *b.Input
 	}
 	return out
 }
@@ -181,12 +188,55 @@ func (h aiRoutingHandlers) ListAvailableModels(
 	if params.Top != nil {
 		top = *params.Top
 	}
-	available, err := h.store.ListAvailableModels(r.Context(), provider, tier, top)
+	available, err := h.store.ListAvailableModels(r.Context(), ai.AvailableModelsQuery{
+		Provider: provider, Tier: tier, Top: top,
+		Location: derefString(params.Location), Model: derefString(params.Model),
+	})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, toContractAvailableModels(available))
+}
+
+// ListProviderLocations reports where one vendor can process a call, for the
+// Location field of a gemini_vertex binding. Like the model list, a vendor
+// that cannot be asked is a 200 carrying the reason.
+func (h aiRoutingHandlers) ListProviderLocations(w http.ResponseWriter, r *http.Request, provider string) {
+	if h.store == nil {
+		httperr.NotImplemented(w, r, "ListProviderLocations")
+		return
+	}
+	// Human-only (x-agent-access): the agent gate refuses first, and this is
+	// its in-handler twin, as on the binding write.
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	found, err := h.store.ListProviderLocations(r.Context(), provider)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, toContractProviderLocations(found))
+}
+
+// toContractProviderLocations keeps Locations an array, never null, for the
+// reason toContractAvailableModels does.
+func toContractProviderLocations(found ai.ProviderLocations) crmcontracts.ProviderLocationList {
+	locations := make([]crmcontracts.ProviderLocation, 0, len(found.Locations))
+	for _, l := range found.Locations {
+		locations = append(locations, crmcontracts.ProviderLocation{
+			Id: l.ID, DisplayName: l.DisplayName,
+			Jurisdiction: crmcontracts.ProviderLocationJurisdiction(l.Jurisdiction), Resident: l.Resident,
+		})
+	}
+	out := crmcontracts.ProviderLocationList{Provider: found.Provider, Locations: locations}
+	if found.Unavailable != ai.AvailabilityOK {
+		reason := crmcontracts.ProviderLocationListUnavailable(found.Unavailable)
+		out.Unavailable = &reason
+	}
+	return out
 }
 
 // toContractAvailableModels maps one vendor's answer onto the wire shape.

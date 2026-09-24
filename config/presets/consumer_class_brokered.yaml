@@ -56,7 +56,7 @@ seeds:
     # The other two are wrong for different reasons. `sovereign` is zero egress
     # and is enforced, not labelled: it refuses a cloud provider outright, and
     # it is the profile the eventual Ollama binding of these same weights will
-    # carry. `eu_hosted` claims partner EU inference, which this file cannot
+    # carry. `eu_resident` enforces EU processing, which this file cannot
     # promise — the endpoints it reaches at fp8 are DeepInfra's and Parasail's,
     # pinned by precision and not by region.
     profile: cloud_frontier

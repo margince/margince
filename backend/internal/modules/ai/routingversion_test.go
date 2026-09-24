@@ -131,3 +131,39 @@ func TestTheVersionIsStableAcrossRepeatedParses(t *testing.T) {
 		}
 	}
 }
+
+// Every installation's cached briefs, dossiers and growth-fits are keyed on
+// these digests, so a change to how a binding marshals regenerates them all
+// through paid models. The hex values are pinned, not recomputed: a renamed
+// constant or a new field without omitempty fails here instead of in a bill.
+func TestAnExistingBindingKeepsItsPinnedVersion(t *testing.T) {
+	for name, tc := range map[string]struct{ doc, want string }{
+		"a single-vendor cloud binding": {
+			doc:  baseRouting,
+			want: "9f63f2eed1f2f0fa302b9b5c3ff0a5ffe2022324f5bf3d041dd8cd53b9c180f2",
+		},
+		"a brokered binding with a defaulted upstream and a narrowed input": {
+			doc: `profile: eu_hosted
+tiers:
+  premium: {provider: openai_compatible, base_url: https://openrouter.ai/api, model: mistralai/mistral-small-2603}
+  frontier: {provider: anthropic, model: claude-sonnet-4-5, input: [text, image]}
+embeddings: {provider: gemini, model: gemini-embedding-001}
+`,
+			want: "e9c868909349fac6f7aadea107a94281362a37b95f1f7cc5a320193142972377",
+		},
+		"a Vertex binding, which alone marshals a location": {
+			doc: `profile: eu_hosted
+tiers:
+  premium: {provider: gemini_vertex, location: eu, model: gemini-3.5-flash}
+embeddings: {provider: gemini_vertex, location: europe-west4, model: gemini-embedding-001}
+`,
+			want: "70df0c5068f432441c98f6af9b4ae5c6dfb432652b92f04f4d3e5d1c0023602d",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := versionOf(t, tc.doc); got != tc.want {
+				t.Errorf("an unchanged binding hashes differently, which regenerates every cached AI output:\n got  %s\n want %s", got, tc.want)
+			}
+		})
+	}
+}

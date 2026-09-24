@@ -440,6 +440,63 @@ describe("the first-run setup gate", () => {
     expect(routing.embeddings.base_url).toBe("https://openrouter.ai/api");
   });
 
+  // The residency choice binds under the profile it was offered as, at a
+  // location, keyed by a service-account file rather than a pasted key.
+  it("binds Gemini on Vertex at eu under eu_resident, keyed by the key file", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Provider" }),
+      "Gemini on Vertex AI (EU data residency)",
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Location" }).textContent,
+    ).toContain("eu");
+    const keyFile = JSON.stringify({
+      type: "service_account",
+      client_email: "m@acme-eu.iam.gserviceaccount.com",
+      private_key: "-----BEGIN PRIVATE KEY-----",
+    });
+    await user.click(screen.getByLabelText("Service-account key (JSON)"));
+    await user.paste(keyFile);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(writes.length).toBe(2));
+    expect(writes[0]).toEqual({
+      url: "/v1/ai/provider-keys/gemini_vertex",
+      body: { service_account_json: keyFile },
+    });
+    const routing = writes[1].body as {
+      profile: string;
+      tiers: Record<string, { provider: string; location?: string }>;
+      embeddings: { provider: string; location?: string };
+    };
+    expect(routing.profile).toBe("eu_resident");
+    for (const bound of [...Object.values(routing.tiers), routing.embeddings]) {
+      expect(bound).toMatchObject({
+        provider: "gemini_vertex",
+        location: "eu",
+      });
+    }
+  });
+
+  it("refuses a pasted key file that is not JSON before writing anything", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Provider" }),
+      "Gemini on Vertex AI (EU data residency)",
+    );
+    await user.click(screen.getByLabelText("Service-account key (JSON)"));
+    await user.paste("AIza-an-api-key");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText(/this is not json/i)).toBeTruthy();
+    expect(writes.length).toBe(0);
+  });
+
   // Continue is always pressable. Pressing it early is how a reader learns
   // what is missing: the field turns red and the rail names it, and nothing is
   // written — a grey button would have said only that something is wrong.

@@ -245,6 +245,7 @@ func TestSeedModelRatesEveryRowDeclaresItsLane(t *testing.T) {
 func TestSeedModelRatesFilesTheEmbeddersAsEmbedders(t *testing.T) {
 	embedders := map[string]bool{
 		providerGemini + "/gemini-embedding-001":                    false,
+		providerGeminiVertex + "/gemini-embedding-001":              false,
 		providerOllama + "/bge-m3":                                  false,
 		providerOpenAICompatible + "/mistralai/mistral-embed-2312":  false,
 		providerOpenAICompatible + "/baai/bge-m3":                   false,

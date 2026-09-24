@@ -224,3 +224,48 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 		})
 	}
 }
+
+// The `location:` matrix. A Vertex host is built from the location, so the
+// editor must refuse every spelling the parser refuses, and on the same lanes.
+func TestTheSchemaAndTheParserAgreeOnEveryVertexPlacement(t *testing.T) {
+	t.Parallel()
+	sch := compiledRoutingSchema(t)
+
+	const embedder = "{provider: gemini, model: e}"
+	routing := func(tier, embeddings string) string {
+		return "profile: eu_hosted\ntiers:\n  premium: " + tier + "\nembeddings: " + embeddings + "\n"
+	}
+	for name, tc := range map[string]struct {
+		yaml  string
+		legal bool
+	}{
+		"the EU multi-region":        {routing("{provider: gemini_vertex, model: m, location: eu}", embedder), true},
+		"a region":                   {routing("{provider: gemini_vertex, model: m, location: europe-west4}", embedder), true},
+		"global":                     {routing("{provider: gemini_vertex, model: m, location: global}", embedder), true},
+		"no location":                {routing("{provider: gemini_vertex, model: m}", embedder), false},
+		"a base_url beside it":       {routing("{provider: gemini_vertex, model: m, location: eu, base_url: 'https://x.example'}", embedder), false},
+		"a host smuggled in":         {routing("{provider: gemini_vertex, model: m, location: 'eu.attacker.example'}", embedder), false},
+		"an uppercase location":      {routing("{provider: gemini_vertex, model: m, location: EU}", embedder), false},
+		"a location on another wire": {routing("{provider: gemini, model: m, location: eu}", embedder), false},
+		"the embeddings lane":        {routing(embedder, "{provider: gemini_vertex, model: e, location: eu}"), true},
+		"the embeddings lane with no location": {
+			routing(embedder, "{provider: gemini_vertex, model: e}"), false,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var doc any
+			if err := yaml.Unmarshal([]byte(tc.yaml), &doc); err != nil {
+				t.Fatalf("test yaml is not yaml: %v", err)
+			}
+			schemaAccepts := sch.Validate(doc) == nil
+			_, parseErr := ai.ParseRouting([]byte(tc.yaml))
+			if schemaAccepts != tc.legal {
+				t.Errorf("the EDITOR accepts=%v, want %v", schemaAccepts, tc.legal)
+			}
+			if parserAccepts := parseErr == nil; parserAccepts != tc.legal {
+				t.Errorf("the PARSER accepts=%v, want %v (err: %v)", parserAccepts, tc.legal, parseErr)
+			}
+		})
+	}
+}

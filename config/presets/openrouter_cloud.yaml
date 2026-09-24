@@ -24,7 +24,7 @@ version: 1
 
 seeds:
   ai_routing:
-    profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+    profile: eu_hosted          # eu_hosted | eu_resident | sovereign | cloud_frontier
     tiers:
       # base_url is the host root with NO version segment — the adapter appends
       # /v1. openai_compatible fails closed without one.

@@ -18,7 +18,7 @@ import (
 
 func devLikeRouting() ai.RoutingConfig {
 	return ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers: map[ai.Tier]ai.ProviderConfig{
 			ai.TierLocalSmall: {Provider: "openai_compatible", Model: "openai/gpt-oss-120b", BaseURL: "https://broker.example/api"},
 			ai.TierCheapCloud: {Provider: "openai_compatible", Model: "openai/gpt-oss-120b", BaseURL: "https://broker.example/api"},
@@ -103,7 +103,7 @@ func TestValidateRoutedBindingsCatchesAJudgeCollisionUpFront(t *testing.T) {
 		// Exactly the premium binding above: the judge would be grading itself on
 		// every premium-led task.
 		JudgeBinding: ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/big-1", BaseURL: "https://broker.example/api"},
-		Profile:      ai.ProfileEUHosted,
+		Profile:      ai.ProfileCloudHosted,
 	}
 	err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler))
 	if err == nil {
@@ -127,7 +127,7 @@ func TestValidateRoutedBindingsAcceptsADistinctJudge(t *testing.T) {
 	cfg := RunnerConfig{
 		Routing:      ptr(devLikeRouting()),
 		JudgeBinding: ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/grader-9", BaseURL: "https://broker.example/api"},
-		Profile:      ai.ProfileEUHosted,
+		Profile:      ai.ProfileCloudHosted,
 	}
 	if err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler)); err != nil {
 		t.Errorf("a judge no task leads on must be accepted, got %v", err)
@@ -137,7 +137,7 @@ func TestValidateRoutedBindingsAcceptsADistinctJudge(t *testing.T) {
 // No judge at all is refused BEFORE the run, and the message says why the
 // routing cannot supply one: cert_judge's own rung would collide.
 func TestValidateRoutedBindingsRequiresAJudge(t *testing.T) {
-	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), Profile: ai.ProfileEUHosted}
+	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), Profile: ai.ProfileCloudHosted}
 	err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler))
 	if err == nil {
 		t.Fatal("a routed run with no judge was accepted; nothing would have graded the candidate")
@@ -173,7 +173,7 @@ func ptr(r ai.RoutingConfig) *ai.RoutingConfig { return &r }
 func TestARoutedRunTakesItsProfileFromTheRouting(t *testing.T) {
 	routing := devLikeRouting() // declares eu_hosted
 	cfg := RunnerConfig{Routing: &routing, Profile: ai.ProfileCloudFrontier}
-	if got := cfg.recordProfile(); got != ai.ProfileEUHosted {
+	if got := cfg.recordProfile(); got != ai.ProfileCloudHosted {
 		t.Errorf("recordProfile() = %q, want the routing's own eu_hosted — not the field beside it", got)
 	}
 	// Unrouted, the field IS the answer; there is nothing else to ask.
@@ -188,7 +188,7 @@ func TestARoutedRunTakesItsProfileFromTheRouting(t *testing.T) {
 // incomparable.
 func TestJudgeForGradesEveryTaskWithTheOneJudge(t *testing.T) {
 	judge := ai.ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
-	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), JudgeBinding: judge, Profile: ai.ProfileEUHosted}
+	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), JudgeBinding: judge, Profile: ai.ProfileCloudHosted}
 	for _, task := range []ai.Task{ai.TaskDocumentExtract, ai.TaskCaptureConfidentialityVerdict} {
 		candidate, _, ok := resolveBinding(*cfg.Routing, task)
 		if !ok {
@@ -205,7 +205,7 @@ func TestJudgeForGradesEveryTaskWithTheOneJudge(t *testing.T) {
 // judge refuses the run, naming the tasks and the flag that fixes it.
 func TestASingleCandidateThatIsTheJudgeIsRefused(t *testing.T) {
 	judge := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}
-	cfg := RunnerConfig{Binding: judge, JudgeBinding: judge, Profile: ai.ProfileEUHosted}
+	cfg := RunnerConfig{Binding: judge, JudgeBinding: judge, Profile: ai.ProfileCloudHosted}
 	err := validateBindings(cfg, []ai.Task{ai.TaskSummarize}, slog.New(slog.DiscardHandler))
 	if err == nil {
 		t.Fatal("a candidate that is the judge was accepted; it would grade itself")

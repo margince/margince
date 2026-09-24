@@ -5,6 +5,7 @@ package ai
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -30,8 +31,36 @@ func noCloudKeys() config.Lookup { return config.Static(nil) }
 //
 // The guard is proved where it belongs: outboundegress_test.go tests the rule,
 // and TestSelectBrainWiresTheEgressGuard tests that SelectBrain applies it.
+//
+// A gemini_vertex binding's host is derived, so its fixture is reached by
+// rewriting Google's hosts to the base_url the case gave.
 func selectLocalBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
-	return selectBrainOn(cfg, keys, &http.Client{Timeout: CallCeiling})
+	httpc := &http.Client{Timeout: CallCeiling}
+	if cfg.Provider == providerGeminiVertex {
+		httpc.Transport = googleFixture{base: cfg.BaseURL}
+		cfg.BaseURL, cfg.Location = "", "eu"
+	}
+	return selectBrainOn(cfg, keys, httpc)
+}
+
+// googleFixture answers the token exchange itself and sends every other
+// Google request to base; any other host is dialled as addressed.
+type googleFixture struct{ base string }
+
+func (g googleFixture) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.URL.String() == vertexTokenURI {
+		return tokenReply{status: http.StatusOK, body: `{"access_token":"ya29.fixture","expires_in":3600}`}.response(), nil
+	}
+	if !strings.HasSuffix(req.URL.Hostname(), ".googleapis.com") {
+		return http.DefaultTransport.RoundTrip(req)
+	}
+	target, err := url.Parse(g.base)
+	if err != nil {
+		return nil, err
+	}
+	routed := req.Clone(req.Context())
+	routed.URL.Scheme, routed.URL.Host, routed.Host = target.Scheme, target.Host, target.Host
+	return http.DefaultTransport.RoundTrip(routed)
 }
 
 // cloudKeyFor supplies one provider's key and nothing else, so a case that
@@ -101,8 +130,11 @@ func TestCloudKeyResolvesFromEnvWhenConfigOmitsIt(t *testing.T) {
 		t.Fatalf("gemini must resolve its key from GEMINI_API_KEY: %v", err)
 	}
 	gc, ok := client.(*geminiClient)
-	if !ok || gc.apiKey != "env-gemini-key" {
-		t.Fatalf("env key not applied: %+v", client)
+	if !ok {
+		t.Fatalf("gemini built %T, want *geminiClient", client)
+	}
+	if studio, ok := gc.transport.(aiStudioTransport); !ok || studio.apiKey != "env-gemini-key" {
+		t.Fatalf("env key not applied: %+v", gc.transport)
 	}
 }
 
@@ -131,11 +163,13 @@ func TestUnknownProviderErrorListsEverySupportedProvider(t *testing.T) {
 // allCloudKeys supplies every provider's BYOK key, for the many tests whose
 // subject is something else entirely — attachment carriage, narrowing, payload
 // shape — and which need only that the binding they use resolves.
-func allCloudKeys() config.Lookup {
+func allCloudKeys(t testing.TB) config.Lookup {
+	t.Helper()
 	keys := make(map[string]string, len(cloudKeyEnv))
 	for _, env := range cloudKeyEnv {
 		keys[env] = "k"
 	}
+	keys[cloudKeyEnv[providerGeminiVertex]] = serviceAccountJSON(t, nil)
 	return config.Static(keys)
 }
 

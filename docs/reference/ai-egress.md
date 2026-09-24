@@ -14,10 +14,14 @@ Two different promises, and a task can make either without the other:
   fact about the LADDER'S NAMES, not a guarantee that text stays put: whether
   it is enforced depends on the deployment's AI profile. Under `sovereign`
   it is enforced — validation refuses a cloud binding for either tier
-  outright, so no cloud client for one is ever constructed. Under every OTHER
-  profile (`eu_hosted`, `cloud_frontier`) it is unenforced: an operator's
-  own binding can point `local_small` or `local_large` at a hosted
-  provider, and a task with a local-only ladder then leaves the machine
+  outright, so no cloud client for one is ever constructed. Under
+  `eu_resident` a hosted binding is admitted only where it keeps processing
+  inside the EU — today `gemini_vertex` at an EU location — so the text may
+  leave the machine but not the EU. Under
+  `eu_hosted` (cloud-hosted, with no residency guarantee) and
+  `cloud_frontier` it is unenforced: an operator's own binding can point
+  `local_small` or `local_large` at a hosted provider, and a task
+  with a local-only ladder then leaves the machine
   anyway. Read `GET /v1/ai/routing` for what a given deployment actually
   bound, and `GET /v1/ai/profile` for which of the two rules applies to it.
 - **Prompt not retained** — the task declares `no_payload`, so its prompt is
@@ -75,9 +79,11 @@ The **Local-only ladder** column is the first fact and, on its own, does NOT
 answer the question — it names the ladder's tiers, not what a deployment does
 with them. The second fact is the AI profile: under `sovereign`, a local-only
 ladder is enforced (validation refuses a cloud binding for it outright) and
-the column's "yes" is a real guarantee. Under `eu_hosted` or
-`cloud_frontier`, it is not — an admin's own binding can point `local_small`
-or `local_large` at a hosted provider, and a "yes" task then leaves the
+the column's "yes" is a real guarantee. Under `eu_resident` a "yes" task
+may leave the machine, but only for a binding that keeps processing inside the
+EU. Under `eu_hosted` or `cloud_frontier`, it is not a guarantee — an
+admin's own binding can point `local_small` or `local_large` at a
+hosted provider, and a "yes" task then leaves the
 machine anyway. Read `GET /v1/ai/profile` for which rule applies to the
 deployment in question, and `GET /v1/ai/routing` for what it actually bound
 — never this page alone.

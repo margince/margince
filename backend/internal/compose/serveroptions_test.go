@@ -95,7 +95,7 @@ func insertOnlyRunnerForTest(t *testing.T) *jobs.Runner {
 func TestWithEmbedReindexLeavesEngineNilOnUnboundLane(t *testing.T) {
 	s := &Server{}
 	cfg := ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers:   map[ai.Tier]ai.ProviderConfig{ai.TierLocalSmall: {Provider: ai.ProviderFake}},
 		// Embeddings.Model deliberately left empty: the unbound-lane shape
 		// (routing_bind.go only stamps TierEmbedLane when Model is
@@ -125,7 +125,7 @@ func TestWithEmbedReindexLeavesEngineNilOnUnboundLane(t *testing.T) {
 func TestWithEmbedReindexWiresTheEngineWhenBound(t *testing.T) {
 	s := &Server{}
 	cfg := ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers:   map[ai.Tier]ai.ProviderConfig{ai.TierLocalSmall: {Provider: ai.ProviderFake}},
 		Embeddings: ai.EmbeddingsConfig{
 			ProviderConfig: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "bound-model"},

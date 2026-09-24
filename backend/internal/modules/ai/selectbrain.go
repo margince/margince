@@ -23,6 +23,9 @@ type ProviderConfig struct {
 	Provider string `yaml:"provider" json:"provider"` // one of knownProviders
 	Model    string `yaml:"model" json:"model"`       // provider-native model id, resolved from the logical tier
 	BaseURL  string `yaml:"base_url" json:"base_url"` // endpoint override; empty means the provider default
+	// Location is the Vertex AI location a gemini_vertex binding is served
+	// from. omitempty keeps every other binding's digest what it was.
+	Location string `yaml:"location" json:"location,omitempty"`
 	// Input is what the bound model can be GIVEN, in the acceptedModalities
 	// vocabulary (inputmodality.go). It does two jobs: on openai_compatible and
 	// vllm it IS the carriage, because only there is the answer a property of the
@@ -98,12 +101,13 @@ const (
 	providerOpenAICompatible = "openai_compatible"
 	providerOpenAI           = "openai"
 	providerGemini           = "gemini"
+	providerGeminiVertex     = "gemini_vertex"
 )
 
 // knownProviders is the single source of truth for the provider names
 // SelectBrain accepts — read by the default error below and by the config
 // JSON-schema drift test. Add a provider here when you add its case.
-var knownProviders = []string{ProviderFake, providerAnthropic, providerOllama, providerVLLM, providerOpenAICompatible, providerOpenAI, providerGemini}
+var knownProviders = []string{ProviderFake, providerAnthropic, providerOllama, providerVLLM, providerOpenAICompatible, providerOpenAI, providerGemini, providerGeminiVertex}
 
 // KnownProviders lists the adapter names knownProviders holds, which is the
 // same slice SelectBrain's switch and the config enum read.
@@ -215,11 +219,12 @@ func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (
 		}
 		return &geminiClient{
 			http:            httpc,
-			baseURL:         defaulted(cfg.BaseURL, defaultGeminiBaseURL),
-			apiKey:          key,
+			transport:       aiStudioTransport{baseURL: defaulted(cfg.BaseURL, defaultGeminiBaseURL), apiKey: key},
 			defaultModel:    cfg.Model,
 			attachmentMIMEs: narrowedCarriage(geminiCarries, cfg.Input),
 		}, nil
+	case providerGeminiVertex:
+		return selectVertex(cfg, keys, httpc)
 	case "":
 		return nil, fmt.Errorf("ai: binding has no provider")
 	default:
@@ -245,6 +250,7 @@ var cloudKeyEnv = map[string]string{
 	providerAnthropic:        "ANTHROPIC_API_KEY",
 	providerOpenAI:           "OPENAI_API_KEY",
 	providerGemini:           "GEMINI_API_KEY",
+	providerGeminiVertex:     "GEMINI_VERTEX_SA_JSON",
 	providerOpenAICompatible: "OPENAI_COMPATIBLE_API_KEY",
 }
 
@@ -303,9 +309,13 @@ func ConfigItems() []config.Item {
 		if !cloud {
 			continue
 		}
+		credential := "API key"
+		if provider == providerGeminiVertex {
+			credential = "service-account key (the JSON key file's contents)"
+		}
 		items = append(items, config.Item{
 			Name: env, Kind: config.KindString, Secret: true, Roles: both,
-			Doc: "BYOK API key for the " + provider + " provider; required only when the routing file binds it (ADR-0020 — we provide no inference)",
+			Doc: "BYOK " + credential + " for the " + provider + " provider; required only when the routing file binds it (ADR-0020 — we provide no inference)",
 		})
 	}
 	return items

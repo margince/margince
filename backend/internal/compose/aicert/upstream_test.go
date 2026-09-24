@@ -49,7 +49,7 @@ func TestThePreflightAsksEachBindingOnceBeforeTheCorpus(t *testing.T) {
 	cfg := RunnerConfig{
 		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		Profile:      ai.ProfileEUHosted,
+		Profile:      ai.ProfileCloudHosted,
 	}
 	tasks := []ai.Task{ai.TaskSummarize, ai.TaskColdStart}
 	t.Run("healthy", func(t *testing.T) {
@@ -100,7 +100,7 @@ func TestUpstreamPreferencesOnANonBrokerBindingAreRefused(t *testing.T) {
 	cfg := RunnerConfig{
 		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge", Routing: &ai.OpenRouterRouting{}},
-		Profile:      ai.ProfileEUHosted,
+		Profile:      ai.ProfileCloudHosted,
 	}
 	err := validateBindings(cfg, []ai.Task{ai.TaskSummarize}, quietLogger())
 	if err == nil || !strings.Contains(err.Error(), "MARGINCE_AICERT_JUDGE_UPSTREAM") {

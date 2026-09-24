@@ -12,6 +12,7 @@ because the choice decides where this installation's text goes.
 | preset | binds | needs |
 |---|---|---|
 | [`gemini_cloud.yaml`](gemini_cloud.yaml) | every tier to Gemini, embeddings to `gemini-embedding-001` | `GEMINI_API_KEY` |
+| [`gemini_vertex_eu.yaml`](gemini_vertex_eu.yaml) | every tier and embeddings to Gemini on Vertex AI at `location: eu`, under the enforced `eu_resident` profile | `GEMINI_VERTEX_SA_JSON` (a service-account key) |
 | [`openrouter_cloud.yaml`](openrouter_cloud.yaml) | every tier to an OpenRouter-brokered model | `OPENAI_COMPATIBLE_API_KEY` |
 | [`consumer_class_brokered.yaml`](consumer_class_brokered.yaml) | every tier to a Gemma 4 an operator could self-host, brokered at fp8 | `OPENAI_COMPATIBLE_API_KEY` |
 | [`openrouter_cloud_eu.yaml`](openrouter_cloud_eu.yaml) | every chat tier to Mistral's EU-region endpoint (`only: [mistral/eu]`) | `OPENAI_COMPATIBLE_API_KEY` |
@@ -19,6 +20,13 @@ because the choice decides where this installation's text goes.
 `gemini_cloud.yaml` is the binding a dev stack bootstraps with today, lifted out
 of `margince.dev.yaml` so it can be named and reused. The dev overlay still
 carries its own copy — that file is the dev posture and has to stand alone.
+
+`gemini_vertex_eu.yaml` is the one preset that is **EU-resident rather than
+EU-flavoured**: its profile is enforced, so every lane must process inside the EU
+member states — the UK and Switzerland are outside it — and a binding that could
+not is refused at save. It binds the same models as `gemini_cloud.yaml`. The key
+is a service account holding `roles/aiplatform.user`; the steps are in
+[docs/how-to/connect-a-cloud-model-provider.md](../../docs/how-to/connect-a-cloud-model-provider.md) §5.
 
 `openrouter_cloud_eu.yaml` fixes the HOST first and takes whatever Mistral
 weights that host serves, which is a different question from

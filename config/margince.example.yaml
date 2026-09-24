@@ -120,7 +120,7 @@ bootstrap_admin:
 #
 # seeds:
 #   ai_routing:
-#     profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+#     profile: eu_hosted          # eu_hosted | eu_resident | sovereign | cloud_frontier
 #     tiers:
 #       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
 #       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }

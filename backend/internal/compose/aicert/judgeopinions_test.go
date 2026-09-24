@@ -24,7 +24,7 @@ const (
 // judgeOver builds the judge router the way certifyTask does, served by fake.
 func judgeOver(t *testing.T, fake *ai.FakeClient, extra ...ai.LocalOption) (*ai.Router, *traceRecorder) {
 	t.Helper()
-	cfg, err := ladderForTask("judge", testJudgeBinding, ai.ProfileEUHosted, ai.TaskSummarize)
+	cfg, err := ladderForTask("judge", testJudgeBinding, ai.ProfileCloudHosted, ai.TaskSummarize)
 	if err != nil {
 		t.Fatalf("binding the judge ladder: %v", err)
 	}
@@ -184,7 +184,7 @@ func TestAWithheldJudgementLeavesTheRunUngraded(t *testing.T) {
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+		ai.ProfileCloudHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 		})

@@ -17,7 +17,7 @@ import (
 
 func TestAnEmbedLaneThatDidNotAnswerIsNamed(t *testing.T) {
 	down := errors.New("ai: gemini: http 503")
-	r := assembleRouter(map[Tier]model.Client{}, erringEmbedder{err: down}, ProfileEUHosted, &memMeter{},
+	r := assembleRouter(map[Tier]model.Client{}, erringEmbedder{err: down}, ProfileCloudHosted, &memMeter{},
 		DefaultMonthlyTokens, nil, nil, false, nil)
 	_, err := r.Embed(wsContext(t), model.EmbedRequest{Inputs: []string{"q"}})
 	if !errors.Is(err, ErrEmbedLaneFailed) {

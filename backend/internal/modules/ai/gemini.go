@@ -27,8 +27,7 @@ import (
 // match Google's wire (see the //nolint:tagliatelle markers).
 type geminiClient struct {
 	http         *http.Client
-	baseURL      string
-	apiKey       string
+	transport    geminiTransport
 	defaultModel string
 	// attachmentMIMEs is what THIS binding carries: the wire's own carriage,
 	// narrowed by any `input:` the operator declared (inputmodality.go).
@@ -217,7 +216,7 @@ func (c *geminiClient) Embed(ctx context.Context, req model.EmbedRequest) (model
 		if err != nil {
 			return model.Embeddings{}, err
 		}
-		body, err := c.post(ctx, "/models/"+embedModel+":embedContent", payload)
+		body, err := c.post(ctx, c.transport.modelURL(embedModel, "embedContent"), payload)
 		if err != nil {
 			return model.Embeddings{}, err
 		}
@@ -286,9 +285,7 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 	if err != nil {
 		return nil, err
 	}
-	// Paths are version-relative: the API version (/v1beta) lives in baseURL
-	// (defaultGeminiBaseURL), so a proxy override keeps the whole prefix in one place.
-	return c.post(ctx, "/models/"+genModel+":"+method+query, payload)
+	return c.post(ctx, c.transport.modelURL(genModel, method)+query, payload)
 }
 
 // geminiContents maps messages to the native contents array (assistant→model)
@@ -368,13 +365,15 @@ func geminiReadOptions(opts map[string]json.RawMessage) (geminiOptions, error) {
 	return o, nil
 }
 
-func (c *geminiClient) post(ctx context.Context, path string, payload []byte) (io.ReadCloser, error) {
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(payload))
+func (c *geminiClient) post(ctx context.Context, endpoint string, payload []byte) (io.ReadCloser, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 	if err != nil {
 		return nil, fmt.Errorf("ai: gemini: build request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("x-goog-api-key", c.apiKey)
+	if err := c.transport.authorize(ctx, httpReq); err != nil {
+		return nil, fmt.Errorf("ai: gemini: %w", err)
+	}
 	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ai: gemini: %w", err)

@@ -6,10 +6,12 @@ package ai
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -56,9 +58,9 @@ const (
 	AvailabilityNotPublished ModelAvailability = "not_published"
 	// AvailabilityUnreachable means the vendor was asked and did not answer.
 	AvailabilityUnreachable ModelAvailability = "unreachable"
-	// AvailabilityNoEndpoint means an OpenAI-wire binding names no host, so
-	// there is no address to ask. Only openai_compatible can be in this state:
-	// every other adapter has a compiled default.
+	// AvailabilityNoEndpoint means there is no address to ask: an OpenAI-wire
+	// binding with no host, or a gemini_vertex one with no location. A probe
+	// also answers it for a location that does not serve the model.
 	AvailabilityNoEndpoint ModelAvailability = "no_endpoint"
 )
 
@@ -102,7 +104,8 @@ type AvailableModels struct {
 // adapter's compiled default, never from the request. A URL accepted here would
 // be a destination chosen by a caller holding only READ on this setting, while
 // the stored one had to be written by someone holding update and passed the
-// endpoint rule on the way in (outboundegress.go).
+// endpoint rule on the way in (outboundegress.go). A gemini_vertex location
+// is no exception: it picks one of vertexHost's three templates, never a host.
 //
 // The lane matters because one vendor may be bound at two hosts: a broker on one
 // tier and a self-hosted gateway on another is a configuration the routing
@@ -114,18 +117,34 @@ type AvailableModels struct {
 // publishes the benchmark it ranks by. Every other vendor answers its full
 // list regardless, per the contract's own description of `top` — a caller
 // that needs the distinction reads AvailableModels.RankedBy, never top itself.
-func (s *RoutingStore) ListAvailableModels(
-	ctx context.Context,
-	provider, tier string,
-	top int,
-) (AvailableModels, error) {
+func (s *RoutingStore) ListAvailableModels(ctx context.Context, q AvailableModelsQuery) (AvailableModels, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
 		return AvailableModels{}, err
+	}
+	if q.Location != "" && !vertexLocationShape.MatchString(q.Location) {
+		return AvailableModels{}, fmt.Errorf("%w: location must be eu, us, global, or a region such as europe-west4", apperrors.ErrInvalidArgument)
+	}
+	if q.Model != "" && !vertexModelShape.MatchString(q.Model) {
+		return AvailableModels{}, fmt.Errorf("%w: model must be a publisher model id such as gemini-3.5-flash", apperrors.ErrInvalidArgument)
 	}
 	cfg, err := s.Get(ctx)
 	if err != nil {
 		return AvailableModels{}, err
 	}
+	return s.availableModels(ctx, cfg, q), nil
+}
+
+// AvailableModelsQuery names what ListAvailableModels is asked. Location and
+// Model apply to gemini_vertex alone: Location replaces the lane's stored one,
+// and Model turns the list into a probe of that one id.
+type AvailableModelsQuery struct {
+	Provider, Tier  string
+	Top             int
+	Location, Model string
+}
+
+func (s *RoutingStore) availableModels(ctx context.Context, cfg RoutingConfig, q AvailableModelsQuery) AvailableModels {
+	provider := q.Provider
 	out := AvailableModels{Provider: provider}
 	// The profile decides where inference may happen, and a list call is egress
 	// like any other. Refused here for the same reason a binding is refused at
@@ -133,9 +152,20 @@ func (s *RoutingStore) ListAvailableModels(
 	// discovering that at the first call is too late. OpenRouter is cloud
 	// egress like any other broker, so it is refused here too rather than
 	// falling through to the unauthenticated read below.
-	if cfg.Profile == ProfileSovereign && !ProviderIsLocal(provider) {
+	bound := boundProviderConfig(cfg, provider, q.Tier)
+	if provider == providerGeminiVertex && q.Location != "" {
+		bound.Location = q.Location
+	}
+	if provider == providerGeminiVertex && bound.Location == "" {
+		out.Unavailable = AvailabilityNoEndpoint
+		return out
+	}
+	if !ProviderIsLocal(provider) && RequireResidency(cfg.Profile, bound) != nil {
 		out.Unavailable = AvailabilityProfileForbids
-		return out, nil
+		return out
+	}
+	if q.Model != "" {
+		return s.probeAvailability(ctx, bound, q)
 	}
 	// OpenRouter publishes its list unauthenticated and unbound: there is no
 	// stored binding to resolve a host from, and SelectBrain knows no adapter
@@ -144,19 +174,19 @@ func (s *RoutingStore) ListAvailableModels(
 	if provider == openRouterProvider {
 		if s.catalogue == nil {
 			out.Unavailable = AvailabilityNotPublished
-			return out, nil
+			return out
 		}
-		return s.catalogue.List(ctx, top), nil
+		return s.catalogue.List(ctx, q.Top)
 	}
-	client, err := SelectBrain(boundProviderConfig(cfg, provider, tier), s.resolvedKeys(ctx))
+	client, err := s.selectBrain.build(bound, s.resolvedKeys(ctx))
 	if err != nil {
 		out.Unavailable = unavailableFor(err)
-		return out, nil
+		return out
 	}
 	lister, ok := client.(model.Lister)
 	if !ok {
 		out.Unavailable = AvailabilityNotPublished
-		return out, nil
+		return out
 	}
 	asked, cancel := context.WithTimeout(ctx, listTimeout)
 	defer cancel()
@@ -166,20 +196,26 @@ func (s *RoutingStore) ListAvailableModels(
 		// model, not debugging our HTTP, and the vendor's message on this
 		// endpoint is as often a proxy's HTML as it is a sentence.
 		out.Unavailable = AvailabilityUnreachable
-		return out, nil
+		return out
 	}
 	out.Models = make([]AvailableModel, len(models))
 	for i, m := range models {
 		out.Models[i] = AvailableModel{Info: m}
 	}
-	return out, nil
+	return out
+}
+
+// isKeyFault reports whether the held credential, not the vendor, is why a
+// provider cannot be asked: no key, or a key that cannot be used.
+func isKeyFault(err error) bool {
+	return errors.Is(err, errNoProviderKey) || errors.Is(err, errInvalidServiceAccount)
 }
 
 // unavailableFor reads why a binding could not be turned into a client.
 //
 // The two states a reader can act on are told apart: a vendor with no
-// credential is a key to paste, and an OpenAI-wire binding with no host is an
-// address to fill in.
+// usable credential is a key to paste, and an OpenAI-wire binding with no host
+// is an address to fill in.
 //
 // Everything else is a name this surface cannot ask AT ALL — an adapter that
 // does not exist, or a binding with no provider on it — and that is
@@ -187,7 +223,7 @@ func (s *RoutingStore) ListAvailableModels(
 // `unreachable` says the vendor was asked and did not answer, which would have
 // a reader chasing a network fault for a provider nothing ever called.
 func unavailableFor(err error) ModelAvailability {
-	if errors.Is(err, errNoProviderKey) {
+	if isKeyFault(err) {
 		return AvailabilityNoKey
 	}
 	if errors.Is(err, errNoBaseURL) {
@@ -220,19 +256,19 @@ func boundProviderConfig(cfg RoutingConfig, provider, tier string) ProviderConfi
 	// nothing" fell through to a sibling lane's override and asked the wrong
 	// host — the defect naming the lane exists to prevent, inverted.
 	if binding, ok := cfg.Tiers[Tier(tier)]; ok && binding.Provider == provider {
-		return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL}
+		return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL, Location: binding.Location}
 	}
 	if tier == string(LaneEmbeddings) && cfg.Embeddings.Provider == provider {
-		return ProviderConfig{Provider: provider, BaseURL: cfg.Embeddings.BaseURL}
+		return ProviderConfig{Provider: provider, BaseURL: cfg.Embeddings.BaseURL, Location: cfg.Embeddings.Location}
 	}
 	for _, t := range sortedTiers(cfg.Tiers) {
 		binding := cfg.Tiers[t]
-		if binding.Provider == provider && binding.BaseURL != "" {
-			return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL}
+		if binding.Provider == provider && (binding.BaseURL != "" || binding.Location != "") {
+			return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL, Location: binding.Location}
 		}
 	}
-	if cfg.Embeddings.Provider == provider && cfg.Embeddings.BaseURL != "" {
-		return ProviderConfig{Provider: provider, BaseURL: cfg.Embeddings.BaseURL}
+	if emb := cfg.Embeddings; emb.Provider == provider && (emb.BaseURL != "" || emb.Location != "") {
+		return ProviderConfig{Provider: provider, BaseURL: emb.BaseURL, Location: emb.Location}
 	}
 	return ProviderConfig{Provider: provider}
 }

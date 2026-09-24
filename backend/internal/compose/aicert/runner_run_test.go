@@ -70,7 +70,7 @@ func TestRunWritesOneRecordPerTaskAndItLoadsBackIdentically(t *testing.T) {
 		Census:       censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
 		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		Profile:      ai.ProfileEUHosted,
+		Profile:      ai.ProfileCloudHosted,
 		CorpusDir:    corpusDir,
 		RecordDir:    recordDir,
 		Repeats:      3,
@@ -114,7 +114,7 @@ func TestRunTaskFilterRestrictsCertificationToOneTask(t *testing.T) {
 		Census:       censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
 		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		Profile:      ai.ProfileEUHosted,
+		Profile:      ai.ProfileCloudHosted,
 		CorpusDir:    corpusDir,
 		RecordDir:    filepath.Join(dir, "records"),
 		TaskFilter:   "cold_start",
@@ -137,7 +137,7 @@ func TestRunUnknownTaskFilterFailsLoudly(t *testing.T) {
 		Census:       censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
 		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		Profile:      ai.ProfileEUHosted,
+		Profile:      ai.ProfileCloudHosted,
 		CorpusDir:    corpusDir,
 		RecordDir:    filepath.Join(dir, "records"),
 		TaskFilter:   "offer_draft",
@@ -157,7 +157,7 @@ func TestRunRejectsAnEvenRepeatsBeforeTouchingAnything(t *testing.T) {
 		Census:       censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
 		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		Profile:      ai.ProfileEUHosted,
+		Profile:      ai.ProfileCloudHosted,
 		CorpusDir:    corpusDir,
 		RecordDir:    filepath.Join(dir, "records"),
 		Repeats:      4,
@@ -201,7 +201,7 @@ func TestRunWritesTaskARecordAndSurfacesTaskBsWriteErrorInTheSameCall(t *testing
 		Census:       censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
 		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		Profile:      ai.ProfileEUHosted,
+		Profile:      ai.ProfileCloudHosted,
 		CorpusDir:    corpusDir,
 		RecordDir:    recordDir,
 		Repeats:      1,
@@ -260,7 +260,7 @@ func TestARoutedRunGradesEveryTaskWithTheOneJudge(t *testing.T) {
 	if ai.TaskLadder(local)[0] == premiumLead {
 		t.Fatalf("%s and %s lead on the same rung, so they cannot resolve to different candidates", local, premium)
 	}
-	routing := ai.RoutingConfig{Profile: ai.ProfileEUHosted, Tiers: map[ai.Tier]ai.ProviderConfig{}}
+	routing := ai.RoutingConfig{Profile: ai.ProfileCloudHosted, Tiers: map[ai.Tier]ai.ProviderConfig{}}
 	for _, tier := range ai.AllTiers() {
 		routing.Tiers[tier] = ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate-a"}
 	}
@@ -310,7 +310,7 @@ func TestARoutedRunGradesEveryTaskWithTheOneJudge(t *testing.T) {
 func TestARoutedRunValidatesOnlyTheTasksItCertifies(t *testing.T) {
 	ranked, colliding := ai.TaskCaptureConfidentialityVerdict, ai.TaskDocumentExtract
 	judge := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}
-	routing := ai.RoutingConfig{Profile: ai.ProfileEUHosted, Tiers: map[ai.Tier]ai.ProviderConfig{}}
+	routing := ai.RoutingConfig{Profile: ai.ProfileCloudHosted, Tiers: map[ai.Tier]ai.ProviderConfig{}}
 	for _, tier := range ai.AllTiers() {
 		routing.Tiers[tier] = ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}
 	}
@@ -363,7 +363,7 @@ func TestARunThatReplaysEveryRunSkipsThePreflight(t *testing.T) {
 			Census:       censusFor(t, task),
 			Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 			JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"},
-			Profile:      ai.ProfileEUHosted,
+			Profile:      ai.ProfileCloudHosted,
 			CorpusDir:    corpusDir,
 			RecordDir:    filepath.Join(dir, "records"),
 			ResumeDir:    filepath.Join(dir, "resume"),

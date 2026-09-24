@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
@@ -14,7 +14,12 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import {
+  ServiceAccountKeyField,
+  serviceAccountProblem,
+} from "./service-account-key";
 import "./ai-settings.css";
 
 // The vendor credentials this installation calls models with.
@@ -32,6 +37,13 @@ import "./ai-settings.css";
 // shape the routing card uses.
 
 type ProviderStatus = components["schemas"]["AiProviderKeyStatus"];
+export type CredentialKind = ProviderStatus["credential_kind"];
+
+// A server older than the kind field sends none, and every vendor it knows
+// takes an API key.
+function credentialKindOf(status: ProviderStatus): CredentialKind {
+  return status.credential_kind ?? "api_key";
+}
 
 export function useProviderKeys(enabled: boolean) {
   return useQuery({
@@ -69,10 +81,20 @@ export function useSetProviderKey() {
     // the key some other way would trade that for a stale-closure refusal,
     // which is the defect the variables rule exists to prevent, so the answer
     // is to keep the variable and drop it early.
-    mutationFn: async (vars: { provider: string; apiKey: string }) => {
+    mutationFn: async (vars: {
+      provider: string;
+      kind: CredentialKind;
+      secret: string;
+    }) => {
+      // The server refuses the field the vendor does not take, so the kind
+      // decides which one carries the secret.
+      const body =
+        vars.kind === "service_account"
+          ? { service_account_json: vars.secret }
+          : { api_key: vars.secret };
       const { error } = await api.PUT("/ai/provider-keys/{provider}", {
         params: { path: { provider: vars.provider } },
-        body: { api_key: vars.apiKey },
+        body,
       });
       if (error) {
         throwProblem(error);
@@ -99,6 +121,22 @@ function useRemoveProviderKey() {
       queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
     },
   });
+}
+
+function keyStateLabel(
+  keyless: boolean,
+  configured: boolean,
+  kind: CredentialKind,
+): MessageKey {
+  if (keyless) {
+    return "aiProviderKeys.keyless";
+  }
+  if (!configured) {
+    return "aiProviderKeys.absent";
+  }
+  return kind === "service_account"
+    ? "aiProviderKeys.serviceAccountConfigured"
+    : "aiProviderKeys.configured";
 }
 
 export function AiProviderKeysCard() {
@@ -163,6 +201,10 @@ function ProviderKeyRow({
   // READING of whether the vendor is keyed, and six open password boxes make a
   // page nobody can audit at a glance.
   const [editing, setEditing] = useState(false);
+  // Set by a Save press on a service-account key the browser can already tell
+  // is not one; cleared as soon as the reader edits it.
+  const [refusal, setRefusal] = useState<MessageKey | undefined>();
+  const kind = credentialKindOf(status);
   const save = useSetProviderKey();
   const remove = useRemoveProviderKey();
 
@@ -192,6 +234,70 @@ function ProviderKeyRow({
   // about it would report a gap that is not one.
   const keyless = status.env_var === "";
 
+  const entryHint = status.configured
+    ? t("aiProviderKeys.configuredHint", { envVar: status.env_var })
+    : t("aiProviderKeys.absentHint", { envVar: status.env_var });
+  // Save and Remove, the same pair whichever field holds the secret.
+  const verbs = (
+    <>
+      <Button
+        variant="primary"
+        // `pending` on the control that is waiting, `disabled` only
+        // for the reasons it may not be pressed at all. A button
+        // carrying both is natively disabled, which drops the focus
+        // and announces nothing — see Button's own note on the
+        // precedence.
+        pending={save.isPending}
+        disabled={!canManage || remove.isPending || trimmed === ""}
+        onClick={() => {
+          // The other mutation's failure is no longer the current
+          // story; without this its Callout stays under the row it
+          // did not come from.
+          remove.reset();
+          const problem =
+            kind === "service_account"
+              ? serviceAccountProblem(trimmed)
+              : undefined;
+          if (problem) {
+            setRefusal(problem);
+            return;
+          }
+          save.mutate(
+            { provider: status.provider, kind, secret: trimmed },
+            {
+              // Cleared on success only: a failed save leaves what
+              // was typed so it can be retried without being
+              // re-pasted. The row folds shut on the same success,
+              // because the question it was opened to answer has
+              // been answered.
+              onSuccess: () => {
+                setValue("");
+                setEditing(false);
+              },
+            },
+          );
+        }}
+      >
+        {t("aiProviderKeys.save")}
+      </Button>
+      {status.configured ? (
+        <Button
+          variant="danger"
+          pending={remove.isPending}
+          disabled={!canManage || save.isPending}
+          // Confirmed first, because the act is irreversible and its
+          // cost is not local to this row: the credential cannot be
+          // read back to restore, and every AI lane bound to this
+          // vendor stops until somebody re-pastes a key they may not
+          // have.
+          onClick={() => setConfirming(true)}
+        >
+          {t("aiProviderKeys.remove")}
+        </Button>
+      ) : null}
+    </>
+  );
+
   return (
     <PanelRow>
       <div data-testid={`ai-provider-key-${status.provider}`}>
@@ -207,11 +313,7 @@ function ProviderKeyRow({
             </span>
           </span>
           <Badge tone={status.configured || keyless ? "success" : "warning"}>
-            {keyless
-              ? t("aiProviderKeys.keyless")
-              : status.configured
-                ? t("aiProviderKeys.configured")
-                : t("aiProviderKeys.absent")}
+            {t(keyStateLabel(keyless, status.configured, kind))}
           </Badge>
           {!keyless && (
             <span className="ai-lane-open">
@@ -222,6 +324,7 @@ function ProviderKeyRow({
                 onClick={() => {
                   if (editing) {
                     setValue("");
+                    setRefusal(undefined);
                   }
                   setEditing((open) => !open);
                 }}
@@ -236,86 +339,19 @@ function ProviderKeyRow({
           )}
         </div>
         {editing && (
-          <Field
-            label={t("aiProviderKeys.field")}
-            hint={
-              status.configured
-                ? t("aiProviderKeys.configuredHint", { envVar: status.env_var })
-                : t("aiProviderKeys.absentHint", { envVar: status.env_var })
-            }
-          >
-            {/* One paste and the verbs that act on it, on one line. It carried
-                `row-inline`, which nothing in this tree styles, so the field,
-                its verb and the removal each took a full-width block of their
-                own. */}
-            {(control) => (
-              <div className="ai-key-entry">
-                <TextInput
-                  {...control}
-                  // A password field, so the browser does not offer to remember
-                  // a credential this app deliberately never stores
-                  // client-side, and so a screenshare does not carry it.
-                  type="password"
-                  autoComplete="off"
-                  value={value}
-                  disabled={!canManage || busy}
-                  placeholder={
-                    status.configured
-                      ? t("aiProviderKeys.replacePlaceholder")
-                      : t("aiProviderKeys.addPlaceholder")
-                  }
-                  onChange={(e) => setValue(e.target.value)}
-                />
-                <Button
-                  variant="primary"
-                  // `pending` on the control that is waiting, `disabled` only
-                  // for the reasons it may not be pressed at all. A button
-                  // carrying both is natively disabled, which drops the focus
-                  // and announces nothing — see Button's own note on the
-                  // precedence.
-                  pending={save.isPending}
-                  disabled={!canManage || remove.isPending || trimmed === ""}
-                  onClick={() => {
-                    // The other mutation's failure is no longer the current
-                    // story; without this its Callout stays under the row it
-                    // did not come from.
-                    remove.reset();
-                    save.mutate(
-                      { provider: status.provider, apiKey: trimmed },
-                      {
-                        // Cleared on success only: a failed save leaves what
-                        // was typed so it can be retried without being
-                        // re-pasted. The row folds shut on the same success,
-                        // because the question it was opened to answer has
-                        // been answered.
-                        onSuccess: () => {
-                          setValue("");
-                          setEditing(false);
-                        },
-                      },
-                    );
-                  }}
-                >
-                  {t("aiProviderKeys.save")}
-                </Button>
-                {status.configured ? (
-                  <Button
-                    variant="danger"
-                    pending={remove.isPending}
-                    disabled={!canManage || save.isPending}
-                    // Confirmed first, because the act is irreversible and its
-                    // cost is not local to this row: the credential cannot be
-                    // read back to restore, and every AI lane bound to this
-                    // vendor stops until somebody re-pastes a key they may not
-                    // have.
-                    onClick={() => setConfirming(true)}
-                  >
-                    {t("aiProviderKeys.remove")}
-                  </Button>
-                ) : null}
-              </div>
-            )}
-          </Field>
+          <KeyEntry
+            kind={kind}
+            configured={status.configured}
+            value={value}
+            disabled={!canManage || busy}
+            hint={entryHint}
+            refusal={refusal}
+            onChange={(next) => {
+              setRefusal(undefined);
+              setValue(next);
+            }}
+            verbs={verbs}
+          />
         )}
         {failure ? (
           <Callout
@@ -357,5 +393,72 @@ function ProviderKeyRow({
         {t("aiProviderKeys.removeConfirmBody")}
       </ConfirmModal>
     </PanelRow>
+  );
+}
+
+// The field the secret is typed into: a password box for a pasted key, the
+// key-file control for a service account. Save and Remove ride along.
+function KeyEntry({
+  kind,
+  configured,
+  value,
+  disabled,
+  hint,
+  refusal,
+  onChange,
+  verbs,
+}: Readonly<{
+  kind: CredentialKind;
+  configured: boolean;
+  value: string;
+  disabled: boolean;
+  hint: string;
+  refusal: MessageKey | undefined;
+  onChange: (value: string) => void;
+  verbs: ReactNode;
+}>) {
+  const t = useT();
+  if (kind === "service_account") {
+    return (
+      <>
+        <ServiceAccountKeyField
+          value={value}
+          disabled={disabled}
+          hint={hint}
+          error={refusal ? t(refusal) : undefined}
+          onChange={onChange}
+        />
+        <div className="ai-key-entry">{verbs}</div>
+      </>
+    );
+  }
+  return (
+    <Field label={t("aiProviderKeys.field")} hint={hint}>
+      {/* One paste and the verbs that act on it, on one line. It carried
+          `row-inline`, which nothing in this tree styles, so the field,
+          its verb and the removal each took a full-width block of their
+          own. */}
+      {(control) => (
+        <div className="ai-key-entry">
+          <TextInput
+            {...control}
+            // A password field, so the browser does not offer to remember
+            // a credential this app deliberately never stores
+            // client-side, and so a screenshare does not carry it.
+            type="password"
+            autoComplete="off"
+            value={value}
+            disabled={disabled}
+            placeholder={
+              configured
+                ? t("aiProviderKeys.replacePlaceholder")
+                : t("aiProviderKeys.addPlaceholder")
+            }
+            onChange={(e) => onChange(e.target.value)}
+          />
+          {verbs}
+        </div>
+      )}
+    </Field>
   );
 }

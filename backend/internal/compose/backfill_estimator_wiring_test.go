@@ -26,7 +26,7 @@ func TestWithBackfillEstimatorWiresThePromotedField(t *testing.T) {
 	// network; the estimator is only constructed here, never called, so a nil pool
 	// (its stores merely hold it) is fine.
 	router, err := ai.NewLocalRouter(ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers: map[ai.Tier]ai.ProviderConfig{
 			ai.TierLocalSmall: {Provider: ai.ProviderFake, Model: "local-model"},
 			ai.TierCheapCloud: {Provider: ai.ProviderFake, Model: "cloud-model"},

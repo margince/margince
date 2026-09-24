@@ -41,7 +41,7 @@ func TestATruncatedAnswerIsRetriedAsTooLongAndNotAsMalformed(t *testing.T) {
 	)
 	premium := NewFakeClient().ScriptSteps(truncatedStep())
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium},
-		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+		&memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 
 	_, _, err := r.CompleteStructured(wsContext(t), TaskColdStart, structuredReq(), jsonObjectValidator)
 	if err == nil {
@@ -66,7 +66,7 @@ func TestTheTerminalErrorSaysTheAnswerWasCutOffRatherThanMalformed(t *testing.T)
 	cheap := NewFakeClient().ScriptSteps(truncatedStep(), truncatedStep())
 	premium := NewFakeClient().ScriptSteps(truncatedStep())
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium},
-		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+		&memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 
 	_, _, err := r.CompleteStructured(wsContext(t), TaskColdStart, structuredReq(), jsonObjectValidator)
 	if err == nil {
@@ -85,7 +85,7 @@ func TestAMalformedAnswerThatRanToCompletionIsStillMalformed(t *testing.T) {
 	cheap := NewFakeClient().Script("not json at all", "still not json")
 	premium := NewFakeClient().Script("nor this")
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium},
-		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+		&memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 
 	_, _, err := r.CompleteStructured(wsContext(t), TaskColdStart, structuredReq(), jsonObjectValidator)
 	if err == nil {

@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -23,9 +24,14 @@ import (
 type Profile string
 
 const (
-	ProfileEUHosted      Profile = "eu_hosted"
+	// ProfileCloudHosted keeps the historical "eu_hosted" spelling because
+	// bindingDigest covers Profile: a new value would regenerate cached content.
+	ProfileCloudHosted   Profile = "eu_hosted"
 	ProfileSovereign     Profile = "sovereign"
 	ProfileCloudFrontier Profile = "cloud_frontier"
+	// ProfileEUResident enforces where a model processes the prompt, not
+	// merely who hosts it.
+	ProfileEUResident Profile = "eu_resident"
 )
 
 // defaultEmbedDimensions is the vector width an embeddings binding gets when
@@ -272,23 +278,26 @@ func ProviderIsLocal(provider string) bool {
 	return localProviders[provider]
 }
 
+// declaredProfiles lists the environment classes Valid admits, and the schema
+// gate compares it with the config schema's enum.
+var declaredProfiles = []Profile{ProfileCloudHosted, ProfileEUResident, ProfileSovereign, ProfileCloudFrontier}
+
+// DeclaredProfiles is declaredProfiles as a copy, for the gate that holds the
+// routing form's own list against it.
+func DeclaredProfiles() []Profile { return slices.Clone(declaredProfiles) }
+
 // Valid reports whether p is one of the declared environment classes.
 //
 // Exported because the certification lane files a record under the profile it
-// measured and has to refuse an unknown one, and a second switch over the same
-// three constants there would go quietly stale the day a fourth is added.
+// measured and has to refuse an unknown one, and a second list of the same
+// constants there would go quietly stale the day another is added.
 func (p Profile) Valid() bool {
-	switch p {
-	case ProfileEUHosted, ProfileSovereign, ProfileCloudFrontier:
-		return true
-	default:
-		return false
-	}
+	return slices.Contains(declaredProfiles, p)
 }
 
 func (cfg RoutingConfig) validate() error {
 	if cfg.Profile == "" {
-		return fmt.Errorf("ai: routing config: profile is required (eu_hosted | sovereign | cloud_frontier)")
+		return fmt.Errorf("ai: routing config: profile is required (eu_hosted | eu_resident | sovereign | cloud_frontier)")
 	}
 	if !cfg.Profile.Valid() {
 		return fmt.Errorf("ai: routing config: unknown profile %q", cfg.Profile)
@@ -322,16 +331,14 @@ func (cfg RoutingConfig) validate() error {
 	if cfg.Embeddings.Input != nil {
 		return fmt.Errorf("ai: routing config: the embeddings lane takes no `input` — it sends no attachments; declare it on the chat tier that reads documents")
 	}
-	if cfg.Profile == ProfileSovereign {
-		if !localProviders[cfg.Embeddings.Provider] {
-			return fmt.Errorf("ai: routing config: profile sovereign forbids cloud provider %q on the embeddings lane", cfg.Embeddings.Provider)
-		}
-		// The embed lane egresses the same text the chat lanes do — a document's
-		// content reaches it as the thing being embedded — so it carries the same
-		// endpoint rule rather than a weaker one.
-		if err := requireSovereignEndpoint("the embeddings lane", cfg.Embeddings.Provider, cfg.Embeddings.BaseURL); err != nil {
-			return err
-		}
+	// The embed lane egresses the same text the chat lanes do — a document's
+	// content reaches it as the thing being embedded — so it carries the same
+	// residency rule rather than a weaker one.
+	if err := refuseNonResident(cfg.Profile, "the embeddings lane", cfg.Embeddings.ProviderConfig); err != nil {
+		return err
+	}
+	if err := validateVertexPlacement("the embeddings lane", cfg.Embeddings.ProviderConfig); err != nil {
+		return err
 	}
 	// The embed lane dials an operator-supplied host like any chat tier, so it
 	// carries the same egress rule on every profile.
@@ -388,14 +395,12 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 	// Sovereign means zero egress BY CONSTRUCTION, which takes both halves:
 	// a cloud provider in any chat tier is a config error, and so is a local
 	// provider pointed at somebody else's host (sovereignendpoint.go).
-	// Neither is a runtime surprise.
-	if profile == ProfileSovereign {
-		if !localProviders[binding.Provider] {
-			return fmt.Errorf("ai: routing config: profile sovereign forbids cloud provider %q on tier %s", binding.Provider, tier)
-		}
-		if err := requireSovereignEndpoint(fmt.Sprintf("tier %s", tier), binding.Provider, binding.BaseURL); err != nil {
-			return err
-		}
+	// eu_resident adds Vertex at an EU location. Neither is a runtime surprise.
+	if err := refuseNonResident(profile, fmt.Sprintf("tier %s", tier), binding); err != nil {
+		return err
+	}
+	if err := validateVertexPlacement(fmt.Sprintf("tier %s", tier), binding); err != nil {
+		return err
 	}
 	// EVERY profile, not only sovereign. base_url is the address this server
 	// dials, and outside the sovereign branch above nothing looked at it at
