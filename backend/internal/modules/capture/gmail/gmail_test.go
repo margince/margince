@@ -39,6 +39,8 @@ type fakeAPI struct {
 	raws               map[string][]byte
 	sent               map[string]bool // ids Gmail filed under the SENT label
 	drafts             map[string]bool // ids Gmail filed under the DRAFT label
+	spam               map[string]bool // ids Gmail filed under the SPAM label
+	trash              map[string]bool // ids Gmail filed under the TRASH label
 	gone               map[string]bool
 	historyCalls       int
 	listCalls          int
@@ -104,6 +106,14 @@ func (f *fakeAPI) GetRaw(_ context.Context, _, id string) (Message, error) {
 	}
 	if f.sent[id] {
 		msg.Labels = append(msg.Labels, sentLabelID)
+	}
+	// Set at FETCH and not at enumeration on purpose: that is the gap these
+	// labels exist to cover — the id was listed, and the label arrived after.
+	if f.spam[id] {
+		msg.Labels = append(msg.Labels, spamLabelID)
+	}
+	if f.trash[id] {
+		msg.Labels = append(msg.Labels, trashLabelID)
 	}
 	return msg, nil
 }
@@ -492,5 +502,40 @@ func TestSyncStillCapturesTheSendThatFollowsTheDraft(t *testing.T) {
 	}
 	if len(sink.recs) != 1 || sink.recs[0].Source != "gmail:s1@mail.gmail.com" {
 		t.Fatalf("captured %+v, want only the sent message", sink.recs)
+	}
+}
+
+// TestSyncRefusesAMessageLabelledSpamOrTrashAfterItWasListed.
+//
+// messages.list already asks Gmail to leave spam and trash out, so an id that
+// reaches the fetch carrying one of those labels is precisely the race the
+// listing cannot close: the message moved between the two calls. It is refused
+// on the label of the message actually read, not on the promise of the call
+// that offered it.
+func TestSyncRefusesAMessageLabelledSpamOrTrashAfterItWasListed(t *testing.T) {
+	api := &fakeAPI{
+		email:     owner,
+		historyID: "12345",
+		recent: []string{
+			"keep@mail.gmail.com",
+			"spam@mail.gmail.com",
+			"trash@mail.gmail.com",
+		},
+		raws: map[string][]byte{
+			"keep@mail.gmail.com":  rawMsg("keep@mail.gmail.com", "alice@acme.com"),
+			"spam@mail.gmail.com":  rawMsg("spam@mail.gmail.com", "bulk@example.com"),
+			"trash@mail.gmail.com": rawMsg("trash@mail.gmail.com", "bob@acme.com"),
+		},
+		spam:  map[string]bool{"spam@mail.gmail.com": true},
+		trash: map[string]bool{"trash@mail.gmail.com": true},
+	}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &recordingSink{}
+
+	if _, err := c.Sync(context.Background(), authBytes(t), nil, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 1 || sink.recs[0].Source != "gmail:keep@mail.gmail.com" {
+		t.Fatalf("captured %+v, want only the message that was in neither folder", sink.recs)
 	}
 }

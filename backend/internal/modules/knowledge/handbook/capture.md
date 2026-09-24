@@ -240,6 +240,25 @@ rule above.
 
 These refusals are the product's character. They are not gaps.
 
+**Spam, junk, trash and drafts are never captured.** Whichever provider your
+mailbox is on:
+
+| Provider | What capture reads | What it never reads |
+|---|---|---|
+| Gmail | Your mail, and your sent mail | Spam and Trash — the listing asks Gmail to leave them out, and any message that carries the Spam or Trash label when it is read is refused even so. Drafts, by the same label rule. |
+| Microsoft 365 / Outlook | Inbox and Sent Items | Junk Email, Deleted Items and Drafts, which are simply never followed. |
+| IMAP | The folder you configured (usually INBOX), and your Sent folder | Junk and Trash folders, which are never opened. Other folders are not read either. |
+
+The Gmail row is two rules rather than one because listing the mail and reading
+it are separate calls, and a message can be moved to Spam or Trash in between.
+The listing narrows what is offered; the label check refuses what turns up
+anyway.
+
+Note what this does **not** cover: everything else in the folder capture does
+read. Newsletters, personal mail and Gmail's Promotions and Social categories
+all arrive, and are dealt with after capture rather than before it — see *What
+happens to one message*.
+
 **Colleagues talking to each other is never stored.** If every address on a
 message belongs to your own domains, capture writes a one-line log row and drops
 it. The app is blunt: *"When colleagues write to each other, that message is not
