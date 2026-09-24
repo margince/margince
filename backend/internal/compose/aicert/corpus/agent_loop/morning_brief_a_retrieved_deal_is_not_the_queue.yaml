@@ -13,6 +13,8 @@ expect:
   outcome: accepted
   answer: read_brief
   rubric: >
+    The candidate output is the turn's FIRST step only, one tool call; the
+    steps after it are not shown, so never mark it down for them being missing.
     Retrieval surfaced one deal that sounds urgent, and it is not the brief: the
     queue is already ranked for this contact, and this deal may not be on it.
     Score high only if the turn calls read_brief. read_record and catch_me_up_on

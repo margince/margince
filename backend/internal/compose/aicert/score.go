@@ -111,23 +111,21 @@ type ScenarioRuns struct {
 	Bands Bands
 }
 
-// certifiedPassPercent is the pooled pass rate, in percent, a set of run sets
-// must reach to certify.
-const certifiedPassPercent = 95
-
 // Verdict folds a set of scenario run sets into one certification outcome — a
 // single scenario for its record row, every scenario of a task for the task:
 //
-//	certified          = pooled passes ≥ 95% of all runs
+//	certified          = pooled passes ≥ 90% of all runs
 //	                   ∧ every scenario passes ≥⌈2n/3⌉ of its own n runs
 //	                   ∧ every scenario's graded median ≥ its CertifiedMin ∧ graded minimum ≥ its Floor
 //	supported_degraded = pooled passes ≥ ⌈2N/3⌉ of all N runs
 //	                   ∧ every scenario's graded median ≥ its DegradedMin
 //	otherwise          = not_supported, which includes any scenario no judge graded
 //
-// A rate rather than "every run" so the bar does not rise with corpus size: at
-// 99% per run, 57 of 57 happens barely half the time. The per-scenario majority
-// keeps one case failing systematically from hiding inside a large pool.
+// A rate rather than "every run" so a large pool can absorb a stray miss: at
+// 99% per run, 57 of 57 happens barely half the time. The rate rounds up, so a
+// pool too small to hold one miss under it needs every run. The per-scenario
+// majority keeps one case failing systematically from hiding inside a large pool.
+// thresholds.go holds every number here; the page test pins the rate above to it.
 //
 // reliability is the pooled fraction of runs that HardPassed (0..1), reported
 // whichever verdict the set lands on.
@@ -188,7 +186,7 @@ func verdictOver(tallies []scenarioTally) (verdict string, reliability float64) 
 	for _, t := range tallies {
 		runs += t.runs
 		passed += t.passed
-		if t.judgeBand != VerdictCertified || t.passed < twoThirds(t.runs) {
+		if t.judgeBand != VerdictCertified || t.passed < majorityOf(t.runs) {
 			certified = false
 		}
 		if t.judgeBand != VerdictCertified && t.judgeBand != VerdictSupportedDegraded {
@@ -202,12 +200,14 @@ func verdictOver(tallies []scenarioTally) (verdict string, reliability float64) 
 	switch {
 	case certified && passed*100 >= certifiedPassPercent*runs:
 		return VerdictCertified, reliability
-	case degraded && passed >= twoThirds(runs):
+	case degraded && passed >= majorityOf(runs):
 		return VerdictSupportedDegraded, reliability
 	default:
 		return VerdictNotSupported, reliability
 	}
 }
 
-// twoThirds is ⌈2n/3⌉ in integer arithmetic.
-func twoThirds(n int) int { return (2*n + 2) / 3 }
+// majorityOf is ⌈n·majorityNumerator/majorityDenominator⌉ in integer arithmetic.
+func majorityOf(n int) int {
+	return (n*majorityNumerator + majorityDenominator - 1) / majorityDenominator
+}

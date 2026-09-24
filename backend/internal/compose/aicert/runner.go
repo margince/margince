@@ -30,10 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// defaultRepeats is Repeats' fallback when a caller (the env-driven CLI
-// lane) leaves it unset. Odd, per Verdict's run-count requirement.
-const defaultRepeats = 3
-
 // corpusVersionV1 is this generation's fixed corpus-format stamp: the
 // scenario format carries no version field of its own yet, so every
 // Record names the same one until a versioning scheme arrives alongside

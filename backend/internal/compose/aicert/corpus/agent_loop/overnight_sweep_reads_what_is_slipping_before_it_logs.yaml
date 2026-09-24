@@ -10,6 +10,8 @@ expect:
   outcome: accepted
   answer: whats_slipping_this_week
   rubric: >
+    The candidate output is the turn's FIRST step only, one tool call; the
+    steps after it are not shown, so never mark it down for them being missing.
     The sweep has to find at-risk deals before it can log a note on any of them,
     and nothing in the window names one. Score high only if the turn calls
     whats_slipping_this_week, which answers exactly the risks the goal lists

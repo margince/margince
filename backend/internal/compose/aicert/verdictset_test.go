@@ -49,12 +49,16 @@ func TestVerdictOverASetOfScenarios(t *testing.T) {
 			scenarioSet(1, testBands, 80, map[int]int{0: 1}), aicert.VerdictSupportedDegraded,
 		},
 		{
-			"a pooled 95% certifies",
-			scenarioSet(20, testBands, 80, map[int]int{0: 1, 1: 1, 2: 1}), aicert.VerdictCertified,
+			"a pooled 90% certifies",
+			scenarioSet(10, testBands, 80, map[int]int{0: 1, 1: 1, 2: 1}), aicert.VerdictCertified,
 		},
 		{
-			"a pooled 94% does not",
-			scenarioSet(17, testBands, 80, map[int]int{0: 1, 1: 1, 2: 1}), aicert.VerdictSupportedDegraded,
+			"a pooled 89% does not",
+			scenarioSet(9, testBands, 80, map[int]int{0: 1, 1: 1, 2: 1}), aicert.VerdictSupportedDegraded,
+		},
+		{
+			"17 of 18 runs clear the pooled bar",
+			scenarioSet(6, testBands, 80, map[int]int{0: 1}), aicert.VerdictCertified,
 		},
 		{
 			"one scenario's median below its degraded_min sinks a 100% pool",

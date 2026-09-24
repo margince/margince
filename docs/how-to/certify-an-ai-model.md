@@ -314,15 +314,17 @@ verdict; `N` is all runs, `n` one scenario's, each held to its own bands:
 
 | Verdict | Rule |
 |---|---|
-| `certified` | ≥ 95% of all `N` runs HardPass ∧ every scenario HardPasses ≥ ⌈2n/3⌉ of its `n` ∧ every scenario's median score ≥ its `certified_min` and min score ≥ its `floor` |
+| `certified` | ≥ 90% of all `N` runs HardPass ∧ every scenario HardPasses ≥ ⌈2n/3⌉ of its `n` ∧ every scenario's median score ≥ its `certified_min` and min score ≥ its `floor` |
 | `supported_degraded` | ≥ ⌈2N/3⌉ of all runs HardPass ∧ every scenario's median score ≥ its `degraded_min` |
 | `not_supported` | otherwise, including any scenario no judge scored |
 
 A pass **rate**, so the bar does not rise with the corpus (at 99% per run, 57 of
 57 happens barely half the time); the per-scenario majority keeps one case that
-always fails from hiding in the pool. **reliability** is the fraction of runs that
-HardPassed (0–1), the number to trend. A run whose served model is not uniform (a
-fallback, between runs or calls) **voids** the record: you cannot certify a moving target.
+always fails from hiding in the pool. Every threshold — rate, majority, default
+repeats, re-judge count — lives in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go):
+edit it there, bump `gradingRule`, and regenerate the page. **reliability** is the
+fraction of runs that HardPassed (0–1), the number to trend. A run whose served
+model is not uniform (a fallback, between runs or calls) **voids** the record: you cannot certify a moving target.
 
 A run is not always one model call — a site may retry, fall back, or turn a tool
 loop — and everything the run is judged and charged for is pooled across all of

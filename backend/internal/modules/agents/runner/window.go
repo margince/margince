@@ -310,8 +310,8 @@ Rules:
 - Actions needing human approval are staged automatically; never fabricate their outcome.
 ` + surfaceSchemaRules)
 	// The rule governs the run's final summary, which is filed on a record the
-	// whole team reads. Empty when the caller passed none — the certification
-	// lane — and an empty block writes nothing rather than a blank line.
+	// whole team reads. Every compose caller passes one; an empty block (a
+	// caller that passed none) writes nothing rather than a blank line.
 	if languageRule != "" {
 		b.WriteString(languageRule)
 		b.WriteString("\n")
@@ -383,8 +383,8 @@ const surfaceSchemaRules = "- An argument no tool declares is refused by name, n
 // measuring it, so it is published beside the listing it buys.
 //
 // The language rule is excluded because it is the CALLER's, not the frame's:
-// the certification lane passes none, and an installation's own base language
-// sentence is not a cost this build can state once.
+// its text is rendered per installation base language, so its size is not a
+// cost this build can state once.
 func SystemFrameTokens() int {
 	return len(systemPrompt(nil, promptfence.New(), "")) / 4
 }

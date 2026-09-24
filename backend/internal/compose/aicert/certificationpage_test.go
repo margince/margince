@@ -97,8 +97,9 @@ func TestAICertificationPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encoding the certification document: %v", err)
 	}
-	page := renderAICertPage(doc, loadAICertVerdictRule(t))
+	page := renderAICertPage(doc, loadAICertVerdictRule(t), aiCertQualityBars(corpus))
 	assertAICertPageCoversEverything(t, string(page), doc)
+	assertAICertThresholdsStateTheRule(t, string(page), corpus)
 	assertAICertPresetSectionsCount(t, string(page), doc.Presets)
 	syncAICertFile(t, aiCertJSON, encoded)
 	syncAICertFile(t, aiCertPage, page)
@@ -242,11 +243,11 @@ func assertAICertPageCoversEverything(t *testing.T, page string, doc aiCertDoc) 
 // renderAICertPage builds the whole page from the document: first the answer
 // for somebody choosing a preset, then everything behind it, folded, for an
 // engineer. Each section is its own writer and takes only what it renders.
-func renderAICertPage(doc aiCertDoc, verdictRule string) []byte {
+func renderAICertPage(doc aiCertDoc, verdictRule string, bars []aiCertQualityBar) []byte {
 	var page strings.Builder
 	writeAICertHead(&page)
 	writeAICertPresetSummary(&page, doc.Presets)
-	writeAICertGrading(&page, verdictRule, doc.Totals.SelfJudged)
+	writeAICertGrading(&page, verdictRule, doc.Totals.SelfJudged, bars)
 	page.WriteString("## For engineers\n\n")
 	page.WriteString("Everything the grades above are computed from, folded so the page stays short.\n\n")
 	writeAICertFolded(&page, "Totals, and why the records went stale", func(page *strings.Builder) {

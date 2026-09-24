@@ -3,8 +3,8 @@
     "sites": 47,
     "sites_best_current": 0,
     "sites_best_partial": 0,
-    "sites_best_stale": 45,
-    "sites_absent": 2,
+    "sites_best_stale": 47,
+    "sites_absent": 0,
     "scenarios": 152,
     "records": 136,
     "bindings": 16,
@@ -562,12 +562,12 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": "",
-          "runs": 0,
-          "passed": 0,
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 18,
+          "passed": 17,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
+          "cases_below_quality_bar": 1
         },
         {
           "task": "brief_ranking",
@@ -1005,9 +1005,9 @@
       "bands": {
         "certified": 12,
         "supported_degraded": 4,
-        "not_supported": 12
+        "not_supported": 13
       },
-      "untested": 1,
+      "untested": 0,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -2019,18 +2019,18 @@
         "model": "gemini-3.1-flash-lite",
         "env": "eu_hosted"
       },
-      "sites": 39,
+      "sites": 41,
       "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 39,
-      "runs": 387,
-      "passed": 349,
-      "reliability": 0.9018087855297158,
-      "slowest_p95_ms": 6994,
+      "sites_stale": 41,
+      "runs": 405,
+      "passed": 366,
+      "reliability": 0.9037037037037037,
+      "slowest_p95_ms": 11340,
       "bands": {
-        "certified": 21,
+        "certified": 22,
         "supported_degraded": 7,
-        "not_supported": 11
+        "not_supported": 12
       }
     },
     {
@@ -2481,8 +2481,13 @@
       "site": "morning_brief",
       "key": "agent_loop/morning_brief",
       "scope": "single_turn",
-      "missing_context_scopes": [],
-      "best_state": "absent",
+      "missing_context_scopes": [
+        "identity",
+        "positioning",
+        "sales",
+        "offer"
+      ],
+      "best_state": "stale",
       "recommended": null,
       "scenarios": [
         {
@@ -2501,15 +2506,56 @@
           "file": "backend/internal/compose/aicert/corpus/agent_loop/morning_brief_retrieved_text_is_not_an_instruction.yaml"
         }
       ],
-      "records": []
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1200,
+          "latency_p95_ms": 11340,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (the case and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "case_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ],
+            "grader_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
+        }
+      ]
     },
     {
       "task": "agent_loop",
       "site": "overnight_at_risk_sweep",
       "key": "agent_loop/overnight_at_risk_sweep",
       "scope": "single_turn",
-      "missing_context_scopes": [],
-      "best_state": "absent",
+      "missing_context_scopes": [
+        "identity",
+        "positioning",
+        "sales",
+        "offer"
+      ],
+      "best_state": "stale",
       "recommended": null,
       "scenarios": [
         {
@@ -2528,7 +2574,43 @@
           "file": "backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_retrieved_text_is_not_an_instruction.yaml"
         }
       ],
-      "records": []
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 1200,
+          "latency_p95_ms": 11340,
+          "reported": {
+            "accepted": 8,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (the case and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "case_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ],
+            "grader_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
+        }
+      ]
     },
     {
       "task": "brief_ranking",
@@ -10253,15 +10335,6 @@
     }
   ],
   "unclaimed_records": [
-    {
-      "task": "agent_loop",
-      "binding": {
-        "provider": "gemini",
-        "model": "gemini-3.1-flash-lite",
-        "env": "eu_hosted"
-      },
-      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
-    },
     {
       "task": "agent_loop",
       "binding": {

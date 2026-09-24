@@ -30,17 +30,16 @@ import (
 //
 // It is the ONLY assembly of the two halves — RunnerService takes its default
 // specByName from here and Tick seeds from here — because the alternative is
-// the failure this whole change exists to remove. Job.Tools empty is read as
-// NO narrowing (runner/job.go), so one production path left reading the bare
-// runner.Catalog() would hand its agent every verb its passport admits, and
-// nothing would look wrong: the run would work, the diff would look complete,
-// and the boundary would be off.
+// a path that skipped the join. The runner refuses a Job with empty Tools
+// (runner/job.go), so a production path left reading the bare runner.Catalog()
+// would build jobs the runner degrades before their first model call, and
+// that agent would never run.
 //
 // TestTheScheduledCatalogIsTotalAgainstTheContract holds both halves total
 // against each other. It does NOT hold that this is the only assembly of them —
 // no test does, so this comment does not claim it. What is gated is narrower
 // and is the part that matters: TestOnlySanctionedFilesBuildARunnerJob names
-// the only two files that may construct a Job at all, so a second assembly
+// the only three files that may construct a Job at all, so a second assembly
 // would have nowhere to deliver its result.
 func scheduledAgents() ([]runner.AgentSpec, error) {
 	return joinScheduledAgents(runner.Catalog(), ai.AgentsFor(ai.TaskAgentLoop))

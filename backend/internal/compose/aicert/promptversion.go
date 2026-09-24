@@ -239,7 +239,7 @@ func graderRequestDigest(sc Scenario, candidateRequest model.Request) (string, e
 
 // gradingRule versions the scoring rule and the judge-opinion policy, so every
 // record graded the old way reads stale; gradingrule_test.go fails an unbumped edit.
-const gradingRule = "grading-rule-2"
+const gradingRule = "grading-rule-3"
 
 // gradedBy is the stamp's grader third: the grader's request digest under the
 // rule that turns its opinions into a verdict, which no request carries.

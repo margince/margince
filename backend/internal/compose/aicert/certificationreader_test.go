@@ -62,8 +62,8 @@ func assertAICertProfilesAreNamed(t *testing.T, presets []aiCertPreset) {
 
 // loadAICertVerdictRule is the indented rule block of Verdict's doc comment,
 // so the page's exact rule is the one the code documents beside itself. It
-// fails when the block names a pass rate other than the constant the rule
-// reads, which is the one way the two could disagree.
+// fails when the block names a pass rate or majority other than the constants
+// the rule reads, which is the one way the two could disagree.
 func loadAICertVerdictRule(t *testing.T) string {
 	t.Helper()
 	file, err := parser.ParseFile(token.NewFileSet(), aiCertVerdictSource, nil, parser.ParseComments)
@@ -88,6 +88,9 @@ func loadAICertVerdictRule(t *testing.T) string {
 	joined := strings.Join(rule, "\n")
 	if percent := fmt.Sprintf("%d%%", aicert.CertifiedPassPercent); !strings.Contains(joined, percent) {
 		t.Fatalf("Verdict's documented rule does not state the %s pass rate the code applies:\n%s", percent, joined)
+	}
+	if majority := fmt.Sprintf("⌈%dn/%d⌉", aicert.MajorityNumerator, aicert.MajorityDenominator); !strings.Contains(joined, majority) {
+		t.Fatalf("Verdict's documented rule does not state the %s case majority the code applies:\n%s", majority, joined)
 	}
 	return joined
 }
@@ -176,8 +179,8 @@ func writeAICertLegend(page *strings.Builder, anyOff bool) {
 	page.WriteString("| Grade | What we measured | What to do |\n|---|---|---|\n")
 	fmt.Fprintf(page, "| %s | Right in at least %d of every 100 tries, no test case failing again and again, and good answers. | Turn it on and rely on it. |\n",
 		aiCertReady, aicert.CertifiedPassPercent)
-	fmt.Fprintf(page, "| %s | Right in at least two thirds of tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |\n",
-		aiCertCare)
+	fmt.Fprintf(page, "| %s | Right in at least %s of tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |\n",
+		aiCertCare, aiCertMajorityWords())
 	fmt.Fprintf(page, "| %s | Wrong too often, or answers below the quality bar. | Leave it off, or check every answer by hand. |\n", aiCertNotYet)
 	fmt.Fprintf(page, "| %s | This preset has a model for the feature, but nobody has tested it yet. | Ask for a test before relying on it. |\n", aiCertUnproven)
 	if anyOff {
@@ -345,7 +348,7 @@ func aiCertCases(n int) string {
 // writeAICertGrading explains the grades in words, then states the exact rule
 // for whoever needs to argue with one. The numbers in the words are the rule's
 // own: the pass rate is its constant, the try count the runner's default.
-func writeAICertGrading(page *strings.Builder, rule string, selfJudged int) {
+func writeAICertGrading(page *strings.Builder, rule string, selfJudged int, bars []aiCertQualityBar) {
 	page.WriteString("## How the scoring works\n\n")
 	page.WriteString("1. **Real test cases.** Every feature has a set of test cases: a realistic\n")
 	page.WriteString("   situation (an email, an account, a web page) and the answer we expect. The\n")
@@ -369,11 +372,12 @@ func writeAICertGrading(page *strings.Builder, rule string, selfJudged int) {
 	page.WriteString("| Grade | Right answers | Every test case | Quality |\n|---|---|---|---|\n")
 	fmt.Fprintf(page, "| %s | at least %d of every 100 tries | right in at least %d of its %d tries | good in every case, no very poor answer |\n",
 		aiCertReady, aicert.CertifiedPassPercent, aicert.CaseMajority(aicert.DefaultRepeats), aicert.DefaultRepeats)
-	fmt.Fprintf(page, "| %s | at least two thirds of all tries | — | acceptable in every case |\n", aiCertCare)
+	fmt.Fprintf(page, "| %s | at least %s of all tries | — | acceptable in every case |\n", aiCertCare, aiCertMajorityWords())
 	fmt.Fprintf(page, "| %s | anything less | | |\n\n", aiCertNotYet)
 	page.WriteString("A feature does not have to be perfect to be ready: a stray miss among many tries\n")
 	page.WriteString("is allowed. A test case that fails again and again is not — that is a real\n")
 	page.WriteString("weakness, not bad luck — and it holds the whole feature back.\n\n")
+	writeAICertThresholds(page, bars)
 	page.WriteString("<details>\n<summary>The exact rule</summary>\n\n")
 	page.WriteString("From `Verdict` in [`" + aiCertVerdictSource + "`](" + corpusLinkPrefix + aiCertCorpusDocs +
 		aiCertVerdictSource + "), applied to every case of a task at once:\n\n")
@@ -389,6 +393,106 @@ func writeAICertGrading(page *strings.Builder, rule string, selfJudged int) {
 			"(`self_judged` in the record file).\n", selfJudged)
 	}
 	page.WriteString("\n</details>\n\n")
+}
+
+// aiCertQualityBar is one set of quality bands and how many cases of the corpus
+// are graded against it.
+type aiCertQualityBar struct {
+	Bands aicert.Bands
+	Cases int
+}
+
+// aiCertQualityBars groups the corpus by its bands, the most used first, so the
+// page states every bar a case is held to without listing each case.
+func aiCertQualityBars(corpus []aicert.Scenario) []aiCertQualityBar {
+	counts := map[aicert.Bands]int{}
+	for _, sc := range corpus {
+		counts[sc.Expect.Bands]++
+	}
+	bars := make([]aiCertQualityBar, 0, len(counts))
+	for bands, cases := range counts {
+		bars = append(bars, aiCertQualityBar{Bands: bands, Cases: cases})
+	}
+	sort.Slice(bars, func(i, j int) bool {
+		if bars[i].Cases != bars[j].Cases {
+			return bars[i].Cases > bars[j].Cases
+		}
+		a, b := bars[i].Bands, bars[j].Bands
+		if a.CertifiedMin != b.CertifiedMin {
+			return a.CertifiedMin > b.CertifiedMin
+		}
+		if a.DegradedMin != b.DegradedMin {
+			return a.DegradedMin > b.DegradedMin
+		}
+		return a.Floor > b.Floor
+	})
+	return bars
+}
+
+// aiCertThresholdsHeading opens the table of every number a grade is reached by.
+const aiCertThresholdsHeading = "### Thresholds\n\n"
+
+// writeAICertThresholds states every threshold in plain words, each read from
+// the constant or the corpus that sets it.
+func writeAICertThresholds(page *strings.Builder, bars []aiCertQualityBar) {
+	page.WriteString(aiCertThresholdsHeading)
+	page.WriteString("| What | Threshold |\n|---|---|\n")
+	fmt.Fprintf(page, "| Right answers needed for %s | at least %d of every 100 tries, counted over all of the feature's test cases |\n",
+		aiCertReady, aicert.CertifiedPassPercent)
+	fmt.Fprintf(page, "| Each test case, for %s | right in at least %d of its %d tries |\n",
+		aiCertReady, aicert.CaseMajority(aicert.DefaultRepeats), aicert.DefaultRepeats)
+	fmt.Fprintf(page, "| Right answers needed for %s | at least %s of all tries |\n", aiCertCare, aiCertMajorityWords())
+	fmt.Fprintf(page, "| Tries per test case | %d (`RUNS=` changes it for one run) |\n", aicert.DefaultRepeats)
+	fmt.Fprintf(page, "| Extra quality opinions on a low score | %d more, and the middle of the %d scores counts |\n",
+		aicert.RejudgeOpinions, aicert.RejudgeOpinions+1)
+	for _, bar := range bars {
+		b := bar.Bands
+		fmt.Fprintf(page, "| Quality bar %d / %d / %d — %s | %s needs a quality score of at least %d (and no single answer below %d); %s needs at least %d |\n",
+			b.CertifiedMin, b.DegradedMin, b.Floor, aiCertCases(bar.Cases),
+			aiCertReady, b.CertifiedMin, b.Floor, aiCertCare, b.DegradedMin)
+	}
+	page.WriteString("\nAll of these live in [`backend/internal/compose/aicert/thresholds.go`](" + corpusLinkPrefix + aiCertCorpusDocs +
+		"thresholds.go) (quality bars: in each test case's file); change them there and regenerate this page.\n\n")
+}
+
+// assertAICertThresholdsStateTheRule holds the Thresholds table to the constants
+// and the corpus, so a number typed into its writer by hand fails here.
+func assertAICertThresholdsStateTheRule(t *testing.T, page string, corpus []aicert.Scenario) {
+	t.Helper()
+	_, table, found := strings.Cut(page, aiCertThresholdsHeading)
+	if !found {
+		t.Fatalf("the page has no %q table", strings.TrimSpace(aiCertThresholdsHeading))
+	}
+	table, _, _ = strings.Cut(table, "\n\n")
+	want := []string{
+		fmt.Sprintf("| Right answers needed for %s | at least %d of every 100 tries", aiCertReady, aicert.CertifiedPassPercent),
+		fmt.Sprintf("| Tries per test case | %d ", aicert.DefaultRepeats),
+	}
+	for _, sc := range corpus {
+		b := sc.Expect.Bands
+		want = append(want, fmt.Sprintf("| Quality bar %d / %d / %d — ", b.CertifiedMin, b.DegradedMin, b.Floor))
+	}
+	for _, row := range want {
+		if !strings.Contains(table, row) {
+			t.Errorf("the Thresholds table does not state %q:\n%s", row, table)
+		}
+	}
+}
+
+// aiCertMajorityWords says the case majority as a fraction in words, "two
+// thirds", falling back to digits for a fraction English has no short name for.
+func aiCertMajorityWords() string {
+	num, den := aicert.MajorityNumerator, aicert.MajorityDenominator
+	counts := []string{"", "one", "two", "three", "four"}
+	parts := map[int]string{2: "half", 3: "third", 4: "quarter", 5: "fifth"}
+	part, named := parts[den]
+	if num < 1 || num >= len(counts) || !named {
+		return fmt.Sprintf("%d/%d", num, den)
+	}
+	if num > 1 {
+		part += "s"
+	}
+	return counts[num] + " " + part
 }
 
 // aiCertCell renders an unmeasured or unbound value as the page's own dash

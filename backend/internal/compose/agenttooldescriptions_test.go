@@ -260,18 +260,13 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 // its parts was already agent-readable — it measured ~15,997 before the tool
 // and ~16,160 after it, against 16,000.
 //
-// WHAT CHANGED ON 2026-08-23: the bound stopped being global (#2355).
+// The bound is per declared agent, not global, because no run is offered the
+// whole catalog: each scheduled agent declares its tools in api/ai-tasks.yaml,
+// compose refuses to assemble one that does not, the runner refuses a Job with
+// no Tools, and no file outside the three sanctioned ones may build a Job.
 //
-// Every raise above was paid for the same way, and the pattern is the finding:
-// the whole catalog was measured because a run offered the whole catalog was a
-// legal configuration — Job.Tools empty read as no narrowing, so nothing said
-// otherwise. That is no longer true. Each scheduled agent declares its tools in
-// api/ai-tasks.yaml, compose refuses to assemble one that does not, and no file
-// outside two sanctioned ones may build a Job at all.
-//
-// So the fraction now bounds a DECLARED agent's listing, and the arithmetic it
-// was fighting is gone: the fattest agent that actually runs is an order of
-// magnitude inside it. The figures are NOT written here — they moved with every
+// So the fraction bounds a DECLARED agent's listing, and the fattest agent that
+// runs is an order of magnitude inside it. The figures are NOT written here — they moved with every
 // change that touched a description, and two of them sat wrong in this comment
 // for weeks. docs/reference/agent-tool-budget.md is regenerated from the served
 // surface and is the place that carries them.

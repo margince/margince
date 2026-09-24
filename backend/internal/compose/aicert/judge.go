@@ -73,10 +73,6 @@ func candidateAsk(trace aitasks.Trace) (string, error) {
 	return strings.Join(turns, "\n\n"), nil
 }
 
-// rejudgeOpinions is how many further opinions a score below certified_min is
-// weighed against: three in all is the fewest whose median outvotes one outlier.
-const rejudgeOpinions = 2
-
 // opinion is one judgeVerdict call's reading of a run. graded is false when the
 // reply never parsed into a verdict, so score is absent rather than zero.
 type opinion struct {

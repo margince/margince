@@ -30,8 +30,9 @@ var gradingRuleOwners = []struct {
 	file  string
 	names []string
 }{
-	{"score.go", []string{"Verdict", "judgeBand", "verdictOver", "twoThirds", "certifiedPassPercent", "judgeMedianAndMin", "medianOf"}},
-	{"judge.go", []string{"judgeScore", "foldOpinions", "rejudgeOpinions"}},
+	{"score.go", []string{"Verdict", "judgeBand", "verdictOver", "majorityOf", "judgeMedianAndMin", "medianOf"}},
+	{"judge.go", []string{"judgeScore", "foldOpinions"}},
+	{"thresholds.go", []string{"certifiedPassPercent", "majorityNumerator", "majorityDenominator", "defaultRepeats", "rejudgeOpinions"}},
 }
 
 // gradingRuleDigest hashes each owner's gofmt'd source with comments and blank

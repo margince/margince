@@ -15,4 +15,11 @@ const RejudgeOpinions = rejudgeOpinions
 
 // CaseMajority is the majority a scenario's own runs must reach; the page counts
 // the cases that miss it.
-func CaseMajority(n int) int { return twoThirds(n) }
+func CaseMajority(n int) int { return majorityOf(n) }
+
+// MajorityNumerator and MajorityDenominator are the majority as a fraction, which
+// the page says in words.
+const (
+	MajorityNumerator   = majorityNumerator
+	MajorityDenominator = majorityDenominator
+)
