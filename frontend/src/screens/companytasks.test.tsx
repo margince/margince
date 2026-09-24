@@ -285,9 +285,7 @@ describe("CompanyScreen — the Tasks tab", () => {
       expect(screen.getByText("No open tasks for this company.")).toBeTruthy(),
     );
     expect(screen.queryByText(RECOMMENDED)).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Add next step" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add next step" })).toBeNull();
   });
 
   it("says the section is withheld rather than rendering it as empty", async () => {
@@ -305,9 +303,7 @@ describe("CompanyScreen — the Tasks tab", () => {
       throw new Error("the tasks tab has no section wrapper");
     }
     await waitFor(() =>
-      expect(
-        within(tasks).getByText("Hidden for your role"),
-      ).toBeTruthy(),
+      expect(within(tasks).getByText("Hidden for your role")).toBeTruthy(),
     );
     expect(
       within(tasks).queryByText("No open tasks for this company."),

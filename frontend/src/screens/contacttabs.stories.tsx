@@ -113,9 +113,7 @@ export const Conversations: Story = {
   render: tab(view),
   play: async ({ canvasElement }) => {
     const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      await page.findByRole("button", { name: "Threads" }),
-    );
+    await userEvent.click(await page.findByRole("button", { name: "Threads" }));
   },
 };
 

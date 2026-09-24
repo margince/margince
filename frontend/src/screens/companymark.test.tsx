@@ -75,9 +75,7 @@ it("stands the monogram in and offers to add each mark", () => {
     expect(field.queryByRole("button", { name: /^Remove/ })).toBeNull();
   }
   expect(screen.getByRole("button", { name: "Add wide logo" })).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Add square icon" }),
-  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Add square icon" })).toBeTruthy();
 });
 
 // Each slot answers for its own mark. A company that uploaded a wordmark and no
@@ -94,16 +92,12 @@ it("draws each mark in its own slot and offers the verbs that fit it", () => {
   expect(
     screen.getByRole("button", { name: "Replace wide logo" }),
   ).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Remove wide logo" }),
-  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Remove wide logo" })).toBeTruthy();
 
   const icon = slot("Square icon");
   expect(icon.queryByRole("img", { name: "Acme GmbH" })).toBeNull();
   expect(icon.getByText("AG")).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Add square icon" }),
-  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Add square icon" })).toBeTruthy();
   expect(
     screen.queryByRole("button", { name: "Remove square icon" }),
   ).toBeNull();
@@ -254,9 +248,7 @@ it("shows the server's refusal of a removal beside the control", async () => {
   );
   mark(WITH_MARK);
 
-  await user.click(
-    screen.getByRole("button", { name: "Remove wide logo" }),
-  );
+  await user.click(screen.getByRole("button", { name: "Remove wide logo" }));
 
   expect(
     await screen.findByText(/being replaced by another write/),

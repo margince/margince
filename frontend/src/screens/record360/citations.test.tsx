@@ -243,9 +243,7 @@ describe("a citation's receipt", () => {
     expect(screen.getByText("Email you sent · 01/05/2026")).toBeTruthy();
     // Nowhere to go: an activity has no page of its own, and a receipt that
     // offered one would be a button that does nothing.
-    expect(
-      screen.queryByRole("button", { name: "Open record" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open record" })).toBeNull();
   });
 
   it("never folds a receipted citation into a count", () => {

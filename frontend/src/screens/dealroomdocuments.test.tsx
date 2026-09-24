@@ -82,9 +82,7 @@ it("offers the upload that fills an empty Files area, and says where it lands", 
   stubApi();
   render(<AddDocument room={ROOM} refusal={undefined} />);
 
-  expect(
-    await screen.findByText("No files on this deal"),
-  ).toBeInTheDocument();
+  expect(await screen.findByText("No files on this deal")).toBeInTheDocument();
   expect(
     screen.getByText(
       "Any file in the deal’s Files area can be added, including uploads and email attachments.",

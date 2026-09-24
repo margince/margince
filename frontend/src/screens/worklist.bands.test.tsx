@@ -62,9 +62,7 @@ describe("a band holding nothing says so", () => {
     renderWorklist("en");
 
     expect(
-      await screen.findByText(
-        "No urgent items. Remaining work is below.",
-      ),
+      await screen.findByText("No urgent items. Remaining work is below."),
     ).toBeTruthy();
     // A band that stays in the day. `review` is drawn in its own panel below
     // now, so it declares no empty run here.
@@ -78,9 +76,7 @@ describe("a band holding nothing says so", () => {
     stub(banded());
     renderWorklist("en");
 
-    await screen.findByText(
-      "No urgent items. Remaining work is below.",
-    );
+    await screen.findByText("No urgent items. Remaining work is below.");
     expect(headings()).toContain("Now");
     expect(headings()).toContain("Prospecting");
   });
@@ -91,9 +87,7 @@ describe("a band holding nothing says so", () => {
     stub(banded());
     renderWorklist("en");
 
-    await screen.findByText(
-      "No urgent items. Remaining work is below.",
-    );
+    await screen.findByText("No urgent items. Remaining work is below.");
     for (const line of ["No prospecting work waiting."]) {
       expect(screen.queryByText(line)).toBeTruthy();
     }
@@ -128,9 +122,7 @@ describe("a page with more to load claims no band is empty", () => {
     // against a rendered page rather than against one that has not arrived.
     expect(await screen.findByText("Send the retrofit quote")).toBeTruthy();
     expect(
-      screen.queryByText(
-        "No urgent items. Remaining work is below.",
-      ),
+      screen.queryByText("No urgent items. Remaining work is below."),
     ).toBeNull();
     expect(screen.queryByText("Nothing to review.")).toBeNull();
   });
@@ -190,9 +182,7 @@ describe("the headings follow the QUEUE", () => {
     );
     renderWorklist("en");
 
-    await screen.findByText(
-      "No urgent items. Remaining work is below.",
-    );
+    await screen.findByText("No urgent items. Remaining work is below.");
     const drawn = headings();
     expect(drawn.indexOf("Now")).toBeLessThan(drawn.indexOf("Review"));
   });
@@ -220,9 +210,7 @@ describe("a server that sends no bands still draws headings", () => {
     // And no line claiming a band is clear: the server said nothing about the
     // bands it is not sending, so the page must not answer for it.
     expect(
-      screen.queryByText(
-        "No urgent items. Remaining work is below.",
-      ),
+      screen.queryByText("No urgent items. Remaining work is below."),
     ).toBeNull();
   });
 });

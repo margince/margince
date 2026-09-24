@@ -75,7 +75,8 @@ export const Unreachable: Story = {
         jsonResponse(
           {
             code: "imap_unreachable",
-            detail: "The mail server could not be reached. Check the host and port.",
+            detail:
+              "The mail server could not be reached. Check the host and port.",
           },
           502,
         ),

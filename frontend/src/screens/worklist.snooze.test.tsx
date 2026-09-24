@@ -240,7 +240,9 @@ describe("how long a row is put down for", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.queryByRole("button", { name: "Snooze duration" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Snooze duration" }),
+    ).toBeNull();
   });
 
   // What the confirmation SAYS a press did.

@@ -66,9 +66,7 @@ describe("the deal's email box", () => {
     serveCard(MAIL);
     renderBox();
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Draft reply" }),
-      ).toBeTruthy(),
+      expect(screen.getByRole("button", { name: "Draft reply" })).toBeTruthy(),
     );
   });
 
@@ -76,13 +74,9 @@ describe("the deal's email box", () => {
     serveCard(null);
     renderBox();
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Send email" }),
-      ).toBeTruthy(),
+      expect(screen.getByRole("button", { name: "Send email" })).toBeTruthy(),
     );
-    expect(
-      screen.queryByRole("button", { name: "Draft reply" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Draft reply" })).toBeNull();
   });
 
   // The read is in flight on the first paint, and a box that rendered nothing

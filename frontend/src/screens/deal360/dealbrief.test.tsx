@@ -52,8 +52,6 @@ it.each([true, false])(
       </StoryProviders>,
     );
     expect(screen.getByText(/No brief written yet/)).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: "Write brief" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Write brief" })).toBeNull();
   },
 );

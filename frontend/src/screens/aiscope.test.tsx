@@ -157,7 +157,9 @@ describe("Ask about this account, scoped to a project", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "Project" }));
     await user.click(screen.getByRole("option", { name: /ERP-27/ }));
-    await user.click(screen.getByRole("button", { name: "What is open here?" }));
+    await user.click(
+      screen.getByRole("button", { name: "What is open here?" }),
+    );
 
     await waitFor(() =>
       expect(seen.filter((s) => s.method === "POST")).toHaveLength(1),
@@ -194,7 +196,9 @@ describe("Ask about this account, scoped to a project", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "Project" }));
     await user.click(screen.getByRole("option", { name: /ERP-27/ }));
-    await user.click(screen.getByRole("button", { name: "What is open here?" }));
+    await user.click(
+      screen.getByRole("button", { name: "What is open here?" }),
+    );
     expect(await screen.findByText(/ERP cutover is waiting/)).toBeTruthy();
 
     await user.click(screen.getByRole("combobox", { name: "Project" }));
@@ -231,7 +235,9 @@ describe("Ask about this account, scoped to a project", () => {
         screen.getByRole("combobox", { name: "Project" }).textContent,
       ).toContain("DC-4"),
     );
-    await user.click(screen.getByRole("button", { name: "What is open here?" }));
+    await user.click(
+      screen.getByRole("button", { name: "What is open here?" }),
+    );
     await waitFor(() => expect(seen).toHaveLength(1));
     expect(seen[0].body).toEqual({
       question: "whats_open",
@@ -240,7 +246,9 @@ describe("Ask about this account, scoped to a project", () => {
 
     // No project left at all: the hidden id must not keep travelling.
     rerender(<AskSection companyId="o-1" projects={[]} />);
-    await user.click(screen.getByRole("button", { name: "What is open here?" }));
+    await user.click(
+      screen.getByRole("button", { name: "What is open here?" }),
+    );
     await waitFor(() => expect(seen).toHaveLength(2));
     expect(seen[1].body).toEqual({ question: "whats_open" });
   });

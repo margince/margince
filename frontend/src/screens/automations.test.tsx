@@ -988,9 +988,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
 
     const picker = screen.getByRole("combobox", { name: "date_field" });
     await waitFor(() => expect(picker).toBeDisabled());
-    expect(
-      screen.getByText("Could not load date fields. Retry."),
-    ).toBeTruthy();
+    expect(screen.getByText("Could not load date fields. Retry.")).toBeTruthy();
   });
 
   it("round-trips the boolean and the picked date field through paramsFromValues into the create request", async () => {

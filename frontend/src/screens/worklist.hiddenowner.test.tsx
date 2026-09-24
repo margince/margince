@@ -102,9 +102,7 @@ describe("the hidden-backlog panel is about the reader", () => {
     await screen.findByText("Nothing is waiting on you.");
     expect(hiddenRequests()).toEqual([]);
     await user.click(screen.getAllByRole("button", { name: "All" })[0]);
-    expect(
-      await screen.findByText("Hidden from the Worklist"),
-    ).toBeTruthy();
+    expect(await screen.findByText("Hidden from the Worklist")).toBeTruthy();
     await waitFor(() => expect(hiddenRequests().length).toBeGreaterThan(0));
   });
 });

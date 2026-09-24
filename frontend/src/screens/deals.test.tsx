@@ -1152,8 +1152,9 @@ describe("DealsScreen", () => {
     // empty column has no sum to refuse, and a board of empty columns each
     // repeating the sentence read as a board of errors.
     expect(
-      screen.getAllByText("Loaded deals only. Filter to My deals for the total.")
-        .length,
+      screen.getAllByText(
+        "Loaded deals only. Filter to My deals for the total.",
+      ).length,
     ).toBe(1);
   });
 
@@ -1170,10 +1171,14 @@ describe("DealsScreen", () => {
 
     // Only the column holding a deal (s1) says so — empty columns stay quiet.
     expect(
-      screen.getAllByText("Loaded deals only. No total while a tag filter is on.").length,
+      screen.getAllByText(
+        "Loaded deals only. No total while a tag filter is on.",
+      ).length,
     ).toBe(1);
     expect(
-      screen.queryByText("Loaded deals only. Filter to My deals for the total."),
+      screen.queryByText(
+        "Loaded deals only. Filter to My deals for the total.",
+      ),
     ).toBeNull();
   });
 

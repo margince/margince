@@ -889,9 +889,7 @@ describe("log activity from a 360", () => {
     await userEvent.upload(input, file);
     await waitFor(() =>
       expect(
-        screen.getByText(
-          "File could not be read. Paste the text instead.",
-        ),
+        screen.getByText("File could not be read. Paste the text instead."),
       ).toBeTruthy(),
     );
     expect(

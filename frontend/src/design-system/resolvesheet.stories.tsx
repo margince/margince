@@ -51,8 +51,7 @@ const labels: ResolveSheetLabels = {
     "The next person to see this number needs the reason it is not flagged.",
   remindAt: "Remind on",
   expiresAt: "Expires on",
-  expiresHelp:
-    "At most 90 days: a value correct in May describes May.",
+  expiresHelp: "At most 90 days: a value correct in May describes May.",
   cancel: "Cancel",
   submit: "Save answer",
 };

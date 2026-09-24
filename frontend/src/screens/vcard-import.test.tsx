@@ -96,9 +96,7 @@ describe("VCardImport", () => {
     expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
     // The card written nowhere is the one a reader must act on, so it says so
     // rather than sitting silently under a success message.
-    expect(
-      screen.getByText("Possible duplicate"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Possible duplicate")).toBeInTheDocument();
     // A skipped card names its reason, or nobody can tell who is missing.
     expect(
       screen.getByText("the card carried no usable name"),
@@ -116,7 +114,9 @@ describe("VCardImport", () => {
     render(<VCardImport />);
     await openAndUpload(user);
 
-    expect(await screen.findByText("The file contains no cards.")).toBeVisible();
+    expect(
+      await screen.findByText("The file contains no cards."),
+    ).toBeVisible();
     const [url, init] = fetchSpy.mock.calls[0];
     expect(url).toBe("/v1/contacts/vcard-import");
     expect(init.method).toBe("POST");

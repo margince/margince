@@ -54,17 +54,13 @@ function renderBox(replyTo?: string) {
 describe("the record's email box", () => {
   it("offers the reply when the caller passes a reply target", () => {
     renderBox(MAIL);
-    expect(
-      screen.getByRole("button", { name: "Draft reply" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Draft reply" })).toBeTruthy();
   });
 
   it("offers a fresh mail when there is no reply target", () => {
     renderBox();
     expect(screen.getByRole("button", { name: "Write email" })).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: "Draft reply" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Draft reply" })).toBeNull();
   });
 
   it("carries the caller's own wording when overrides are supplied", () => {

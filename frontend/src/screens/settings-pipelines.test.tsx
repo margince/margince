@@ -402,9 +402,7 @@ describe("PipelinesCard", () => {
       }),
     );
     render(<PipelinesCard />);
-    await user.click(
-      await screen.findByRole("button", { name: "Restore" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Restore" }));
     await waitFor(() => expect(restored).toHaveLength(1));
     expect(restored[0].url).toContain("/pipelines/pl-old/restore");
     // The VERB as well as the address. Restoring is a POST — the contract's
