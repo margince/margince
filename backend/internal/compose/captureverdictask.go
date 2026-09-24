@@ -61,7 +61,7 @@ func verdictRequest(row capture.PendingCounterparty) model.Request {
 		System:         verdictSystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: verdictSchema(),
+		ResponseSchema: verdictSchema(row.ID.String()),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -193,13 +193,14 @@ func clampToken(s string) string {
 	return string(runes[:maxEchoedToken]) + "…"
 }
 
-// verdictSchema is the generation-time shape guardrail.
-func verdictSchema() json.RawMessage {
+// verdictSchema is the generation-time shape guardrail for the one sender
+// requested.
+func verdictSchema(requested string) json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			"results": schema.Array(schema.Object(
 				map[string]schema.Node{
-					"id": schema.String(),
+					"id": requestedIDNode([]string{requested}),
 					// From verdictKinds, not a second hand-written list: the two
 					// kinds that reached the prompt while this enum still
 					// refused them were unreachable in production.

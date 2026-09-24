@@ -67,7 +67,7 @@ func confidentialityRequest(row capture.PendingThread) model.Request {
 		System:         confidentialitySystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: confidentialitySchema(),
+		ResponseSchema: confidentialitySchema(row.ID.String()),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -77,12 +77,12 @@ func confidentialityRequest(row capture.PendingThread) model.Request {
 // local rung the model cannot emit a kind this enum omits, whatever the prompt
 // says, so a hand-written copy that fell behind would make a kind unreachable
 // in production with every test still green.
-func confidentialitySchema() json.RawMessage {
+func confidentialitySchema(requested string) json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			"results": schema.Array(schema.Object(
 				map[string]schema.Node{
-					"id":                    schema.String(),
+					"id":                    requestedIDNode([]string{requested}),
 					"verdict":               schema.Enum(confidentialityKindNames()...),
 					extractionConfidenceKey: schema.Number(),
 				},

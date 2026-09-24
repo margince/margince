@@ -34,7 +34,7 @@ func TestTheModelMayAnswerEveryConfidentialityKind(t *testing.T) {
 			} `json:"results"`
 		} `json:"properties"`
 	}
-	if err := json.Unmarshal(confidentialitySchema(), &shape); err != nil {
+	if err := json.Unmarshal(confidentialitySchema("r1"), &shape); err != nil {
 		t.Fatalf("decoding the confidentiality schema: %v", err)
 	}
 	got := make(map[string]bool, len(shape.Properties.Results.Items.Properties.Verdict.Enum))

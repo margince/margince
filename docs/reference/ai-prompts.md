@@ -1134,6 +1134,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "number"
           },
           "id": {
+            "enum": [
+              "<id minted for this call>"
+            ],
             "type": "string"
           },
           "label": {
@@ -1253,6 +1256,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "number"
           },
           "id": {
+            "enum": [
+              "<id minted for this call>"
+            ],
             "type": "string"
           },
           "verdict": {
@@ -1405,6 +1411,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "number"
           },
           "id": {
+            "enum": [
+              "<id minted for this call>"
+            ],
             "type": "string"
           },
           "verdict": {
@@ -3339,6 +3348,10 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "number"
           },
           "id": {
+            "enum": [
+              "<id minted for this call>",
+              "<id minted for this call>"
+            ],
             "type": "string"
           },
           "verdict": {
@@ -3643,6 +3656,10 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "string"
           },
           "id": {
+            "enum": [
+              "<id minted for this call>",
+              "<id minted for this call>"
+            ],
             "type": "string"
           },
           "remaining": {

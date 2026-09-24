@@ -287,7 +287,7 @@ func classifyRequest(batch []unlabeledMessage) model.Request {
 		System:         capturelabel.SystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: capturelabel.Prompt(fence, batch)}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: classifySchema(),
+		ResponseSchema: classifySchema(classifyIDs(batch)),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -349,11 +349,7 @@ func classifyShapeValid(batch []unlabeledMessage) ai.Validator {
 // validateClassifyPayload names the first §2.8 batch-fidelity violation,
 // or "" when the payload is exact.
 func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) string {
-	requested := make([]string, len(batch))
-	for i, m := range batch {
-		requested[i] = m.ID.String()
-	}
-	if msg := checkBatchFidelity(payload.Results, requested); msg != "" {
+	if msg := checkBatchFidelity(payload.Results, classifyIDs(batch)); msg != "" {
 		return msg
 	}
 	// This site's own vocabulary, checked here rather than in the shared id
@@ -389,13 +385,23 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 
 func (r classifyResult) answeredID() string { return r.ID }
 
+// classifyIDs is the ids one batch asks about, in the order it sends them: what
+// the schema lets the model name and what the validator requires it to answer.
+func classifyIDs(batch []unlabeledMessage) []string {
+	requested := make([]string, len(batch))
+	for i, m := range batch {
+		requested[i] = m.ID.String()
+	}
+	return requested
+}
+
 // classifySchema is the generation-time shape guardrail (§2.8).
-func classifySchema() json.RawMessage {
+func classifySchema(requested []string) json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			"results": schema.Array(schema.Object(
 				map[string]schema.Node{
-					"id":                    schema.String(),
+					"id":                    requestedIDNode(requested),
 					"label":                 schema.Enum("commitment", "meeting", "noise"),
 					extractionConfidenceKey: schema.Number(),
 					// Optional, because an outbound message has no reply verdict
