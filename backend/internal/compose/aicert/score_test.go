@@ -35,7 +35,7 @@ func TestVerdictReliabilityAtEveryN3PassCount(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			rs := runResults(c.hardPasses, []int{80, 80, 80})
-			_, reliability := aicert.Verdict(rs, testBands)
+			_, reliability := aicert.Verdict(aicert.ScenarioRuns{Runs: rs, Bands: testBands})
 			if diff := reliability - c.wantReliab; diff > 1e-9 || diff < -1e-9 {
 				t.Fatalf("reliability = %v, want %v", reliability, c.wantReliab)
 			}
@@ -45,7 +45,7 @@ func TestVerdictReliabilityAtEveryN3PassCount(t *testing.T) {
 
 func TestVerdictCertifiedRequiresAllHardPassAndMedianAndFloor(t *testing.T) {
 	rs := runResults([]bool{true, true, true}, []int{75, 80, 90})
-	verdict, _ := aicert.Verdict(rs, testBands)
+	verdict, _ := aicert.Verdict(aicert.ScenarioRuns{Runs: rs, Bands: testBands})
 	if verdict != aicert.VerdictCertified {
 		t.Fatalf("verdict = %q, want %q", verdict, aicert.VerdictCertified)
 	}
@@ -53,11 +53,11 @@ func TestVerdictCertifiedRequiresAllHardPassAndMedianAndFloor(t *testing.T) {
 
 // TestVerdictMinBelowFloorFailsCertification: every run HardPasses and the
 // median clears CertifiedMin, but the worst run's score dips under Floor —
-// spec §5 makes the floor a hard gate on Certified independent of the
-// median, so this must NOT certify.
+// the floor is a hard gate on Certified independent of the median, so this
+// must NOT certify.
 func TestVerdictMinBelowFloorFailsCertification(t *testing.T) {
 	rs := runResults([]bool{true, true, true}, []int{90, 90, 30})
-	verdict, _ := aicert.Verdict(rs, testBands)
+	verdict, _ := aicert.Verdict(aicert.ScenarioRuns{Runs: rs, Bands: testBands})
 	if verdict == aicert.VerdictCertified {
 		t.Fatalf("verdict = %q, want anything but certified (min score 30 < floor 40)", verdict)
 	}
@@ -71,7 +71,7 @@ func TestVerdictMinBelowFloorFailsCertification(t *testing.T) {
 
 func TestVerdictSupportedDegradedAtTheTwoOfThreeThreshold(t *testing.T) {
 	rs := runResults([]bool{true, true, false}, []int{60, 60, 10})
-	verdict, _ := aicert.Verdict(rs, testBands)
+	verdict, _ := aicert.Verdict(aicert.ScenarioRuns{Runs: rs, Bands: testBands})
 	if verdict != aicert.VerdictSupportedDegraded {
 		t.Fatalf("verdict = %q, want %q (2/3 HardPass meets ceil(2*3/3)=2, median 60 >= DegradedMin 50)", verdict, aicert.VerdictSupportedDegraded)
 	}
@@ -79,7 +79,7 @@ func TestVerdictSupportedDegradedAtTheTwoOfThreeThreshold(t *testing.T) {
 
 func TestVerdictNotSupportedBelowTheDegradedThreshold(t *testing.T) {
 	rs := runResults([]bool{true, false, false}, []int{90, 10, 10})
-	verdict, _ := aicert.Verdict(rs, testBands)
+	verdict, _ := aicert.Verdict(aicert.ScenarioRuns{Runs: rs, Bands: testBands})
 	if verdict != aicert.VerdictNotSupported {
 		t.Fatalf("verdict = %q, want %q (only 1/3 HardPass, below the ceil(2*3/3)=2 threshold)", verdict, aicert.VerdictNotSupported)
 	}
@@ -87,7 +87,7 @@ func TestVerdictNotSupportedBelowTheDegradedThreshold(t *testing.T) {
 
 func TestVerdictNotSupportedWhenMedianMissesDegradedMinDespiteHardPasses(t *testing.T) {
 	rs := runResults([]bool{true, true, true}, []int{20, 20, 20})
-	verdict, _ := aicert.Verdict(rs, testBands)
+	verdict, _ := aicert.Verdict(aicert.ScenarioRuns{Runs: rs, Bands: testBands})
 	if verdict != aicert.VerdictNotSupported {
 		t.Fatalf("verdict = %q, want %q (median 20 misses DegradedMin 50 despite 3/3 HardPass)", verdict, aicert.VerdictNotSupported)
 	}
@@ -97,7 +97,7 @@ func TestVerdictMedianOfAnOddRunCountIsTheMiddleElementNoInterpolation(t *testin
 	// Five runs, scores unsorted on input: median must be the middle of the
 	// SORTED sequence (60), not an interpolated or input-order value.
 	rs := runResults([]bool{true, true, true, true, true}, []int{90, 10, 60, 55, 100})
-	verdict, _ := aicert.Verdict(rs, testBands)
+	verdict, _ := aicert.Verdict(aicert.ScenarioRuns{Runs: rs, Bands: testBands})
 	// median(sorted [10,55,60,90,100]) = 60 >= CertifiedMin 70? No: 60 < 70,
 	// so this must NOT certify; it must still clear supported-degraded
 	// (5/5 HardPass >= ceil(10/3)=4, median 60 >= DegradedMin 50).
@@ -112,7 +112,7 @@ func TestVerdictPanicsOnAnEvenRunCount(t *testing.T) {
 			t.Fatal("want a panic for an even (non-odd) run count")
 		}
 	}()
-	aicert.Verdict(runResults([]bool{true, true}, []int{80, 80}), testBands)
+	aicert.Verdict(aicert.ScenarioRuns{Runs: runResults([]bool{true, true}, []int{80, 80}), Bands: testBands})
 }
 
 func TestVerdictPanicsOnAnEmptyRunSet(t *testing.T) {
@@ -121,5 +121,5 @@ func TestVerdictPanicsOnAnEmptyRunSet(t *testing.T) {
 			t.Fatal("want a panic for an empty run set")
 		}
 	}()
-	aicert.Verdict(nil, testBands)
+	aicert.Verdict(aicert.ScenarioRuns{Bands: testBands})
 }

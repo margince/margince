@@ -194,11 +194,12 @@ func ParseRouting(raw []byte) (RoutingConfig, error) {
 // finalize applies the defaults, validates, and stamps the version — the steps
 // every routing config takes however it arrived.
 //
-// It is the ONE defaulting site for embeddings.dimensions: NewRouter and
-// NewLocalRouter both build their config through a function that ends here, so
-// no role can construct a router with an out-of-range or undefaulted width. The
-// digest is taken last, over the DEFAULTED value, which is what makes an
-// omitted width and an explicitly-written default the same binding.
+// ParseRouting and FromStored both end here, so a parsed or stored config
+// cannot reach a router with an out-of-range or undefaulted width.
+// NewLocalRouter's callers build by struct literal and never reach it, so that
+// constructor applies the upstream default itself. The digest is taken last,
+// over the DEFAULTED value, which is what makes an omitted width and an
+// explicitly-written default the same binding.
 func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
 	if d := cfg.Embeddings.Dimensions; d < 0 || d > maxEmbedDimensions {
 		return RoutingConfig{}, fmt.Errorf("ai: routing config: embeddings dimensions %d out of range [1,%d]", d, maxEmbedDimensions)

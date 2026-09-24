@@ -37,7 +37,7 @@ func TestAQuotaRefusalReachesTheOperatorAsABudgetMessage(t *testing.T) {
 		}
 	}()
 
-	providerErr := geminiError(resp)
+	providerErr := geminiError(t.Context(), resp)
 	if !errors.Is(providerErr, ErrProviderQuota) {
 		t.Fatalf("a 429 from the provider is a quota refusal: %v", providerErr)
 	}

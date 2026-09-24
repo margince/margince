@@ -5,8 +5,11 @@ package runner
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // The degrade reasons are a CLOSED vocabulary, and closed is a security
@@ -24,6 +27,8 @@ const (
 		"the next scheduled occurrence will start clean"
 	reasonModelCallFailed = "model call failed — the AI provider did not answer this run; " +
 		"the server log carries the provider's own message"
+	reasonModelWithheld = "model declined — the AI provider withheld its answer to this run; " +
+		"the server log carries the provider's reason"
 	reasonStepBudgetExhausted        = "step budget exhausted"
 	reasonOutputTokenBudgetExhausted = "output token budget exhausted"
 )
@@ -36,12 +41,27 @@ func invalidOutputReason(attempts int) string {
 		"the server log carries what the parser rejected", attempts)
 }
 
+// modelCallReason names a failed model call for its reader. A withheld answer
+// is the provider declining, which is not an outage and must not read as one; a
+// rejected request is our own defect, which the reader can do nothing about, so
+// it reads as the ordinary failure while degradeFromCause logs it as an error.
+func modelCallReason(err error) string {
+	if errors.Is(err, model.ErrOutputWithheld) {
+		return reasonModelWithheld
+	}
+	return reasonModelCallFailed
+}
+
 // degradeFromCause degrades on one of the closed reasons and routes the
 // underlying cause to the operator log, which is the only place it may go: the
 // reason reaches a browser, the cause does not, and losing the cause entirely
 // would leave a degraded overnight run with nothing to diagnose it from.
 func (r *Runner) degradeFromCause(acc Result, job Job, reason string, cause error) Result {
-	slog.Warn("agent run degraded", "trigger_ref", job.TriggerRef, "reason", reason, "cause", cause)
+	if errors.Is(cause, model.ErrRequestRejected) {
+		slog.Error("agent run degraded", "trigger_ref", job.TriggerRef, "reason", reason, "cause", cause)
+	} else {
+		slog.Warn("agent run degraded", "trigger_ref", job.TriggerRef, "reason", reason, "cause", cause)
+	}
 	degraded := r.degrade(acc, reason)
 	degraded.DegradeCause = cause.Error()
 	return degraded

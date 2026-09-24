@@ -4,6 +4,7 @@
 package runner
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -34,7 +35,10 @@ type window struct {
 	// Deliberately the whole catalog and not the narrower set this run was
 	// offered — the two differ, and newWindow says why.
 	knownSources map[string]bool
-	msgs         []model.Message
+	// schema is what this run may answer, derived from the same offered tools
+	// the system prompt lists.
+	schema json.RawMessage
+	msgs   []model.Message
 }
 
 // unknownSourceLabel stands in for a source outside the closed vocabulary.
@@ -112,7 +116,7 @@ const perCallOutputCeiling = 4096
 // on its author's CURRENT authority — see windowFromSnapshot.
 func newWindow(job Job, offered, known []mcp.ToolSpec) *window {
 	fence := promptfence.New()
-	w := &window{system: systemPrompt(offered, fence, job.LanguageRule), fence: fence, knownSources: sourceVocabulary(known)}
+	w := &window{system: systemPrompt(offered, fence, job.LanguageRule), schema: stepSchema(offered), fence: fence, knownSources: sourceVocabulary(known)}
 	w.msgs = append(w.msgs, model.Message{Role: roleUser, Content: goalPrompt(job, fence)})
 	return w
 }
@@ -150,7 +154,7 @@ func windowFromSnapshot(job Job, offered, known []mcp.ToolSpec, snapshot []model
 	// what the run was told, after the fact, because its author's authority
 	// changed afterwards. What may be CALLED from here is narrowed; what was
 	// already answered keeps its name.
-	w := &window{system: systemPrompt(offered, fence, job.LanguageRule), fence: fence, knownSources: sourceVocabulary(known)}
+	w := &window{system: systemPrompt(offered, fence, job.LanguageRule), schema: stepSchema(offered), fence: fence, knownSources: sourceVocabulary(known)}
 	w.msgs = append(w.msgs, snapshot...)
 	return w, nil
 }
@@ -222,7 +226,7 @@ func (w *window) asRequest(remainingOutputTokens, promptWindow int) model.Reques
 		System:         w.system,
 		Messages:       w.bounded(promptWindow),
 		MaxTokens:      maxTokens,
-		ResponseSchema: stepSchema,
+		ResponseSchema: w.schema,
 	}
 }
 
@@ -248,7 +252,7 @@ func (w *window) bounded(promptWindow int) []model.Message {
 	if promptWindow <= 0 {
 		return msgs
 	}
-	for estimateTokens(w.system, msgs) > promptWindow && len(msgs) > 2 {
+	for requestTokens(w.system, w.schema, msgs) > promptWindow && len(msgs) > 2 {
 		oldest := 1
 		if msgs[1].Content == elisionMarker {
 			oldest = 2
@@ -259,16 +263,6 @@ func (w *window) bounded(promptWindow int) []model.Message {
 		msgs = trimmed
 	}
 	return msgs
-}
-
-// estimateTokens is the ~4-bytes-per-token heuristic — coarse, but the
-// ceiling exists to stop runaway growth, not to bill by it.
-func estimateTokens(system string, msgs []model.Message) int {
-	total := len(system)
-	for _, m := range msgs {
-		total += len(m.Content)
-	}
-	return total / 4
 }
 
 // systemPrompt is the §2.0 shared frame plus the tool surface: JSON-only
@@ -310,8 +304,8 @@ Rules:
 - Actions needing human approval are staged automatically; never fabricate their outcome.
 ` + surfaceSchemaRules)
 	// The rule governs the run's final summary, which is filed on a record the
-	// whole team reads. Empty when the caller passed none — the certification
-	// lane — and an empty block writes nothing rather than a blank line.
+	// whole team reads. Every compose caller passes one; an empty block (a
+	// caller that passed none) writes nothing rather than a blank line.
 	if languageRule != "" {
 		b.WriteString(languageRule)
 		b.WriteString("\n")
@@ -383,8 +377,8 @@ const surfaceSchemaRules = "- An argument no tool declares is refused by name, n
 // measuring it, so it is published beside the listing it buys.
 //
 // The language rule is excluded because it is the CALLER's, not the frame's:
-// the certification lane passes none, and an installation's own base language
-// sentence is not a cost this build can state once.
+// its text is rendered per installation base language, so its size is not a
+// cost this build can state once.
 func SystemFrameTokens() int {
 	return len(systemPrompt(nil, promptfence.New(), "")) / 4
 }

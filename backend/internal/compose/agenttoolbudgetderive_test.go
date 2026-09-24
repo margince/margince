@@ -23,9 +23,11 @@ package compose
 // copy), and the mis-selection weight (the certification corpus).
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -114,10 +116,16 @@ const agentLoopCorpusDir = "aicert/corpus/agent_loop"
 // dropped: a census that silently ignored the scenarios it could not read would
 // look exactly like one that found nothing to report in them.
 type wrongReachCensus struct {
-	Counts    map[string]int
+	Counts map[string]int
+	// BySite is Counts split by the agent_loop site a scenario certifies, so an
+	// agent's weight is read only off scenarios written under its own goal.
+	BySite    map[string]map[string]int
 	Scenarios int
-	Catalog   int
 	Skipped   []string
+	// Unoffered names each declared near miss its site's run is never offered.
+	// A tool absent from the window cannot be reached, so naming it tempts
+	// nothing and would inflate a weight it cannot earn.
+	Unoffered []string
 	// Heuristic names the scenarios whose near misses were read out of rubric
 	// PROSE because the scenario declares none of its own.
 	//
@@ -137,11 +145,11 @@ var (
 	// surface.
 	scenarioAnswer       = regexp.MustCompile(`(?m)^\s{2}answer:\s*(\S+)\s*$`)
 	scenarioAnswerNested = regexp.MustCompile(`(?m)^\s{2}answer:\s*\n\s{4}step:\s*(\S+)\s*$`)
-	scenarioTools        = regexp.MustCompile(`(?m)^\s{2}tools:\s*(\S+)\s*$`)
+	scenarioSite         = regexp.MustCompile(`(?m)^site:\s*(\S+)\s*$`)
 	scenarioRubric       = regexp.MustCompile(`(?s)\n  rubric:(.*?)\n  bands:`)
 )
 
-func readWrongReachCensus(dir string, specs []mcp.ToolSpec) (wrongReachCensus, error) {
+func readWrongReachCensus(dir string, specs []mcp.ToolSpec, offered map[string][]string) (wrongReachCensus, error) {
 	registered := make(map[string]bool, len(specs))
 	for _, spec := range specs {
 		registered[spec.Name] = true
@@ -150,7 +158,7 @@ func readWrongReachCensus(dir string, specs []mcp.ToolSpec) (wrongReachCensus, e
 	if err != nil {
 		return wrongReachCensus{}, err
 	}
-	census := wrongReachCensus{Counts: map[string]int{}}
+	census := wrongReachCensus{Counts: map[string]int{}, BySite: map[string]map[string]int{}}
 	for _, entry := range entries {
 		if !strings.HasSuffix(entry.Name(), ".yaml") {
 			continue
@@ -161,8 +169,9 @@ func readWrongReachCensus(dir string, specs []mcp.ToolSpec) (wrongReachCensus, e
 			return wrongReachCensus{}, readErr
 		}
 		text := string(body)
-		if tools := scenarioTools.FindStringSubmatch(text); len(tools) == 2 && tools[1] == "catalog" {
-			census.Catalog++
+		site := ""
+		if got := scenarioSite.FindStringSubmatch(text); len(got) == 2 {
+			site = got[1]
 		}
 		rubric := scenarioRubric.FindStringSubmatch(text)
 		if len(rubric) != 2 {
@@ -198,12 +207,21 @@ func readWrongReachCensus(dir string, specs []mcp.ToolSpec) (wrongReachCensus, e
 				}
 			}
 		}
+		if census.BySite[site] == nil {
+			census.BySite[site] = map[string]int{}
+		}
 		for name := range named {
+			if !slices.Contains(offered[site], name) {
+				census.Unoffered = append(census.Unoffered, fmt.Sprintf("%s: %s is not offered to %s", entry.Name(), name, site))
+				continue
+			}
 			census.Counts[name]++
+			census.BySite[site][name]++
 		}
 	}
 	sort.Strings(census.Skipped)
 	sort.Strings(census.Heuristic)
+	sort.Strings(census.Unoffered)
 	return census, nil
 }
 
@@ -241,17 +259,15 @@ func declaredNearMisses(body []byte, registered map[string]bool, answer string) 
 	return named
 }
 
-// temptationWeight sums the corpus's wrong-reach counts over an agent's
-// attached tools.
-//
-// It orders which tools cause trouble ON THIS SURFACE; it is NOT a prediction
-// about one agent. Each count was measured under a different scenario's goal,
-// so summing them over a menu whose agent has one fixed goal borrows precision
-// the number does not have. The page carries that caveat next to the figure.
-func temptationWeight(attached []string, census wrongReachCensus) int {
+// temptationWeight sums, over an agent's attached tools, how many of that
+// agent's own scenarios name each one as the wrong reach. Every count was
+// authored under the agent's own goal, so it is an ordering of which of its
+// tools its scenarios argue against — still an authored count, not an error
+// rate.
+func temptationWeight(site string, attached []string, census wrongReachCensus) int {
 	weight := 0
 	for _, name := range attached {
-		weight += census.Counts[name]
+		weight += census.BySite[site][name]
 	}
 	return weight
 }

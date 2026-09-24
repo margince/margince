@@ -6,18 +6,11 @@ package compose
 // Where a runner.Job may be BUILT, held against the tree rather than against a
 // list beside it.
 //
-// Job.Tools empty is read as NO narrowing (runner/job.go), and that reading is
-// safe only while every construction site is one somebody has looked at. The
-// existing gate in agentspectools_test.go proves the two production Jobs carry
-// an allowlist; it reads ONE file by name, so a third construction anywhere
-// else is invisible to it. This is the other half: the set of files allowed to
-// build one at all.
-//
-// The certification lane is on the list deliberately. It builds a Job with no
-// Tools because its fixture IS the offered surface, and the restraint band
-// scores whether a turn declines a tempting tool — narrow that surface with an
-// allowlist and the band passes for no reason, so the empty case is the honest
-// one there.
+// TestEveryRunnerJobBuiltHereCarriesAnAllowlist (agentspectools_test.go) proves
+// each Job compose builds takes its Tools from a runner.AgentSpec, but it reads
+// compose alone. This gate bounds WHERE a Job may be built at all, so that
+// census has a bounded set: a construction anywhere else in backend/ fails here
+// instead of going unread there.
 
 import (
 	"fmt"
@@ -44,7 +37,7 @@ import (
 var buildsAJobLegitimately = gatekit.Waive(map[string]string{
 	"internal/compose/runnerservice.go":      "the scheduled path, carrying the spec's own allowlist",
 	"internal/compose/runnerresume.go":       "the resumed path, carrying the CURRENT catalog entry's allowlist rather than the one staged with the call — a run parked across a catalog change resumes under what the entry says now",
-	"internal/compose/certcase_agentloop.go": "the certification lane, whose fixture is the offered surface",
+	"internal/compose/certcase_agentloop.go": "the certification lane, which builds its Job from ScheduledAgentSpecByName's own allowlist",
 })
 
 // jobConstructionForms are the ways a runner.Job comes into existence. A gate
@@ -56,10 +49,9 @@ var buildsAJobLegitimately = gatekit.Waive(map[string]string{
 // a zero-valued field carries empty Tools exactly like one built with a literal.
 //
 // It matches on the `runner.Job` spelling, so an import alias (`import r
-// ".../runner"` then `r.Job{}`) walks past it. That is a known limit, shared
-// with the older gate in agentspectools_test.go, and it is left rather than
-// papered over: closing it means resolving imports per file, and an alias for
-// this package would itself be a strange thing to find in review.
+// ".../runner"` then `r.Job{}`) walks past it. Closing that means resolving
+// imports across all of backend/; inside compose the allowlist census resolves
+// by type and is not evaded that way.
 func jobConstructionForms(file *ast.File) []token.Pos {
 	// A struct type written INSIDE a signature — `func f(arg struct{ job
 	// runner.Job })` — is a shape the function receives, not one it builds, so
@@ -131,6 +123,16 @@ func jobConstructionForms(file *ast.File) []token.Pos {
 	return at
 }
 
+// isRunnerJob reports whether a type expression is spelled runner.Job.
+func isRunnerJob(expr ast.Expr) bool {
+	sel, ok := expr.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	pkg, ok := sel.X.(*ast.Ident)
+	return ok && pkg.Name == "runner" && sel.Sel.Name == "Job"
+}
+
 // The walk covers backend/ AND THAT IS THE WHOLE REACH, which is worth saying
 // because "the tree" would be an overclaim. runner lives under
 // backend/internal/, so Go's internal rule puts it out of reach of anything
@@ -188,9 +190,9 @@ func TestOnlySanctionedFilesBuildARunnerJob(t *testing.T) {
 
 	sort.Strings(offenders)
 	for _, file := range offenders {
-		t.Errorf("%s builds a runner.Job — Job.Tools empty is read as NO narrowing, so a construction "+
-			"nobody reviewed hands its run every verb the passport admits. Route it through "+
-			"compose's scheduledAgents(), or add the file to buildsAJobLegitimately with the reason", file)
+		t.Errorf("%s builds a runner.Job outside the files the allowlist census reads, so nothing "+
+			"checks that its Tools come from a catalog entry. Route it through compose's "+
+			"scheduledAgents(), or add the file to buildsAJobLegitimately with the reason", file)
 	}
 	// A gate that finds nothing because it is looking in the wrong place reads
 	// exactly like a clean tree, so a sanction that matched nothing is reported

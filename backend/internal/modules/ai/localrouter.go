@@ -5,6 +5,7 @@ package ai
 
 import (
 	"context"
+	"maps"
 	"sync"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -95,6 +96,11 @@ func sharedFakeCarriage(inputs [][]string) []string {
 // ai_call rows are traced (WithCallStore installs a recorder) and the
 // result cache runs (WithoutResultCache turns it off).
 func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
+	// A DB-less caller builds its config by struct literal, so it never passes
+	// through finalize; without this a broker binding reached here with none of
+	// the upstream preferences production would send for the same binding.
+	cfg.Tiers = maps.Clone(cfg.Tiers)
+	cfg.applyUpstreamDefaults()
 	clients, embedder, err := cfg.buildClients()
 	if err != nil {
 		return nil, err

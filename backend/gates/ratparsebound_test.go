@@ -60,7 +60,7 @@ var unfencedRatParseWaivers = gatekit.Waive(map[string]string{
 	"internal/compose/aicert/scenariorender.go:representable": "compares a number read from a " +
 		"corpus YAML file this repository authors; ParseFloat has already accepted the text, and no " +
 		"request, page or model output reaches the corpus loader",
-	"internal/compose/certcase_agentloop_window.go:agentLoopSameNumber": "certification-only " +
+	"internal/compose/certcase_agentloop_step.go:agentLoopSameNumber": "certification-only " +
 		"comparison of a fixed scenario's expected argument with the one a model produced for that " +
 		"scenario; an operator runs it against their own provider, and no fetched or user content is in the prompt",
 	"internal/compose/offerdraft_price.go:validDecimal": "its rune filter admits only digits, '.' " +

@@ -7,7 +7,13 @@ package runner
 // tests rather than inside window.go: the window is about what the model is
 // shown, and this is about what it may answer.
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"sort"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+)
 
 // stepSchema is the step protocol as a JSON Schema, so a provider with
 // schema-constrained decoding enforces the shape at GENERATION rather than
@@ -23,35 +29,69 @@ import "encoding/json"
 // args, final, tool. Property ORDER is load-bearing under grammar-constrained
 // decoding: converted to the builder, agent_loop fell 0.78→0.18 on one binding
 // and 0.53→0.31 on another, and no tool call in the failing run carried args at
-// all. Removing the field descriptions did not recover it; the order is what
-// the model follows.
+// all. Do not "fix" it back without re-certifying agent_loop on two bindings.
 //
-// So this stays a string until the builder can express an order. Do not
-// "fix" it back without re-certifying agent_loop on two bindings.
+// NO OBJECT HERE MAY BE DECLARED WITHOUT ITS KEYS. Gemini's decoder admits no
+// key into an object whose schema lists no properties, open or not, and pads it
+// with whitespace to the output ceiling instead. So args is the named tool's
+// own input schema, closed wherever the tool closes it because decodeArgs
+// refuses an unknown key, and final declares its summary.
 //
-// It constrains the KEY SET and the types, and deliberately not the
-// exactly-one-of rule. Expressing that needs oneOf/not, which the strict
-// structured-output modes handle unevenly and may refuse the whole request
-// over; a rejected request is a worse failure than the one this prevents. The
-// XOR is a domain rule parseStep owns, and states with a better error than a
-// schema could — so the descriptions below say it in words instead, where a
-// model reads them.
+// ONE BRANCH PER OFFERED TOOL, pairing `tool` with that tool's own `args`, so
+// each tool's `required` is enforced and `tool` is one offered name. Under a
+// single branch whose args is an anyOf over every tool, a zero-argument tool's
+// `{}` satisfies every name. `enum`, not `const`: Gemini's documented keyword
+// subset has no `const`.
 //
-// The STEP is closed, which mirrors parseStep's DisallowUnknownFields. A
-// schema open where the parser is closed would let constrained decoding produce
-// a step that then gets refused, which is this bug wearing the opposite face.
+// Each branch REQUIRES its keys, because Gemini's decoder skips an optional
+// args and closes the object after "tool". The branches are the exactly-one-of
+// rule parseStep holds, and each is closed as parseStep's envelope is.
 //
-// args and final are OPEN objects, and must be: their keys belong to whichever
-// tool the model picked, which is a runtime registry rather than a shape known
-// here. A closed object with no properties admits no key at all, so a provider
-// enforcing it would refuse the arguments the loop has to send —
-// TestTheStepSchemaLetsArgsAndFinalCarryKeys exists to say so.
+// The schema is O(offered tools) and rides every step, so window.bounded counts
+// it against the prompt window with the rest of the request.
 //
 // Held by: TestTheStepSchemaAdmitsExactlyWhatTheStepParserAccepts (internal/modules/agents/runner/stepschema_test.go)
-var stepSchema = json.RawMessage(`{` +
-	`"type":"object",` +
-	`"properties":{` +
-	`"tool":{"type":"string"},` +
-	`"args":{"type":"object"},` +
-	`"final":{"type":"object"}},` +
-	`"additionalProperties":false}`)
+func stepSchema(offered []mcp.ToolSpec) json.RawMessage {
+	var b strings.Builder
+	b.WriteString(`{"anyOf":[`)
+	for _, branch := range toolCallBranches(offered) {
+		b.WriteString(branch)
+		b.WriteString(",")
+	}
+	b.WriteString(`{"type":"object","properties":{"final":{"type":"object",` +
+		`"properties":{"summary":{"type":"string"}},"required":["summary"]}},` +
+		`"required":["final"],"additionalProperties":false}]}`)
+	return json.RawMessage(b.String())
+}
+
+// toolCallBranches renders one branch per offered tool, in the listing's name
+// order so one catalog always yields one request. Each is written tool, then
+// args: the order that was measured.
+//
+// There is NO fallback for a schema that will not parse. Registration panics on
+// one at boot (assertObjectSchemas), and one that bypassed it is carried
+// verbatim, so the adapter refuses to encode the request instead of the model
+// being offered a bare `args` — the exact shape this schema keeps off the wire.
+func toolCallBranches(offered []mcp.ToolSpec) []string {
+	sorted := append([]mcp.ToolSpec(nil), offered...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+	branches := make([]string, 0, len(sorted))
+	for _, spec := range sorted {
+		branches = append(branches, `{"type":"object","properties":{"tool":{"type":"string","enum":[`+
+			jsonString(spec.Name)+`]},"args":`+stepArguments(spec)+
+			`},"required":["tool","args"],"additionalProperties":false}`)
+	}
+	return branches
+}
+
+// jsonString is name as a JSON string literal. Go's own quoting is not JSON's:
+// strconv.Quote writes a control byte as `\a` or `\x07`, which no JSON parser
+// reads. Marshalling a string cannot fail; an empty enum member would admit no
+// tool, which is the side to err on.
+func jsonString(name string) string {
+	encoded, err := json.Marshal(name)
+	if err != nil {
+		return `""`
+	}
+	return string(encoded)
+}

@@ -288,7 +288,7 @@ func (p *TranscriptProposer) ask(ctx context.Context, lines []string, meetingDay
 	validate := transcriptShapeValid(len(lines))
 	resp, err := ai.Ask(ctx, p.brain, req, validate)
 	if err != nil {
-		if errors.Is(err, ai.ErrOutputRejected) {
+		if ai.ModelDeclined(err) {
 			return nil, fmt.Errorf("%w: %w", errRefusedTranscript, err)
 		}
 		return nil, err

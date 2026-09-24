@@ -380,19 +380,22 @@ func (s *RunnerService) seedGrounding(ctx context.Context, goal string) []runner
 		s.log.Warn("runner: seed retrieval failed — running ungrounded", "err", err)
 		return nil
 	}
-	// The ranking's kind is deliberately not threaded into the grounding: a
-	// seed enters the run at T2 whichever lane surfaced it, and the run's own
-	// answer carries that tier. A lexically-ranked seed is a less RELEVANT
-	// seed, not a less trustworthy one.
 	grounding := make([]runner.Grounding, 0, len(found.Hits))
 	for _, hit := range found.Hits {
 		for _, ev := range hit.Evidence {
-			grounding = append(grounding, runner.Grounding{
-				SourceID:  ev.Source,
-				TrustTier: "T2",
-				Content:   ev.Snippet,
-			})
+			grounding = append(grounding, retrievedSeed(ev.Source, ev.Snippet))
 		}
 	}
 	return grounding
+}
+
+// retrievedSeed is one piece of retrieved evidence as a run is seeded with it.
+// The certification case seeds its window through this too, so the tier a
+// certified prompt fences at is the tier a production run fences at.
+//
+// The ranking's kind is deliberately not threaded in: a seed enters the run at
+// T2 whichever lane surfaced it, and the run's own answer carries that tier. A
+// lexically-ranked seed is a less RELEVANT seed, not a less trustworthy one.
+func retrievedSeed(source, snippet string) runner.Grounding {
+	return runner.Grounding{SourceID: source, TrustTier: "T2", Content: snippet}
 }

@@ -242,7 +242,7 @@ func TestOnlyAMissingPublisherModelReadsAsNotServed(t *testing.T) {
 		"ai studio":           {`{"error":{"code":404,"status":"NOT_FOUND","message":"models/x is not found for API version v1beta, or is not supported for generateContent."}}`, false},
 		"no json":             {`<html>Not Found</html>`, false},
 	} {
-		err := geminiError(&http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(tc.body))})
+		err := geminiError(t.Context(), &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(tc.body))})
 		if got := errors.Is(err, errModelNotFound); got != tc.want {
 			t.Errorf("%s: not served = %v, want %v (%v)", name, got, tc.want, err)
 		}

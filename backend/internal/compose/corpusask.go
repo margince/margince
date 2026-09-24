@@ -46,6 +46,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -348,7 +349,7 @@ func (e *corpusAskEngine) ask(w http.ResponseWriter, r *http.Request, id crmcont
 	}
 	state, passages, err := e.store.Retrieve(r.Context(), ids.UUID(id), req.Question, e.embedder)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	answer := AnswerCorpus(r.Context(), e.lane, state, req.Question, passages,

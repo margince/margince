@@ -24,11 +24,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // roleUser is the model.Message role a request's own asks carry. The port
@@ -72,51 +74,104 @@ func candidateAsk(trace aitasks.Trace) (string, error) {
 	return strings.Join(turns, "\n\n"), nil
 }
 
-// judgeScore drives the judge router for one candidate output: one call,
-// one retry on a parse failure, then a 0 score with the parse error
-// logged rather than propagated — a flaky grader must never abort an
-// otherwise-healthy certification run. judgeServedModel is read back
-// from rec's own terminal trace (never resp.ServedModel directly) so it
-// carries the same resolved identity (response vs. echo vs. configured
-// fallback) the candidate side reports, and names the attempt the score
-// came from. judgeDegraded is true when ANY attempt was demoted, the
-// retry included: the spec's "any Degraded attempt voids the record"
-// rule applies to the judge exactly like the candidate, and a demotion
-// the retry recovered from still means this run's grading budget ran
-// out — which must never be certified silently.
+// opinion is one judgeVerdict call's reading of a run. graded is false when the
+// reply never parsed into a verdict, so score is absent rather than zero.
+type opinion struct {
+	score       int
+	graded      bool
+	servedModel string
+}
+
+// judgement is what the judge side contributes to one RunResult.
+type judgement struct {
+	score       int
+	scores      []int
+	ungraded    bool
+	servedModel string
+	degraded    bool
+}
+
+// judgeScore drives the judge router for one candidate output and folds every
+// opinion it asked for into one judgement. A flaky grader never aborts an
+// otherwise-healthy certification run: a reply that will not parse is an
+// absent opinion, not an error and not a zero.
+//
+// A graded score below the scenario's certified_min is not taken on one
+// judge's word. One judge scoring a correct answer 0, 100 and 20 across three
+// runs decided a grade on its own, so a low score is re-asked rejudgeOpinions
+// times and the run is scored at the median of the opinions that parsed. A
+// score at or above the bar costs one call: the re-ask protects the candidate
+// from one judge's low outlier, and a passing score has none to be protected
+// from. That one-sided re-ask biases toward the candidate by design; an ungraded
+// first reply is not re-asked.
+//
+// The served model is read back from rec's own terminal trace (never
+// resp.ServedModel directly) so it carries the same resolved identity the
+// candidate side reports, and names the last opinion that was graded. The
+// degrade is folded across EVERY call this run made, re-judges and retries
+// included: a demotion any of them recovered from still means this run was
+// graded on a budget that had run out, which must never be certified silently.
 //
 // The grader is shown the answer under grading and the case's own trace, from
 // which candidateAsk reads the input that answer was given: the site's built
 // prompt, never the fixture it was built from.
-func judgeScore(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc Scenario, caseTrace aitasks.Trace, candidateOutput string, log *slog.Logger) (score int, judgeServedModel string, judgeDegraded bool, err error) {
+func judgeScore(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc Scenario, caseTrace aitasks.Trace, candidateOutput string, log *slog.Logger) (judgement, error) {
 	ask, err := candidateAsk(caseTrace)
 	if err != nil {
-		return 0, "", false, err
+		return judgement{}, err
 	}
 	mark := rec.mark()
-	score, judgeServedModel, err = judgeVerdict(ctx, judge, rec, sc, ask, candidateOutput, log)
+	first, err := judgeVerdict(ctx, judge, rec, sc, ask, candidateOutput, log)
 	if err != nil {
-		return 0, "", false, err
+		return judgement{}, err
+	}
+	opinions := []opinion{first}
+	if first.graded && first.score < sc.Expect.Bands.CertifiedMin {
+		for range rejudgeOpinions {
+			next, err := judgeVerdict(ctx, judge, rec, sc, ask, candidateOutput, log)
+			if err != nil {
+				return judgement{}, err
+			}
+			opinions = append(opinions, next)
+		}
 	}
 	calls, err := rec.terminalsSince(mark)
 	if err != nil {
-		return 0, "", false, fmt.Errorf("judge call: %w", err)
+		return judgement{}, fmt.Errorf("judge call: %w", err)
 	}
-	// The degrade is folded across every attempt by the one spelling the
-	// candidate side uses, rather than read off the attempt that scored: a
-	// demotion the retry recovered from still means this run was graded on a
-	// budget that had run out.
-	graded, err := poolRunCalls(calls)
+	pooled, err := poolRunCalls(calls)
 	if err != nil {
-		return 0, "", false, fmt.Errorf("judge call: %w", err)
+		return judgement{}, fmt.Errorf("judge call: %w", err)
 	}
-	return score, judgeServedModel, graded.Degraded, nil
+	folded := foldOpinions(opinions)
+	folded.degraded = pooled.Degraded
+	return folded, nil
 }
 
-// judgeVerdict drives the graded call, returning the score and the served
-// identity of the attempt the score actually came from — the last one the
-// policy walked, since that is the reply that was parsed.
-func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc Scenario, ask, candidateOutput string, log *slog.Logger) (int, string, error) {
+// foldOpinions scores a run at the median of its graded opinions, keeping each
+// one in the order it was given. No graded opinion leaves the run ungraded: the
+// judge's numbers skip it exactly as they skip a truncated run.
+func foldOpinions(opinions []opinion) judgement {
+	var folded judgement
+	for _, o := range opinions {
+		if o.graded {
+			folded.scores = append(folded.scores, o.score)
+			folded.servedModel = o.servedModel
+		}
+	}
+	if len(folded.scores) == 0 {
+		folded.ungraded = true
+		return folded
+	}
+	sorted := slices.Sorted(slices.Values(folded.scores))
+	folded.score = medianOf(sorted)
+	return folded
+}
+
+// judgeVerdict drives one graded call, returning its opinion and the served
+// identity of the attempt that opinion came from — the last one the policy
+// walked, since that is the reply that was parsed.
+func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc Scenario, ask, candidateOutput string, log *slog.Logger) (opinion, error) {
 	// ask is the turn the candidate was given (candidateAsk), and it reaches the
 	// grader as UNTRUSTED data behind the boundary JudgeRequest mints: it is if
 	// anything more hostile than the fixture it was built from, because it
@@ -133,26 +188,31 @@ func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc 
 			_, err := compose.ParseJudgeVerdict(text)
 			return err
 		})
-	if callErr != nil && !errors.Is(callErr, ai.ErrOutputRejected) {
-		return 0, "", fmt.Errorf("judge call: %w", callErr)
+	// A withheld judgement is no opinion, as an unparseable one is. A REJECTED
+	// one is not let through: the same request is refused on every run, so the
+	// grader's binding is what is broken and the run should stop and say so.
+	if callErr != nil && !ai.ModelDeclined(callErr) {
+		return opinion{}, fmt.Errorf("judge call: %w", callErr)
 	}
 	term, ok := rec.lastTerminal()
 	if !ok {
-		return 0, "", fmt.Errorf("judge call: no terminal trace recorded")
+		return opinion{}, fmt.Errorf("judge call: no terminal trace recorded")
 	}
-	judgeServedModel := term.ServedModel
+	if errors.Is(callErr, model.ErrOutputWithheld) {
+		log.WarnContext(ctx, "aicert: the judge's provider withheld its answer — this opinion is left ungraded",
+			"scenario", sc.Name, "err", callErr)
+		return opinion{servedModel: term.ServedModel}, nil
+	}
 
 	verdict, parseErr := compose.ParseJudgeVerdict(resp.Text)
 	if parseErr != nil {
-		// Unchanged on purpose: a verdict the policy could not recover still
-		// scores 0 rather than recording the run `invalid`. That is its own
-		// question about what a certification reports, and answering it here
-		// would move a number every stored record is compared against.
-		log.ErrorContext(ctx, "aicert: judge output failed to parse after the validated retry — scoring this run 0",
+		// A judge that answered the task instead of grading it has no opinion of
+		// the candidate, so the candidate is not scored 0 for the judge's failure.
+		log.ErrorContext(ctx, "aicert: judge output failed to parse after the validated retry — this opinion is left ungraded",
 			"scenario", sc.Name, "err", parseErr)
-		return 0, judgeServedModel, nil
+		return opinion{servedModel: term.ServedModel}, nil
 	}
-	return verdict.Score, judgeServedModel, nil
+	return opinion{score: verdict.Score, graded: true, servedModel: term.ServedModel}, nil
 }
 
 // selfJudged reports whether the judge and the candidate were served by

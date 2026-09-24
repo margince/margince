@@ -43,6 +43,24 @@ var ErrAttachmentUnsupported = errors.New("model: provider cannot carry this att
 // package.
 var ErrAttachmentMislabelled = errors.New("model: attachment bytes are not the type claimed")
 
+// ErrOutputWithheld marks an answer the provider declined to deliver: a model
+// refusal, a safety or recitation stop, a content filter, a blocked prompt. It
+// is an OUTCOME — a model was reached and decided — so a caller that reads it
+// as an outage retries what will not change. A router walks past it, because a
+// different model may answer what one withheld.
+//
+// Port-level so other modules can errors.Is without importing a provider
+// package.
+var ErrOutputWithheld = errors.New("model: the provider withheld the answer")
+
+// ErrRequestRejected marks a request the provider's own error code names as
+// malformed: a schema or field the API refuses. A status alone never makes it,
+// because a 400 also means a context too long for one model, a parameter one
+// model lacks, a key, an account or a region. The fault is the request's, so it
+// is a defect to log rather than an answer to show, and a router stops at it
+// when the next rung would send the same request to the same model.
+var ErrRequestRejected = errors.New("model: the provider rejected the request")
+
 // Attachment is one cross-provider input part. Bytes XOR URI: Bytes for inline
 // content, URI for a provider file handle / URL. Name is optional provenance.
 type Attachment struct {

@@ -11,6 +11,7 @@ package aicert
 // rather than about the driving.
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -39,7 +40,12 @@ type runCalls struct {
 	// than at the end of its answer. OR-ed across the run like Degraded, and
 	// for its reason: one cut-off attempt leaves the run without an answer to
 	// score, whichever attempt it was.
-	Truncated                                   bool
+	Truncated bool
+	// Withheld is the provider's reason it withheld the answer. Like Truncated,
+	// a measurement of the binding rather than an outage, so the run is
+	// recorded and not re-driven. Text rather than an error, because it is a
+	// finding to record, not a failure for any caller to handle.
+	Withheld                                    string
 	Provider, ServedModel, ServedIdentitySource string
 	TokensIn, TokensOut                         int
 	CachedTokens, CacheWriteTokens              int
@@ -93,4 +99,18 @@ func (r runCalls) servedUniformly() error {
 		}
 	}
 	return nil
+}
+
+// withheldReason is the filter or stop a withheld candidate call named, and
+// empty for any other outcome. A rejected request is not one: it is refused the
+// same way on every run, so it stops the task instead (unservable).
+func withheldReason(err error) string {
+	if !errors.Is(err, model.ErrOutputWithheld) {
+		return ""
+	}
+	var named interface{ FinishReason() string }
+	if errors.As(err, &named) && named.FinishReason() != "" {
+		return named.FinishReason()
+	}
+	return err.Error()
 }

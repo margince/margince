@@ -15,7 +15,9 @@ package ai
 // in a certification record rather than in a unit test.
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -184,8 +186,40 @@ func TestTheWireCarriesTheDerivedStrictness(t *testing.T) {
 				t.Fatal("a request carrying a schema must carry a response_format")
 			}
 			if got := wire.ResponseFormat.JSONSchema.Strict; got != tc.strict {
-				t.Errorf("wire strict = %v, want %v", got, tc.strict)
+				t.Errorf("openai_compatible wire strict = %v, want %v", got, tc.strict)
+			}
+			if got := nativeOpenAIStrict(t, tc.schema); got != tc.strict {
+				t.Errorf("native openai wire strict = %v, want %v — OpenAI answers strict over an unsupported schema with an error", got, tc.strict)
 			}
 		})
 	}
+}
+
+// nativeOpenAIStrict is the `strict` flag the Responses adapter put on the wire
+// for schema, read off the request body it actually sent.
+func nativeOpenAIStrict(t *testing.T, schema json.RawMessage) bool {
+	t.Helper()
+	var body []byte
+	client := newOpenAIForTest(t, func(w http.ResponseWriter, r *http.Request) {
+		body = readBody(t, r.Body)
+		if _, err := w.Write([]byte(`{"id":"r","status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"{}"}]}]}`)); err != nil {
+			t.Errorf("writing fixture reply: %v", err)
+		}
+	})
+	if _, err := client.Complete(context.Background(), model.Request{
+		Messages: []model.Message{{Role: "user", Content: "hi"}}, ResponseSchema: schema,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var wire struct {
+		Text struct {
+			Format struct {
+				Strict bool `json:"strict"`
+			} `json:"format"`
+		} `json:"text"`
+	}
+	if err := json.Unmarshal(body, &wire); err != nil {
+		t.Fatal(err)
+	}
+	return wire.Text.Format.Strict
 }

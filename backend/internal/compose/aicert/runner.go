@@ -30,10 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// defaultRepeats is Repeats' fallback when a caller (the env-driven CLI
-// lane) leaves it unset. Odd, per Verdict's median requirement.
-const defaultRepeats = 3
-
 // corpusVersionV1 is this generation's fixed corpus-format stamp: the
 // scenario format carries no version field of its own yet, so every
 // Record names the same one until a versioning scheme arrives alongside
@@ -98,7 +94,7 @@ type RunnerConfig struct {
 	Routing    *ai.RoutingConfig // MARGINCE_AICERT_ROUTING
 	Profile    ai.Profile        // MARGINCE_AICERT_PROFILE
 	TaskFilter string            // MARGINCE_AICERT_TASK ("" = all tasks with a corpus)
-	Repeats    int               // MARGINCE_AICERT_RUNS, default 3, must be odd
+	Repeats    int               // MARGINCE_AICERT_RUNS, default defaultRepeats, must be odd
 	RecordDir  string
 	CorpusDir  string
 	// TraceDir, when non-empty, turns on the opt-in payload trace
@@ -117,19 +113,21 @@ type RunnerConfig struct {
 // validateBindings refuses a run that could not produce a trustworthy verdict,
 // before a single paid call is made.
 //
-// Both bindings are required because there is no routing file left to fall back
-// on, and they must DIFFER because a model grading itself passes by
-// construction. The old file made the second point structurally — the judge rode
-// the file while MODEL= moved only the candidate — so with the file gone it has
-// to be checked outright rather than assumed.
-func validateBindings(cfg RunnerConfig, log *slog.Logger) error {
+// Both bindings are required because there is no routing file to fall back on,
+// and the judge that grades the candidate must differ from it (judgeFor) because
+// a model grading itself passes by construction. Nothing pairs the two for the
+// run, so the difference is checked outright, over the tasks this run certifies.
+func validateBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger) error {
 	if cfg.Routing != nil && cfg.Binding.Provider != "" {
 		return errors.New("both MARGINCE_AICERT_ROUTING and MARGINCE_AICERT_MODEL are set — " +
 			"the first certifies the models a deployment binds, the second one model you name; " +
 			"a run cannot report both, so pick one")
 	}
+	if err := refuseUnreachableUpstream(cfg); err != nil {
+		return err
+	}
 	if cfg.Routing != nil {
-		return validateRoutedBindings(cfg, log)
+		return validateRoutedBindings(cfg, tasks, log)
 	}
 	if cfg.Binding.Provider == "" || cfg.Binding.Model == "" {
 		return errors.New("no candidate binding — set MARGINCE_AICERT_MODEL=provider:model " +
@@ -139,16 +137,11 @@ func validateBindings(cfg RunnerConfig, log *slog.Logger) error {
 		return errors.New("no judge binding — set MARGINCE_AICERT_JUDGE_MODEL=provider:model; " +
 			"the judge is a SECOND model on purpose, and the run has no file to inherit one from")
 	}
-	if cfg.Binding.Provider == cfg.JudgeBinding.Provider && cfg.Binding.Model == cfg.JudgeBinding.Model {
-		return fmt.Errorf("candidate and judge are both %s:%s — a model grading itself is certified "+
-			"by construction; name a different MARGINCE_AICERT_JUDGE_MODEL",
-			cfg.Binding.Provider, cfg.Binding.Model)
-	}
 	if !cfg.Profile.Valid() {
 		return fmt.Errorf("MARGINCE_AICERT_PROFILE=%q is not an environment class; a record is filed "+
 			"under it, so a run states which one it measured", cfg.Profile)
 	}
-	return nil
+	return refuseSelfJudgedTasks(cfg, tasks)
 }
 
 // Run certifies every task named by cfg.TaskFilter (or, when empty,
@@ -174,13 +167,6 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		return nil, err
 	}
 
-	// Refused here rather than per task: with no routing file to fall back on,
-	// a run with no binding could only report that it measured nothing, after
-	// paying for it.
-	if err := validateBindings(cfg, log); err != nil {
-		return nil, fmt.Errorf("aicert: runner: %w", err)
-	}
-
 	scenarios, err := LoadCorpus(cfg.CorpusDir, cfg.Census)
 	if err != nil {
 		return nil, fmt.Errorf("aicert: runner: %w", err)
@@ -191,8 +177,14 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		return nil, fmt.Errorf("aicert: runner: task %q has no scenarios under %s", cfg.TaskFilter, cfg.CorpusDir)
 	}
 
-	ctx = ensureWorkspace(ctx)
+	// Refused here rather than per task, over the tasks this run certifies: with no
+	// routing file to fall back on, a run with no binding could only report that it
+	// measured nothing, after paying for it.
+	if err := validateBindings(cfg, sortedTasks(byTask), log); err != nil {
+		return nil, fmt.Errorf("aicert: runner: %w", err)
+	}
 
+	ctx = ensureWorkspace(ctx)
 	// TraceDir empty ⇒ tracing off: trace stays nil and every method no-ops.
 	var trace *payloadTrace
 	if cfg.TraceDir != "" {
@@ -212,7 +204,7 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	// cannot be loaded or compacted costs nothing to find out about.
 	var journal *runJournal
 	if cfg.ResumeDir != "" {
-		journal, err = openRunJournal(ctx, cfg.ResumeDir, cfg.JudgeBinding, cfg.recordProfile(), nowFunc(), log)
+		journal, err = openRunJournal(ctx, cfg.ResumeDir, cfg.recordProfile(), nowFunc(), log)
 		if err != nil {
 			return nil, fmt.Errorf("aicert: runner: %w", err)
 		}
@@ -223,24 +215,24 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		}
 	}()
 
+	// After the journal, because a restart replaying every run sends nothing and
+	// the pre-flight would be its one paid call.
+	if journal.replaysEverything(ctx, cfg, byTask, repeats) {
+		log.InfoContext(ctx, "aicert: pre-flight skipped — every run replays from the resume journal")
+	} else if err := preflight(ctx, cfg, sortedTasks(byTask), nil, log); err != nil {
+		return nil, fmt.Errorf("aicert: runner: %w", err)
+	}
+
 	var records []Record
 	var runErrs []error
 	for _, task := range sortedTasks(byTask) {
-		binding := cfg.Binding
-		if cfg.Routing != nil {
-			resolved, rung, ok := resolveBinding(*cfg.Routing, task)
-			if !ok {
-				// Not fatal to the whole run: another task's rung may be bound
-				// perfectly well, and one unbound tier must not cost every record.
-				runErrs = append(runErrs, fmt.Errorf("aicert: task %s: no rung of its ladder %v is bound in the supplied routing, so there is no model to certify it against — and production could not serve it either",
-					task, ai.TaskLadder(task)))
-				continue
-			}
-			binding = resolved
-			log.InfoContext(ctx, "aicert: routed", "task", string(task), "tier", string(rung), "model", resolved.Model)
+		binding, judge, err := taskBindings(ctx, cfg, task, log)
+		if err != nil {
+			runErrs = append(runErrs, err)
+			continue
 		}
-		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, binding, cfg.JudgeBinding, cfg.recordProfile(), repeats, log,
-			&certifyHooks{trace: trace, journal: journal.forTask(task, binding)})
+		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, binding, judge, cfg.recordProfile(), repeats, log,
+			&certifyHooks{trace: trace, journal: journal.forTask(task, binding, judge)})
 		if err != nil {
 			log.ErrorContext(ctx, "aicert: task certification failed — no record written", "task", string(task), "err", err)
 			runErrs = append(runErrs, fmt.Errorf("task %s: %w", task, err))
@@ -328,17 +320,19 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	}
 
 	acc := &taskAccumulation{selfJudgedEveryRun: true}
-	taskVerdict := VerdictCertified // folded down to the worst scenario verdict below
-
+	sets := make([]ScenarioRuns, 0, len(scenarios))
 	for _, sc := range scenarios {
-		scenarioVerdict, err := runScenario(ctx, task, sc, scenarioStamps[sc.Name], census, repeats, candidateRouter, candidateRec, judgeRouter, judgeRec, log, acc, trace, journal)
+		results, err := runScenario(ctx, task, sc, scenarioStamps[sc.Name], census, repeats, candidateRouter, candidateRec, judgeRouter, judgeRec, log, acc, trace, journal)
 		if err != nil {
 			return Record{}, err
 		}
-		taskVerdict = worstVerdict(taskVerdict, scenarioVerdict)
+		sets = append(sets, ScenarioRuns{Runs: results, Bands: sc.Expect.Bands})
 	}
+	taskVerdict, _ := Verdict(sets...)
 
-	return buildRecord(task, taskVerdict, acc, profile, promptVersion), nil
+	rec := buildRecord(task, taskVerdict, acc, profile, promptVersion)
+	rec.CandidateUpstream, rec.JudgeUpstream = ai.UpstreamPreferencesFor(binding), ai.UpstreamPreferencesFor(judgeBinding)
+	return rec, nil
 }
 
 // taskAccumulation collects the pooled stats certifyTask folds across
@@ -384,7 +378,8 @@ type taskAccumulation struct {
 // an error — voiding the whole task's record — when a later run's
 // provider or served model diverges from that baseline.
 func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, outcome runOutcome) error {
-	if acc.identitySet && (outcome.Provider != acc.provider || outcome.ServedModel != acc.servedModel) {
+	withheld := outcome.Withheld != ""
+	if acc.identitySet && !withheld && (outcome.Provider != acc.provider || outcome.ServedModel != acc.servedModel) {
 		return fmt.Errorf(
 			"aicert: task %s scenario %s run %d: candidate served by %s:%s, but run 1 was served by %s:%s — refusing to certify a mixed run set",
 			task, sc.Name, runIndex+1, outcome.Provider, outcome.ServedModel, acc.provider, acc.servedModel,
@@ -396,8 +391,12 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 	acc.tokensOutTotal += outcome.TokensOut
 	acc.cachedTokensTotal += outcome.CachedTokens
 	acc.cacheWriteTokensTotal += outcome.CacheWriteTokens
-	acc.provider, acc.servedModel, acc.identitySource = outcome.Provider, outcome.ServedModel, outcome.ServedIdentitySource
-	acc.identitySet = true
+	// A withheld run names the binding, which stands in only until a served run
+	// supplies the identity that actually answered.
+	if !withheld || !acc.identitySet {
+		acc.provider, acc.servedModel, acc.identitySource = outcome.Provider, outcome.ServedModel, outcome.ServedIdentitySource
+	}
+	acc.identitySet = acc.identitySet || !withheld
 	acc.certifiedScope = aitasks.NarrowerScope(acc.certifiedScope, outcome.CertifiedScope)
 	// A run no judge saw says nothing about the judge. Capturing its empty
 	// identity would let one truncated run at the END of a set erase the grader
@@ -439,22 +438,6 @@ func ensureWorkspace(ctx context.Context) context.Context {
 		return ctx
 	}
 	return principal.WithWorkspaceID(ctx, ids.NewV7())
-}
-
-// verdictRank orders the three §5 verdicts worst-to-best so a
-// multi-scenario task can fold down to its worst scenario outcome.
-var verdictRank = map[string]int{
-	VerdictNotSupported:      0,
-	VerdictSupportedDegraded: 1,
-	VerdictCertified:         2,
-}
-
-// worstVerdict returns whichever of a, b ranks lower (less certified).
-func worstVerdict(a, b string) string {
-	if verdictRank[a] <= verdictRank[b] {
-		return a
-	}
-	return b
 }
 
 // buildRecord, seedRateFor, and percentile live in record.go alongside the

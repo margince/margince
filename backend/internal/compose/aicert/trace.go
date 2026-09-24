@@ -43,8 +43,8 @@ type tracedCall struct {
 	Attempt int `json:"attempt"`
 	// Call is this call's 1-based position within the run. A run is not one
 	// call — a site retries, falls back, or turns a loop, and the judge is
-	// asked twice on a parse failure — so without it a reader cannot tell the
-	// draft that was served from the attempt it replaced.
+	// re-asked on a parse failure or a low score — so without it a reader
+	// cannot tell the draft that was served from the attempt it replaced.
 	Call     int    `json:"call"`
 	Tier     string `json:"tier"`
 	Provider string `json:"provider"`

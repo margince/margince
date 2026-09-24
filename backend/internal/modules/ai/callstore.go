@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // callKindCompletion and callKindEmbedding are the ai_call.kind vocabulary
@@ -412,6 +413,12 @@ func classifyError(err error) string {
 		return "provider_throttled"
 	case errors.Is(err, errProviderRefused):
 		return "provider_refused"
+	// Outcomes, not failures: a model was reached and decided. Filed under
+	// provider_error they would read as an outage on every error-rate panel.
+	case errors.Is(err, model.ErrOutputWithheld):
+		return "output_withheld"
+	case errors.Is(err, model.ErrRequestRejected):
+		return "request_rejected"
 	default:
 		return "provider_error"
 	}
