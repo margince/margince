@@ -6,6 +6,8 @@ package ai
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 func TestIsEURegionHostAdmitsOnlyARegionVariant(t *testing.T) {
@@ -94,5 +96,32 @@ func TestAStoredEUHostedBrokerLaneWithNoPreferencesIsRefused(t *testing.T) {
 	err := validateStoredRouting(cfg)
 	if err == nil || !strings.Contains(err.Error(), "under profile eu_hosted") {
 		t.Fatalf("err = %v, want the eu_hosted residency refusal", err)
+	}
+}
+
+// A binding stored before the residency rule existed must still load at boot:
+// refusing it there would take the installation's AI down on upgrade, and only
+// a write can settle which way the operator wants it. The same config is still
+// refused on the way in.
+func TestAStoredEUHostedBrokerLaneLoadsButIsRefusedOnWrite(t *testing.T) {
+	t.Parallel()
+	pinned := &OpenRouterRouting{Only: []string{"mistral/eu"}}
+	broker := ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://openrouter.ai/api"}
+	embed := broker
+	embed.Routing = pinned
+	cfg := RoutingConfig{
+		Profile:    ProfileEUHosted,
+		Tiers:      map[Tier]ProviderConfig{TierPremium: broker},
+		Embeddings: EmbeddingsConfig{ProviderConfig: embed, Dimensions: 1024},
+	}
+	loaded, err := FromStored(cfg, config.Static(nil))
+	if err != nil {
+		t.Fatalf("FromStored refused a stored binding at load: %v", err)
+	}
+	if gap := loaded.ResidencyGap(); gap == nil || !strings.Contains(gap.Error(), "tier premium") {
+		t.Errorf("ResidencyGap = %v, want the unpinned premium tier named", gap)
+	}
+	if err := validateStoredRouting(cfg); err == nil {
+		t.Error("validateStoredRouting accepted the unpinned lane a settings write must refuse")
 	}
 }

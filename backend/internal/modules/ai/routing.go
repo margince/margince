@@ -182,7 +182,14 @@ func ParseRouting(raw []byte) (RoutingConfig, error) {
 			strings.Join(blank, ", "),
 		)
 	}
-	return cfg.finalize()
+	cfg, err = cfg.finalize()
+	if err != nil {
+		return RoutingConfig{}, err
+	}
+	if err := cfg.ResidencyGap(); err != nil {
+		return RoutingConfig{}, err
+	}
+	return cfg, nil
 }
 
 // finalize applies the defaults, validates, and stamps the version — the steps
@@ -306,9 +313,6 @@ func (cfg RoutingConfig) validate() error {
 		if err := validateUpstreamPreferences(string(tier), binding); err != nil {
 			return err
 		}
-		if err := requireEURegionPin(cfg.Profile, fmt.Sprintf("tier %s", tier), binding); err != nil {
-			return err
-		}
 	}
 	if cfg.Embeddings.Provider == "" {
 		return fmt.Errorf("ai: routing config: embeddings lane has no provider")
@@ -320,9 +324,6 @@ func (cfg RoutingConfig) validate() error {
 	// it from embeddingsBinding for the same reason, but the schema is editor
 	// tooling and cannot be the thing that holds this.
 	if err := validateEmbeddingsRouting(cfg.Embeddings.ProviderConfig); err != nil {
-		return err
-	}
-	if err := requireEURegionPin(cfg.Profile, "the embeddings lane", cfg.Embeddings.ProviderConfig); err != nil {
 		return err
 	}
 	if cfg.Embeddings.Input != nil {

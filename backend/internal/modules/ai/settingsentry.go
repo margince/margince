@@ -81,7 +81,10 @@ func validateStoredRouting(cfg RoutingConfig) error {
 	if d := cfg.Embeddings.Dimensions; d < 0 || d > maxEmbedDimensions {
 		return fmt.Errorf("ai: routing config: embeddings dimensions %d out of range [1,%d]", d, maxEmbedDimensions)
 	}
-	return cfg.validate()
+	if err := cfg.validate(); err != nil {
+		return err
+	}
+	return cfg.ResidencyGap()
 }
 
 // Unconfigured reports whether this config binds nothing at all — the state an

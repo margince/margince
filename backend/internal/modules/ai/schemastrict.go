@@ -37,8 +37,8 @@ var strictKeywords = map[string]bool{
 // strictDowngrade is the downgrade an OpenAI-wire request goes under: a
 // schema schemaAllowsStrict refuses is still sent, with strict false, which
 // leaves enforcing it to the endpoint — model.SchemaUnenforced.
-// Both wires that send the flag report it, from this one predicate, so the
-// record and the wire cannot disagree.
+// The openai and openai_compatible wires both report it from this predicate,
+// which is the one that decides the flag they send.
 func strictDowngrade(raw json.RawMessage) string {
 	if len(raw) == 0 || schemaAllowsStrict(raw) {
 		return ""

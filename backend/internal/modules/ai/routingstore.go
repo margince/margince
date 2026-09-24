@@ -134,7 +134,10 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 		// model is choosing to run without AI, and it is the state a fresh
 		// installation is already in.
 		if !next.Unconfigured() {
-			if next, err = next.keepingStoredUpstream(current).finalize(); err != nil {
+			if next, err = next.keepingStoredUpstream(current).finalize(); err == nil {
+				err = next.ResidencyGap()
+			}
+			if err != nil {
 				refused = settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
 				return refused
 			}

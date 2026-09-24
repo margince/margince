@@ -83,8 +83,8 @@ func (e downgradedError) SchemaDowngrade() string { return e.downgrade }
 
 // reportSchemaDowngrade stamps the downgrade an adapter decided before sending
 // on the call's outcome: on the Response when it was served, on the error when
-// it was not. Every adapter that decides one reports it here, so the served
-// and failed rows of one request cannot disagree about what was sent.
+// it was not. An adapter reports a downgrade here so a failed row records
+// what was sent the same way a served row does.
 func reportSchemaDowngrade(resp model.Response, err error, downgrade string) (model.Response, error) {
 	if err != nil {
 		if downgrade == "" {

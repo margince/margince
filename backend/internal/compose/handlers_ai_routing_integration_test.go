@@ -46,7 +46,7 @@ func routingAdmin(e *integration.Env) context.Context {
 // getThenPut reads the binding through GET and writes the body it answered
 // back through PUT, conditioned on the ETag it answered, after edit rewrites
 // the document the way a form would.
-func getThenPut(t *testing.T, ctx context.Context, h aiRoutingHandlers, edit func(string) string) *httptest.ResponseRecorder {
+func getThenPut(ctx context.Context, t *testing.T, h aiRoutingHandlers, edit func(string) string) *httptest.ResponseRecorder {
 	t.Helper()
 	got := httptest.NewRecorder()
 	h.GetAiRouting(got, httptest.NewRequest(http.MethodGet, "/v1/ai/routing", nil).WithContext(ctx))
@@ -72,7 +72,7 @@ func TestReadingTheBindingAndWritingItBackKeepsEveryResidencyPin(t *testing.T) {
 		t.Fatalf("storing the planted binding: %v", err)
 	}
 
-	put := getThenPut(t, ctx, aiRoutingHandlers{store: store}, func(body string) string { return body })
+	put := getThenPut(ctx, t, aiRoutingHandlers{store: store}, func(body string) string { return body })
 	if put.Code != http.StatusOK {
 		t.Fatalf("PUT of the document GET answered = %d: %s", put.Code, put.Body)
 	}
@@ -107,7 +107,7 @@ func TestRepointingAPinnedLaneAtAnotherModelDoesNotCarryItsPin(t *testing.T) {
 		t.Fatalf("storing the planted binding: %v", err)
 	}
 
-	put := getThenPut(t, ctx, aiRoutingHandlers{store: store}, func(body string) string {
+	put := getThenPut(ctx, t, aiRoutingHandlers{store: store}, func(body string) string {
 		return strings.Replace(body, "mistralai/mistral-small-2603", "openai/gpt-oss-120b", 1)
 	})
 	if put.Code != http.StatusUnprocessableEntity || !strings.Contains(put.Body.String(), "under profile eu_hosted") {
