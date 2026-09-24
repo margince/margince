@@ -136,7 +136,7 @@ func (c *ollamaClient) showThink(ctx context.Context, model string) (json.RawMes
 	}
 	body, err := c.post(ctx, "/api/show", payload)
 	if err != nil {
-		if showEndpointMissing(err) {
+		if showUnavailable(err) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("ai: ollama: describing model %q: %w", model, err)
@@ -154,18 +154,20 @@ func (c *ollamaClient) showThink(ctx context.Context, model string) (json.RawMes
 	return cheapestThink(shown.Thinking.Values), nil
 }
 
-// showEndpointMissing reports a server that has no /api/show, as against one
-// that has it and does not know the model. Ollama answers the second with a JSON
-// {"error": …} body; a proxy's or an old server's missing route is a bare
-// 404/405/501, and failing every chat call on it would break a deployment that
-// worked before the field existed.
-func showEndpointMissing(err error) bool {
+// showUnavailable reports a server that cannot be asked about the model, as
+// against one that has /api/show and does not know the model. Ollama answers the
+// second with a JSON {"error": …} body. The first is a proxy or an old server: a
+// bare 404 or 405/501 for a route it does not have, or a 401/403 from a proxy that
+// lets chat through and refuses inspection. Failing every chat call on any of
+// them would break a deployment that worked before the field existed; if the
+// chat call is refused too, it reports its own error.
+func showUnavailable(err error) bool {
 	var status *ollamaStatusError
 	if !errors.As(err, &status) {
 		return false
 	}
 	switch status.code {
-	case http.StatusMethodNotAllowed, http.StatusNotImplemented:
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusMethodNotAllowed, http.StatusNotImplemented:
 		return true
 	case http.StatusNotFound:
 		return !strings.HasPrefix(status.body, `{"error"`)
@@ -173,13 +175,33 @@ func showEndpointMissing(err error) bool {
 	return false
 }
 
-// cheapestThink picks the value that spends the least on thinking. Ollama lists
-// levels lowest first (gpt-oss: low, medium, high), so the first is the cheapest.
+// thinkLevelRank orders the effort levels Ollama documents, lowest first. The
+// order of a model's `values` array is not part of that contract, so the lowest
+// level is chosen by name.
+var thinkLevelRank = map[string]int{"low": 0, "medium": 1, "high": 2, "max": 3}
+
+// cheapestThink picks the value that spends the least on thinking: `false` if
+// the model can turn it off, else the lowest level it lists by name, else (a
+// level this adapter does not know) the first one listed.
 func cheapestThink(values []json.RawMessage) json.RawMessage {
 	for _, v := range values {
 		if bytes.Equal(v, ollamaThinkOff) {
 			return ollamaThinkOff
 		}
+	}
+	var lowest json.RawMessage
+	lowestRank := len(thinkLevelRank)
+	for _, v := range values {
+		var level string
+		if json.Unmarshal(v, &level) != nil {
+			continue
+		}
+		if rank, known := thinkLevelRank[level]; known && rank < lowestRank {
+			lowest, lowestRank = v, rank
+		}
+	}
+	if lowest != nil {
+		return lowest
 	}
 	if len(values) > 0 {
 		return values[0]

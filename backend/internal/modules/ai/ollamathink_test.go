@@ -68,6 +68,8 @@ func TestOllamaSendsTheCheapestThinkValueTheModelAccepts(t *testing.T) {
 		"a model that only grades it (gpt-oss)":              {`{"thinking":{"values":["low","medium","high"],"default":"medium"},"capabilities":["thinking"]}`, `"low"`},
 		"a model that does not think":                        {`{"capabilities":["completion","tools"]}`, ""},
 		"a server that does not list the choices":            {`{"capabilities":["completion","thinking"]}`, ""},
+		"levels listed highest first":                        {`{"thinking":{"values":["high","medium","low"]}}`, `"low"`},
+		"a level the adapter does not know":                  {`{"thinking":{"values":["deep","shallow"]}}`, `"deep"`},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -164,9 +166,10 @@ func TestOllamaNamesTheModelTheServerDoesNotHave(t *testing.T) {
 }
 
 // A proxy in front of Ollama, or a server that predates /api/show, has no such
-// route. Chat worked through it before the field existed, so it must still work.
+// route, or refuses it (401/403) while letting chat through. Chat worked through
+// it before the field existed, so it must still work.
 func TestOllamaStillChatsThroughAServerWithNoShowEndpoint(t *testing.T) {
-	for name, status := range map[string]int{"404 page not found": http.StatusNotFound, "405": http.StatusMethodNotAllowed, "501": http.StatusNotImplemented} {
+	for name, status := range map[string]int{"404 page not found": http.StatusNotFound, "405": http.StatusMethodNotAllowed, "501": http.StatusNotImplemented, "401": http.StatusUnauthorized, "403": http.StatusForbidden} {
 		t.Run(name, func(t *testing.T) {
 			var wire map[string]json.RawMessage
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

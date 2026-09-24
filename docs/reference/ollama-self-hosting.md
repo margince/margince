@@ -218,9 +218,10 @@ every binding a run makes, the judge included. So a sovereign run needs a local
 judge from a different family. A 7B local judge (`mistral`) was unreliable: one
 call scored a correct answer 0 and pushed two tasks down a band. `gpt-oss:20b` is
 the better local judge but shares the GPU with the candidate, which is why the
-committed sovereign records show 14 to 34 seconds at the median where a direct
-call takes 5 to 12. The records overstate serving time; the direct numbers in
-section 2 do not.
+committed sovereign records show 14 to 34 seconds at the median. The same twelve
+tasks measured with the judge in the cloud (section 4) are 4 to 9 seconds faster
+per call, 7.6 at the median. The records overstate serving time by about that
+much; section 4 is the serving time.
 
 **Ollama hangs.** In the ~490 `gemma4:12b` calls, one returned HTTP 500 after
 exactly 5 minutes, Ollama restarted its runner, and the router's retry succeeded.

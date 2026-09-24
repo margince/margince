@@ -23,11 +23,15 @@ it too (`ollama pull mistral`) if enrich grounding is weak.
 For Gemma 4, pull `gemma4:12b` (what we measured, and what not to pull instead:
 [ollama-self-hosting.md](../reference/ollama-self-hosting.md)) and bind it with
 [`config/presets/gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
-Gemma 4 reasons before it answers, which Ollama turns on by default, so the
-adapter sends `think: false` on every chat call unless the request asks for
-thinking. Left on, a short JSON answer takes tens of seconds and a small output
-budget is spent on the reasoning before the answer starts, so the reply comes
-back empty with `done_reason: "length"`.
+Gemma 4 reasons before it answers, which Ollama turns on by default. The adapter
+asks Ollama once per model what it accepts (`/api/show`) and sends `think: false`
+to a model that can turn thinking off (the lowest level to one that cannot, and
+nothing to one that does not think). Left on, a short JSON answer takes tens of
+seconds and a small output budget is spent on the reasoning before the answer
+starts, so the reply comes back empty with `done_reason: "length"`. A proxy in
+front of Ollama that refuses `/api/show` gets no `think` field, so Gemma 4 keeps
+its default thinking there: give the adapter direct access to `/api/show`, or
+expect slow, sometimes empty answers.
 
 ## 2. Point the AI lanes at Ollama
 
