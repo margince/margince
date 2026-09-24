@@ -412,11 +412,11 @@ func TestTheRetentionSweepDeletesOnlyDraftsPastTheWindow(t *testing.T) {
 		}
 	}
 
-	if _, err := draftStore(e).PurgeStaleMailDrafts(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := draftStore(e).PurgeStaleMailDrafts(ctx, 10); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep running the sweep → %v, want ErrPermissionDenied", err)
 	}
 	system := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
-	purged, err := draftStore(e).PurgeStaleMailDrafts(system)
+	purged, err := draftStore(e).PurgeStaleMailDrafts(system, 10)
 	if err != nil {
 		t.Fatalf("sweeping: %v", err)
 	}
@@ -426,5 +426,39 @@ func TestTheRetentionSweepDeletesOnlyDraftsPastTheWindow(t *testing.T) {
 	}
 	if actions, _ := e.draftTrail(t, stale.ID); len(actions) == 0 || actions[len(actions)-1] != "delete" {
 		t.Errorf("the sweep left no delete in the stale draft's trail: %v", actions)
+	}
+}
+
+// A backlog deeper than one pass drains across passes, oldest first: each pass
+// commits its own batch, so a pass the job's timeout cuts short has still kept
+// what it deleted, and the next one starts where it stopped.
+func TestAStaleBacklogDeeperThanOnePassDrainsOldestFirst(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	var backlog []ids.UUID
+	for age := range 3 {
+		draft := saveDraft(ctx, t, e, replyAnchor(e.seedAnchor(t, "", "")))
+		if _, err := e.owner.Exec(context.Background(), `UPDATE mail_draft SET updated_at = $2 WHERE id = $1`,
+			draft.ID, draftClock.Add(-MailDraftRetention-time.Duration(3-age)*time.Hour)); err != nil {
+			t.Fatalf("ageing a draft: %v", err)
+		}
+		backlog = append(backlog, draft.ID)
+	}
+	system := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
+	store := draftStore(e)
+
+	for pass, want := range []int{2, 1, 0} {
+		purged, err := store.PurgeStaleMailDrafts(system, 2)
+		if err != nil || purged != want {
+			t.Fatalf("pass %d purged %d (%v), want %d", pass, purged, err, want)
+		}
+		if pass == 0 && (e.draftExists(t, backlog[0]) || e.draftExists(t, backlog[1]) || !e.draftExists(t, backlog[2])) {
+			t.Fatal("the first capped pass did not take the two oldest drafts and leave the newest")
+		}
+	}
+	for _, id := range backlog {
+		if e.draftExists(t, id) {
+			t.Errorf("draft %s survived the passes that drained the backlog", id)
+		}
 	}
 }

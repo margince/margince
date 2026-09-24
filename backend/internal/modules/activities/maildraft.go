@@ -234,9 +234,11 @@ func (s *Store) DiscardMailDraft(ctx context.Context, id ids.UUID) error {
 // discard it.
 const MailDraftRetention = 90 * 24 * time.Hour
 
-// PurgeStaleMailDrafts deletes every draft not saved within MailDraftRetention
-// and answers how many went. The retention sweep calls it as the system.
-func (s *Store) PurgeStaleMailDrafts(ctx context.Context) (int, error) {
+// PurgeStaleMailDrafts deletes up to limit drafts not saved within
+// MailDraftRetention, oldest first, in one transaction, and answers how many
+// went. The retention sweep calls it as the system; a backlog deeper than
+// limit is left to its next pass, like ListOrphanedObjects.
+func (s *Store) PurgeStaleMailDrafts(ctx context.Context, limit int) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
 	}
@@ -244,8 +246,9 @@ func (s *Store) PurgeStaleMailDrafts(ctx context.Context) (int, error) {
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		stale, err := deleteDrafts(ctx, tx, fmt.Sprintf(`updated_at < $%d`,
-			arg(s.now().Add(-MailDraftRetention))), args)
+		stale, err := deleteDrafts(ctx, tx, fmt.Sprintf(`id IN (
+			SELECT id FROM mail_draft WHERE updated_at < $%d ORDER BY updated_at LIMIT $%d)`,
+			arg(s.now().Add(-MailDraftRetention)), arg(limit)), args)
 		purged = len(stale)
 		return err
 	})

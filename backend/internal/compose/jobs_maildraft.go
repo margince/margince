@@ -18,6 +18,12 @@ import (
 // mailDraftRetentionActor is the principal the pass's audit rows carry.
 const mailDraftRetentionActor = "system:mail_draft_retention"
 
+// mailDraftRetentionBatch bounds one pass, for the reason storedObjectReapBatch
+// does: a capped pass that leaves a backlog behind is picked up by the next
+// hourly one, and each pass commits what it deleted before the job's timeout
+// could cancel it.
+const mailDraftRetentionBatch = 500
+
 // MailDraftRetentionArgs schedules one purge of drafts nobody has saved within
 // activities.MailDraftRetention.
 type MailDraftRetentionArgs struct{}
@@ -46,7 +52,7 @@ func (w *mailDraftRetentionWorker) Work(ctx context.Context, _ *river.Job[MailDr
 		return jobs.FaultContext(ctx, err)
 	}
 	wsCtx = principal.SystemActing(wsCtx, mailDraftRetentionActor)
-	purged, err := w.drafts.PurgeStaleMailDrafts(wsCtx)
+	purged, err := w.drafts.PurgeStaleMailDrafts(wsCtx, mailDraftRetentionBatch)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
