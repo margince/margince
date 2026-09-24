@@ -351,8 +351,8 @@ This is the export to reach for when the question is "give us our data",
 whether for a migration, an audit, or a portability request.
 
 It is admin and ops only, it writes an audit entry like every other export, and
-it is row-scoped to whoever asks — so a bundle can never hand out rows that
-person's own lists would hide.
+it is row-scoped to whoever asks — so a bundle can never hand out rows their
+own lists would hide.
 
 As with the subject-access package, no screen offers it yet: it is served by
 `GET /exports/bundle`.
