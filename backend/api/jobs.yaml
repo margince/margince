@@ -1065,6 +1065,21 @@ kinds:
       without a second migration; a narrower one would have to be widened by
       changing history nobody kept.
 
+  mail_draft_retention:
+    role: worker
+    go_type: MailDraftRetentionArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 24h
+    reason: >-
+      Daily, because the window it enforces is ninety days and a day either
+      side of it changes nothing a rep could notice. It is the only way out for
+      a draft whose anchor was deleted or fell out of its author's scope —
+      reading one answers not found, so nobody can find it to discard it — and
+      a draft holds a subject's address and the words written to them.
+
   idempotency_retention:
     role: worker
     fleet: true

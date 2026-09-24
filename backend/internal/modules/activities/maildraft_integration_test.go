@@ -377,3 +377,54 @@ func discardInOwnTx(ctx context.Context, t *testing.T, e *sendEnv, id ids.UUID, 
 		return discardComposedDraftTx(ctx, tx, id, origin)
 	})
 }
+
+// Addresses are kept the way the send path compares them, so the erasure and
+// the subject export find a draft by the address they hold.
+func TestADraftKeepsItsAddressesTrimmedAndLowercased(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	anchor := replyAnchor(e.seedAnchor(t, "", ""))
+	content := typedDraft()
+	content.To = []string{"  Buyer@Example.TEST ", "   "}
+
+	saved, err := draftStore(e).SaveMailDraft(ctx, anchor, content, nil)
+	if err != nil {
+		t.Fatalf("saving: %v", err)
+	}
+	if len(saved.Content.To) != 1 || saved.Content.To[0] != "buyer@example.test" {
+		t.Fatalf("To line saved as %q, want the one address trimmed and lowercased", saved.Content.To)
+	}
+}
+
+// A draft nobody saves again for the retention window is deleted, whatever
+// became of its anchor; a newer one stays. Only the system sweeps.
+func TestTheRetentionSweepDeletesOnlyDraftsPastTheWindow(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	stale := saveDraft(ctx, t, e, replyAnchor(e.seedAnchor(t, "", "")))
+	fresh := saveDraft(ctx, t, e, replyAnchor(e.seedAnchor(t, "", "")))
+	for id, age := range map[ids.UUID]time.Duration{
+		stale.ID: MailDraftRetention + time.Hour, fresh.ID: MailDraftRetention - time.Hour,
+	} {
+		if _, err := e.owner.Exec(context.Background(),
+			`UPDATE mail_draft SET updated_at = $2 WHERE id = $1`, id, draftClock.Add(-age)); err != nil {
+			t.Fatalf("ageing a draft: %v", err)
+		}
+	}
+
+	if _, err := draftStore(e).PurgeStaleMailDrafts(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a rep running the sweep → %v, want ErrPermissionDenied", err)
+	}
+	system := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
+	purged, err := draftStore(e).PurgeStaleMailDrafts(system)
+	if err != nil {
+		t.Fatalf("sweeping: %v", err)
+	}
+	if purged != 1 || e.draftExists(t, stale.ID) || !e.draftExists(t, fresh.ID) {
+		t.Fatalf("purged %d; stale kept=%v, fresh kept=%v — want only the stale one gone",
+			purged, e.draftExists(t, stale.ID), e.draftExists(t, fresh.ID))
+	}
+	if actions, _ := e.draftTrail(t, stale.ID); len(actions) == 0 || actions[len(actions)-1] != "delete" {
+		t.Errorf("the sweep left no delete in the stale draft's trail: %v", actions)
+	}
+}

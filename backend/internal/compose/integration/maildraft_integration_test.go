@@ -218,7 +218,8 @@ func TestASubjectAccessExportCarriesTheDraftsWrittenToThem(t *testing.T) {
 	if !strings.Contains(rendered, "Written and never sent.") {
 		t.Errorf("the export withheld the body of the draft written to this contact: %s", rendered)
 	}
-	if !strings.Contains(rendered, "Buyer@preflight.test") {
+	// Saved canonical, the way the send path compares addresses.
+	if !strings.Contains(rendered, "buyer@preflight.test") {
 		t.Errorf("the subject's own blind copy is missing from their export: %s", rendered)
 	}
 	if strings.Contains(rendered, "other-blind@preflight.test") {
@@ -240,4 +241,81 @@ func (p *preflightEnv) seedStranger(t *testing.T) string {
 		t.Fatalf("seeding the stranger: %v", err)
 	}
 	return id.String()
+}
+
+// Every shape of "a draft that is the subject's" is exported AND erased, and
+// by the same rule: an address padded and cased as a rep might type it, a
+// draft opened on the contact itself, and one opened on the lead they were
+// before promotion. A draft to somebody else on another record is neither.
+func TestTheExportAndTheErasureAgreeOnWhichDraftsAreTheSubjects(t *testing.T) {
+	p := setupPreflight(t)
+	lead := p.seedLiveLead(t)
+	stranger := p.seedStranger(t)
+	for _, draft := range []AnyMap{
+		{"anchor_type": "activity", "anchor_id": p.activityID, "to": []string{"  BUYER@Preflight.test "}, "body": "padded"},
+		{"anchor_type": "contact", "anchor_id": p.contactID, "to": []string{"assistant@preflight.test"}, "body": "on their record"},
+		{"anchor_type": "lead", "anchor_id": lead, "to": []string{"assistant@preflight.test"}, "body": "on their lead"},
+		{"anchor_type": "contact", "anchor_id": stranger, "to": []string{"stranger@preflight.test"}, "body": "not theirs"},
+	} {
+		if status := p.Call(t, "PUT", "/v1/mail-drafts", draft, nil, nil); status != http.StatusOK {
+			t.Fatalf("saving the %q draft → %d, want 200", draft["body"], status)
+		}
+	}
+	p.promoteLead(t, lead)
+
+	contactID, err := ids.Parse(p.contactID)
+	if err != nil {
+		t.Fatalf("contact id %q: %v", p.contactID, err)
+	}
+	subject := ids.From[ids.ContactKind](contactID)
+	pkg, err := privacy.AssembleSAR(p.privacyAdmin(t), compose.InstallationDB(p.Pool), subject)
+	if err != nil {
+		t.Fatalf("AssembleSAR: %v", err)
+	}
+	exported := fmt.Sprintf("%#v", pkg.DraftMessages)
+	for _, body := range []string{"padded", "on their record", "on their lead"} {
+		if !strings.Contains(exported, body) {
+			t.Errorf("the export is missing the %q draft: %s", body, exported)
+		}
+	}
+	if strings.Contains(exported, "not theirs") || len(pkg.DraftMessages) != 3 {
+		t.Errorf("the export carried %d drafts, want exactly the subject's three: %s", len(pkg.DraftMessages), exported)
+	}
+
+	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).EraseContact(
+		p.privacyAdmin(t), contactID, "art-17"); err != nil {
+		t.Fatalf("erasing the recipient: %v", err)
+	}
+	if n := p.draftRows(t); n != 1 {
+		t.Fatalf("%d draft(s) left after the erasure, want only the one that was never the subject's", n)
+	}
+}
+
+// seedLiveLead writes a lead the rep can open a composer on, before anything
+// has promoted it.
+func (p *preflightEnv) seedLiveLead(t *testing.T) string {
+	t.Helper()
+	id := ids.NewV7()
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO lead (id, owner_id, full_name, source, captured_by)
+			VALUES ($1, $2, 'Buyer as a lead', 'manual', 'human:x')`, id, p.user)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the lead: %v", err)
+	}
+	return id.String()
+}
+
+// promoteLead makes the lead the subject's twin, the state a promotion leaves.
+func (p *preflightEnv) promoteLead(t *testing.T, lead string) {
+	t.Helper()
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE lead SET status = 'promoted', promoted_contact_id = $2, archived_at = now()
+			 WHERE id = $1`, lead, p.contactID)
+		return err
+	}); err != nil {
+		t.Fatalf("promoting the lead: %v", err)
+	}
 }

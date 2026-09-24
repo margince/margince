@@ -6932,8 +6932,10 @@ paths:
         '404':
           description: |
             No draft of the caller's for this anchor, or an anchor the caller can no longer
-            see. The two are one answer, so a draft cannot outlive its author's access to what
-            it was written about.
+            see. The two are one answer, so a draft is never read back past its author's
+            access to what it was written about. Such a draft is not kept forever: every draft
+            not saved for ninety days is deleted, as is one whose message is sent or scheduled,
+            or whose addressee is erased.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }

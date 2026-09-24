@@ -4,10 +4,11 @@
 package privacy
 
 // The messages half of a subject-access package: what was captured, what was
-// sent to the subject, and what is still waiting — scheduled, staged or drafted. Split from
-// sar.go because these three projections carry the file's hardest rule — which
-// addresses may be disclosed to whom — and it is easier to check when it is not
-// interleaved with the identity and provenance sections.
+// sent to the subject, and what is still waiting — scheduled, staged or
+// drafted. Split from sar.go because these projections carry the file's
+// hardest rule — which addresses may be disclosed to whom — and it is easier
+// to check when it is not interleaved with the identity and provenance
+// sections.
 
 import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 
@@ -226,24 +227,24 @@ func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 			[]any{contactID.UUID, leads, addressPatterns(emails)},
 		},
 	}
-	return append(sections, sarDraftSection(pkg))
+	return append(sections, sarDraftSection(pkg, contactID, emails, leads))
 }
 
-// sarDraftSection exports the drafts a rep saved and never sent, found by
-// address or by the contact they were opened on. It follows the scheduled
-// projection's blind-copy rule: any addressee finds the row, and the bcc line
-// is reduced to the subject's own address. A draft keeps To apart from Cc and
-// Bcc, so its To line needs no subtraction.
-func sarDraftSection(pkg *SARPackage) sarSection {
-	return sarSection{&pkg.DraftMessages, `SELECT d.subject, d.body, d.html_body,
+// sarDraftSection exports the drafts subjectDraftMatch names — the same rows
+// the erasure deletes. It follows the scheduled projection's blind-copy rule:
+// any addressee finds the row, and the bcc line is reduced to the subject's
+// own address. A draft keeps To apart from Cc and Bcc, so its To line needs no
+// subtraction.
+func sarDraftSection(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) sarSection {
+	return sarSection{
+		&pkg.DraftMessages, `SELECT d.subject, d.body, d.html_body,
 		      to_jsonb(d.to_addresses) AS recipients, to_jsonb(d.cc_addresses) AS cc,
 		      (SELECT coalesce(jsonb_agg(addr), '[]'::jsonb)
 		         FROM unnest(d.bcc_addresses) AS addr
-		        WHERE lower(btrim(addr)) IN (SELECT email FROM contact_email WHERE contact_id = $1)) AS bcc,
+		        WHERE lower(btrim(addr)) = ANY($3::text[])) AS bcc,
 		      d.anchor_type, d.created_at, d.updated_at
 		   FROM mail_draft d
-		   WHERE (d.anchor_type = 'contact' AND d.anchor_id = $1)
-		      OR EXISTS (
-		           SELECT 1 FROM unnest(d.to_addresses || d.cc_addresses || d.bcc_addresses) AS addr
-		           WHERE lower(btrim(addr)) IN (SELECT email FROM contact_email WHERE contact_id = $1))`, nil}
+		   WHERE ` + subjectDraftMatch,
+		[]any{contactID.UUID, leads, loweredAddresses(emails)},
+	}
 }

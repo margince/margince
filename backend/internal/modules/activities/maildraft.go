@@ -35,8 +35,9 @@ type MailDraftAnchor struct {
 	ID   ids.UUID
 }
 
-// MailDraftContent is the composer's fields as they stand. Addresses are kept
-// as typed; they are checked when the message is sent, never here.
+// MailDraftContent is the composer's fields as they stand. Addresses are
+// trimmed and lowercased on save and otherwise unchecked until the message is
+// sent — a draft may hold one half-typed.
 type MailDraftContent struct {
 	To       []string
 	Cc       []string
@@ -64,17 +65,6 @@ const (
 	maxDraftAddresses = 100
 )
 
-// mailDraftAnchorTables names the table each anchor's visibility is probed
-// against, as compile-time literals so no request string is formatted into SQL.
-var mailDraftAnchorTables = map[crmcontracts.MailDraftAnchorType]string{
-	crmcontracts.MailDraftAnchorTypeActivity: linkEntityActivity,
-	crmcontracts.MailDraftAnchorTypeContact:  linkEntityContact,
-	crmcontracts.MailDraftAnchorTypeCompany:  linkEntityCompany,
-	crmcontracts.MailDraftAnchorTypeDeal:     linkEntityDeal,
-	crmcontracts.MailDraftAnchorTypeLead:     "lead",
-	crmcontracts.MailDraftAnchorTypeProject:  linkEntityProject,
-}
-
 const mailDraftColumns = `id, anchor_type, anchor_id, to_addresses, cc_addresses, bcc_addresses,
 	subject, body, html_body, version, created_at, updated_at`
 
@@ -95,6 +85,9 @@ func (e *InvalidMailDraftError) FieldFault() (field, code, message string) {
 // else's, and an anchor the caller can no longer see are all ErrNotFound.
 func (s *Store) GetMailDraft(ctx context.Context, anchor MailDraftAnchor) (MailDraft, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return MailDraft{}, err
+	}
+	if err := checkDraftAnchor(anchor); err != nil {
 		return MailDraft{}, err
 	}
 	author, err := draftAuthor(ctx)
@@ -129,6 +122,7 @@ func (s *Store) SaveMailDraft(ctx context.Context, anchor MailDraftAnchor, conte
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return MailDraft{}, err
 	}
+	content = canonicalDraft(content)
 	if err := validateDraft(anchor, content); err != nil {
 		return MailDraft{}, err
 	}
@@ -234,6 +228,30 @@ func (s *Store) DiscardMailDraft(ctx context.Context, id ids.UUID) error {
 	})
 }
 
+// MailDraftRetention is how long a draft nobody saves again is kept. It is the
+// only way out for a draft whose anchor was deleted or fell out of its author's
+// scope: reading one answers not found, so its author cannot find it to
+// discard it.
+const MailDraftRetention = 90 * 24 * time.Hour
+
+// PurgeStaleMailDrafts deletes every draft not saved within MailDraftRetention
+// and answers how many went. The retention sweep calls it as the system.
+func (s *Store) PurgeStaleMailDrafts(ctx context.Context) (int, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return 0, err
+	}
+	var purged int
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		stale, err := deleteDrafts(ctx, tx, fmt.Sprintf(`updated_at < $%d`,
+			arg(s.now().Add(-MailDraftRetention))), args)
+		purged = len(stale)
+		return err
+	})
+	return purged, err
+}
+
 // discardComposedDraftTx removes the draft a message was composed in, inside
 // the transaction that sends or schedules it.
 //
@@ -299,14 +317,21 @@ func deleteDrafts(ctx context.Context, tx pgx.Tx, predicate string, args []any) 
 // draft is about. A reply needs the conversation's content, so an activity is
 // probed through its content gate rather than the discover one.
 func ensureDraftAnchorVisible(ctx context.Context, tx pgx.Tx, anchor MailDraftAnchor) error {
-	table, ok := mailDraftAnchorTables[anchor.Type]
-	if !ok {
-		return &InvalidMailDraftError{Field: fieldAnchorType, Reason: "is not a place a message can be written from"}
-	}
 	if anchor.Type == crmcontracts.MailDraftAnchorTypeActivity {
 		return auth.EnsureActivityContentVisibleLive(ctx, tx, anchor.ID)
 	}
-	return auth.EnsureVisibleLive(ctx, tx, table, anchor.ID)
+	// Each record type lives in a table named for it (linktarget.go), and the
+	// row-scope probe refuses any name outside its own table set.
+	return auth.EnsureVisibleLive(ctx, tx, string(anchor.Type), anchor.ID)
+}
+
+// checkDraftAnchor admits the conversation a reply answers or a record a
+// message can be filed under — the timeline link's own vocabulary.
+func checkDraftAnchor(anchor MailDraftAnchor) error {
+	if anchor.Type == crmcontracts.MailDraftAnchorTypeActivity || linkColumn(string(anchor.Type)) != "" {
+		return nil
+	}
+	return &InvalidMailDraftError{Field: fieldAnchorType, Reason: "is not a place a message can be written from"}
 }
 
 // draftAuthor is the seat a draft belongs to — the principal, never the body.
@@ -322,15 +347,37 @@ func draftAuthor(ctx context.Context) (ids.UUID, error) {
 }
 
 func validateDraft(anchor MailDraftAnchor, content MailDraftContent) error {
-	if _, ok := mailDraftAnchorTables[anchor.Type]; !ok {
-		return &InvalidMailDraftError{Field: fieldAnchorType, Reason: "is not a place a message can be written from"}
+	if err := checkDraftAnchor(anchor); err != nil {
+		return err
 	}
-	for field, line := range map[string][]string{"to": content.To, "cc": content.Cc, "bcc": content.Bcc} {
-		if len(line) > maxDraftAddresses {
-			return &InvalidMailDraftError{Field: field, Reason: fmt.Sprintf("holds more than %d addresses", maxDraftAddresses)}
+	for _, line := range []struct {
+		field     string
+		addresses []string
+	}{{"to", content.To}, {"cc", content.Cc}, {"bcc", content.Bcc}} {
+		if len(line.addresses) > maxDraftAddresses {
+			return &InvalidMailDraftError{Field: line.field, Reason: fmt.Sprintf("holds more than %d addresses", maxDraftAddresses)}
 		}
 	}
 	return nil
+}
+
+// canonicalDraft keeps each address the way the send path compares it, so
+// erasure and the subject export find a draft by the address they hold.
+func canonicalDraft(content MailDraftContent) MailDraftContent {
+	content.To = canonicalAddresses(content.To)
+	content.Cc = canonicalAddresses(content.Cc)
+	content.Bcc = canonicalAddresses(content.Bcc)
+	return content
+}
+
+func canonicalAddresses(line []string) []string {
+	out := make([]string, 0, len(line))
+	for _, addr := range line {
+		if addr = normalizeAddress(addr); addr != "" {
+			out = append(out, addr)
+		}
+	}
+	return out
 }
 
 // draftImage is what the audit trail keeps: where and which version, never
