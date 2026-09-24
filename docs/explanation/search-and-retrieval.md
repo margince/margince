@@ -306,10 +306,16 @@ its context is honestly its profile alone.
 
 Ranking follows the retrieval-ranking weights
 `0.60·similarity + 0.30·recency + 0.10·source_trust` with an id-ascending
-tie-break; recency halves every 30 days, and source trust ladders `manual` 1.0 >
-`mcp` 0.7 > captured/connector content 0.4. Graph items carry no query
-similarity — there is no query — so their rank is recency × trust over the same
-weights.
+tie-break; recency halves every 30 days, and source trust is keyed on
+`captured_by`, the authenticated principal a write stamps: a human's own
+statement scores 1.0 (T0), an agent write on a contact's authority scores 0.7
+(T1), and captured or connector content scores 0.4 (T2) — the same floor an
+unrecognized or empty `captured_by` takes, since guessing upward is the
+direction that misleads. An imported row is checked first and takes T2 even
+when it carries a human `captured_by`: an import runs as whoever ran it, so
+every row it writes truthfully names that administrator and falsely reads as
+their own testimony. Graph items carry no query similarity — there is no
+query — so their rank is recency × trust over the same weights.
 
 A **contact** anchor additionally carries a `who_knows` section: which colleagues
 actually interact with this contact, warmest first, each with its band and
