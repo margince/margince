@@ -153,7 +153,7 @@ describe("restingReadings", () => {
       WORDS,
     );
     expect(lines.map(said)).toEqual([
-      "2 decisions waiting",
+      en["agent.line.waiting_other"].replace("{count}", "2"),
       "brief ready",
       "summary ready",
       "offline model",
@@ -316,7 +316,10 @@ function settledRun(
 }
 
 /** The sentence from the screenshot this change was opened against. */
-const SUMMARY_LINE = "My summary of Sabine Mayer is ready.";
+const SUMMARY_LINE = en["agent.activity.summarizeNamed.done"].replace(
+  "{name}",
+  "Sabine Mayer",
+);
 const BRIEF_LINE = "Morning brief ready.";
 
 const summary = (agoMs: number) =>

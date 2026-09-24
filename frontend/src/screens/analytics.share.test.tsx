@@ -65,9 +65,9 @@ describe("sharing a forecast view", () => {
     // Both kinds named, and each one's promise stated. A label alone leaves a
     // reader guessing which of the two they were handed.
     expect(screen.getByLabelText(/Live view/)).toBeTruthy();
-    expect(screen.getByText(/Recomputed each time it is opened/)).toBeTruthy();
+    expect(screen.getByText(/Recalculated on each open/)).toBeTruthy();
     expect(
-      screen.getByText(/as they stood when the state was taken/),
+      screen.getByText(/as they stood when the snapshot was taken/),
     ).toBeTruthy();
   });
 
@@ -103,7 +103,7 @@ describe("sharing a forecast view", () => {
 
     const link = await screen.findByTestId("forecast-share-link");
     expect(link.textContent).toContain("tok-xyz");
-    expect(screen.getByText(/only time the link is shown/)).toBeTruthy();
+    expect(screen.getByText(/link is shown only once/)).toBeTruthy();
     expect(
       screen.getByText(/Leaving without copying discards the link/),
     ).toBeTruthy();
@@ -127,9 +127,7 @@ describe("sharing a forecast view", () => {
       await screen.findByRole("button", { name: "Copy link" }),
     );
 
-    expect(
-      await screen.findByText(/this browser refused the clipboard/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
     expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
   });
 });

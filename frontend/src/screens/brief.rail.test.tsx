@@ -181,10 +181,10 @@ describe("BriefScreen — the context rail", () => {
     const user = userEvent.setup();
     render(<BriefScreen />);
 
-    expect(await screen.findByText(/rejected our credentials/i)).toBeTruthy();
-    await user.click(
-      screen.getByRole("button", { name: "Fix connector" }),
-    );
+    expect(
+      await screen.findByText(/rejected the stored credentials/i),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Fix connector" }));
     expect(window.location.hash).toBe("#/settings/connections");
   });
 
@@ -199,9 +199,7 @@ describe("BriefScreen — the context rail", () => {
     render(<BriefScreen />);
 
     await screen.findByText("Overnight");
-    expect(
-      screen.queryByRole("button", { name: "Fix connector" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Fix connector" })).toBeNull();
   });
 
   it("lists the projects that moved or went quiet, each linking to its page", async () => {
@@ -238,7 +236,7 @@ describe("BriefScreen — the context rail", () => {
     });
     render(<BriefScreen />);
 
-    const moves = await screen.findByLabelText("Phase moves");
+    const moves = await screen.findByLabelText("Phase changes");
     expect(moves.textContent).toContain("Pursuing → Delivering");
     // By ROLE as well as by name: the watch panel in the rail carries the same
     // words as its heading, and this assertion is about the digest's list.
@@ -261,7 +259,7 @@ describe("BriefScreen — the context rail", () => {
     render(<BriefScreen />);
 
     await screen.findByText("Overnight");
-    expect(screen.queryByLabelText("Phase moves")).toBeNull();
+    expect(screen.queryByLabelText("Phase changes")).toBeNull();
   });
 });
 

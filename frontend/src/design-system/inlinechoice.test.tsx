@@ -31,7 +31,7 @@ function renderChoice(
   render(
     <LocaleProvider initial="en">
       <InlineChoice
-        label="Lifecycle"
+        label="Account lifecycle"
         value="prospect"
         options={OPTIONS}
         canEdit

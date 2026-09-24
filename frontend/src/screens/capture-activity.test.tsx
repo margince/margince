@@ -251,9 +251,7 @@ describe("capture activity", () => {
     // said once, above the rows, about the installation.
     renderTab(windowBody({ data: [ROW, { ...ROW, id: "row-2" }] }));
     await openLog();
-    const note = await screen.findAllByText(
-      /does not record who sent a message/i,
-    );
+    const note = await screen.findAllByText(/does not record message senders/i);
     expect(note).toHaveLength(1);
   });
 
@@ -266,7 +264,7 @@ describe("capture activity", () => {
     await openLog();
     expect(await screen.findByText(/no sender recorded/i)).toBeInTheDocument();
     expect(
-      screen.queryByText(/does not record who sent a message/i),
+      screen.queryByText(/does not record message senders/i),
     ).not.toBeInTheDocument();
   });
 
@@ -286,7 +284,7 @@ describe("capture activity", () => {
     // "Awaiting classification" alone would tell the reader to wait for an answer
     // that is never coming.
     expect(
-      await screen.findByText(/no verdict is coming/i),
+      await screen.findByText(/no check result is coming/i),
     ).toBeInTheDocument();
   });
 
@@ -364,7 +362,7 @@ describe("capture activity", () => {
     );
     const row = within(await screen.findByRole("list"));
     expect(row.getByText(/not queued/i)).toBeInTheDocument();
-    expect(row.queryByText(/waiting on a verdict/i)).not.toBeInTheDocument();
+    expect(row.queryByText(/awaiting sender check/i)).not.toBeInTheDocument();
   });
 
   it("keeps the deferred bucket's tense, because the count is only the waiting", async () => {
@@ -406,7 +404,7 @@ describe("capture activity", () => {
     expect(
       funnel.getByText(en["captureActivity.funnel.deferred"]),
     ).toBeInTheDocument();
-    expect(funnel.queryByText(/sent for a verdict/i)).not.toBeInTheDocument();
+    expect(funnel.queryByText(/sent for check/i)).not.toBeInTheDocument();
   });
 
   it("says when the sender pass runs while messages are waiting on it", async () => {
@@ -467,8 +465,8 @@ describe("capture activity", () => {
       }),
     );
     const note = await screen.findByTestId("verdict-pass-senders");
-    expect(note).toHaveTextContent(/a pass is running now/i);
-    expect(note).not.toHaveTextContent(/next pass/i);
+    expect(note).toHaveTextContent(/a check is running now/i);
+    expect(note).not.toHaveTextContent(/next check/i);
   });
 
   it("says a pass is due rather than naming a moment that has gone", async () => {
@@ -495,7 +493,7 @@ describe("capture activity", () => {
     );
     const note = await screen.findByTestId("verdict-pass-senders");
     expect(note).toHaveTextContent(/due and waiting/i);
-    expect(note).not.toHaveTextContent(/next pass/i);
+    expect(note).not.toHaveTextContent(/next check/i);
   });
 
   it("prints the cadence alone when the next moment is not knowable", async () => {
@@ -523,7 +521,7 @@ describe("capture activity", () => {
     );
     const note = await screen.findByTestId("verdict-pass-senders");
     expect(note).toHaveTextContent(/every 60 minutes/i);
-    expect(note).not.toHaveTextContent(/next pass/i);
+    expect(note).not.toHaveTextContent(/next check/i);
     expect(note).not.toHaveTextContent(/running now/i);
     expect(note).not.toHaveTextContent(/due and waiting/i);
   });
@@ -643,9 +641,9 @@ describe("capture activity", () => {
       }),
     );
     const row = within(await screen.findByRole("list"));
-    expect(row.getByText(/sent for a verdict/i)).toBeInTheDocument();
+    expect(row.getByText(/sent for check/i)).toBeInTheDocument();
     expect(row.getByText(/judged a real person/i)).toBeInTheDocument();
-    expect(row.queryByText(/waiting on a verdict/i)).not.toBeInTheDocument();
+    expect(row.queryByText(/awaiting sender check/i)).not.toBeInTheDocument();
   });
 
   it("still says a deferral with no answer yet is waiting", async () => {
@@ -667,7 +665,7 @@ describe("capture activity", () => {
     const row = within(await screen.findByRole("list"));
     // And it names WHICH verdict. Two run on this pipeline, ten minutes and an
     // hour apart, and "waiting on a verdict" named neither.
-    expect(row.getByText(/waiting on a sender verdict/i)).toBeInTheDocument();
+    expect(row.getByText(/awaiting sender check/i)).toBeInTheDocument();
   });
 
   // What a rep meets on this page, in order. The block list is the one control
@@ -758,7 +756,9 @@ describe("the pipeline drill-down", () => {
     renderTab(windowBody());
     await openLog();
     await user.click(
-      screen.getByRole("button", { name: /every step this message/i }),
+      screen.getByRole("button", {
+        name: /every processing step for this message/i,
+      }),
     );
     expect(
       await screen.findByText(/how this message was handled/i),
@@ -777,7 +777,9 @@ describe("the pipeline drill-down", () => {
     renderTab(windowBody());
     await openLog();
     await user.click(
-      screen.getByRole("button", { name: /every step this message/i }),
+      screen.getByRole("button", {
+        name: /every processing step for this message/i,
+      }),
     );
     expect(await screen.findByText("Sentiment scoring")).toBeInTheDocument();
     expect(screen.getByText(/the sentiment pass read it/i)).toBeInTheDocument();
@@ -790,10 +792,12 @@ describe("the pipeline drill-down", () => {
     renderTab(windowBody());
     await openLog();
     await user.click(
-      screen.getByRole("button", { name: /every step this message/i }),
+      screen.getByRole("button", {
+        name: /every processing step for this message/i,
+      }),
     );
     expect(
-      await screen.findByText(/turned payload capture off/i),
+      await screen.findByText(/payload capture is turned off/i),
     ).toBeInTheDocument();
   });
 
@@ -820,7 +824,9 @@ describe("the pipeline drill-down", () => {
     );
     await openLog();
     await user.click(
-      screen.getByRole("button", { name: /every step this message/i }),
+      screen.getByRole("button", {
+        name: /every processing step for this message/i,
+      }),
     );
 
     await user.click(
@@ -859,7 +865,9 @@ describe("the pipeline drill-down", () => {
     );
     await openLog();
     await user.click(
-      screen.getByRole("button", { name: /every step this message/i }),
+      screen.getByRole("button", {
+        name: /every processing step for this message/i,
+      }),
     );
 
     // The ladder is open, so the absence below is the gate rather than a

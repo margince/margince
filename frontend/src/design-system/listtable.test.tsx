@@ -839,9 +839,7 @@ describe("a chip with an async search source", () => {
       vi.useRealTimers();
     }
 
-    expect(
-      await screen.findByText("Search failed. Retry."),
-    ).toBeTruthy();
+    expect(await screen.findByText("Search failed. Retry.")).toBeTruthy();
   });
 });
 
@@ -1155,7 +1153,7 @@ describe("pagination", () => {
     );
     await user.click(screen.getByRole("button", { name: "Page 3" }));
     expect(
-      screen.getByRole("button", { name: "Next ›" }).hasAttribute("disabled"),
+      screen.getByRole("button", { name: "Next" }).hasAttribute("disabled"),
     ).toBe(true);
 
     rerender(
@@ -1170,7 +1168,7 @@ describe("pagination", () => {
         />
       </LocaleProvider>,
     );
-    const next = screen.getByRole("button", { name: "Next ›" });
+    const next = screen.getByRole("button", { name: "Next" });
     expect(next.hasAttribute("disabled")).toBe(false);
     await user.click(next);
     expect(onLoadMore).toHaveBeenCalled();
@@ -1188,7 +1186,7 @@ describe("count line", () => {
         sort={{ value: "name", onChange: () => {} }}
       />,
     );
-    expect(screen.getByText(/1–25 of 60 rows, sorted by Name/)).toBeTruthy();
+    expect(screen.getByText(/1 to 25 of 60 rows, sorted by Name/)).toBeTruthy();
   });
 });
 

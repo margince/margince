@@ -130,7 +130,7 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
     // Three proposals, ONE card. The card is headlined by the member it
     // represents, says how much saying yes decides, and keeps the other two
     // behind an expander rather than drawing three questions.
-    expect(await screen.findByText("One decision · 3 items")).toBeTruthy();
+    expect(await screen.findByText("1 decision · 3 items")).toBeTruthy();
     expect(document.querySelectorAll(".dcard").length).toBe(1);
     expect(document.querySelector(".approval-headline")?.textContent).toBe(
       "Publish the acme.example facts",
@@ -141,7 +141,7 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
     await user.click(
       screen.getByRole("button", { name: en["brief.deck.rowDetail"] }),
     );
-    expect(screen.getByText("Show the 3 items")).toBeTruthy();
+    expect(screen.getByText("Show 3 items")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Approve" }));
     expect(writes(calls)).toEqual([]);
@@ -155,7 +155,7 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
     );
     // One call decided all three members, so the card is gone from the queue.
     await waitFor(() =>
-      expect(screen.queryByText("One decision · 3 items")).toBeNull(),
+      expect(screen.queryByText("1 decision · 3 items")).toBeNull(),
     );
     // And the plate the commit earned is actually drawn. Emptying the deck also
     // flips the column's order, and while the two sections were positional
@@ -228,7 +228,7 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
     expect(
       screen.getByText(en["brief.deck.edited_one"].replace("{count}", "1")),
     ).toBeTruthy();
-    expect(screen.queryByText(/skipped/)).toBeNull();
+    expect(screen.queryByText(/^\d+ skipped$/)).toBeNull();
     await user.click(
       screen.getByRole("button", {
         name: en["brief.deck.commitNothingToSend"],
@@ -339,7 +339,7 @@ describe("ApprovalTray — a bundle says only what its members agree on", () => 
     stubApi({ "GET /approvals": () => pendingPage(queue, new Set<string>()) });
     render(<ApprovalTray />);
 
-    expect(await screen.findByText("One decision · 2 items")).toBeTruthy();
+    expect(await screen.findByText("1 decision · 2 items")).toBeTruthy();
     // Neither agent's name — and not the unnamed tag either, which would still
     // claim one agent produced the whole act.
     expect(screen.queryByText("Automated by deepread")).toBeNull();
@@ -360,7 +360,7 @@ describe("ApprovalTray — a bundle says only what its members agree on", () => 
     stubApi({ "GET /approvals": () => pendingPage(queue, new Set<string>()) });
     render(<ApprovalTray />);
 
-    expect(await screen.findByText("One decision · 2 items")).toBeTruthy();
+    expect(await screen.findByText("1 decision · 2 items")).toBeTruthy();
     expect(screen.getByText("Automated by runner")).toBeTruthy();
   });
 });

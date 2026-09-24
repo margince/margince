@@ -136,7 +136,7 @@ describe("CompaniesScreen — search/sort/pagination (P-14)", () => {
       expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
     );
 
-    const next = screen.getByRole("button", { name: "Next ›" });
+    const next = screen.getByRole("button", { name: "Next" });
     expect((next as HTMLButtonElement).disabled).toBe(false);
     await userEvent.click(next);
 
@@ -633,7 +633,9 @@ describe("CompanyScreen — profile fields card (B5)", () => {
     // A field the read never grounded still DRAWS ITS ROW, empty. The tab is a
     // form now, not a list of what a crawl happened to find: a reader can only
     // add what they can see is missing, and the old card hid exactly that.
-    expect(screen.getAllByText("Ideal customer profile").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("Ideal customer profile").length,
+    ).toBeGreaterThan(0);
   });
 
   it("draws every narrative field as an empty row when nothing has been read", async () => {
@@ -705,15 +707,11 @@ describe("CompanyScreen — facts card (B6)", () => {
     render(<CompanyScreen id="o-1" />);
     await openProfile();
 
-    await waitFor(() =>
-      expect(screen.getByText("Company facts")).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText("Company facts")).toBeTruthy());
     // Scoped to the facts card: the right rail carries a Signals card of its
     // own, and "which categories did the site read produce" is a question
     // about this card, not about the page.
-    const factsCard = screen
-      .getByText("Company facts")
-      .closest("section");
+    const factsCard = screen.getByText("Company facts").closest("section");
     if (!factsCard) {
       throw new Error("the facts card has no section wrapper");
     }
@@ -1030,7 +1028,7 @@ describe("CompanyScreen — hierarchy roll-up in the rail (P-7)", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("1 account(s) not visible to you were excluded"),
+        screen.getByText("Companies not visible to you excluded: 1"),
       ).toBeTruthy(),
     );
   });
@@ -1076,10 +1074,14 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
     render(<CompanyScreen id="o-1" />);
 
     // The way in. WHEN contact last happened is the readings row's (Last
-    // touch), not the header's: one fact, one home.
-    await waitFor(() => expect(screen.getByText(/Way in/)).toBeTruthy());
+    // contact), not the header's: one fact, one home.
+    await waitFor(() => expect(screen.getByText(/Best route/)).toBeTruthy());
     expect(screen.getByText(/of 3 contacts here/)).toBeTruthy();
-    expect(screen.queryByText(/Last contact/)).toBeNull();
+    const facts = screen.getByText(/Best route/).closest("dl");
+    if (!facts) {
+      throw new Error("the way in is not drawn among the header's facts");
+    }
+    expect(within(facts).queryByText(/Last contact/)).toBeNull();
     // The composite is gone: it was PO-F-3's MAX over contacts, so one
     // talkative contact spoke for the account and "41/100" read as a verdict.
     expect(screen.queryByText(/41\/100/)).toBeNull();
@@ -1100,7 +1102,7 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
     // company360's backstop omits `strength` entirely, which is what an account
     // with no readable contacts looks like: no way in named, and no score
     // standing in for one.
-    expect(screen.queryByText(/Way in/)).toBeNull();
+    expect(screen.queryByText(/Best route/)).toBeNull();
     expect(screen.queryByText(/^0 ·/)).toBeNull();
   });
 });
@@ -1307,9 +1309,7 @@ describe("CompanyScreen — the record's history", () => {
     // — no second rendering of the audit rows, and no restore control here:
     // put-back lives on the record's Full history (the header's overflow
     // menu), the one surface that carries that write.
-    expect(
-      within(timeline).queryByRole("button", { name: "Put back" }),
-    ).toBeNull();
+    expect(within(timeline).queryByRole("button", { name: "Undo" })).toBeNull();
   });
 });
 
@@ -1415,13 +1415,13 @@ describe("CompanyScreen — next-step suggestions", () => {
 
     // A truncated list with no count reads as "that is everything".
     await waitFor(() =>
-      expect(screen.getByText("3 more not shown here.")).toBeTruthy(),
+      expect(screen.getByText("3 more not shown.")).toBeTruthy(),
     );
   });
 
   it("stays silent about what it left out when there is nothing left out", async () => {
     // Zero is the ordinary case, so the "N more" line must not render on it —
-    // otherwise every card carries "0 more not shown here."
+    // otherwise every card carries "0 more not shown."
     const three60 = {
       ...company360,
       suggestions: [stalledSuggestion],
@@ -1433,7 +1433,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     await waitFor(() =>
       expect(screen.getByText(stalledSuggestion.reason)).toBeTruthy(),
     );
-    expect(screen.queryByText(/more not shown here/)).toBeNull();
+    expect(screen.queryByText(/more not shown/)).toBeNull();
   });
 
   it("stays silent about what it left out when the count is absent", async () => {
@@ -1450,7 +1450,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     await waitFor(() =>
       expect(screen.getByText(stalledSuggestion.reason)).toBeTruthy(),
     );
-    expect(screen.queryByText(/more not shown here/)).toBeNull();
+    expect(screen.queryByText(/more not shown/)).toBeNull();
   });
 
   it("says nothing at all when the account needs nothing", async () => {
@@ -1524,7 +1524,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     await userEvent.click(screen.getByRole("button", { name: "Not now" }));
 
     await waitFor(() =>
-      expect(screen.getByText(/could not be dismissed/)).toBeTruthy(),
+      expect(screen.getByText(/was not dismissed/)).toBeTruthy(),
     );
     // The row is still there, which is what the notice is telling the reader.
     expect(screen.getByText(stalledSuggestion.reason)).toBeTruthy();
@@ -1597,7 +1597,7 @@ describe("CompanyScreen — Ask Margince", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText(/Nothing here that you can see/)).toBeTruthy(),
+      expect(screen.getByText(/No records you can access/)).toBeTruthy(),
     );
   });
 
@@ -1698,12 +1698,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // summaries stand on every tab, capped to their top rows.
     const rail = document.querySelector(".co-rail");
     expect(rail).toBeTruthy();
-    for (const card of [
-      "Active deals",
-      "Key contacts",
-      "Details",
-      "Tags",
-    ]) {
+    for (const card of ["Active deals", "Key contacts", "Details", "Tags"]) {
       expect(rail?.textContent).toContain(card);
     }
 
@@ -1799,9 +1794,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     const stack = container.querySelector(".co-overview-stack");
     const fold = stack?.querySelector("details");
     const summary = fold?.querySelector("summary");
-    await waitFor(() =>
-      expect(summary?.textContent).toContain("What happened · 1"),
-    );
+    await waitFor(() => expect(summary?.textContent).toContain("Activity · 1"));
     expect(fold?.open).toBe(false);
 
     // Opened, the call is IN it — not the sentence an account with nothing

@@ -244,7 +244,7 @@ describe("AutomationPreview", () => {
     await waitFor(() =>
       expect(screen.getByText("Matches now: 12")).toBeTruthy(),
     );
-    expect(screen.getByText("Would fire: ~34 / 30d")).toBeTruthy();
+    expect(screen.getByText("Would fire: about 34 in 30 days")).toBeTruthy();
     expect(bodies).toEqual([{ window_days: 30 }]);
   });
 
@@ -266,9 +266,9 @@ describe("AutomationPreview", () => {
     await waitFor(() =>
       expect(screen.getByText("Matches now: 12")).toBeTruthy(),
     );
-    await userEvent.click(screen.getByRole("button", { name: "7d" }));
+    await userEvent.click(screen.getByRole("button", { name: "7 days" }));
     await waitFor(() =>
-      expect(screen.getByText("Would fire: ~5 / 7d")).toBeTruthy(),
+      expect(screen.getByText("Would fire: about 5 in 7 days")).toBeTruthy(),
     );
     expect(bodies).toContainEqual({ window_days: 7 });
   });
@@ -329,7 +329,7 @@ describe("AutomationPreview", () => {
     );
     render(<AutomationPreview automationId="au-1" />);
     await waitFor(() =>
-      expect(screen.getByText("2 hidden — no access")).toBeTruthy(),
+      expect(screen.getByText("2 hidden (no access)")).toBeTruthy(),
     );
   });
 

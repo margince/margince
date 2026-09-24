@@ -248,9 +248,7 @@ describe("BuyerRoomScreen", () => {
       screen.getByLabelText("Your email address"),
       "laura@buyer.example",
     );
-    await user.click(
-      screen.getByRole("button", { name: /send me a new link/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /send new link/i }));
     await screen.findByText(/a new link is on its way/i);
     const request = sent.find(
       (s) => s.key === "POST /public/rooms/link-request",

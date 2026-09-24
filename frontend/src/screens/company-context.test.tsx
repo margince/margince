@@ -389,12 +389,12 @@ describe("CompanyContextCard refresh review", () => {
       // lookups rather than passing one of them.
       expect(
         screen.getByRole("checkbox", {
-          name: "Select the What do you sell? change",
+          name: "Select change to Products and services",
         }),
       ).toBeTruthy();
       expect(
         screen.getByRole("checkbox", {
-          name: "Select the Registered legal name change",
+          name: "Select change to Registered legal name",
         }),
       ).toBeTruthy();
 
@@ -431,14 +431,13 @@ describe("CompanyContextCard refresh review", () => {
 // with a 403 — and the card must still say what it is, because an absent card
 // would claim the installation has no company profile at all.
 describe("CompanyContextCard write posture", () => {
-  const READ_ONLY =
-    "Read-only. Your role cannot change the company profile.";
+  const READ_ONLY = "Read-only. Your role cannot change the company profile.";
   const SAVE = "Save company context";
   const REFRESH = "Refresh from website";
   // The row verb, named by the fact it changes rather than by the word "Edit":
   // seventeen rows offer seventeen of these buttons, and a suite that asked for
   // "Edit" would be asking which one.
-  const EDIT_OFFER = "Edit What do you sell?";
+  const EDIT_OFFER = "Edit Products and services";
 
   async function renderAs(principal: Me) {
     vi.stubGlobal("fetch", backend(principal));

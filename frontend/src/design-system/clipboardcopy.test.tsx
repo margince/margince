@@ -72,9 +72,7 @@ describe("useClipboardCopy", () => {
 
     await user.click(screen.getByRole("button", { name: "Copy link" }));
 
-    expect(
-      await screen.findByText(/this browser refused the clipboard/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
     expect(screen.getByText(LABELS.remedy)).toBeTruthy();
     // Still offering the verb: the button that did nothing must not go on to
     // claim it worked.
@@ -88,9 +86,7 @@ describe("useClipboardCopy", () => {
 
     await user.click(screen.getByRole("button", { name: "Copy link" }));
 
-    expect(
-      await screen.findByText(/this browser refused the clipboard/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
   });
 
@@ -113,16 +109,14 @@ describe("useClipboardCopy", () => {
     stubClipboard("refuses");
     renderProbe("the-link");
     await user.click(screen.getByRole("button", { name: "Copy link" }));
-    await screen.findByText(/this browser refused the clipboard/i);
+    await screen.findByText(/clipboard access denied/i);
 
     // The browser changes its mind mid-case; teardown unwinds both stubs.
     stubClipboard("accepts");
     await user.click(screen.getByRole("button", { name: "Copy link" }));
 
     expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
-    expect(
-      screen.queryByText(/this browser refused the clipboard/i),
-    ).toBeNull();
+    expect(screen.queryByText(/clipboard access denied/i)).toBeNull();
   });
 
   it("ignores a write a later press has already overtaken", async () => {
@@ -142,9 +136,7 @@ describe("useClipboardCopy", () => {
     deferred.writes[0].reject();
 
     await waitFor(() =>
-      expect(
-        screen.queryByText(/this browser refused the clipboard/i),
-      ).toBeNull(),
+      expect(screen.queryByText(/clipboard access denied/i)).toBeNull(),
     );
     expect(screen.getByRole("button", { name: "Copied" })).toBeTruthy();
     deferred.restore();

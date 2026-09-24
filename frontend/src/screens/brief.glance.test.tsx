@@ -46,8 +46,8 @@ describe("BriefGlance — the greeting follows the reader's own hour", () => {
     expect(greetingAt(17, "Ada")).toBe("Good afternoon, Ada.");
     expect(greetingAt(18, "Ada")).toBe("Good evening, Ada.");
     expect(greetingAt(21, "Ada")).toBe("Good evening, Ada.");
-    expect(greetingAt(22, "Ada")).toBe("Still at it, Ada.");
-    expect(greetingAt(4, "Ada")).toBe("Still at it, Ada.");
+    expect(greetingAt(22, "Ada")).toBe("Good evening, Ada.");
+    expect(greetingAt(4, "Ada")).toBe("Good evening, Ada.");
   });
 
   // The hour is known before the name is. Greeting nobody until /me answers
@@ -132,7 +132,7 @@ describe("BriefGlance — the weekly's sentence comes from the closed week", () 
 
   it("states the week's result and what it left behind", () => {
     const said = sentenceOf("weekly", CLOSED_WEEK);
-    expect(said).toContain("closed 2");
+    expect(said).toContain("2 deals won");
     expect(said).toContain("2 promises");
   });
 

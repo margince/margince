@@ -76,7 +76,7 @@ test("says which side the conversation is owed, not just when it moved", async (
 
   // A date alone reads the same whoever sent it. The direction is the fact.
   expect((await screen.findAllByText(/They wrote/)).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/We wrote/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Your team wrote/).length).toBeGreaterThan(0);
   expect(screen.getByText("No exchange yet")).not.toBeNull();
 });
 

@@ -964,7 +964,7 @@ describe("AgentRail", () => {
   it("names the record a summary is about while it is still being written", async () => {
     withRuns(RUN({ kind: "summarize", subject_label: "Acme" }));
     const { container } = render(ROUTE);
-    await settlesOnLine(container, "I'm summarising Acme.");
+    await settlesOnLine(container, "Summarizing Acme…");
   });
 
   // The name is the way to the record. A company's name goes to the company,
@@ -988,7 +988,7 @@ describe("AgentRail", () => {
       );
       const user = userEvent.setup();
       const { container } = render(ROUTE);
-      await settlesOnLine(container, `I'm summarising ${name}.`);
+      await settlesOnLine(container, `Summarizing ${name}…`);
       const link = container.querySelector(".arline a");
       expect(link?.textContent).toBe(name);
       expect(link?.getAttribute("href")).toBe(`${page}${id}`);
@@ -1016,7 +1016,7 @@ describe("AgentRail", () => {
       }),
     );
     const { container } = render(ROUTE);
-    await settlesOnLine(container, "I'm summarising the cutover review.");
+    await settlesOnLine(container, "Summarizing the cutover review…");
     expect(container.querySelector(".arline a")).toBeNull();
   });
 
@@ -1035,7 +1035,10 @@ describe("AgentRail", () => {
     );
     const user = userEvent.setup();
     const { container } = render(ROUTE);
-    await settlesOnLine(container, "I'm reading Brandt Automotive's history.");
+    await settlesOnLine(
+      container,
+      "Analyzing the history of Brandt Automotive…",
+    );
     await openPanel(user, container);
     const links = [...panel().querySelectorAll("a")].filter(
       (a) => a.getAttribute("href") === `#/companies/${id}`,
@@ -1214,7 +1217,7 @@ describe("AgentRail", () => {
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("ingest"),
     );
-    await settlesOnLine(container, "I'm reading the Acme website.");
+    await settlesOnLine(container, "Reading the Acme website…");
   });
 
   // A run past the lease its own source declared. The server derives it, so a

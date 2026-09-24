@@ -316,9 +316,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
     await userEvent.type(screen.getByRole("searchbox"), "acme");
 
-    expect(
-      await screen.findByText(/Records could not be searched/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Search failed/)).toBeTruthy();
     // Not the empty state: the list is not empty, and saying so would be the
     // false claim this replaces.
     expect(screen.queryByText("No matches.")).toBeNull();

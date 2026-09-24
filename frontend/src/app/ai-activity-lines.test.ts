@@ -179,7 +179,7 @@ describe("speak", () => {
       (key) => en[key],
     );
     expect(line).toEqual({
-      before: "My summary of ",
+      before: "Summary of ",
       subject: {
         name: "Acme",
         route: {
@@ -187,7 +187,7 @@ describe("speak", () => {
           id: "019f7e65-fbf7-7114-b114-40af4af63a77",
         },
       },
-      after: " is ready.",
+      after: " ready.",
     });
   });
 
@@ -199,14 +199,14 @@ describe("speak", () => {
       {
         kind: "summarize",
         state: "done",
-        subject_label: "I",
+        subject_label: "of",
         subject_type: "contact",
         subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
       },
       (key) => en[key],
     );
-    expect(line?.before).toBe("My summary of ");
-    expect(line?.subject?.name).toBe("I");
+    expect(line?.before).toBe("Summary of ");
+    expect(line?.subject?.name).toBe("of");
     expect(line?.subject?.route?.screen).toBe("contacts");
   });
 
@@ -239,7 +239,7 @@ describe("speak", () => {
       (key) => en[key],
     );
     expect(line?.subject).toEqual({ name: "Acme", route: null });
-    expect(line && spokenText(line)).toBe("My summary of Acme is ready.");
+    expect(line && spokenText(line)).toBe("Summary of Acme ready.");
   });
 
   it("renders the line for a state that has copy", () => {

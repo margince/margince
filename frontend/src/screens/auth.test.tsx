@@ -478,7 +478,9 @@ describe("AuthScreen reset deep link", () => {
     );
 
     expect(
-      await screen.findByText("This reset link is invalid, already used or expired."),
+      await screen.findByText(
+        "This reset link is invalid, already used or expired.",
+      ),
     ).toBeTruthy();
     expect(screen.getByText("Request a new link")).toBeTruthy();
   });
@@ -644,7 +646,7 @@ describe("AvailabilityScreen", () => {
     const onRetry = vi.fn();
     render(<AvailabilityScreen kind="connection" onRetry={onRetry} />);
     expect(screen.getByText("Margince could not be reached")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalled();
     cleanup();
 

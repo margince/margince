@@ -86,7 +86,7 @@ it("renders historical usage without inventing cost or duplicating the live allo
   });
   expect(await screen.findByText("enrich")).toBeTruthy();
   expect(screen.queryByText("850 of 1,000 tokens · 85%")).toBeNull();
-  expect(screen.queryByText("Est. cost")).toBeNull();
+  expect(screen.queryByText("Estimated cost")).toBeNull();
 });
 
 it("shows estimated cost when present independently of the current allowance band", async () => {
@@ -109,7 +109,7 @@ it("shows estimated cost when present independently of the current allowance ban
     ],
   });
   expect(await screen.findByText("enrich")).toBeTruthy();
-  expect(screen.getByText("Est. cost")).toBeTruthy();
+  expect(screen.getByText("Estimated cost")).toBeTruthy();
   expect(screen.getAllByText(/€1\.23/).length).toBeGreaterThan(0);
   // The caveat and the total are what the table says taken TOGETHER, so they
   // stand in the row's naming as its description rather than under the table as
@@ -254,9 +254,7 @@ it("withholds the spend from a principal without the diagnostics read, and asks 
   });
 
   expect(
-    await screen.findByText(
-      /only an operator can see what the AI runtime spent/i,
-    ),
+    await screen.findByText(/only an operator can see AI spend/i),
   ).toBeTruthy();
   expect(screen.getByText("Estimated AI spend and usage")).toBeTruthy();
   expect(seen.some((url) => url.includes("/ai/usage"))).toBe(false);

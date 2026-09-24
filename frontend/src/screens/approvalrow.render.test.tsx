@@ -132,9 +132,7 @@ describe("the offer to put an approved change back", () => {
     await userEvent.click(screen.getByRole("button", { name: "Reject" }));
 
     await waitFor(() => expect(rejectCalls(fetched)).toBe(1));
-    expect(
-      screen.queryByRole("button", { name: "Undo on record" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Undo on record" })).toBeNull();
   });
 
   // A step-up names no record, so there is no history to send anyone to. Same
@@ -157,9 +155,7 @@ describe("the offer to put an approved change back", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
     await waitFor(() => expect(approveCalls(fetched)).toBe(1));
-    expect(
-      screen.queryByRole("button", { name: "Undo on record" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Undo on record" })).toBeNull();
   });
 });
 
@@ -214,7 +210,7 @@ describe("whether the staged mail may go", () => {
     render(<ApprovalRow approval={heldDraft()} />);
 
     expect(
-      await screen.findByText(/asked not to receive marketing/i),
+      await screen.findByText(/recipient objected to marketing/i),
     ).toBeInTheDocument();
     // Asked the way the release will ask: against the thread the draft answers.
     const asked = fetched.mock.calls.find(([input]) =>

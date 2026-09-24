@@ -349,7 +349,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     const heading = screen.getByRole("heading", { level: 1 });
     const switcher = screen.getByRole("button", {
-      name: "Privacy & retention — change section",
+      name: "Privacy and retention: change section",
     });
     expect(heading.contains(switcher)).toBe(true);
     // The visible word is the entry, and it is part of the name (WCAG 2.5.3), so
@@ -369,7 +369,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     const dialog = screen.getByRole("dialog");
@@ -413,7 +413,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={named} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     const dialog = screen.getByRole("dialog");
@@ -433,7 +433,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     await user.click(
@@ -452,7 +452,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     await user.click(

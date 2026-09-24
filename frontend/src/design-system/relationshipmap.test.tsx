@@ -119,7 +119,7 @@ function draw(over: Partial<Parameters<typeof RelationshipMap>[0]> = {}) {
 test("names every node with its lane and its engagement", () => {
   draw();
   const philipp = screen.getByRole("button", {
-    name: /Philipp Königs, CFO, Economic buyer, Not approached/,
+    name: /Philipp Königs, CFO, Economic buyer, Not contacted/,
   });
   expect(philipp).not.toBeNull();
 });

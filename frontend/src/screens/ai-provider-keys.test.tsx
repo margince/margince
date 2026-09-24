@@ -145,7 +145,7 @@ describe("AiProviderKeysCard", () => {
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
     await user.type(
-      within(row).getByPlaceholderText(/paste the api key/i),
+      within(row).getByPlaceholderText(/paste api key/i),
       "  sk-openai-pasted  ",
     );
     await user.click(within(row).getByRole("button", { name: /save key/i }));
@@ -164,7 +164,7 @@ describe("AiProviderKeysCard", () => {
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
-    const input = within(row).getByPlaceholderText(/paste the api key/i);
+    const input = within(row).getByPlaceholderText(/paste api key/i);
     await user.type(input, "sk-openai");
     await user.click(within(row).getByRole("button", { name: /save key/i }));
 
@@ -194,7 +194,7 @@ describe("AiProviderKeysCard", () => {
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
     await user.type(
-      within(row).getByPlaceholderText(/paste the api key/i),
+      within(row).getByPlaceholderText(/paste api key/i),
       "sk-openai-secret",
     );
     await user.click(within(row).getByRole("button", { name: /save key/i }));
@@ -217,10 +217,7 @@ describe("AiProviderKeysCard", () => {
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
-    await user.type(
-      within(row).getByPlaceholderText(/paste the api key/i),
-      "   ",
-    );
+    await user.type(within(row).getByPlaceholderText(/paste api key/i), "   ");
     // Removing a credential is the Remove button; a blank write is a mistake the
     // server would refuse, so the button does not offer it.
     expect(
@@ -343,14 +340,12 @@ describe("AiProviderKeysCard", () => {
 
     const row = await openKey(user, "openai");
     await user.type(
-      within(row).getByPlaceholderText(/paste the api key/i),
+      within(row).getByPlaceholderText(/paste api key/i),
       "sk-typed-then-abandoned",
     );
     // Close, then open again: the field is empty, not holding what was typed.
     await user.click(within(row).getByRole("button", { name: /^add$/i }));
     await user.click(within(row).getByRole("button", { name: /^add$/i }));
-    expect(within(row).getByPlaceholderText(/paste the api key/i)).toHaveValue(
-      "",
-    );
+    expect(within(row).getByPlaceholderText(/paste api key/i)).toHaveValue("");
   });
 });

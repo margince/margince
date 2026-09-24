@@ -118,7 +118,7 @@ it("warns about urgent work beyond the loaded page using server urgency facts", 
       state="ready"
     />,
   );
-  expect(screen.getByText("3 more urgent items in the queue")).toBeTruthy();
+  expect(screen.getByText("3 more urgent items in the Worklist")).toBeTruthy();
 });
 
 it("shows dates and does not repeat the ranking comparator", () => {

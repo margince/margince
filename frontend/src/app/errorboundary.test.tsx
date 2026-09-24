@@ -18,7 +18,7 @@ import { AppErrorBoundary } from "./errorboundary";
 const THROWN = "cannot read properties of undefined";
 const SHELL = "the routed shell";
 const TITLE = "View stopped working";
-const RETRY = "Try again";
+const RETRY = "Retry";
 
 let broken = true;
 

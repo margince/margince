@@ -76,7 +76,7 @@ describe("weekSentence — what the closed week says about itself", () => {
   });
 
   it("leads with what the week closed", () => {
-    expect(say(week({ deals_won: 2 }))).toContain("closed 2");
+    expect(say(week({ deals_won: 2 }))).toContain("2 deals won");
   });
 
   // What the wins were WORTH belongs to the Won card's detail line, which gave
@@ -103,15 +103,15 @@ describe("weekSentence — what the closed week says about itself", () => {
   // routed leads must not outrank the deal that paid for the quarter.
   it("puts a single win ahead of a busier count of anything else", () => {
     const said = say(week({ deals_won: 1, deals_moved: 9, meetings_held: 12 }));
-    expect(said).toContain("closed 1");
+    expect(said).toMatch(/\b1 deals? won\b/);
     expect(said).not.toContain("9");
   });
 
   it("falls back to what moved, then to what was held", () => {
     expect(say(week({ deals_moved: 3, meetings_held: 12 }))).toContain(
-      "moved 3",
+      "3 deals moved",
     );
-    expect(say(week({ meetings_held: 12 }))).toContain("held 12");
+    expect(say(week({ meetings_held: 12 }))).toContain("12 meetings held");
   });
 
   // A promise the rep made and did not keep is the first debt, because they

@@ -156,11 +156,9 @@ describe("the data coverage section", () => {
       .click(await screen.findByRole("button", { name: "Data coverage" }));
     expect(await screen.findByText("Checked")).toBeTruthy();
     // The source column speaks the reader's words, not the wire's.
-    expect(screen.getByText("the mailbox")).toBeTruthy();
+    expect(screen.getByText("mailbox")).toBeTruthy();
     // An unconnected source is a decision, not a repair — its words say so.
-    expect(
-      screen.getByText("Not connected"),
-    ).toBeTruthy();
+    expect(screen.getByText("Not connected")).toBeTruthy();
     // Only the read source carries a date; the unread one shows absence.
     expect(screen.getByText("—")).toBeTruthy();
   });
@@ -1209,7 +1207,7 @@ describe("the report frame", () => {
     render(<AnalyticsScreen />);
     await openPipeline();
 
-    expect(await screen.findByText(/each converted into EUR/)).toBeTruthy();
+    expect(await screen.findByText(/converted to EUR/)).toBeTruthy();
   });
 
   // A server mid-upgrade sends a partial frame. Naming one of the two would be

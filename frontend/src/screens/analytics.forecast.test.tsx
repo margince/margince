@@ -217,7 +217,7 @@ describe("ForecastView", () => {
   it("says nobody has called rather than calling it zero", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-    expect(await screen.findByText(/Nobody has called/i)).toBeTruthy();
+    expect(await screen.findByText(/No call recorded/i)).toBeTruthy();
   });
 
   // An unpriced deal is real pipeline contributing zero money. A total shown
@@ -234,7 +234,7 @@ describe("ForecastView", () => {
   it("says nothing about pricing when every deal carries an amount", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-    await screen.findByText(/Nobody has called/i);
+    await screen.findByText(/No call recorded/i);
     expect(screen.queryByText(/of 12 deals/i)).toBeNull();
   });
 
@@ -278,7 +278,7 @@ describe("ForecastView", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /^Week$/i }));
     await user.click(
-      await screen.findByRole("button", { name: /Update the current call/i }),
+      await screen.findByRole("button", { name: /Update call/i }),
     );
     await user.click(screen.getByRole("button", { name: /Save call/i }));
 
@@ -293,7 +293,7 @@ describe("ForecastView", () => {
 
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: /Update the current call/i }),
+      await screen.findByRole("button", { name: /Update call/i }),
     );
     await user.type(
       await screen.findByLabelText(/Supporting note/i),
@@ -315,7 +315,7 @@ describe("ForecastView", () => {
 
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: /Update the current call/i }),
+      await screen.findByRole("button", { name: /Update call/i }),
     );
     await user.click(screen.getByRole("button", { name: /Save call/i }));
 
@@ -346,9 +346,7 @@ describe("ForecastView", () => {
     vi.stubGlobal("fetch", forecastStub({ assuranceStatus: 404 }));
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
-    expect(
-      await screen.findByText(/Nothing has been checked yet/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Nothing checked yet/)).toBeTruthy();
     // And NOT the broken-view state, which is what shipped.
     expect(screen.queryByText(/Couldn't load this view/)).toBeNull();
     expect(screen.queryByText(/not found/)).toBeNull();

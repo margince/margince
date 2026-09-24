@@ -72,14 +72,14 @@ it("distinguishes nobody named from not allowed to see", () => {
   );
   // Empty is a real answer about the account and says so, because a paying
   // customer with no recipient on file is a gap somebody should close.
-  expect(screen.getByText(/Nobody is named yet/)).toBeTruthy();
+  expect(screen.getByText(/No billing contacts yet/)).toBeTruthy();
   unmount();
 
   // Undefined means the server withheld the section. The panel does not
   // appear at all — claiming "nobody is named" here would be a statement this
   // reader has no standing to make.
   render(<BillingContactsPanel contacts={undefined} companyId={COMPANY} />);
-  expect(screen.queryByText(/Nobody is named yet/)).toBeNull();
+  expect(screen.queryByText(/No billing contacts yet/)).toBeNull();
   expect(screen.queryByText("Billing contacts")).toBeNull();
 });
 
@@ -97,7 +97,7 @@ it("lists one contact's several capacities in invoice order", () => {
   // A small customer's office manager is often all three, and each capacity is
   // its own row because each is its own edge the panel can change alone.
   expect(screen.getAllByText("Pat Okafor")).toHaveLength(3);
-  expect(screen.getByText("Approves")).toBeTruthy();
+  expect(screen.getByText("Approver")).toBeTruthy();
   expect(screen.getByText("Accounts payable")).toBeTruthy();
 });
 
@@ -124,7 +124,7 @@ it("names the companies a contact bills for", () => {
   );
   expect(screen.getByText("Billing roles")).toBeTruthy();
   expect(screen.getByText("Acme")).toBeTruthy();
-  expect(screen.getByText("Approves")).toBeTruthy();
+  expect(screen.getByText("Approver")).toBeTruthy();
 });
 
 // The three verbs write a RELATIONSHIP, so the panel asks for that grant and
@@ -216,9 +216,7 @@ it("offers no verbs at all on a company this reader cannot write", async () => {
   // entitled to. What goes is every way to change it.
   expect(screen.getByText("Pat Okafor")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Add contact" })).toBeNull();
-  expect(
-    screen.queryByRole("button", { name: /^Change the capacity/ }),
-  ).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Change role of/ })).toBeNull();
 });
 
 it("offers no verbs to a reader without the relationship grant", async () => {
@@ -237,11 +235,9 @@ it("offers no verbs to a reader without the relationship grant", async () => {
   await settled(seen);
   expect(screen.getByText("Pat Okafor")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Add contact" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Change role of/ })).toBeNull();
   expect(
-    screen.queryByRole("button", { name: /^Change the capacity/ }),
-  ).toBeNull();
-  expect(
-    screen.queryByRole("button", { name: /^Take Pat Okafor off/ }),
+    screen.queryByRole("button", { name: /^Remove Pat Okafor from/ }),
   ).toBeNull();
 });
 
@@ -271,11 +267,9 @@ it("offers naming and changing but not Remove to a seat that cannot delete", asy
   expect(
     await screen.findByRole("button", { name: "Add contact" }),
   ).toBeTruthy();
+  expect(screen.getByRole("button", { name: /^Change role of/ })).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: /^Change the capacity/ }),
-  ).toBeTruthy();
-  expect(
-    screen.queryByRole("button", { name: /^Take Pat Okafor off/ }),
+    screen.queryByRole("button", { name: /^Remove Pat Okafor from/ }),
   ).toBeNull();
 });
 
@@ -287,7 +281,7 @@ it("takes a billing contact off the account, pinned to its own version", async (
   // wire, so the verbs appear one tick after the first render.
   await userEvent.click(
     await screen.findByRole("button", {
-      name: "Take Pat Okafor off this account's invoices",
+      name: "Remove Pat Okafor from this company’s invoices",
     }),
   );
   const del = seen.find((s) => s.method === "DELETE");
@@ -309,7 +303,7 @@ it("pins a capacity change to the edge's own version", async () => {
   // wire, so the verbs appear one tick after the first render.
   await userEvent.click(
     await screen.findByRole("button", {
-      name: "Change the capacity Pat Okafor holds",
+      name: "Change role of Pat Okafor",
     }),
   );
   await userEvent.click(screen.getByRole("button", { name: "Save change" }));
@@ -323,7 +317,7 @@ it("narrows the version lookup to the one contact", async () => {
   render(<BillingContactsPanel contacts={[PAT]} companyId={COMPANY} />);
   await userEvent.click(
     await screen.findByRole("button", {
-      name: "Take Pat Okafor off this account's invoices",
+      name: "Remove Pat Okafor from this company’s invoices",
     }),
   );
   // `/relationships` answers one page at a time. Asked for a whole company's
@@ -350,7 +344,7 @@ it("refreshes both the Finance and the Contacts projections after a write", asyn
   const invalidate = vi.spyOn(qc, "invalidateQueries");
   await userEvent.click(
     await screen.findByRole("button", {
-      name: "Take Pat Okafor off this account's invoices",
+      name: "Remove Pat Okafor from this company’s invoices",
     }),
   );
   await waitFor(() => {
@@ -371,7 +365,7 @@ it("says so rather than writing unpinned when the edge cannot be read back", asy
   // wire, so the verbs appear one tick after the first render.
   await userEvent.click(
     await screen.findByRole("button", {
-      name: "Change the capacity Pat Okafor holds",
+      name: "Change role of Pat Okafor",
     }),
   );
   await userEvent.click(screen.getByRole("button", { name: "Save change" }));

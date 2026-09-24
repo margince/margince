@@ -83,7 +83,7 @@ describe("CaptureChip", () => {
       }),
     ]);
     const link = await screen.findByRole("link", {
-      name: "Importing mail history. 42% · 1,218 of 2,900 messages. Open the import",
+      name: "Importing mailbox history…. 42% · 1,218 of 2,900 messages. Open import",
     });
     expect(link.getAttribute("href")).toBe("#/settings/connections");
     expect(screen.getByRole("status").textContent).toContain(
