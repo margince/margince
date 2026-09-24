@@ -33,16 +33,22 @@ type LastBrief interface {
 type Service struct {
 	pool  *pgxpool.Pool
 	brief LastBrief
-	// troubled is OPTIONAL: unbound, the could-not-complete lane reports the
-	// approvals half alone rather than refusing the page. An installation that
-	// runs no automations has nothing to say there, and a lane that failed
-	// because a seam was not wired would look exactly like one with nothing in
-	// it.
+	// troubled is OPTIONAL: unbound, the could-not-complete lane is empty rather
+	// than the page refusing. An installation that runs no automations has
+	// nothing to say there, and a lane that failed because a seam was not wired
+	// would look exactly like one with nothing in it.
 	troubled TroubledRuns
 	// undo is OPTIONAL for the same reason: unbound, every done line reads
 	// not-undoable with a stated reason rather than the page refusing.
 	undo UndoJudge
-	now  func() time.Time
+	// sources is OPTIONAL for the same reason: unbound, the watching lane is
+	// empty rather than the page refusing. An installation that captures from
+	// nothing has no source health to report.
+	sources SourceHealth
+	// pending is OPTIONAL for the same reason: unbound, the needs-you lane is
+	// empty rather than the page refusing.
+	pending PendingDecisions
+	now     func() time.Time
 }
 
 // NewService binds the read.
@@ -125,8 +131,25 @@ func (s *Service) Read(
 			return err
 		}
 		receipt.CouldNotComplete = failed
-		if refused != nil {
-			receipt.SourcesUnavailable = append(receipt.SourcesUnavailable, *refused)
+		waiting, queueRefused, err := s.needsYou(ctx, limit)
+		if err != nil {
+			return err
+		}
+		receipt.NeedsYou = waiting
+		// The window does not bound this lane. A standing condition is true now
+		// or it is not, and a mailbox that broke before the reader last looked
+		// is exactly the one they most need told about.
+		watched, sourceRefused, err := s.watching(ctx, asOf)
+		if err != nil {
+			return err
+		}
+		receipt.Watching = watched
+		for _, unavailable := range []*crmcontracts.WorklistSourceUnavailable{
+			refused, queueRefused, sourceRefused,
+		} {
+			if unavailable != nil {
+				receipt.SourcesUnavailable = append(receipt.SourcesUnavailable, *unavailable)
+			}
 		}
 		// THE TOTALS COUNT WHAT IS DRAWN, and say so by being derived from the
 		// drawn lines rather than from the fetch behind them.
@@ -143,7 +166,9 @@ func (s *Service) Read(
 		// total worth having; until then the honest claim is the smaller one.
 		receipt.Totals = crmcontracts.MagicTotals{
 			Done:             len(receipt.Done),
-			CouldNotComplete: len(failed),
+			NeedsYou:         len(receipt.NeedsYou),
+			CouldNotComplete: len(receipt.CouldNotComplete),
+			Watching:         len(receipt.Watching),
 		}
 		return nil
 	})
