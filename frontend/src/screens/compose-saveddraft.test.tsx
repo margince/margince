@@ -7,7 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { messageText, writeMessage } from "../design-system/richtext-testing";
@@ -220,6 +220,59 @@ describe("a saved draft", () => {
     const put = calls(sent, "PUT /mail-drafts")[0];
     expect(put?.headers.get("If-Match")).toBeNull();
     expect(put?.body).toMatchObject({ body: "Half written before lunch" });
+  });
+
+  it("is named restored when the composer reopens still holding it", async () => {
+    const sent: Sent[] = stubRoutes({
+      "DELETE /mail-drafts/md-1": () => new Response(null, { status: 204 }),
+      "PUT /mail-drafts": () => {
+        const put = sent
+          .filter((call) => call.key === "PUT /mail-drafts")
+          .at(-1);
+        return jsonResponse({ ...SAVED, ...(put?.body as object), version: 1 });
+      },
+    });
+    function Page() {
+      const [open, setOpen] = useState(true);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Write again
+          </button>
+          <ComposeModal
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+            open={open}
+            onClose={() => setOpen(false)}
+          />
+        </>
+      );
+    }
+    render(<Page />);
+    await waitFor(() =>
+      expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
+    );
+    writeMessage("Body", "Half written before lunch");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save as draft" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    await userEvent.click(screen.getByRole("button", { name: "Write again" }));
+
+    expect(await screen.findByText("Saved draft restored")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Delete saved draft" }),
+    ).toBeTruthy();
+    expect(messageText("Body")).toBe("Half written before lunch");
+    // The save's toast stands down, so the delete's confirmation is not
+    // queued behind a Delete that has already been offered here.
+    expect(screen.queryByText("Draft saved")).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete saved draft" }),
+    );
+    expect(await screen.findByText("Saved draft deleted")).toBeTruthy();
   });
 
   it("is not written when the composer closes as it opened", async () => {

@@ -241,8 +241,18 @@ export function useSavedDraft(input: {
   const keyText = key.join(":");
   // Restored once per opening and per anchor, and never over words the reader
   // has already started: a read answering after the first keystroke leaves the
-  // text alone and only holds the version, so the next save replaces it.
+  // text alone and only holds the version, so the next save replaces it. A
+  // composer reopened still holding the saved words is a restored one too.
   const decided = useRef(new Set<string>());
+  // The "Draft saved" toast is sticky, and every later toast queues behind it.
+  // Reopening the composer puts the draft back on screen with its own Delete,
+  // so the toast has said its piece and would otherwise hold the queue.
+  const savedToastUp = useRef(false);
+  useEffect(() => {
+    if (!open || !savedToastUp.current) return;
+    savedToastUp.current = false;
+    toast.dismiss();
+  }, [open, toast]);
   const onRestore = input.onRestore;
   const typed = wroteSomething(fields, defaults);
   useEffect(() => {
@@ -255,10 +265,10 @@ export function useSavedDraft(input: {
     if (!read.isSuccess || read.isFetching || decided.current.has(keyText))
       return;
     decided.current.add(keyText);
-    if (read.data && !typed) {
-      onRestore(fieldsOfDraft(read.data));
-      setRestoredKey(keyText);
-    }
+    if (!read.data) return;
+    const saved = fieldsOfDraft(read.data);
+    if (!typed) onRestore(saved);
+    if (!typed || sameFields(fields, saved)) setRestoredKey(keyText);
   }, [
     open,
     read.isSuccess,
@@ -266,6 +276,7 @@ export function useSavedDraft(input: {
     read.data,
     keyText,
     typed,
+    fields,
     onRestore,
   ]);
 
@@ -288,10 +299,12 @@ export function useSavedDraft(input: {
     onSuccess: (saved, ask) => {
       queryClient.setQueryData(draftKey(ask.anchor), saved);
       setChangedElsewhere(false);
+      savedToastUp.current = true;
       toast.show(t("compose.savedDraftSaved"), {
         action: {
           label: t("compose.savedDraftDelete"),
-          onAct: () =>
+          onAct: () => {
+            savedToastUp.current = false;
             deleteFromToast({
               queryClient,
               toast,
@@ -299,7 +312,8 @@ export function useSavedDraft(input: {
               id: saved.id,
               t,
               onDeleted: onCleared,
-            }),
+            });
+          },
         },
       });
       onClose();
