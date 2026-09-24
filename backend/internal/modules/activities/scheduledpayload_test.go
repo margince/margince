@@ -105,6 +105,9 @@ var notFrozen = map[string]bool{
 	// standing over the predecessor would be found for a message nobody
 	// acknowledged.
 	"ResumingIntentID": true,
+	// The draft the message was composed in. The schedule discards it in the
+	// transaction that freezes the message, so a thawed id names nothing.
+	"MailDraftID": true,
 }
 
 // THE DROPPED FIELDS ARE ACTUALLY DROPPED. Without this the exemption above
@@ -117,6 +120,7 @@ func TestAFreezeCarriesNothingAboutTheCallThatMadeIt(t *testing.T) {
 		Subject:          "Your quote",
 		Body:             "As discussed.",
 		ResumingIntentID: ids.NewV7(),
+		MailDraftID:      ids.NewV7(),
 	}
 	out, err := freezePayload(in).thaw()
 	if err != nil {
@@ -126,6 +130,9 @@ func TestAFreezeCarriesNothingAboutTheCallThatMadeIt(t *testing.T) {
 		t.Error("a freeze carried the intent this send was resumed from — a message refused " +
 			"again would be held pointing at the message it replaced, and a decision taken " +
 			"about that predecessor would be found for one nobody acknowledged")
+	}
+	if !out.MailDraftID.IsZero() {
+		t.Error("a freeze carried the draft the message was composed in, which the schedule already discarded")
 	}
 }
 

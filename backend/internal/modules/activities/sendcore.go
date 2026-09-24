@@ -241,5 +241,8 @@ func (s *Store) SendPreparedTx(ctx context.Context, tx pgx.Tx, origin SendOrigin
 	if err := s.recordDraftOutcome(ctx, tx, p.in.DraftRef, p.in.Body); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	if err := discardComposedDraftTx(ctx, tx, p.in.MailDraftID, origin); err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	return sent, nil
 }

@@ -9829,6 +9829,36 @@ func (e MagicNotShownReason) Valid() bool {
 	}
 }
 
+// Defines values for MailDraftAnchorType.
+const (
+	MailDraftAnchorTypeActivity MailDraftAnchorType = "activity"
+	MailDraftAnchorTypeCompany  MailDraftAnchorType = "company"
+	MailDraftAnchorTypeContact  MailDraftAnchorType = "contact"
+	MailDraftAnchorTypeDeal     MailDraftAnchorType = "deal"
+	MailDraftAnchorTypeLead     MailDraftAnchorType = "lead"
+	MailDraftAnchorTypeProject  MailDraftAnchorType = "project"
+)
+
+// Valid indicates whether the value is a known member of the MailDraftAnchorType enum.
+func (e MailDraftAnchorType) Valid() bool {
+	switch e {
+	case MailDraftAnchorTypeActivity:
+		return true
+	case MailDraftAnchorTypeCompany:
+		return true
+	case MailDraftAnchorTypeContact:
+		return true
+	case MailDraftAnchorTypeDeal:
+		return true
+	case MailDraftAnchorTypeLead:
+		return true
+	case MailDraftAnchorTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeResponsePassportScopes.
 const (
 	MeResponsePassportScopesActWithApproval    MeResponsePassportScopes = "act_with_approval"
@@ -31709,6 +31739,47 @@ type MagicUndo struct {
 	Undoable bool    `json:"undoable"`
 }
 
+// MailDraft One rep's unsent message, readable by its author and nobody else. Not an activity.
+type MailDraft struct {
+	AnchorId openapi_types.UUID `json:"anchor_id"`
+
+	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
+	// record a new conversation starts from.
+	AnchorType MailDraftAnchorType `json:"anchor_type"`
+	Bcc        []string            `json:"bcc"`
+	Body       string              `json:"body"`
+	Cc         []string            `json:"cc"`
+	CreatedAt  time.Time           `json:"created_at"`
+	HtmlBody   *string             `json:"html_body,omitempty"`
+	Id         openapi_types.UUID  `json:"id"`
+	Subject    string              `json:"subject"`
+	To         []string            `json:"to"`
+	UpdatedAt  time.Time           `json:"updated_at"`
+	Version    int64               `json:"version"`
+}
+
+// MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
+// record a new conversation starts from.
+type MailDraftAnchorType string
+
+// MailDraftInput The composer's fields as they stand. Every content field is optional and an omitted
+// one saves as empty, because a draft is whatever the rep had typed so far.
+type MailDraftInput struct {
+	AnchorId openapi_types.UUID `json:"anchor_id"`
+
+	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
+	// record a new conversation starts from.
+	AnchorType MailDraftAnchorType `json:"anchor_type"`
+	Bcc        *[]string           `json:"bcc,omitempty"`
+	Body       *string             `json:"body,omitempty"`
+	Cc         *[]string           `json:"cc,omitempty"`
+
+	// HtmlBody The editor's markup beside the plain body, so reopening restores the formatting.
+	HtmlBody *string   `json:"html_body,omitempty"`
+	Subject  *string   `json:"subject,omitempty"`
+	To       *[]string `json:"to,omitempty"`
+}
+
 // MeResponse defines model for MeResponse.
 type MeResponse struct {
 	// AdminPasswordLink Whether THIS CALLER may issue member set-password links (`issueUserPasswordLink`) — true only when the caller holds `admin` AND the installation has no outbound-email channel AND a public base URL is configured. Deliberately a caller capability rather than a deployment-posture flag: `/me` answers every authenticated member, and a bare posture boolean would tell every rep whether the installation has email configured. Clients render the action on this, so an admin never sees a control that can only fail (ADR-0061 Amendment 1).
@@ -35803,6 +35874,10 @@ type SendCompanyEmailRequest struct {
 	// at 25 (a message about more records than that is about none of them).
 	Links []ActivityLinkInput `json:"links"`
 
+	// MailDraftId The caller's saved draft this message was composed in, discarded in the same
+	// transaction as the send or the scheduling, exactly as on `send_email`.
+	MailDraftId *openapi_types.UUID `json:"mail_draft_id,omitempty"`
+
 	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
 	// Marketing consent is purpose-specific: a grant for one topic authorizes that
 	// topic and no other.
@@ -35975,6 +36050,13 @@ type SendEmailRequest struct {
 	// receives the words. The sender's signature and the unsubscribe footer are
 	// appended to BOTH parts by the server, in each part's own syntax.
 	HtmlBody *string `json:"html_body,omitempty"`
+
+	// MailDraftId The caller's saved draft (`PUT /mail-drafts`) this message was composed in. The
+	// send, or the scheduling, discards it in the SAME transaction, so a message that
+	// left the composer leaves no draft behind; a refused send commits nothing and the
+	// draft stays. Only a human caller's own draft for this message's anchor is
+	// discarded — any other id is ignored — and omitting it discards nothing.
+	MailDraftId *openapi_types.UUID `json:"mail_draft_id,omitempty"`
 
 	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
 	// Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -44064,6 +44146,22 @@ type GetMagicParams struct {
 	Limit *int       `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// GetMailDraftParams defines parameters for GetMailDraft.
+type GetMailDraftParams struct {
+	AnchorType MailDraftAnchorType `form:"anchor_type" json:"anchor_type"`
+	AnchorId   openapi_types.UUID  `form:"anchor_id" json:"anchor_id"`
+}
+
+// SaveMailDraftParams defines parameters for SaveMailDraft.
+type SaveMailDraftParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // GetMyAiActivityParams defines parameters for GetMyAiActivity.
 type GetMyAiActivityParams struct {
 	// Kinds Restrict the arrays to these kinds of AI work, applied BEFORE the bounds.
@@ -46675,6 +46773,9 @@ type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
 
 // PromoteLeadJSONRequestBody defines body for PromoteLead for application/json ContentType.
 type PromoteLeadJSONRequestBody = PromoteLeadRequest
+
+// SaveMailDraftJSONRequestBody defines body for SaveMailDraft for application/json ContentType.
+type SaveMailDraftJSONRequestBody = MailDraftInput
 
 // SetMyAgentGrantJSONRequestBody defines body for SetMyAgentGrant for application/json ContentType.
 type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
@@ -58096,6 +58197,15 @@ type ServerInterface interface {
 	// What the machinery did, what it needs, what it could not finish, and what it is watching.
 	// (GET /magic)
 	GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams)
+	// The caller's own unsent message for one place the composer opens.
+	// (GET /mail-drafts)
+	GetMailDraft(w http.ResponseWriter, r *http.Request, params GetMailDraftParams)
+	// Save the caller's unsent message for one anchor, replacing what was saved before.
+	// (PUT /mail-drafts)
+	SaveMailDraft(w http.ResponseWriter, r *http.Request, params SaveMailDraftParams)
+	// Discard one of the caller's unsent messages.
+	// (DELETE /mail-drafts/{id})
+	DiscardMailDraft(w http.ResponseWriter, r *http.Request, id Id)
 	// Get the current authenticated principal (user or agent).
 	// (GET /me)
 	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
@@ -61357,6 +61467,24 @@ func (_ Unimplemented) ExplainLeadScore(w http.ResponseWriter, r *http.Request, 
 // What the machinery did, what it needs, what it could not finish, and what it is watching.
 // (GET /magic)
 func (_ Unimplemented) GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's own unsent message for one place the composer opens.
+// (GET /mail-drafts)
+func (_ Unimplemented) GetMailDraft(w http.ResponseWriter, r *http.Request, params GetMailDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Save the caller's unsent message for one anchor, replacing what was saved before.
+// (PUT /mail-drafts)
+func (_ Unimplemented) SaveMailDraft(w http.ResponseWriter, r *http.Request, params SaveMailDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Discard one of the caller's unsent messages.
+// (DELETE /mail-drafts/{id})
+func (_ Unimplemented) DiscardMailDraft(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -80329,6 +80457,137 @@ func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// GetMailDraft operation middleware
+func (siw *ServerInterfaceWrapper) GetMailDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMailDraftParams
+
+	// ------------- Required query parameter "anchor_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "anchor_type", r.URL.Query(), &params.AnchorType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "anchor_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "anchor_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "anchor_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "anchor_id", r.URL.Query(), &params.AnchorId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "anchor_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "anchor_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMailDraft(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveMailDraft operation middleware
+func (siw *ServerInterfaceWrapper) SaveMailDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SaveMailDraftParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMailDraft(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DiscardMailDraft operation middleware
+func (siw *ServerInterfaceWrapper) DiscardMailDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiscardMailDraft(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetCurrentPrincipal operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 
@@ -92151,6 +92410,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/magic", wrapper.GetMagic)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/mail-drafts", wrapper.GetMailDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/mail-drafts", wrapper.SaveMailDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/mail-drafts/{id}", wrapper.DiscardMailDraft)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetCurrentPrincipal)

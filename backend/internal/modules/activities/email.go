@@ -119,6 +119,10 @@ type SendEmailInput struct {
 	// close the learning signal that draft opened. Empty is the ordinary case:
 	// mail the human composed independently resolves no draft.
 	DraftRef string
+	// MailDraftID names the rep's saved draft this message was composed in,
+	// discarded in the transaction that sends or schedules it. Never frozen
+	// into a scheduled payload: the draft is gone once the schedule commits.
+	MailDraftID ids.UUID
 }
 
 // DeliveryStager records an outbound message for transmission. It is the

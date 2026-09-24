@@ -143,11 +143,11 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err := purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, reason, e.payloads); err != nil {
 			return err
 		}
-		// The messages nobody has sent yet. They hold the subject's address and
-		// the body before any activity exists, so nothing above this line can
-		// reach them — and a scheduled one would otherwise fire the morning
-		// after this erasure certified the data destroyed.
-		if err := redactScheduledSends(ctx, tx, reason, emails); err != nil {
+		// The messages nobody has sent yet — scheduled, or still a draft. They
+		// hold the subject's address and the body before any activity exists, so
+		// nothing above this line can reach them — and a scheduled one would
+		// otherwise fire the morning after this erasure certified the data destroyed.
+		if err := redactUnsentMessages(ctx, tx, reason, subject, emails); err != nil {
 			return err
 		}
 		// And the ones nobody has DECIDED yet, one step earlier in the same life

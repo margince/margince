@@ -4506,6 +4506,26 @@ public.list_member.list_member_unique UNIQUE (list_id, entity_type, entity_id)
 public.list_member_pkey CREATE UNIQUE INDEX list_member_pkey ON public.list_member USING btree (id)
 public.list_member_unique CREATE UNIQUE INDEX list_member_unique ON public.list_member USING btree (list_id, entity_type, entity_id)
 public.list_pkey CREATE UNIQUE INDEX list_pkey ON public.list USING btree (id)
+public.mail_draft acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.mail_draft.anchor_id uuid NOT NULL gen=- def=-
+public.mail_draft.anchor_type text NOT NULL gen=- def=-
+public.mail_draft.author_id uuid NOT NULL gen=- def=-
+public.mail_draft.bcc_addresses text[] NOT NULL gen=- def='{}'::text[]
+public.mail_draft.body text NOT NULL gen=- def=''::text
+public.mail_draft.cc_addresses text[] NOT NULL gen=- def='{}'::text[]
+public.mail_draft.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.mail_draft.html_body text gen=- def=-
+public.mail_draft.id uuid NOT NULL gen=- def=-
+public.mail_draft.mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
+public.mail_draft.mail_draft_author_id_fkey FOREIGN KEY (author_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.mail_draft.mail_draft_one_per_anchor UNIQUE (author_id, anchor_type, anchor_id)
+public.mail_draft.mail_draft_pkey PRIMARY KEY (id)
+public.mail_draft.subject text NOT NULL gen=- def=''::text
+public.mail_draft.to_addresses text[] NOT NULL gen=- def='{}'::text[]
+public.mail_draft.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.mail_draft.version bigint NOT NULL gen=- def=1
+public.mail_draft_one_per_anchor CREATE UNIQUE INDEX mail_draft_one_per_anchor ON public.mail_draft USING btree (author_id, anchor_type, anchor_id)
+public.mail_draft_pkey CREATE UNIQUE INDEX mail_draft_pkey ON public.mail_draft USING btree (id)
 public.maskable_field acl=margince_owner=arwdDxt/margince_owner,margince_app=r/margince_owner rls=false force=false
 public.maskable_field.field text NOT NULL gen=- def=-
 public.maskable_field.maskable_field_pkey PRIMARY KEY (object, field)
