@@ -66,6 +66,19 @@ var (
 	}
 )
 
+// recordFieldsUnkeyed is why create_record's and update_record's `fields`
+// declares no keys: they are the named record type's own, including the
+// workspace's custom fields, and the per-type vocabulary is published as a
+// document (recordfieldsdoc.go) rather than recited into every listing.
+//
+// A function rather than a shared map, so a spec one tool hands out cannot
+// write through to the other's.
+func recordFieldsUnkeyed() map[string]string {
+	return map[string]string{
+		"$.fields": "fields is keyed by the record type's own field names, custom fields included",
+	}
+}
+
 // contractFieldNames reports the wire field names a contract body accepts, in
 // a stable order. It reads json tags, so it sees exactly what the decoder
 // binds: the AdditionalProperties catch-all (`json:"-"`) is not a field name

@@ -69,6 +69,10 @@ const (
 	OwedVerdictInformsUs = "informs_us"
 )
 
+// owedVerdictField is the column a verdict is written to, and the name the
+// audit trail and a decline stamp give the question it answers.
+const owedVerdictField = "owed_verdict"
+
 // PriorOutbound is OUR own last message in a candidate's thread, as context.
 //
 // It is what makes a reply readable AS a reply. "Dienstag 14 Uhr würde bei uns
@@ -190,11 +194,13 @@ func scanCandidates(rows pgx.Rows) ([]OwedCandidate, error) {
 // The index behind the column accelerates "unjudged", which is the one part of
 // the question that IS a property of the row.
 //
-// IT ASKS EXACTLY THE QUESTION IT ALWAYS DID, and takes no ruleset. Re-judging
-// is OwedRestale's, in its own call under its own bound, because a single
-// widened predicate would put stale rows into competition with fresh mail for
-// this query's scan cap — see OwedRestale for what that costs.
-func (s *Store) OwedBacklog(ctx context.Context, asOf time.Time, limit, bodyLimit, priorBodyLimit int) ([]OwedCandidate, time.Time, error) {
+// It never re-judges a verdict: that is OwedRestale's, in its own call under its
+// own bound, because a single widened predicate would put stale rows into
+// competition with fresh mail for this query's scan cap — see OwedRestale for
+// what that costs. The ruleset it takes decides only which declines still
+// stand: a message every rung declined under another prompt is unjudged mail
+// like any other, and is offered to this one.
+func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time, limit, bodyLimit, priorBodyLimit int) ([]OwedCandidate, time.Time, error) {
 	// System principal only, like RepliedRequests beside it and for the same
 	// reason: this hands a customer's subject and body, and now our own earlier
 	// message, to a model. OwedRestale composes no row-scope clause of its own,
@@ -206,6 +212,9 @@ func (s *Store) OwedBacklog(ctx context.Context, asOf time.Time, limit, bodyLimi
 	}
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, time.Time{}, err
+	}
+	if ruleset == "" {
+		return nil, time.Time{}, fmt.Errorf("activities: reading the unjudged backlog needs the prompt its declines are judged against: %w", errRulesetUnnamed)
 	}
 	var out []OwedCandidate
 	var readAt time.Time
@@ -250,7 +259,8 @@ func (s *Store) OwedBacklog(ctx context.Context, asOf time.Time, limit, bodyLimi
 		// clause would have done that silently — the statutory-hold check
 		// beside it does not cover a confidentiality narrowing.
 		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own, nil, horizon,
-			`a.owed_verdict IS NULL AND a.owed_verdict_declined_at IS NULL AND a.audience = 'workspace' AND a.restricted_at IS NULL`)
+			`a.owed_verdict IS NULL AND `+owedVerdictDecline.offeredSQL("a.", fmt.Sprintf("$%d", arg(ruleset)))+
+				` AND a.audience = 'workspace' AND a.restricted_at IS NULL`)
 		if err != nil {
 			return err
 		}
@@ -310,7 +320,7 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 		return nil, time.Time{}, err
 	}
 	if ruleset == "" {
-		return nil, time.Time{}, fmt.Errorf("activities: reading stale verdicts needs the ruleset they are stale against")
+		return nil, time.Time{}, fmt.Errorf("activities: reading stale verdicts needs the prompt they are stale against: %w", errRulesetUnnamed)
 	}
 	var out []OwedCandidate
 	var readAt time.Time
@@ -331,13 +341,13 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 			 WHERE a.direction = 'inbound'
 			   AND a.kind IN ('email', 'message')
 			   AND a.owed_verdict IS NOT NULL
-			   AND `+owedRulesetStaleSQL("a.owed_verdict_ruleset", "$%[2]d")+`
+			   AND `+rulesetStaleSQL("a.owed_verdict_ruleset", "$%[2]d")+`
 			   AND a.archived_at IS NULL
 			   AND a.audience = 'workspace'
 			   AND a.restricted_at IS NULL
-			   -- Declined by every rung (MarkOwedVerdictDeclined): its verdict
-			   -- stands rather than being re-sent each time the rules move.
-			   AND a.owed_verdict_declined_at IS NULL
+			   -- Declined by every rung under THESE rules (MarkOwedVerdictDeclined):
+			   -- its verdict stands. A decline under older rules is re-offered.
+			   AND `+owedVerdictDecline.offeredSQL("a.", "$%[2]d")+`
 			   -- A human saying "this is not sales work" is the one rule from the
 			   -- waiting query this read keeps, and it is kept because it is a
 			   -- DECISION rather than a derivation. The clauses left behind are
@@ -365,15 +375,17 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 	return out, readAt, nil
 }
 
-// owedRulesetStaleSQL is "this row was judged under other rules", shared by the
+// rulesetStaleSQL is "this row was judged under other rules", shared by the
 // read that finds such rows and the write that replaces them — the two have to
 // agree on what stale means, or the sweep re-reads rows the write then refuses.
+// A declined question's prompt is compared the same way (declineStamp), so a
+// verdict and a decline go stale on one definition.
 //
 // TWO ARMS rather than IS DISTINCT FROM, which is not a btree search operator:
 // the NULL arm is index-served, and it is also the legacy population, judged
 // before the column existed. The shape CHECK guarantees an unjudged row carries
 // NULL here too, so callers pair this with their own test for a verdict.
-func owedRulesetStaleSQL(col, param string) string {
+func rulesetStaleSQL(col, param string) string {
 	return "(" + col + " IS NULL OR " + col + " <> " + param + ")"
 }
 
@@ -411,7 +423,7 @@ func (s *Store) SetOwedVerdict(ctx context.Context, id ids.UUID, verdict, rulese
 		return false, fmt.Errorf("activities: %q is not a verdict this column accepts", verdict)
 	}
 	if ruleset == "" {
-		return false, fmt.Errorf("activities: a verdict must name the rules that judged it")
+		return false, fmt.Errorf("activities: a verdict must name the prompt that judged it: %w", errRulesetUnnamed)
 	}
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return false, err
@@ -439,7 +451,7 @@ func (s *Store) SetOwedVerdict(ctx context.Context, id ids.UUID, verdict, rulese
 			UPDATE activity
 			   SET owed_verdict = $2, owed_verdict_at = now(), owed_verdict_ruleset = $3
 			WHERE id = $1
-			  AND `+owedRulesetStaleSQL("owed_verdict_ruleset", "$3")+`
+			  AND `+rulesetStaleSQL("owed_verdict_ruleset", "$3")+`
 			  AND (owed_verdict_at IS NULL OR owed_verdict_at < $4)
 			  AND archived_at IS NULL
 			  AND audience = 'workspace' AND restricted_at IS NULL`, id, verdict, ruleset, readAt)
@@ -469,8 +481,8 @@ func (s *Store) SetOwedVerdict(ctx context.Context, id ids.UUID, verdict, rulese
 		// write with no event — in transcriptread.go and in capture's settings
 		// writers.
 		if _, err := storekit.Audit(ctx, tx, "update", "activity", id,
-			map[string]any{"owed_verdict": priorVerdict, "owed_verdict_ruleset": priorRuleset},
-			map[string]any{"owed_verdict": verdict, "owed_verdict_ruleset": ruleset}); err != nil {
+			map[string]any{owedVerdictField: priorVerdict, "owed_verdict_ruleset": priorRuleset},
+			map[string]any{owedVerdictField: verdict, "owed_verdict_ruleset": ruleset}); err != nil {
 			return err
 		}
 		return nil

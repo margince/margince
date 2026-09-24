@@ -5,48 +5,139 @@ package compose
 
 // A handler waiting on a model answers a lane that did not answer as the lane
 // being down (modelfailure.Write), never as an opaque 500. The set it binds is
-// DERIVED: every handler in this package whose calls can reach a model call.
+// DERIVED: every handler in this package, or in any package beneath it, whose
+// calls can reach a model call. The packages are the go command's listing of
+// this tree, so a new subpackage is held the day it is added.
 //
-// "Can reach" is followed through this package's own functions and methods,
-// through an interface method to every type here that implements it, and out
-// of the package at the first call that takes a model request, takes a value
-// able to make one, or is a method of a type holding one. The subpackages are
-// not read; modelfailure's own doc says so.
+// "Can reach" is followed through the handler's own package's functions and
+// methods, through an interface method to every type there that implements it,
+// and out of the package at the first call that takes a model request, takes a
+// value able to make one, or is a method of a type holding one.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/types"
+	"path/filepath"
 	"reflect"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// modelHandlersThatDegrade are handlers that reach a model and deliberately
-// answer without it, so a model failure never becomes their error.
+// modelHandlersThatDegrade are the functions that catch a model call's error
+// and deliberately answer without the model, so the failure never reaches
+// modelfailure.Write. An entry names the function that drops the error — the
+// handler when it drops it inline, the helper when a helper does — so the two
+// shapes need the same entry and one helper several handlers share needs one.
 var modelHandlersThatDegrade = gatekit.Waive(map[string]string{
-	"(compose.Server).RegenerateOffer": "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
+	"(compose.Server).RegenerateOffer":               "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
+	"compose.AnswerCorpus":                           "a failed lane serves the retrieved passages with their citations as unreviewed, never as answered, and logs which lane failed",
+	"(*compose.onboardingCompanyAssistant).converse": "a clicked option was proved against the read before any model was asked, so it is recorded and confirmed in a server-written sentence; with no option clicked the error is returned",
+	"(compose/briefs.briefL2Ranker).reorder":         "the model re-rank is advisory over the deterministic composite order, which the brief keeps when the lane fails, with a warning logged",
+	"compose/company360.writeIntroRequest":           "the template floor states every fact of the ask honestly, so the reader gets a sendable message and generated_by says the floor wrote it",
+	"compose/companybrief.Answer":                    "the deterministic answer is the declared on_budget_exhausted degrade; generated_by tells the reader the floor answered",
+	"compose/companybrief.Write":                     "the deterministic card is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
+	"compose/companydossier.WriteDossier":            "the floor dossier is the declared degrade, labelled as the floor's, and the lane-failed flag stops it overwriting a written dossier",
+	"compose/companydossier.WriteGrowthFit":          "the floor's abstention is the declared degrade, labelled as the floor's, and the lane-failed flag stops it overwriting a real assessment",
+	"compose/contactbrief.Write":                     "the deterministic card is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
+	"(*compose/dealstatus.Service).write":            "the deterministic card is the declared degrade, and a warning names the lane that failed so the fallback is not silent",
+	"compose/meetingbrief.Write":                     "the floor brief is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
+	"compose/meetingbrief.WritePlan":                 "the floor plan is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
+	"compose/network.writeIntroNote":                 "the template floor states every fact of the introduction honestly, and generated_by says the floor wrote it",
 })
 
 func TestEveryHandlerReachingAModelAnswersThroughModelFailure(t *testing.T) {
-	reaching := 0
-	for _, unit := range modelHandlerUnits(typeCheckedComposeSources(t)) {
-		if !unit.reachesModel {
-			continue
-		}
-		reaching++
-		if unit.writesModelFailure || modelHandlersThatDegrade.Waived(t, unit.name) {
-			continue
-		}
-		t.Errorf("%s reaches a model but never answers through modelfailure.Write, so a provider that is down "+
-			"reaches its client as an opaque 500 — write its error through modelfailure.Write", unit.name)
+	got := modelFailureCensus(t, typeCheckedComposeTree(t))
+	for _, finding := range got.findings {
+		t.Error(finding)
 	}
 	modelHandlersThatDegrade.AssertAllMatched(t)
 	// The onboarding assistant, the cold start, the scrape, the site read and
-	// the corpus ask all reach a model; fewer means the scan lost its way.
-	if reaching < 5 {
-		t.Fatalf("found %d handlers reaching a model — the census is reading the wrong files", reaching)
+	// the corpus ask all reach a model in this package, and the briefs, the
+	// drafts and the dossier each in their own; fewer means the scan lost its way.
+	if got.reaching < 5 || got.packages < 10 {
+		t.Fatalf("found %d handlers in %d packages reaching a model — the census is reading the wrong files",
+			got.reaching, got.packages)
+	}
+}
+
+// modelFailureFindings is what the census found across the packages it read.
+type modelFailureFindings struct {
+	findings           []string
+	reaching, packages int
+}
+
+// modelFailureCensus names every handler, across checked, that reaches a model
+// and does not answer each model-reaching call's error through
+// modelfailure.Write, unless it is waived.
+func modelFailureCensus(t *testing.T, checked []*typeCheckedSources) modelFailureFindings {
+	t.Helper()
+	var got modelFailureFindings
+	for _, pkg := range checked {
+		before := got.reaching
+		for _, unit := range modelHandlerUnits(pkg) {
+			if !unit.reachesModel {
+				continue
+			}
+			got.reaching++
+			if unit.modelCalls == 0 && modelHandlersThatDegrade.Waived(t, unit.name) {
+				continue
+			}
+			unit.unanswered = slices.DeleteFunc(unit.unanswered, func(drop modelDropSite) bool {
+				return modelHandlersThatDegrade.Waived(t, drop.owner)
+			})
+			if !unit.answered() {
+				got.findings = append(got.findings, unit.finding())
+			}
+		}
+		if got.reaching > before {
+			got.packages++
+		}
+	}
+	return got
+}
+
+// A subpackage is read like the root: a handler planted in one, shaped the way
+// the subpackages are — a transport over a service holding the model lane — is
+// named by the census, and the same handler answering through modelfailure is
+// not.
+func TestTheModelFailureCensusNamesASubpackageHandler(t *testing.T) {
+	const source = `package planted
+import (
+	"net/http"
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	model "` + "MODEL" + `"
+)
+var _ = modelfailure.Write
+var _ = httperr.Write
+type Service struct{ lane model.Client }
+func (s *Service) Draft(r *http.Request) (string, error) {
+	res, err := s.lane.Complete(r.Context(), model.Request{})
+	return res.Text, err
+}
+type Handlers struct{ svc *Service }
+func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request) {
+	draft, err := h.svc.Draft(r)
+	if err != nil { WRITER(w, r, err); return }
+	httperr.WriteJSON(w, http.StatusOK, draft)
+}`
+	for writer, want := range map[string]int{"httperr.Write": 1, "modelfailure.Write": 0} {
+		t.Run(writer, func(t *testing.T) {
+			src := strings.NewReplacer("MODEL", modelPortPath, "WRITER", writer).Replace(source)
+			got := modelFailureCensus(t, []*typeCheckedSources{typeCheckPlantedAs(t, "compose/planted", src)})
+			if got.reaching != 1 || len(got.findings) != want {
+				t.Fatalf("reaching = %d, findings = %q; want 1 handler reaching a model and %d finding",
+					got.reaching, got.findings, want)
+			}
+			if want == 1 && !strings.HasPrefix(got.findings[0], "(compose/planted.Handlers).DraftEmail ") {
+				t.Errorf("the finding names %q, not the planted handler", got.findings[0])
+			}
+		})
 	}
 }
 
@@ -90,9 +181,9 @@ func h(w http.ResponseWriter, r *http.Request, a asker) { if err := a.ask(r); er
 			if found == nil {
 				t.Fatal("the census did not see the planted handler")
 			}
-			if found.reachesModel != tc.reaches || found.writesModelFailure != tc.answered {
+			if found.reachesModel != tc.reaches || found.answered() != tc.answered {
 				t.Errorf("reaches a model = %v, answers through modelfailure = %v; want %v, %v",
-					found.reachesModel, found.writesModelFailure, tc.reaches, tc.answered)
+					found.reachesModel, found.answered(), tc.reaches, tc.answered)
 			}
 		})
 	}
@@ -101,8 +192,40 @@ func h(w http.ResponseWriter, r *http.Request, a asker) { if err := a.ask(r); er
 // handlerUnit is one HTTP handler — a declared function or a function literal
 // taking a ResponseWriter and a Request — and what its calls can reach.
 type handlerUnit struct {
-	name                             string
-	reachesModel, writesModelFailure bool
+	name         string
+	reachesModel bool
+	// modelCalls counts the calls in the handler that can reach a model, and
+	// unanswered names each model call, here or in a helper beneath, whose
+	// error misses modelfailure.Write.
+	modelCalls int
+	unanswered []modelDropSite
+}
+
+// modelDropSite is where a model call's error is dropped, and the function —
+// the handler, or a helper beneath it — that drops it.
+type modelDropSite struct{ at, owner string }
+
+// answered reports whether the handler reaches a model and answers every
+// model-reaching call's error through modelfailure.Write. A handler that
+// reaches a model through no call the census can follow is not: its error
+// goes somewhere the census cannot see.
+func (u handlerUnit) answered() bool {
+	return u.modelCalls > 0 && len(u.unanswered) == 0
+}
+
+func (u handlerUnit) finding() string {
+	if u.modelCalls == 0 {
+		return u.name + " reaches a model through no call whose error the census can follow — " +
+			"call the model-reaching function directly and answer its error through modelfailure.Write"
+	}
+	sites := make([]string, 0, len(u.unanswered))
+	for _, drop := range u.unanswered {
+		sites = append(sites, drop.at+" (in "+drop.owner+")")
+	}
+	return u.name + " reaches a model, and the error of the call at " + strings.Join(sites, ", ") +
+		" never reaches modelfailure.Write, so a provider that is down reaches its client as an " +
+		"opaque 500 — write that error through modelfailure.Write, or name the function dropping it in " +
+		"modelHandlersThatDegrade with why its answer without the model is honest"
 }
 
 // modelHandlerUnits finds every handler in the checked package and follows its
@@ -118,9 +241,19 @@ func modelHandlerUnits(checked *typeCheckedSources) []handlerUnit {
 			}
 			unit := handlerUnit{name: name}
 			for _, callee := range graph.refs(body) {
-				got := graph.visit(callee)
-				unit.reachesModel = unit.reachesModel || got.model
-				unit.writesModelFailure = unit.writesModelFailure || got.failure
+				unit.reachesModel = unit.reachesModel || graph.visit(callee).model
+			}
+			var unanswered []modelDrop
+			unit.modelCalls, unanswered = graph.unansweredModelCalls(body, sig)
+			for _, drop := range unanswered {
+				at := checked.fset.Position(drop.at)
+				owner := name
+				if drop.owner != nil {
+					owner = drop.owner.FullName()
+				}
+				unit.unanswered = append(unit.unanswered, modelDropSite{
+					at: fmt.Sprintf("%s:%d", filepath.Base(at.Filename), at.Line), owner: owner,
+				})
 			}
 			units = append(units, unit)
 			return true
@@ -145,23 +278,36 @@ func handlerOf(checked *typeCheckedSources, n ast.Node) (*types.Signature, *ast.
 }
 
 // reach is what one function's calls can get to.
-type reach struct{ model, failure bool }
+type reach struct{ model bool }
 
 // modelCallGraph resolves the package's functions to their bodies and memoises
-// what each can reach.
+// what each can reach, which of their parameters reach modelfailure.Write, and
+// how each body's values flow.
 type modelCallGraph struct {
 	checked *typeCheckedSources
 	bodies  map[*types.Func]*ast.BlockStmt
 	memo    map[*types.Func]*reach
+	sinks   map[sinkKey]bool
+	flows   map[*ast.BlockStmt]*modelErrorFlow
+	// declared holds the bodies of declared functions, the only ones whose
+	// return has a caller the census can follow; swallowed memoises, per
+	// function, the model calls in it whose error goes nowhere.
+	declared  map[*ast.BlockStmt]bool
+	swallowed map[*types.Func][]modelDrop
 }
 
 func newModelCallGraph(checked *typeCheckedSources) *modelCallGraph {
-	g := &modelCallGraph{checked: checked, bodies: map[*types.Func]*ast.BlockStmt{}, memo: map[*types.Func]*reach{}}
+	g := &modelCallGraph{
+		checked: checked, bodies: map[*types.Func]*ast.BlockStmt{}, memo: map[*types.Func]*reach{},
+		sinks: map[sinkKey]bool{}, flows: map[*ast.BlockStmt]*modelErrorFlow{},
+		declared: map[*ast.BlockStmt]bool{}, swallowed: map[*types.Func][]modelDrop{},
+	}
 	for _, file := range checked.files {
 		for _, decl := range file.Decls {
 			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
 				if obj, ok := checked.info.Defs[fn.Name].(*types.Func); ok {
 					g.bodies[obj] = fn.Body
+					g.declared[fn.Body] = true
 				}
 			}
 		}
@@ -191,11 +337,7 @@ func (g *modelCallGraph) visit(f *types.Func) reach {
 	}
 	r := &reach{}
 	g.memo[f] = r
-	switch {
-	case isModelFailureWrite(f):
-		r.failure = true
-		return *r
-	case isModelSeed(f, g.checked.pkg):
+	if isModelSeed(f, g.checked.pkg) {
 		r.model = true
 		return *r
 	}
@@ -204,9 +346,7 @@ func (g *modelCallGraph) visit(f *types.Func) reach {
 		callees = append(callees, g.refs(body)...)
 	}
 	for _, callee := range callees {
-		got := g.visit(callee)
-		r.model = r.model || got.model
-		r.failure = r.failure || got.failure
+		r.model = r.model || g.visit(callee).model
 	}
 	return *r
 }

@@ -6,9 +6,9 @@
     "sites_best_stale": 45,
     "sites_absent": 0,
     "scenarios": 152,
-    "records": 136,
-    "bindings": 16,
-    "self_judged_records": 8
+    "records": 132,
+    "bindings": 15,
+    "self_judged_records": 4
   },
   "presets": [
     {
@@ -513,7 +513,7 @@
     },
     {
       "file": "gemini_cloud.yaml",
-      "profile": "eu_hosted",
+      "profile": "cloud_frontier",
       "tiers": [
         {
           "tier": "local_small",
@@ -544,7 +544,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -560,7 +560,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "current",
@@ -576,7 +576,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -592,7 +592,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -608,7 +608,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -624,7 +624,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -640,7 +640,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -656,7 +656,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -672,7 +672,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -688,7 +688,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -704,7 +704,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -720,7 +720,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -736,7 +736,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -752,7 +752,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -768,7 +768,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -784,7 +784,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -800,7 +800,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -816,7 +816,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -832,7 +832,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -848,7 +848,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -864,7 +864,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -880,7 +880,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -896,7 +896,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -912,7 +912,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -928,7 +928,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -944,7 +944,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -960,7 +960,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -976,7 +976,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -992,7 +992,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1013,7 +1013,7 @@
     },
     {
       "file": "openrouter_cloud.yaml",
-      "profile": "eu_hosted",
+      "profile": "cloud_frontier",
       "tiers": [
         {
           "tier": "local_small",
@@ -1044,7 +1044,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1060,7 +1060,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1076,7 +1076,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1092,7 +1092,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1108,7 +1108,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -1124,7 +1124,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1140,7 +1140,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1156,7 +1156,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1172,7 +1172,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1188,7 +1188,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1204,7 +1204,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1220,7 +1220,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1236,7 +1236,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1252,7 +1252,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1268,7 +1268,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1284,7 +1284,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1300,7 +1300,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -1316,7 +1316,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1332,7 +1332,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1348,7 +1348,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1364,7 +1364,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1380,7 +1380,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1396,7 +1396,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -1412,7 +1412,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1428,7 +1428,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1444,7 +1444,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -1460,7 +1460,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1476,7 +1476,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1492,7 +1492,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -2017,7 +2017,7 @@
       "binding": {
         "provider": "gemini",
         "model": "gemini-3.1-flash-lite",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 41,
       "sites_current": 2,
@@ -2037,7 +2037,7 @@
       "binding": {
         "provider": "gemini",
         "model": "gemini-3.1-pro-preview",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 6,
       "sites_current": 0,
@@ -2057,7 +2057,7 @@
       "binding": {
         "provider": "gemini",
         "model": "gemini-3.5-flash",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 13,
       "sites_current": 0,
@@ -2077,7 +2077,7 @@
       "binding": {
         "provider": "openai_compatible",
         "model": "anthropic/claude-haiku-4.5",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 1,
       "sites_current": 0,
@@ -2219,26 +2219,6 @@
         "model": "mistralai/mistral-large-2512",
         "env": "cloud_frontier"
       },
-      "sites": 5,
-      "sites_current": 0,
-      "sites_partial": 0,
-      "sites_stale": 5,
-      "runs": 30,
-      "passed": 27,
-      "reliability": 0.9,
-      "slowest_p95_ms": 4574,
-      "bands": {
-        "certified": 4,
-        "supported_degraded": 0,
-        "not_supported": 1
-      }
-    },
-    {
-      "binding": {
-        "provider": "openai_compatible",
-        "model": "mistralai/mistral-large-2512",
-        "env": "eu_hosted"
-      },
       "sites": 6,
       "sites_current": 0,
       "sites_partial": 0,
@@ -2257,7 +2237,7 @@
       "binding": {
         "provider": "openai_compatible",
         "model": "mistralai/mistral-medium-3-5",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 1,
       "sites_current": 0,
@@ -2297,7 +2277,7 @@
       "binding": {
         "provider": "openai_compatible",
         "model": "openai/gpt-oss-120b",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 39,
       "sites_current": 0,
@@ -2362,7 +2342,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -2449,7 +2429,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -2492,7 +2472,7 @@
         "binding": {
           "provider": "gemini",
           "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
+          "env": "cloud_frontier"
         },
         "band": "certified",
         "reliability": 1,
@@ -2520,7 +2500,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "current",
           "band": "certified",
@@ -2557,7 +2537,7 @@
         "binding": {
           "provider": "gemini",
           "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
+          "env": "cloud_frontier"
         },
         "band": "certified",
         "reliability": 1,
@@ -2585,7 +2565,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "current",
           "band": "certified",
@@ -2626,7 +2606,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -2683,29 +2663,6 @@
             "provider": "openai_compatible",
             "model": "mistralai/mistral-large-2512",
             "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": null,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 1856,
-          "latency_p95_ms": 1899,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
           },
           "state": "stale",
           "band": "certified",
@@ -2822,7 +2779,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -2839,8 +2796,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
           "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
             "grader_changed": [
               "a_message_that_is_both_is_labelled_commitment",
               "a_mixed_batch_keeps_every_label_on_its_own_message",
@@ -2871,8 +2835,15 @@
             "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
           "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
             "grader_changed": [
               "a_message_that_is_both_is_labelled_commitment",
               "a_mixed_batch_keeps_every_label_on_its_own_message",
@@ -2926,8 +2897,15 @@
             "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
           "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
             "grader_changed": [
               "a_message_that_is_both_is_labelled_commitment",
               "a_mixed_batch_keeps_every_label_on_its_own_message",
@@ -2941,7 +2919,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -2958,8 +2936,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
           "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
             "grader_changed": [
               "a_message_that_is_both_is_labelled_commitment",
               "a_mixed_batch_keeps_every_label_on_its_own_message",
@@ -3056,7 +3041,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -3179,7 +3164,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -3328,7 +3313,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -3489,7 +3474,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -3558,7 +3543,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -3620,29 +3605,6 @@
           },
           "state": "stale",
           "band": "certified",
-          "scenarios_measured": null,
-          "scenarios_total": 2,
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "latency_p50_ms": 1319,
-          "latency_p95_ms": 1966,
-          "reported": {
-            "accepted": 6,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "certified",
           "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
@@ -3697,7 +3659,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -3787,7 +3749,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -3804,8 +3766,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
           "stale_cause": {
+            "prompt_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ],
             "grader_changed": [
               "a_factual_question_about_connecting_is_answered",
               "a_progress_question_is_answered_as_status",
@@ -3836,8 +3805,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
           "stale_cause": {
+            "prompt_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ],
             "grader_changed": [
               "a_factual_question_about_connecting_is_answered",
               "a_progress_question_is_answered_as_status",
@@ -3891,8 +3867,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
           "stale_cause": {
+            "prompt_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ],
             "grader_changed": [
               "a_factual_question_about_connecting_is_answered",
               "a_progress_question_is_answered_as_status",
@@ -3906,7 +3889,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -3923,8 +3906,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
           "stale_cause": {
+            "prompt_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ],
             "grader_changed": [
               "a_factual_question_about_connecting_is_answered",
               "a_progress_question_is_answered_as_status",
@@ -3956,7 +3946,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -3973,8 +3963,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
             "grader_changed": [
               "bare_answer_corrects_the_field_the_wizard_asked_for"
             ]
@@ -4001,8 +3994,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
             "grader_changed": [
               "bare_answer_corrects_the_field_the_wizard_asked_for"
             ]
@@ -4052,8 +4048,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
             "grader_changed": [
               "bare_answer_corrects_the_field_the_wizard_asked_for"
             ]
@@ -4063,7 +4062,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -4080,8 +4079,11 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
             "grader_changed": [
               "bare_answer_corrects_the_field_the_wizard_asked_for"
             ]
@@ -4109,7 +4111,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4216,7 +4218,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4267,7 +4269,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -4284,8 +4286,12 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
           "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_confirms_and_changes_nothing_further",
+              "dossier_correction_the_administrator_asked_for"
+            ],
             "grader_changed": [
               "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
@@ -4313,8 +4319,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
           "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_confirms_and_changes_nothing_further",
+              "dossier_correction_the_administrator_asked_for"
+            ],
             "grader_changed": [
               "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
@@ -4365,8 +4375,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
           "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_confirms_and_changes_nothing_further",
+              "dossier_correction_the_administrator_asked_for"
+            ],
             "grader_changed": [
               "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
@@ -4377,7 +4391,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4394,8 +4408,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
           "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_confirms_and_changes_nothing_further",
+              "dossier_correction_the_administrator_asked_for"
+            ],
             "grader_changed": [
               "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
@@ -4444,7 +4462,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4484,7 +4502,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4548,7 +4566,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -4587,7 +4605,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4679,7 +4697,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4769,7 +4787,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4832,7 +4850,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4886,7 +4904,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4917,7 +4935,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4951,7 +4969,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5047,7 +5065,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5101,7 +5119,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -5132,7 +5150,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5166,7 +5184,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5262,7 +5280,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5316,7 +5334,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5333,8 +5351,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "first_message_from_an_intent_alone"
+            ],
             "grader_changed": [
               "first_message_from_an_intent_alone"
             ]
@@ -5344,7 +5365,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5378,7 +5399,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5429,8 +5450,11 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "first_message_from_an_intent_alone"
+            ],
             "grader_changed": [
               "first_message_from_an_intent_alone"
             ]
@@ -5457,8 +5481,11 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "first_message_from_an_intent_alone"
+            ],
             "grader_changed": [
               "first_message_from_an_intent_alone"
             ]
@@ -5468,7 +5495,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5485,8 +5512,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "first_message_from_an_intent_alone"
+            ],
             "grader_changed": [
               "first_message_from_an_intent_alone"
             ]
@@ -5524,7 +5554,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5553,7 +5583,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5590,7 +5620,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -5685,7 +5715,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -5747,7 +5777,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5777,7 +5807,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -5817,7 +5847,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -5917,7 +5947,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -5985,7 +6015,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -6002,8 +6032,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
           "stale_cause": {
+            "prompt_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask"
+            ],
             "grader_changed": [
               "german_thread_with_an_introduction_in_it",
               "reply_to_pricing_question",
@@ -6016,7 +6052,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6059,7 +6095,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6119,8 +6155,14 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
           "stale_cause": {
+            "prompt_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask"
+            ],
             "grader_changed": [
               "german_thread_with_an_introduction_in_it",
               "reply_to_pricing_question",
@@ -6173,8 +6215,14 @@
             "invalid": 10,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
           "stale_cause": {
+            "prompt_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask"
+            ],
             "grader_changed": [
               "german_thread_with_an_introduction_in_it",
               "reply_to_pricing_question",
@@ -6187,7 +6235,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6204,8 +6252,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
           "stale_cause": {
+            "prompt_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask"
+            ],
             "grader_changed": [
               "german_thread_with_an_introduction_in_it",
               "reply_to_pricing_question",
@@ -6236,7 +6290,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -6343,7 +6397,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -6393,7 +6447,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -6477,7 +6531,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6547,7 +6601,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6666,7 +6720,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6731,7 +6785,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -6824,7 +6878,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6883,7 +6937,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -6973,7 +7027,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -7026,7 +7080,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -7085,29 +7139,6 @@
             "provider": "openai_compatible",
             "model": "mistralai/mistral-large-2512",
             "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": null,
-          "scenarios_total": 2,
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "latency_p50_ms": 2384,
-          "latency_p95_ms": 3001,
-          "reported": {
-            "accepted": 6,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
           },
           "state": "stale",
           "band": "certified",
@@ -7206,7 +7237,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -7263,29 +7294,6 @@
             "provider": "openai_compatible",
             "model": "mistralai/mistral-large-2512",
             "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": null,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 2384,
-          "latency_p95_ms": 3001,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
           },
           "state": "stale",
           "band": "certified",
@@ -7397,7 +7405,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -7508,7 +7516,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -7578,7 +7586,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -7671,7 +7679,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -7740,7 +7748,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -7772,7 +7780,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "anthropic/claude-haiku-4.5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -7844,29 +7852,6 @@
             "provider": "openai_compatible",
             "model": "mistralai/mistral-large-2512",
             "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": null,
-          "scenarios_total": 5,
-          "runs": 12,
-          "passed": 9,
-          "reliability": 0.75,
-          "latency_p50_ms": 2481,
-          "latency_p95_ms": 4574,
-          "reported": {
-            "accepted": 6,
-            "wrong_answer": 3,
-            "invalid": 0,
-            "abstained": 3
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "eu_hosted"
           },
           "state": "stale",
           "band": "not_supported",
@@ -7981,7 +7966,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -8094,7 +8079,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -8162,7 +8147,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -8258,7 +8243,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -8348,7 +8333,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -8365,8 +8350,19 @@
             "invalid": 2,
             "abstained": 6
           },
-          "stale_reason": "9 scenarios it scored have changed since (how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
+          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conversation_about_something_else",
+              "a_correspondent_tries_to_settle_their_own_criteria",
+              "a_date_floated_is_not_a_date_agreed",
+              "a_settled_fact_no_criterion_asks_about",
+              "talking_about_signing_is_not_signing",
+              "the_buyer_names_who_signs",
+              "the_buyer_states_the_problem_in_their_own_words",
+              "the_rep_says_the_buyer_confirmed_it",
+              "warmth_with_no_facts_in_it"
+            ],
             "grader_changed": [
               "a_conversation_about_something_else",
               "a_correspondent_tries_to_settle_their_own_criteria",
@@ -8401,8 +8397,19 @@
             "invalid": 0,
             "abstained": 6
           },
-          "stale_reason": "9 scenarios it scored have changed since (how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
+          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conversation_about_something_else",
+              "a_correspondent_tries_to_settle_their_own_criteria",
+              "a_date_floated_is_not_a_date_agreed",
+              "a_settled_fact_no_criterion_asks_about",
+              "talking_about_signing_is_not_signing",
+              "the_buyer_names_who_signs",
+              "the_buyer_states_the_problem_in_their_own_words",
+              "the_rep_says_the_buyer_confirmed_it",
+              "warmth_with_no_facts_in_it"
+            ],
             "grader_changed": [
               "a_conversation_about_something_else",
               "a_correspondent_tries_to_settle_their_own_criteria",
@@ -8437,8 +8444,19 @@
             "invalid": 3,
             "abstained": 6
           },
-          "stale_reason": "9 scenarios it scored have changed since (how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
+          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conversation_about_something_else",
+              "a_correspondent_tries_to_settle_their_own_criteria",
+              "a_date_floated_is_not_a_date_agreed",
+              "a_settled_fact_no_criterion_asks_about",
+              "talking_about_signing_is_not_signing",
+              "the_buyer_names_who_signs",
+              "the_buyer_states_the_problem_in_their_own_words",
+              "the_rep_says_the_buyer_confirmed_it",
+              "warmth_with_no_facts_in_it"
+            ],
             "grader_changed": [
               "a_conversation_about_something_else",
               "a_correspondent_tries_to_settle_their_own_criteria",
@@ -8456,7 +8474,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -8473,8 +8491,19 @@
             "invalid": 1,
             "abstained": 6
           },
-          "stale_reason": "9 scenarios it scored have changed since (how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
+          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conversation_about_something_else",
+              "a_correspondent_tries_to_settle_their_own_criteria",
+              "a_date_floated_is_not_a_date_agreed",
+              "a_settled_fact_no_criterion_asks_about",
+              "talking_about_signing_is_not_signing",
+              "the_buyer_names_who_signs",
+              "the_buyer_states_the_problem_in_their_own_words",
+              "the_rep_says_the_buyer_confirmed_it",
+              "warmth_with_no_facts_in_it"
+            ],
             "grader_changed": [
               "a_conversation_about_something_else",
               "a_correspondent_tries_to_settle_their_own_criteria",
@@ -8517,7 +8546,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -8604,7 +8633,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -8658,7 +8687,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -8745,7 +8774,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -8794,7 +8823,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -8878,7 +8907,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -8931,7 +8960,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -9018,7 +9047,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -9067,7 +9096,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -9151,7 +9180,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -9199,7 +9228,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -9283,7 +9312,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -9339,7 +9368,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -9356,8 +9385,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
           "stale_cause": {
+            "prompt_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ],
             "grader_changed": [
               "a_meeting_that_promised_nothing",
               "a_speaker_tries_to_write_the_record",
@@ -9386,8 +9420,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
           "stale_cause": {
+            "prompt_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ],
             "grader_changed": [
               "a_meeting_that_promised_nothing",
               "a_speaker_tries_to_write_the_record",
@@ -9416,8 +9455,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
           "stale_cause": {
+            "prompt_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ],
             "grader_changed": [
               "a_meeting_that_promised_nothing",
               "a_speaker_tries_to_write_the_record",
@@ -9429,7 +9473,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -9446,8 +9490,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
           "stale_cause": {
+            "prompt_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ],
             "grader_changed": [
               "a_meeting_that_promised_nothing",
               "a_speaker_tries_to_write_the_record",
@@ -9477,7 +9526,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -9494,8 +9543,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "the_card_shows_a_line_in_the_built_voice"
+            ],
             "grader_changed": [
               "the_card_shows_a_line_in_the_built_voice"
             ]
@@ -9522,8 +9574,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "the_card_shows_a_line_in_the_built_voice"
+            ],
             "grader_changed": [
               "the_card_shows_a_line_in_the_built_voice"
             ]
@@ -9550,8 +9605,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "the_card_shows_a_line_in_the_built_voice"
+            ],
             "grader_changed": [
               "the_card_shows_a_line_in_the_built_voice"
             ]
@@ -9561,7 +9619,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -9578,8 +9636,11 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "the_card_shows_a_line_in_the_built_voice"
+            ],
             "grader_changed": [
               "the_card_shows_a_line_in_the_built_voice"
             ]
@@ -9607,7 +9668,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -9714,7 +9775,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -9760,7 +9821,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -9777,8 +9838,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "held_out_draft_sits_close_to_the_author"
+            ],
             "grader_changed": [
               "held_out_draft_sits_close_to_the_author"
             ]
@@ -9805,8 +9869,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "held_out_draft_sits_close_to_the_author"
+            ],
             "grader_changed": [
               "held_out_draft_sits_close_to_the_author"
             ]
@@ -9856,8 +9923,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "held_out_draft_sits_close_to_the_author"
+            ],
             "grader_changed": [
               "held_out_draft_sits_close_to_the_author"
             ]
@@ -9867,7 +9937,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -9884,8 +9954,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "held_out_draft_sits_close_to_the_author"
+            ],
             "grader_changed": [
               "held_out_draft_sits_close_to_the_author"
             ]
@@ -9913,7 +9986,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -9930,8 +10003,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "judge_ranks_the_author_rhythm_above_generic_ai_prose"
+            ],
             "grader_changed": [
               "judge_ranks_the_author_rhythm_above_generic_ai_prose"
             ]
@@ -9958,8 +10034,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "judge_ranks_the_author_rhythm_above_generic_ai_prose"
+            ],
             "grader_changed": [
               "judge_ranks_the_author_rhythm_above_generic_ai_prose"
             ]
@@ -10009,8 +10088,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "judge_ranks_the_author_rhythm_above_generic_ai_prose"
+            ],
             "grader_changed": [
               "judge_ranks_the_author_rhythm_above_generic_ai_prose"
             ]
@@ -10020,7 +10102,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -10037,8 +10119,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "judge_ranks_the_author_rhythm_above_generic_ai_prose"
+            ],
             "grader_changed": [
               "judge_ranks_the_author_rhythm_above_generic_ai_prose"
             ]
@@ -10076,7 +10161,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -10166,7 +10251,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -10229,7 +10314,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -10322,7 +10407,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -10385,7 +10470,7 @@
       "binding": {
         "provider": "openai_compatible",
         "model": "openai/gpt-oss-120b",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
     }

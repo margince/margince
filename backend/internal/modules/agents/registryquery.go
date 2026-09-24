@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"maps"
 	"sort"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -83,8 +84,9 @@ func (r *Registry) Spec(name string) (mcp.ToolSpec, bool) {
 // A json.RawMessage is a slice, so returning the registered one shares its
 // backing array: a caller that wrote through it would rewrite what tools/list
 // advertises and what results are validated against, for every later request,
-// from outside the lock. The schemas are the two members that can be written
-// through; everything else on a ToolSpec is copied by the assignment.
+// from outside the lock. Every reference-typed member — the two schemas, the
+// view declaration and the unkeyed-argument declaration — is copied below;
+// everything else on a ToolSpec is copied by the assignment.
 func copySchemas(spec mcp.ToolSpec) mcp.ToolSpec {
 	spec.InputSchema = bytes.Clone(spec.InputSchema)
 	spec.OutputSchema = bytes.Clone(spec.OutputSchema)
@@ -93,6 +95,9 @@ func copySchemas(spec mcp.ToolSpec) mcp.ToolSpec {
 	// what it registered could rewrite the URI a host is told to fetch — and the
 	// audience it is told to offer the tool to — for every later request, from
 	// outside the lock and after the boot-time gate that validated it.
+	// And the unkeyed-argument declaration, a map: shared, a caller writing
+	// through it could clear the one statement keeping a tool from an agent.
+	spec.UnkeyedArguments = maps.Clone(spec.UnkeyedArguments)
 	if spec.UI != nil {
 		ui := *spec.UI
 		ui.Visibility = append([]string(nil), ui.Visibility...)

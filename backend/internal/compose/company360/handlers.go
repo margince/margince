@@ -68,7 +68,7 @@ func (h Handlers) DraftIntroRequest(w http.ResponseWriter, r *http.Request, id c
 	draft, err := h.svc.IntroRequestDraft(r.Context(), h.introLane,
 		ids.From[ids.CompanyKind](ids.UUID(id)), req)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, draft)

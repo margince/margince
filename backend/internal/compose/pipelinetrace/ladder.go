@@ -68,13 +68,17 @@ type Assembler struct {
 	threads    ThreadReader
 	domains    DomainTriageReader
 	payloads   bool
+	// classifyRuleset is the digest of the classify prompt that ships, which
+	// decides whether a decline recorded on the message still stands.
+	classifyRuleset string
 }
 
 // NewAssembler wires the assembly. `payloads` is the deployment's
 // capture.trace_payloads posture, passed in rather than read here so one
-// composition root decides it for every surface.
-func NewAssembler(traces *capture.TraceStore, acts *activities.Store, payloads bool) *Assembler {
-	return &Assembler{traces: traces, activities: acts, payloads: payloads}
+// composition root decides it for every surface. `classifyRuleset` is the
+// classify prompt's digest, which compose owns and this package may not import.
+func NewAssembler(traces *capture.TraceStore, acts *activities.Store, classifyRuleset string, payloads bool) *Assembler {
+	return &Assembler{traces: traces, activities: acts, classifyRuleset: classifyRuleset, payloads: payloads}
 }
 
 // WithThreadReader supplies the signal extractor's rule, which compose owns.
@@ -242,7 +246,7 @@ func (a *Assembler) factsFor(ctx context.Context, activityID *ids.UUID) (facts a
 	if activityID == nil {
 		return activities.PipelineFacts{}, false, nil
 	}
-	facts, err = a.activities.ReadPipelineFacts(ctx, *activityID)
+	facts, err = a.activities.ReadPipelineFacts(ctx, *activityID, a.classifyRuleset)
 	if err != nil {
 		return activities.PipelineFacts{}, false, fmt.Errorf("pipelinetrace: reading the derived rungs: %w", err)
 	}

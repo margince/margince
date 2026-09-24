@@ -256,7 +256,8 @@ func (t createRecord) Spec() mcp.ToolSpec {
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
-		OutputSchema: schemaFor[createdRecord](),
+		UnkeyedArguments: recordFieldsUnkeyed(),
+		OutputSchema:     schemaFor[createdRecord](),
 	}
 }
 

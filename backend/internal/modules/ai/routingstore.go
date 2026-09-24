@@ -12,6 +12,8 @@ package ai
 
 import (
 	"context"
+	"net/url"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -110,37 +112,95 @@ func (cfg RoutingConfig) Revision() string { return cfg.bindingDigest() }
 
 // ReplaceIfVersion checks a supplied version under the same lock as the write.
 // An empty version preserves the existing unconditional API for legacy clients.
+//
+// A lane that arrives with no upstream preferences keeps the ones stored for
+// the same binding (see keepingStoredUpstream), read under that lock too, so a
+// concurrent write cannot hand it another binding's pins.
 func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig, expected string) (RoutingConfig, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
 		return RoutingConfig{}, err
 	}
-	// Unconfigured is a legitimate destination: an operator unbinding every
-	// model is choosing to run without AI, and it is the state a fresh
-	// installation is already in.
-	if !next.Unconfigured() {
-		var err error
-		if next, err = next.finalize(); err != nil {
-			return RoutingConfig{}, settings.InvalidValue{
-				Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error(),
-			}
-		}
-	}
+	var refused error
 	if err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		if err := settings.LockForWrite(ctx, tx, RoutingKey); err != nil {
 			return err
 		}
-		if expected != "" {
-			current, err := settings.GetTx(ctx, tx, Routing)
-			if err != nil {
-				return err
-			}
-			if current.Revision() != expected {
-				return apperrors.ErrVersionSkew
+		current, err := settings.GetTx(ctx, tx, Routing)
+		if err != nil {
+			return err
+		}
+		if expected != "" && current.Revision() != expected {
+			return apperrors.ErrVersionSkew
+		}
+		// Unconfigured is a legitimate destination: an operator unbinding every
+		// model is choosing to run without AI, and it is the state a fresh
+		// installation is already in.
+		if !next.Unconfigured() {
+			if next, err = next.keepingStoredUpstream(current).finalize(); err != nil {
+				refused = settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
+				return refused
 			}
 		}
+		// The residency bar is the entry's own validator (validateStoredRouting),
+		// which SetTx runs and answers with the same InvalidValue.
 		return settings.SetTx(ctx, s.settings, tx, Routing, next)
 	}); err != nil {
+		if refused != nil {
+			return RoutingConfig{}, refused
+		}
 		return RoutingConfig{}, err
 	}
 	return next, nil
+}
+
+// keepingStoredUpstream carries each stored lane's upstream preferences onto
+// the same lane of next when next declares none and binds the same provider,
+// host and model.
+//
+// The HTTP contract has no field for them, so every write through it arrives
+// with none: without this, reading the binding and writing it straight back
+// would drop an `only:` residency pin, and the broker would go back to serving
+// that lane from any region. Keyed on the model as well as the host because a
+// pin names hosts that serve ONE model — carried onto another, it would fail
+// every call for want of a host, with nothing in the form able to lift it.
+func (next RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingConfig {
+	carry := func(lane, kept ProviderConfig) ProviderConfig {
+		if lane.Routing == nil && kept.Routing != nil &&
+			lane.Provider == kept.Provider && sameEndpoint(lane.BaseURL, kept.BaseURL) && lane.Model == kept.Model {
+			lane.Routing = kept.Routing
+		}
+		return lane
+	}
+	tiers := make(map[Tier]ProviderConfig, len(next.Tiers))
+	for tier, binding := range next.Tiers {
+		tiers[tier] = carry(binding, stored.Tiers[tier])
+	}
+	next.Tiers = tiers
+	next.Embeddings.ProviderConfig = carry(next.Embeddings.ProviderConfig, stored.Embeddings.ProviderConfig)
+	return next
+}
+
+// sameEndpoint reports whether two base URLs name one endpoint, ignoring the
+// spellings a form or a hand edit varies without meaning to: surrounding
+// space, a trailing slash, and the case of scheme and host (URLs are
+// case-insensitive in both). Compared byte for byte, re-saving
+// "https://openrouter.ai/api/" over a stored "https://openrouter.ai/api" would
+// silently drop the lane's residency pin.
+func sameEndpoint(a, b string) bool {
+	return canonicalEndpoint(a) == canonicalEndpoint(b)
+}
+
+func canonicalEndpoint(raw string) string {
+	raw = strings.TrimSpace(raw)
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		// Unparseable is compared as written: it cannot be dialled, so the
+		// only question left is whether it is literally the stored value.
+		return raw
+	}
+	parsed.Scheme = strings.ToLower(parsed.Scheme)
+	parsed.Host = strings.ToLower(parsed.Host)
+	parsed.Path = strings.TrimRight(parsed.Path, "/")
+	parsed.RawPath = strings.TrimRight(parsed.RawPath, "/")
+	return parsed.String()
 }

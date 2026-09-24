@@ -61,12 +61,12 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
      BASE_URL=https://openrouter.ai/api
    ```
 
-   `PROFILE=` names the environment class a record is filed under (`eu_hosted`,
-   the default, `sovereign` or `cloud_frontier`). It is enforced, not a label: a
-   cloud vendor under `sovereign` is refused rather than run. Under `ROUTING=` it
-   is **ignored** and the profile is the config file's own — the profile is part
-   of a record's identity and part of what the binding is validated against, so
-   it has to come from the file that named the models.
+   `PROFILE=` names the environment class a record is filed under
+   (`cloud_frontier`, the default, `eu_hosted` or `sovereign`). It is enforced:
+   `sovereign` refuses a cloud vendor, and `eu_hosted` a broker candidate that
+   `UPSTREAM=` does not pin to EU-region hosts (`{"only":["mistral/eu"]}`).
+   Under `ROUTING=` it is **ignored**: a record's profile is part of its
+   identity, so it comes from the file that named the models.
 
 2. The provider's **BYOK key in the environment** — e.g. `GEMINI_API_KEY`,
    `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY` (the

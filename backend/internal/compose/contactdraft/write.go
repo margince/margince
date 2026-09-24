@@ -9,7 +9,6 @@ package contactdraft
 
 import (
 	"context"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
@@ -46,7 +45,7 @@ The "due" field is a machine timestamp for you to read, never text to copy. Neve
 Where the shared rules let you either write around a missing detail or ask for it, prefer writing around it here: this message opens with an ask of its own, and a second question dilutes it.
 rewrite_of, when present, is the draft already on the salesperson's screen, and the ask is to REWRITE it rather than to write again. Keep what it says — its subject, its one ask, the detail it carries — and change only what the ask names. A different message is the one answer that is always wrong, because the salesperson has already read and often edited this one. Everything below still binds: the greeting rule, the sign-off rule, and the refusal to state anything the summary does not support, so a claim the old draft invented does not survive the rewrite.
 The reasoning array is where an explanation of the draft goes. It is the ONLY place; the body carries none.
-Each reasoning entry names ONE input you actually used, in the reader's words, short enough to read as a chip ("pricing concern", "asked about onboarding"). Give entity_type and entity_id when the input was a record the summary identified; omit both when it was the caller's own intent.
+Each reasoning entry names ONE input you actually used, in the reader's words, short enough to read as a chip ("pricing concern", "asked about onboarding"). Give entity_type and entity_id when the input was a record the summary identified; set both to null when it was the caller's own intent.
 sections_omitted names what the reader of this summary was not allowed to see. Say nothing about those subjects rather than inferring around the gap.
 If the summary gives you nothing but the recipient, write a short honest opener and return an empty reasoning array. Do not invent a reason.`
 
@@ -66,49 +65,18 @@ func draftSystemFor(fence promptfence.Fence, voiced bool) string {
 	return system + "\n" + fence.Rule("contact summary")
 }
 
-// draftSchema is the response shape the validated lane enforces.
-const draftSchema = `{
-  "type": "object",
-  "required": ["subject", "body"],
-  "properties": {
-    "subject": {"type": "string"},
-    "body": {"type": "string"},
-    "reasoning": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["kind", "label"],
-        "properties": {
-          "kind": {"type": "string"},
-          "label": {"type": "string"},
-          "entity_type": {"type": "string"},
-          "entity_id": {"type": "string"}
-        }
-      }
-    }
-  }
-}`
-
-// parseKind narrows the model's string to the contract's closed vocabulary. An
-// unknown kind is dropped rather than passed through: the composer groups
-// reasons by kind, and one it does not know would render as an unlabelled chip.
+// reasonKinds is the contract's closed vocabulary as this surface serves it.
 //
 // `dossier` is absent on purpose. It names a company's recorded facts, and this
-// draft never reads them — accepting it would let the model label a contact's
+// draft never reads them — admitting it would let the model label a contact's
 // claim as something the company published.
-func parseKind(raw string) (crmcontracts.AccountDraftReasonKind, bool) {
-	kind := crmcontracts.AccountDraftReasonKind(strings.TrimSpace(raw))
-	switch kind {
-	case crmcontracts.AccountDraftReasonKindIntent,
-		crmcontracts.AccountDraftReasonKindRecipient,
-		crmcontracts.AccountDraftReasonKindRelationship,
-		crmcontracts.AccountDraftReasonKindDeal,
-		crmcontracts.AccountDraftReasonKindCommitment,
-		crmcontracts.AccountDraftReasonKindConversation:
-		return kind, true
-	default:
-		return "", false
-	}
+var reasonKinds = []crmcontracts.AccountDraftReasonKind{
+	crmcontracts.AccountDraftReasonKindIntent,
+	crmcontracts.AccountDraftReasonKindRecipient,
+	crmcontracts.AccountDraftReasonKindRelationship,
+	crmcontracts.AccountDraftReasonKindDeal,
+	crmcontracts.AccountDraftReasonKindCommitment,
+	crmcontracts.AccountDraftReasonKindConversation,
 }
 
 // knownRecords maps every id this draft's own input carried to the KIND that id
@@ -171,8 +139,7 @@ func surface(in Input) draftcore.Surface {
 	return draftcore.Surface{
 		Name:   "contact draft",
 		System: draftSystemFor,
-		Schema: draftSchema,
-		Kind:   parseKind,
+		Kinds:  reasonKinds,
 		// Only the caller's own intent is honest with nothing cited: they typed
 		// it. An uncited "deal" or "conversation" is a claim about a record with
 		// no record behind it.

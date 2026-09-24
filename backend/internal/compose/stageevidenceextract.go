@@ -203,7 +203,7 @@ func stageEvidenceRequest(
 		System:         stageEvidenceSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: stageEvidenceSchema(),
+		ResponseSchema: stageEvidenceSchema(criteria, spans),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -211,19 +211,34 @@ func stageEvidenceRequest(
 // stageEvidenceSchema is the generation-time shape guardrail. It names no
 // stage and no author side, so the shape itself refuses the reply this site
 // must never accept.
-func stageEvidenceSchema() json.RawMessage {
+//
+// The two ids a claim cites are closed to THIS call's own: the criterion keys
+// it listed and the span ids it supplied. stageEvidenceValid refuses anything
+// else afterwards, but a decoder that can only write an offered id cannot
+// spend a whole reply on a record this call never read. The lines are
+// integers because a claim cites line 3, never line 2.5, and the reader
+// decodes them into ints.
+func stageEvidenceSchema(criteria []stageEvidenceCriterion, spans []stageEvidenceSpan) json.RawMessage {
+	keys := make([]string, 0, len(criteria))
+	for _, c := range criteria {
+		keys = append(keys, c.Key)
+	}
+	sourceIDs := make([]string, 0, len(spans))
+	for _, span := range spans {
+		sourceIDs = append(sourceIDs, span.SourceID)
+	}
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			"claims": schema.Array(schema.Object(
 				map[string]schema.Node{
-					"criterion_key": schema.String(),
-					"source_id":     schema.String(),
-					"source_lines":  schema.Array(schema.Number()),
+					"criterion_key": schema.Enum(keys...),
+					"source_id":     schema.Enum(sourceIDs...),
+					"source_lines":  schema.Array(schema.Integer()),
 					"quote":         schema.String(),
 					// met is a STRING enum rather than a boolean: the shape must
 					// refuse a third state, and "the text says neither" is
 					// expressed by omitting the criterion, not by a value.
-					"met":                   schema.Enum("true", "false"),
+					"met":                   schema.Enum(stageEvidenceMet, stageEvidenceNotMet),
 					"commitment":            schema.Enum(stageEvidenceCommitments...),
 					extractionConfidenceKey: schema.Number(),
 				},

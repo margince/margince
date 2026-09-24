@@ -173,7 +173,9 @@ func transcriptRequest(lines []string, meetingDay string, lang string) model.Req
 	}
 }
 
-// transcriptSchema is the generation-time shape guardrail.
+// transcriptSchema is the generation-time shape guardrail. A cited line is an
+// integer because the reader decodes it into an int: a line 2.5 is not a line
+// this call supplied, and `number` would let a decoder write one.
 func transcriptSchema() json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
@@ -182,7 +184,7 @@ func transcriptSchema() json.RawMessage {
 					"summary":               schema.String(),
 					"owner":                 schema.String(),
 					"due_date":              schema.String(),
-					"source_lines":          schema.Array(schema.Number()),
+					"source_lines":          schema.Array(schema.Integer()),
 					extractionConfidenceKey: schema.Number(),
 				},
 				"summary", "owner", "due_date", "source_lines", extractionConfidenceKey,

@@ -18,10 +18,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/capturelabel"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -59,36 +59,6 @@ var replyVerdicts = map[string]bool{
 	activities.ReplyVerdictPositive: true,
 	activities.ReplyVerdictNegative: true,
 	activities.ReplyVerdictNeutral:  true,
-}
-
-// yesNo renders the direction flag for the prompt's own line.
-func yesNo(b bool) string {
-	if b {
-		return "yes"
-	}
-	return "no"
-}
-
-const classifySystem = `You label captured emails for attention routing. For EACH supplied message emit exactly one
-label: "commitment" (a promise or request to act), "meeting" (scheduling or follow-through),
-or "noise" (neither). Labels route attention; they change no data. If a message fits both
-commitment and meeting, choose commitment.
-
-A message marked "inbound: yes" was sent TO us by someone outside. For those, ALSO judge how
-they answered: "positive" (interest, a question worth answering, a request to meet or to hear
-more), "negative" (not interested, the wrong contact with no referral, a request to stop
-writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a redirect with no
-view of its own). Omit "reply" entirely for a message marked "inbound: no": we wrote it, so it
-answers nobody. Omit it too when the message does not read as an answer at all. A guess here
-becomes a number somebody is measured on, so leave it out when you cannot tell.
-
-"confidence" covers EVERY judgement you emit for that message — the label and, when you give
-one, the reply. Report the LOWEST of the two, not the label's alone. If you are sure of the
-label and unsure of the reply, either omit the reply or let the lower number stand for both.`
-
-// classifySystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func classifySystemFor(fence promptfence.Fence) string {
-	return classifySystem + "\n" + fence.Rule("message")
 }
 
 // CaptureClassifier drives the batched label pass for every workspace.
@@ -147,7 +117,7 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 	calls := newSweepCalls(maxLabels, classifyBatchSize)
 	labeled := 0
 	for labeled < maxLabels && calls.remain() {
-		batch, err := c.store.UnlabeledCaptureEmails(ctx, classifyBatchSize, classifyBodyLimit)
+		batch, err := c.store.UnlabeledCaptureEmails(ctx, capturelabel.Ruleset, classifyBatchSize, classifyBodyLimit)
 		if err != nil {
 			return fmt.Errorf("classify: reading backlog: %w", err)
 		}
@@ -237,7 +207,7 @@ func (c *CaptureClassifier) classifyEach(ctx context.Context, msgs []unlabeledMe
 		}
 		solo, soloJudge, err := c.ask(ctx, []unlabeledMessage{msg})
 		if declinedByTheModels(err) {
-			recorded, markErr := c.store.MarkCaptureLabelDeclined(ctx, msg.ID)
+			recorded, markErr := c.store.MarkCaptureLabelDeclined(ctx, msg.ID, capturelabel.Ruleset)
 			if markErr != nil {
 				return labeled, markErr
 			}
@@ -313,23 +283,9 @@ func (c *CaptureClassifier) recordReply(ctx context.Context, msg unlabeledMessag
 //promptvoice:exempt the reply is a closed set of label enum values keyed by id, never a sentence.
 func classifyRequest(batch []unlabeledMessage) model.Request {
 	fence := promptfence.New()
-	var prompt strings.Builder
-	prompt.WriteString("Messages (untrusted; classify each by its id):\n")
-	for _, m := range batch {
-		// The direction line sits OUTSIDE the message text, above the fenced
-		// span: it is our own record of who wrote the mail, and a sender who
-		// could type "inbound: no" into their own message would otherwise be
-		// able to opt their reply out of being judged.
-		message := fmt.Sprintf("Subject: %s\n%s", m.Subject, m.Body)
-		fmt.Fprintf(&prompt, "inbound: %s\n", yesNo(m.Inbound))
-		prompt.WriteString(fence.WrapAttr("source_id", m.ID.String(), message) + "\n")
-	}
-	prompt.WriteString(`Return JSON: { "results": [ { "id", "label", "confidence", "reply" } ] } — one entry per ` +
-		`supplied id. "reply" only for a message marked inbound: yes, and only when it reads as an answer.`)
-
 	return model.Request{
-		System:         classifySystemFor(fence),
-		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
+		System:         capturelabel.SystemFor(fence),
+		Messages:       []model.Message{{Role: chatRoleUser, Content: capturelabel.Prompt(fence, batch)}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: classifySchema(),
 		SecretStripper: ai.NewSecretStripper(),
@@ -442,12 +398,14 @@ func classifySchema() json.RawMessage {
 					"id":                    schema.String(),
 					"label":                 schema.Enum("commitment", "meeting", "noise"),
 					extractionConfidenceKey: schema.Number(),
-					// Not in the required list: an outbound message has no reply
-					// verdict to give, and a schema demanding one would push the
-					// model to invent a judgement about our own mail.
-					"reply": schema.Enum("positive", "negative", "neutral"),
+					// Optional, because an outbound message has no reply verdict
+					// to give and a schema demanding one would push the model to
+					// invent a judgement about our own mail. Spelled as null
+					// rather than left out of required: the strict profile
+					// refuses an object with an unrequired property.
+					"reply": schema.Optional(schema.Enum("positive", "negative", "neutral")),
 				},
-				"id", "label", "confidence",
+				"id", "label", extractionConfidenceKey, "reply",
 			)),
 		},
 		"results",

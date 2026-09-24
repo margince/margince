@@ -12,6 +12,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -79,7 +80,7 @@ func (h Handlers) GetClaimEvidence(w http.ResponseWriter, r *http.Request,
 func (h Handlers) serve(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, force bool) {
 	dossier, err := h.svc.Get(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)), force)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, dossier)
@@ -88,7 +89,7 @@ func (h Handlers) serve(w http.ResponseWriter, r *http.Request, id crmcontracts.
 func (h Handlers) serveGrowthFit(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, force bool) {
 	fit, err := h.growthFit.Get(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)), force)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, fit)

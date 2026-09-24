@@ -24,7 +24,10 @@ version: 1
 
 seeds:
   ai_routing:
-    profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+    # cloud_frontier, not eu_hosted: no tier here pins a region, so the broker
+    # serves each one from wherever its routing lands — and mistral-medium-3-5
+    # has no EU endpoint at all. openrouter_cloud_eu.yaml is the EU-pinned one.
+    profile: cloud_frontier     # eu_hosted | sovereign | cloud_frontier
     tiers:
       # base_url is the host root with NO version segment — the adapter appends
       # /v1. openai_compatible fails closed without one.

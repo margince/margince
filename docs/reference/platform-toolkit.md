@@ -180,9 +180,12 @@ is a property of content, never whitespace or key order.
 - **Reach for it when:** comparing or binding a staged payload by content.
 
 ### `shared/schema` — structured-output JSON Schema builder
-Composable `Object`/`Array`/`String`/… builders rendering the `model.Request.ResponseSchema` value, so
-every structured-output schema is compile-checked and built one way (objects are CLOSED —
-`additionalProperties: false`).
+Composable `Record`/`Object`/`Array`/`String`/`Integer`/`Enum`/`Optional`/… builders rendering the
+`model.Request.ResponseSchema` value, so every structured-output schema is compile-checked and built
+one way. Objects are CLOSED (`additionalProperties: false`); `Record` also requires every field and
+keeps the declared field order, and `Optional` spells an absent value as null. The vocabulary stops
+at the strict structured-output profile: value bounds (`maxLength`, `maxItems`, `minimum`, …) are
+not emitted, because Anthropic and strict mode refuse them — the site's validator enforces them.
 - **Reach for it when:** constraining a model call to a JSON shape — never hand-write the schema string.
 
 ### `shared/ports/*` — the frozen seam interfaces

@@ -141,6 +141,16 @@ func validateBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger) error
 		return fmt.Errorf("MARGINCE_AICERT_PROFILE=%q is not an environment class; a record is filed "+
 			"under it, so a run states which one it measured", cfg.Profile)
 	}
+	// The rule a parsed eu_hosted config meets, asked of the candidate a MODEL=
+	// run names: its record is filed under eu_hosted, so the binding has to keep
+	// its text in the EU. A ROUTING= run met it when its file was parsed.
+	if cfg.Profile == ai.ProfileEUHosted {
+		if gap := ai.EURegionPinGap(cfg.Binding); gap != "" {
+			return fmt.Errorf("the candidate %s:%s would be filed under eu_hosted, but %s — pin it with "+
+				"UPSTREAM='{\"only\":[\"<vendor>/eu\"]}' (MARGINCE_AICERT_UPSTREAM), or run it as PROFILE=cloud_frontier",
+				cfg.Binding.Provider, cfg.Binding.Model, gap)
+		}
+	}
 	return refuseSelfJudgedTasks(cfg, tasks)
 }
 

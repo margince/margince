@@ -107,3 +107,40 @@ func TestUpstreamPreferencesOnANonBrokerBindingAreRefused(t *testing.T) {
 		t.Fatalf("err = %v, want the judge's preferences refused by name", err)
 	}
 }
+
+// A MODEL= run files its records under the profile it names, so a broker
+// candidate under eu_hosted has to be pinned to EU hosts the way a parsed
+// config is — otherwise the record claims EU inference for text the broker
+// sent wherever it liked.
+func TestAnEUHostedBrokerCandidateMustPinAnEURegion(t *testing.T) {
+	t.Parallel()
+	broker := func(routing *ai.OpenRouterRouting) ai.ProviderConfig {
+		return ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/m", BaseURL: "https://openrouter.ai/api", Routing: routing}
+	}
+	judge := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}
+	for name, tc := range map[string]struct {
+		candidate ai.ProviderConfig
+		profile   ai.Profile
+		refused   bool
+	}{
+		"unpinned under eu_hosted":      {broker(nil), ai.ProfileEUHosted, true},
+		"a non-EU pin under eu_hosted":  {broker(&ai.OpenRouterRouting{Only: []string{"mistral"}}), ai.ProfileEUHosted, true},
+		"pinned to the EU":              {broker(&ai.OpenRouterRouting{Only: []string{"mistral/eu"}}), ai.ProfileEUHosted, false},
+		"unpinned under cloud_frontier": {broker(nil), ai.ProfileCloudFrontier, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			cfg := RunnerConfig{Binding: tc.candidate, JudgeBinding: judge, Profile: tc.profile}
+			err := validateBindings(cfg, []ai.Task{ai.TaskSummarize}, quietLogger())
+			if !tc.refused {
+				if err != nil {
+					t.Fatalf("refused: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), "PROFILE=cloud_frontier") {
+				t.Fatalf("err = %v, want the eu_hosted refusal naming the way out", err)
+			}
+		})
+	}
+}

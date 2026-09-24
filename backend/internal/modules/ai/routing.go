@@ -182,7 +182,14 @@ func ParseRouting(raw []byte) (RoutingConfig, error) {
 			strings.Join(blank, ", "),
 		)
 	}
-	return cfg.finalize()
+	cfg, err = cfg.finalize()
+	if err != nil {
+		return RoutingConfig{}, err
+	}
+	if err := cfg.ResidencyGap(); err != nil {
+		return RoutingConfig{}, err
+	}
+	return cfg, nil
 }
 
 // finalize applies the defaults, validates, and stamps the version — the steps
@@ -310,15 +317,15 @@ func (cfg RoutingConfig) validate() error {
 	if cfg.Embeddings.Provider == "" {
 		return fmt.Errorf("ai: routing config: embeddings lane has no provider")
 	}
+	if err := validateEmbeddingsRouting(cfg.Embeddings.ProviderConfig); err != nil {
+		return err
+	}
 	// EmbeddingsConfig embeds ProviderConfig INLINE, so `input:` under
 	// `embeddings:` decodes happily and would reach the embedder's client. The
 	// embedding lane sends no attachments, so the declaration could only mislead
 	// — refuse it here, where the parser is the gate. The generated schema omits
 	// it from embeddingsBinding for the same reason, but the schema is editor
 	// tooling and cannot be the thing that holds this.
-	if cfg.Embeddings.Routing != nil {
-		return fmt.Errorf("ai: routing config: the embeddings lane takes no `routing` — upstream selection bounds a completion's tail, and an embedding is one forward pass; declare it on the chat tier that needs it")
-	}
 	if cfg.Embeddings.Input != nil {
 		return fmt.Errorf("ai: routing config: the embeddings lane takes no `input` — it sends no attachments; declare it on the chat tier that reads documents")
 	}

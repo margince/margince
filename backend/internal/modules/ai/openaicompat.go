@@ -10,7 +10,6 @@ package ai
 // provider name, never a field on this struct (spec §3.2/§3.6).
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -113,10 +112,23 @@ type openAICompatChatResponse struct {
 		CompletionTokensDetails struct {
 			ReasoningTokens int `json:"reasoning_tokens"`
 		} `json:"completion_tokens_details"`
+		// PromptTokensDetails itemizes PromptTokens the same way: the cache
+		// read and the cache write, both inside the total. A broker reports
+		// them for every upstream that caches; a bare vLLM host omits them.
+		PromptTokensDetails struct {
+			CachedTokens     int `json:"cached_tokens"`
+			CacheWriteTokens int `json:"cache_write_tokens"`
+		} `json:"prompt_tokens_details"`
 	} `json:"usage"`
 }
 
 func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	ctx, attempt := trackHTTPAttempt(ctx)
+	resp, err := c.completeChat(ctx, req)
+	return reportSchemaDowngrade(resp, err, strictDowngrade(req.ResponseSchema), attempt)
+}
+
+func (c *openAICompatClient) completeChat(ctx context.Context, req model.Request) (model.Response, error) {
 	body, err := c.sendChat(ctx, req, false)
 	if err != nil {
 		return model.Response{}, err
@@ -137,6 +149,8 @@ func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (m
 		ServedModel:     out.Model,
 		ServedProvider:  out.Provider,
 	}
+	resp.CachedTokens, resp.CacheWriteTokens = cacheWithin(out.Usage.PromptTokens,
+		out.Usage.PromptTokensDetails.CachedTokens, out.Usage.PromptTokensDetails.CacheWriteTokens)
 	choice := out.Choices[0]
 	finish, err := choice.terminal(ctx)
 	if err != nil {
@@ -214,7 +228,7 @@ func (c *openAICompatClient) Stream(ctx context.Context, req model.Request) (mod
 	if err != nil {
 		return nil, err
 	}
-	return &openAICompatStream{body: body, scanner: streamLineScanner(body)}, nil
+	return &openAICompatStream{body: body, scanner: streamLineScanner(body), end: streamEnd{wire: "openai-compat"}}, nil
 }
 
 func (c *openAICompatClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
@@ -223,7 +237,7 @@ func (c *openAICompatClient) Embed(ctx context.Context, req model.EmbedRequest) 
 	// outright on models that aren't MRL-trained (a 400 on every embed call).
 	// Omit it — the store's width check catches a genuinely mismatched model.
 	req.Dimensions = 0
-	return openAIWireEmbed(ctx, c.post, c.defaultModel, req)
+	return openAIWireEmbed(ctx, c.post, c.defaultModel, req, c.routing.providerWire())
 }
 
 // isFetchableURL reports whether an attachment's URI is a URL the vendor can
@@ -396,6 +410,9 @@ func (c *openAICompatClient) chatWire(req model.Request, stream bool) openAIComp
 	if wire.Model == "" {
 		wire.Model = c.defaultModel
 	}
+	if wire.MaxTokens <= 0 {
+		wire.MaxTokens = unsetMaxOutputTokens
+	}
 	wire.Messages = openAICompatMessages(req.System, req.Messages, req.Attachments)
 	if len(req.ResponseSchema) > 0 {
 		wire.ResponseFormat = &openAICompatResponseFormat{
@@ -426,7 +443,7 @@ func (c *openAICompatClient) post(ctx context.Context, path string, payload []by
 	if c.apiKey != "" {
 		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 	}
-	resp, err := c.http.Do(httpReq)
+	resp, err := sendModelRequest(c.http, httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ai: openai-compat: %w", err)
 	}
@@ -437,47 +454,3 @@ func (c *openAICompatClient) post(ctx context.Context, path string, payload []by
 	}
 	return resp.Body, nil
 }
-
-// openAICompatStream reads the OpenAI-compatible SSE stream: `data: {...}`
-// lines, terminated by `data: [DONE]`.
-type openAICompatStream struct {
-	body    io.ReadCloser
-	scanner *bufio.Scanner
-}
-
-type openAICompatStreamEvent struct {
-	Choices []struct {
-		Delta struct {
-			Content string `json:"content"`
-		} `json:"delta"`
-	} `json:"choices"`
-}
-
-func (s *openAICompatStream) Next(ctx context.Context) (string, bool, error) {
-	for s.scanner.Scan() {
-		if err := ctx.Err(); err != nil {
-			return "", false, err
-		}
-		line := strings.TrimSpace(s.scanner.Text())
-		if line == "" || !strings.HasPrefix(line, "data:") {
-			continue
-		}
-		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-		if data == "[DONE]" {
-			return "", false, nil
-		}
-		var ev openAICompatStreamEvent
-		if err := json.Unmarshal([]byte(data), &ev); err != nil {
-			return "", false, fmt.Errorf("ai: openai-compat: stream event: %w", err)
-		}
-		if len(ev.Choices) > 0 && ev.Choices[0].Delta.Content != "" {
-			return ev.Choices[0].Delta.Content, true, nil
-		}
-	}
-	if err := s.scanner.Err(); err != nil {
-		return "", false, fmt.Errorf("ai: openai-compat: stream: %w", err)
-	}
-	return "", false, nil
-}
-
-func (s *openAICompatStream) Close() error { return s.body.Close() }

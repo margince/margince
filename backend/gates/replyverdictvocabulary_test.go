@@ -93,17 +93,21 @@ func TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 	// The response schema's enum is the third copy: a word the database accepts
 	// and the schema omits is one no model may ever return, so the column could
 	// hold a value nothing can produce.
-	schemaEnum := between(string(engine), `"reply": schema.Enum(`, ")")
+	schemaEnum := between(string(engine), `"reply": schema.Optional(schema.Enum(`, ")")
 	if schemaEnum == "" {
-		t.Fatal(`no "reply": schema.Enum(...) in the classify engine — ` +
+		t.Fatal(`no "reply": schema.Optional(schema.Enum(...)) in the classify engine — ` +
 			"the response schema this gate measures has moved")
 	}
 	// And the PROMPT has to offer every word too. Read from the system prompt
 	// alone, for the same reason the map is: a word appearing anywhere in the
 	// file would satisfy a whole-file search after the prompt stopped naming it.
-	systemPrompt := between(string(engine), "const classifySystem = `", "`")
+	promptSurface, err := os.ReadFile("internal/compose/capturelabel/prompt.go")
+	if err != nil {
+		t.Fatalf("reading the classify prompt: %v", err)
+	}
+	systemPrompt := between(string(promptSurface), "const system = `", "`")
 	if systemPrompt == "" {
-		t.Fatal("no `const classifySystem` in the classify engine — the prompt this gate measures has moved")
+		t.Fatal("no `const system` in the classify prompt surface — the prompt this gate measures has moved")
 	}
 	for _, verdict := range fromDB {
 		if !strings.Contains(schemaEnum, `"`+verdict+`"`) {

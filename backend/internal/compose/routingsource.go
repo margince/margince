@@ -114,6 +114,10 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 	if err != nil {
 		return ai.RoutingConfig{}, err
 	}
+	if gap := cfg.ResidencyGap(); gap != nil {
+		log.WarnContext(ctx, "ai: the stored model binding does not keep its declared residency; it is loaded as stored, and the next save in Settings -> AI must pin it or relabel the profile",
+			"reason", gap.Error())
+	}
 	return cfg.WithCredentialVersion(credentials), nil
 }
 

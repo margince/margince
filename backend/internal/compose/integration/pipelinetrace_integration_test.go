@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/capturelabel"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -34,7 +35,7 @@ import (
 )
 
 func ladderAssembler(e *Env, payloads bool) *pipelinetrace.Assembler {
-	return pipelinetrace.NewAssembler(capture.NewTraceStore(e.DB()), e.Activities, payloads)
+	return pipelinetrace.NewAssembler(capture.NewTraceStore(e.DB()), e.Activities, capturelabel.Ruleset, payloads)
 }
 
 // seededMessage is one captured message: the activity, and the trace row the

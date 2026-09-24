@@ -56,8 +56,8 @@ in separately, in step 4. The shipped dev default binds **gemini** on
 # / OPENAI_API_KEY seed it, and remain the source with no vault and in the
 # DB-less lanes:
 tiers:
-  cheap_cloud: { provider: gemini, model: gemini-2.5-flash }
-  premium:     { provider: gemini, model: gemini-2.5-pro }
+  cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
+  premium:     { provider: gemini, model: gemini-3.5-flash }
 
 # …or any OpenAI-compatible vendor via the generic adapter. It needs a base_url
 # (the key comes from OPENAI_COMPATIBLE_API_KEY):
@@ -80,6 +80,14 @@ tiers:
 > AI rebinds a stack that is already up. The shape a binding has — `profile` plus
 > a `tiers` map — is schema-validated in any editor with a YAML language server
 > (autocomplete, enum checks, hover docs) against `config/margince.schema.json`, which the shipped configs point at with a `# yaml-language-server:` line.
+>
+> **Gemini thinking on a structured call.** Gemini charges its thinking to the
+> same output ceiling the answer needs, so a request with a response schema and
+> no `thinking_level` of its own is sent `thinkingLevel: low`. That only ever
+> lowers a model's default: a Flash-Lite, which already defaults to `minimal` (or
+> to no thinking at all on 2.5), is sent no level and keeps its own. A task that
+> wants a different level names it on the request
+> (`ProviderOptions["gemini"].thinking_level`); a binding carries no level.
 >
 > **One key, every open-weight model:** bind `openai_compatible` with
 > `base_url: https://openrouter.ai/api` and one `OPENAI_COMPATIBLE_API_KEY`, and

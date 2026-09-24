@@ -22,7 +22,7 @@ import (
 // cannot reach the Files API for document input. The native wire is what
 // carries attachments (inlineData/fileData), thinking control
 // (thinkingConfig.thinkingLevel), full-JSON-Schema structured output
-// (responseJsonSchema), and the thought-signature continuity channel. stdlib
+// (responseFormat.text.schema), and the thought-signature continuity channel. stdlib
 // HTTP only, mirroring anthropic.go; no vendor SDK. Field tags are camelCase to
 // match Google's wire (see the //nolint:tagliatelle markers).
 type geminiClient struct {
@@ -34,9 +34,6 @@ type geminiClient struct {
 	// narrowed by any `input:` the operator declared (inputmodality.go).
 	attachmentMIMEs []string
 }
-
-// geminiMaxOutputDefault caps a request that didn't set MaxTokens.
-const geminiMaxOutputDefault = 1024
 
 // geminiEmbedModel is Gemini's dedicated embedding model; the chat model id
 // does not serve :embedContent.
@@ -73,18 +70,30 @@ type geminiFileData struct {
 }
 
 // geminiGenConfig carries structured-output and thinking controls. Structured
-// output uses responseJsonSchema (the full-JSON-Schema field) — NOT the older
-// OpenAPI-subset responseSchema — with responseMimeType application/json.
+// output rides responseFormat.text, which takes a full JSON Schema: v1beta marks
+// both older spellings deprecated in its favour — responseSchema (the OpenAPI
+// subset) and responseJsonSchema with its responseMimeType pairing.
 type geminiGenConfig struct {
-	MaxOutputTokens    int             `json:"maxOutputTokens,omitempty"`    //nolint:tagliatelle // Google's wire format (camelCase)
-	ResponseMimeType   string          `json:"responseMimeType,omitempty"`   //nolint:tagliatelle // Google's wire format (camelCase)
-	ResponseJSONSchema json.RawMessage `json:"responseJsonSchema,omitempty"` //nolint:tagliatelle // Google's wire format (camelCase)
-	ThinkingConfig     *geminiThinking `json:"thinkingConfig,omitempty"`     //nolint:tagliatelle // Google's wire format (camelCase)
+	MaxOutputTokens int                   `json:"maxOutputTokens,omitempty"` //nolint:tagliatelle // Google's wire format (camelCase)
+	ResponseFormat  *geminiResponseFormat `json:"responseFormat,omitempty"`  //nolint:tagliatelle // Google's wire format (camelCase)
+	ThinkingConfig  *geminiThinking       `json:"thinkingConfig,omitempty"`  //nolint:tagliatelle // Google's wire format (camelCase)
 }
 
-type geminiThinking struct {
-	ThinkingLevel string `json:"thinkingLevel"` //nolint:tagliatelle // Google's wire format (camelCase)
+// geminiResponseFormat configures output per modality; only text is asked for.
+type geminiResponseFormat struct {
+	Text geminiTextFormat `json:"text"`
 }
+
+// geminiTextFormat constrains the text part to a JSON Schema. MimeType is the
+// enum spelling (APPLICATION_JSON), not the MIME string the deprecated
+// responseMimeType took.
+type geminiTextFormat struct {
+	MimeType string          `json:"mimeType"` //nolint:tagliatelle // Google's wire format (camelCase)
+	Schema   json.RawMessage `json:"schema"`
+}
+
+// geminiJSONOutput is TextResponseFormat's mime type for JSON output.
+const geminiJSONOutput = "APPLICATION_JSON"
 
 // geminiEmbedWire is the :embedContent request body — a single content whose
 // parts carry the text to embed. outputDimensionality (MRL truncation) pins the
@@ -191,7 +200,7 @@ func (c *geminiClient) Stream(ctx context.Context, req model.Request) (model.Tok
 	if err != nil {
 		return nil, err
 	}
-	return &geminiStream{body: body, scanner: streamLineScanner(body)}, nil
+	return &geminiStream{body: body, scanner: streamLineScanner(body), end: streamEnd{wire: providerGemini}}, nil
 }
 
 func (c *geminiClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
@@ -274,7 +283,7 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 	if req.System != "" {
 		wire.SystemInstruction = &geminiContent{Parts: []geminiPart{{Text: req.System}}}
 	}
-	wire.GenerationConfig = geminiGenerationConfig(req, opts)
+	wire.GenerationConfig = geminiGenerationConfig(req, genModel, opts)
 
 	method := "generateContent"
 	query := ""
@@ -339,19 +348,25 @@ func geminiAttachmentPart(a model.Attachment) geminiPart {
 	return geminiPart{InlineData: &geminiInlineData{MimeType: a.MIME, Data: base64.StdEncoding.EncodeToString(a.Bytes)}}
 }
 
-func geminiGenerationConfig(req model.Request, opts geminiOptions) *geminiGenConfig {
+// geminiGenerationConfig takes the model id the request resolves to, because
+// the thinking level a schema-constrained request gets depends on that model's
+// own default.
+func geminiGenerationConfig(req model.Request, modelID string, opts geminiOptions) *geminiGenConfig {
 	cfg := &geminiGenConfig{}
 	if req.MaxTokens > 0 {
 		cfg.MaxOutputTokens = req.MaxTokens
 	} else {
-		cfg.MaxOutputTokens = geminiMaxOutputDefault
+		cfg.MaxOutputTokens = unsetMaxOutputTokens
 	}
+	level := opts.ThinkingLevel
 	if len(req.ResponseSchema) > 0 {
-		cfg.ResponseMimeType = "application/json"
-		cfg.ResponseJSONSchema = req.ResponseSchema
+		cfg.ResponseFormat = &geminiResponseFormat{Text: geminiTextFormat{MimeType: geminiJSONOutput, Schema: req.ResponseSchema}}
+		if level == "" && !geminiThinksShallowByDefault(modelID) && geminiTakesThinkingLevel(modelID) {
+			level = geminiStructuredThinkingLevel
+		}
 	}
-	if opts.ThinkingLevel != "" {
-		cfg.ThinkingConfig = &geminiThinking{ThinkingLevel: opts.ThinkingLevel}
+	if level != "" {
+		cfg.ThinkingConfig = &geminiThinking{ThinkingLevel: level}
 	}
 	return cfg
 }
@@ -388,29 +403,21 @@ func (c *geminiClient) post(ctx context.Context, path string, payload []byte) (i
 }
 
 // geminiStream reads the :streamGenerateContent?alt=sse stream. There is no
-// [DONE] sentinel — the final chunk carries finishReason STOP and then the
-// stream closes; text arrives at candidates[0].content.parts[].text on each
-// chunk. sawTerminal remembers the terminal so an EOF without one (a
-// connection dropped mid-generation) surfaces as an error, not a complete
-// answer. TokenStream has no terminal to carry a truncation, so a stream cut
-// off at MAX_TOKENS delivers its text and then ends on truncatedError.
+// [DONE] sentinel — the final chunk carries finishReason STOP (or MAX_TOKENS)
+// and then the stream closes; text arrives at candidates[0].content.parts[].text
+// on each chunk, the final one included.
 type geminiStream struct {
-	body        io.ReadCloser
-	scanner     *bufio.Scanner
-	sawTerminal bool
-	cutOff      bool
+	body    io.ReadCloser
+	scanner *bufio.Scanner
+	end     streamEnd
 }
 
 func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
-	if s.cutOff {
-		return "", false, truncatedError{wire: providerGemini}
-	}
-	for s.scanner.Scan() {
+	for !s.end.read && s.scanner.Scan() {
 		if err := ctx.Err(); err != nil {
 			return "", false, err
 		}
-		line := s.scanner.Text()
-		data, isData := strings.CutPrefix(line, "data: ")
+		data, isData := strings.CutPrefix(s.scanner.Text(), "data: ")
 		if !isData {
 			continue
 		}
@@ -425,8 +432,7 @@ func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
 			return "", false, err
 		}
 		if finish, terminal := geminiTerminal(ev); terminal {
-			s.sawTerminal = true
-			s.cutOff = finish == geminiMaxTokens
+			s.end.finish(geminiFinishReason(finish))
 		}
 		var chunk strings.Builder
 		for _, cand := range ev.Candidates {
@@ -437,18 +443,8 @@ func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
 		if chunk.Len() > 0 {
 			return chunk.String(), true, nil
 		}
-		if s.cutOff {
-			return "", false, truncatedError{wire: providerGemini}
-		}
 	}
-	if err := s.scanner.Err(); err != nil {
-		return "", false, fmt.Errorf("ai: gemini: stream: %w", err)
-	}
-	if !s.sawTerminal {
-		// EOF before the STOP terminal: the connection dropped mid-generation.
-		return "", false, fmt.Errorf("ai: gemini: stream ended without a terminal STOP")
-	}
-	return "", false, nil
+	return s.end.outcome(s.scanner.Err())
 }
 
 func (s *geminiStream) Close() error { return s.body.Close() }

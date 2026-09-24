@@ -54,13 +54,32 @@ type ModelRate struct {
 // micro-USD grain (1e-6 USD) that is sub-cent noise per call and is
 // intentional — CostReport performs the identical division so a
 // row-by-row sum of PriceCall never drifts from the aggregate SQL.
+//
+// A cache bucket whose price is 0 prices at the input rate (cacheRate).
 func PriceCall(u Usage, r ModelRate) int64 {
 	uncached := int64(uncachedTokensIn(u.TokensIn, u.CachedTokens, u.CacheWriteTokens))
 	total := uncached*r.InputPerMTokMicroUSD +
-		int64(u.CachedTokens)*r.CacheReadPerMTokMicroUSD +
-		int64(u.CacheWriteTokens)*r.CacheWritePerMTokMicroUSD +
+		int64(u.CachedTokens)*cacheRate(r.CacheReadPerMTokMicroUSD, r.InputPerMTokMicroUSD) +
+		int64(u.CacheWriteTokens)*cacheRate(r.CacheWritePerMTokMicroUSD, r.InputPerMTokMicroUSD) +
 		int64(u.TokensOut)*r.OutputPerMTokMicroUSD
 	return total / 1_000_000
+}
+
+// cacheRate is what one cached-token bucket costs per MTok. A cache price of 0
+// on a row is a vendor publishing no separate cache price — no discount on a
+// cached read, no surcharge on a cache write — so those tokens cost what any
+// prompt token costs. Reading the 0 literally would bill a cached token as free,
+// and every adapter now reports its cache buckets, so on a row like
+// mistral-medium-3-5 the cost report would fall as the cache warmed.
+//
+// A free model is unaffected: its input rate is 0 as well. CostReport spells
+// the same rule in SQL (COALESCE(NULLIF(cache, 0), input)), and
+// TestCostReportPricesAZeroCachePriceAtTheInputRate holds the two together.
+func cacheRate(cache, input int64) int64 {
+	if cache == 0 {
+		return input
+	}
+	return cache
 }
 
 // DayCost is one (calendar day, task, tier) computed cost line
@@ -132,8 +151,10 @@ func embedOn(day time.Time, provider, model string, in int64) ModelRate {
 // config/ai-routing.example.yaml binds directly on that vendor's API.
 func vendorSheetRates(day time.Time) []ModelRate {
 	return []ModelRate{
-		// Anthropic (native Messages API sheet prices, verified 2026-07-20):
-		// cache read = 0.1x input, cache write = 1.25x input, matching
+		// Anthropic (native Messages API sheet prices, verified 2026-07-20;
+		// sonnet-4-6 reconfirmed unchanged 2026-09-24 at $3/$15, $0.30 cache
+		// read, $3.75 five-minute cache write, one flat rate across its 1M
+		// window): cache read = 0.1x input, cache write = 1.25x input, matching
 		// Anthropic's published prompt-caching multipliers across the family.
 		rateOn(day, providerAnthropic, "claude-opus-4-8", 5_000_000, 25_000_000, 500_000, 6_250_000),
 		rateOn(day, providerAnthropic, "claude-sonnet-4-6", 3_000_000, 15_000_000, 300_000, 3_750_000),
@@ -231,9 +252,8 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		// Read 2026-09-23, after the block above: mistral-large-2512 had lost
 		// every upstream endpoint by then and these two are what the presets
 		// bind in its place. medium-3-5's cache column is 0 because Mistral
-		// publishes no cached-input price AND this adapter never reports a
-		// cached token — only the anthropic and gemini clients populate that
-		// field — so the column is unreachable rather than a discount.
+		// publishes no cached-input price, so a cached token it reports prices
+		// at the input rate: no discount, rather than an unpriced one.
 		rateOn(day, providerOpenAICompatible, "mistralai/mistral-small-2603", 150_000, 600_000, 15_000, 0),
 		rateOn(day, providerOpenAICompatible, "mistralai/mistral-medium-3-5", 1_500_000, 7_500_000, 0, 0),
 		rateOn(day, providerOpenAICompatible, "deepseek/deepseek-v4-flash", 140_000, 280_000, 28_000, 0),
@@ -250,8 +270,15 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		// — so these are separate rows rather than duplicates: a call on this
 		// adapter reports the broker's id, and an id with no row prices as a
 		// visible unpriced count instead of a dollar figure.
+		//
+		// Sonnet is 4.6, the version config/presets/openrouter_cloud.yaml binds
+		// as its frontier tier; read from the catalog 2026-09-24. It replaced a
+		// 4.5 row nothing bound, which also had the wrong shape to seed: the
+		// catalog prices 4.5 at double above 200k prompt tokens, where 4.6 is
+		// flat across its window — the same reason gemini-3.1-pro-preview is
+		// left unseeded above.
 		rateOn(day, providerOpenAICompatible, "anthropic/claude-haiku-4.5", 1_000_000, 5_000_000, 100_000, 1_250_000),
-		rateOn(day, providerOpenAICompatible, "anthropic/claude-sonnet-4.5", 3_000_000, 15_000_000, 300_000, 3_750_000),
+		rateOn(day, providerOpenAICompatible, "anthropic/claude-sonnet-4.6", 3_000_000, 15_000_000, 300_000, 3_750_000),
 		// Embedding lanes have no output and no cache — only input is nonzero.
 		embedOn(day, providerOpenAICompatible, "mistralai/mistral-embed-2312", 100_000),
 		embedOn(day, providerOpenAICompatible, "baai/bge-m3", 10_000),

@@ -35,11 +35,6 @@ type anthropicClient struct {
 
 const anthropicAPIVersion = "2023-06-01"
 
-// anthropicMaxTokensDefault caps a request that didn't set MaxTokens —
-// the API requires the field, and an unbounded default would let a
-// caller bug turn into an unbounded spend.
-const anthropicMaxTokensDefault = 1024
-
 type anthropicWire struct {
 	Model     string `json:"model"`
 	MaxTokens int    `json:"max_tokens"`
@@ -64,7 +59,8 @@ type anthropicToolWire struct {
 // constrains the completion to the schema at generation — the same guardrail
 // Ollama's `format` and vLLM's response_format provide — and the completion
 // still arrives as an ordinary text block of JSON, so no response handling
-// changes. Sent only when the request carries a schema.
+// changes. Sent only when the request carries a schema, and only in the form
+// the decoder can hold (anthropicschema.go).
 type anthropicOutputConfig struct {
 	Format *anthropicResponseFormat `json:"format,omitempty"`
 }
@@ -81,11 +77,27 @@ type anthropicResponseFormat struct {
 // simple wire.
 const streamedCompleteThreshold = 8192
 
+// Complete fits the response schema once, before either wire is chosen, and
+// reports the downgrade that fit cost on whatever the call returns — the
+// Response, or the error of a call that failed after its request was sent,
+// whose record still says what was sent.
 func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	schema, downgrade := anthropicOutputSchema(req.ResponseSchema)
+	ctx, attempt := trackHTTPAttempt(ctx)
+	var (
+		resp model.Response
+		err  error
+	)
 	if req.MaxTokens > streamedCompleteThreshold {
-		return c.completeStreamed(ctx, req)
+		resp, err = c.completeStreamed(ctx, req, schema)
+	} else {
+		resp, err = c.completePlain(ctx, req, schema)
 	}
-	body, err := c.post(ctx, req)
+	return reportSchemaDowngrade(resp, err, downgrade, attempt)
+}
+
+func (c *anthropicClient) completePlain(ctx context.Context, req model.Request, schema json.RawMessage) (model.Response, error) {
+	body, err := c.post(ctx, req, schema)
 	if err != nil {
 		return model.Response{}, err
 	}
@@ -107,9 +119,10 @@ func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (mode
 			// which already report a cache-inclusive prompt total) — normalizing
 			// below adds them back so model.Response.InputTokens lands on the
 			// port's pinned cache-inclusive contract.
-			CacheReadInputTokens     int `json:"cache_read_input_tokens"`
-			CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
-			OutputTokens             int `json:"output_tokens"`
+			CacheReadInputTokens     int                          `json:"cache_read_input_tokens"`
+			CacheCreationInputTokens int                          `json:"cache_creation_input_tokens"`
+			OutputTokens             int                          `json:"output_tokens"`
+			OutputTokensDetails      anthropicOutputTokensDetails `json:"output_tokens_details"`
 		} `json:"usage"`
 	}
 	if err := json.NewDecoder(body).Decode(&out); err != nil {
@@ -134,6 +147,7 @@ func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (mode
 		OutputTokens:     out.Usage.OutputTokens,
 		CachedTokens:     out.Usage.CacheReadInputTokens,
 		CacheWriteTokens: out.Usage.CacheCreationInputTokens,
+		ReasoningTokens:  reasoningWithin(out.Usage.OutputTokens, out.Usage.OutputTokensDetails.ThinkingTokens),
 		ServedModel:      out.Model,
 	}
 	finish, err := anthropicFinishReason(out.StopReason)
@@ -142,6 +156,14 @@ func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (mode
 	}
 	resp.FinishReason = finish
 	return resp, nil
+}
+
+// anthropicOutputTokensDetails itemizes output_tokens. ThinkingTokens is the
+// share that went to extended or adaptive thinking — already counted inside
+// output_tokens, so it is the port's ReasoningTokens as reported, bounded by
+// reasoningWithin like every wire's.
+type anthropicOutputTokensDetails struct {
+	ThinkingTokens int `json:"thinking_tokens"`
 }
 
 // anthropicFinishReason is a stop_reason in the port's vocabulary. Both ceilings
@@ -165,8 +187,8 @@ func anthropicFinishReason(stopReason string) (string, error) {
 // schema-constrained JSON deltas) accumulate into one response, and the
 // usage counts are read off the message_start / message_delta events so
 // metering stays exact.
-func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Request) (model.Response, error) {
-	body, err := c.postStream(ctx, req)
+func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Request, schema json.RawMessage) (model.Response, error) {
+	body, err := c.postStream(ctx, req, schema)
 	if err != nil {
 		return model.Response{}, err
 	}
@@ -184,30 +206,7 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 		if !isData {
 			continue
 		}
-		var ev struct {
-			Type    string `json:"type"`
-			Message struct {
-				Model string `json:"model"`
-				Usage struct {
-					InputTokens int `json:"input_tokens"`
-					// Same cache-inclusive normalization as the non-streaming path
-					// (see the Complete usage struct above): Anthropic's
-					// message_start usage also reports input_tokens exclusive of
-					// both cache buckets.
-					CacheReadInputTokens     int `json:"cache_read_input_tokens"`
-					CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
-				} `json:"usage"`
-			} `json:"message"`
-			Delta struct {
-				Type        string `json:"type"`
-				Text        string `json:"text"`
-				PartialJSON string `json:"partial_json"`
-				StopReason  string `json:"stop_reason"`
-			} `json:"delta"`
-			Usage struct {
-				OutputTokens int `json:"output_tokens"`
-			} `json:"usage"`
-		}
+		var ev anthropicStreamEvent
 		if err := json.Unmarshal([]byte(data), &ev); err != nil {
 			return model.Response{}, fmt.Errorf("ai: anthropic: stream event: %w", err)
 		}
@@ -222,6 +221,7 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 			text.WriteString(ev.Delta.PartialJSON)
 		case "message_delta":
 			resp.OutputTokens = ev.Usage.OutputTokens
+			resp.ReasoningTokens = reasoningWithin(ev.Usage.OutputTokens, ev.Usage.OutputTokensDetails.ThinkingTokens)
 			// A delta may carry usage alone, with stop_reason null.
 			if ev.Delta.StopReason == "" {
 				continue
@@ -234,6 +234,8 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 		case "message_stop":
 			resp.Text = text.String()
 			return resp, nil
+		case sseErrorEvent:
+			return model.Response{}, ev.failure(ctx)
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -243,11 +245,14 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 }
 
 func (c *anthropicClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
-	body, err := c.postStream(ctx, req)
+	// A stream has no Response to report a schema downgrade on, and no caller
+	// that sends a schema down it.
+	schema, _ := anthropicOutputSchema(req.ResponseSchema)
+	body, err := c.postStream(ctx, req, schema)
 	if err != nil {
 		return nil, err
 	}
-	return &anthropicStream{body: body, scanner: streamLineScanner(body)}, nil
+	return &anthropicStream{body: body, scanner: streamLineScanner(body), end: streamEnd{wire: providerAnthropic}}, nil
 }
 
 // Embed is a different lane, not a chat-tier capability: Anthropic
@@ -267,44 +272,28 @@ func (c *anthropicClient) Caps() model.Capabilities {
 
 // post sends one non-streaming Messages call; postStream opens the SSE
 // variant of the same call. Two names so a call site says which wire
-// mode it gets instead of passing a bare boolean.
-func (c *anthropicClient) post(ctx context.Context, req model.Request) (io.ReadCloser, error) {
-	return c.send(ctx, req, false)
+// mode it gets instead of passing a bare boolean. Both send schema, the
+// response schema already fitted to the decoder (anthropicschema.go), or no
+// output_config when it is nil.
+func (c *anthropicClient) post(ctx context.Context, req model.Request, schema json.RawMessage) (io.ReadCloser, error) {
+	return c.send(ctx, req, schema, false)
 }
 
-func (c *anthropicClient) postStream(ctx context.Context, req model.Request) (io.ReadCloser, error) {
-	return c.send(ctx, req, true)
+func (c *anthropicClient) postStream(ctx context.Context, req model.Request, schema json.RawMessage) (io.ReadCloser, error) {
+	return c.send(ctx, req, schema, true)
 }
 
-func (c *anthropicClient) send(ctx context.Context, req model.Request, stream bool) (io.ReadCloser, error) {
-	body, status, err := c.sendOnce(ctx, req, stream)
-	if err != nil && status == http.StatusBadRequest && len(req.ResponseSchema) > 0 {
-		// ResponseSchema is a best-effort generation guardrail (see
-		// model.Request.ResponseSchema): not every Anthropic model supports
-		// output_config.format, and one that doesn't rejects it with a 400.
-		// Rather than fail the whole call, retry with the schema cleared — the
-		// caller's parse→validate→retry policy and the evidence gate remain the
-		// authority, exactly as for a provider that ignores the schema outright.
-		// A 400 with an unrelated cause simply recurs on the retry and surfaces
-		// then. The clear is on a copy; the caller's request is untouched.
-		unconstrained := req
-		unconstrained.ResponseSchema = nil
-		body, _, err = c.sendOnce(ctx, unconstrained, stream)
-	}
-	return body, err
-}
-
-// sendOnce performs one Messages call, attaching the output_config.format
-// guardrail when the request carries a schema. The returned status is the HTTP
-// status (0 on a transport-level failure) so send can distinguish a
-// schema-rejection 400 from a transport error.
-func (c *anthropicClient) sendOnce(ctx context.Context, req model.Request, stream bool) (io.ReadCloser, int, error) {
+// send performs one Messages call, attaching the output_config.format
+// guardrail fitted to what the decoder enforces. The fit is settled before the
+// request leaves, so a 400 here is the vendor's answer about the request and
+// is never retried with the schema cleared.
+func (c *anthropicClient) send(ctx context.Context, req model.Request, schema json.RawMessage, stream bool) (io.ReadCloser, error) {
 	// Images map to native content blocks; a PDF does not, because
 	// `document` support is model-dependent here in a way image support is not,
 	// and this adapter cannot see which model the binding named. Anything outside
 	// the declaration is refused rather than dropped (spec §3.8).
 	if err := anthropicRefuseAttachments(req.Attachments, c.attachmentMIMEs); err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	wire := anthropicWire{
 		Model:     req.Model,
@@ -317,39 +306,39 @@ func (c *anthropicClient) sendOnce(ctx context.Context, req model.Request, strea
 		wire.Model = c.defaultModel
 	}
 	if wire.MaxTokens <= 0 {
-		wire.MaxTokens = anthropicMaxTokensDefault
+		wire.MaxTokens = unsetMaxOutputTokens
 	}
 	for _, tool := range req.Tools {
 		wire.Tools = append(wire.Tools, anthropicToolWire{
 			Name: tool.Name, Description: tool.Description, InputSchema: tool.InputSchema,
 		})
 	}
-	if len(req.ResponseSchema) > 0 {
+	if len(schema) > 0 {
 		wire.OutputConfig = &anthropicOutputConfig{
-			Format: &anthropicResponseFormat{Type: jsonSchemaFormatType, Schema: req.ResponseSchema},
+			Format: &anthropicResponseFormat{Type: jsonSchemaFormatType, Schema: schema},
 		}
 	}
 	payload, _, err := sendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/v1/messages", bytes.NewReader(payload))
 	if err != nil {
-		return nil, 0, fmt.Errorf("ai: anthropic: build request: %w", err)
+		return nil, fmt.Errorf("ai: anthropic: build request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-Api-Key", c.apiKey)
 	httpReq.Header.Set("Anthropic-Version", anthropicAPIVersion)
-	resp, err := c.http.Do(httpReq)
+	resp, err := sendModelRequest(c.http, httpReq)
 	if err != nil {
-		return nil, 0, fmt.Errorf("ai: anthropic: %w", err)
+		return nil, fmt.Errorf("ai: anthropic: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		//craft:ignore swallowed-errors best-effort close on the error path — the API status error is the answer
 		defer func() { _ = resp.Body.Close() }()
-		return nil, resp.StatusCode, anthropicError(ctx, resp)
+		return nil, anthropicError(ctx, resp)
 	}
-	return resp.Body, resp.StatusCode, nil
+	return resp.Body, nil
 }
 
 // anthropicError surfaces the API's error type and message — and only
@@ -373,43 +362,94 @@ func anthropicError(ctx context.Context, resp *http.Response) error {
 	return providerRefusal(resp, "", fmt.Errorf("ai: anthropic: http %d", resp.StatusCode))
 }
 
-// anthropicStream parses the Messages SSE stream, yielding text deltas.
+// anthropicStream parses the Messages SSE stream, yielding text deltas. The
+// reply's terminal is message_delta's stop_reason, read through the same
+// anthropicFinishReason Complete uses; message_stop closes the stream after it.
 type anthropicStream struct {
 	body    io.ReadCloser
 	scanner *bufio.Scanner
+	end     streamEnd
+	// finish is the stop_reason message_delta reported, held until
+	// message_stop confirms the reply is over.
+	finish string
+}
+
+// anthropicStreamEvent is one Messages SSE event, as both readers of the
+// stream decode it: Complete over SSE and the token stream.
+type anthropicStreamEvent struct {
+	Type    string `json:"type"`
+	Message struct {
+		Model string `json:"model"`
+		Usage struct {
+			InputTokens int `json:"input_tokens"`
+			// Same cache-inclusive normalization as the non-streaming path
+			// (see the Complete usage struct above): Anthropic's
+			// message_start usage also reports input_tokens exclusive of
+			// both cache buckets.
+			CacheReadInputTokens     int `json:"cache_read_input_tokens"`
+			CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+		} `json:"usage"`
+	} `json:"message"`
+	Delta struct {
+		Type        string `json:"type"`
+		Text        string `json:"text"`
+		PartialJSON string `json:"partial_json"`
+		StopReason  string `json:"stop_reason"`
+	} `json:"delta"`
+	Usage struct {
+		OutputTokens        int                          `json:"output_tokens"`
+		OutputTokensDetails anthropicOutputTokensDetails `json:"output_tokens_details"`
+	} `json:"usage"`
+	// Error is the `error` event's body: an overload or a server fault after
+	// the 200 went out.
+	Error struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+// failure is an `error` event as the caller sees it: the provider's own reason,
+// never mistaken for a connection that simply dropped.
+func (ev anthropicStreamEvent) failure(ctx context.Context) error {
+	return fmt.Errorf("ai: anthropic: stream error: %s: %s",
+		safeProviderText(ctx, ev.Error.Type), safeProviderText(ctx, ev.Error.Message))
 }
 
 func (s *anthropicStream) Next(ctx context.Context) (string, bool, error) {
-	for s.scanner.Scan() {
+	for !s.end.read && s.scanner.Scan() {
 		if err := ctx.Err(); err != nil {
 			return "", false, err
 		}
-		line := s.scanner.Text()
-		data, isData := strings.CutPrefix(line, "data: ")
+		data, isData := strings.CutPrefix(s.scanner.Text(), "data: ")
 		if !isData {
 			continue
 		}
-		var ev struct {
-			Type  string `json:"type"`
-			Delta struct {
-				Type string `json:"type"`
-				Text string `json:"text"`
-			} `json:"delta"`
-		}
+		var ev anthropicStreamEvent
 		if err := json.Unmarshal([]byte(data), &ev); err != nil {
 			return "", false, fmt.Errorf("ai: anthropic: stream event: %w", err)
 		}
-		switch {
-		case ev.Type == "content_block_delta" && ev.Delta.Type == "text_delta":
-			return ev.Delta.Text, true, nil
-		case ev.Type == "message_stop":
-			return "", false, nil
+		switch ev.Type {
+		case "content_block_delta":
+			if ev.Delta.Type == "text_delta" && ev.Delta.Text != "" {
+				return ev.Delta.Text, true, nil
+			}
+		case "message_delta":
+			// A delta may carry usage alone, with stop_reason null.
+			if ev.Delta.StopReason == "" {
+				continue
+			}
+			finish, err := anthropicFinishReason(ev.Delta.StopReason)
+			if err != nil {
+				return "", false, err
+			}
+			s.finish = finish
+		case "message_stop":
+			s.end.finish(s.finish)
+		case sseErrorEvent:
+			return "", false, ev.failure(ctx)
 		}
 	}
-	if err := s.scanner.Err(); err != nil {
-		return "", false, fmt.Errorf("ai: anthropic: stream: %w", err)
-	}
-	return "", false, nil
+	return s.end.outcome(s.scanner.Err())
 }
 
 func (s *anthropicStream) Close() error { return s.body.Close() }

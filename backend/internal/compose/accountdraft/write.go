@@ -43,7 +43,7 @@ A recent message may carry a "snippet" — the opening of a message on this acco
 Where the snippets are the only substance you have, write from what they actually say. If they say nothing you can use, say less rather than inventing a conversation: no meeting that has not happened, no concern the recipient did not raise, no description of their situation you were not given.
 rewrite_of, when present, is the draft already on the salesperson's screen, and the ask is to REWRITE it rather than to write again. Keep what it says — its subject, its one ask, the detail it carries — and change only what the ask names. A different message is the one answer that is always wrong, because the salesperson has already read and often edited this one. Everything below still binds: the greeting rule, the sign-off rule, and the refusal to state anything the summary does not support, so a claim the old draft invented does not survive the rewrite.
 The reasoning array is where an explanation of the draft goes. It is the ONLY place; the body carries none.
-Each reasoning entry names ONE input you actually used, in the reader's words, short enough to read as a chip ("pricing concern", "follow-up due today"). Give entity_type and entity_id when the input was a record the summary identified; omit both when it was the caller's own intent.
+Each reasoning entry names ONE input you actually used, in the reader's words, short enough to read as a chip ("pricing concern", "follow-up due today"). Give entity_type and entity_id when the input was a record the summary identified; set both to null when it was the caller's own intent.
 If the summary gives you nothing but the recipient, write a short honest opener and return an empty reasoning array. Do not invent a reason.`
 
 // draftSystemFor assembles this call's system turn: what this surface is for,
@@ -61,29 +61,6 @@ func draftSystemFor(fence promptfence.Fence, voiced bool) string {
 	}
 	return system + "\n" + fence.Rule("account summary")
 }
-
-// draftSchema is the response shape the validated lane enforces.
-const draftSchema = `{
-  "type": "object",
-  "required": ["subject", "body"],
-  "properties": {
-    "subject": {"type": "string"},
-    "body": {"type": "string"},
-    "reasoning": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["kind", "label"],
-        "properties": {
-          "kind": {"type": "string"},
-          "label": {"type": "string"},
-          "entity_type": {"type": "string"},
-          "entity_id": {"type": "string"}
-        }
-      }
-    }
-  }
-}`
 
 // groundedWithoutCitation reports whether this reason is honest with no record
 // behind it.
@@ -160,23 +137,17 @@ func contentWords(text string) map[string]bool {
 	return out
 }
 
-// parseKind narrows the model's string to the contract's closed vocabulary. An
-// unknown kind is dropped rather than passed through: the composer groups
-// reasons by kind, and one it does not know would render as an unlabelled chip.
-func parseKind(raw string) (crmcontracts.AccountDraftReasonKind, bool) {
-	kind := crmcontracts.AccountDraftReasonKind(strings.TrimSpace(raw))
-	switch kind {
-	case crmcontracts.AccountDraftReasonKindIntent,
-		crmcontracts.AccountDraftReasonKindRecipient,
-		crmcontracts.AccountDraftReasonKindRelationship,
-		crmcontracts.AccountDraftReasonKindDeal,
-		crmcontracts.AccountDraftReasonKindCommitment,
-		crmcontracts.AccountDraftReasonKindConversation,
-		crmcontracts.AccountDraftReasonKindDossier:
-		return kind, true
-	default:
-		return "", false
-	}
+// reasonKinds is the contract's closed vocabulary as this surface serves it:
+// all of it, because an account draft is the one surface with a dossier to
+// cite.
+var reasonKinds = []crmcontracts.AccountDraftReasonKind{
+	crmcontracts.AccountDraftReasonKindIntent,
+	crmcontracts.AccountDraftReasonKindRecipient,
+	crmcontracts.AccountDraftReasonKindRelationship,
+	crmcontracts.AccountDraftReasonKindDeal,
+	crmcontracts.AccountDraftReasonKindCommitment,
+	crmcontracts.AccountDraftReasonKindConversation,
+	crmcontracts.AccountDraftReasonKindDossier,
 }
 
 // knownRecords maps every id this draft's own input carried to the KIND that
@@ -239,8 +210,7 @@ func surface(in Input) draftcore.Surface {
 	return draftcore.Surface{
 		Name:   "account draft",
 		System: draftSystemFor,
-		Schema: draftSchema,
-		Kind:   parseKind,
+		Kinds:  reasonKinds,
 		// Two kinds are honest with nothing cited here. The caller's own intent
 		// cites nothing by design, and a dossier fact is a sentence about what
 		// the company IS with no record of ours behind it — checked against the

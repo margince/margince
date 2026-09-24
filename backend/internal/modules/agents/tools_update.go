@@ -58,7 +58,8 @@ func (t updateRecord) Spec() mcp.ToolSpec {
 			"if_version":{"type":"integer","description":"Optimistic-concurrency guard: the last-seen record version"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after a human approved overwriting their edit; send it with exactly the staged replay arguments"}},
 			"additionalProperties":false}`),
-		OutputSchema: schemaFor[UpdateWithStagedApprovalResult](),
+		UnkeyedArguments: recordFieldsUnkeyed(),
+		OutputSchema:     schemaFor[UpdateWithStagedApprovalResult](),
 	}
 }
 

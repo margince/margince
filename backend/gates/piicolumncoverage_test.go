@@ -133,6 +133,11 @@ var erasureColumnBaseline = map[string][]string{
 		// derived from what they wrote — the same string on every row one build
 		// judged.
 		"owed_verdict_ruleset",
+		// The same digest, naming which prompt every rung declined to answer.
+		// Nothing the subject wrote, and identical on every row one build
+		// declined.
+		"capture_label_declined_ruleset",
+		"owed_verdict_declined_ruleset",
 		"captured_by",
 		"channel_provider",
 		"direction",

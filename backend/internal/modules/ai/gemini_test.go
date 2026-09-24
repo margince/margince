@@ -94,7 +94,7 @@ func TestGeminiCompleteMapsNativeWireAndUsage(t *testing.T) {
 	}
 }
 
-func TestGeminiStructuredOutputUsesResponseJSONSchema(t *testing.T) {
+func TestGeminiStructuredOutputRidesResponseFormat(t *testing.T) {
 	schema := json.RawMessage(`{"type":"object","properties":{"ok":{"type":"boolean"}}}`)
 	var body []byte
 	client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
@@ -108,19 +108,71 @@ func TestGeminiStructuredOutputUsesResponseJSONSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	var wire struct {
-		GenerationConfig struct {
-			ResponseMimeType   string          `json:"responseMimeType"`   //nolint:tagliatelle // Google's wire format (camelCase)
-			ResponseJSONSchema json.RawMessage `json:"responseJsonSchema"` //nolint:tagliatelle // Google's wire format (camelCase)
-		} `json:"generationConfig"` //nolint:tagliatelle // Google's wire format (camelCase)
+		GenerationConfig map[string]json.RawMessage `json:"generationConfig"` //nolint:tagliatelle // Google's wire format (camelCase)
 	}
 	if err := json.Unmarshal(body, &wire); err != nil {
 		t.Fatal(err)
 	}
-	if wire.GenerationConfig.ResponseMimeType != "application/json" {
-		t.Fatalf("responseMimeType not set: %s", body)
+	// Both older spellings are deprecated in v1beta; sending either beside
+	// responseFormat would be two schemas on one request.
+	for _, deprecated := range []string{"responseMimeType", "responseJsonSchema", "responseSchema"} {
+		if _, sent := wire.GenerationConfig[deprecated]; sent {
+			t.Errorf("deprecated %s sent: %s", deprecated, body)
+		}
 	}
-	if !bytes.Equal(bytes.TrimSpace(wire.GenerationConfig.ResponseJSONSchema), bytes.TrimSpace(schema)) {
-		t.Fatalf("responseJsonSchema not verbatim: %s", wire.GenerationConfig.ResponseJSONSchema)
+	var format struct {
+		Text struct {
+			MimeType string          `json:"mimeType"` //nolint:tagliatelle // Google's wire format (camelCase)
+			Schema   json.RawMessage `json:"schema"`
+		} `json:"text"`
+	}
+	if err := json.Unmarshal(wire.GenerationConfig["responseFormat"], &format); err != nil {
+		t.Fatalf("responseFormat absent or malformed: %v: %s", err, body)
+	}
+	if format.Text.MimeType != "APPLICATION_JSON" {
+		t.Fatalf("responseFormat.text.mimeType = %q, want APPLICATION_JSON", format.Text.MimeType)
+	}
+	if !bytes.Equal(bytes.TrimSpace(format.Text.Schema), bytes.TrimSpace(schema)) {
+		t.Fatalf("responseFormat.text.schema not verbatim: %s", format.Text.Schema)
+	}
+}
+
+// A structured request thinks at low unless its caller chose a level, because
+// Gemini's thinking is charged to the same maxOutputTokens the answer needs; a
+// free-text request keeps the model's own default. So does a Flash-Lite, whose
+// default is already shallower than low: naming low would make it think more.
+func TestGeminiThinkingDefaultsLowOnlyForAStructuredRequest(t *testing.T) {
+	schema := json.RawMessage(`{"type":"object"}`)
+	cases := []struct {
+		name   string
+		model  string
+		schema json.RawMessage
+		chosen string
+		want   string
+	}{
+		{"structured, no level chosen", "gemini-3.5-flash", schema, "", geminiStructuredThinkingLevel},
+		{"structured on pro, no level chosen", "gemini-3.1-pro-preview", schema, "", geminiStructuredThinkingLevel},
+		{"structured, caller chose high", "gemini-3.5-flash", schema, "high", "high"},
+		{"free text, no level chosen", "gemini-3.5-flash", nil, "", ""},
+		{"free text, caller chose medium", "gemini-3.5-flash", nil, "medium", "medium"},
+		{"structured on flash-lite, no level chosen", "gemini-3.1-flash-lite", schema, "", ""},
+		{"structured on 2.5 flash-lite, no level chosen", "gemini-2.5-flash-lite", schema, "", ""},
+		{"structured on 2.5 flash, no level chosen", "gemini-2.5-flash", schema, "", ""},
+		{"structured on 2.5 pro, no level chosen", "models/gemini-2.5-pro", schema, "", ""},
+		{"structured on an alias, no level chosen", "gemini-flash-latest", schema, "", geminiStructuredThinkingLevel},
+		{"structured on flash-lite, caller chose medium", "gemini-3.1-flash-lite", schema, "medium", "medium"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := geminiGenerationConfig(model.Request{ResponseSchema: tc.schema}, tc.model, geminiOptions{ThinkingLevel: tc.chosen})
+			got := ""
+			if cfg.ThinkingConfig != nil {
+				got = cfg.ThinkingConfig.ThinkingLevel
+			}
+			if got != tc.want {
+				t.Fatalf("thinking level = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
 
@@ -138,6 +190,31 @@ func TestGeminiThinkingLevelFromProviderOptions(t *testing.T) {
 	}
 	if !bytes.Contains(body, []byte(`"thinkingLevel":"low"`)) {
 		t.Fatalf("thinkingLevel not on wire: %s", body)
+	}
+}
+
+// The thinking default follows the model the request names, the "models/"
+// prefix included, not the binding's default model.
+func TestGeminiStructuredThinkingFollowsTheRequestedModel(t *testing.T) {
+	for _, tc := range []struct {
+		model string
+		sent  bool
+	}{{"models/gemini-3.1-flash-lite", false}, {"gemini-3.5-flash", true}, {"gemini-2.5-flash", false}, {"models/gemini-2.5-flash", false}} {
+		var body []byte
+		client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
+			body = readBody(t, r.Body)
+			_, _ = w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"{}"}]},"finishReason":"STOP"}]}`))
+		})
+		if _, err := client.Complete(context.Background(), model.Request{
+			Model:          tc.model,
+			Messages:       []model.Message{{Role: "user", Content: "hi"}},
+			ResponseSchema: json.RawMessage(`{"type":"object"}`),
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if sent := bytes.Contains(body, []byte(`"thinkingConfig"`)); sent != tc.sent {
+			t.Errorf("%s: thinkingConfig sent = %v, want %v: %s", tc.model, sent, tc.sent, body)
+		}
 	}
 }
 
@@ -392,8 +469,8 @@ func TestGeminiStreamSurfacesErrorChunkAndAbnormalFinish(t *testing.T) {
 }
 
 // A stream cut off at MAX_TOKENS delivers the text it generated, then ends on
-// an error: TokenStream has no terminal to carry "length", and a clean EOF
-// would pass the half-written answer off as a complete one.
+// model.ErrOutputTruncated: a clean end would pass the half-written answer off
+// as a complete one.
 func TestGeminiStreamCutOffDeliversItsTextThenSaysSo(t *testing.T) {
 	client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, `data: {"candidates":[{"content":{"parts":[{"text":"he"}]}}]}`+"\n\n")
@@ -512,8 +589,8 @@ func TestGeminiStreamEOFWithoutStopIsAnError(t *testing.T) {
 	if chunk, ok, err := stream.Next(context.Background()); err != nil || !ok || chunk != "partial" {
 		t.Fatalf("first chunk: %q %v %v", chunk, ok, err)
 	}
-	if _, _, err := stream.Next(context.Background()); err == nil || !strings.Contains(err.Error(), "STOP") {
-		t.Fatalf("EOF without STOP must be an error, got %v", err)
+	if _, _, err := stream.Next(context.Background()); err == nil || errors.Is(err, model.ErrOutputTruncated) {
+		t.Fatalf("EOF without STOP must be an error, and not a truncation, got %v", err)
 	}
 }
 

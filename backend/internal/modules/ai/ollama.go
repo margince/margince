@@ -63,11 +63,11 @@ type ollamaEmbedOptions struct {
 	NumCtx int `json:"num_ctx"`
 }
 
-// ollamaMaxTokensDefault caps a request that didn't set MaxTokens, the same
-// answer anthropic and gemini give the same gap. The window below is sized from
-// this number, so leaving it unset would make the output allowance an accident
-// of the arithmetic rather than a stated budget.
-const ollamaMaxTokensDefault = 1024
+// ollamaMaxTokensDefault caps a request that didn't set MaxTokens: the ceiling
+// every adapter gives the same gap. Named here as well because the window below
+// is sized from it, so leaving it unset would make the output allowance an
+// accident of the arithmetic rather than a stated budget.
+const ollamaMaxTokensDefault = unsetMaxOutputTokens
 
 // ollamaContextFloor is Ollama's own default window. The adapter never asks for
 // less, so a short request cannot come out worse than saying nothing at all.
@@ -258,7 +258,11 @@ type ollamaChatEvent struct {
 	// or the window cut the reply off, "stop" when it finished.
 	DoneReason      string `json:"done_reason"`
 	PromptEvalCount int    `json:"prompt_eval_count"`
-	EvalCount       int    `json:"eval_count"`
+	// PromptEvalCachedCount is the part of PromptEvalCount read from the
+	// runner's prompt cache rather than evaluated; absent from a runner that
+	// predates it, which reads as no cache.
+	PromptEvalCachedCount int `json:"prompt_eval_cached_count"`
+	EvalCount             int `json:"eval_count"`
 }
 
 func (c *ollamaClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
@@ -276,6 +280,7 @@ func (c *ollamaClient) Complete(ctx context.Context, req model.Request) (model.R
 		Text:         out.Message.Content,
 		InputTokens:  out.PromptEvalCount,
 		OutputTokens: out.EvalCount,
+		CachedTokens: cacheReadWithin(out.PromptEvalCount, out.PromptEvalCachedCount),
 		ServedModel:  out.Model,
 		FinishReason: out.DoneReason,
 	}, nil
@@ -286,7 +291,7 @@ func (c *ollamaClient) Stream(ctx context.Context, req model.Request) (model.Tok
 	if err != nil {
 		return nil, err
 	}
-	return &ollamaStream{body: body, scanner: streamLineScanner(body)}, nil
+	return &ollamaStream{body: body, scanner: streamLineScanner(body), end: streamEnd{wire: providerOllama}}, nil
 }
 
 func (c *ollamaClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
@@ -431,32 +436,40 @@ func (c *ollamaClient) post(ctx context.Context, path string, payload []byte) (i
 	return resp.Body, nil
 }
 
-// ollamaStream reads the JSON-lines chat stream.
+// ollamaStream reads the JSON-lines chat stream. The reply's terminal is the
+// done event's done_reason, already in the port's vocabulary as Complete reads
+// it; a body that closes before a done event dropped mid-generation.
 type ollamaStream struct {
 	body    io.ReadCloser
 	scanner *bufio.Scanner
+	end     streamEnd
 }
 
 func (s *ollamaStream) Next(ctx context.Context) (string, bool, error) {
-	for s.scanner.Scan() {
+	for !s.end.read && s.scanner.Scan() {
 		if err := ctx.Err(); err != nil {
 			return "", false, err
 		}
-		var ev ollamaChatEvent
+		var ev struct {
+			ollamaChatEvent
+			// Error is Ollama's report that generation failed after the 200
+			// went out: a runner that crashed or ran out of memory mid-reply.
+			Error string `json:"error"`
+		}
 		if err := json.Unmarshal(s.scanner.Bytes(), &ev); err != nil {
 			return "", false, fmt.Errorf("ai: ollama: stream event: %w", err)
 		}
+		if ev.Error != "" {
+			return "", false, fmt.Errorf("ai: ollama: stream error: %s", safeProviderText(ctx, ev.Error))
+		}
 		if ev.Done {
-			return "", false, nil
+			s.end.finish(ev.DoneReason)
 		}
 		if ev.Message.Content != "" {
 			return ev.Message.Content, true, nil
 		}
 	}
-	if err := s.scanner.Err(); err != nil {
-		return "", false, fmt.Errorf("ai: ollama: stream: %w", err)
-	}
-	return "", false, nil
+	return s.end.outcome(s.scanner.Err())
 }
 
 func (s *ollamaStream) Close() error { return s.body.Close() }

@@ -111,6 +111,19 @@ type ToolSpec struct {
 	// renderer for an answer this tool already gives in text, never a second
 	// door onto the record. See ToolUI.
 	UI *ToolUI
+	// UnkeyedArguments declares, by path into InputSchema (`$.fields`), each
+	// object argument whose keys belong to the caller's data rather than to the
+	// tool — a record type's own fields, a query document in a per-workspace
+	// grammar, an uploaded file's column headers — with why it cannot name
+	// them.
+	//
+	// A schema-constrained decoder writes no key into an object whose schema
+	// lists none (Gemini's pads it with whitespace to the output ceiling), so a
+	// tool carrying one cannot be driven by such a model and is never attached
+	// to a scheduled agent. Empty on every tool whose objects all name their
+	// keys. Held to InputSchema in both directions, and to the agent catalog, by
+	// TestEveryServedToolNamesTheKeysOfItsObjects.
+	UnkeyedArguments map[string]string
 }
 
 // ReadOnly reports whether the tool only reads — the protocol's

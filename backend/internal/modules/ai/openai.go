@@ -34,10 +34,6 @@ type openaiClient struct {
 	attachmentMIMEs []string
 }
 
-// openaiMaxOutputDefault caps a request that didn't set MaxTokens, so a caller
-// bug can't turn into unbounded spend (mirrors the Anthropic default).
-const openaiMaxOutputDefault = 1024
-
 type openaiWire struct {
 	Model           string            `json:"model"`
 	Input           []openaiInputItem `json:"input"`
@@ -123,10 +119,14 @@ type openaiResponse struct {
 		} `json:"content"`
 	} `json:"output"`
 	Usage struct {
-		InputTokens       int `json:"input_tokens"`
-		OutputTokens      int `json:"output_tokens"`
+		InputTokens  int `json:"input_tokens"`
+		OutputTokens int `json:"output_tokens"`
+		// InputTokenDetails itemizes input_tokens: the cache read and, from
+		// gpt-5.6 on, the cache write — both parts of the total, never added
+		// to it.
 		InputTokenDetails struct {
-			CachedTokens int `json:"cached_tokens"`
+			CachedTokens     int `json:"cached_tokens"`
+			CacheWriteTokens int `json:"cache_write_tokens"`
 		} `json:"input_tokens_details"`
 		OutputTokenDetails struct {
 			ReasoningTokens int `json:"reasoning_tokens"`
@@ -135,6 +135,12 @@ type openaiResponse struct {
 }
 
 func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	ctx, attempt := trackHTTPAttempt(ctx)
+	resp, err := c.completeResponse(ctx, req)
+	return reportSchemaDowngrade(resp, err, strictDowngrade(req.ResponseSchema), attempt)
+}
+
+func (c *openaiClient) completeResponse(ctx context.Context, req model.Request) (model.Response, error) {
 	body, err := c.post(ctx, "/v1/responses", req, false)
 	if err != nil {
 		return model.Response{}, err
@@ -148,10 +154,11 @@ func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.R
 	resp := model.Response{
 		InputTokens:     out.Usage.InputTokens,
 		OutputTokens:    out.Usage.OutputTokens,
-		CachedTokens:    out.Usage.InputTokenDetails.CachedTokens,
 		ReasoningTokens: out.Usage.OutputTokenDetails.ReasoningTokens,
 		ServedModel:     out.Model,
 	}
+	resp.CachedTokens, resp.CacheWriteTokens = cacheWithin(out.Usage.InputTokens,
+		out.Usage.InputTokenDetails.CachedTokens, out.Usage.InputTokenDetails.CacheWriteTokens)
 	cutOff := openaiCutOff(out)
 	if err := openaiTerminalStatus(ctx, out); err != nil && !cutOff {
 		return model.Response{}, withSpend(err, resp)
@@ -199,11 +206,11 @@ func (c *openaiClient) Stream(ctx context.Context, req model.Request) (model.Tok
 	if err != nil {
 		return nil, err
 	}
-	return &openaiStream{body: body, scanner: streamLineScanner(body)}, nil
+	return &openaiStream{body: body, scanner: streamLineScanner(body), end: streamEnd{wire: providerOpenAI}}, nil
 }
 
 func (c *openaiClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
-	return openAIWireEmbed(ctx, c.postRaw, c.defaultModel, req)
+	return openAIWireEmbed(ctx, c.postRaw, c.defaultModel, req, nil)
 }
 
 func (c *openaiClient) Caps() model.Capabilities {
@@ -226,7 +233,7 @@ func (c *openaiClient) post(ctx context.Context, path string, req model.Request,
 		wire.Model = c.defaultModel
 	}
 	if wire.MaxOutputTokens <= 0 {
-		wire.MaxOutputTokens = openaiMaxOutputDefault
+		wire.MaxOutputTokens = unsetMaxOutputTokens
 	}
 	wire.Input = openaiInputMessages(req.System, req.Messages, req.Attachments)
 	if len(req.ResponseSchema) > 0 {
@@ -337,7 +344,7 @@ func (c *openaiClient) postRaw(ctx context.Context, path string, payload []byte)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
-	resp, err := c.http.Do(httpReq)
+	resp, err := sendModelRequest(c.http, httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ai: openai: %w", err)
 	}
@@ -379,8 +386,8 @@ func openaiError(ctx context.Context, resp *http.Response) error {
 }
 
 // openaiCutOff reports a response the output ceiling stopped: an answer,
-// truncated, rather than a failed call. Only Complete reads it — TokenStream
-// has no terminal to carry the truncation, so a stream ends on truncatedError.
+// truncated, rather than a failed call. Only Complete reads it — a stream ends
+// on truncatedError, the port's model.ErrOutputTruncated.
 func openaiCutOff(out openaiResponse) bool {
 	return out.Status == "incomplete" && out.IncompleteDetails.Reason == openaiMaxOutputTokens
 }
@@ -430,10 +437,11 @@ const openaiMaxOutputTokens = "max_output_tokens"
 type openaiStream struct {
 	body    io.ReadCloser
 	scanner *bufio.Scanner
+	end     streamEnd
 }
 
 func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
-	for s.scanner.Scan() {
+	for !s.end.read && s.scanner.Scan() {
 		if err := ctx.Err(); err != nil {
 			return "", false, err
 		}
@@ -459,7 +467,7 @@ func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
 				return ev.Delta, true, nil
 			}
 		case "response.completed":
-			return "", false, nil
+			s.end.finish("")
 		case "response.failed", "response.incomplete":
 			if err := openaiTerminalStatus(ctx, ev.Response); err != nil {
 				return "", false, err
@@ -467,15 +475,11 @@ func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
 			// The embedded response object omitted its status — the event
 			// type itself is still the authority that this is a failure.
 			return "", false, fmt.Errorf("ai: openai: stream ended with %s", ev.Type)
-		case "error":
+		case sseErrorEvent:
 			return "", false, fmt.Errorf("ai: openai: stream error: %s: %s", safeProviderText(ctx, ev.Code), safeProviderText(ctx, ev.Message))
 		}
 	}
-	if err := s.scanner.Err(); err != nil {
-		return "", false, fmt.Errorf("ai: openai: stream: %w", err)
-	}
-	// EOF without response.completed: the connection dropped mid-generation.
-	return "", false, fmt.Errorf("ai: openai: stream ended without a terminal event")
+	return s.end.outcome(s.scanner.Err())
 }
 
 func (s *openaiStream) Close() error { return s.body.Close() }

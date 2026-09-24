@@ -150,8 +150,16 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 	sch := compiledRoutingSchema(t)
 
 	const broker = "provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'"
+	// cloud_frontier, because this compares the per-binding shape. Under
+	// eu_hosted the parser also asks every broker lane for an EU `only:` pin —
+	// a rule across the profile and each lane that ai.EURegionPinGap owns, and
+	// that the editor schema does not repeat.
 	tiered := func(binding string) string {
-		return "profile: eu_hosted\ntiers:\n  premium: {" + binding + "}\nembeddings: {provider: gemini, model: e}\n"
+		return "profile: cloud_frontier\ntiers:\n  premium: {" + binding + "}\nembeddings: {provider: gemini, model: e}\n"
+	}
+	embedded := func(routing string) string {
+		return "profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\n" +
+			"embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api', " + routing + "}\n"
 	}
 	for name, tc := range map[string]struct {
 		yaml  string
@@ -200,10 +208,21 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 		"a block on the wire pointed elsewhere": {
 			tiered("provider: openai_compatible, model: m, base_url: 'https://api.mistral.ai', routing: {sort: throughput}"), false,
 		},
-		// The embeddings lane has no tail to bound.
-		"a block on the embeddings lane": {
-			"profile: eu_hosted\ntiers:\n  premium: {" + broker + "}\n" +
-				"embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api', routing: {sort: throughput}}\n", false,
+		// The embeddings lane has no tail to bound, so a tail preference is
+		// refused there — but WHICH hosts may read the text is a question it
+		// shares with every chat tier, and a residency pin must reach it.
+		"a tail preference on the embeddings lane": {embedded("routing: {sort: throughput}"), false},
+		"a host pin on the embeddings lane":        {embedded("routing: {only: [mistral/eu]}"), true},
+		"a host blocklist on the embeddings lane":  {embedded("routing: {ignore: [deepinfra], allow_fallbacks: false}"), true},
+		"an effort cap on the embeddings lane":     {embedded("routing: {reasoning_effort: low}"), false},
+		// The embeddings lane shares the chat tiers' host rule: a direct vendor
+		// on the OpenAI wire fronts one host, so a pin there has nothing to pick.
+		"a host pin on an embeddings lane pointed elsewhere": {
+			"profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\n" +
+				"embeddings: {provider: openai_compatible, model: e, base_url: 'https://api.mistral.ai', routing: {only: [x]}}\n", false,
+		},
+		"a host pin on a native embeddings lane": {
+			"profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\nembeddings: {provider: gemini, model: e, routing: {only: [x]}}\n", false,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
