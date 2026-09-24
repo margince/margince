@@ -127,7 +127,7 @@ func (a vertexServiceAccount) assertion(issuedAt time.Time) (string, error) {
 	}
 	signingInput := header + "." + base64.RawURLEncoding.EncodeToString(claims)
 	digest := sha256.Sum256([]byte(signingInput))
-	signature, err := rsa.SignPKCS1v15(rand.Reader, a.key, crypto.SHA256, digest[:])
+	signature, err := rsa.SignPKCS1v15(rand.Reader, a.key, crypto.SHA256, digest[:]) // NOSONAR(go:S5542) a signature, not encryption: Google's jwt-bearer grant accepts only RS256
 	if err != nil {
 		return "", errors.New("ai: gemini_vertex: signing the token assertion failed")
 	}
