@@ -109,7 +109,7 @@
           }
         },
         "retention": {
-          "description": "RetentionSeed selects the retention POSTURE a fresh installation is bootstrapped into (GCS-PARAM-7). It does not select the policy rows: those stay the data-model's pins (DM-SEED-1..6) under either posture, so an installation that must keep everything still SEES the ladder it is not running.",
+          "description": "RetentionSeed selects the retention POSTURE a fresh installation is bootstrapped into (GCS-PARAM-7). It does not select the policy rows: those stay the data-model's pins (DM-SEED-1..7) under either posture, so an installation that must keep everything still SEES the ladder it is not running.",
           "type": [
             "object",
             "null"
