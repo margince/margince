@@ -191,10 +191,15 @@ endpoint directly.
 Three things bound it, and they are the reason it is not simply a button
 everywhere:
 
-- **It is privileged.** Assembly admits an unbounded human holding the contact
-  delete grant. The request queue's own gate is narrower still — admin, human,
-  contact read — and it stays in front, so the package is never reachable by a
-  role the queue itself would refuse.
+- **It is privileged, twice over.** Reaching the request at all takes the
+  **privacy request** grant and a human principal — one grant that asks the
+  question directly, so an installation can delegate the privacy inbox without
+  handing out member administration with it. Assembling the package then takes
+  the **contact delete** grant — the same trust level erasure needs — over an
+  unbounded row scope, and a human again: an agent under a passport carries the
+  granting human's live grants, so an admin's read-scoped passport would
+  otherwise assemble somebody's entire Article 15 package. Both checks stand,
+  and the queue's own gate is in front.
 - **It answers access requests only.** An erasure or a rectification request
   has no package; answering one with a subject's whole record would export
   everything to close a request that asked for something else.
@@ -318,10 +323,8 @@ retention floor by hand.
 
 ## Exporting records
 
-There is one export in the product, and it is worth knowing exactly what it is
-so you do not promise more than it does.
-
-There are two exports, and they answer different questions.
+There are two exports, and they answer different questions. It is worth
+knowing exactly what each one is, so you do not promise more than it does.
 
 #### The list export
 
