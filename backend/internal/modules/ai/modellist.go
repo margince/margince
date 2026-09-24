@@ -60,14 +60,16 @@ func getListBody(
 	ctx context.Context,
 	httpc *http.Client,
 	vendor, endpoint string,
-	authorize func(*http.Request),
+	authorize func(*http.Request) error,
 ) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("ai: %s: build request: %w", vendor, err)
 	}
 	req.Header.Set("Accept", "application/json")
-	authorize(req)
+	if err := authorize(req); err != nil {
+		return nil, fmt.Errorf("ai: %s: %w", vendor, err)
+	}
 	resp, err := noRedirect(httpc).Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("ai: %s: %w", vendor, err)
@@ -129,9 +131,10 @@ func (c *anthropicClient) ListModels(ctx context.Context) ([]model.Info, error) 
 		} `json:"data"`
 	}
 	endpoint := c.baseURL + "/v1/models?limit=" + strconv.Itoa(modelListLimit)
-	raw, err := getListBody(ctx, c.http, "anthropic", endpoint, func(r *http.Request) {
+	raw, err := getListBody(ctx, c.http, "anthropic", endpoint, func(r *http.Request) error {
 		r.Header.Set("x-api-key", c.apiKey)
 		r.Header.Set("anthropic-version", anthropicAPIVersion)
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -188,12 +191,13 @@ func openAIWireModels(
 			Name string `json:"name"`
 		} `json:"data"`
 	}
-	raw, err := getListBody(ctx, httpc, vendor, baseURL+"/v1/models", func(r *http.Request) {
+	raw, err := getListBody(ctx, httpc, vendor, baseURL+"/v1/models", func(r *http.Request) error {
 		// Empty on a local vLLM, which takes no auth — the same condition the
 		// adapter's own post() applies.
 		if apiKey != "" {
 			r.Header.Set("Authorization", "Bearer "+apiKey)
 		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -235,12 +239,12 @@ func (c *geminiClient) ListModels(ctx context.Context) ([]model.Info, error) {
 			} `json:"models"`
 			NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google's wire format (camelCase)
 		}
-		endpoint := c.baseURL + "/models?pageSize=100"
+		endpoint := c.transport.modelsURL() + "?pageSize=100"
 		if pageToken != "" {
 			endpoint += "&pageToken=" + url.QueryEscape(pageToken)
 		}
-		raw, err := getListBody(ctx, c.http, "gemini", endpoint, func(r *http.Request) {
-			r.Header.Set("x-goog-api-key", c.apiKey)
+		raw, err := getListBody(ctx, c.http, "gemini", endpoint, func(r *http.Request) error {
+			return c.transport.authorize(ctx, r)
 		})
 		if err != nil {
 			return nil, err
@@ -296,10 +300,11 @@ func (c *ollamaClient) ListModels(ctx context.Context) ([]model.Info, error) {
 		} `json:"models"`
 	}
 	raw, err := getListBody(ctx, c.http, "ollama", c.baseURL+"/api/tags",
-		func(*http.Request) {
+		func(*http.Request) error {
 			// Nothing to sign. A model runner the operator runs themselves takes
 			// no credential, which is the same reason this adapter's own post()
 			// sets no auth header either.
+			return nil
 		})
 	if err != nil {
 		return nil, err

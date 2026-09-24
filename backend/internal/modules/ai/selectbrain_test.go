@@ -101,8 +101,11 @@ func TestCloudKeyResolvesFromEnvWhenConfigOmitsIt(t *testing.T) {
 		t.Fatalf("gemini must resolve its key from GEMINI_API_KEY: %v", err)
 	}
 	gc, ok := client.(*geminiClient)
-	if !ok || gc.apiKey != "env-gemini-key" {
-		t.Fatalf("env key not applied: %+v", client)
+	if !ok {
+		t.Fatalf("gemini built %T, want *geminiClient", client)
+	}
+	if studio, ok := gc.transport.(aiStudioTransport); !ok || studio.apiKey != "env-gemini-key" {
+		t.Fatalf("env key not applied: %+v", gc.transport)
 	}
 }
 

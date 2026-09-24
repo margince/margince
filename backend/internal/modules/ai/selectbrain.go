@@ -215,8 +215,7 @@ func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (
 		}
 		return &geminiClient{
 			http:            httpc,
-			baseURL:         defaulted(cfg.BaseURL, defaultGeminiBaseURL),
-			apiKey:          key,
+			transport:       aiStudioTransport{baseURL: defaulted(cfg.BaseURL, defaultGeminiBaseURL), apiKey: key},
 			defaultModel:    cfg.Model,
 			attachmentMIMEs: narrowedCarriage(geminiCarries, cfg.Input),
 		}, nil
