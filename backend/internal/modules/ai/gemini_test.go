@@ -94,7 +94,7 @@ func TestGeminiCompleteMapsNativeWireAndUsage(t *testing.T) {
 	}
 }
 
-func TestGeminiStructuredOutputUsesResponseJSONSchema(t *testing.T) {
+func TestGeminiStructuredOutputRidesResponseFormat(t *testing.T) {
 	schema := json.RawMessage(`{"type":"object","properties":{"ok":{"type":"boolean"}}}`)
 	var body []byte
 	client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
@@ -108,19 +108,62 @@ func TestGeminiStructuredOutputUsesResponseJSONSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	var wire struct {
-		GenerationConfig struct {
-			ResponseMimeType   string          `json:"responseMimeType"`   //nolint:tagliatelle // Google's wire format (camelCase)
-			ResponseJSONSchema json.RawMessage `json:"responseJsonSchema"` //nolint:tagliatelle // Google's wire format (camelCase)
-		} `json:"generationConfig"` //nolint:tagliatelle // Google's wire format (camelCase)
+		GenerationConfig map[string]json.RawMessage `json:"generationConfig"` //nolint:tagliatelle // Google's wire format (camelCase)
 	}
 	if err := json.Unmarshal(body, &wire); err != nil {
 		t.Fatal(err)
 	}
-	if wire.GenerationConfig.ResponseMimeType != "application/json" {
-		t.Fatalf("responseMimeType not set: %s", body)
+	// Both older spellings are deprecated in v1beta; sending either beside
+	// responseFormat would be two schemas on one request.
+	for _, deprecated := range []string{"responseMimeType", "responseJsonSchema", "responseSchema"} {
+		if _, sent := wire.GenerationConfig[deprecated]; sent {
+			t.Errorf("deprecated %s sent: %s", deprecated, body)
+		}
 	}
-	if !bytes.Equal(bytes.TrimSpace(wire.GenerationConfig.ResponseJSONSchema), bytes.TrimSpace(schema)) {
-		t.Fatalf("responseJsonSchema not verbatim: %s", wire.GenerationConfig.ResponseJSONSchema)
+	var format struct {
+		Text struct {
+			MimeType string          `json:"mimeType"` //nolint:tagliatelle // Google's wire format (camelCase)
+			Schema   json.RawMessage `json:"schema"`
+		} `json:"text"`
+	}
+	if err := json.Unmarshal(wire.GenerationConfig["responseFormat"], &format); err != nil {
+		t.Fatalf("responseFormat absent or malformed: %v: %s", err, body)
+	}
+	if format.Text.MimeType != "APPLICATION_JSON" {
+		t.Fatalf("responseFormat.text.mimeType = %q, want APPLICATION_JSON", format.Text.MimeType)
+	}
+	if !bytes.Equal(bytes.TrimSpace(format.Text.Schema), bytes.TrimSpace(schema)) {
+		t.Fatalf("responseFormat.text.schema not verbatim: %s", format.Text.Schema)
+	}
+}
+
+// A structured request thinks at low unless its caller chose a level, because
+// Gemini's thinking is charged to the same maxOutputTokens the answer needs; a
+// free-text request keeps the model's own default.
+func TestGeminiThinkingDefaultsLowOnlyForAStructuredRequest(t *testing.T) {
+	schema := json.RawMessage(`{"type":"object"}`)
+	cases := []struct {
+		name   string
+		schema json.RawMessage
+		chosen string
+		want   string
+	}{
+		{"structured, no level chosen", schema, "", geminiStructuredThinkingLevel},
+		{"structured, caller chose high", schema, "high", "high"},
+		{"free text, no level chosen", nil, "", ""},
+		{"free text, caller chose medium", nil, "medium", "medium"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := geminiGenerationConfig(model.Request{ResponseSchema: tc.schema}, geminiOptions{ThinkingLevel: tc.chosen})
+			got := ""
+			if cfg.ThinkingConfig != nil {
+				got = cfg.ThinkingConfig.ThinkingLevel
+			}
+			if got != tc.want {
+				t.Fatalf("thinking level = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
 

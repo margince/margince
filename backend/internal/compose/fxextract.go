@@ -59,8 +59,8 @@ type extractedFxPair struct {
 	// Confidence is read through schema.Confidence, which takes the score
 	// quoted or bare. The prompt and response schema above ask for a string
 	// and a conforming provider sends one, but neither binds: the model
-	// runtime retries with the schema cleared when a provider rejects it, and
-	// a provider with no schema-constrained mode never had it. A reader that
+	// runtime sends no schema to a provider that cannot enforce it, and a
+	// provider with no schema-constrained mode never had it. A reader that
 	// insisted on the quotes would refuse a perfectly good rate over its
 	// wrapper.
 	Confidence schema.Confidence `json:"confidence"`

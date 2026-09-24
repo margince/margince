@@ -34,10 +34,6 @@ type openaiClient struct {
 	attachmentMIMEs []string
 }
 
-// openaiMaxOutputDefault caps a request that didn't set MaxTokens, so a caller
-// bug can't turn into unbounded spend (mirrors the Anthropic default).
-const openaiMaxOutputDefault = 1024
-
 type openaiWire struct {
 	Model           string            `json:"model"`
 	Input           []openaiInputItem `json:"input"`
@@ -123,10 +119,14 @@ type openaiResponse struct {
 		} `json:"content"`
 	} `json:"output"`
 	Usage struct {
-		InputTokens       int `json:"input_tokens"`
-		OutputTokens      int `json:"output_tokens"`
+		InputTokens  int `json:"input_tokens"`
+		OutputTokens int `json:"output_tokens"`
+		// InputTokenDetails itemizes input_tokens: the cache read and, from
+		// gpt-5.6 on, the cache write — both parts of the total, never added
+		// to it.
 		InputTokenDetails struct {
-			CachedTokens int `json:"cached_tokens"`
+			CachedTokens     int `json:"cached_tokens"`
+			CacheWriteTokens int `json:"cache_write_tokens"`
 		} `json:"input_tokens_details"`
 		OutputTokenDetails struct {
 			ReasoningTokens int `json:"reasoning_tokens"`
@@ -148,10 +148,11 @@ func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.R
 	resp := model.Response{
 		InputTokens:     out.Usage.InputTokens,
 		OutputTokens:    out.Usage.OutputTokens,
-		CachedTokens:    out.Usage.InputTokenDetails.CachedTokens,
 		ReasoningTokens: out.Usage.OutputTokenDetails.ReasoningTokens,
 		ServedModel:     out.Model,
 	}
+	resp.CachedTokens, resp.CacheWriteTokens = cacheWithin(out.Usage.InputTokens,
+		out.Usage.InputTokenDetails.CachedTokens, out.Usage.InputTokenDetails.CacheWriteTokens)
 	cutOff := openaiCutOff(out)
 	if err := openaiTerminalStatus(ctx, out); err != nil && !cutOff {
 		return model.Response{}, withSpend(err, resp)
@@ -226,7 +227,7 @@ func (c *openaiClient) post(ctx context.Context, path string, req model.Request,
 		wire.Model = c.defaultModel
 	}
 	if wire.MaxOutputTokens <= 0 {
-		wire.MaxOutputTokens = openaiMaxOutputDefault
+		wire.MaxOutputTokens = unsetMaxOutputTokens
 	}
 	wire.Input = openaiInputMessages(req.System, req.Messages, req.Attachments)
 	if len(req.ResponseSchema) > 0 {

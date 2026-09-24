@@ -244,6 +244,13 @@ type ToolDef struct {
 	InputSchema []byte // JSON Schema
 }
 
+// SchemaRelaxed and SchemaDropped are the two values of
+// Response.SchemaDowngrade.
+const (
+	SchemaRelaxed = "relaxed"
+	SchemaDropped = "dropped"
+)
+
 type Response struct {
 	Text string
 	// InputTokens is the TOTAL prompt tokens billed, cache reads AND cache
@@ -271,6 +278,14 @@ type Response struct {
 	// counted inside InputTokens above, so this is a breakdown, never
 	// additive on its own. 0 when the provider reports none.
 	CacheWriteTokens int
+	// SchemaDowngrade says the request's ResponseSchema was not enforced as
+	// written: SchemaRelaxed when bounds the vendor's decoder cannot hold were
+	// moved into descriptions (the shape is enforced, those bounds are not),
+	// SchemaDropped when the vendor could hold no form of it and the completion
+	// was unconstrained. Empty when the schema went as given or there was none.
+	// The caller's validator checks the whole schema either way; this is how the
+	// call record says which answers generation did not hold.
+	SchemaDowngrade string
 	// ProviderMetadata carries vendor-only outputs namespaced by provider key
 	// (e.g. {"openai":{"response_id":"…"}} for session logging).
 	ProviderMetadata map[string]json.RawMessage

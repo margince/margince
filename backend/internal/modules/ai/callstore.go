@@ -124,10 +124,15 @@ type Call struct {
 	// reported. Recorded because a truncated answer and a complete one are
 	// otherwise the same row, and the difference decides whether a schema
 	// failure was the model's fault or the output budget's.
-	FinishReason  string
-	Degraded      bool
-	ErrorSentinel string
-	AgentRunID    *ids.UUID
+	FinishReason string
+	// SchemaDowngrade is model.Response.SchemaDowngrade: whether generation
+	// held the response schema as written, only its shape, or none of it.
+	// Recorded because the three produce answers that read alike and fail the
+	// validator for different reasons.
+	SchemaDowngrade string
+	Degraded        bool
+	ErrorSentinel   string
+	AgentRunID      *ids.UUID
 	// ConfigHash points at the ai_call_config row describing the task
 	// contract, routing config, and prompt version that produced this
 	// attempt. Nil when the serving Router never installed a config
@@ -323,6 +328,7 @@ func aiCallBindings(c Call) []boundColumn {
 		{"served_identity_source", servedSource},
 		{"served_provider", c.ServedProvider},
 		{"finish_reason", c.FinishReason},
+		{"schema_downgrade", c.SchemaDowngrade},
 		{"cache_off", c.CacheOff},
 		{"config_hash", c.ConfigHash},
 		{"secrets_removed", c.SecretsRemoved},

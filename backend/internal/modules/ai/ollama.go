@@ -63,11 +63,11 @@ type ollamaEmbedOptions struct {
 	NumCtx int `json:"num_ctx"`
 }
 
-// ollamaMaxTokensDefault caps a request that didn't set MaxTokens, the same
-// answer anthropic and gemini give the same gap. The window below is sized from
-// this number, so leaving it unset would make the output allowance an accident
-// of the arithmetic rather than a stated budget.
-const ollamaMaxTokensDefault = 1024
+// ollamaMaxTokensDefault caps a request that didn't set MaxTokens: the ceiling
+// every adapter gives the same gap. Named here as well because the window below
+// is sized from it, so leaving it unset would make the output allowance an
+// accident of the arithmetic rather than a stated budget.
+const ollamaMaxTokensDefault = unsetMaxOutputTokens
 
 // ollamaContextFloor is Ollama's own default window. The adapter never asks for
 // less, so a short request cannot come out worse than saying nothing at all.
@@ -258,7 +258,11 @@ type ollamaChatEvent struct {
 	// or the window cut the reply off, "stop" when it finished.
 	DoneReason      string `json:"done_reason"`
 	PromptEvalCount int    `json:"prompt_eval_count"`
-	EvalCount       int    `json:"eval_count"`
+	// PromptEvalCachedCount is the part of PromptEvalCount read from the
+	// runner's prompt cache rather than evaluated; absent from a runner that
+	// predates it, which reads as no cache.
+	PromptEvalCachedCount int `json:"prompt_eval_cached_count"`
+	EvalCount             int `json:"eval_count"`
 }
 
 func (c *ollamaClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
@@ -276,6 +280,7 @@ func (c *ollamaClient) Complete(ctx context.Context, req model.Request) (model.R
 		Text:         out.Message.Content,
 		InputTokens:  out.PromptEvalCount,
 		OutputTokens: out.EvalCount,
+		CachedTokens: cacheReadWithin(out.PromptEvalCount, out.PromptEvalCachedCount),
 		ServedModel:  out.Model,
 		FinishReason: out.DoneReason,
 	}, nil

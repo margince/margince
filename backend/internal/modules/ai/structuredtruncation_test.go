@@ -17,6 +17,8 @@ package ai
 // fault.
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -93,5 +95,103 @@ func TestAMalformedAnswerThatRanToCompletionIsStillMalformed(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), "cut off") {
 		t.Errorf("an answer that stopped on its own was reported as truncated: %v", err)
+	}
+}
+
+// scriptedClient answers each Complete with the next scripted Response and
+// remembers every request, MaxTokens included — the field the fake's recorded
+// payload does not carry.
+type scriptedClient struct {
+	stubClient
+	replies  []model.Response
+	requests *[]model.Request
+}
+
+func (c scriptedClient) Complete(_ context.Context, req model.Request) (model.Response, error) {
+	n := len(*c.requests)
+	*c.requests = append(*c.requests, req)
+	return c.replies[min(n, len(c.replies)-1)], nil
+}
+
+// starvedStep is an attempt whose thinking spent the output ceiling: cut off,
+// with almost nothing of the answer written.
+func starvedStep(ceiling, thinking int) model.Response {
+	return model.Response{Text: `{"ans`, OutputTokens: ceiling, ReasoningTokens: thinking, FinishReason: model.FinishReasonLength}
+}
+
+func structuredWith(t *testing.T, maxTokens int, replies ...model.Response) []model.Request {
+	t.Helper()
+	var requests []model.Request
+	client := scriptedClient{replies: replies, requests: &requests}
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: client, TierPremium: client},
+		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+	req := structuredReq()
+	req.MaxTokens = maxTokens
+	// What these tests read is the requests the policy made; a terminal
+	// rejection is one of the scripted outcomes, and anything else is not.
+	if _, _, err := r.CompleteStructured(wsContext(t), TaskColdStart, req, jsonObjectValidator); err != nil &&
+		!errors.Is(err, ErrOutputRejected) {
+		t.Fatalf("the structured call failed for a reason no script gave it: %v", err)
+	}
+	return requests
+}
+
+// Thinking that spent the ceiling is recovered by room, not by asking for a
+// shorter answer: the answer was never the long part.
+func TestAnAnswerStarvedByThinkingIsRetriedWithRoomRatherThanBrevity(t *testing.T) {
+	requests := structuredWith(t, 1000, starvedStep(1000, 960), model.Response{Text: `{"ok":true}`})
+	if len(requests) != 2 {
+		t.Fatalf("made %d calls, want the starved attempt and one retry", len(requests))
+	}
+	retry := requests[1]
+	if retry.MaxTokens != 1000+960 {
+		t.Errorf("retry ceiling = %d, want the original 1000 plus the 960 the thinking took", retry.MaxTokens)
+	}
+	if len(retry.Messages) != len(requests[0].Messages) {
+		t.Errorf("the retry changed the conversation, so the model was told something about an answer "+
+			"it never got to write: %+v", retry.Messages)
+	}
+}
+
+// An answer that ran long by itself still gets the brevity retry, and its
+// ceiling is left alone — more room would buy a longer runaway.
+func TestAnAnswerThatRanLongItselfIsStillAskedToBeBrief(t *testing.T) {
+	requests := structuredWith(t, 1000, starvedStep(1000, 200), model.Response{Text: `{"ok":true}`})
+	if len(requests) != 2 {
+		t.Fatalf("made %d calls, want the cut-off attempt and one retry", len(requests))
+	}
+	retry := requests[1]
+	if retry.MaxTokens != 1000 {
+		t.Errorf("retry ceiling = %d, want 1000 unchanged", retry.MaxTokens)
+	}
+	last := retry.Messages[len(retry.Messages)-1]
+	if last.Content != truncationFeedback {
+		t.Errorf("the retry does not ask for a briefer answer: %q", last.Content)
+	}
+}
+
+// A request that set no ceiling was capped by the adapter's default, which the
+// attempt's own output count reports.
+func TestRoomToAnswerStartsFromTheCeilingThatActuallyApplied(t *testing.T) {
+	requests := structuredWith(t, 0, starvedStep(1024, 1000), model.Response{Text: `{"ok":true}`})
+	if len(requests) != 2 || requests[1].MaxTokens != 1024+1000 {
+		t.Fatalf("retry ceiling = %+v, want 1024 plus 1000", requests)
+	}
+}
+
+// Each retry grows from the caller's request and at most doubles it, so a model
+// that keeps thinking to the ceiling cannot ratchet it upward attempt after
+// attempt.
+func TestRoomToAnswerDoesNotCompoundAcrossRetries(t *testing.T) {
+	requests := structuredWith(t, 1000, starvedStep(1000, 900), starvedStep(1900, 1800), starvedStep(1800, 1700))
+	if len(requests) != maxLadderWalks {
+		t.Fatalf("made %d calls, want %d", len(requests), maxLadderWalks)
+	}
+	if got := requests[1].MaxTokens; got != 1000+900 {
+		t.Errorf("retry ceiling = %d, want 1000 plus the 900 the first attempt thought", got)
+	}
+	if got := requests[2].MaxTokens; got != 2000 {
+		t.Errorf("escalation ceiling = %d, want the caller's 1000 at most doubled, not grown from the "+
+			"retry's 1900", got)
 	}
 }

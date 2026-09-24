@@ -112,6 +112,13 @@ type openAICompatChatResponse struct {
 		CompletionTokensDetails struct {
 			ReasoningTokens int `json:"reasoning_tokens"`
 		} `json:"completion_tokens_details"`
+		// PromptTokensDetails itemizes PromptTokens the same way: the cache
+		// read and the cache write, both inside the total. A broker reports
+		// them for every upstream that caches; a bare vLLM host omits them.
+		PromptTokensDetails struct {
+			CachedTokens     int `json:"cached_tokens"`
+			CacheWriteTokens int `json:"cache_write_tokens"`
+		} `json:"prompt_tokens_details"`
 	} `json:"usage"`
 }
 
@@ -136,6 +143,8 @@ func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (m
 		ServedModel:     out.Model,
 		ServedProvider:  out.Provider,
 	}
+	resp.CachedTokens, resp.CacheWriteTokens = cacheWithin(out.Usage.PromptTokens,
+		out.Usage.PromptTokensDetails.CachedTokens, out.Usage.PromptTokensDetails.CacheWriteTokens)
 	choice := out.Choices[0]
 	finish, err := choice.terminal(ctx)
 	if err != nil {
@@ -394,6 +403,9 @@ func (c *openAICompatClient) chatWire(req model.Request, stream bool) openAIComp
 	}
 	if wire.Model == "" {
 		wire.Model = c.defaultModel
+	}
+	if wire.MaxTokens <= 0 {
+		wire.MaxTokens = unsetMaxOutputTokens
 	}
 	wire.Messages = openAICompatMessages(req.System, req.Messages, req.Attachments)
 	if len(req.ResponseSchema) > 0 {

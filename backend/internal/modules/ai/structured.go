@@ -193,13 +193,58 @@ func withTruncationFeedback(req model.Request) model.Request {
 	return out
 }
 
-// feedbackFor picks the retry an attempt has earned: a cut-off answer is told to
-// be shorter, and a complete-but-wrong one is shown why it was refused.
+// feedbackFor picks the retry an attempt has earned. A cut-off answer gets the
+// lever for whatever spent the budget — room, when thinking spent it; brevity,
+// when the answer did — and a complete-but-wrong one is shown why it was
+// refused.
 func feedbackFor(req model.Request, resp model.Response, cause error) model.Request {
-	if truncated(resp) {
+	switch {
+	case truncated(resp) && thinkingSpentTheBudget(resp):
+		return withRoomToAnswer(req, resp)
+	case truncated(resp):
 		return withTruncationFeedback(req)
+	default:
+		return withValidatorFeedback(req, resp.Text, cause)
 	}
-	return withValidatorFeedback(req, resp.Text, cause)
+}
+
+// thinkingSpentTheBudget reports whether a cut-off attempt's reasoning, not its
+// answer, took the larger share of the output ceiling. Every reasoning wire
+// charges thinking to the same ceiling as the answer, and a model can think
+// until almost nothing is left; "answer more briefly" then shortens the one
+// part that was already short, and the retry runs out the same way.
+//
+// An adapter that reports no reasoning figure leaves ReasoningTokens 0, which
+// reads as an answer that ran long — the brevity retry this replaced.
+func thinkingSpentTheBudget(resp model.Response) bool {
+	answer := resp.OutputTokens - resp.ReasoningTokens
+	return resp.ReasoningTokens > 0 && resp.ReasoningTokens >= answer
+}
+
+// withRoomToAnswer is the retry for an attempt whose thinking spent its output
+// ceiling: the same request, with the ceiling raised by what the thinking took,
+// so the answer gets at least the whole budget it was meant to have. The
+// messages are unchanged — nothing about the answer was wrong — and the raised
+// ceiling alone keys the retry apart from the cut-off attempt in the cache.
+//
+// Raising the ceiling rather than lowering the thinking level, because it is
+// the one lever every wire has: thinking controls are per vendor, and a
+// structured Gemini request already thinks at the lowest level all its models
+// accept (geminiStructuredThinkingLevel).
+//
+// The growth is bounded twice over: the ceiling at most doubles, and every
+// retry grows from the caller's request rather than from the previous retry,
+// so a model that keeps thinking to the ceiling cannot ratchet it upward.
+func withRoomToAnswer(req model.Request, resp model.Response) model.Request {
+	out := req
+	ceiling := req.MaxTokens
+	if ceiling <= 0 {
+		// A request that set no ceiling was capped by its adapter's default,
+		// which the cut-off attempt's own output count reports.
+		ceiling = resp.OutputTokens
+	}
+	out.MaxTokens = ceiling + min(resp.ReasoningTokens, ceiling)
+	return out
 }
 
 // withValidatorFeedback appends the failed output and its validation

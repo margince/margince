@@ -88,49 +88,30 @@ func TestAnthropicCarriesResponseSchemaAsOutputConfigFormatAndOmitsItOtherwise(t
 	}
 }
 
-func TestAnthropicDropsSchemaAndRetriesWhenOutputConfigRejected(t *testing.T) {
+// The schema's fit is decided before sending, so a 400 on a schema-carrying
+// request is the vendor's answer and surfaces — it is not a cue to resend the
+// request unconstrained.
+func TestAnthropicDoesNotRetryA400WhenASchemaWasSent(t *testing.T) {
 	schema := json.RawMessage(`{"type":"object","additionalProperties":false,"properties":{"ok":{"type":"boolean"}},"required":["ok"]}`)
 	var calls int
-	var sawSchemaThenPlain []bool
 	client := newAnthropicForTest(t, func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		var wire map[string]json.RawMessage
-		if err := json.Unmarshal(readBody(t, r.Body), &wire); err != nil {
-			t.Errorf("wire not JSON: %v", err)
-		}
-		_, hasOutputConfig := wire["output_config"]
-		sawSchemaThenPlain = append(sawSchemaThenPlain, hasOutputConfig)
-		if hasOutputConfig {
-			// Simulate a model/endpoint that does not support structured output.
-			w.WriteHeader(http.StatusBadRequest)
-			if err := json.NewEncoder(w).Encode(map[string]any{
-				"error": map[string]string{"type": "invalid_request_error", "message": "output_config is not supported for this model"},
-			}); err != nil {
-				t.Errorf("encoding error fixture: %v", err)
-			}
-			return
-		}
+		w.WriteHeader(http.StatusBadRequest)
 		if err := json.NewEncoder(w).Encode(map[string]any{
-			"content": []map[string]any{{"type": "text", "text": "grounded"}},
-			"usage":   map[string]int{"input_tokens": 1, "output_tokens": 1},
+			"error": map[string]string{"type": "invalid_request_error", "message": "prompt is too long"},
 		}); err != nil {
-			t.Errorf("encoding response fixture: %v", err)
+			t.Errorf("encoding error fixture: %v", err)
 		}
 	})
-
-	resp, err := client.Complete(context.Background(), model.Request{
+	_, err := client.Complete(context.Background(), model.Request{
 		Messages:       []model.Message{{Role: "user", Content: "hi"}},
 		ResponseSchema: schema,
 	})
-	if err != nil {
-		t.Fatalf("schema-rejection fallback should have succeeded, got: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "prompt is too long") {
+		t.Fatalf("the 400 must surface as the vendor's answer, got %v", err)
 	}
-	if resp.Text != "grounded" {
-		t.Fatalf("unexpected text after fallback: %q", resp.Text)
-	}
-	// First attempt carries the schema (rejected), second drops it (accepted).
-	if calls != 2 || len(sawSchemaThenPlain) != 2 || !sawSchemaThenPlain[0] || sawSchemaThenPlain[1] {
-		t.Fatalf("expected schema attempt then unconstrained retry, got %d calls: %v", calls, sawSchemaThenPlain)
+	if calls != 1 {
+		t.Fatalf("a 400 on a schema-carrying request must not be retried, got %d calls", calls)
 	}
 }
 
@@ -204,7 +185,7 @@ func TestAnthropicCompleteSendsStrippedPayload(t *testing.T) {
 	if wire.Model != "claude-test" {
 		t.Fatalf("default model not applied: %q", wire.Model)
 	}
-	if wire.MaxTokens != anthropicMaxTokensDefault {
+	if wire.MaxTokens != unsetMaxOutputTokens {
 		t.Fatalf("max_tokens default not applied: %d", wire.MaxTokens)
 	}
 }

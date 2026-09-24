@@ -22,7 +22,7 @@ import (
 // cannot reach the Files API for document input. The native wire is what
 // carries attachments (inlineData/fileData), thinking control
 // (thinkingConfig.thinkingLevel), full-JSON-Schema structured output
-// (responseJsonSchema), and the thought-signature continuity channel. stdlib
+// (responseFormat.text.schema), and the thought-signature continuity channel. stdlib
 // HTTP only, mirroring anthropic.go; no vendor SDK. Field tags are camelCase to
 // match Google's wire (see the //nolint:tagliatelle markers).
 type geminiClient struct {
@@ -34,9 +34,6 @@ type geminiClient struct {
 	// narrowed by any `input:` the operator declared (inputmodality.go).
 	attachmentMIMEs []string
 }
-
-// geminiMaxOutputDefault caps a request that didn't set MaxTokens.
-const geminiMaxOutputDefault = 1024
 
 // geminiEmbedModel is Gemini's dedicated embedding model; the chat model id
 // does not serve :embedContent.
@@ -73,14 +70,49 @@ type geminiFileData struct {
 }
 
 // geminiGenConfig carries structured-output and thinking controls. Structured
-// output uses responseJsonSchema (the full-JSON-Schema field) — NOT the older
-// OpenAPI-subset responseSchema — with responseMimeType application/json.
+// output rides responseFormat.text, which takes a full JSON Schema: v1beta marks
+// both older spellings deprecated in its favour — responseSchema (the OpenAPI
+// subset) and responseJsonSchema with its responseMimeType pairing.
 type geminiGenConfig struct {
-	MaxOutputTokens    int             `json:"maxOutputTokens,omitempty"`    //nolint:tagliatelle // Google's wire format (camelCase)
-	ResponseMimeType   string          `json:"responseMimeType,omitempty"`   //nolint:tagliatelle // Google's wire format (camelCase)
-	ResponseJSONSchema json.RawMessage `json:"responseJsonSchema,omitempty"` //nolint:tagliatelle // Google's wire format (camelCase)
-	ThinkingConfig     *geminiThinking `json:"thinkingConfig,omitempty"`     //nolint:tagliatelle // Google's wire format (camelCase)
+	MaxOutputTokens int                   `json:"maxOutputTokens,omitempty"` //nolint:tagliatelle // Google's wire format (camelCase)
+	ResponseFormat  *geminiResponseFormat `json:"responseFormat,omitempty"`  //nolint:tagliatelle // Google's wire format (camelCase)
+	ThinkingConfig  *geminiThinking       `json:"thinkingConfig,omitempty"`  //nolint:tagliatelle // Google's wire format (camelCase)
 }
+
+// geminiResponseFormat configures output per modality; only text is asked for.
+type geminiResponseFormat struct {
+	Text geminiTextFormat `json:"text"`
+}
+
+// geminiTextFormat constrains the text part to a JSON Schema. MimeType is the
+// enum spelling (APPLICATION_JSON), not the MIME string the deprecated
+// responseMimeType took.
+type geminiTextFormat struct {
+	MimeType string          `json:"mimeType"` //nolint:tagliatelle // Google's wire format (camelCase)
+	Schema   json.RawMessage `json:"schema"`
+}
+
+// geminiJSONOutput is TextResponseFormat's mime type for JSON output.
+const geminiJSONOutput = "APPLICATION_JSON"
+
+// geminiStructuredThinkingLevel is the thinking level a schema-constrained
+// request gets when the caller named none.
+//
+// Gemini counts thinking against maxOutputTokens, and each model's own default
+// is deep — gemini-3.1-pro-preview thinks at high, gemini-3.5-flash at medium —
+// so a structured lane with a modest cap could spend all of it thinking and
+// return no answer at all. Measured on a three-field email classification under
+// a 400-token cap, two runs per model and level: at each model's default level
+// all four runs stopped at MAX_TOKENS having spent 381-384 tokens thinking and
+// written 0-5 of the answer; at low, three of four finished, thinking 175-310.
+// A schema already says what the answer is shaped like, which is most of what
+// the thinking was for. The run that still ran out — pro, 359 tokens thinking —
+// is what the structured retry's room-to-answer lever is for (structured.go).
+//
+// "low" rather than the shallower "minimal" because it is the floor every
+// Gemini model this tree binds accepts: gemini-3.1-pro-preview answers minimal
+// with a 400.
+const geminiStructuredThinkingLevel = "low"
 
 type geminiThinking struct {
 	ThinkingLevel string `json:"thinkingLevel"` //nolint:tagliatelle // Google's wire format (camelCase)
@@ -344,14 +376,17 @@ func geminiGenerationConfig(req model.Request, opts geminiOptions) *geminiGenCon
 	if req.MaxTokens > 0 {
 		cfg.MaxOutputTokens = req.MaxTokens
 	} else {
-		cfg.MaxOutputTokens = geminiMaxOutputDefault
+		cfg.MaxOutputTokens = unsetMaxOutputTokens
 	}
+	level := opts.ThinkingLevel
 	if len(req.ResponseSchema) > 0 {
-		cfg.ResponseMimeType = "application/json"
-		cfg.ResponseJSONSchema = req.ResponseSchema
+		cfg.ResponseFormat = &geminiResponseFormat{Text: geminiTextFormat{MimeType: geminiJSONOutput, Schema: req.ResponseSchema}}
+		if level == "" {
+			level = geminiStructuredThinkingLevel
+		}
 	}
-	if opts.ThinkingLevel != "" {
-		cfg.ThinkingConfig = &geminiThinking{ThinkingLevel: opts.ThinkingLevel}
+	if level != "" {
+		cfg.ThinkingConfig = &geminiThinking{ThinkingLevel: level}
 	}
 	return cfg
 }

@@ -102,6 +102,7 @@ func (r *Router) finalizeAttempt(ctx context.Context, b *binding, lc *logicalCal
 	// means no broker named an upstream, and substituting the configured
 	// provider would turn "nobody told us" into a claim about who served.
 	trace.ServedProvider, trace.FinishReason = resp.ServedProvider, finishReasonFor(resp.FinishReason, callErr)
+	trace.SchemaDowngrade = resp.SchemaDowngrade
 	// Payload capture is best-effort and, like the trace write itself, must
 	// not become a new way for a working model call to fail (contrast the
 	// meter, which fails loudly to protect the budget guardrail). flush()

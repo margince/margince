@@ -265,6 +265,10 @@ Since the change that added this page's subject, `ai_call` carries:
   `provider` field. Empty on a direct vendor, which reports none.
 - **`finish_reason`** — so a truncated answer and a complete one are different
   rows.
+- **`cached_tokens` and `cache_write_tokens`** — read from the response's
+  `usage.prompt_tokens_details`, both already inside `prompt_tokens`. An upstream
+  that caches (Anthropic through the broker is the one that charges for the
+  write) therefore prices at its cache rates rather than as plain input.
 
 `served_identity_source` deliberately stays `'echo'` for this wire: the
 broker's `model` field is our own request reflected back, so we now know **who**

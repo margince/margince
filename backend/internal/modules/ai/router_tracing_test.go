@@ -136,6 +136,27 @@ func TestCompleteCarriesCacheWriteTokens(t *testing.T) {
 	}
 }
 
+// A schema the serving adapter could not send as written is on the call
+// record, so a reply generation did not constrain is not mistaken for one it
+// did.
+func TestTheTraceRecordsTheSchemaDowngradeTheAdapterReported(t *testing.T) {
+	for _, downgrade := range []string{"", model.SchemaRelaxed, model.SchemaDropped} {
+		fcs := &fakeCallStore{}
+		r := assembleRouter(
+			map[Tier]model.Client{TierCheapCloud: stubClient{resp: model.Response{Text: "{}", SchemaDowngrade: downgrade}}},
+			nil, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, fcs,
+			map[Tier]routeMeta{TierCheapCloud: {provider: "anthropic", model: "claude-x"}},
+			false, nil,
+		)
+		if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud}, model.Request{}); err != nil {
+			t.Fatalf("complete: %v", err)
+		}
+		if len(fcs.recorded) != 1 || fcs.recorded[0].SchemaDowngrade != downgrade {
+			t.Fatalf("trace SchemaDowngrade = %+v, want %q", fcs.recorded, downgrade)
+		}
+	}
+}
+
 // TestServedIdentityStamping covers the terminals servedIdentity must
 // distinguish: a provider that reports its own served model off the wire
 // (source "response"), the generic OpenAI-compatible wire that only ever
