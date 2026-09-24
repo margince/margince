@@ -76,10 +76,13 @@ func Catalog() []AgentSpec {
 		},
 		{
 			Name: "overnight_at_risk_sweep",
-			Goal: "Sweep this workspace's open deals for risk: find deals with no activity in " +
-				"14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity " +
-				"per at-risk deal summarizing the risk and the evidence (cite the records you " +
-				"read). Do not advance stages, send anything, or archive anything.",
+			Goal: "Sweep this workspace's open deals for risk: deals with no activity in " +
+				"14+ days, stakeholders gone quiet, or missing next steps. First call " +
+				"whats_slipping_this_week: it returns the at-risk deals across the whole workspace. " +
+				"A deal the retrieved context mentions is one example, not the sweep, so do not " +
+				"read or log on it before that list. Then read each listed deal and log ONE note " +
+				"activity per at-risk deal summarizing the risk and the evidence (cite the records " +
+				"you read). Do not advance stages, send anything, or archive anything.",
 			DueHourUTC: 2,
 		},
 	}

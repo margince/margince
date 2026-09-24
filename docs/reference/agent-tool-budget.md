@@ -83,7 +83,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 ### `overnight_at_risk_sweep`
 
-> Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
+> Sweep this workspace's open deals for risk: deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. First call whats_slipping_this_week: it returns the at-risk deals across the whole workspace. A deal the retrieved context mentions is one example, not the sweep, so do not read or log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
 Attaches 7 tools and pays 4907 tokens on every step (2721 listing, 1737 step schema), leaving
 18303 of its budget and 27861 tokens of the
