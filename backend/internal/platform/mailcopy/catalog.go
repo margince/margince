@@ -139,7 +139,7 @@ func weeklyFigureLines(line writeLine) {
 		"Bewegt",
 		"Đã chuyển")
 	line(func(c *Copy) *string { return &c.WeeklyDecided },
-		"You decided",
+		"Proposals decided",
 		"Von dir entschieden",
 		"Bạn đã quyết")
 	weeklyDecisionLines(line)
@@ -169,7 +169,7 @@ func weeklyDecisionLines(line writeLine) {
 // with the week, and what it carried into the next one.
 func weeklyQueueLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyQueue },
-		"Morning queue",
+		"Morning brief items",
 		"Morgen-Liste",
 		"Danh sách buổi sáng")
 	line(func(c *Copy) *string { return &c.WeeklyActed },
