@@ -194,7 +194,7 @@ test("renders in German under a German locale", async () => {
     <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
     "de",
   );
-  expect(await screen.findByText("Um eine Vorstellung bitten")).toBeTruthy();
+  expect(await screen.findByText("Vorstellung anfragen")).toBeTruthy();
 });
 
 // A DRAFT MUST NOT FOLLOW THE READER TO ANOTHER CONTACT.

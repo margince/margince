@@ -61,7 +61,7 @@ test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, th
   // act, and the name alone no longer says which control the reader pressed.
   await page.getByTestId("lead-qualify").click();
   await expect(
-    page.getByText("Die Übernahme legt einen neuen Kontakt an."),
+    page.getByText("Das Qualifizieren legt einen neuen Kontakt an."),
   ).toBeVisible();
   // The reason is derived, not asked for: the seeded lead has no captured
   // engagement, so it is the rep's own call.

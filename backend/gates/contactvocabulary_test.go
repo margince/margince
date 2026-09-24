@@ -245,6 +245,8 @@ var retired = gatekit.Waive(map[string]string{
 
 	"docs/reference/record-vocabulary.md": "it states the rule, which it cannot do without " +
 		"naming the word the rule retires",
+	"docs/reference/ui-copy-style-de.md": "it states the German human-sense rule that " +
+		"record-noun.test.ts holds, which it cannot do without the German word for a human being",
 
 	"backend/gates/contactvocabulary_test.go": "this file names the word in order to refuse it",
 

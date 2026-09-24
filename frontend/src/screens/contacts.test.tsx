@@ -408,7 +408,7 @@ describe("ContactsScreen — rich create (P-15)", () => {
     await user.click(screen.getByText("E-Mail hinzufügen"));
     const optionText = await optionTextOf(user, screen.getByLabelText("Typ"));
     expect(optionText).toEqual([
-      "Nicht gesetzt",
+      "Nicht festgelegt",
       "Geschäftlich",
       "Privat",
       "Sonstige",

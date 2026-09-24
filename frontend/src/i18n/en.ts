@@ -12,7 +12,7 @@ export const en = {
   "aiAdmin.fixed":
     "Fixed company allowance overrides the per-user calculation.",
   "aiAdmin.formula":
-    "{users} active full users × {tokens} tokens per user per month.",
+    "Active full users: {users} × {tokens} tokens per user per month.",
   "aiAdmin.floor": "With no eligible users, the allowance counts 1 user.",
   "aiAdmin.normal": "Within the normal allowance band",
   "aiAdmin.degraded": "80% threshold reached: reduced-tier routing is active",
@@ -1813,7 +1813,7 @@ export const en = {
   "linkedinReach.empty":
     "None of your connections work at a company on file yet.",
   "linkedinReach.allUnresolved":
-    "All {unresolved} of your connections work at companies not on file yet.",
+    "All your connections work at companies not on file yet. Connections: {unresolved}.",
   "linkedinReach.accountsLabel": "Companies you reach",
   "linkedinReach.account": "Company",
   "linkedinReach.connections": "Connections",
@@ -2674,7 +2674,7 @@ export const en = {
   "deal.pulse.nothingFlagged": "No reply due.",
   "deal.pulse.nothingFlaggedWhy":
     "No inbound message on this deal is flagged for an answer.",
-  "deal.pulse.wroteOn": "They last wrote on {date}, {days} days ago.",
+  "deal.pulse.wroteOn": "They last wrote on {date}. Days since: {days}.",
   "deal.pulse.wroteUnknown": "They wrote and no one has replied.",
   "deal.timeline.empty": "No activity on this deal yet.",
   "acqSources.title": "Acquisition sources",
@@ -4086,7 +4086,7 @@ export const en = {
   "analytics.medianDaysInStage": "Median days in stage",
   "analytics.p75DaysInStage": "P75 days in stage",
   "analytics.tooFewForMedian": "Too few deals",
-  "analytics.days": "{days} days",
+  "analytics.days": "{days} d",
   "analytics.unknownStage": "Former stage",
   "analytics.share.open": "Share view",
   "analytics.share.title": "Share this view",
@@ -4639,7 +4639,7 @@ export const en = {
   "import.importing": "Importing…",
   "import.done": "Import complete",
   "import.failed":
-    "The import stopped after {checkpoint} rows. Resume continues from that point.",
+    "The import stopped. Rows processed: {checkpoint}. Resume continues from that point.",
   "import.resume": "Resume import",
   "import.uploadFailed": "File could not be read",
   "import.resumedRunTitle": "Earlier import",
@@ -5168,7 +5168,7 @@ export const en = {
     "Each block shows the registered name, address and register or VAT number. Select the right one in the review.",
   "ob.legalEntity": "Legal entity",
   "ob.confirmWebsite":
-    "Based on {count} public pages. Edit any value; unedited values keep their evidence.",
+    "Based on public pages: {count}. Edit any value; unedited values keep their evidence.",
   "ob.confirmManual":
     "These answers came from you and are stored as human assertions.",
   "ob.legalTitle": "Select legal entity",
@@ -6119,8 +6119,7 @@ export const en = {
   "ob.conv.voice.revise": "Not quite me: add more writing",
   "ob.conv.voice.distilling": "Analyzing",
   "ob.conv.voice.hears": "hears",
-  "ob.conv.voice.hearsWords":
-    "{words} of your own words across {sources} sources",
+  "ob.conv.voice.hearsWords": "{words} of your own words, sources: {sources}",
   "ob.conv.voice.hearsBand": "a {band} corpus so far",
   "ob.conv.voice.hearsRegister": "{words} words of {register} writing",
   "ob.conv.voice.sampleEyebrow": "Sample, not sent",
@@ -6971,7 +6970,7 @@ export const en = {
   "cf.builder.intro":
     "A new field is a real column on the existing table. It works in filters, reports, exports and the API like any core field. It is not a new object.",
   "cf.label": "Label",
-  "cf.apiKey": "API key",
+  "cf.apiKey": "API name",
   "cf.apiKeyHint":
     "Derived automatically and fixed once live. The cf_ prefix prevents collisions with core fields.",
   "cf.typeLabel": "Type",
@@ -8576,7 +8575,7 @@ export const en = {
   "contact.intro.factOneSided": "One-sided",
   "contact.intro.factDirect": "Direct relationship",
   "contact.intro.factIndirect": "Through a colleague",
-  "contact.intro.factReceipts": "{count} visible receipts",
+  "contact.intro.factReceipts": "Visible receipts: {count}",
   "contact.intro.verdictDirect":
     "Ask {name}. They already correspond with this contact.",
   "contact.intro.verdictOneSided":
@@ -10036,7 +10035,7 @@ export const en = {
   "ob.digest.where": "What Margince knows about the company",
   "ob.digest.written": "{n} of {m} lines written",
   "ob.digest.companyLine": "Company profile from {host}, pages read: {n}",
-  "ob.digest.citedCaption": "lines, each citing its page",
+  "ob.digest.citedCaption": "citing a source page",
   "ob.digest.openCaption": "still open",
   "ob.digest.section.identity": "Identity",
   "ob.digest.section.offer": "What they sell",
