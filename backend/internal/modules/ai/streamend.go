@@ -9,10 +9,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// streamEnd is what one stream has learned about how its reply ended, and the
-// ONE place every adapter's Next turns that into the port's TokenStream
-// terminal. Five wires spell their terminal five ways; what each answer means
-// to a caller must not differ by wire.
+// streamEnd is what one stream has learned about how its reply ended, and how
+// every adapter's Next turns that into the port's TokenStream terminal. Five
+// wires spell their terminal five ways; what each answer means to a caller
+// must not differ by wire.
 //
 // The terminal is recorded rather than returned at once because a wire may put
 // the last of the text in the same event that ends the reply, and that text

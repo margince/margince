@@ -319,8 +319,8 @@ func TestEveryStreamReportsAMidReplyFailureAsAFailure(t *testing.T) {
 // streamWires is the census the tests above walk; an adapter missing from it
 // goes unchecked, so this makes that a failure. The fake is exempt because its
 // stream replays a script and has no wire. The withheld fixtures follow the
-// same waiver the Complete parity keeps, so the two cannot disagree about which
-// wires can withhold.
+// same waiver the Complete parity keeps: which wires can withhold is one fact
+// about the wire, whichever method reads it.
 func TestStreamWiresCoverEveryProvider(t *testing.T) {
 	covered := map[string]bool{}
 	withholds := map[string]bool{}
