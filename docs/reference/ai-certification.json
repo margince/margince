@@ -1,13 +1,13 @@
 {
   "totals": {
     "sites": 47,
-    "sites_best_current": 2,
+    "sites_best_current": 13,
     "sites_best_partial": 0,
-    "sites_best_stale": 45,
+    "sites_best_stale": 34,
     "sites_absent": 0,
     "scenarios": 152,
-    "records": 132,
-    "bindings": 15,
+    "records": 144,
+    "bindings": 16,
     "self_judged_records": 4
   },
   "presets": [
@@ -1008,6 +1008,506 @@
         "not_supported": 12
       },
       "untested": 0,
+      "unbound": 0,
+      "unrecognised": 0
+    },
+    {
+      "file": "gemma4_local_ollama.yaml",
+      "profile": "sovereign",
+      "tiers": [
+        {
+          "tier": "local_small",
+          "provider": "ollama",
+          "model": "gemma4:12b"
+        },
+        {
+          "tier": "cheap_cloud",
+          "provider": "ollama",
+          "model": "gemma4:12b"
+        },
+        {
+          "tier": "premium",
+          "provider": "ollama",
+          "model": "gemma4:12b"
+        },
+        {
+          "tier": "frontier",
+          "provider": "ollama",
+          "model": "gemma4:12b"
+        }
+      ],
+      "tasks": [
+        {
+          "task": "account_scan",
+          "label": "Reading what an account needs",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 6,
+          "passed": 3,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "agent_loop",
+          "label": "Agent reasoning loop",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "brief_ranking",
+          "label": "Morning brief ranking",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "capture_classify",
+          "label": "Message classification",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 15,
+          "passed": 14,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "capture_confidentiality_verdict",
+          "label": "Thread confidentiality check",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "capture_counterparty_verdict",
+          "label": "First-time sender check",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "cert_judge",
+          "label": "Certification judging",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "cold_start",
+          "label": "Onboarding read",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "corpus_ask",
+          "label": "Document corpus question",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "deal_health",
+          "label": "Deal status card",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "document_extract",
+          "label": "Document extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "draft_reply",
+          "label": "Reply drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "enrich",
+          "label": "Signature enrichment",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "growth_fit",
+          "label": "Company fit assessment",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "offer_draft",
+          "label": "Offer drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "owed_verdict",
+          "label": "Unanswered-message triage",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 12,
+          "passed": 7,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "propose_roles",
+          "label": "Buying-role reading",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "rate_extract",
+          "label": "Model pricing extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "request_settlement",
+          "label": "Did our reply settle it",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 12,
+          "passed": 9,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 3
+        },
+        {
+          "task": "signal_extract",
+          "label": "Signal extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 12,
+          "passed": 6,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "site_extract",
+          "label": "Website deep read",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "site_fact_extract",
+          "label": "Website fact extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "site_triage",
+          "label": "Website triage",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 12,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "stage_evidence_extract",
+          "label": "Stage evidence extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "summarize",
+          "label": "Record summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "transcript_propose",
+          "label": "Meeting follow-up extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "voice_build",
+          "label": "Voice DNA build",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "weekly_learnings",
+          "label": "What last week taught",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "weekly_review",
+          "label": "Weekly review narrative",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        }
+      ],
+      "bands": {
+        "certified": 6,
+        "supported_degraded": 1,
+        "not_supported": 5
+      },
+      "untested": 17,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -2075,6 +2575,26 @@
     },
     {
       "binding": {
+        "provider": "ollama",
+        "model": "gemma4:12b",
+        "env": "sovereign"
+      },
+      "sites": 13,
+      "sites_current": 11,
+      "sites_partial": 0,
+      "sites_stale": 2,
+      "runs": 111,
+      "passed": 90,
+      "reliability": 0.8108108108108109,
+      "slowest_p95_ms": 56477,
+      "bands": {
+        "certified": 7,
+        "supported_degraded": 1,
+        "not_supported": 5
+      }
+    },
+    {
+      "binding": {
         "provider": "openai_compatible",
         "model": "anthropic/claude-haiku-4.5",
         "env": "cloud_frontier"
@@ -2323,8 +2843,17 @@
       "missing_context_scopes": [
         "identity"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "ollama",
+          "model": "gemma4:12b",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.5,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "scan_finds_the_promise_we_did_not_keep",
@@ -2366,6 +2895,29 @@
               "scan_finds_the_question_nobody_answered"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 3,
+          "reliability": 0.5,
+          "latency_p50_ms": 30560,
+          "latency_p95_ms": 32654,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -2592,8 +3144,17 @@
       "key": "brief_ranking/rank",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "ollama",
+          "model": "gemma4:12b",
+          "env": "sovereign"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "reorder_two_candidates_by_momentum",
@@ -2629,6 +3190,29 @@
               "reorder_two_candidates_by_momentum"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 17139,
+          "latency_p95_ms": 18070,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -2806,6 +3390,38 @@
               "meeting_request_from_reply"
             ],
             "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 14,
+          "reliability": 0.9333333333333333,
+          "latency_p50_ms": 19842,
+          "latency_p95_ms": 38204,
+          "reported": {
+            "accepted": 14,
+            "wrong_answer": 0,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
               "a_message_that_is_both_is_labelled_commitment",
               "a_mixed_batch_keeps_every_label_on_its_own_message",
               "a_stated_promise_is_a_commitment",
@@ -3524,8 +4140,17 @@
       "key": "cert_judge/judge",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "ollama",
+          "model": "gemma4:12b",
+          "env": "sovereign"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "grades_a_fabricated_answer_poorly",
@@ -3567,6 +4192,29 @@
               "grades_a_well_grounded_answer_highly"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 13702,
+          "latency_p95_ms": 14978,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -6276,8 +6924,17 @@
       "key": "enrich/signature",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "ollama",
+          "model": "gemma4:12b",
+          "env": "sovereign"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "contact_fields_from_a_mail_signature",
@@ -6313,6 +6970,29 @@
               "contact_fields_from_a_mail_signature"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 33865,
+          "latency_p95_ms": 36038,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -6756,8 +7436,17 @@
       "key": "owed_verdict/owed",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "ollama",
+          "model": "gemma4:12b",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.5833333333333334,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_direct_question_asks_us_and_a_report_does_not",
@@ -6811,6 +7500,29 @@
               "the_recipient_line_separates_a_request_from_a_copy"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 7,
+          "reliability": 0.5833333333333334,
+          "latency_p50_ms": 26672,
+          "latency_p95_ms": 42636,
+          "reported": {
+            "accepted": 7,
+            "wrong_answer": 3,
+            "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -6913,8 +7625,17 @@
       "key": "propose_roles/committee",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "ollama",
+          "model": "gemma4:12b",
+          "env": "sovereign"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_committee_where_four_contacts_state_their_own_roles",
@@ -6962,6 +7683,29 @@
               "propose_roles_reads_no_role_out_of_a_title"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 24660,
+          "latency_p95_ms": 56477,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -7061,8 +7805,17 @@
       "key": "rate_extract/fx",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "ollama",
+          "model": "gemma4:12b",
+          "env": "sovereign"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "fx_rates_json_api_grounded",
@@ -7104,6 +7857,29 @@
               "fx_rates_two_pairs_grounded"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 17672,
+          "latency_p95_ms": 33557,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -7223,8 +7999,17 @@
       "key": "rate_extract/pricing",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "ollama",
+          "model": "gemma4:12b",
+          "env": "sovereign"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "pricing_table_two_models_grounded",
@@ -7260,6 +8045,29 @@
               "pricing_table_two_models_grounded"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 17672,
+          "latency_p95_ms": 33557,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -7376,8 +8184,17 @@
       "key": "request_settlement/request_settle",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "ollama",
+          "model": "gemma4:12b",
+          "env": "sovereign"
+        },
+        "band": "supported_degraded",
+        "reliability": 0.75,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_reply_that_says_nothing_either_way_is_answered_unsure",
@@ -7437,6 +8254,29 @@
               "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 9,
+          "reliability": 0.75,
+          "latency_p50_ms": 31116,
+          "latency_p95_ms": 34918,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 3,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -7557,8 +8397,17 @@
       "key": "signal_extract/thread_events",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "ollama",
+          "model": "gemma4:12b",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.5,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "both_sides_promise_something",
@@ -7612,6 +8461,29 @@
               "the_mail_tries_to_write_the_record"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 6,
+          "reliability": 0.5,
+          "latency_p50_ms": 20141,
+          "latency_p95_ms": 24253,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -8113,8 +8985,17 @@
       "key": "site_triage/triage",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "ollama",
+          "model": "gemma4:12b",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.8,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
@@ -8174,6 +9055,29 @@
               "a_personal_domain_is_not_a_company"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 12,
+          "reliability": 0.8,
+          "latency_p50_ms": 15277,
+          "latency_p95_ms": 16379,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -9393,6 +10297,36 @@
               "one_side_promises_revised_pricing"
             ],
             "grader_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 19181,
+          "latency_p95_ms": 25161,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
+          "stale_cause": {
+            "prompt_changed": [
               "a_meeting_that_promised_nothing",
               "a_speaker_tries_to_write_the_record",
               "one_side_promises_revised_pricing"

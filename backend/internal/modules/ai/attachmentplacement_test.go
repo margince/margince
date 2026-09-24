@@ -246,6 +246,8 @@ func placementFixtureServer(t *testing.T) (*httptest.Server, func() []byte) {
 			writeFixture(t, w, `{"model":"m","content":[{"type":"text","text":"ok"}]}`)
 		case strings.HasPrefix(r.URL.Path, "/v1/responses"):
 			writeFixture(t, w, `{"id":"r","status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"ok"}]}]}`)
+		case strings.HasPrefix(r.URL.Path, "/api/show"):
+			writeFixture(t, w, `{"capabilities":["completion","vision"]}`)
 		case strings.HasPrefix(r.URL.Path, "/api/chat"):
 			writeFixture(t, w, `{"model":"m","message":{"content":"ok"},"done":true}`)
 		default:
