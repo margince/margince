@@ -26,18 +26,12 @@ import (
 // installations bootstrapped afterwards, and an operator reading their own
 // retention page is the one who decides for theirs.
 //
-// `raw_capture` is here because the table it governs is the largest thing this
-// product stores — 92% of one measured database, 6.7 GB of 7.3 — and because
-// until the provider original got a clock of its own it was reached only by the
-// activity sweep's natural-key join and by Art. 17 erasure. An installation
-// whose activity policy is the seeded 1095 days therefore kept every verbatim
-// original for three years, and a scope shipping with no row at all meant that
-// number was nobody's decision.
-//
-// 730 days rather than the activity's 1095: the original outlives nothing that
-// reads it. The extracted activity survives this stage untouched — the selector
-// joins to it precisely so it can — and with it the `(source_system, source_id)`
-// tombstone a replay is refused by. What ages out is the second copy.
+// `raw_capture` holds the verbatim provider original, and it ages on its own
+// clock rather than on the activity's. 730 days rather than the activity
+// ladder's 1095 because the original outlives nothing that reads it: the
+// extracted activity survives this stage untouched — the selector joins to it
+// precisely so it can — and with it the `(source_system, source_id)` tombstone
+// a replay is refused by. What ages out is the second copy.
 //
 // It destroys less than the number suggests. The selector carries the statutory
 // correspondence floor and the legal-hold test, so a Handelsbrief inside its

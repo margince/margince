@@ -7,22 +7,20 @@ package gates
 
 // Every scope the retention engine can act on ships a default, or says why not.
 //
-// The defect this exists for is not a wrong number. It is a scope that reaches
-// production with NO row at all, which reads exactly like a scope whose number
-// an admin chose: the settings page shows nothing either way, and the sweep
-// simply never visits it. `raw_capture` shipped like that, and the table it
-// governs was 92% of a measured database — 6.7 GB of 7.3 — because the only
-// thing aging those rows was the activity sweep's natural-key join, on an
-// installation whose activity policy is the seeded 1095 days.
+// A scope with no policy row is indistinguishable, on the settings page and in
+// the sweep, from a scope whose number an admin chose: the page shows nothing
+// either way and the pass simply never visits it. So the absence has to be
+// caught here, where it is a source fact, rather than in a database where it
+// looks like a decision.
 //
-// So this walks the seeded INSERT and the engine's own vocabulary and asserts
-// they agree. It reads SeedDefaultRetentionTx's SQL rather than executing it,
-// because the subject is what a fresh installation gets planted with, and that
-// is a source fact available without a database.
+// The seeded INSERT is read rather than executed: the subject is what a fresh
+// installation is planted with, which is answerable without a database. The
+// engine's vocabulary is read the same way, off its selector table, because
+// gates may not depend on a module.
 //
-// A scope that is deliberately unseeded stays possible — deal/won is one, and
-// retentionselectors.go says why beside it — but it costs an entry here with a
-// reason, which is the difference between a decision and an oversight.
+// A scope that must NOT be planted stays possible and costs an entry in
+// deliberatelyUnseeded with a reason, which is the difference between a
+// decision and an oversight.
 
 import (
 	"os"
@@ -34,8 +32,8 @@ import (
 )
 
 // deliberatelyUnseeded names a scope the engine can act on that a fresh
-// installation must NOT be planted with, and why. An entry that stops matching
-// a real scope fails below rather than lingering.
+// installation must NOT be planted with, and why. An entry matching no
+// remaining unseeded scope fails rather than standing.
 var deliberatelyUnseeded = gatekit.Waive(map[string]string{
 	"deal/won": "a won deal is the record of revenue earned and the evidence behind it, so " +
 		"archiving one on a timer is a decision an operator makes rather than one they " +
@@ -44,15 +42,14 @@ var deliberatelyUnseeded = gatekit.Waive(map[string]string{
 
 var seedRowRE = regexp.MustCompile(`\(\s*'([a-z_]+)'\s*,\s*(?:'([a-z_]+)'|NULL)\s*,\s*(\d+)\s*,\s*'([a-z]+)'\s*\)`)
 
-// selectorKeyRE reads the retention engine's own scope vocabulary off its
-// selector table. Read from SOURCE rather than imported: gates may not depend
-// on a module (arch-lint), and the subject here is a declaration rather than a
-// runtime value, so parsing it is the honest shape as well as the permitted one.
+// selectorKeyRE matches a selector-table key. The character class admits digits
+// so a scope named with one is not silently skipped by the reader that exists
+// to notice missing scopes.
 var selectorKeyRE = regexp.MustCompile("(?m)^\\t\"([a-z_]+/[a-z_]*)\": `")
 
 // actionableScopes reads the scope keys off the engine's selector table. It
 // claims no completeness beyond what the parse finds: an empty result fails
-// loudly below, because a gate reading nothing passes over everything.
+// loudly, because a reader that finds nothing passes over everything.
 func actionableScopes(t *testing.T) []string {
 	t.Helper()
 	src, err := os.ReadFile("internal/modules/privacy/retentionselectors.go")
