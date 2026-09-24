@@ -20,10 +20,10 @@
 # latency a certification run records includes those reloads; measure serving
 # speed with a direct call, not from a record.
 #
-# The committed records cover twelve shipped tasks: the six that certified, and
-# the ones that fell short (request_settlement, owed_verdict, signal_extract,
-# account_scan, site_triage), so the readiness page shows both ends. The rest of
-# the corpus is uncertified under this binding, not failed.
+# The committed records cover twelve shipped tasks: six that certified and six
+# that did not (capture_classify, request_settlement, owed_verdict,
+# signal_extract, account_scan, site_triage), so the readiness page shows both
+# ends. The rest of the corpus is uncertified under this binding, not failed.
 #
 # WHY 12b ON EVERY TIER. Sized for a 24GB Apple-silicon machine, the smallest
 # this preset is meant to run on, with Ollama 0.34 (its server log reports
