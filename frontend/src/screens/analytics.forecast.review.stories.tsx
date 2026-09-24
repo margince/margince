@@ -13,9 +13,9 @@ import {
 } from "./story-utils";
 
 // What should be checked before the forecast call: the coverage line first and
-// apart, then one row per finding with the money it puts at stake. That amount
-// is a figure in a column of rows, so it keeps tabular digits and lines up
-// down the panel in the body face.
+// apart, then a table of findings in the server's order, severity first. The
+// money at stake is a figure in a column, so it keeps tabular digits and lines
+// up down the table in the body face.
 //
 // Read both frames in BOTH themes with the toolbar's Theme control.
 
@@ -109,8 +109,8 @@ export default meta;
 
 type Story = StoryObj<typeof ForecastReview>;
 
-// Three findings, one unpriced: the amounts line up down the rows, and the
-// unpriced one says so rather than drawing a zero.
+// Three findings, one per severity and one unpriced: the amounts line up down
+// the column, and the unpriced one says so rather than drawing a zero.
 export const FindingsToCheck: Story = {
   render: () => {
     installFetchStub(routes(RUN, FINDINGS));
