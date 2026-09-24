@@ -164,7 +164,8 @@ type scenarioTally struct {
 }
 
 // judgeBand is the best verdict rs's graded scores reach against b, ignoring
-// pass/fail. No graded run reaches nothing: a band is not met by a score nobody gave.
+// pass/fail. No graded run reaches nothing: a band is not met by a score
+// nobody gave.
 func judgeBand(rs []RunResult, b Bands) string {
 	median, minScore, graded := judgeMedianAndMin(rs)
 	switch {

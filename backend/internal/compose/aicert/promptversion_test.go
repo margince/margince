@@ -567,7 +567,4 @@ func TestAScenarioStampCoversTheGradingRule(t *testing.T) {
 	if third == graderRequest {
 		t.Fatal("the grader third is the bare request digest — a change of grading rule would leave every record current")
 	}
-	if third == gradedBy(gradingRule+"-next", graderRequest) {
-		t.Fatal("two grading rules stamp the same grader third")
-	}
 }

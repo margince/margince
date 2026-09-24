@@ -130,7 +130,8 @@ func TestE2ECertify(t *testing.T) {
 	}
 
 	// The judge is a SECOND model on purpose: one grading itself is certified by
-	// construction. Run refuses the two being equal before a call is paid for.
+	// construction. A task whose candidate is the judge is graded by the fallback,
+	// and Run refuses one that is both before a call is paid for.
 	judge, err := ai.ParseBinding(os.Getenv("MARGINCE_AICERT_JUDGE_MODEL"),
 		judgeBaseURL("MARGINCE_AICERT_JUDGE_MODEL", "MARGINCE_AICERT_JUDGE_BASE_URL"))
 	if err != nil {

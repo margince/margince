@@ -275,17 +275,21 @@ e2e-siteread: composition ## Deep-read quality floor vs the real gradion.com (pa
 # swap flips verdicts on the same candidate. JUDGE_FALLBACK grades the tasks whose
 # candidate IS the judge (a Gemini preset's premium rung); a task that is both is
 # refused before the first paid call, and `JUDGE_FALLBACK=` refuses every collision.
+# The defaults sit on the exported names, so an operator's environment wins; JUDGE*
+# default to those and override both, and `?=` keeps an explicit empty one empty.
 # BASE_URL carries a broker host — openai_compatible fails closed without one —
 # and a native vendor leaves it empty.
 MARGINCE_AICERT_ROUTING                 ?=
 MARGINCE_AICERT_MODEL                   ?=
 MARGINCE_AICERT_BASE_URL                ?=
-MARGINCE_AICERT_JUDGE_MODEL             ?=
+MARGINCE_AICERT_JUDGE_MODEL             ?= gemini:gemini-3.5-flash
 MARGINCE_AICERT_JUDGE_BASE_URL          ?=
-MARGINCE_AICERT_JUDGE_FALLBACK_MODEL    ?=
+MARGINCE_AICERT_JUDGE_FALLBACK_MODEL    ?= gemini:gemini-3.1-flash-lite
 MARGINCE_AICERT_JUDGE_FALLBACK_BASE_URL ?=
-JUDGE                                   ?= gemini:gemini-3.5-flash
-JUDGE_FALLBACK                          ?= gemini:gemini-3.1-flash-lite
+JUDGE                                   ?= $(MARGINCE_AICERT_JUDGE_MODEL)
+JUDGE_BASE_URL                          ?= $(MARGINCE_AICERT_JUDGE_BASE_URL)
+JUDGE_FALLBACK                          ?= $(MARGINCE_AICERT_JUDGE_FALLBACK_MODEL)
+JUDGE_FALLBACK_BASE_URL                 ?= $(MARGINCE_AICERT_JUDGE_FALLBACK_BASE_URL)
 MARGINCE_AICERT_PROFILE                 ?= eu_hosted
 MARGINCE_AICERT_UPSTREAM                ?=
 
@@ -344,10 +348,8 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
 	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \
 	  MARGINCE_AICERT_BASE_URL=$(if $(BASE_URL),$(BASE_URL),$(MARGINCE_AICERT_BASE_URL)) \
-	  MARGINCE_AICERT_JUDGE_MODEL=$(if $(JUDGE),$(JUDGE),$(MARGINCE_AICERT_JUDGE_MODEL)) \
-	  MARGINCE_AICERT_JUDGE_BASE_URL=$(if $(JUDGE_BASE_URL),$(JUDGE_BASE_URL),$(MARGINCE_AICERT_JUDGE_BASE_URL)) \
-	  MARGINCE_AICERT_JUDGE_FALLBACK_MODEL=$(if $(JUDGE_FALLBACK),$(JUDGE_FALLBACK),$(MARGINCE_AICERT_JUDGE_FALLBACK_MODEL)) \
-	  MARGINCE_AICERT_JUDGE_FALLBACK_BASE_URL=$(if $(JUDGE_FALLBACK_BASE_URL),$(JUDGE_FALLBACK_BASE_URL),$(MARGINCE_AICERT_JUDGE_FALLBACK_BASE_URL)) \
+	  MARGINCE_AICERT_JUDGE_MODEL=$(JUDGE) MARGINCE_AICERT_JUDGE_BASE_URL=$(JUDGE_BASE_URL) \
+	  MARGINCE_AICERT_JUDGE_FALLBACK_MODEL=$(JUDGE_FALLBACK) MARGINCE_AICERT_JUDGE_FALLBACK_BASE_URL=$(JUDGE_FALLBACK_BASE_URL) \
 	  MARGINCE_AICERT_PROFILE=$(if $(PROFILE),$(PROFILE),$(MARGINCE_AICERT_PROFILE)) \
 	  MARGINCE_AICERT_UPSTREAM='$(if $(UPSTREAM),$(UPSTREAM),$(MARGINCE_AICERT_UPSTREAM))' \
 	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" \

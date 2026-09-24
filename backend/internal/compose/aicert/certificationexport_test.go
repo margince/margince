@@ -7,6 +7,12 @@ package aicert
 // plain-words grading summary quotes the rule rather than restating it.
 const CertifiedPassPercent = certifiedPassPercent
 
+// DefaultRepeats is how many times a run tries each case unless told otherwise.
+const DefaultRepeats = defaultRepeats
+
+// RejudgeOpinions is how many more opinions a low judge score is weighed against.
+const RejudgeOpinions = rejudgeOpinions
+
 // CaseMajority is the majority a scenario's own runs must reach; the page counts
 // the cases that miss it.
 func CaseMajority(n int) int { return twoThirds(n) }

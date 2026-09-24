@@ -46,7 +46,8 @@ func resolveBinding(routing ai.RoutingConfig, task ai.Task) (ai.ProviderConfig, 
 
 // taskBindings is the candidate one task is certified against and the judge
 // that grades it. An error costs that task its record and no other: another
-// task's rung may be bound perfectly well, and one gap must not cost every record.
+// task's rung may be bound perfectly well, and one gap must not cost every
+// record.
 func taskBindings(ctx context.Context, cfg RunnerConfig, task ai.Task, log *slog.Logger) (candidate, judge ai.ProviderConfig, err error) {
 	candidate = cfg.Binding
 	if cfg.Routing != nil {
@@ -69,13 +70,13 @@ func taskBindings(ctx context.Context, cfg RunnerConfig, task ai.Task, log *slog
 // validateRoutedBindings refuses a routed run that could not produce a
 // trustworthy verdict, BEFORE the first paid call.
 //
-// The candidate-is-not-the-judge check runs for every task the routing resolves,
+// The candidate-is-not-the-judge check runs for every task the run will certify,
 // not just one: cert_judge's own ladder leads at premium, so against a config
 // binding claude-haiku-4.5 there the grader collides with the candidate for every
-// premium-led task that the fallback cannot take. Caught here that costs nothing; caught per task it would
-// surface midway through a paid corpus, after the tasks before it had been
-// billed.
-func validateRoutedBindings(cfg RunnerConfig, log *slog.Logger) error {
+// premium-led task the fallback cannot take. Caught here that costs nothing;
+// caught per task it would surface midway through a paid corpus, after the tasks
+// before it had been billed. A task the run will not certify cannot collide.
+func validateRoutedBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger) error {
 	if cfg.JudgeBinding.Provider == "" || cfg.JudgeBinding.Model == "" {
 		return errors.New("no judge binding — set MARGINCE_AICERT_JUDGE_MODEL=provider:model; " +
 			"the judge is a SECOND model on purpose and is NOT resolved from the routing, because " +
@@ -88,7 +89,7 @@ func validateRoutedBindings(cfg RunnerConfig, log *slog.Logger) error {
 	warnUnboundDegradeTargets(cfg, log)
 
 	var collisions []string
-	for _, task := range ai.AllTasks() {
+	for _, task := range tasks {
 		binding, _, ok := resolveBinding(*cfg.Routing, task)
 		if !ok {
 			continue // reported per task at run time, where it costs one record

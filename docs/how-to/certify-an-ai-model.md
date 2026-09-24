@@ -41,12 +41,13 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    `ROUTING=` reads what a fresh install would be *seeded* with.
 
    `JUDGE=provider:model` is the second model that grades the answers, pinned to
-   `gemini:gemini-3.5-flash` so every record is graded alike (a judge swap flips
-   verdicts on its own), and **never resolved from the routing**. A model never
-   grades itself: a task whose candidate is the judge — a Gemini preset's
-   `premium` rung — is graded by `JUDGE_FALLBACK=` (`gemini:gemini-3.1-flash-lite`)
-   instead. A task that is both, or any collision under `JUDGE_FALLBACK=`, is
-   refused for every resolved task up front, before the first paid call.
+   `gemini:gemini-3.5-flash` (an exported `MARGINCE_AICERT_JUDGE_MODEL` replaces
+   it) because a judge swap flips verdicts on its own, and **never resolved from
+   the routing**. A model never grades itself: under `gemini_cloud`, whose
+   `premium` rung is that judge, the premium-led tasks are graded by the fallback,
+   `JUDGE_FALLBACK=` (`gemini:gemini-3.1-flash-lite`), and each record's
+   `judge_served_model` names the judge that graded it. A task that is both, or any
+   collision under `JUDGE_FALLBACK=`, is refused before the first paid call.
 
    For an OpenAI-wire broker — one OpenRouter key reaching every open-weight
    model — add the endpoint, which `openai_compatible` fails closed without:
@@ -70,8 +71,7 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    OpenRouter example reads that last one). Keys live in the env, never in the
    config file (a stray `api_key:` there is a boot error). Keep them in a
    gitignored `.env.local` and `source` it.
-3. No database. The lane runs on the DB-less local router, so `make db-up` is
-   not required.
+3. No database: the lane runs on the DB-less local router, so no `make db-up`.
 
 ## 1. Certify a task
 

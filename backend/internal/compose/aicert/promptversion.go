@@ -237,8 +237,8 @@ func graderRequestDigest(sc Scenario, candidateRequest model.Request) (string, e
 	return canonicalRequestDigest(compose.JudgeRequest(sc.Expect.Rubric, ask, stampCandidateOutput))
 }
 
-// gradingRule versions the scoring rule and the judge-opinion policy.
-// Bump it whenever either changes, so every record graded the old way reads stale.
+// gradingRule versions the scoring rule and the judge-opinion policy, so every
+// record graded the old way reads stale; gradingrule_test.go fails an unbumped edit.
 const gradingRule = "grading-rule-2"
 
 // gradedBy is the stamp's grader third: the grader's request digest under the

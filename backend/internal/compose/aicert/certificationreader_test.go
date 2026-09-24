@@ -149,6 +149,7 @@ func writeAICertPresetSummary(page *strings.Builder, presets []aiCertPreset) {
 	page.WriteString("## Can I use this preset?\n\n")
 	page.WriteString("A [preset](" + aiCertPresetLink + "README.md) picks which AI model runs each feature, so the same\n")
 	page.WriteString("feature can be ready under one preset and not under another.\n\n")
+	writeAICertOlderVersionNote(page, presets)
 	page.WriteString("| Preset | Where your data goes | " + aiCertReady + " | " + aiCertCare + " | " +
 		aiCertNotYet + " | " + aiCertUnproven + " | Bottom line |\n")
 	page.WriteString("|---|---|---:|---:|---:|---:|---|\n")
@@ -162,7 +163,6 @@ func writeAICertPresetSummary(page *strings.Builder, presets []aiCertPreset) {
 	}
 	page.WriteString("\n")
 	writeAICertLegend(page, anyOff)
-	writeAICertOlderVersionNote(page, presets)
 	for _, p := range presets {
 		writeAICertPresetDetail(page, p)
 	}
@@ -176,8 +176,8 @@ func writeAICertLegend(page *strings.Builder, anyOff bool) {
 	page.WriteString("| Grade | What we measured | What to do |\n|---|---|---|\n")
 	fmt.Fprintf(page, "| %s | Right in at least %d of every 100 tries, no test case failing again and again, and good answers. | Turn it on and rely on it. |\n",
 		aiCertReady, aicert.CertifiedPassPercent)
-	fmt.Fprintf(page, "| %s | Right in at least %d of every 3 tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |\n",
-		aiCertCare, aicert.CaseMajority(3))
+	fmt.Fprintf(page, "| %s | Right in at least two thirds of tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |\n",
+		aiCertCare)
 	fmt.Fprintf(page, "| %s | Wrong too often, or answers below the quality bar. | Leave it off, or check every answer by hand. |\n", aiCertNotYet)
 	fmt.Fprintf(page, "| %s | This preset has a model for the feature, but nobody has tested it yet. | Ask for a test before relying on it. |\n", aiCertUnproven)
 	if anyOff {
@@ -190,39 +190,59 @@ func writeAICertLegend(page *strings.Builder, anyOff bool) {
 
 func aiCertPresetName(p aiCertPreset) string { return strings.TrimSuffix(p.File, ".yaml") }
 
+// aiCertBottomLine is the preset's one-line answer. A count read from stale
+// grades says so, or the summary row would state old measurements as current.
 func aiCertBottomLine(p aiCertPreset) string {
 	line := fmt.Sprintf("%d of %d features ready", p.Bands.Certified, len(p.Tasks))
+	measured, stale := aiCertStaleGrades(p)
+	switch stale {
+	case 0:
+	case measured:
+		line += " (re-check pending)"
+	case 1:
+		line += " (1 re-check pending)"
+	default:
+		line += fmt.Sprintf(" (%d re-checks pending)", stale)
+	}
 	if p.Unbound > 0 {
 		line += fmt.Sprintf(", %d switched off", p.Unbound)
 	}
 	return line
 }
 
-// writeAICertOlderVersionNote says, once, how many of the grades above were
+// aiCertStaleGrades counts p's measured grades and how many of them are stale.
+func aiCertStaleGrades(p aiCertPreset) (measured, stale int) {
+	for _, row := range p.Tasks {
+		if row.Band == "" {
+			continue
+		}
+		measured++
+		if row.State == aicert.StatusStale {
+			stale++
+		}
+	}
+	return measured, stale
+}
+
+// writeAICertOlderVersionNote says, once, how many of the grades below were
 // measured on a version of the product that has since changed. The grades
 // stay shown — they are the last measurement there is — and this is what
 // keeps them from reading as current.
 func writeAICertOlderVersionNote(page *strings.Builder, presets []aiCertPreset) {
 	measured, older := 0, 0
 	for _, p := range presets {
-		for _, row := range p.Tasks {
-			if row.Band == "" {
-				continue
-			}
-			measured++
-			if row.State == aicert.StatusStale {
-				older++
-			}
-		}
+		presetMeasured, presetStale := aiCertStaleGrades(p)
+		measured += presetMeasured
+		older += presetStale
 	}
 	switch older {
 	case 0:
 		return
 	case measured:
-		page.WriteString("Every grade above was measured on an older version of the product, so each one\n")
+		page.WriteString("Every grade below was measured on an older version of the product, so each one\n")
 		page.WriteString("is waiting to be re-checked.\n\n")
 	default:
-		fmt.Fprintf(page, "%d of the %d grades above were measured on an older version of the product and\n"+
+		fmt.Fprintf(page, "%d of the %d grades below were measured on an older version of the product and\n"+
 			"are waiting to be re-checked; each is marked below.\n\n", older, measured)
 	}
 }
@@ -324,27 +344,32 @@ func aiCertCases(n int) string {
 
 // writeAICertGrading explains the grades in words, then states the exact rule
 // for whoever needs to argue with one. The numbers in the words are the rule's
-// own: the pass rate is its constant and the majority is its function.
+// own: the pass rate is its constant, the try count the runner's default.
 func writeAICertGrading(page *strings.Builder, rule string, selfJudged int) {
 	page.WriteString("## How the scoring works\n\n")
 	page.WriteString("1. **Real test cases.** Every feature has a set of test cases: a realistic\n")
 	page.WriteString("   situation (an email, an account, a web page) and the answer we expect. The\n")
 	page.WriteString("   model receives exactly the prompt the product sends in real use.\n")
-	page.WriteString("2. **Several tries.** Each test case is run more than once, usually three times,\n")
-	page.WriteString("   because a model can answer the same question differently each time.\n")
+	fmt.Fprintf(page, "2. **Several tries.** Each test case is run %d times (our standard setting; `RUNS=`\n"+
+		"   can change it for one run), because a model can answer the same question\n"+
+		"   differently each time.\n", aicert.DefaultRepeats)
 	page.WriteString("3. **Two checks on every try.**\n")
 	page.WriteString("   - *Is it right?* The answer is checked mechanically against what we expect: the\n")
 	page.WriteString("     right label, the right record, no invented facts, fast enough.\n")
-	page.WriteString("   - *Is it good?* A second AI model — never the one being tested — scores the\n")
-	page.WriteString("     answer from 0 to 100 against a written description of a good answer.\n")
+	page.WriteString("   - *Is it good?* A second AI model, chosen so that it is not the one being tested,\n")
+	page.WriteString("     scores the answer from 0 to 100 against a written description of a good answer.\n")
+	if selfJudged > 0 {
+		fmt.Fprintf(page, "     %d older results were scored by the same model they tested; the next re-check\n"+
+			"     replaces them.\n", selfJudged)
+	}
 	page.WriteString("4. **A low score is double-checked.** When the quality score is below the bar, the\n")
-	page.WriteString("   scoring model is asked twice more and the middle of the three scores counts, so\n")
-	page.WriteString("   one bad reading cannot fail a good answer.\n")
+	fmt.Fprintf(page, "   scoring model is asked %d more times and the middle of the %d scores counts, so\n"+
+		"   one bad reading cannot fail a good answer.\n", aicert.RejudgeOpinions, aicert.RejudgeOpinions+1)
 	page.WriteString("5. **The grade.** All the tries of a feature are then added up:\n\n")
 	page.WriteString("| Grade | Right answers | Every test case | Quality |\n|---|---|---|---|\n")
-	fmt.Fprintf(page, "| %s | at least %d of every 100 tries | right in at least %d of its 3 tries | good in every case, no very poor answer |\n",
-		aiCertReady, aicert.CertifiedPassPercent, aicert.CaseMajority(3))
-	fmt.Fprintf(page, "| %s | at least %d of every 3 tries | — | acceptable in every case |\n", aiCertCare, aicert.CaseMajority(3))
+	fmt.Fprintf(page, "| %s | at least %d of every 100 tries | right in at least %d of its %d tries | good in every case, no very poor answer |\n",
+		aiCertReady, aicert.CertifiedPassPercent, aicert.CaseMajority(aicert.DefaultRepeats), aicert.DefaultRepeats)
+	fmt.Fprintf(page, "| %s | at least two thirds of all tries | — | acceptable in every case |\n", aiCertCare)
 	fmt.Fprintf(page, "| %s | anything less | | |\n\n", aiCertNotYet)
 	page.WriteString("A feature does not have to be perfect to be ready: a stray miss among many tries\n")
 	page.WriteString("is allowed. A test case that fails again and again is not — that is a real\n")
@@ -354,8 +379,8 @@ func writeAICertGrading(page *strings.Builder, rule string, selfJudged int) {
 		aiCertVerdictSource + "), applied to every case of a task at once:\n\n")
 	page.WriteString("```text\n" + rule + "\n```\n\n")
 	page.WriteString("Each case sets its own quality bands (`certified_min`, `degraded_min`, `floor`).\n")
-	page.WriteString("A judge score below `certified_min` is asked for twice more, and the run is\n")
-	page.WriteString("scored at the median of the three. The grades map to the record's words as\n")
+	fmt.Fprintf(page, "A judge score below `certified_min` is asked for %d more times, and the run is\n"+
+		"scored at the median of the %d. The grades map to the record's words as\n", aicert.RejudgeOpinions, aicert.RejudgeOpinions+1)
 	fmt.Fprintf(page, "%s = `%s`, %s = `%s`, %s = `%s`, and %s = no record for that model.\n",
 		aiCertReady, aicert.VerdictCertified, aiCertCare, aicert.VerdictSupportedDegraded,
 		aiCertNotYet, aicert.VerdictNotSupported, aiCertUnproven)
@@ -383,4 +408,37 @@ func aiCertBandCell(row aiCertPresetTask) string {
 		return "`untested`"
 	}
 	return "`" + row.Band + "`"
+}
+
+// A preset's bottom line counts ready features from whatever grades it has, so it
+// says when those grades are waiting on a re-check — all of them, or how many.
+func TestAPresetsBottomLineSaysHowManyGradesArePending(t *testing.T) {
+	row := func(band, state string) aiCertPresetTask {
+		return aiCertPresetTask{Tier: "premium", Band: band, State: state}
+	}
+	current, stale := aicert.StatusCurrent, aicert.StatusStale
+	for _, tc := range []struct {
+		name  string
+		tasks []aiCertPresetTask
+		want  string
+	}{
+		{"every grade current", []aiCertPresetTask{row(aicert.VerdictCertified, current), row("", "")}, "1 of 2 features ready"},
+		{"every grade stale", []aiCertPresetTask{row(aicert.VerdictCertified, stale), row("", "")}, "1 of 2 features ready (re-check pending)"},
+		{"one grade stale", []aiCertPresetTask{row(aicert.VerdictCertified, stale), row(aicert.VerdictNotSupported, current)}, "1 of 2 features ready (1 re-check pending)"},
+		{"some grades stale", []aiCertPresetTask{
+			row(aicert.VerdictCertified, stale), row(aicert.VerdictNotSupported, stale), row(aicert.VerdictCertified, current),
+		}, "2 of 3 features ready (2 re-checks pending)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			preset := aiCertPreset{Tasks: tc.tasks}
+			for _, r := range tc.tasks {
+				if r.Band == aicert.VerdictCertified {
+					preset.Bands.Certified++
+				}
+			}
+			if got := aiCertBottomLine(preset); got != tc.want {
+				t.Errorf("bottom line = %q, want %q", got, tc.want)
+			}
+		})
+	}
 }

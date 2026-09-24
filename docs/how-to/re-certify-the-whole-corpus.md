@@ -87,7 +87,7 @@ verdicts on the same candidate. `gemini_cloud` puts that model on its `premium`
 rung, so its premium-led tasks are graded by `JUDGE_FALLBACK=`
 (`gemini:gemini-3.1-flash-lite`) instead, and `judge_served_model` names which.
 A task whose candidate is both is refused **before the first paid call** —
-`validateRoutedBindings` checks every task the routing resolves.
+`validateRoutedBindings` checks every task the run will certify.
 
 Two further rules the commands above encode:
 

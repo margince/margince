@@ -121,19 +121,18 @@ type RunnerConfig struct {
 // validateBindings refuses a run that could not produce a trustworthy verdict,
 // before a single paid call is made.
 //
-// Both bindings are required because there is no routing file left to fall back
-// on, and the judge that grades the candidate must differ from it (judgeFor)
-// because a model grading itself passes by construction. The old file made the second point structurally — the judge rode
-// the file while MODEL= moved only the candidate — so with the file gone it has
-// to be checked outright rather than assumed.
-func validateBindings(cfg RunnerConfig, log *slog.Logger) error {
+// Both bindings are required because there is no routing file to fall back on,
+// and the judge that grades the candidate must differ from it (judgeFor) because
+// a model grading itself passes by construction. Nothing pairs the two for the
+// run, so the difference is checked outright, over the tasks this run certifies.
+func validateBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger) error {
 	if cfg.Routing != nil && cfg.Binding.Provider != "" {
 		return errors.New("both MARGINCE_AICERT_ROUTING and MARGINCE_AICERT_MODEL are set — " +
 			"the first certifies the models a deployment binds, the second one model you name; " +
 			"a run cannot report both, so pick one")
 	}
 	if cfg.Routing != nil {
-		return validateRoutedBindings(cfg, log)
+		return validateRoutedBindings(cfg, tasks, log)
 	}
 	if cfg.Binding.Provider == "" || cfg.Binding.Model == "" {
 		return errors.New("no candidate binding — set MARGINCE_AICERT_MODEL=provider:model " +
@@ -176,13 +175,6 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		return nil, err
 	}
 
-	// Refused here rather than per task: with no routing file to fall back on,
-	// a run with no binding could only report that it measured nothing, after
-	// paying for it.
-	if err := validateBindings(cfg, log); err != nil {
-		return nil, fmt.Errorf("aicert: runner: %w", err)
-	}
-
 	scenarios, err := LoadCorpus(cfg.CorpusDir, cfg.Census)
 	if err != nil {
 		return nil, fmt.Errorf("aicert: runner: %w", err)
@@ -191,6 +183,13 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	byTask := groupByTask(scenarios, cfg.TaskFilter)
 	if cfg.TaskFilter != "" && len(byTask) == 0 {
 		return nil, fmt.Errorf("aicert: runner: task %q has no scenarios under %s", cfg.TaskFilter, cfg.CorpusDir)
+	}
+
+	// Refused here rather than per task, over the tasks this run certifies: with no
+	// routing file to fall back on, a run with no binding could only report that it
+	// measured nothing, after paying for it.
+	if err := validateBindings(cfg, sortedTasks(byTask), log); err != nil {
+		return nil, fmt.Errorf("aicert: runner: %w", err)
 	}
 
 	ctx = ensureWorkspace(ctx)

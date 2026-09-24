@@ -224,7 +224,7 @@ func TestAJournalEndingMidLineKeepsTheRunsBeforeIt(t *testing.T) {
 	}
 }
 
-func TestCompactionKeepsAnotherJudgesLiveRuns(t *testing.T) {
+func TestAJournaledRunIsNotReplayedForADifferentJudge(t *testing.T) {
 	dir := t.TempDir()
 	sc := testScenario("basic", wideBands)
 	candidate, judge := answeringFakes()

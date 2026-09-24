@@ -32,19 +32,22 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 A [preset](../../config/presets/README.md) picks which AI model runs each feature, so the same
 feature can be ready under one preset and not under another.
 
+Every grade below was measured on an older version of the product, so each one
+is waiting to be re-checked.
+
 | Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
 |---|---|---:|---:|---:|---:|---|
-| [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 11 | 2 | 15 | 1 | 11 of 29 features ready |
-| [`gemini_cloud`](#gemini_cloud) | EU-hosted cloud | 12 | 4 | 13 | 0 | 12 of 29 features ready |
-| [`openrouter_cloud`](#openrouter_cloud) | EU-hosted cloud | 6 | 4 | 14 | 5 | 6 of 29 features ready |
-| [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 10 | 1 | 17 | 1 | 10 of 29 features ready |
+| [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 11 | 2 | 15 | 1 | 11 of 29 features ready (re-check pending) |
+| [`gemini_cloud`](#gemini_cloud) | EU-hosted cloud | 12 | 4 | 13 | 0 | 12 of 29 features ready (re-check pending) |
+| [`openrouter_cloud`](#openrouter_cloud) | EU-hosted cloud | 6 | 4 | 14 | 5 | 6 of 29 features ready (re-check pending) |
+| [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 10 | 1 | 17 | 1 | 10 of 29 features ready (re-check pending) |
 
 **What the grades mean**
 
 | Grade | What we measured | What to do |
 |---|---|---|
 | ✅ Ready | Right in at least 95 of every 100 tries, no test case failing again and again, and good answers. | Turn it on and rely on it. |
-| ⚠️ Usable with care | Right in at least 2 of every 3 tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |
+| ⚠️ Usable with care | Right in at least two thirds of tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |
 | ❌ Not reliable yet | Wrong too often, or answers below the quality bar. | Leave it off, or check every answer by hand. |
 | ❔ Not measured | This preset has a model for the feature, but nobody has tested it yet. | Ask for a test before relying on it. |
 
@@ -52,12 +55,9 @@ feature can be ready under one preset and not under another.
 measured. The grade is the last one we have, and it is shown until the next test replaces it.
 [How the scoring works](#how-the-scoring-works) explains how a grade is reached.
 
-Every grade above was measured on an older version of the product, so each one
-is waiting to be re-checked.
-
 ### `consumer_class_brokered`
 
-Your data goes to: global cloud. 11 of 29 features ready. Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
+Your data goes to: global cloud. 11 of 29 features ready (re-check pending). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -140,7 +140,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `gemini_cloud`
 
-Your data goes to: EU-hosted cloud. 12 of 29 features ready. Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
+Your data goes to: EU-hosted cloud. 12 of 29 features ready (re-check pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -223,7 +223,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `openrouter_cloud`
 
-Your data goes to: EU-hosted cloud. 6 of 29 features ready. Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
+Your data goes to: EU-hosted cloud. 6 of 29 features ready (re-check pending). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -306,7 +306,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `openrouter_cloud_eu`
 
-Your data goes to: EU-hosted cloud. 10 of 29 features ready. Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
+Your data goes to: EU-hosted cloud. 10 of 29 features ready (re-check pending). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -392,22 +392,25 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 1. **Real test cases.** Every feature has a set of test cases: a realistic
    situation (an email, an account, a web page) and the answer we expect. The
    model receives exactly the prompt the product sends in real use.
-2. **Several tries.** Each test case is run more than once, usually three times,
-   because a model can answer the same question differently each time.
+2. **Several tries.** Each test case is run 3 times (our standard setting; `RUNS=`
+   can change it for one run), because a model can answer the same question
+   differently each time.
 3. **Two checks on every try.**
    - *Is it right?* The answer is checked mechanically against what we expect: the
      right label, the right record, no invented facts, fast enough.
-   - *Is it good?* A second AI model — never the one being tested — scores the
-     answer from 0 to 100 against a written description of a good answer.
+   - *Is it good?* A second AI model, chosen so that it is not the one being tested,
+     scores the answer from 0 to 100 against a written description of a good answer.
+     8 older results were scored by the same model they tested; the next re-check
+     replaces them.
 4. **A low score is double-checked.** When the quality score is below the bar, the
-   scoring model is asked twice more and the middle of the three scores counts, so
+   scoring model is asked 2 more times and the middle of the 3 scores counts, so
    one bad reading cannot fail a good answer.
 5. **The grade.** All the tries of a feature are then added up:
 
 | Grade | Right answers | Every test case | Quality |
 |---|---|---|---|
 | ✅ Ready | at least 95 of every 100 tries | right in at least 2 of its 3 tries | good in every case, no very poor answer |
-| ⚠️ Usable with care | at least 2 of every 3 tries | — | acceptable in every case |
+| ⚠️ Usable with care | at least two thirds of all tries | — | acceptable in every case |
 | ❌ Not reliable yet | anything less | | |
 
 A feature does not have to be perfect to be ready: a stray miss among many tries
@@ -429,8 +432,8 @@ otherwise          = not_supported, which includes any scenario no judge graded
 ```
 
 Each case sets its own quality bands (`certified_min`, `degraded_min`, `floor`).
-A judge score below `certified_min` is asked for twice more, and the run is
-scored at the median of the three. The grades map to the record's words as
+A judge score below `certified_min` is asked for 2 more times, and the run is
+scored at the median of the 3. The grades map to the record's words as
 ✅ Ready = `certified`, ⚠️ Usable with care = `supported_degraded`, ❌ Not reliable yet = `not_supported`, and ❔ Not measured = no record for that model.
 
 8 of the committed records were nonetheless graded by the model they measured

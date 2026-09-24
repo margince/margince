@@ -286,3 +286,49 @@ func TestRunGradesACandidateThatIsThePrimaryJudgeWithTheFallback(t *testing.T) {
 		t.Errorf("the journal does not file the run under the fallback judge that graded it:\n%s", journal)
 	}
 }
+
+// A routed TASK= run certifies one task, so only that task's candidate can collide
+// with the judge: a collision elsewhere in the routing refuses the run naming it,
+// never the run that does not.
+func TestARoutedRunValidatesOnlyTheTasksItCertifies(t *testing.T) {
+	ranked, colliding := ai.TaskCaptureConfidentialityVerdict, ai.TaskDocumentExtract
+	judge := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}
+	routing := ai.RoutingConfig{Profile: ai.ProfileEUHosted, Tiers: map[ai.Tier]ai.ProviderConfig{}}
+	for _, tier := range ai.AllTiers() {
+		routing.Tiers[tier] = ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}
+	}
+	collidingLead := ai.TaskLadder(colliding)[0]
+	if ai.TaskLadder(ranked)[0] == collidingLead {
+		t.Fatalf("%s and %s lead on the same rung, so one cannot collide without the other", ranked, colliding)
+	}
+	routing.Tiers[collidingLead] = judge
+
+	dir := t.TempDir()
+	corpusDir := filepath.Join(dir, "corpus")
+	for _, task := range []ai.Task{ranked, colliding} {
+		writeCorpusFile(t, corpusDir, string(task)+"/basic_01.yaml", scenarioYAML(string(task)))
+	}
+	run := func(task ai.Task) ([]aicert.Record, error) {
+		return aicert.Run(context.Background(), aicert.RunnerConfig{
+			Census:       censusFor(t, ranked, colliding),
+			Routing:      &routing,
+			JudgeBinding: judge,
+			CorpusDir:    corpusDir,
+			RecordDir:    filepath.Join(dir, "records"),
+			TaskFilter:   string(task),
+			Repeats:      1,
+		}, quietTestLogger())
+	}
+
+	records, err := run(ranked)
+	if err != nil {
+		t.Fatalf("TASK=%s was refused over %s, a task it does not certify: %v", ranked, colliding, err)
+	}
+	if len(records) != 1 || records[0].Task != string(ranked) {
+		t.Fatalf("TASK=%s wrote %+v, want exactly its own record", ranked, records)
+	}
+	_, err = run(colliding)
+	if err == nil || !strings.Contains(err.Error(), string(colliding)) {
+		t.Fatalf("TASK=%s grades itself and must be refused naming it; got %v", colliding, err)
+	}
+}

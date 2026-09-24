@@ -92,8 +92,8 @@ func TestResolveBindingRefusesWhenNoRungIsBound(t *testing.T) {
 	}
 }
 
-// The candidate-is-not-the-judge check must run for EVERY task the routing
-// resolves, before the first call. cert_judge leads on premium, so a config
+// The candidate-is-not-the-judge check must run for EVERY task the run
+// certifies, before the first call. cert_judge leads on premium, so a config
 // binding the judge's own model there collides with every premium-led candidate
 // — and caught per task instead, it would surface after the earlier tasks had
 // been paid for.
@@ -105,7 +105,7 @@ func TestValidateRoutedBindingsCatchesAJudgeCollisionUpFront(t *testing.T) {
 		JudgeBinding: ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/big-1", BaseURL: "https://broker.example/api"},
 		Profile:      ai.ProfileEUHosted,
 	}
-	err := validateRoutedBindings(cfg, slog.New(slog.DiscardHandler))
+	err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler))
 	if err == nil {
 		t.Fatal("a judge bound to the same model as a premium-led candidate was accepted; the run would have paid for tasks before reaching the collision")
 	}
@@ -126,7 +126,7 @@ func TestValidateRoutedBindingsAcceptsADistinctJudge(t *testing.T) {
 		JudgeBinding: ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/grader-9", BaseURL: "https://broker.example/api"},
 		Profile:      ai.ProfileEUHosted,
 	}
-	if err := validateRoutedBindings(cfg, slog.New(slog.DiscardHandler)); err != nil {
+	if err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler)); err != nil {
 		t.Errorf("a judge no task leads on must be accepted, got %v", err)
 	}
 }
@@ -135,7 +135,7 @@ func TestValidateRoutedBindingsAcceptsADistinctJudge(t *testing.T) {
 // routing cannot supply one: cert_judge's own rung would collide.
 func TestValidateRoutedBindingsRequiresAJudge(t *testing.T) {
 	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), Profile: ai.ProfileEUHosted}
-	err := validateRoutedBindings(cfg, slog.New(slog.DiscardHandler))
+	err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler))
 	if err == nil {
 		t.Fatal("a routed run with no judge was accepted; nothing would have graded the candidate")
 	}
@@ -155,7 +155,7 @@ func TestValidateRoutedBindingsRefusesAnUnknownProfile(t *testing.T) {
 		JudgeBinding: ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/grader-9", BaseURL: "https://broker.example/api"},
 		Profile:      routing.Profile,
 	}
-	if err := validateRoutedBindings(cfg, slog.New(slog.DiscardHandler)); err == nil {
+	if err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler)); err == nil {
 		t.Error("a profile outside the vocabulary was accepted; the record would name an environment class that does not exist")
 	}
 }
@@ -207,7 +207,7 @@ func TestJudgeForTakesTheFallbackOnlyWhereTheCandidateIsThePrimary(t *testing.T)
 			t.Errorf("%s (candidate %s) is graded by %s, want %s", tc.task, candidate.Model, got.Model, tc.want.Model)
 		}
 	}
-	if err := validateRoutedBindings(cfg, slog.New(slog.DiscardHandler)); err != nil {
+	if err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler)); err != nil {
 		t.Errorf("every task has a judge that is not its candidate, so the run must be accepted, got %v", err)
 	}
 }
@@ -217,7 +217,7 @@ func TestJudgeForTakesTheFallbackOnlyWhereTheCandidateIsThePrimary(t *testing.T)
 func TestValidateRoutedBindingsRefusesATaskThatCollidesWithBothJudges(t *testing.T) {
 	both := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/big-1", BaseURL: "https://broker.example/api"}
 	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), JudgeBinding: both, JudgeFallback: both, Profile: ai.ProfileEUHosted}
-	err := validateRoutedBindings(cfg, slog.New(slog.DiscardHandler))
+	err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler))
 	if err == nil {
 		t.Fatal("a premium-led task whose candidate is both the judge and the fallback was accepted; it would grade itself")
 	}
@@ -237,7 +237,7 @@ func TestASingleCandidateThatIsThePrimaryJudgeIsGradedByTheFallback(t *testing.T
 	primary := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}
 	fallback := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"}
 	cfg := RunnerConfig{Binding: primary, JudgeBinding: primary, JudgeFallback: fallback, Profile: ai.ProfileEUHosted}
-	if err := validateBindings(cfg, slog.New(slog.DiscardHandler)); err != nil {
+	if err := validateBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler)); err != nil {
 		t.Fatalf("a fallback that differs from the candidate grades it, so the run must be accepted, got %v", err)
 	}
 	if got, err := cfg.judgeFor(cfg.Binding); err != nil || got.Model != fallback.Model {
@@ -245,7 +245,7 @@ func TestASingleCandidateThatIsThePrimaryJudgeIsGradedByTheFallback(t *testing.T
 	}
 
 	cfg.JudgeFallback = ai.ProviderConfig{}
-	err := validateBindings(cfg, slog.New(slog.DiscardHandler))
+	err := validateBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler))
 	if err == nil || !strings.Contains(err.Error(), "MARGINCE_AICERT_JUDGE_MODEL") {
 		t.Errorf("with no fallback a candidate that is the judge must be refused, naming the fix; got %v", err)
 	}

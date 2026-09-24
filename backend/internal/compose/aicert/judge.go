@@ -104,7 +104,9 @@ type judgement struct {
 // runs decided a grade on its own, so a low score is re-asked rejudgeOpinions
 // times and the run is scored at the median of the opinions that parsed. A
 // score at or above the bar costs one call: the re-ask protects the candidate
-// from one judge's low outlier, and a passing score has none to be protected from.
+// from one judge's low outlier, and a passing score has none to be protected
+// from. That one-sided re-ask biases toward the candidate by design; an ungraded
+// first reply is not re-asked.
 //
 // The served model is read back from rec's own terminal trace (never
 // resp.ServedModel directly) so it carries the same resolved identity the

@@ -24,9 +24,9 @@ import (
 
 // runScenario drives repeats runs of one scenario, folding each into acc, and
 // returns its run set for certifyTask to judge beside its siblings. The per-run
-// degrade gates sit here rather than inside
-// certifyTask because they void the WHOLE task: a demoted answer or a demoted
-// grader anywhere in the set means no record, not a lower band.
+// degrade gates sit here rather than inside certifyTask because they void the
+// WHOLE task: a demoted answer or a demoted grader anywhere in the set means no
+// record, not a lower band.
 func runScenario(ctx context.Context, task ai.Task, sc Scenario, stamp string, census *aitasks.Registry, repeats int,
 	candidateRouter *ai.Router, candidateRec *traceRecorder, judgeRouter *ai.Router, judgeRec *traceRecorder,
 	log *slog.Logger, acc *taskAccumulation, trace *payloadTrace, journal taskJournal,
@@ -338,7 +338,8 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 
 // candidateSideRun is one run's outcome with everything the CANDIDATE side
 // knows and nothing the judge does. The judged path adds what the judge gave,
-// which may be no opinion; the truncated path asks for none and marks itself Ungraded.
+// which may be no opinion; the truncated path asks for none and marks itself
+// Ungraded.
 //
 // One builder for both rather than two, because a second copy is where a field
 // added to the record later reaches the judged runs and misses the cut-off ones.
