@@ -41,6 +41,9 @@ type RoutingStore struct {
 	// benchmark rather than by a stored binding. Optional: absent it, that
 	// vendor answers not_published like any adapter this build does not carry.
 	catalogue *ModelCatalogue
+	// selectBrain builds the client every vendor read and save-time probe
+	// calls through; the zero value is SelectBrain.
+	selectBrain brainSelector
 }
 
 // NewRoutingStore builds the store over the settings catalog.
@@ -119,7 +122,10 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 	// installation is already in.
 	if !next.Unconfigured() {
 		var err error
-		if next, err = next.finalize(); err != nil {
+		if next, err = next.finalize(); err == nil {
+			err = s.probeVertexBindings(ctx, next)
+		}
+		if err != nil {
 			return RoutingConfig{}, settings.InvalidValue{
 				Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error(),
 			}

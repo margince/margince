@@ -10,6 +10,7 @@ package ai
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -43,10 +44,21 @@ func geminiError(resp *http.Response) error {
 				break
 			}
 		}
-		return providerRefusal(resp, limit, fmt.Errorf("ai: gemini: %s: %s (http %d)", apiErr.Error.Status, apiErr.Error.Message, resp.StatusCode))
+		refused := fmt.Errorf("ai: gemini: %s: %s (http %d)", apiErr.Error.Status, apiErr.Error.Message, resp.StatusCode)
+		if apiErr.Error.Status == "NOT_FOUND" {
+			refused = fmt.Errorf("%w: %w", errModelNotFound, refused)
+		}
+		return providerRefusal(resp, limit, refused)
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("%w: ai: gemini: http %d", errModelNotFound, resp.StatusCode)
 	}
 	return providerRefusal(resp, "", fmt.Errorf("ai: gemini: http %d", resp.StatusCode))
 }
+
+// errModelNotFound is Google saying the addressed model does not exist at
+// this host, which on Vertex means the location does not serve it.
+var errModelNotFound = errors.New("ai: gemini: the model is not served here")
 
 // geminiRetryableLimit is the limit-source name a RetryInfo detail stands for.
 // Spelled as a rate limit because that is what refusalKind reads it as, and

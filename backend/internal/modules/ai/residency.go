@@ -79,3 +79,19 @@ func requireEULocation(label, location string) error {
 	return fmt.Errorf("ai: routing config: profile %s refuses gemini_vertex at location %q on %s: %s",
 		ProfileEUResident, location, label, reason)
 }
+
+// locationJurisdiction is whose law a Vertex location processes under, by
+// this build's policy: eu exactly when resident, so a location Google adds
+// reads as other until this build names it.
+func locationJurisdiction(location string) string {
+	switch {
+	case euResidentLocations[location]:
+		return "eu"
+	case location == "global":
+		return "global"
+	case location == "us" || strings.HasPrefix(location, "us-"):
+		return "us"
+	default:
+		return "other"
+	}
+}

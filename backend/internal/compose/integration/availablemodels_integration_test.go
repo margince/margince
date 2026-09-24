@@ -16,11 +16,13 @@ package integration
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,7 +37,7 @@ func TestAvailableModelsAsksTheBoundAdapter(t *testing.T) {
 		t.Fatalf("storing the binding: %v", err)
 	}
 
-	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "fake", "", 0)
+	got, err := store.ListAvailableModels(e.adminRoutingCtx(), ai.AvailableModelsQuery{Provider: "fake"})
 	if err != nil {
 		t.Fatalf("listing: %v", err)
 	}
@@ -57,7 +59,7 @@ func TestSovereignRefusesToAskACloudVendor(t *testing.T) {
 		t.Fatalf("storing the sovereign binding: %v", err)
 	}
 
-	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "anthropic", "", 0)
+	got, err := store.ListAvailableModels(e.adminRoutingCtx(), ai.AvailableModelsQuery{Provider: "anthropic"})
 	if err != nil {
 		t.Fatalf("a refused vendor is a state, not an error: %v", err)
 	}
@@ -70,7 +72,7 @@ func TestSovereignRefusesToAskACloudVendor(t *testing.T) {
 
 	// And a LOCAL vendor is still askable under the same profile — the refusal
 	// is about egress, not about the surface being switched off.
-	local, err := store.ListAvailableModels(e.adminRoutingCtx(), "fake", "", 0)
+	local, err := store.ListAvailableModels(e.adminRoutingCtx(), ai.AvailableModelsQuery{Provider: "fake"})
 	if err != nil {
 		t.Fatalf("listing a local vendor: %v", err)
 	}
@@ -93,7 +95,7 @@ func TestSovereignRefusesOpenRouterToo(t *testing.T) {
 		t.Fatalf("storing the sovereign binding: %v", err)
 	}
 
-	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "openrouter", "", 0)
+	got, err := store.ListAvailableModels(e.adminRoutingCtx(), ai.AvailableModelsQuery{Provider: "openrouter"})
 	if err != nil {
 		t.Fatalf("a refused vendor is a state, not an error: %v", err)
 	}
@@ -115,7 +117,7 @@ func TestACloudVendorWithNoKeyReportsItRatherThanFailing(t *testing.T) {
 		t.Fatalf("storing the binding: %v", err)
 	}
 
-	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "anthropic", "", 0)
+	got, err := store.ListAvailableModels(e.adminRoutingCtx(), ai.AvailableModelsQuery{Provider: "anthropic"})
 	if err != nil {
 		t.Fatalf("an unkeyed vendor is a state, not an error: %v", err)
 	}
@@ -140,10 +142,38 @@ func TestAvailableModelsNeedsTheRoutingReadGrant(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	if _, err := store.ListAvailableModels(ctx, "fake", "", 0); err == nil {
+	if _, err := store.ListAvailableModels(ctx, ai.AvailableModelsQuery{Provider: "fake"}); err == nil {
 		t.Fatal("a seat without ai_routing:read was served the vendor list")
 	} else if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("want a permission denial, got %v", err)
+	}
+}
+
+// Saving a gemini_vertex binding asks its location for the model first, on
+// the real store: with no service-account key held, nothing can be asked, and
+// the save is refused naming the lane rather than storing a binding nobody
+// checked.
+func TestSavingAVertexBindingIsRefusedWhenItsModelCannotBeChecked(t *testing.T) {
+	e := SetupSearch(t)
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	cfg, err := ai.ParseRouting([]byte(`profile: eu_resident
+tiers:
+  local_small: {provider: fake, model: fake-local}
+  premium: {provider: gemini_vertex, location: eu, model: gemini-3.5-flash}
+embeddings: {provider: fake, model: fake-embed, dimensions: 8}
+`))
+	if err != nil {
+		t.Fatalf("parsing the vertex fixture: %v", err)
+	}
+
+	_, err = store.Replace(e.adminRoutingCtx(), cfg)
+
+	var invalid settings.InvalidValue
+	if !errors.As(err, &invalid) || !strings.Contains(invalid.Reason, "tier premium") || !strings.Contains(invalid.Reason, "service-account key") {
+		t.Fatalf("want a 422 naming the tier and the missing key, got %v", err)
+	}
+	if stored, err := store.Get(e.adminRoutingCtx()); err != nil || !stored.Unconfigured() {
+		t.Errorf("the refused binding was stored anyway: %+v, %v", stored, err)
 	}
 }
 

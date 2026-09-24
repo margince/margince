@@ -8,6 +8,7 @@ package compose
 // endpoint, or refuses a document the operator bound a model to carry.
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,9 +29,10 @@ func TestABindingSurvivesTheRoundTripToTheWireAndBack(t *testing.T) {
 				BaseURL: "https://eu-gateway.example", Input: []string{"text", "image"},
 			},
 			ai.TierCheapCloud: {Provider: "gemini", Model: "gemini-3.1-flash-lite"},
+			ai.TierFrontier:   {Provider: "gemini_vertex", Model: "gemini-3.5-flash", Location: "europe-west4"},
 		},
 		Embeddings: ai.EmbeddingsConfig{
-			ProviderConfig: ai.ProviderConfig{Provider: "gemini", Model: "gemini-embedding-001"},
+			ProviderConfig: ai.ProviderConfig{Provider: "gemini_vertex", Model: "gemini-embedding-001", Location: "eu"},
 			Dimensions:     1536,
 		},
 	}
@@ -45,7 +47,7 @@ func TestABindingSurvivesTheRoundTripToTheWireAndBack(t *testing.T) {
 	}
 	for tier, want := range original.Tiers {
 		got := back.Tiers[tier]
-		if got.Provider != want.Provider || got.Model != want.Model || got.BaseURL != want.BaseURL {
+		if got.Provider != want.Provider || got.Model != want.Model || got.BaseURL != want.BaseURL || got.Location != want.Location {
 			t.Errorf("tier %s = %+v, want %+v", tier, got, want)
 		}
 		if len(got.Input) != len(want.Input) {
@@ -54,6 +56,9 @@ func TestABindingSurvivesTheRoundTripToTheWireAndBack(t *testing.T) {
 	}
 	if back.Embeddings.Dimensions != original.Embeddings.Dimensions {
 		t.Errorf("embeddings width = %d, want %d", back.Embeddings.Dimensions, original.Embeddings.Dimensions)
+	}
+	if back.Embeddings.Location != original.Embeddings.Location {
+		t.Errorf("embeddings location = %q, want %q — a gemini_vertex lane without it is refused on save", back.Embeddings.Location, original.Embeddings.Location)
 	}
 }
 
@@ -71,6 +76,9 @@ func TestAnUnsetOptionalIsAbsentRatherThanEmpty(t *testing.T) {
 	}
 	if tier.Input != nil {
 		t.Errorf("input = %v, want absent", *tier.Input)
+	}
+	if tier.Location != nil {
+		t.Errorf("location = %q, want absent on a binding that is not gemini_vertex", *tier.Location)
 	}
 	// Reported as STORED, not as defaulted: a GET → PUT round-trip must not
 	// freeze today's compiled default into the document as though an operator
@@ -171,4 +179,58 @@ func TestAnUnwiredRoutingSurfaceIsNotImplemented(t *testing.T) {
 			t.Errorf("%s: status = %d, want %d", name, rec.Code, http.StatusNotImplemented)
 		}
 	}
+}
+
+func locationsReq(ctx context.Context) *http.Request {
+	return httptest.NewRequest(http.MethodGet, "/v1/ai/provider-locations/gemini_vertex", nil).WithContext(ctx)
+}
+
+// The location list is human-only like the model list: an agent is refused
+// whatever its grant, and so is a human without ai_routing:read.
+func TestTheLocationListIsForAHumanHoldingTheRoutingReadGrant(t *testing.T) {
+	h := aiRoutingHandlers{store: &ai.RoutingStore{}}
+
+	agent := httptest.NewRecorder()
+	h.ListProviderLocations(agent, agentReq(""), "gemini_vertex")
+	if agent.Code != http.StatusForbidden {
+		t.Errorf("agent: status = %d, want %d", agent.Code, http.StatusForbidden)
+	}
+
+	unentitled := httptest.NewRecorder()
+	h.ListProviderLocations(unentitled, locationsReq(routingSeat(principal.ObjectGrant{})), "gemini_vertex")
+	if unentitled.Code != http.StatusForbidden {
+		t.Errorf("no ai_routing:read: status = %d, want %d", unentitled.Code, http.StatusForbidden)
+	}
+
+	unwired := httptest.NewRecorder()
+	aiRoutingHandlers{}.ListProviderLocations(unwired, locationsReq(routingSeat(principal.ObjectGrant{Read: true})), "gemini_vertex")
+	if unwired.Code != http.StatusNotImplemented {
+		t.Errorf("unwired: status = %d, want %d", unwired.Code, http.StatusNotImplemented)
+	}
+}
+
+// A vendor with no location to choose answers 200 with the reason and an
+// empty array, never null.
+func TestAVendorWithNoLocationsSaysSo(t *testing.T) {
+	h := aiRoutingHandlers{store: &ai.RoutingStore{}}
+	rec := httptest.NewRecorder()
+	h.ListProviderLocations(rec, locationsReq(routingSeat(principal.ObjectGrant{Read: true})), "anthropic")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if body := strings.TrimSpace(rec.Body.String()); body != `{"locations":[],"provider":"anthropic","unavailable":"not_published"}` {
+		t.Errorf("body = %s", body)
+	}
+}
+
+func routingSeat(grant principal.ObjectGrant) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"ai_routing": grant},
+			RowScope: principal.RowScopeAll,
+		},
+	})
 }

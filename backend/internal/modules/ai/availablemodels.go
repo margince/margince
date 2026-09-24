@@ -6,10 +6,12 @@ package ai
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -102,7 +104,8 @@ type AvailableModels struct {
 // adapter's compiled default, never from the request. A URL accepted here would
 // be a destination chosen by a caller holding only READ on this setting, while
 // the stored one had to be written by someone holding update and passed the
-// endpoint rule on the way in (outboundegress.go).
+// endpoint rule on the way in (outboundegress.go). A gemini_vertex location
+// is no exception: it picks one of vertexHost's three templates, never a host.
 //
 // The lane matters because one vendor may be bound at two hosts: a broker on one
 // tier and a self-hosted gateway on another is a configuration the routing
@@ -114,18 +117,31 @@ type AvailableModels struct {
 // publishes the benchmark it ranks by. Every other vendor answers its full
 // list regardless, per the contract's own description of `top` — a caller
 // that needs the distinction reads AvailableModels.RankedBy, never top itself.
-func (s *RoutingStore) ListAvailableModels(
-	ctx context.Context,
-	provider, tier string,
-	top int,
-) (AvailableModels, error) {
+func (s *RoutingStore) ListAvailableModels(ctx context.Context, q AvailableModelsQuery) (AvailableModels, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
 		return AvailableModels{}, err
+	}
+	if q.Location != "" && !vertexLocationShape.MatchString(q.Location) {
+		return AvailableModels{}, fmt.Errorf("%w: location must be eu, us, global, or a region such as europe-west4", apperrors.ErrInvalidArgument)
 	}
 	cfg, err := s.Get(ctx)
 	if err != nil {
 		return AvailableModels{}, err
 	}
+	return s.availableModels(ctx, cfg, q), nil
+}
+
+// AvailableModelsQuery names what ListAvailableModels is asked. Location and
+// Model apply to gemini_vertex alone: Location replaces the lane's stored one,
+// and Model turns the list into a probe of that one id.
+type AvailableModelsQuery struct {
+	Provider, Tier  string
+	Top             int
+	Location, Model string
+}
+
+func (s *RoutingStore) availableModels(ctx context.Context, cfg RoutingConfig, q AvailableModelsQuery) AvailableModels {
+	provider := q.Provider
 	out := AvailableModels{Provider: provider}
 	// The profile decides where inference may happen, and a list call is egress
 	// like any other. Refused here for the same reason a binding is refused at
@@ -133,10 +149,16 @@ func (s *RoutingStore) ListAvailableModels(
 	// discovering that at the first call is too late. OpenRouter is cloud
 	// egress like any other broker, so it is refused here too rather than
 	// falling through to the unauthenticated read below.
-	bound := boundProviderConfig(cfg, provider, tier)
+	bound := boundProviderConfig(cfg, provider, q.Tier)
+	if provider == providerGeminiVertex && q.Location != "" {
+		bound.Location = q.Location
+	}
 	if !ProviderIsLocal(provider) && RequireResidency(cfg.Profile, bound) != nil {
 		out.Unavailable = AvailabilityProfileForbids
-		return out, nil
+		return out
+	}
+	if q.Model != "" {
+		return s.probeAvailability(ctx, bound, q)
 	}
 	// OpenRouter publishes its list unauthenticated and unbound: there is no
 	// stored binding to resolve a host from, and SelectBrain knows no adapter
@@ -145,19 +167,19 @@ func (s *RoutingStore) ListAvailableModels(
 	if provider == openRouterProvider {
 		if s.catalogue == nil {
 			out.Unavailable = AvailabilityNotPublished
-			return out, nil
+			return out
 		}
-		return s.catalogue.List(ctx, top), nil
+		return s.catalogue.List(ctx, q.Top)
 	}
-	client, err := SelectBrain(bound, s.resolvedKeys(ctx))
+	client, err := s.selectBrain.build(bound, s.resolvedKeys(ctx))
 	if err != nil {
 		out.Unavailable = unavailableFor(err)
-		return out, nil
+		return out
 	}
 	lister, ok := client.(model.Lister)
 	if !ok {
 		out.Unavailable = AvailabilityNotPublished
-		return out, nil
+		return out
 	}
 	asked, cancel := context.WithTimeout(ctx, listTimeout)
 	defer cancel()
@@ -167,13 +189,13 @@ func (s *RoutingStore) ListAvailableModels(
 		// model, not debugging our HTTP, and the vendor's message on this
 		// endpoint is as often a proxy's HTML as it is a sentence.
 		out.Unavailable = AvailabilityUnreachable
-		return out, nil
+		return out
 	}
 	out.Models = make([]AvailableModel, len(models))
 	for i, m := range models {
 		out.Models[i] = AvailableModel{Info: m}
 	}
-	return out, nil
+	return out
 }
 
 // unavailableFor reads why a binding could not be turned into a client.
