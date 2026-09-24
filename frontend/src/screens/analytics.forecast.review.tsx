@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { isEntityKind } from "../app/entity";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -12,7 +13,6 @@ import {
   type ResolveSheetLabels,
 } from "../design-system/resolvesheet";
 import { formatDate, formatMoneyOrAbsent } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
@@ -20,6 +20,11 @@ import { EntityRef } from "./entityref";
 type InputCheck = components["schemas"]["InputCheck"];
 type Assurance = components["schemas"]["ForecastAssurance"];
 type Resolution = { id: string; answer: ResolveAnswer };
+type CheckColumn = {
+  key: string;
+  header: string;
+  render: (check: InputCheck) => ReactNode;
+};
 
 // What should be checked before the call.
 //
@@ -206,76 +211,119 @@ function CheckTable({
   title,
 }: Readonly<{ checks: InputCheck[]; locale: Locale; title: string }>) {
   const t = useT();
-  const zone = viewerZone();
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const resolve = useResolveCheck(() => setActiveId(null));
+  const zone = useRecordZone();
+  // Closing keeps `id`, so the sheet's key holds and the Modal closes and
+  // returns focus normally; a DIFFERENT finding changes the key and starts blank.
+  const [sheet, setSheet] = useState<{ id: string; open: boolean } | null>(
+    null,
+  );
+  const table = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const close = () => setSheet((was) => was && { ...was, open: false });
+  const resolve = useResolveCheck(close);
+  // A finding a refetch took away is no longer the server's to answer, so the
+  // sheet follows the list rather than the click that opened it.
+  const open =
+    sheet?.open === true && checks.some((check) => check.id === sheet.id);
+
+  const answer = (check: InputCheck, button: HTMLElement) => {
+    opener.current = button;
+    resolve.reset();
+    setSheet({ id: check.id, open: true });
+  };
+  // An answered finding leaves the list with its own button, so focus goes to
+  // the next Answer rather than falling to the page.
+  const focusAfterClose = (): HTMLElement | null => {
+    if (opener.current?.isConnected) {
+      return opener.current;
+    }
+    return table.current?.querySelector<HTMLElement>("button") ?? null;
+  };
 
   return (
     <>
-      <DataTable<InputCheck>
-        label={title}
-        rows={checks}
-        rowKey={(check) => check.id}
-        columns={[
-          {
-            key: "severity",
-            header: t("review.colSeverity"),
-            render: (check) => <SeverityBadge severity={check.severity} />,
-          },
-          {
-            key: "finding",
-            header: t("review.colFinding"),
-            render: (check) => t(checkLabel(check.type)),
-          },
-          {
-            key: "deal",
-            header: t("review.colDeal"),
-            render: (check) => <SubjectCell check={check} />,
-          },
-          {
-            key: "stake",
-            header: t("review.colAtStake"),
-            render: (check) => (
-              <span className="t-num">
-                {formatMoneyOrAbsent(
-                  check.affected_minor ?? null,
-                  check.currency ?? "",
-                  locale,
-                )}
-              </span>
-            ),
-          },
-          {
-            key: "since",
-            header: t("review.colSeenSince"),
-            render: (check) => formatDate(check.first_seen_at, locale, zone),
-          },
-          {
-            key: "answer",
-            header: t("table.actions"),
-            render: (check) => (
-              <div className="cell-actions">
-                <Button onClick={() => setActiveId(check.id)}>
-                  {t("review.answer")}
-                </Button>
-              </div>
-            ),
-          },
-        ]}
-      />
+      <PanelBody>
+        <div ref={table}>
+          <DataTable<InputCheck>
+            label={title}
+            rows={checks}
+            rowKey={(check) => check.id}
+            columns={checkColumns(t, locale, zone, answer)}
+          />
+        </div>
+      </PanelBody>
       <ResolveSheet
-        open={activeId !== null}
+        key={sheet?.id}
+        open={open}
         pending={resolve.isPending}
+        error={resolve.error}
         labels={sheetLabels(t)}
-        onSubmit={(answer) => {
-          if (activeId !== null) {
-            resolve.mutate({ id: activeId, answer });
+        returnFocusTo={focusAfterClose}
+        onSubmit={(given) => {
+          if (sheet !== null) {
+            resolve.mutate({ id: sheet.id, answer: given });
           }
         }}
-        onClose={() => setActiveId(null)}
+        onClose={close}
       />
     </>
   );
+}
+
+function checkColumns(
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  zone: string,
+  answer: (check: InputCheck, button: HTMLElement) => void,
+): CheckColumn[] {
+  return [
+    {
+      key: "severity",
+      header: t("review.colSeverity"),
+      render: (check) => <SeverityBadge severity={check.severity} />,
+    },
+    {
+      key: "finding",
+      header: t("review.colFinding"),
+      render: (check) => t(checkLabel(check.type)),
+    },
+    {
+      key: "deal",
+      header: t("review.colDeal"),
+      render: (check) => <SubjectCell check={check} />,
+    },
+    {
+      key: "stake",
+      header: t("review.colAtStake"),
+      render: (check) => (
+        <span className="t-num">
+          {formatMoneyOrAbsent(
+            check.affected_minor ?? null,
+            check.currency ?? "",
+            locale,
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "since",
+      // The record's clock, not the reader's: colleagues quote this date to
+      // each other, and two of them must read the same day.
+      header: t("review.colSeenSince"),
+      render: (check) => formatDate(check.first_seen_at, locale, zone),
+    },
+    {
+      key: "answer",
+      header: t("table.actions"),
+      render: (check) => (
+        <div className="cell-actions">
+          <Button onClick={(event) => answer(check, event.currentTarget)}>
+            {t("review.answer")}
+          </Button>
+        </div>
+      ),
+    },
+  ];
 }
 
 // The answer to one finding, sent.
