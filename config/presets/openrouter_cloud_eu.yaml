@@ -34,6 +34,8 @@ version: 1
 
 seeds:
   ai_routing:
+    # Not eu_resident: the broker itself reads every prompt outside the EU, so
+    # pinning the upstream to an EU host bounds only half of the path.
     profile: eu_hosted
     tiers:
       # Every tier writes `routing:` out rather than inheriting the product

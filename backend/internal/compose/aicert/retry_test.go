@@ -75,7 +75,7 @@ func TestCertifyTaskRedrivesARunAfterEveryBoundTierFailed(t *testing.T) {
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+		ai.ProfileCloudHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 		})
@@ -100,7 +100,7 @@ func TestCertifyTaskDoesNotRedriveAnExhaustedAccount(t *testing.T) {
 
 	_, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+		ai.ProfileCloudHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 		})
@@ -131,7 +131,7 @@ func TestCertifyTaskGivesUpAfterRunAttemptsAndSaysHowMany(t *testing.T) {
 
 	_, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+		ai.ProfileCloudHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 		})

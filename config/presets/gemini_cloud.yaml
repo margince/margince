@@ -12,7 +12,9 @@ version: 1
 
 seeds:
   ai_routing:
-    profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+    # eu_hosted means cloud-hosted and nothing more: AI Studio has no region
+    # selector and no residency commitment, so this preset cannot be eu_resident.
+    profile: eu_hosted          # eu_hosted | eu_resident | sovereign | cloud_frontier
     tiers:
       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }

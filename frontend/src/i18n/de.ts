@@ -8071,8 +8071,9 @@ export const de = {
   "aiRouting.profile.card": "Bereitstellungsprofil",
   "aiRouting.profile.label": "Standort",
   "aiRouting.profile.help":
-    "Wo die Inferenz läuft. Souverän bedeutet kein Datenabfluss: nur Modelle auf eigenen Hosts — abgelehnt beim Speichern, nicht erst beim ersten Aufruf.",
-  "aiRouting.profile.eu_hosted": "In der EU gehostet",
+    "Wo die Inferenz läuft. Souverän bedeutet kein Datenabfluss: nur Modelle auf eigenen Hosts. EU-Datenresidenz lehnt jede Bindung ab, die außerhalb der EU verarbeitet. Beides wird beim Speichern abgelehnt, nicht erst beim ersten Aufruf.",
+  "aiRouting.profile.eu_hosted": "Cloud-gehostet (ohne Residenzgarantie)",
+  "aiRouting.profile.eu_resident": "EU-Datenresidenz (erzwungen)",
   "aiRouting.profile.sovereign": "Souverän (kein Datenabfluss)",
   "aiRouting.profile.cloud_frontier": "Cloud-Frontier",
   "aiRouting.dimensions.label": "Vektorbreite",

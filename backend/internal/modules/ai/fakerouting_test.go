@@ -21,8 +21,8 @@ func TestFakeRoutingConfigBindsEveryLadder(t *testing.T) {
 	if got := cfg.UnboundLadderWarnings(); len(got) != 0 {
 		t.Fatalf("FakeRoutingConfig() leaves ladders unbound: %v", got)
 	}
-	if cfg.Profile != ProfileEUHosted {
-		t.Fatalf("Profile = %q, want %q", cfg.Profile, ProfileEUHosted)
+	if cfg.Profile != ProfileCloudHosted {
+		t.Fatalf("Profile = %q, want %q", cfg.Profile, ProfileCloudHosted)
 	}
 	for _, tier := range []Tier{TierLocalSmall, TierCheapCloud, TierPremium} {
 		if got := cfg.Tiers[tier].Provider; got != ProviderFake {

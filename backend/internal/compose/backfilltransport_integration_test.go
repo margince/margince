@@ -217,7 +217,7 @@ func setupBackfillWire(t *testing.T) *backfillWireEnv {
 	// the resolvers BoundLadder / CurrentModelForTier need real (provider, model)
 	// identities, no network. A fixed clock keeps the 7-day window deterministic.
 	router, err := ai.NewLocalRouter(ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers: map[ai.Tier]ai.ProviderConfig{
 			ai.TierLocalSmall: {Provider: ai.ProviderFake, Model: "local-model"},
 			ai.TierCheapCloud: {Provider: ai.ProviderFake, Model: "cloud-model"},

@@ -150,6 +150,34 @@ func TestSovereignRefusesNativeCloudProviders(t *testing.T) {
 	}
 }
 
+// eu_resident is an enforced promise, so it admits nothing it cannot vouch for:
+// every cloud provider is refused on a chat tier and on the embeddings lane,
+// and what sovereign accepts still parses.
+func TestEUResidentAdmitsOnlyWhatSovereignDoes(t *testing.T) {
+	const local = "{provider: ollama, model: bge-m3}"
+	for _, provider := range knownProviders {
+		if localProviders[provider] {
+			continue
+		}
+		cloud := "{provider: " + provider + ", model: m, base_url: https://api.mistral.ai}"
+		for lane, doc := range map[string]string{
+			"tier premium":        "profile: eu_resident\ntiers:\n  premium: " + cloud + "\nembeddings: " + local + "\n",
+			"the embeddings lane": "profile: eu_resident\ntiers:\n  premium: " + local + "\nembeddings: " + cloud + "\n",
+		} {
+			t.Run(provider+" on "+lane, func(t *testing.T) {
+				_, err := ParseRouting([]byte(doc))
+				want := "profile eu_resident forbids cloud provider \"" + provider + "\" on " + lane
+				if err == nil || !strings.Contains(err.Error(), want) {
+					t.Fatalf("want %q, got %v", want, err)
+				}
+			})
+		}
+	}
+	if _, err := ParseRouting([]byte("profile: eu_resident\ntiers:\n  premium: " + local + "\nembeddings: " + local + "\n")); err != nil {
+		t.Fatalf("a same-host binding is resident and must parse: %v", err)
+	}
+}
+
 // LocalOnly (the runtime capability) and localProviders (the parse-time set)
 // are two encodings of "is this cloud"; they may never disagree.
 func TestLocalOnlyMatchesLocalProvidersForEveryProvider(t *testing.T) {
@@ -302,7 +330,7 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 		{
 			name: "a chat tier with no host",
 			cfg: RoutingConfig{
-				Profile:    ProfileEUHosted,
+				Profile:    ProfileCloudHosted,
 				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: broker},
 				Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}},
 			},
@@ -311,7 +339,7 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 		{
 			name: "the embeddings lane with no host",
 			cfg: RoutingConfig{
-				Profile:    ProfileEUHosted,
+				Profile:    ProfileCloudHosted,
 				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: ProviderFake}},
 				Embeddings: EmbeddingsConfig{ProviderConfig: broker},
 			},
@@ -334,7 +362,7 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 			// The other arm, so the rule cannot pass by refusing everything.
 			name: "the same binding with its host",
 			cfg: RoutingConfig{
-				Profile:    ProfileEUHosted,
+				Profile:    ProfileCloudHosted,
 				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: withHost},
 				Embeddings: EmbeddingsConfig{ProviderConfig: withHost},
 			},

@@ -378,9 +378,10 @@
       ],
       "properties": {
         "profile": {
-          "description": "Location ladder: eu_hosted (partner EU inference), sovereign (zero egress — cloud providers refused), cloud_frontier (BYOK cloud).",
+          "description": "Location ladder: eu_hosted (cloud-hosted, no residency guarantee; the spelling is historical), eu_resident (enforced: every binding keeps processing inside the EU), sovereign (zero egress — cloud providers refused), cloud_frontier (BYOK cloud).",
           "enum": [
             "eu_hosted",
+            "eu_resident",
             "sovereign",
             "cloud_frontier"
           ]

@@ -133,7 +133,7 @@ func (s *RoutingStore) ListAvailableModels(
 	// discovering that at the first call is too late. OpenRouter is cloud
 	// egress like any other broker, so it is refused here too rather than
 	// falling through to the unauthenticated read below.
-	if cfg.Profile == ProfileSovereign && !ProviderIsLocal(provider) {
+	if cfg.Profile.localOnly() && !ProviderIsLocal(provider) {
 		out.Unavailable = AvailabilityProfileForbids
 		return out, nil
 	}

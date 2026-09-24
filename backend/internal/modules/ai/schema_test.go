@@ -71,8 +71,11 @@ func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
 		t.Fatalf("parse the routing subtree: %v", err)
 	}
 
-	assertSetEqual(t, "profiles", schema.Properties.Profile.Enum,
-		[]string{string(ProfileEUHosted), string(ProfileSovereign), string(ProfileCloudFrontier)})
+	profileNames := make([]string, 0, len(declaredProfiles))
+	for _, profile := range declaredProfiles {
+		profileNames = append(profileNames, string(profile))
+	}
+	assertSetEqual(t, "profiles", schema.Properties.Profile.Enum, profileNames)
 	tierNames := make([]string, 0, len(knownTiers))
 	for tier := range knownTiers {
 		tierNames = append(tierNames, string(tier))

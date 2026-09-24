@@ -49,7 +49,7 @@ func TestRoutingFromDeployConfigReadsTheDeclaredBinding(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading a config that declares a binding: %v", err)
 	}
-	if routing.Profile != ai.ProfileEUHosted {
+	if routing.Profile != ai.ProfileCloudHosted {
 		t.Errorf("profile = %q, want the file's own eu_hosted", routing.Profile)
 	}
 	small, bound := routing.Tiers[ai.TierLocalSmall]

@@ -158,9 +158,11 @@ embeddings:    {provider: gemini}
 ```
 
 - **`profile`** is the §4 location ladder — the privacy choice of *where* the
-  model runs: `eu_hosted` (partner-operated EU inference, the default),
-  `sovereign` (zero egress by construction), and so on. It constrains, it never
-  leaks.
+  model runs: `sovereign` (zero egress by construction), `eu_resident` (every
+  binding must keep processing inside the EU, refused at save otherwise),
+  `eu_hosted` (cloud-hosted with no residency guarantee — the spelling is
+  historical) and `cloud_frontier`. The first two constrain; the last two are
+  labels. None of them leaks.
 - **No key ever lives in the binding.** A provider names only itself, and a stray
   `api_key:` is a *boot error* rather than a convenience. Where the key comes from
   depends on who is asking: a served installation resolves it from the **key

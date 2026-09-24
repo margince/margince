@@ -7978,8 +7978,10 @@ export const vi = {
   "aiRouting.profile.card": "Hồ sơ triển khai",
   "aiRouting.profile.label": "Vị trí",
   "aiRouting.profile.help":
-    "Nơi chạy suy luận. Sovereign nghĩa là không có dữ liệu ra ngoài: chỉ mô hình trên máy chủ của bạn, bị từ chối khi lưu chứ không phải ở lần gọi đầu tiên.",
-  "aiRouting.profile.eu_hosted": "Đặt tại EU",
+    "Nơi chạy suy luận. Sovereign nghĩa là không có dữ liệu ra ngoài: chỉ mô hình trên máy chủ của bạn. Lưu trú dữ liệu tại EU từ chối mọi liên kết xử lý bên ngoài EU. Cả hai đều bị từ chối khi lưu chứ không phải ở lần gọi đầu tiên.",
+  "aiRouting.profile.eu_hosted":
+    "Lưu trữ trên đám mây (không đảm bảo lưu trú dữ liệu)",
+  "aiRouting.profile.eu_resident": "Lưu trú dữ liệu tại EU (bắt buộc)",
   "aiRouting.profile.sovereign": "Sovereign (không ra ngoài)",
   "aiRouting.profile.cloud_frontier": "Cloud frontier (đám mây cao cấp)",
   "aiRouting.dimensions.label": "Độ rộng vector",

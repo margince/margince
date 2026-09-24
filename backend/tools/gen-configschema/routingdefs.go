@@ -31,8 +31,8 @@ const routingDefsTemplate = `{
 "required": ["profile", "tiers", "embeddings"],
 "properties": {
   "profile": {
-    "description": "Location ladder: eu_hosted (partner EU inference), sovereign (zero egress — cloud providers refused), cloud_frontier (BYOK cloud).",
-    "enum": ["eu_hosted", "sovereign", "cloud_frontier"]
+    "description": "Location ladder: eu_hosted (cloud-hosted, no residency guarantee; the spelling is historical), eu_resident (enforced: every binding keeps processing inside the EU), sovereign (zero egress — cloud providers refused), cloud_frontier (BYOK cloud).",
+    "enum": ["eu_hosted", "eu_resident", "sovereign", "cloud_frontier"]
   },
   "tiers": {
     "description": "Capability tiers; bind each to one provider. An unbound tier is legal — the router degrades honestly.",

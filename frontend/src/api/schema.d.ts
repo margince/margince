@@ -16829,9 +16829,12 @@ export interface components {
             /**
              * @description The location ladder (§4). `sovereign` means zero egress by construction: a cloud
              *     provider on any tier is refused, and so is a local provider pointed at another host.
+             *     `eu_resident` is enforced: every tier and the embeddings lane must keep ML processing
+             *     inside the EU, and a binding that cannot is refused. `eu_hosted` is cloud-hosted with
+             *     no residency guarantee; the spelling is historical. `cloud_frontier` is BYOK cloud.
              * @enum {string}
              */
-            profile: "eu_hosted" | "sovereign" | "cloud_frontier";
+            profile: "eu_hosted" | "eu_resident" | "sovereign" | "cloud_frontier";
             /** @description Tier name to the model bound on it. Empty means no models are bound. */
             tiers: {
                 [key: string]: components["schemas"]["AiTierBinding"];

@@ -155,8 +155,10 @@ Under `profile: sovereign` (zero egress by construction) a cloud provider on any
 tier — or the embeddings lane — is a **startup error**, not a runtime surprise.
 The refusal is bound to the provider _name_, not a config flag, so pointing
 `openai_compatible` at a localhost URL is still refused: only `ollama`, `vllm`,
-and `fake` are sovereign-eligible. Use `eu_hosted` or `cloud_frontier` for a BYOK
-cloud binding.
+and `fake` are sovereign-eligible. Use `eu_hosted` (cloud-hosted, no residency
+guarantee) or `cloud_frontier` for a BYOK cloud binding. `eu_resident` enforces
+EU processing and refuses every binding that cannot guarantee it, which today
+leaves only what `sovereign` accepts.
 
 The endpoint is checked too, because a local provider name is not on its own a
 local endpoint: `ollama` and `vllm` take a `base_url`, and one pointed at a
@@ -190,7 +192,7 @@ followed, one that changes host or downgrades to http is refused.
 | Symptom | Meaning / fix |
 |---|---|
 | `http 404` on `…/v1/v1/chat/completions` or `…/v1/v1/responses` | `base_url` includes a `/v1` segment — drop it (§2 caveat); the adapter adds it. |
-| Boot error *"profile sovereign forbids cloud provider …"* | A cloud provider is bound under `profile: sovereign`. Switch to `eu_hosted`/`cloud_frontier`, or bind that tier to `ollama`/`vllm`. |
+| Boot error *"profile sovereign forbids cloud provider …"* (or *"profile eu_resident …"*) | A cloud provider is bound under a profile that refuses it. Switch to `eu_hosted`/`cloud_frontier`, or bind that tier to `ollama`/`vllm`. |
 | Boot error *"needs an api key — set X_API_KEY …"* | The bound cloud provider's key env var is unset. Export the one the error names (e.g. `GEMINI_API_KEY`). |
 | Boot error *"field api_key not found"* | You put an `api_key:` in the `seeds.ai_routing` binding — remove it; the key comes from the env var (see the table above). |
 | Boot error *"needs a base_url …"* | `openai_compatible` has no `base_url`. Add the vendor host root (no `/v1`). |

@@ -21,7 +21,7 @@ import (
 
 func TestABindingSurvivesTheRoundTripToTheWireAndBack(t *testing.T) {
 	original := ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers: map[ai.Tier]ai.ProviderConfig{
 			ai.TierPremium: {
 				Provider: "gemini", Model: "gemini-3.5-flash",
@@ -62,7 +62,7 @@ func TestABindingSurvivesTheRoundTripToTheWireAndBack(t *testing.T) {
 // empty string", which is why these fields are pointers on the wire.
 func TestAnUnsetOptionalIsAbsentRatherThanEmpty(t *testing.T) {
 	wire := toContractAiRouting(ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers:   map[ai.Tier]ai.ProviderConfig{ai.TierPremium: {Provider: "fake", Model: "m"}},
 	})
 	tier := wire.Tiers["premium"]

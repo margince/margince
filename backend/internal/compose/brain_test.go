@@ -85,7 +85,7 @@ func TestModelPathInvalidateCacheForcesAFreshCompletion(t *testing.T) {
 // classification the loops read, not the store failure itself.
 func TestAnUnservableBindingIsTheOnlyFailureAFallbackMayAnswer(t *testing.T) {
 	unkeyed := ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers: map[ai.Tier]ai.ProviderConfig{
 			ai.TierPremium: {Provider: "gemini", Model: "gemini-2.5-flash"},
 		},

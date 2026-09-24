@@ -8255,8 +8255,9 @@ export const en = {
   "aiRouting.profile.card": "Deployment profile",
   "aiRouting.profile.label": "Location",
   "aiRouting.profile.help":
-    "Where inference runs. Sovereign means zero egress: only models on your own hosts, refused at save time rather than at the first call.",
-  "aiRouting.profile.eu_hosted": "EU-hosted",
+    "Where inference runs. Sovereign means zero egress: only models on your own hosts. EU data residency refuses any binding that processes outside the EU. Both are refused at save time rather than at the first call.",
+  "aiRouting.profile.eu_hosted": "Cloud-hosted (no residency guarantee)",
+  "aiRouting.profile.eu_resident": "EU data residency (enforced)",
   "aiRouting.profile.sovereign": "Sovereign (no egress)",
   "aiRouting.profile.cloud_frontier": "Cloud frontier",
   "aiRouting.dimensions.label": "Vector width",

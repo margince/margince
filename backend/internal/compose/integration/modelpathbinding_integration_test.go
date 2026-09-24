@@ -37,7 +37,7 @@ import (
 // non-empty string this suite can assert against.
 func boundEmbedRoutingConfig(embedModel string) ai.RoutingConfig {
 	return ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers: map[ai.Tier]ai.ProviderConfig{
 			ai.TierLocalSmall: {Provider: ai.ProviderFake},
 		},
@@ -55,7 +55,7 @@ func boundEmbedRoutingConfig(embedModel string) ai.RoutingConfig {
 // reports as "" without a map-lookup panic.
 func unboundEmbedRoutingConfig() ai.RoutingConfig {
 	return ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers: map[ai.Tier]ai.ProviderConfig{
 			ai.TierLocalSmall: {Provider: ai.ProviderFake},
 		},

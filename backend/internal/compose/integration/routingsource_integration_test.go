@@ -154,7 +154,7 @@ func TestAnInstallationThatBindsNothingResolvesUnconfigured(t *testing.T) {
 // that reaches the row some other way cannot land something the boot would have
 // refused. ai.FromStored is where that bar is applied on the way out.
 func TestAStoredBindingIsValidatedOnTheWayOut(t *testing.T) {
-	if _, err := ai.FromStored(ai.RoutingConfig{Profile: ai.ProfileEUHosted}, config.Static(nil)); err == nil {
+	if _, err := ai.FromStored(ai.RoutingConfig{Profile: ai.ProfileCloudHosted}, config.Static(nil)); err == nil {
 		t.Error("a binding with no tiers finalized without error")
 	}
 }

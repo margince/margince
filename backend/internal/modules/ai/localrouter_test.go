@@ -31,7 +31,7 @@ func (s *memCallStore) EnsureConfig(context.Context, ConfigSnapshot) error { ret
 // the shape every NewLocalRouter test starts from.
 func localFakeConfig() RoutingConfig {
 	return RoutingConfig{
-		Profile:    ProfileEUHosted,
+		Profile:    ProfileCloudHosted,
 		Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: ProviderFake}},
 		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}},
 	}

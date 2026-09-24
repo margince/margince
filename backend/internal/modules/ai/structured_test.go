@@ -31,7 +31,7 @@ func structuredReq() model.Request {
 
 func TestStructuredValidFirstTry(t *testing.T) {
 	cheap := NewFakeClient().Script(`{"ok":true}`)
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, &memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 
 	resp, _, err := r.CompleteStructured(wsContext(t), TaskColdStart, structuredReq(), jsonObjectValidator)
 	if err != nil || resp.Text != `{"ok":true}` {
@@ -44,7 +44,7 @@ func TestStructuredValidFirstTry(t *testing.T) {
 
 func TestStructuredRetryCarriesValidatorError(t *testing.T) {
 	cheap := NewFakeClient().Script("garbage", `{"fixed":true}`)
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, &memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 
 	resp, _, err := r.CompleteStructured(wsContext(t), TaskColdStart, structuredReq(), jsonObjectValidator)
 	if err != nil || resp.Text != `{"fixed":true}` {
@@ -66,7 +66,7 @@ func TestStructuredEscalatesOneTierOnSecondFailure(t *testing.T) {
 	premium := NewFakeClient().Script(`{"rescued":true}`)
 	meter := &memMeter{}
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium},
-		meter, DefaultMonthlyTokens, ProfileEUHosted)
+		meter, DefaultMonthlyTokens, ProfileCloudHosted)
 
 	resp, info, err := r.CompleteStructured(wsContext(t), TaskColdStart, structuredReq(), jsonObjectValidator)
 	if err != nil || resp.Text != `{"rescued":true}` {
@@ -83,7 +83,7 @@ func TestStructuredEscalatesOneTierOnSecondFailure(t *testing.T) {
 
 func TestStructuredExhaustionIsAnHonestError(t *testing.T) {
 	cheap := NewFakeClient().Script("bad", "bad", "bad")
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, &memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
 
 	_, _, err := r.CompleteStructured(wsContext(t), TaskColdStart, structuredReq(), jsonObjectValidator)
 	// The SENTINEL, not the wording: a caller with a watermark or a queue has
@@ -140,7 +140,7 @@ func TestStructuredLeavesARealModelsBadAnswerUnmarked(t *testing.T) {
 	cheap := NewFakeClient().Script("garbage", "still garbage", "garbage again")
 	r := assembleRouter(
 		map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: cheap},
-		NewFakeClient(), ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens, nil,
+		NewFakeClient(), ProfileCloudHosted, &memMeter{}, DefaultMonthlyTokens, nil,
 		map[Tier]routeMeta{
 			TierCheapCloud: {provider: "anthropic", model: "claude-x"},
 			TierPremium:    {provider: "anthropic", model: "claude-y"},

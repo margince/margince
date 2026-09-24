@@ -878,6 +878,7 @@ func (e AiProfileState) Valid() bool {
 const (
 	AiRoutingProfileCloudFrontier AiRoutingProfile = "cloud_frontier"
 	AiRoutingProfileEuHosted      AiRoutingProfile = "eu_hosted"
+	AiRoutingProfileEuResident    AiRoutingProfile = "eu_resident"
 	AiRoutingProfileSovereign     AiRoutingProfile = "sovereign"
 )
 
@@ -887,6 +888,8 @@ func (e AiRoutingProfile) Valid() bool {
 	case AiRoutingProfileCloudFrontier:
 		return true
 	case AiRoutingProfileEuHosted:
+		return true
+	case AiRoutingProfileEuResident:
 		return true
 	case AiRoutingProfileSovereign:
 		return true
@@ -19291,6 +19294,9 @@ type AiRouting struct {
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 	// provider on any tier is refused, and so is a local provider pointed at another host.
+	// `eu_resident` is enforced: every tier and the embeddings lane must keep ML processing
+	// inside the EU, and a binding that cannot is refused. `eu_hosted` is cloud-hosted with
+	// no residency guarantee; the spelling is historical. `cloud_frontier` is BYOK cloud.
 	Profile AiRoutingProfile `json:"profile"`
 
 	// Tiers Tier name to the model bound on it. Empty means no models are bound.
@@ -19299,6 +19305,9 @@ type AiRouting struct {
 
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
+// `eu_resident` is enforced: every tier and the embeddings lane must keep ML processing
+// inside the EU, and a binding that cannot is refused. `eu_hosted` is cloud-hosted with
+// no residency guarantee; the spelling is historical. `cloud_frontier` is BYOK cloud.
 type AiRoutingProfile string
 
 // AiRoutingPreview defines model for AiRoutingPreview.

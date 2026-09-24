@@ -149,7 +149,7 @@ func TestTheUpstreamDefaultReachesTheBrokerAndNobodyElse(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			cfg := RoutingConfig{
-				Profile: ProfileEUHosted,
+				Profile: ProfileCloudHosted,
 				Tiers: map[Tier]ProviderConfig{
 					TierCheapCloud: {Provider: tc.provider, Model: "m", BaseURL: tc.baseURL},
 				},
@@ -178,7 +178,7 @@ func TestTheUpstreamDefaultReachesTheBrokerAndNobodyElse(t *testing.T) {
 // back to the default on the next read.
 func TestAnExplicitlyEmptyDeclarationIsNotRedefaulted(t *testing.T) {
 	cfg := RoutingConfig{
-		Profile: ProfileEUHosted,
+		Profile: ProfileCloudHosted,
 		Tiers: map[Tier]ProviderConfig{
 			TierCheapCloud: {
 				Provider: providerOpenAICompatible, Model: "m",

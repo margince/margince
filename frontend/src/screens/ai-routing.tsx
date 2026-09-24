@@ -46,7 +46,12 @@ import "./ai-settings.css";
 type Routing = components["schemas"]["AiRouting"];
 type TierBinding = components["schemas"]["AiTierBinding"];
 
-const PROFILES = ["eu_hosted", "sovereign", "cloud_frontier"] as const;
+const PROFILES = [
+  "eu_hosted",
+  "eu_resident",
+  "sovereign",
+  "cloud_frontier",
+] as const;
 
 // The key the embedding lane is opened under. Not a tier name, and it cannot
 // collide with one: the tier vocabulary is the task contract's and this is the

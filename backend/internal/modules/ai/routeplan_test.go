@@ -12,13 +12,13 @@ import (
 )
 
 func TestFeaturePolicyAgreesWithServingBudgetAndProfile(t *testing.T) {
-	cfg := RoutingConfig{Profile: ProfileEUHosted, Tiers: map[Tier]ProviderConfig{}}
+	cfg := RoutingConfig{Profile: ProfileCloudHosted, Tiers: map[Tier]ProviderConfig{}}
 	clients := map[Tier]model.Client{}
 	for _, tier := range []Tier{TierLocalSmall, TierLocalLarge, TierCheapCloud, TierPremium, TierFrontier} {
 		cfg.Tiers[tier] = ProviderConfig{Provider: "fake", Model: string(tier)}
 		clients[tier] = NewFakeClient()
 	}
-	for _, profile := range []Profile{ProfileEUHosted, ProfileSovereign, ProfileCloudFrontier} {
+	for _, profile := range []Profile{ProfileCloudHosted, ProfileSovereign, ProfileCloudFrontier} {
 		cfg.Profile = profile
 		for _, spent := range []int64{0, 79, 80, 99, 100, 106} {
 			router := testRouter(clients, &memMeter{spent: spent}, StaticBudget(100), profile)

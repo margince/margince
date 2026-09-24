@@ -84,7 +84,7 @@ func setupEstimator(t *testing.T) *estEnv {
 	// (provider, model) identities the served slices and rates are keyed on —
 	// no network, no API keys.
 	router, err := ai.NewLocalRouter(ai.RoutingConfig{
-		Profile: ai.ProfileEUHosted,
+		Profile: ai.ProfileCloudHosted,
 		Tiers: map[ai.Tier]ai.ProviderConfig{
 			ai.TierLocalSmall: {Provider: ai.ProviderFake, Model: "local-model"},
 			ai.TierCheapCloud: {Provider: ai.ProviderFake, Model: "cloud-model"},

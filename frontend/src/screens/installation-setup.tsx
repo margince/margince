@@ -260,10 +260,10 @@ function useBindModels() {
       };
       const { error } = await api.PUT("/ai/routing", {
         body: {
-          // eu_hosted rather than a question: `sovereign` forbids the cloud
-          // vendors this screen offers, and asking a first-time admin to choose
-          // a location ladder before they have bound anything is asking them to
-          // answer a question they cannot yet have.
+          // eu_hosted rather than a question: `sovereign` and `eu_resident`
+          // forbid the cloud vendors this screen offers, and asking a
+          // first-time admin to choose a location ladder before they have
+          // bound anything is asking a question they cannot yet answer.
           profile: "eu_hosted",
           tiers: {
             local_small: binding,
