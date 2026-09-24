@@ -15,7 +15,9 @@ version: 1
 
 seeds:
   ai_routing:
-    profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+    # cloud_frontier, not eu_hosted: the Gemini Developer API states no EU
+    # processing region, so nothing here keeps text in the EU.
+    profile: cloud_frontier     # eu_hosted | sovereign | cloud_frontier
     tiers:
       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }

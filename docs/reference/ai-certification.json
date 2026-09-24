@@ -513,7 +513,7 @@
     },
     {
       "file": "gemini_cloud.yaml",
-      "profile": "eu_hosted",
+      "profile": "cloud_frontier",
       "tiers": [
         {
           "tier": "local_small",
@@ -544,7 +544,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -560,7 +560,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "current",
@@ -576,7 +576,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -592,7 +592,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -608,7 +608,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -624,7 +624,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -640,7 +640,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -656,7 +656,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -672,7 +672,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -688,7 +688,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -704,7 +704,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -720,7 +720,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -736,7 +736,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -752,7 +752,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -768,7 +768,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -784,7 +784,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -800,7 +800,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -816,7 +816,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -832,7 +832,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -848,7 +848,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -864,7 +864,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -880,7 +880,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -896,7 +896,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -912,7 +912,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -928,7 +928,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -944,7 +944,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -960,7 +960,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -976,7 +976,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -992,7 +992,7 @@
           "model": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1013,7 +1013,7 @@
     },
     {
       "file": "openrouter_cloud.yaml",
-      "profile": "eu_hosted",
+      "profile": "cloud_frontier",
       "tiers": [
         {
           "tier": "local_small",
@@ -1044,7 +1044,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1060,7 +1060,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1076,7 +1076,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1092,7 +1092,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1108,7 +1108,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -1124,7 +1124,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1140,7 +1140,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1156,7 +1156,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1172,7 +1172,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1188,7 +1188,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1204,7 +1204,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1220,7 +1220,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1236,7 +1236,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1252,7 +1252,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1268,7 +1268,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1284,7 +1284,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1300,7 +1300,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -1316,7 +1316,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1332,7 +1332,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1348,7 +1348,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1364,7 +1364,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "",
           "state": "",
@@ -1380,7 +1380,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "stale",
@@ -1396,7 +1396,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -1412,7 +1412,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1428,7 +1428,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1444,7 +1444,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
           "state": "stale",
@@ -1460,7 +1460,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1476,7 +1476,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -1492,7 +1492,7 @@
           "model": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
@@ -2017,7 +2017,7 @@
       "binding": {
         "provider": "gemini",
         "model": "gemini-3.1-flash-lite",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 41,
       "sites_current": 2,
@@ -2037,7 +2037,7 @@
       "binding": {
         "provider": "gemini",
         "model": "gemini-3.1-pro-preview",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 6,
       "sites_current": 0,
@@ -2057,7 +2057,7 @@
       "binding": {
         "provider": "gemini",
         "model": "gemini-3.5-flash",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 13,
       "sites_current": 0,
@@ -2257,7 +2257,7 @@
       "binding": {
         "provider": "openai_compatible",
         "model": "mistralai/mistral-medium-3-5",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 1,
       "sites_current": 0,
@@ -2297,7 +2297,7 @@
       "binding": {
         "provider": "openai_compatible",
         "model": "openai/gpt-oss-120b",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "sites": 39,
       "sites_current": 0,
@@ -2362,7 +2362,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -2449,7 +2449,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -2492,7 +2492,7 @@
         "binding": {
           "provider": "gemini",
           "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
+          "env": "cloud_frontier"
         },
         "band": "certified",
         "reliability": 1,
@@ -2520,7 +2520,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "current",
           "band": "certified",
@@ -2557,7 +2557,7 @@
         "binding": {
           "provider": "gemini",
           "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
+          "env": "cloud_frontier"
         },
         "band": "certified",
         "reliability": 1,
@@ -2585,7 +2585,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "current",
           "band": "certified",
@@ -2626,7 +2626,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -2822,7 +2822,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -2962,7 +2962,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -3084,7 +3084,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -3207,7 +3207,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -3356,7 +3356,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -3517,7 +3517,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -3586,7 +3586,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -3725,7 +3725,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -3815,7 +3815,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -3955,7 +3955,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -4012,7 +4012,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4128,7 +4128,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -4177,7 +4177,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4284,7 +4284,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4335,7 +4335,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -4457,7 +4457,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4528,7 +4528,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4568,7 +4568,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4671,7 +4671,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4763,7 +4763,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4853,7 +4853,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4916,7 +4916,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -4970,7 +4970,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5001,7 +5001,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5035,7 +5035,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5131,7 +5131,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5185,7 +5185,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -5216,7 +5216,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5250,7 +5250,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5346,7 +5346,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5400,7 +5400,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5431,7 +5431,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5465,7 +5465,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5561,7 +5561,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5620,7 +5620,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5649,7 +5649,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5686,7 +5686,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -5781,7 +5781,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -5843,7 +5843,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -5873,7 +5873,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -5913,7 +5913,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6013,7 +6013,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6081,7 +6081,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -6118,7 +6118,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6161,7 +6161,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6301,7 +6301,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6356,7 +6356,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -6463,7 +6463,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -6513,7 +6513,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -6597,7 +6597,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6667,7 +6667,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6786,7 +6786,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -6851,7 +6851,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -6944,7 +6944,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -7003,7 +7003,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -7093,7 +7093,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -7146,7 +7146,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -7326,7 +7326,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -7517,7 +7517,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -7628,7 +7628,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -7698,7 +7698,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -7791,7 +7791,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -7860,7 +7860,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -8101,7 +8101,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -8214,7 +8214,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -8282,7 +8282,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -8378,7 +8378,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -8468,7 +8468,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -8609,7 +8609,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -8681,7 +8681,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -8768,7 +8768,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -8822,7 +8822,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -8909,7 +8909,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -8958,7 +8958,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -9042,7 +9042,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -9095,7 +9095,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -9182,7 +9182,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -9231,7 +9231,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -9315,7 +9315,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -9363,7 +9363,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -9447,7 +9447,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -9503,7 +9503,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -9608,7 +9608,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -9661,7 +9661,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -9754,7 +9754,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -9803,7 +9803,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -9910,7 +9910,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -9956,7 +9956,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "supported_degraded",
@@ -10072,7 +10072,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -10121,7 +10121,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -10237,7 +10237,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "certified",
@@ -10296,7 +10296,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -10386,7 +10386,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -10449,7 +10449,7 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -10542,7 +10542,7 @@
           "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "state": "stale",
           "band": "not_supported",
@@ -10605,7 +10605,7 @@
       "binding": {
         "provider": "openai_compatible",
         "model": "openai/gpt-oss-120b",
-        "env": "eu_hosted"
+        "env": "cloud_frontier"
       },
       "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
     }

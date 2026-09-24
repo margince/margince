@@ -150,7 +150,7 @@ running one is rebound under Settings → AI or through `PUT /v1/ai/routing`. Th
 shape below is that binding's.
 
 ```yaml
-profile: eu_hosted            # WHERE inference may run (the egress posture)
+profile: cloud_frontier       # WHERE inference may run (the egress posture)
 tiers:
   local_small: {provider: ollama,  model: gemma3}
   cheap_cloud: {provider: gemini,  model: gemini-2.5-flash}
@@ -159,9 +159,11 @@ embeddings:    {provider: gemini}
 ```
 
 - **`profile`** is the §4 location ladder — the privacy choice of *where* the
-  model runs: `eu_hosted` (partner-operated EU inference, the default),
-  `sovereign` (zero egress by construction), and so on. It constrains, it never
-  leaks.
+  model runs: `eu_hosted` (partner-operated EU inference), `sovereign` (zero
+  egress by construction), `cloud_frontier` (a vendor's cloud, wherever it
+  serves). It constrains, it never leaks: under `eu_hosted` a lane on the
+  OpenRouter broker must pin EU-region hosts with `routing: {only: [...]}`, or
+  the config is refused, because an unpinned broker serves from any region.
 - **No key ever lives in the binding.** A provider names only itself, and a stray
   `api_key:` is a *boot error* rather than a convenience. Where the key comes from
   depends on who is asking: a served installation resolves it from the **key
@@ -402,7 +404,9 @@ model-call hot path.
   `(provider, model, effective_date)` — keyed on the *concrete model that
   served*, not the tier, so rebinding a tier keeps its rates. Each row is four
   integer
-  **micro-USD-per-MTok** prices: input, cache-read, cache-write, output. Lookup
+  **micro-USD-per-MTok** prices: input, cache-read, cache-write, output. A cache
+  price of `0` means the vendor publishes none — no discount, no surcharge — so
+  those tokens price at the input rate rather than as free. Lookup
   works like `fx_rate` — the latest row dated on or before the call's day wins,
   and a price change is a *new* row, never an edit. Local providers get explicit
   all-zero rows, so a local call prices as an honest `0`. **Unpriced ≠ free:** a

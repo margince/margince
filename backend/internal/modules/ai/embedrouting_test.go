@@ -85,12 +85,12 @@ func TestTheEmbeddingsLaneTakesOnlyHostSelection(t *testing.T) {
 		"{preferred_max_latency_p90: 4}":        false,
 		"{reasoning_effort: low}":               false,
 	} {
-		yaml := "profile: eu_hosted\ntiers:\n  premium: {" + broker + "}\nembeddings: {" + broker + ", routing: " + routing + "}\n"
+		yaml := "profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\nembeddings: {" + broker + ", routing: " + routing + "}\n"
 		if _, err := ParseRouting([]byte(yaml)); (err == nil) != legal {
 			t.Errorf("embeddings routing %s: accepted=%v, want %v (err: %v)", routing, err == nil, legal, err)
 		}
 	}
-	native := "profile: eu_hosted\ntiers:\n  premium: {" + broker + "}\nembeddings: {provider: gemini, model: e, routing: {only: [x]}}\n"
+	native := "profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\nembeddings: {provider: gemini, model: e, routing: {only: [x]}}\n"
 	if _, err := ParseRouting([]byte(native)); err == nil {
 		t.Error("a host pin on a native embeddings vendor was accepted; it fronts one host and would be sent a field it never asked for")
 	}

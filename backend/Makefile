@@ -288,7 +288,7 @@ MARGINCE_AICERT_JUDGE_MODEL    ?= $(AICERT_DEFAULT_JUDGE)
 MARGINCE_AICERT_JUDGE_BASE_URL ?= $(if $(filter $(AICERT_DEFAULT_JUDGE),$(JUDGE)),https://openrouter.ai/api)
 JUDGE                          ?= $(MARGINCE_AICERT_JUDGE_MODEL)
 JUDGE_BASE_URL                 ?= $(MARGINCE_AICERT_JUDGE_BASE_URL)
-MARGINCE_AICERT_PROFILE        ?= eu_hosted
+MARGINCE_AICERT_PROFILE        ?= cloud_frontier
 MARGINCE_AICERT_UPSTREAM       ?=
 MARGINCE_AICERT_JUDGE_UPSTREAM ?=
 JUDGE_UPSTREAM                 ?= $(MARGINCE_AICERT_JUDGE_UPSTREAM)
@@ -343,7 +343,7 @@ AICERT_TIMEOUT ?= 90m
 # itself a task and leads at premium, so a config binding claude-haiku-4.5 there
 # makes the grader collide with every premium-led candidate — the run checks that
 # for every resolved task up front rather than failing mid-corpus after paying.
-e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=openai_compatible:openai/gpt-oss-120b by default, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies that model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<odd n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=eu_hosted (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
+e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=openai_compatible:openai/gpt-oss-120b by default, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies that model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<odd n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
 	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \

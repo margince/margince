@@ -119,27 +119,16 @@ func TestABrokerPresetInheritsTheDefaultAndCanOptOut(t *testing.T) {
 	}
 }
 
-// residencyPresetSuffix marks a preset that promises where its text is read:
-// openrouter_cloud_eu.yaml today. The name is the promise an operator reads when
-// choosing one, so the name is what this gate holds to it.
-const residencyPresetSuffix = "_eu.yaml"
-
-// euRegionSlug reports whether a broker host slug names one EU-region endpoint.
-// A base slug (`mistral`) matches every region the vendor serves from, and a
-// variant slug (`mistral/zdr`) names a retention policy rather than a place, so
-// neither pins anything to the EU.
-func euRegionSlug(slug string) bool {
-	_, region, found := strings.Cut(slug, "/")
-	if !found {
-		return false
-	}
-	return region == "eu" || strings.HasPrefix(region, "eu-") || strings.HasPrefix(region, "europe-")
-}
-
 // residencyGaps names every lane of cfg whose text could be read outside the EU:
-// a lane on a binding that cannot carry a host pin, a lane with no `only:`, and
-// a lane whose `only:` admits a host that is not an EU-region endpoint. An empty
+// a lane on a binding that cannot carry a host pin, and a broker lane whose
+// `only:` is absent or admits a host that is not an EU-region endpoint. An empty
 // `routing: {}` is the broker's own price-weighted choice of host, anywhere.
+//
+// The broker half is ai.EURegionPinGap, the rule the parser holds every
+// eu_hosted config to. The first half is this gate's own and is stricter: the
+// parser admits a native vendor under eu_hosted because it cannot tell where an
+// operator's host runs, but a SHIPPED preset is one the repository vouches for,
+// and a binding that carries no pin is not one it can vouch for.
 func residencyGaps(cfg ai.RoutingConfig) []string {
 	lanes := map[string]ai.ProviderConfig{"embeddings": cfg.Embeddings.ProviderConfig}
 	for tier, binding := range cfg.Tiers {
@@ -147,57 +136,62 @@ func residencyGaps(cfg ai.RoutingConfig) []string {
 	}
 	var gaps []string
 	for lane, binding := range lanes {
-		switch {
-		case !ai.UpstreamPreferencesApply(binding):
-			gaps = append(gaps, lane+": bound to "+binding.Provider+" at "+binding.BaseURL+", which carries no host pin")
-		case binding.Routing == nil || len(binding.Routing.Only) == 0:
-			gaps = append(gaps, lane+": no `only:` — the broker may serve "+binding.Model+" from any region")
-		default:
-			for _, slug := range binding.Routing.Only {
-				if !euRegionSlug(slug) {
-					gaps = append(gaps, lane+": `only:` admits "+slug+", which is not an EU-region endpoint")
-				}
+		if !ai.UpstreamPreferencesApply(binding) {
+			host := binding.BaseURL
+			if host == "" {
+				host = "its vendor's own host"
 			}
+			gaps = append(gaps, lane+": bound to "+binding.Provider+" at "+host+", which carries no host pin")
+			continue
+		}
+		if gap := ai.EURegionPinGap(binding); gap != "" {
+			gaps = append(gaps, lane+": "+gap)
 		}
 	}
 	sort.Strings(gaps)
 	return gaps
 }
 
-// A preset named for the EU pins every lane to an EU-region endpoint.
+// A preset that declares eu_hosted pins every lane to an EU-region endpoint.
 //
-// OpenRouter serves one model id from several regions, and without a pin it
-// picks among them itself — a model with no EU endpoint at all is still served,
-// from wherever it runs. So the pin is the whole residency guarantee: a tier
-// that inherits the product default, or opts out with `routing: {}`, sends its
-// text out of region with nothing failing. The embeddings lane is held too,
-// because it reads every document the chat tiers do.
+// Selected by the profile the preset DECLARES, not by its file name: the
+// profile is what an operator copies into their deployment and what every
+// certification record from it is filed under, so it is the promise. A broker
+// serves one model id from several regions and, without a pin, picks among
+// them itself, so the pin is the whole residency guarantee. The embeddings lane
+// is held too, because it reads every document the chat tiers do.
 //
 // Held by: TestAResidencyPresetPinsEveryLaneToAnEURegion (backend/gates/configpresets_test.go) — this test.
 func TestAResidencyPresetPinsEveryLaneToAnEURegion(t *testing.T) {
 	t.Parallel()
 	checked := 0
 	for _, path := range presetFiles(t) {
-		if !strings.HasSuffix(path, residencyPresetSuffix) {
+		cfg := routingFromPreset(t, path)
+		if cfg.Profile != ai.ProfileEUHosted {
 			continue
 		}
 		checked++
-		for _, gap := range residencyGaps(routingFromPreset(t, path)) {
+		for _, gap := range residencyGaps(cfg) {
 			t.Errorf("%s: %s", filepath.Base(path), gap)
 		}
 	}
 	if checked == 0 {
-		t.Fatalf("no preset in %s ends in %s, so this gate is vouching for nothing", presetDir, residencyPresetSuffix)
+		t.Fatalf("no preset in %s declares %s, so this gate is vouching for nothing", presetDir, ai.ProfileEUHosted)
 	}
 }
 
 // Every shape of an unpinned lane is caught, each by the finding that names it.
+//
+// The planted configs declare cloud_frontier because the parser refuses an
+// unpinned broker lane under eu_hosted before this gate could see it;
+// residencyGaps reads the lanes and never the profile, so the planted shapes
+// are the same ones.
 func TestResidencyGapsSeesEveryUnpinnedShape(t *testing.T) {
 	t.Parallel()
 	const pinned = "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}"
 	const embeddings = "embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}\n"
 	withPremium := func(premium string) string {
-		return "profile: eu_hosted\ntiers:\n  cheap_cloud: " + pinned + "\n  premium: " + premium + "\n" + embeddings
+		return "profile: cloud_frontier\ntiers:\n  cheap_cloud: " + pinned + "\n  premium: " + premium + "\n" + embeddings
 	}
 	for name, tc := range map[string]struct {
 		yaml string
@@ -219,7 +213,7 @@ func TestResidencyGapsSeesEveryUnpinnedShape(t *testing.T) {
 		},
 		"a direct vendor": {withPremium("{provider: gemini, model: m}"), "premium: bound to gemini"},
 		"an unpinned embeddings lane": {
-			"profile: eu_hosted\ntiers:\n  premium: " + pinned + "\n" +
+			"profile: cloud_frontier\ntiers:\n  premium: " + pinned + "\n" +
 				"embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}\n",
 			"embeddings: no `only:`",
 		},
