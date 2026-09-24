@@ -1,0 +1,101 @@
+import { describe, expect, it } from "vitest";
+import { en } from "./en";
+
+// The mechanical half of docs/reference/ui-copy-style.md, held on the English
+// catalog because every other locale is translated from it: a defect here
+// becomes one per catalog. The rest of that page is the author's judgement.
+// Each rule lists every offender as `key: "value"`, so one run names all the
+// strings a rewrite has to touch.
+const catalog: Record<string, string> = en;
+
+// A placeholder names a parameter, not copy, and `{us}` or `{me}` would read as
+// a word to the patterns below.
+function prose(value: string): string {
+  return value.replace(/\{[^}]*\}/g, "");
+}
+
+function offenders(
+  pattern: RegExp,
+  options: {
+    text?: (value: string) => string;
+    exempt?: (key: string) => boolean;
+  } = {},
+): string[] {
+  const { text = (value: string) => value, exempt = () => false } = options;
+  return Object.entries(catalog)
+    .filter(([key, value]) => !exempt(key) && pattern.test(text(value)))
+    .map(([key, value]) => `${key}: ${JSON.stringify(value)}`);
+}
+
+// The privacy notice is the data controller addressing the data subject, and
+// in law the controller speaks as "we".
+const CONTROLLER_SPEAKS_PREFIX = "privacynotice.";
+
+// The onboarding conversation, where an agent literally speaks in a bubble.
+const AGENT_SPEAKS_PREFIX = "ob.conv.";
+
+describe("en copy style", () => {
+  it("uses no em dash or en dash", () => {
+    expect(offenders(/[—–]/)).toEqual([]);
+  });
+
+  it("uses no exclamation mark", () => {
+    expect(offenders(/!/)).toEqual([]);
+  });
+
+  it("spells apostrophes and quotes curly", () => {
+    expect(offenders(/[A-Za-z]'[A-Za-z]|"/)).toEqual([]);
+  });
+
+  it("spells an ellipsis as the one character …", () => {
+    expect(offenders(/\.\.\./)).toEqual([]);
+  });
+
+  // Edge whitespace is not checked: some values are fragments the code joins
+  // around markup, and their leading or trailing space is load-bearing.
+  it("has no double space", () => {
+    expect(offenders(/ {2}/)).toEqual([]);
+  });
+
+  it("uses no Latin abbreviation", () => {
+    expect(
+      offenders(/\b(?:e\.g\.|i\.e\.|etc\.|vs\.)/i, { text: prose }),
+    ).toEqual([]);
+  });
+
+  it("never says please", () => {
+    expect(offenders(/\bplease\b/i, { text: prose })).toEqual([]);
+  });
+
+  it("uses no contraction", () => {
+    const contraction =
+      /\b(?:can|won|don|isn|aren|didn|doesn|couldn|wasn|hasn|haven)['’]t\b|\b(?:it|that|there|let)['’]s\b|\b(?:you|we|they)['’]re\b|\byou['’]ve\b/i;
+    expect(offenders(contraction, { text: prose })).toEqual([]);
+  });
+
+  // Margince is software; it has no opinions, intentions or feelings to own.
+  it("never speaks as we", () => {
+    expect(
+      offenders(/\b(?:we|us|our|ours)\b/i, {
+        text: prose,
+        exempt: (key) => key.startsWith(CONTROLLER_SPEAKS_PREFIX),
+      }),
+    ).toEqual([]);
+  });
+
+  // "me" stays legal: "Assign to me" is the object of a control, not a voice.
+  it("says I only inside the onboarding conversation", () => {
+    expect(
+      offenders(/\bI\b|\b[Mm]y(?:self)?\b/, {
+        text: prose,
+        exempt: (key) => key.startsWith(AGENT_SPEAKS_PREFIX),
+      }),
+    ).toEqual([]);
+  });
+
+  it("spells American English", () => {
+    const british =
+      /\b(?:colour\w*|organis\w*|behaviour\w*|favourite\w*|centre[ds]?|licence[ds]?|cancell(?:ed|ing)|labell(?:ed|ing)|analyse[dr]?|analysing|catalogue[ds]?|recognis\w*|customis\w*|authoris\w*|prioritis\w*|summaris\w*|initialis\w*|optimis\w*|synchronis\w*|programmes?|grey(?:s|ed|ish)?|enrolments?|enrols?)\b/i;
+    expect(offenders(british, { text: prose })).toEqual([]);
+  });
+});
