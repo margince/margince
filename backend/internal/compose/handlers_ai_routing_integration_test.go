@@ -60,6 +60,40 @@ func getThenPut(ctx context.Context, t *testing.T, h aiRoutingHandlers, edit fun
 	return put
 }
 
+// The editor gates its save on a clean preview, so the preview must judge the
+// document GET answered the way the write will: with the stored pins carried.
+// Judged bare, every lane of a pinned eu_hosted binding reads as a residency
+// breach and the binding can never be saved from the form.
+func TestAPinnedEUBindingPreviewsCleanAndSavesFromTheDocumentGETAnswered(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.AdminUser, nil, principal.Permissions{
+		Objects:  map[string]principal.ObjectGrant{"ai_routing": {Read: true, Update: true}, "ai_budget": {Read: true}},
+		RowScope: principal.RowScopeAll,
+	})
+	settingsStore := NewSettingsStore(e.Pool)
+	store := ai.NewRoutingStore(settingsStore, config.Static(nil))
+	pinned, err := ai.ParseRouting([]byte(pinnedBrokerRouting))
+	if err != nil {
+		t.Fatalf("the planted binding does not parse: %v", err)
+	}
+	if _, err := store.Replace(ctx, pinned); err != nil {
+		t.Fatalf("storing the planted binding: %v", err)
+	}
+	admin := aiAdminHandlers{store: ai.NewAdminStore(e.DB(), settingsStore, budgetFullUsers, aiDeferredWork(e.Pool))}
+
+	put := getThenPut(ctx, t, aiRoutingHandlers{store: store}, func(body string) string {
+		preview := httptest.NewRecorder()
+		admin.PreviewAiRouting(preview, httptest.NewRequest(http.MethodPost, "/v1/ai/routing/preview", strings.NewReader(body)).WithContext(ctx))
+		if preview.Code != http.StatusOK {
+			t.Fatalf("preview of the document GET answered = %d: %s", preview.Code, preview.Body)
+		}
+		return body
+	})
+	if put.Code != http.StatusOK {
+		t.Fatalf("PUT of the previewed document = %d: %s", put.Code, put.Body)
+	}
+}
+
 func TestReadingTheBindingAndWritingItBackKeepsEveryResidencyPin(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := routingAdmin(e)
