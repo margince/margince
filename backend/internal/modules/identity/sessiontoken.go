@@ -18,10 +18,13 @@ import (
 )
 
 func insertSession(ctx context.Context, tx pgx.Tx, userID ids.UserID, tokenHash string) error {
+	// The device rides the context, not this signature: it is a transport
+	// detail the login handler captured, absent (NULL) for any session opened
+	// without a request behind it. See withUserAgent.
 	_, err := tx.Exec(ctx,
-		`INSERT INTO session (user_id, token_hash, idle_expires_at, expires_at)
-		 VALUES ($1, $2, now() + $3::interval, now() + $4::interval)`,
-		userID, tokenHash, idleTTL.String(), absoluteTTL.String())
+		`INSERT INTO session (user_id, token_hash, user_agent, idle_expires_at, expires_at)
+		 VALUES ($1, $2, $3, now() + $4::interval, now() + $5::interval)`,
+		userID, tokenHash, userAgentFromContext(ctx), idleTTL.String(), absoluteTTL.String())
 	return err
 }
 
