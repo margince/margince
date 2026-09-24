@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -164,5 +165,49 @@ func TestNewLocalRouterWithMonthlyBudgetIsLive(t *testing.T) {
 	}
 	if !errors.Is(err, ErrBudgetDeferred) && !strings.Contains(err.Error(), "no bound tier") {
 		t.Fatalf("want a budget-band effect (queue or honest degrade), got %v", err)
+	}
+}
+
+// A DB-less router serves a broker binding the way production would: the
+// certification lane and the debug tools build their config by struct literal
+// rather than through ParseRouting, and a binding that skipped the upstream
+// default was served by whichever host the broker's price weighting picked —
+// fp4 hosts, and hosts that cannot honour response_format at all.
+func TestALocalRouterSendsTheBrokerDefaultsProductionWould(t *testing.T) {
+	t.Parallel()
+	for name, binding := range map[string]ProviderConfig{
+		"a judge binding":    {Provider: providerOpenAICompatible, Model: "openai/gpt-oss-120b", BaseURL: "https://openrouter.ai/api"},
+		"a MODEL= candidate": {Provider: providerOpenAICompatible, Model: "z-ai/glm-5.2", BaseURL: "https://openrouter.ai/api"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			tiers := map[Tier]ProviderConfig{}
+			for _, tier := range AllTiers() {
+				tiers[tier] = binding
+			}
+			cfg := RoutingConfig{
+				Profile: ProfileCloudFrontier, Tiers: tiers,
+				Embeddings: EmbeddingsConfig{ProviderConfig: binding},
+			}.WithKeys(allCloudKeys())
+			router, err := NewLocalRouter(cfg)
+			if err != nil {
+				t.Fatalf("building the router: %v", err)
+			}
+			for tier, client := range router.binding().clients {
+				compat, ok := client.(*openAICompatClient)
+				if !ok {
+					t.Fatalf("tier %s is served by %T, want the OpenAI-wire adapter", tier, client)
+				}
+				wire := compat.chatWire(model.Request{ResponseSchema: []byte(`{"type":"object"}`)}, false)
+				if wire.Provider == nil || wire.Provider.RequireParameters == nil || !*wire.Provider.RequireParameters {
+					t.Errorf("tier %s: the wire carries no require_parameters, so a host without response_format can serve it: %+v", tier, wire.Provider)
+					continue
+				}
+				if !slices.Equal(wire.Provider.Quantizations, DefaultOpenRouterRouting().Quantizations) {
+					t.Errorf("tier %s: quantizations = %v, want the production filter %v",
+						tier, wire.Provider.Quantizations, DefaultOpenRouterRouting().Quantizations)
+				}
+			}
+		})
 	}
 }

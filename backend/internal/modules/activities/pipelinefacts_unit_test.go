@@ -22,37 +22,42 @@ func TestTheClassifyReasonNamesTheExclusionThatApplied(t *testing.T) {
 		capturedBy      string
 		archived        bool
 		senderUndecided bool
+		declined        bool
 		want            pipelinetrace.Reason
 	}{
 		{
 			"a labelled message ran and reports no exclusion",
-			"meeting", "email", connector, false, false, "",
+			"meeting", "email", connector, false, false, false, "",
 		},
 		{
 			"a chat message is not the classifier's transport",
-			"", "message", connector, false, false, pipelinetrace.ReasonTransportNotRead,
+			"", "message", connector, false, false, false, pipelinetrace.ReasonTransportNotRead,
 		},
 		{
 			"a hand-logged activity was never connector-captured",
-			"", "email", "human:someone", false, false, pipelinetrace.ReasonNotConnectorCaptured,
+			"", "email", "human:someone", false, false, false, pipelinetrace.ReasonNotConnectorCaptured,
 		},
 		{
 			"an archived email is out of the backlog",
-			"", "email", connector, true, false, pipelinetrace.ReasonArchived,
+			"", "email", connector, true, false, false, pipelinetrace.ReasonArchived,
 		},
 		{
 			"an undecided sender holds the message back (ADR-0072 §5)",
-			"", "email", connector, false, true, pipelinetrace.ReasonSenderUndecided,
+			"", "email", connector, false, true, false, pipelinetrace.ReasonSenderUndecided,
+		},
+		{
+			"a message every model declined is not asked again",
+			"", "email", connector, false, false, true, pipelinetrace.ReasonModelsDeclined,
 		},
 		{
 			"an eligible message is simply waiting for the batch",
-			"", "email", connector, false, false, pipelinetrace.ReasonAwaitingBatch,
+			"", "email", connector, false, false, false, pipelinetrace.ReasonAwaitingBatch,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := classifyReason(classifySubject{
 				label: tc.label, kind: tc.kind, capturedBy: tc.capturedBy,
-				archived: tc.archived, senderUndecided: tc.senderUndecided,
+				archived: tc.archived, senderUndecided: tc.senderUndecided, declined: tc.declined,
 			})
 			if got != tc.want {
 				t.Errorf("classifyReason() = %q, want %q", got, tc.want)

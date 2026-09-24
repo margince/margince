@@ -32,8 +32,16 @@ func TestGeneratedDeclarationAccessors(t *testing.T) {
 	if rate[0].Kind != SiteKindOneShot {
 		t.Errorf("a bare site got kind %q, want %q", rate[0].Kind, SiteKindOneShot)
 	}
-	if loop := SitesFor(TaskAgentLoop); len(loop) != 1 || loop[0].Kind != SiteKindAgentLoop {
-		t.Errorf("SitesFor(agent_loop) = %+v, want one agent_loop site", loop)
+	// Every agent_loop site is one scheduled agent, and AgentsFor is those same
+	// sites with their tools: a site with no agent behind it runs nothing.
+	loop, agents := SitesFor(TaskAgentLoop), AgentsFor(TaskAgentLoop)
+	if len(loop) == 0 || len(loop) != len(agents) {
+		t.Errorf("SitesFor(agent_loop) = %+v and AgentsFor = %+v, want one agent per site", loop, agents)
+	}
+	for _, site := range loop {
+		if site.Kind != SiteKindAgentLoop {
+			t.Errorf("agent_loop site %q has kind %q", site.Name, site.Kind)
+		}
 	}
 	if got := SitesFor(TaskNlSearch); len(got) != 0 {
 		t.Errorf("a planned task declares sites: %+v", got)

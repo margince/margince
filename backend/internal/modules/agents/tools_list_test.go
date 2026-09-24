@@ -6,6 +6,8 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"maps"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -147,9 +149,71 @@ func TestAnEnumerationIsChargedPerRecord(t *testing.T) {
 	}
 }
 
-// The description says which filters each type takes, because the schema
-// cannot: `status` is open|won|lost on a deal and new|contacted|engaged on a lead, so one
-// union of properties would have to publish one type's enum for both.
+// `filters` DECLARES its keys, and they are exactly the names some record type
+// publishes — both sides of one wire. A schema-constrained decoder writes no key
+// into an object whose schema lists none, so an undeclared name is one a
+// constrained model can never send; a declared name no type takes is a key the
+// handler refuses.
+func TestTheFiltersObjectDeclaresEveryPublishedNameAndNothingElse(t *testing.T) {
+	seam := &listProbeProvider{}
+	tool := listRecords{p: seam, filters: bindableFilters(probeVocabulary{})}
+	var declared struct {
+		Properties struct {
+			Filters struct {
+				Type                 string                     `json:"type"`
+				Properties           map[string]json.RawMessage `json:"properties"`
+				AdditionalProperties *bool                      `json:"additionalProperties"` //nolint:tagliatelle // JSON Schema's own key spelling
+			} `json:"filters"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(tool.Spec().InputSchema, &declared); err != nil {
+		t.Fatalf("list_records' input schema does not parse: %v", err)
+	}
+	filters := declared.Properties.Filters
+	if filters.Type != "object" || filters.AdditionalProperties == nil || *filters.AdditionalProperties {
+		t.Errorf("filters must be a closed object; got type %q, additionalProperties %v", filters.Type, filters.AdditionalProperties)
+	}
+
+	published := map[string]string{}
+	for _, recordType := range listRecordTypes {
+		for _, filter := range tool.filters[recordType] {
+			published[filter.Name] = recordType
+		}
+	}
+	if got, want := slices.Sorted(maps.Keys(filters.Properties)), slices.Sorted(maps.Keys(published)); !slices.Equal(got, want) {
+		t.Errorf("filters declares %v; the published vocabulary is %v", got, want)
+	}
+	for name, recordType := range published {
+		operand := "x"
+		if filter := tool.filters[recordType][slices.IndexFunc(tool.filters[recordType],
+			func(f listFilter) bool { return f.Name == name })]; len(filter.Enum) > 0 {
+			operand = filter.Enum[0]
+		}
+		call := `{"record_type":"` + recordType + `","filters":{"` + name + `":"` + operand + `"}}`
+		if _, err := tool.Handle(t.Context(), json.RawMessage(call)); err != nil {
+			t.Errorf("the schema declares filter %q and the handler refuses it on a %s: %v", name, recordType, err)
+		}
+	}
+}
+
+// A deployment that publishes no filter declares no `filters` at all, rather
+// than an object with no keys a constrained decoder could write.
+func TestADeploymentWithNoFiltersDeclaresNoFiltersObject(t *testing.T) {
+	var declared struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+	}
+	tool := listRecords{filters: bindableFilters(noFilterVocabulary{})}
+	if err := json.Unmarshal(tool.Spec().InputSchema, &declared); err != nil {
+		t.Fatalf("list_records' input schema does not parse: %v", err)
+	}
+	if raw, present := declared.Properties["filters"]; present {
+		t.Errorf("with nothing published, filters is still declared: %s", raw)
+	}
+}
+
+// The description says which filters each type takes, because the schema's
+// keys cannot: `status` is open|won|lost on a deal and new|contacted|engaged on
+// a lead, so one enum per key would publish one type's vocabulary for both.
 func TestTheDescriptionCarriesThePerTypeVocabulary(t *testing.T) {
 	described := listRecords{filters: bindableFilters(probeVocabulary{})}.describeFilters()
 	// Anchored on the type heading and on the filters themselves, not on which
@@ -161,6 +225,22 @@ func TestTheDescriptionCarriesThePerTypeVocabulary(t *testing.T) {
 	} {
 		if !strings.Contains(described, want) {
 			t.Errorf("the filter description lacks %q:\n%s", want, described)
+		}
+	}
+}
+
+// Every abbreviated operand type the description prints is explained in it. A
+// bare `tag_id (a)` leaves a caller to guess that the operand is a
+// comma-separated list, which is the spelling it gets wrong.
+func TestEveryOperandCodeTheDescriptionPrintsIsExplained(t *testing.T) {
+	described := listRecords{filters: bindableFilters(probeVocabulary{})}.describeFilters()
+	codes := regexp.MustCompile(`\(([a-z])\)`).FindAllStringSubmatch(described, -1)
+	if len(codes) == 0 {
+		t.Fatalf("the description abbreviates no operand type, so this reads nothing:\n%s", described)
+	}
+	for _, code := range codes {
+		if strings.Count(described, code[0]) < 2 || !strings.Contains(described, code[0]+" is ") {
+			t.Errorf("the description prints %s and never says what it means:\n%s", code[0], described)
 		}
 	}
 }

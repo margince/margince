@@ -54,6 +54,9 @@ const ClassifyBacklogPredicate = `capture_label IS NULL
 	  -- path (A165/ADR-0114 §2), and the label pass is a model call over its
 	  -- text — precisely the further processing the hold bars.
 	  AND restricted_at IS NULL
+	  -- Every rung declined to label it (MarkCaptureLabelDeclined): asking
+	  -- again would be refused again, and paid for on every tick.
+	  AND capture_label_declined_at IS NULL
 	  AND NOT EXISTS (
 	    SELECT 1 FROM capture_pending_counterparty p
 	     WHERE p.email = activity.counterparty_email
@@ -111,7 +114,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 		}
 		var label, threadKey *string
 		var kind, capturedBy string
-		var archived, audienceLimited, senderUndecided, eligible bool
+		var archived, audienceLimited, declined, senderUndecided, eligible bool
 		row := tx.QueryRow(ctx, `
 			SELECT
 			  EXISTS (SELECT 1 FROM activity_link l
@@ -122,6 +125,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 			  captured_by,
 			  archived_at IS NOT NULL,
 			  audience <> 'workspace',
+			  capture_label_declined_at IS NOT NULL,
 			  EXISTS (SELECT 1 FROM capture_pending_counterparty p
 			           WHERE p.email = activity.counterparty_email
 			             AND p.status = ANY($2)),
@@ -129,7 +133,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 			FROM activity
 			WHERE id = $1`, id, pipelinetrace.OpenDispositionStatuses())
 		if err := row.Scan(&out.HasContactLink, &label, &threadKey, &kind, &capturedBy,
-			&archived, &audienceLimited, &senderUndecided, &eligible); err != nil {
+			&archived, &audienceLimited, &declined, &senderUndecided, &eligible); err != nil {
 			return err
 		}
 		if label != nil {
@@ -142,7 +146,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 		out.ClassifyReason = classifyReason(classifySubject{
 			label: out.CaptureLabel, kind: kind, capturedBy: capturedBy,
 			archived: archived, audienceLimited: audienceLimited,
-			senderUndecided: senderUndecided,
+			declined: declined, senderUndecided: senderUndecided,
 		})
 		return nil
 	})
@@ -166,6 +170,7 @@ type classifySubject struct {
 	capturedBy      string
 	archived        bool
 	audienceLimited bool
+	declined        bool
 	senderUndecided bool
 }
 
@@ -188,6 +193,8 @@ func classifyReason(in classifySubject) pipelinetrace.Reason {
 		return pipelinetrace.ReasonArchived
 	case in.audienceLimited:
 		return pipelinetrace.ReasonAudienceLimited
+	case in.declined:
+		return pipelinetrace.ReasonModelsDeclined
 	case in.senderUndecided:
 		return pipelinetrace.ReasonSenderUndecided
 	default:

@@ -53,6 +53,8 @@ type aiCertTotals struct {
 	Scenarios        int `json:"scenarios"`
 	Records          int `json:"records"`
 	Bindings         int `json:"bindings"`
+	// SelfJudged counts records graded by the very model they measured.
+	SelfJudged int `json:"self_judged_records"`
 }
 
 // aiCertBindingRef is the whole of what a band speaks for. It is a struct
@@ -189,6 +191,11 @@ func buildAICertDoc(rows []aicert.ReadinessRow, unclaimed []aicert.Record,
 	}
 	doc.Totals = aiCertTotals{
 		Sites: len(doc.Sites), Scenarios: len(corpus), Records: len(records), Bindings: len(doc.Bindings),
+	}
+	for _, rec := range records {
+		if rec.SelfJudged {
+			doc.Totals.SelfJudged++
+		}
 	}
 	for _, site := range doc.Sites {
 		switch site.BestState {
@@ -330,16 +337,28 @@ func bandRank(band string) int {
 // "is this site certified" is asked of the site and answered by whichever
 // binding answers it best.
 func bestStateOf(rows []aicert.ReadinessRow) string {
-	rank := map[string]int{
-		aicert.StatusAbsent: 0, aicert.StatusStale: 1, aicert.StatusPartial: 2, aicert.StatusCurrent: 3,
-	}
 	best := aicert.StatusAbsent
 	for _, row := range rows {
-		if rank[row.Status()] > rank[best] {
+		if aiCertStateRank(row.Status()) > aiCertStateRank(best) {
 			best = row.Status()
 		}
 	}
 	return best
+}
+
+// aiCertStateRank orders the states from the one that claims least to the one
+// that claims most.
+func aiCertStateRank(state string) int {
+	switch state {
+	case aicert.StatusCurrent:
+		return 3
+	case aicert.StatusPartial:
+		return 2
+	case aicert.StatusStale:
+		return 1
+	default:
+		return 0
+	}
 }
 
 // foldAICertBindings groups every certified row by binding, ordered so the

@@ -217,11 +217,11 @@ func plainCompletionTokens(tokensOut, reasoning int) int {
 // ai_call row either way; only the series count is at stake here.
 var finishReasons = map[string]bool{
 	// OpenAI and the OpenAI-compatible wire.
-	"stop": true, "length": true, "content_filter": true,
+	"stop": true, "length": true, finishContentFilter: true,
 	"tool_calls": true, "function_call": true,
 	// Anthropic.
 	"end_turn": true, "max_tokens": true, "stop_sequence": true, "tool_use": true,
-	"pause_turn": true, "refusal": true,
+	"pause_turn": true, finishRefusal: true,
 	// Gemini, whose abnormal terminals reach the trace as a named error.
 	"safety": true, "recitation": true, "language": true, "blocklist": true,
 	"prohibited_content": true, "spii": true, "malformed_function_call": true,

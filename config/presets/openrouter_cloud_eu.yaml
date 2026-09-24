@@ -24,9 +24,10 @@
 # Not loaded automatically — see README.md. Copy the `seeds` block into your own
 # config/margince.yaml, or:
 #
-#     make e2e-ai ROUTING=config/presets/openrouter_cloud_eu.yaml \
-#       JUDGE=openai_compatible:mistralai/mistral-small-2603 \
-#       JUDGE_BASE_URL=https://openrouter.ai/api
+#     make e2e-ai ROUTING=config/presets/openrouter_cloud_eu.yaml
+#
+# The default judge, gpt-oss-120b, is bound on no tier here; mistral-small-2603
+# would grade its own premium and frontier tasks, and the runner refuses that.
 #
 # On the `routing:` block's fields and the measurements behind them:
 # docs/reference/openrouter.md.

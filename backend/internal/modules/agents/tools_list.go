@@ -109,9 +109,8 @@ func (t listRecords) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","project"]},
-			"filters":{"type":"object","additionalProperties":{"type":"string"},"description":` +
-			strconv.Quote(t.describeFilters()) + `},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","project"]},` +
+			t.filtersProperty() + `
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from a previous page's next_cursor"}},
 			"additionalProperties":false}`),
@@ -119,23 +118,55 @@ func (t listRecords) Spec() mcp.ToolSpec {
 	}
 }
 
-// describeFilters writes the per-type vocabulary into the one place a caller
-// reads it.
+// filtersProperty declares `filters` with every published filter name as a key,
+// or leaves it out when this deployment publishes none.
 //
-// It is prose rather than JSON Schema `properties` because the names are not
+// The keys are DECLARED because a schema-constrained decoder writes no key into
+// an object whose schema lists none — Gemini padded such an object with
+// whitespace to the output ceiling — and `additionalProperties` does not reopen
+// it. The handler still reads the same object of string operands.
+//
+// Each key is only a string here. Which record type takes it, and the closed
+// vocabulary it takes there, stay in the description, because the names are not
 // type-independent: `status` is one of open|won|lost on a deal and
-// new|contacted|engaged|promoted|disqualified on a lead, so a single union of properties
-// would have to publish one of those two enums for both — advertising a
-// vocabulary the handler then refuses, which is the specific dishonesty A139
-// objects to.
+// new|contacted|engaged|promoted|disqualified on a lead, so one enum per key
+// would publish one of those two for both — advertising a vocabulary the handler
+// then refuses, which is the specific dishonesty A139 objects to.
+func (t listRecords) filtersProperty() string {
+	names := t.publishedFilterNames()
+	if len(names) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(names))
+	for _, name := range names {
+		keys = append(keys, strconv.Quote(name)+`:{"type":"string"}`)
+	}
+	return `"filters":{"type":"object","properties":{` + strings.Join(keys, ",") +
+		`},"additionalProperties":false,"description":` + strconv.Quote(t.describeFilters()) + `},`
+}
+
+// publishedFilterNames returns the filter names any record type publishes, sorted.
+func (t listRecords) publishedFilterNames() []string {
+	seen := map[string]bool{}
+	for _, filters := range t.filters {
+		for _, filter := range filters {
+			seen[filter.Name] = true
+		}
+	}
+	return slices.Sorted(maps.Keys(seen))
+}
+
+// describeFilters writes the per-type vocabulary into the one place a caller
+// reads it: which record type takes which key, and the operand each takes.
 func (t listRecords) describeFilters() string {
-	lines := make([]string, 0, len(listRecordTypes)+1)
-	lines = append(lines, "Narrow the list. Every operand is a string, booleans included (\"true\"). "+
-		"Each record_type takes only its own:")
+	lines := make([]string, 0, len(listRecordTypes)+2)
+	lines = append(lines, "Narrow the list. Every operand is a string. Each record_type takes only its own:")
+	used := map[string]bool{}
 	for _, recordType := range listRecordTypes {
 		names := make([]string, 0, len(t.filters[recordType]))
 		for _, filter := range t.filters[recordType] {
 			names = append(names, filter.describe())
+			used[filter.Type] = true
 		}
 		if len(names) == 0 {
 			lines = append(lines, recordType+" — none; it can only be listed whole")
@@ -143,7 +174,32 @@ func (t listRecords) describeFilters() string {
 		}
 		lines = append(lines, recordType+" — "+strings.Join(names, ", "))
 	}
+	lines = append(lines, operandKey(used)...)
 	return strings.Join(append(lines, t.sourceOfStageIDs()...), " ")
+}
+
+// operandCodes abbreviates the non-string operand types, and says what each
+// code means, because the code alone does not: `(a)` is a comma-separated list.
+var operandCodes = []struct{ schemaType, code, meaning string }{
+	{schemaArray, "(a)", "a comma-separated list"},
+	{schemaBoolean, "(b)", `"true" or "false"`},
+	{schemaInteger, "(i)", "a whole number"},
+	{schemaNumber, "(n)", "a number"},
+}
+
+// operandKey states the meaning of each code the vocabulary uses, and nothing
+// for a code it does not.
+func operandKey(used map[string]bool) []string {
+	var key []string
+	for _, operand := range operandCodes {
+		if used[operand.schemaType] {
+			key = append(key, operand.code+" is "+operand.meaning)
+		}
+	}
+	if len(key) == 0 {
+		return nil
+	}
+	return []string{strings.Join(key, ", ") + "."}
 }
 
 // sourceOfStageIDs says where a pipeline or stage id comes from, when the
@@ -171,20 +227,23 @@ func (t listRecords) sourceOfStageIDs() []string {
 // is not a string — every operand travels as a string on this wire, so `true`
 // and `3` are the two a caller would otherwise have to guess the spelling of.
 //
-// The non-string types are abbreviated to their first letter. The whole listing
-// rides in every Surface-B prompt against a hard ceiling, and the sentence above
-// this vocabulary already says booleans travel as "true" — so spelling the word
-// out on each of them buys nothing a caller did not already read, while the
-// closed vocabularies, which nothing else states, stay in full.
+// The non-string types are abbreviated to an operandCodes code, which
+// operandKey explains once: the whole listing rides in every Surface-B prompt
+// against a hard ceiling, so the meaning is paid once rather than per filter. A
+// type with no code is spelled out, so no code is ever printed unexplained.
 func (f listFilter) describe() string {
 	switch {
 	case len(f.Enum) > 0:
 		return f.Name + " (" + strings.Join(f.Enum, "|") + ")"
-	case f.Type != "" && f.Type != schemaString:
-		return f.Name + " (" + f.Type[:1] + ")"
-	default:
+	case f.Type == "" || f.Type == schemaString:
 		return f.Name
 	}
+	for _, operand := range operandCodes {
+		if operand.schemaType == f.Type {
+			return f.Name + " " + operand.code
+		}
+	}
+	return f.Name + " (" + f.Type + ")"
 }
 
 func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

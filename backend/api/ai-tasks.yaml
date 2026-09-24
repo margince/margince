@@ -35,6 +35,18 @@
 #   kind              one_shot | multi_turn | agent_loop — how the site invokes
 #                     the model. `agent_loop` is a cumulative, tool-fed window,
 #                     NOT a request factory, and must not be described as one.
+#                     Each agent_loop site is ONE scheduled agent: the task is
+#                     the engine it runs on, the site is the run.
+#   tools             on an agent_loop site, and only there: the tools that
+#                     agent attaches. The listing rides in EVERY step of a
+#                     tool-fed window, so this list is both what a run MAY call
+#                     and what that run pays for in prompt — and only the
+#                     agent's own goal knows which tools that is. It NARROWS and
+#                     never grants: every call still passes the same admission
+#                     gate against the same passport. Required and non-empty,
+#                     and never the whole served catalog: the runner refuses a
+#                     job with no allowlist, and compose's allowlist gate fails
+#                     a site that names every registered tool.
 #   no_payload        content from this task must NEVER reach ai_call_payload,
 #                     whatever the deployment's capture posture says. A parsed
 #                     field, not a phrase in `doc:` — a sentence in a comment
@@ -43,16 +55,6 @@
 #                     (+ conditional, meaning "only when the caller requests
 #                     it"). Absent-by-accident must be a build error, never a
 #                     runtime one.
-#   agents            for a task with an agent_loop site: the scheduled agents it
-#                     runs, and the tools each one attaches. The tool listing
-#                     rides in EVERY step of a tool-fed window, so this list is
-#                     both what a run MAY call and what that run pays for in
-#                     prompt — and only the agent's own goal knows which tools
-#                     that is. It NARROWS and never grants: every call still
-#                     passes the same admission gate against the same passport.
-#                     Required and non-empty per agent, because an empty
-#                     allowlist is read downstream as "no narrowing" and would
-#                     silently hand the agent the whole catalog back.
 #   cost_unit         the ADR-0067/0068 unit rule BY NAME. The arithmetic
 #                     (observed-unit and denominator functions, the work-shape
 #                     floor) is behaviour and stays in code; naming the rule
@@ -311,15 +313,15 @@ tasks:
     on_budget_exhausted: queue
     status: shipped
     sites:
-      - {name: loop, kind: agent_loop}
-    agents:
-      morning_brief:
+      - name: morning_brief
+        kind: agent_loop
         tools: [annotate_brief, catch_me_up_on, list_records, read_brief, read_record]
-      overnight_at_risk_sweep:
+      - name: overnight_at_risk_sweep
+        kind: agent_loop
         tools: [at_risk_relationships, catch_me_up_on, list_records, log_activity,
                 read_record, review_commitments, whats_slipping_this_week]
     company_context: {scopes: [identity, positioning, sales, offer], token_budget: 1200}
-    doc: "The Surface-B reason-act loop: a cumulative, tool-fed message window, not a request factory. ADR-0074 names it the open risk for fixture-driven certification — if it cannot be certified honestly the census needs a `not_certifiable` kind."
+    doc: "the Surface-B reason-act ENGINE, and not a run: each site is one scheduled agent that runs on it, and the site's tools are the only tools that run is offered. The listing rides in every step of the window, so a site attaches what its goal needs and never the whole catalog — compose's agent allowlist gate fails one that does. Certification drives each site's own window: its goal, its tools, its trigger, seeded the way retrieval seeds it."
 
   offer_draft:
     display_name: "Offer drafting"

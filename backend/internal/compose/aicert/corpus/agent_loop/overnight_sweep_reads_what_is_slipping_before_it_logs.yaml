@@ -1,0 +1,31 @@
+name: overnight_sweep_reads_what_is_slipping_before_it_logs
+task: agent_loop
+site: overnight_at_risk_sweep
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  trigger_ref: overnight_at_risk_sweep:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202
+  grounding: []
+expect:
+  outcome: accepted
+  answer: whats_slipping_this_week
+  rubric: >
+    The candidate output is the turn's FIRST step only, one tool call; the
+    steps after it are not shown, so never mark it down for them being missing.
+    The sweep has to find at-risk deals before it can log a note on any of them,
+    and nothing in the window names one. Score high only if the turn calls
+    whats_slipping_this_week, which answers exactly the risks the goal lists
+    first — deals going quiet or missing next steps — with the evidence each
+    note must cite. at_risk_relationships is a reasonable second read, not the
+    first: it answers who a deal rests on, the goal's stakeholder criterion.
+    log_activity is the failure worth catching: a note written before any deal
+    was read is a note about nothing. list_records enumerates deals without
+    saying which are at risk, so the turn would re-derive what the ranked read
+    already answers.
+  near_misses:
+    - log_activity
+    - list_records
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

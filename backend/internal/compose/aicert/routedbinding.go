@@ -11,6 +11,7 @@ package aicert
 // the run was pointed at a config instead of a model.
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -43,16 +44,39 @@ func resolveBinding(routing ai.RoutingConfig, task ai.Task) (ai.ProviderConfig, 
 	return ai.ProviderConfig{}, "", false
 }
 
+// taskBindings is the candidate one task is certified against and the judge
+// that grades it. An error costs that task its record and no other: another
+// task's rung may be bound perfectly well, and one gap must not cost every
+// record.
+func taskBindings(ctx context.Context, cfg RunnerConfig, task ai.Task, log *slog.Logger) (candidate, judge ai.ProviderConfig, err error) {
+	candidate = cfg.Binding
+	if cfg.Routing != nil {
+		resolved, rung, ok := resolveBinding(*cfg.Routing, task)
+		if !ok {
+			return ai.ProviderConfig{}, ai.ProviderConfig{}, fmt.Errorf("aicert: task %s: no rung of its ladder %v is bound in the supplied routing, so there is no model to certify it against — and production could not serve it either",
+				task, ai.TaskLadder(task))
+		}
+		candidate = resolved
+		log.InfoContext(ctx, "aicert: routed", "task", string(task), "tier", string(rung), "model", resolved.Model)
+	}
+	judge, err = cfg.judgeFor(candidate)
+	if err != nil {
+		return ai.ProviderConfig{}, ai.ProviderConfig{}, fmt.Errorf("task %s: %w", task, err)
+	}
+	log.InfoContext(ctx, "aicert: judged by", "task", string(task), "judge", judge.Model)
+	return candidate, judge, nil
+}
+
 // validateRoutedBindings refuses a routed run that could not produce a
 // trustworthy verdict, BEFORE the first paid call.
 //
-// The candidate-is-not-the-judge check runs for every task the routing resolves,
+// The candidate-is-not-the-judge check runs for every task the run will certify,
 // not just one: cert_judge's own ladder leads at premium, so against a config
-// binding claude-haiku-4.5 there the grader collides with the candidate for every
-// premium-led task. Caught here that costs nothing; caught per task it would
-// surface midway through a paid corpus, after the tasks before it had been
+// binding the judge's model there the grader collides with the candidate for
+// every premium-led task. Caught here that costs nothing; caught per task it
+// would surface midway through a paid corpus, after the tasks before it had been
 // billed.
-func validateRoutedBindings(cfg RunnerConfig, log *slog.Logger) error {
+func validateRoutedBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger) error {
 	if cfg.JudgeBinding.Provider == "" || cfg.JudgeBinding.Model == "" {
 		return errors.New("no judge binding — set MARGINCE_AICERT_JUDGE_MODEL=provider:model; " +
 			"the judge is a SECOND model on purpose and is NOT resolved from the routing, because " +
@@ -63,24 +87,51 @@ func validateRoutedBindings(cfg RunnerConfig, log *slog.Logger) error {
 			"a record is filed under it, so a run states which one it measured", cfg.Routing.Profile)
 	}
 	warnUnboundDegradeTargets(cfg, log)
+	return refuseSelfJudgedTasks(cfg, tasks)
+}
 
+// refuseSelfJudgedTasks names every task this run certifies whose candidate is
+// the judge. A task the run will not certify cannot collide, so TASK= narrows it.
+func refuseSelfJudgedTasks(cfg RunnerConfig, tasks []ai.Task) error {
 	var collisions []string
-	for _, task := range ai.AllTasks() {
-		binding, _, ok := resolveBinding(*cfg.Routing, task)
-		if !ok {
-			continue // reported per task at run time, where it costs one record
+	for _, task := range tasks {
+		candidate := cfg.Binding
+		if cfg.Routing != nil {
+			resolved, _, ok := resolveBinding(*cfg.Routing, task)
+			if !ok {
+				continue // reported per task at run time, where it costs one record
+			}
+			candidate = resolved
 		}
-		if binding.Provider == cfg.JudgeBinding.Provider && binding.Model == cfg.JudgeBinding.Model {
-			collisions = append(collisions, string(task))
+		if _, err := cfg.judgeFor(candidate); err != nil {
+			collisions = append(collisions, fmt.Sprintf("%s (%s:%s)", task, candidate.Provider, candidate.Model))
 		}
 	}
 	if len(collisions) > 0 {
-		return fmt.Errorf("the routing binds %s:%s to the leading rung of %d task(s) — %s — and that is "+
-			"also the judge; a model grading itself is certified by construction, so name a different "+
-			"MARGINCE_AICERT_JUDGE_MODEL",
-			cfg.JudgeBinding.Provider, cfg.JudgeBinding.Model, len(collisions), strings.Join(collisions, ", "))
+		return fmt.Errorf("%d task(s) would be graded by their own candidate — %s: %w",
+			len(collisions), strings.Join(collisions, ", "), errSelfJudged)
 	}
 	return nil
+}
+
+// errSelfJudged is judgeFor's refusal: the candidate is the judge.
+var errSelfJudged = errors.New("a model grading itself is certified by construction, and one judge " +
+	"grades every task of a run — pick a judge this run does not certify with JUDGE= (MARGINCE_AICERT_JUDGE_MODEL)")
+
+// judgeFor is the judge that grades a task certified against candidate, and the
+// one place the candidate-is-not-the-judge rule is spelled: both validations and
+// the run itself ask it, so what was checked up front is what grades.
+func (c RunnerConfig) judgeFor(candidate ai.ProviderConfig) (ai.ProviderConfig, error) {
+	if sameModel(candidate, c.JudgeBinding) {
+		return ai.ProviderConfig{}, errSelfJudged
+	}
+	return c.JudgeBinding, nil
+}
+
+// sameModel is the identity a self-grading check compares: provider and model,
+// not the host, because one model behind two base URLs still grades itself.
+func sameModel(a, b ai.ProviderConfig) bool {
+	return a.Provider == b.Provider && a.Model == b.Model
 }
 
 // recordProfile is the environment class this run files its records under.

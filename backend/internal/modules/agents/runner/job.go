@@ -43,18 +43,11 @@ type Job struct {
 	Budget     Budget
 	// Tools is the catalog entry's allowlist, carried from AgentSpec.Tools.
 	//
-	// EMPTY MEANS NO NARROWING, and that default is deliberate rather than
-	// lazy: the certification lane builds a Job with no spec behind it, and
-	// a caller that is not a catalog agent has no allowlist to apply. It is
-	// safe HERE because it can only widen back to what the passport already
-	// admits — but it is the same "empty means everything" reading
-	// AgentSpec.Tools refuses, so the two seams are held to different rules
-	// on purpose.
-	//
-	// The invariant that makes the difference safe is a RUNTIME one, not a
-	// property of any test: A JOB BUILT FROM A CATALOG ENTRY CARRIES THAT
-	// ENTRY'S OWN ALLOWLIST. A scheduled agent therefore never reaches the
-	// empty case; only a caller with no entry behind it does.
+	// EMPTY IS REFUSED. Run and Resume degrade a job carrying none before any
+	// model call, because the only other reading of an empty list is "offer
+	// everything the passport admits" — the whole catalog in every step of the
+	// window. Every job names the tools its goal needs; the certification lane
+	// builds its jobs from the same catalog entries production runs.
 	Tools []string
 	// LanguageRule is the RENDERED "write in this language" block for the run's
 	// final summary, already text rather than a language code.
@@ -66,9 +59,10 @@ type Job struct {
 	//
 	// Held by: TestOnlyPromptlangSpellsTheLanguageRule (backend/gates/promptlanguage_test.go)
 	//
-	// EMPTY MEANS NO RULE, and it is what the certification lane's Job carries:
-	// a cert grades a fixed corpus, so a rule that moved with an installation's
-	// settings would make two installations' scores incomparable.
+	// EMPTY MEANS NO RULE. Production always renders one — English when an
+	// installation has chosen none — and the certification lane passes the
+	// English rule, as every other certified site does, so two installations'
+	// scores stay comparable while the prompt stays the one a run sends.
 	LanguageRule string
 }
 

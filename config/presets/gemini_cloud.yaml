@@ -5,7 +5,10 @@
 # can be named, diffed and reused. Copy the `seeds` block into your own
 # config/margince.yaml, or point a certification run at this file:
 #
-#     make e2e-ai ROUTING=config/presets/gemini_cloud.yaml JUDGE=...
+#     make e2e-ai ROUTING=config/presets/gemini_cloud.yaml
+#
+# The default judge (openai_compatible:openai/gpt-oss-120b, so
+# OPENAI_COMPATIBLE_API_KEY too) is off this preset, so one judge grades it all.
 #
 # Needs GEMINI_API_KEY and nothing else. Not loaded automatically — see README.md.
 version: 1

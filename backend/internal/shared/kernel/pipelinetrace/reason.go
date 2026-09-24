@@ -73,7 +73,7 @@ const (
 	ReasonJudgedRejected   Reason = "judged_rejected"
 	ReasonJudgedSuppressed Reason = "judged_suppressed"
 
-	// StageAttentionLabel. Five ways the backlog excludes a message, because a
+	// StageAttentionLabel. Six ways the backlog excludes a message, because a
 	// ladder that says "reads email only" about an ARCHIVED email gives a wrong
 	// why, which is worse than none.
 	ReasonTransportNotRead     Reason = "transport_not_read"
@@ -81,6 +81,7 @@ const (
 	ReasonArchived             Reason = "archived"
 	ReasonNotConnectorCaptured Reason = "not_connector_captured"
 	ReasonAudienceLimited      Reason = "audience_limited"
+	ReasonModelsDeclined       Reason = "models_declined"
 	ReasonAwaitingBatch        Reason = "awaiting_batch"
 	ReasonLabelled             Reason = "labelled"
 

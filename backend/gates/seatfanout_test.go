@@ -112,7 +112,7 @@ func TestEveryScheduledOccurrenceIsNamedForOneSeat(t *testing.T) {
 // iteration is meaningless to them: nothing they produce is inserted, so
 // nothing they produce can collide.
 var mintsAShapeRatherThanAnOccurrence = gatekit.Waive(map[string]string{
-	"internal/compose/certcase_agentlooptrigger.go:mintedSchedulerTriggerRef": "mints a ref from a fixed day and seat so the certification fixture validator can compare a corpus trigger ref's SHAPE against what the writer produces, rather than restating the format; the value is compared and discarded, and never reaches EnqueueJob or a job row",
+	"internal/compose/certcase_agentlooptrigger.go:refuseUnmintableTriggerRef": "mints a ref from a fixed day and seat so the certification fixture validator can compare a corpus trigger ref's SHAPE against what the writer produces, rather than restating the format; the value is compared and discarded, and never reaches EnqueueJob or a job row",
 })
 
 // TestTheTriggerRefStillCarriesTheWholeUniquenessKey fails when a migration

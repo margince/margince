@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // The contract's oneOf: EXACTLY ONE of url|text|self_description. Zero or
@@ -217,5 +219,29 @@ func TestRuneOffsetCountsCharsNotBytes(t *testing.T) {
 	}
 	if runeOffset(pasted, "not in the paste") != nil {
 		t.Fatal("an unlocatable snippet must yield nil, never a guessed offset")
+	}
+}
+
+// A read-back whose model lane ended without an answer is the assistant being
+// unavailable, not a server fault: the 503 the client has copy for, since
+// every field it would have drafted can be typed by hand.
+func TestColdStartPreviewAnswersAnUnansweredModelAsTheAssistantBeingUnavailable(t *testing.T) {
+	for name, cause := range map[string]error{
+		"a withheld answer":    model.ErrOutputWithheld,
+		"every tier failing":   ai.ErrAllTiersFailed,
+		"an exhausted account": ai.ErrProviderQuota,
+	} {
+		t.Run(name, func(t *testing.T) {
+			brain := &replyBrainStub{err: fmt.Errorf("ai: provider: %w", cause)}
+			handler := coldstartHandlers{engine: &coldStartEngine{extract: evidenceExtractor{brain: brain}}}
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/v1/coldstart/preview",
+				strings.NewReader(`{"text":"Acme GmbH builds heat pumps for commercial buildings."}`)).WithContext(fakeWorkspaceCtx())
+			handler.ColdStartPreview(rec, req)
+
+			if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), "assistant_unavailable") {
+				t.Errorf("want 503 assistant_unavailable, got %d %s", rec.Code, rec.Body.String())
+			}
+		})
 	}
 }

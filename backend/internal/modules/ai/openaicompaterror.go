@@ -15,11 +15,20 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 )
+
+// ErrNoUpstreamHost is a broker answering that none of the hosts it offers for
+// the model can serve this request under the preferences it carries: a data
+// policy, a provider allowlist, a precision, a parameter no host supports. It
+// fails identically on every attempt, so re-sending it is paid for and learns
+// nothing. The ladder still walks past it, because another rung is another
+// model or broker, which may have a host.
+var ErrNoUpstreamHost = errors.New("ai: the broker has no upstream host that can serve this request")
 
 // openAICompatError surfaces the vendor's structured error message only —
 // never the raw response body, which may be unstructured HTML/text — so a logged
@@ -34,13 +43,14 @@ import (
 // returned error" for everything — and puts the upstream vendor's sentence in
 // metadata.raw. Reading only the outer message produced log lines that named
 // no cause and a build failure the operator could do nothing with.
-func openAICompatError(resp *http.Response) error {
+func openAICompatError(ctx context.Context, resp *http.Response) error {
 	var apiErr struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
 		Error   struct {
-			Type     string `json:"type"`
-			Message  string `json:"message"`
+			Type     string          `json:"type"`
+			Message  string          `json:"message"`
+			Code     json.RawMessage `json:"code"`
 			Metadata struct {
 				Raw          string `json:"raw"`
 				ProviderName string `json:"provider_name"`
@@ -50,16 +60,41 @@ func openAICompatError(resp *http.Response) error {
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil {
-		if detail := compatErrorDetail(apiErr.Error.Message, apiErr.Error.Metadata.Raw, apiErr.Error.Metadata.ProviderName); detail != "" {
-			return providerRefusal(resp, apiErr.Error.Metadata.LimitSource,
-				fmt.Errorf("ai: openai-compat: %s: %s (http %d)", safeProviderText(apiErr.Error.Type), detail, resp.StatusCode))
+		if detail := compatErrorDetail(ctx, apiErr.Error.Message, apiErr.Error.Metadata.Raw, apiErr.Error.Metadata.ProviderName); detail != "" {
+			err := providerRefusal(resp, apiErr.Error.Metadata.LimitSource,
+				fmt.Errorf("ai: openai-compat: %s: %s (http %d)", safeProviderText(ctx, apiErr.Error.Type), detail, resp.StatusCode))
+			if openAIRejectsTheRequest(apiErr.Error.Code) {
+				return rejectedRequest(err)
+			}
+			if brokerFoundNoHost(resp.StatusCode, apiErr.Error.Message) {
+				return fmt.Errorf("%w: %w", ErrNoUpstreamHost, err)
+			}
+			return err
 		}
 		if apiErr.Message != "" {
 			return providerRefusal(resp, "", fmt.Errorf("ai: openai-compat: %s: %s (http %d)",
-				safeProviderText(apiErr.Type), safeProviderText(apiErr.Message), resp.StatusCode))
+				safeProviderText(ctx, apiErr.Type), safeProviderText(ctx, apiErr.Message), resp.StatusCode))
 		}
 	}
 	return providerRefusal(resp, "", fmt.Errorf("ai: openai-compat: http %d", resp.StatusCode))
+}
+
+// brokerFoundNoHost reads OpenRouter's 404 for a request no upstream host can
+// serve. The broker has no code for it beyond the status, which it also sends
+// for an unknown model, so its own opening words are what separate the two.
+// Only the OUTER message is read: that sentence is the broker's, where
+// metadata.raw is an upstream vendor's and says nothing about the broker's hosts.
+func brokerFoundNoHost(status int, message string) bool {
+	if status != http.StatusNotFound {
+		return false
+	}
+	message = strings.ToLower(message)
+	for _, opening := range []string{"no endpoints found", "no endpoints available", "no allowed providers"} {
+		if strings.HasPrefix(message, opening) {
+			return true
+		}
+	}
+	return false
 }
 
 // compatErrorDetail is the sentence worth logging out of a broker's answer.
@@ -75,15 +110,15 @@ func openAICompatError(resp *http.Response) error {
 // through a path nothing else guards. Redacted through the same stripper the
 // model payloads use, and capped: a vendor's cause is one sentence, and
 // anything longer is a body that lost its way into a message field.
-func compatErrorDetail(message, upstreamRaw, providerName string) string {
+func compatErrorDetail(ctx context.Context, message, upstreamRaw, providerName string) string {
 	upstreamRaw = strings.TrimSpace(upstreamRaw)
 	if upstreamRaw == "" {
-		return safeProviderText(message)
+		return safeProviderText(ctx, message)
 	}
 	if providerName == "" {
-		return safeProviderText(upstreamRaw)
+		return safeProviderText(ctx, upstreamRaw)
 	}
-	return safeProviderText(providerName + ": " + upstreamRaw)
+	return safeProviderText(ctx, providerName+": "+upstreamRaw)
 }
 
 // providerTextMax bounds one logged vendor sentence.
@@ -96,12 +131,12 @@ const providerTextMax = 300
 // it is a string an upstream chose, so it can be long or carry the request back.
 // Every remote field on this path goes through here or none of it is worth
 // having.
-func safeProviderText(text string) string {
+func safeProviderText(ctx context.Context, text string) string {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		return ""
 	}
-	stripped, _, err := NewSecretStripper().Strip(context.Background(), []byte(text))
+	stripped, _, err := NewSecretStripper().Strip(ctx, []byte(text))
 	if err != nil {
 		// The stripper could not vouch for it, so none of it is logged: a
 		// vendor sentence is worth having, never at the price of writing an

@@ -12,6 +12,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -108,7 +109,7 @@ func (e *deepReadEngine) messageCompanySiteRead(w http.ResponseWriter, r *http.R
 	callCtx := principal.WithCorrelationID(r.Context(), ids.UUID(readID))
 	answer, err := e.answerCompanySiteRead(callCtx, message, history, evidence)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	runtime, err := e.runtime.Get(r.Context(), ids.UUID(readID))

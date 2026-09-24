@@ -5,8 +5,13 @@ package runner
 
 import (
 	"encoding/json"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // The step request constrains its own shape at generation.
@@ -52,47 +57,224 @@ func TestTheStepRequestCarriesTheSchemaItsReplyMustMatch(t *testing.T) {
 // admitting a shape the parser then refuses. So every shape named here is put
 // through the real parser.
 func TestTheStepSchemaAdmitsExactlyWhatTheStepParserAccepts(t *testing.T) {
-	win := newWindow(Job{Goal: "prep the meeting", TriggerRef: triggerRef}, nil, nil)
-	schema := win.asRequest(1000, MinimumPromptWindow).ResponseSchema
-
-	var declared struct {
-		Type                 string                     `json:"type"`
-		Properties           map[string]json.RawMessage `json:"properties"`
-		AdditionalProperties *bool                      `json:"additionalProperties"` //nolint:tagliatelle // JSON Schema's own key spelling
+	branches := stepBranches(t, stepSchemaOffering(readRecordSpec(), zeroArgumentSpec()))
+	if len(branches) != 3 {
+		t.Fatalf("the step schema has %d branches; a step is a call to one of the 2 offered tools or a final, so 3", len(branches))
 	}
-	if err := json.Unmarshal(schema, &declared); err != nil {
-		t.Fatalf("the ResponseSchema is not an object schema: %v", err)
-	}
-	if declared.Type != "object" {
-		t.Errorf("the step schema declares type %q; a step is an object", declared.Type)
-	}
-	// The three keys parseStep reads, and no others. A schema naming a key the
-	// parser does not read would invite a model to fill it.
-	for _, key := range []string{"tool", "args", "final"} {
-		if _, named := declared.Properties[key]; !named {
-			t.Errorf("the step schema does not name %q, which parseStep reads", key)
+	// Each branch REQUIRES exactly the keys of its shape, and is closed the way
+	// parseStep's DisallowUnknownFields is: open, constrained decoding could
+	// produce a step the parser then refuses; optional, a decoder may skip it.
+	for i, want := range [][]string{{"tool", "args"}, {"tool", "args"}, {"final"}} {
+		branch := branches[i]
+		if branch.Type != "object" {
+			t.Errorf("branch %d declares type %q; a step is an object", i, branch.Type)
+		}
+		if got := sortedKeys(branch.Properties); strings.Join(got, ",") != strings.Join(sortedCopy(want), ",") {
+			t.Errorf("branch %d names %v; parseStep reads %v for that shape", i, got, want)
+		}
+		if strings.Join(branch.Required, ",") != strings.Join(want, ",") {
+			t.Errorf("branch %d requires %v, want %v — an optional args was skipped by Gemini's "+
+				"decoder in every measured call", i, branch.Required, want)
+		}
+		if branch.AdditionalProperties == nil || *branch.AdditionalProperties {
+			t.Errorf("branch %d allows extra properties while parseStep sets DisallowUnknownFields", i)
 		}
 	}
-	if len(declared.Properties) != 3 {
-		t.Errorf("the step schema names %d properties; parseStep reads exactly 3", len(declared.Properties))
-	}
-	// additionalProperties:false mirrors the parser's DisallowUnknownFields. If
-	// the schema were open where the parser is closed, constrained decoding
-	// would happily produce a step the parser then rejects.
-	if declared.AdditionalProperties == nil || *declared.AdditionalProperties {
-		t.Error("the step schema allows extra properties while parseStep sets " +
-			"DisallowUnknownFields — a model obeying the schema could still be refused")
-	}
 
-	// Both legal shapes survive the real parser, so the schema is not describing
-	// a protocol this package cannot read.
+	// Step documents that differ only in their ENVELOPE: which keys are present
+	// and what shape each value takes. Every tool named is offered and every args
+	// is valid for it, because whether a tool is allowed and whether its
+	// arguments are is judged by the allowlist and by the tool, which answer with
+	// a refusal the model re-plans on rather than a parse error.
+	stepEnvelopes := map[string]string{
+		"tool call":                  `{"tool":"read_record","args":{"record_id":"x"}}`,
+		"zero-argument call":         `{"tool":"at_risk_relationships","args":{}}`,
+		"final":                      `{"final":{"summary":"done"}}`,
+		"final with more than prose": `{"final":{"summary":"done","open_questions":["who owns it"]}}`,
+		"call without args":          `{"tool":"at_risk_relationships"}`,
+		"call with null args":        `{"tool":"at_risk_relationships","args":null}`,
+		"call with array args":       `{"tool":"at_risk_relationships","args":[]}`,
+		"call with an empty name":    `{"tool":"","args":{}}`,
+		"empty final":                `{"final":{}}`,
+		"final without a summary":    `{"final":{"text":"done"}}`,
+		"final with a number":        `{"final":{"summary":7}}`,
+		"final with a null summary":  `{"final":{"summary":null}}`,
+		"final as a string":          `{"final":"done"}`,
+		"null final":                 `{"final":null}`,
+		"final carrying args":        `{"final":{"summary":"done"},"args":{}}`,
+		"final beside a null tool":   `{"final":{"summary":"done"},"tool":null}`,
+		"args alone":                 `{"args":{}}`,
+	}
+	declared := stepSchemaOffering(readRecordSpec(), zeroArgumentSpec())
+	for name, step := range stepEnvelopes {
+		admitted := schemaAdmits(t, declared, step)
+		_, err := parseStep(step)
+		switch {
+		case admitted && err != nil:
+			t.Errorf("%s: %s is a shape the schema admits but parseStep refuses: %v", name, step, err)
+		case !admitted && err == nil:
+			t.Errorf("%s: %s is a shape parseStep accepts but the schema refuses, so a model the "+
+				"provider does not constrain can end or act on a step no constrained one could write", name, step)
+		}
+	}
+}
+
+// schemaAdmits reports whether doc satisfies one branch of the step schema's
+// anyOf, each branch checked by the shared validator.
+func schemaAdmits(t *testing.T, declared json.RawMessage, doc string) bool {
+	t.Helper()
+	var root struct {
+		AnyOf []json.RawMessage `json:"anyOf"` //nolint:tagliatelle // JSON Schema's own key spelling
+	}
+	if err := json.Unmarshal(declared, &root); err != nil || len(root.AnyOf) == 0 {
+		t.Fatalf("the step schema is not an anyOf over the step shapes (%v): %s", err, declared)
+	}
+	for _, branch := range root.AnyOf {
+		if schema.ValidateJSON(branch, doc) == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// Each tool-call branch names ONE tool and carries that tool's own schema as
+// args, so the provider holds a call to the arguments of the tool it names.
+//
+// Under one branch whose args is an anyOf over every offered tool, `tool` and
+// `args` are unrelated: any listed schema satisfies any name, and a
+// zero-argument tool's `{}` satisfies every one of them.
+func TestEachToolCallBranchPairsOneToolWithItsOwnArguments(t *testing.T) {
+	offered := []mcp.ToolSpec{readRecordSpec(), zeroArgumentSpec()}
+	branches := stepBranches(t, stepSchemaOffering(offered...))
+
+	for i, spec := range []mcp.ToolSpec{offered[1], offered[0]} {
+		named := branchTool(t, branches[i])
+		if named.Type != "string" || strings.Join(named.Enum, ",") != spec.Name {
+			t.Errorf("branch %d's tool is %+v; want a string enum of exactly %q, in name order — "+
+				"`enum` rather than `const`, which Gemini's keyword subset lacks", i, named, spec.Name)
+		}
+		if got, want := schemaOutline(t, branches[i].Properties["args"]), schemaOutline(t, spec.InputSchema); got != want {
+			t.Errorf("branch %d (%s) carries args naming %s; want that tool's own schema, naming %s", i, spec.Name, got, want)
+		}
+	}
+}
+
+// A call's args stay closed wherever the tool's own schema closes them, at any
+// depth. The surface decodes arguments closed (decodeArgs), so an open args
+// would let constrained decoding write a key the tool then refuses by name.
+func TestAToolCallsArgsStayClosedWhereItsToolClosesThem(t *testing.T) {
+	spec := mcp.ToolSpec{Name: "run_report", InputSchema: json.RawMessage(`{"type":"object","properties":{` +
+		`"aggregates":{"type":"array","items":{"type":"object","required":["fn"],"properties":{` +
+		`"fn":{"type":"string"}},"additionalProperties":false}}},"additionalProperties":false}`)}
+	declared := stepSchemaOffering(spec)
+
+	args := string(stepBranches(t, declared)[0].Properties["args"])
+	if got := strings.Count(args, `"additionalProperties":false`); got != 2 {
+		t.Errorf("the tool closes 2 objects and its step branch's args closes %d: %s", got, args)
+	}
 	for name, step := range map[string]string{
-		"tool call": `{"tool":"read_record","args":{"record_id":"x"}}`,
-		"final":     `{"final":{"text":"done"}}`,
+		"an unknown argument":      `{"tool":"run_report","args":{"aggregates":[],"limit":5}}`,
+		"an unknown nested member": `{"tool":"run_report","args":{"aggregates":[{"fn":"sum","as":"total"}]}}`,
 	} {
-		if _, err := parseStep(step); err != nil {
-			t.Errorf("%s is a shape the schema admits but parseStep refuses: %v", name, err)
+		if schemaAdmits(t, declared, step) {
+			t.Errorf("%s: the step schema admits %s, which the tool refuses by name", name, step)
 		}
+	}
+}
+
+// A call the named tool's own schema refuses is refused by the step schema.
+//
+// `read_record` requires `record_id`; the only branch that admits the name
+// requires it too, so `{}` cannot reach the tool by borrowing a zero-argument
+// tool's schema.
+func TestTheStepSchemaRefusesArgumentsTheNamedToolRefuses(t *testing.T) {
+	branches := stepBranches(t, stepSchemaOffering(readRecordSpec(), zeroArgumentSpec()))
+
+	admitting := branchesNaming(t, branches, "read_record")
+	if len(admitting) != 1 {
+		t.Fatalf("%d branches admit tool read_record; exactly one must, or its args are not its own", len(admitting))
+	}
+	var args struct {
+		Required []string `json:"required"`
+	}
+	if err := json.Unmarshal(admitting[0].Properties["args"], &args); err != nil {
+		t.Fatalf("read_record's args is not an object schema: %v", err)
+	}
+	if !slices.Contains(args.Required, "record_id") {
+		t.Errorf("the branch naming read_record requires %v of its args, so "+
+			`{"tool":"read_record","args":{}} satisfies the schema`, args.Required)
+	}
+}
+
+// A tool the window does not offer is not a value `tool` may take.
+func TestTheStepSchemaRefusesAToolItDoesNotOffer(t *testing.T) {
+	branches := stepBranches(t, stepSchemaOffering(readRecordSpec(), zeroArgumentSpec()))
+	if admitting := branchesNaming(t, branches, "send_email"); len(admitting) != 0 {
+		t.Errorf("%d branches admit tool send_email, which this window never offered", len(admitting))
+	}
+}
+
+// Every object the step schema itself declares names its keys.
+//
+// Gemini's decoder admits no key into an object whose schema lists none, and
+// `additionalProperties` does not reopen it: given a bare args object it writes
+// no argument, and given a bare final it writes `{"final": { }}` or pads
+// whitespace to the output ceiling. So final declares its summary.
+func TestTheStepSchemaNamesTheKeysOfEveryObjectItDeclares(t *testing.T) {
+	branches := stepBranches(t, stepSchemaOffering(readRecordSpec()))
+
+	var final struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+		Required   []string                   `json:"required"`
+	}
+	if err := json.Unmarshal(branches[len(branches)-1].Properties["final"], &final); err != nil {
+		t.Fatalf("final is not an object schema: %v", err)
+	}
+	if _, named := final.Properties["summary"]; !named || strings.Join(final.Required, ",") != "summary" {
+		t.Errorf("final must declare and require summary, or a decoder enforcing it writes "+
+			"an empty final; got %s", branches[len(branches)-1].Properties["final"])
+	}
+}
+
+// A tool whose schema will not parse is never offered with a bare `args` — the
+// very shape this schema keeps off the wire. Registration refuses one at boot;
+// one that bypassed it is carried verbatim, so the request fails to encode.
+func TestAToolWhoseSchemaCannotBeCarriedIsNotOfferedAsABareObject(t *testing.T) {
+	declared := stepSchema([]mcp.ToolSpec{{Name: "broken", InputSchema: json.RawMessage(`{"type":`)}})
+	if json.Valid(declared) {
+		t.Errorf("a tool with an unparsable input schema produced a valid step schema, so something "+
+			"stood in for its arguments: %s", declared)
+	}
+}
+
+// A run offered no tools can still only end, and its schema is still valid:
+// anyOf must not be empty.
+func TestAWindowWithNoToolsOffersOnlyTheFinalStep(t *testing.T) {
+	branches := stepBranches(t, stepSchemaOffering())
+	if len(branches) != 1 {
+		t.Fatalf("a window offering no tools declares %d branches; only final is reachable", len(branches))
+	}
+	if _, named := branches[0].Properties["final"]; !named {
+		t.Errorf("the one branch is not the final step: %v", sortedKeys(branches[0].Properties))
+	}
+}
+
+// The step schema is O(offered tools) and the adapter sends it with the prompt,
+// so the elision that keeps a request inside the window has to count it.
+func TestTheWindowCountsTheStepSchemaAgainstThePromptWindow(t *testing.T) {
+	win := newWindow(Job{Goal: "sweep", TriggerRef: triggerRef}, []mcp.ToolSpec{readRecordSpec()}, nil)
+	win.observe("read_record", strings.Repeat("x", 4000))
+	win.observe("read_record", "newest")
+	req := win.asRequest(1000, 0)
+	fits := requestTokens(req.System, nil, req.Messages)
+
+	bounded := win.asRequest(1000, fits)
+	if bounded.Messages[1].Content != elisionMarker {
+		t.Fatalf("a window exactly the size of the prompt WITHOUT its %d-byte schema elided "+
+			"nothing, so the request the adapter sends is larger than the window", len(req.ResponseSchema))
+	}
+	if got := requestTokens(bounded.System, bounded.ResponseSchema, bounded.Messages); got > fits {
+		t.Errorf("prompt plus schema is %d tokens against a window of %d", got, fits)
 	}
 }
 
@@ -140,9 +322,9 @@ func TestAStepSurvivesTheManners(t *testing.T) {
 // An UNFENCED object in prose is refused on the step channel, whichever side
 // the prose falls.
 //
-// These two shapes used to pass, and giving them up is the price of the sole
-// candidate attack: a quoted injection wears exactly this shape, and nothing in
-// the text tells the two apart. The cost is a re-ask when a model writes its
+// Refusing these two shapes is the price of the sole-candidate defence: a
+// quoted injection wears exactly this shape, and nothing in the text tells the
+// two apart. The cost is a re-ask when a model writes its
 // step as a bare object in a sentence; the alternative is executing a tool call
 // the model refused.
 func TestAnUnfencedStepInProseIsRefusedOnTheStepChannel(t *testing.T) {
@@ -168,46 +350,6 @@ func TestAReplyWithNoStepInItIsStillRefused(t *testing.T) {
 	} {
 		if _, err := parseStep(reply); err == nil {
 			t.Errorf("%s: accepted a reply carrying no step", name)
-		}
-	}
-}
-
-// args and final carry keys the schema cannot know, so neither may be closed.
-//
-// A closed object with no properties — {"type":"object","additionalProperties":
-// false} — forbids EVERY key inside it. A provider enforcing that would refuse
-// {"tool":"read_record","args":{"record_id":"x"}}, which is the shape the loop
-// exists to produce.
-//
-// Nothing else here could catch it: parseStep reads both fields as
-// json.RawMessage and never checks them against the schema, so the Go tests
-// pass while the request forbids the answer. This asserts the schema's own
-// shape instead, which is the only place the mistake is visible without a live
-// provider.
-func TestTheStepSchemaLetsArgsAndFinalCarryKeys(t *testing.T) {
-	win := newWindow(Job{Goal: "prep the meeting", TriggerRef: triggerRef}, nil, nil)
-
-	var declared struct {
-		Properties map[string]struct {
-			Type                 string         `json:"type"`
-			AdditionalProperties *bool          `json:"additionalProperties"` //nolint:tagliatelle // JSON Schema's own key spelling
-			Properties           map[string]any `json:"properties"`
-		} `json:"properties"`
-	}
-	if err := json.Unmarshal(win.asRequest(1000, MinimumPromptWindow).ResponseSchema, &declared); err != nil {
-		t.Fatalf("the ResponseSchema is not an object schema: %v", err)
-	}
-
-	for _, field := range []string{"args", "final"} {
-		node, named := declared.Properties[field]
-		if !named {
-			t.Fatalf("the step schema does not name %q", field)
-		}
-		closed := node.AdditionalProperties != nil && !*node.AdditionalProperties
-		if closed && len(node.Properties) == 0 {
-			t.Errorf("%q is a closed object with no properties, so the schema forbids every key "+
-				"inside it — a provider enforcing this would refuse the tool arguments the loop "+
-				"has to send", field)
 		}
 	}
 }
@@ -287,7 +429,7 @@ func TestASingleFencedStepIsStillRecovered(t *testing.T) {
 // author could sort the keys — or convert it to the builder, which sorts them —
 // and repeat the measured regression with the suite green.
 func TestTheStepSchemaListsToolBeforeArgsBeforeFinal(t *testing.T) {
-	declared := string(stepSchema)
+	declared := string(stepSchemaOffering(readRecordSpec()))
 	tool, args, final := strings.Index(declared, `"tool"`), strings.Index(declared, `"args"`), strings.Index(declared, `"final"`)
 	if tool < 0 || args < 0 || final < 0 {
 		t.Fatalf("the step schema does not name all three keys: %s", declared)
@@ -298,4 +440,97 @@ func TestTheStepSchemaListsToolBeforeArgsBeforeFinal(t *testing.T) {
 			"sending args at all when this was sorted, and agent_loop fell 0.78→0.18 on one "+
 			"binding and 0.53→0.31 on another", declared)
 	}
+}
+
+type stepBranch struct {
+	Type                 string                     `json:"type"`
+	Properties           map[string]json.RawMessage `json:"properties"`
+	Required             []string                   `json:"required"`
+	AdditionalProperties *bool                      `json:"additionalProperties"` //nolint:tagliatelle // JSON Schema's own key spelling
+}
+
+// stepSchemaOffering is the schema a real window offering these tools sends.
+func stepSchemaOffering(offered ...mcp.ToolSpec) json.RawMessage {
+	win := newWindow(Job{Goal: "prep the meeting", TriggerRef: triggerRef}, offered, nil)
+	return win.asRequest(1000, MinimumPromptWindow).ResponseSchema
+}
+
+func stepBranches(t *testing.T, schema json.RawMessage) []stepBranch {
+	t.Helper()
+	var root struct {
+		AnyOf []stepBranch `json:"anyOf"` //nolint:tagliatelle // JSON Schema's own key spelling
+	}
+	if err := json.Unmarshal(schema, &root); err != nil || len(root.AnyOf) == 0 {
+		t.Fatalf("the step schema is not an anyOf over the step shapes (%v): %s", err, schema)
+	}
+	return root.AnyOf
+}
+
+type toolNameSchema struct {
+	Type string   `json:"type"`
+	Enum []string `json:"enum"`
+}
+
+// branchTool reads the schema a branch gives its `tool` key.
+func branchTool(t *testing.T, branch stepBranch) toolNameSchema {
+	t.Helper()
+	var named toolNameSchema
+	if err := json.Unmarshal(branch.Properties["tool"], &named); err != nil {
+		t.Fatalf("a tool-call branch's tool is not a schema: %v", err)
+	}
+	return named
+}
+
+// branchesNaming returns the tool-call branches whose `tool` admits name. A `tool`
+// with no enum admits every string, which is what JSON Schema makes of it.
+func branchesNaming(t *testing.T, branches []stepBranch, name string) []stepBranch {
+	t.Helper()
+	var admitting []stepBranch
+	for _, branch := range branches {
+		if _, isCall := branch.Properties["tool"]; !isCall {
+			continue
+		}
+		if enum := branchTool(t, branch).Enum; len(enum) == 0 || slices.Contains(enum, name) {
+			admitting = append(admitting, branch)
+		}
+	}
+	return admitting
+}
+
+func zeroArgumentSpec() mcp.ToolSpec {
+	return mcp.ToolSpec{Name: "at_risk_relationships", InputSchema: json.RawMessage(`{"type":"object","properties":{}}`)}
+}
+
+func readRecordSpec() mcp.ToolSpec {
+	return mcp.ToolSpec{Name: "read_record", InputSchema: json.RawMessage(
+		`{"type":"object","required":["record_id"],"properties":{"record_id":{"type":"string"}}}`)}
+}
+
+// schemaOutline names an object schema's properties and required keys, which is
+// what identifies the tool a schema belongs to.
+func schemaOutline(t *testing.T, raw json.RawMessage) string {
+	t.Helper()
+	var object struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+		Required   []string                   `json:"required"`
+	}
+	if err := json.Unmarshal(raw, &object); err != nil {
+		t.Fatalf("not an object schema: %v: %s", err, raw)
+	}
+	return "properties " + strings.Join(sortedKeys(object.Properties), ",") + ", required " + strings.Join(object.Required, ",")
+}
+
+func sortedKeys(m map[string]json.RawMessage) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func sortedCopy(in []string) []string {
+	out := append([]string(nil), in...)
+	sort.Strings(out)
+	return out
 }

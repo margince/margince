@@ -102,25 +102,9 @@ type openAICompatChatResponse struct {
 	//
 	// Absent on a single-vendor OpenAI-wire host (a vLLM deployment), which
 	// leaves it empty: there, the host we called is the host that served.
-	Provider string `json:"provider"`
-	Choices  []struct {
-		// FinishReason is the normalized stop reason. The wire also carries the
-		// upstream's own unmapped string beside it; that is not decoded here
-		// because nothing reads it yet, and a decoded field no caller consumes
-		// is a claim that it is used.
-		FinishReason string `json:"finish_reason"`
-		Message      struct {
-			Content string `json:"content"`
-			// Reasoning is a reasoning model's thinking text, which this wire
-			// carries BESIDE Content rather than inside it. It matters to a
-			// non-reasoning caller for one reason: when the output budget is
-			// spent before the answer begins, Content arrives null and all the
-			// generated tokens are here. Reading Content alone then returns
-			// empty text for a call that was billed in full.
-			Reasoning string `json:"reasoning"`
-		} `json:"message"`
-	} `json:"choices"`
-	Usage struct {
+	Provider string               `json:"provider"`
+	Choices  []openAICompatChoice `json:"choices"`
+	Usage    struct {
 		PromptTokens     int `json:"prompt_tokens"`
 		CompletionTokens int `json:"completion_tokens"`
 		// CompletionTokensDetails itemizes reasoning spend inside
@@ -146,33 +130,23 @@ func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (m
 	if len(out.Choices) == 0 {
 		return model.Response{}, fmt.Errorf("ai: openai-compat: response has no choices")
 	}
-	choice := out.Choices[0]
-	return model.Response{
-		Text:            completionText(choice.Message.Content, choice.Message.Reasoning, choice.FinishReason),
+	resp := model.Response{
 		InputTokens:     out.Usage.PromptTokens,
 		OutputTokens:    out.Usage.CompletionTokens,
 		ReasoningTokens: reasoningWithin(out.Usage.CompletionTokens, out.Usage.CompletionTokensDetails.ReasoningTokens),
 		ServedModel:     out.Model,
 		ServedProvider:  out.Provider,
-		FinishReason:    choice.FinishReason,
-	}, nil
+	}
+	choice := out.Choices[0]
+	finish, err := choice.terminal(ctx)
+	if err != nil {
+		return model.Response{}, withSpend(err, resp)
+	}
+	resp.Text = completionText(choice.Message.Content, choice.Message.Reasoning, finish)
+	resp.FinishReason = finish
+	return resp, nil
 }
 
-// completionText is the answer text, falling back to a reasoning model's
-// thinking when the answer itself is empty.
-//
-// The fallback exists because this wire's two text fields are not
-// alternatives — they are sequential. A reasoning model emits thinking first
-// and the answer after it, both charged to the same output budget, so a budget
-// that runs out mid-thought yields a response with every generated token in
-// Reasoning and Content null. Returning Content alone hands the caller an
-// empty string for a call that was generated and billed in full, with no error
-// to retry on and nothing in the trace to explain it.
-//
-// The thinking is not as good as the answer, and it is not pretended to be:
-// the caller's own schema validation will reject it, which is the honest
-// outcome. What changes is that the rejection carries the text that was paid
-// for, and FinishReason beside it says the budget was the cause.
 // reasoningWithin bounds a reported reasoning count by the completion it is a
 // breakdown of, because on this wire the two counts do not always agree.
 //
@@ -203,6 +177,21 @@ func reasoningWithin(completion, reasoning int) int {
 	return reasoning
 }
 
+// completionText is the answer text, falling back to a reasoning model's
+// thinking when the answer itself is empty.
+//
+// The fallback exists because this wire's two text fields are not
+// alternatives — they are sequential. A reasoning model emits thinking first
+// and the answer after it, both charged to the same output budget, so a budget
+// that runs out mid-thought yields a response with every generated token in
+// Reasoning and Content null. Returning Content alone hands the caller an
+// empty string for a call that was generated and billed in full, with no error
+// to retry on and nothing in the trace to explain it.
+//
+// The thinking is not as good as the answer, and it is not pretended to be:
+// the caller's own schema validation will reject it, which is the honest
+// outcome. What changes is that the rejection carries the text that was paid
+// for, and FinishReason beside it says the budget was the cause.
 func completionText(content, reasoning, finishReason string) string {
 	if content != "" {
 		return content
@@ -213,16 +202,11 @@ func completionText(content, reasoning, finishReason string) string {
 	// entirely, so handing it back as the answer would dress a refusal up as a
 	// reply. Those keep their empty text, which is what the caller's own schema
 	// check is there to reject.
-	if finishReason == finishReasonLength {
+	if finishReason == model.FinishReasonLength {
 		return reasoning
 	}
 	return ""
 }
-
-// finishReasonLength is the stop reason that means the output budget bound
-// before the model was done — the one case where the thinking is all that got
-// generated and is worth handing back.
-const finishReasonLength = "length"
 
 //nolint:ireturn // model.Client.Stream returns the port's TokenStream interface by contract
 func (c *openAICompatClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
@@ -449,7 +433,7 @@ func (c *openAICompatClient) post(ctx context.Context, path string, payload []by
 	if resp.StatusCode != http.StatusOK {
 		//craft:ignore swallowed-errors best-effort close on the error path — the API status error is the answer
 		defer func() { _ = resp.Body.Close() }()
-		return nil, openAICompatError(resp)
+		return nil, openAICompatError(ctx, resp)
 	}
 	return resp.Body, nil
 }

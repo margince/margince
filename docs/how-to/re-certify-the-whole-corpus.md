@@ -27,10 +27,10 @@ mkdir -p .tmp
 `.tmp/` is gitignored and may not exist yet — this step runs before anything
 else has written there.
 
-This is not bookkeeping. A stale row names **which half of its stamp moved** —
-the case, the prompt this build sends, or the grader — and that is the only
-record of it you will have: once the sweep overwrites the records, the old stamps
-are gone and the report can no longer attribute anything.
+This is not bookkeeping. A stale row names **which part of its stamp moved** —
+the case, the prompt this build sends, or how a run is graded — and that is the
+only record of it you will have: once the sweep overwrites the records, the old
+stamps are gone and the report can no longer attribute anything.
 
 The three causes want opposite responses, which is why the report separates them:
 
@@ -39,9 +39,9 @@ The three causes want opposite responses, which is why the report separates them
 - **the prompt this build sends** — the product changed. The new band describes
   the NEW prompt; a drop is a consequence of a product change, and somebody
   should be told which change.
-- **the grader** — the judge's own request moved. A band can move with neither
-  the test nor the product touched. This reads as a model regression and is not
-  one.
+- **how a run is graded** — the judge's request or the scoring rule moved. A
+  band can move with neither the test nor the product touched. This reads as a
+  model regression and is not one.
 
 Keep the file. §2 reads it.
 
@@ -56,13 +56,10 @@ cd backend
 
 # gemini_cloud: every tier on Gemini, one credential.
 make e2e-ai ROUTING=config/presets/gemini_cloud.yaml \
-  JUDGE=openai_compatible:openai/gpt-oss-120b \
-  JUDGE_BASE_URL=https://openrouter.ai/api \
   TRACE="$PWD/../.tmp/aicert/gemini" RESUME="$PWD/../.tmp/aicert/gemini/resume"
 
-# openrouter_cloud: every lane through the broker.
-make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
-  JUDGE=gemini:gemini-3.5-flash \
+# openrouter_cloud binds gpt-oss-120b, the default judge, so it takes a Gemini one.
+make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml JUDGE=gemini:gemini-3.1-flash-lite \
   TRACE="$PWD/../.tmp/aicert/openrouter" RESUME="$PWD/../.tmp/aicert/openrouter/resume"
 ```
 
@@ -84,12 +81,15 @@ and for a reason a relative one silently gets wrong: a Go test runs with its
 working directory set to the package under test, so `../.tmp/…` typed here would
 land under `backend/internal/compose/` rather than beside the repo.
 
-**The judges are crossed on purpose, and a run refuses them uncrossed.**
-`cert_judge` is a task like any other and leads at `premium`, so a judge bound to
-the model that preset puts on its premium rung collides with every premium-led
-candidate. `validateRoutedBindings` checks every task the routing resolves and
-fails **before the first paid call** — caught mid-corpus it would be caught after
-the tasks before it had been billed.
+**One judge grades every task of a run, and a model never grades itself.** The
+default is `openai_compatible:openai/gpt-oss-120b` on OpenRouter, for cost
+(`OPENAI_COMPATIBLE_API_KEY`); `JUDGE=gemini:gemini-3.1-flash-lite` or
+`JUDGE=gemini:gemini-3.5-flash` picks a Gemini one (`GEMINI_API_KEY`). A judge
+swap flips verdicts on the same candidate, so keep one judge across a sweep where
+you can, and `judge_served_model` names it on every record. A run in which any
+task it certifies has the judge as its candidate is refused **before the first
+paid call**, naming those tasks — which is why `openrouter_cloud`, binding
+gpt-oss-120b itself, runs with the Gemini judge above.
 
 Two further rules the commands above encode:
 
@@ -174,11 +174,8 @@ tells the two apart for free, and it is the only thing that does:
 
 ```bash
 cd backend
-make e2e-ai TASK=<task> ROUTING=config/presets/gemini_cloud.yaml \
-  JUDGE=openai_compatible:openai/gpt-oss-120b \
-  JUDGE_BASE_URL=https://openrouter.ai/api RESUME=
-make e2e-ai TASK=<task> ROUTING=config/presets/openrouter_cloud.yaml \
-  JUDGE=gemini:gemini-3.5-flash RESUME=
+make e2e-ai TASK=<task> ROUTING=config/presets/gemini_cloud.yaml RESUME=
+make e2e-ai TASK=<task> ROUTING=config/presets/openrouter_cloud.yaml RESUME=
 ```
 
 Run it again afterwards and read the headline: every site current means the fix

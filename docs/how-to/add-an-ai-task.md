@@ -221,10 +221,8 @@ and it caps how much of the site one certification run can cover:
    — read that first, or the run fails on a missing key.
 
    ```
-   # real calls, billed to YOUR api key; MODEL and JUDGE are both required
-   make e2e-ai TASK=<your task> \
-     MODEL=gemini:gemini-3.1-flash-lite \
-     JUDGE=anthropic:claude-sonnet-4-6
+   # real calls, billed to YOUR api key; MODEL is required, JUDGE defaults to gpt-oss-120b
+   make e2e-ai TASK=<your task> MODEL=gemini:gemini-3.1-flash-lite
    make e2e-ai-report                # free: band, scope, binding, counts, scenario coverage
    cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
    ```
@@ -279,9 +277,9 @@ and it caps how much of the site one certification run can cover:
 ## Notes
 
 - **A record is a claim about one (provider, model, env) binding**, not about the
-  prompt in the abstract. Editing the prompt, the request builder or the grader
-  re-stamps the version and marks the record **stale** — re-certify rather than
-  hand-editing a record.
+  prompt in the abstract. Editing the prompt, the request builder, the grader or
+  the scoring rule re-stamps the version and marks the record **stale** —
+  re-certify rather than hand-editing a record.
 - **Renaming** a task or site starts upstream like any other contract change,
   then lands here as the mirrored declaration, the census line, the case's
   `Site()`, the corpus `site:` field, the record directory, and any exemption

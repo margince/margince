@@ -171,11 +171,11 @@ func validateSettlePayload(payload settlePayload, batch []settleCandidate) strin
 		if r.Verdict != activities.RequestStillOwed && strings.TrimSpace(r.Remaining) != "" {
 			return fmt.Sprintf("verdict %q carries a remaining phrase, which only still_owed may", clampToken(r.Verdict))
 		}
-		// And the other direction, which nothing held: a still_owed naming
-		// nothing renders a worklist row telling a rep they owe something and
-		// not what. The schema's required list and the column's CHECK both
-		// constrain only the sentence above, so this was the one place left to
-		// say it — and saying it here puts the model through the retry with the
+		// And the other direction: a still_owed naming nothing renders a
+		// worklist row telling a rep they owe something and not what. The
+		// schema can require the key but not a non-empty value per verdict,
+		// and the column's CHECK constrains only the sentence above, so this
+		// is where it is said — putting the model through the retry with the
 		// reason, rather than storing an item nobody can act on.
 		if r.Verdict == activities.RequestStillOwed && strings.TrimSpace(r.Remaining) == "" {
 			return "a still_owed verdict carries no remaining phrase; name in a few plain words what we still owe"
@@ -185,6 +185,11 @@ func validateSettlePayload(payload settlePayload, batch []settleCandidate) strin
 }
 
 // settleSchema is the generation-time shape guardrail.
+//
+// `remaining` is REQUIRED although it is empty on two verdicts of three: the
+// validator refuses a still_owed without it, and an optional key is one a
+// constrained decoder may skip — so the prompt's "empty string unless
+// still_owed" is the only way to leave it blank.
 func settleSchema() json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
@@ -196,7 +201,7 @@ func settleSchema() json.RawMessage {
 					settleDueKey:            schema.String(),
 					extractionConfidenceKey: schema.Number(),
 				},
-				"id", settleVerdictKey, extractionConfidenceKey)),
+				"id", settleVerdictKey, settleRemainingKey, extractionConfidenceKey)),
 		},
 		settleResultsKey))
 }

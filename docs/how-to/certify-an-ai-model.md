@@ -40,13 +40,17 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    binding — that is the `ai.routing` setting, this lane opens no database, and
    `ROUTING=` reads what a fresh install would be *seeded* with.
 
-   `JUDGE=provider:model` is the second model that grades the answers, **always
-   required and never resolved from the routing**: `cert_judge` is itself a task
-   and leads at `premium`, so a config binding a model there would make the
-   grader collide with every `premium`-led candidate. A judge equal to any
-   resolved candidate is refused — a model grading itself is certified by
-   construction — and every resolved task is checked up front rather than failing
-   midway through a paid corpus.
+   `JUDGE=provider:model` is the second model that grades the answers, and **one
+   judge grades every task of a run** — a judge swap flips verdicts on its own.
+   It defaults to `openai_compatible:openai/gpt-oss-120b` on OpenRouter, chosen
+   for cost (needs `OPENAI_COMPATIBLE_API_KEY`); an exported
+   `MARGINCE_AICERT_JUDGE_MODEL` replaces it and `JUDGE=` overrides both —
+   `gemini:gemini-3.1-flash-lite` (also cheap) or `gemini:gemini-3.5-flash`, with
+   `GEMINI_API_KEY`. It is **never resolved from the routing**, and a model never
+   grades itself: a run in which any task it certifies has the judge as its
+   candidate is refused before the first paid call, naming those tasks.
+   `openrouter_cloud` binds gpt-oss-120b itself, so certify it with
+   `JUDGE=gemini:gemini-3.1-flash-lite`.
 
    For an OpenAI-wire broker — one OpenRouter key reaching every open-weight
    model — add the endpoint, which `openai_compatible` fails closed without:
@@ -54,8 +58,7 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    ```bash
    make e2e-ai TASK=cold_start \
      MODEL=openai_compatible:z-ai/glm-5.2 \
-     BASE_URL=https://openrouter.ai/api \
-     JUDGE=gemini:gemini-3.1-pro
+     BASE_URL=https://openrouter.ai/api
    ```
 
    `PROFILE=` names the environment class a record is filed under (`eu_hosted`,
@@ -70,15 +73,12 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    OpenRouter example reads that last one). Keys live in the env, never in the
    config file (a stray `api_key:` there is a boot error). Keep them in a
    gitignored `.env.local` and `source` it.
-3. No database. The lane runs on the DB-less local router, so `make db-up` is
-   not required.
+3. No database: the lane runs on the DB-less local router, so no `make db-up`.
 
 ## 1. Certify a task
 
 ```bash
-make e2e-ai TASK=cold_start \
-  MODEL=gemini:gemini-3.1-flash-lite \
-  JUDGE=anthropic:claude-sonnet-4-6
+make e2e-ai TASK=cold_start MODEL=gemini:gemini-3.1-flash-lite
 ```
 
 This certifies **the model you name**, not any binding this installation holds.
@@ -101,7 +101,7 @@ To certify **what a deployment binds** rather than one model you typed, point
 `ROUTING=` at that deployment's config (path read from the repo root):
 
 ```bash
-make e2e-ai ROUTING=config/margince.dev.yaml JUDGE=anthropic:claude-sonnet-4-6
+make e2e-ai ROUTING=config/margince.dev.yaml
 ```
 
 It resolves a model per task from that config's `seeds.ai_routing` and logs the
@@ -134,9 +134,7 @@ Certify a *different* model against the same corpus — change `MODEL=`, leave
 `JUDGE=` where it is, so the two runs differ in exactly one thing:
 
 ```bash
-make e2e-ai TASK=cold_start \
-  MODEL=gemini:gemini-3.5-flash \
-  JUDGE=anthropic:claude-sonnet-4-6
+make e2e-ai TASK=cold_start MODEL=gemini:gemini-3.5-flash
 ```
 
 Certify both the incumbent and the candidate, then compare their records before
@@ -149,9 +147,13 @@ the provider/model split cuts at the FIRST colon, so
 `openai_compatible:openai/gpt-oss-20b:free` binds the whole slug.
 
 Other knobs: `RUNS=5` (odd repeat count), `PROFILE=` (environment class),
-`JUDGE_BASE_URL=` when the judge is on a *different* broker — unset, it falls back
-to `BASE_URL=`, since a judge on the candidate's broker is the common case and
-re-typing the host was the common mistake.
+`JUDGE_BASE_URL=` for an `openai_compatible` judge you name — the OpenRouter host
+is the default only for the default judge, and unset it falls back to
+`BASE_URL=`, since a judge on the candidate's broker is the common case.
+A broker binding is served under production's upstream default (fp16/bf16 hosts
+only); `UPSTREAM='{}'` and `JUDGE_UPSTREAM='{}'` lift it, and each record names
+what applied. One small pre-flight call per binding runs before the corpus, so a
+key, slug or preference no host can serve fails in seconds, not mid-corpus.
 
 ## 3. Read the readiness report
 
@@ -166,11 +168,11 @@ ever certified, which is why it enumerates the census rather than the records:
 ```text
 AI certification readiness: 1 of 36 shipped sites carry a current record.
 
-SITE                  SCOPE            STATUS   SCENARIOS  BAND       PROVIDER  MODEL             ENV        RUNS  PASSED  RELIABILITY  ACCEPTED  WRONG_ANSWER  INVALID  ABSTAINED
-agent_loop/loop       single_turn      absent   -          -          -         -                 -          -     -       -            -         -             -        -
-cold_start/acts       single_turn      current  3/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
-cold_start/company    single_turn      partial  9/10       certified  gemini    gemini-3.5-flash  eu_hosted  27    27      1.00         27        0             0        0
-rate_extract/pricing  full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
+SITE                      SCOPE            STATUS   SCENARIOS  BAND       PROVIDER  MODEL             ENV        RUNS  PASSED  RELIABILITY  ACCEPTED  WRONG_ANSWER  INVALID  ABSTAINED
+agent_loop/morning_brief  single_turn      absent   -          -          -         -                 -          -     -       -            -         -             -        -
+cold_start/acts           single_turn      current  3/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
+cold_start/company        single_turn      partial  9/10       certified  gemini    gemini-3.5-flash  eu_hosted  27    27      1.00         27        0             0        0
+rate_extract/pricing      full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
 ```
 
 **Every row's numbers are that SITE's own.** A record is written per task and a
@@ -187,15 +189,14 @@ Four states, and they never collapse into each other:
 - **`current`** — every scenario this site ships was measured, and each one's
   stamp is the one this build computes, so the band describes the request this
   build actually sends. A stamp covers the scenario, the request the site's own
-  code builds from it, and the request sent to the grader that scored it.
+  code builds from it, and how a run is graded (the grader's request and rule).
 - **`partial`** — everything the record measured is still current, and the corpus
   has since grown cases it has never seen. Explicitly **not** stale: the record is
   wrong about nothing, merely incomplete, and clearing it costs the new scenarios
   rather than the whole task.
 - **`stale`** — a scenario the record *did* measure has changed since, or the code
-  that turns it into a prompt did, or the grader's own prompt did. The band is a
-  claim about requests no longer sent, or scores a grader no longer produces;
-  re-certify that task.
+  that turns it into a prompt did, or how a run is graded did. The band describes
+  requests or grading this build no longer uses; re-certify that task.
 - **`absent`** — nothing has ever been measured. The columns are dashes rather
   than zeroes, because a zero is a result and this is not one.
 
@@ -288,7 +289,9 @@ Two things now stand in the way.
 **The run is re-driven** when the router comes back having failed on every bound
 tier — three attempts, waiting 2s then 8s. Only an exhausted ladder is retried: a
 validator failure or a caps miss is a *measurement*, and an exhausted account is
-a human's to fix. It is re-driven whole, because a site may turn a multi-turn
+a human's to fix. A withheld answer is a measurement too — the run fails,
+ungraded, and the record names the filter — while a rejected request stops the
+task with no record, because it measures the binding, not the model. It is re-driven whole, because a site may turn a multi-turn
 conversation or a tool loop and there is no resuming one mid-way.
 
 **Every scored run is journaled** to `.tmp/aicert/resume/` as it is scored, so a
@@ -311,20 +314,17 @@ every whole run before the cut. One run owns a directory at a time — parallel
 
 Each run either **HardPasses** — the site's own production validator accepted
 the reply, the reply is the answer the scenario expects, and the run stayed
-inside the scenario's token/latency caps — or fails. The judge scores the
-answer 0–100 against the scenario's rubric. `N` runs of one scenario fold into a verdict
-against the scenario's score bands (spec §5):
-
-| Verdict | Rule |
-|---|---|
-| `certified` | **every** run HardPasses ∧ median score ≥ `certified_min` ∧ min score ≥ `floor` |
-| `supported_degraded` | ≥ ⌈2N/3⌉ runs HardPass ∧ median score ≥ `degraded_min` |
-| `not_supported` | otherwise |
-
-**reliability** is the fraction of runs that HardPassed (0–1), reported for every
-verdict — the number to trend over time. A run whose served-model identity is not
-uniform (a fallback to another model, between runs or between the calls of one
-run) **voids** the record: you cannot certify a moving target.
+inside its token/latency caps — or fails. The judge scores the answer 0–100
+against the rubric. `certified` takes a pooled pass **rate** (so the bar does not
+rise with the corpus), a majority of every scenario's own runs (so one case that
+always fails cannot hide in the pool), and every scenario's median and minimum
+score at its bands; `supported_degraded` a pooled majority and medians at
+`degraded_min`; anything else, including a scenario no judge scored, is
+`not_supported`. The numbers are in [The exact rule](../reference/ai-certification.md#how-the-scoring-works),
+and every one lives in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go):
+edit it there, bump `gradingRule`, and regenerate the page. **reliability** is the
+fraction of runs that HardPassed (0–1), the number to trend. A run whose served
+model is not uniform (a fallback, between runs or calls) **voids** the record: you cannot certify a moving target.
 
 A run is not always one model call — a site may retry, fall back, or turn a tool
 loop — and everything the run is judged and charged for is pooled across all of
