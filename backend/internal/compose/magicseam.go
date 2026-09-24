@@ -48,7 +48,7 @@ func newMagicService(
 	}, now).
 		WithTroubledRuns(automation.NewAutomationStore(db)).
 		WithPendingDecisions(magicPendingDecisions{svc: staged}).
-		WithSourceHealth(magicSourceHealth{registry: capture.NewRegistry(db, nil, nil, nil)})
+		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)})
 }
 
 // magicPendingDecisions reads the staged queue for the needs-you lane.
@@ -56,6 +56,9 @@ func newMagicService(
 // Only the approvals this caller could themselves decide come back, because
 // that filter lives in the engine: the lane adds no authority of its own, and a
 // receipt that widened the inbox would be a side channel around it.
+//
+// attentionApprovals.ListWire spells the same read for the feed; the two stay
+// separate because each satisfies its own consumer's interface.
 type magicPendingDecisions struct{ svc *approvals.Service }
 
 func (m magicPendingDecisions) PendingApprovals(
@@ -70,9 +73,9 @@ func (m magicPendingDecisions) PendingApprovals(
 // human-only arm lives there, and its refusal is what the lane renders as
 // withheld.
 //
-// The registry is composed bare, with no sink, authority or vault, because
-// HealthConcerns stays within what Connections itself reads. Anything deeper
-// would be a nil dereference on this read's path.
+// attentionCaptureHealth is the same conversion for the feed. They cannot share
+// a body: each converts into its OWN consumer package's row type, and neither
+// consumer may depend on the other.
 type magicSourceHealth struct{ registry *capture.Registry }
 
 func (m magicSourceHealth) CaptureConcerns(ctx context.Context) ([]magic.CaptureConcern, error) {

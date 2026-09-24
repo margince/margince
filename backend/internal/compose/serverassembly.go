@@ -168,6 +168,17 @@ func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 	return collections.NewHandlers(NewCollectionsStore(pool))
 }
 
+// wireStagedSurfaces binds the two surfaces that read the staged queue. They
+// share ONE approvals engine, so the day's card and the receipt's line are one
+// queue rather than two readings of it; a second engine here is how the two
+// would come to disagree.
+func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
+	staged := approvalsServiceWithEffects(pool)
+	s.attentionHandlers = newAttentionHandlers(pool, staged)
+	s.magicService = newMagicService(pool, staged, time.Now)
+	s.magicHandlers = magic.NewHandlers(s.magicService)
+}
+
 // wireCaptureSettingsSurface binds the workspace's own capture posture
 // controls.
 // wireAnalyticsSurface wires the four handler sets that read the numbers:
@@ -179,23 +190,6 @@ func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 // sits behind the grant that reads the thing being shared. Splitting them
 // across the literal and here would put half of that seam out of sight of the
 // other half.
-// wireStagedSurfaces binds the two surfaces that read the staged queue.
-//
-// They are assembled together because they share ONE approvals engine: the
-// day's card and the receipt's line are one queue rather than two readings of
-// it, and a second engine here is how the two would come to disagree. Holding
-// them in one function makes that sharing structural rather than a coincidence
-// of two adjacent lines somebody later separates.
-//
-// The receipt also reads the same clock the rest of the surface does, so "since
-// your brief" means the same instant everywhere.
-func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
-	staged := approvalsServiceWithEffects(pool)
-	s.attentionHandlers = newAttentionHandlers(pool, staged)
-	s.magicService = newMagicService(pool, staged, time.Now)
-	s.magicHandlers = magic.NewHandlers(s.magicService)
-}
-
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.forecastHandlers = forecasting.NewHandlers(
 		forecasting.NewStore(InstallationDB(pool)),
