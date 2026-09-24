@@ -77,7 +77,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
 
   // 2. Attach through the company/project group in the deal's Details pane.
   await page.goto("/#/deals/d-fleet");
-  await page.getByRole("button", { name: "Firma ändern", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Unternehmen ändern", exact: true })
+    .click();
   await choose(
     page,
     page.getByRole("combobox", { name: "Projekt", exact: true }),
@@ -202,7 +204,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await relink.click();
   await dialog
     .getByRole("searchbox", {
-      name: "Kontakt, Firma, Deal, Lead oder Projekt suchen",
+      name: "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",
     })
     .fill("Brandt ERP");
   await dialog.getByRole("button", { name: "Brandt ERP" }).click();

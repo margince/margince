@@ -241,12 +241,12 @@ function accountTrigger(page: Page) {
 const primaryDestinations = [
   "Startseite",
   "Kontakte",
-  "Firmen",
+  "Unternehmen",
   "Leads",
   "Deals",
   "Projekte",
-  "Filter & Ansichten",
-  "Analytics",
+  "Filter und Ansichten",
+  "Analysen",
 ];
 
 // settleAnimations' own case, because the gap it closes is invisible to every
@@ -315,10 +315,10 @@ test("AC-shell-2: exactly one rail item is active and tracks the route", async (
     "aria-label",
     "Deals",
   );
-  await page.locator('nav.rail a[aria-label="Analytics"]').click();
+  await page.locator('nav.rail a[aria-label="Analysen"]').click();
   await expect(page.locator("nav.rail a.navitem.active")).toHaveAttribute(
     "aria-label",
-    "Analytics",
+    "Analysen",
   );
   await expect(page.locator("nav.rail a.navitem.active")).toHaveCount(1);
 });
@@ -354,7 +354,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await page.goto("/#/settings/privacy");
   const settingsHeading = page.getByRole("heading", { level: 1 });
   await expect(settingsHeading).toHaveCount(1);
-  await expect(settingsHeading).toHaveText("Datenschutz & Aufbewahrung");
+  await expect(settingsHeading).toHaveText("Datenschutz und Aufbewahrung");
   await expect(page.locator(".rail .navheading").first()).toHaveText(
     "Einstellungen",
   );
@@ -444,7 +444,9 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   await page.goto("/#/settings/account");
   // The card the language row sits in: password, sign-off and language are one
   // account card now rather than a Preferences card of their own.
-  await expect(page.getByRole("heading", { name: "Dein Konto" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Dein Nutzerkonto" }),
+  ).toBeVisible();
   await page.getByRole("combobox", { name: "Sprache" }).click();
   await page.getByRole("option", { name: "English" }).click();
   // The surface around the control follows the choice, not just the control's
@@ -465,7 +467,9 @@ test("features/10 §7: Settings → Account offers language and appearance", asy
   page,
 }) => {
   await page.goto("/#/settings/account");
-  await expect(page.getByRole("heading", { name: "Dein Konto" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Dein Nutzerkonto" }),
+  ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Sprache" })).toBeVisible();
   await expect(
     page.getByRole("combobox", { name: "Darstellung" }),
@@ -1010,7 +1014,7 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
   // The outcome lands on the CARD: by the time it is true the dialog that
   // produced it is gone.
   await expect(
-    page.getByText("Pausiert angelegt — es läuft nichts, bis du aktivierst."),
+    page.getByText("Pausiert angelegt. Nichts läuft, bis sie aktiviert ist."),
   ).toBeVisible();
   const row = page.locator('[data-automation="au-2"]');
   // The row states its status on the control that changes it, rather than on a
@@ -1085,7 +1089,9 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
     .click();
   // The actor filter still speaks the API's `type:id` vocabulary, which is the
   // spelling the column itself carries.
-  await page.getByRole("textbox", { name: "Akteur" }).fill("agent:runner");
+  await page
+    .getByRole("textbox", { name: de["settings.auditActor"] })
+    .fill("agent:runner");
   // The matching row stays AND both non-matching rows go. Asserting only that
   // the agent row is still visible would pass on a filter that did nothing —
   // it was already on screen before the filter was typed.
@@ -1124,9 +1130,11 @@ test("AC-book-public (B-EP09.14): consent gates booking and the policy passes th
   await expect(page.locator("nav.rail")).toHaveCount(0);
   const slot = page.getByRole("button", { name: /06\.07\.2026/ }).first();
   await expect(slot).toBeDisabled();
-  await page.getByRole("textbox", { name: "Dein Name" }).fill("Jonas Beispiel");
   await page
-    .getByRole("textbox", { name: "Deine E-Mail" })
+    .getByRole("textbox", { name: de["book.name"], exact: true })
+    .fill("Jonas Beispiel");
+  await page
+    .getByRole("textbox", { name: de["book.email"] })
     .fill("jonas@beispiel.example");
   await expect(slot).toBeDisabled();
   await page.getByRole("checkbox").check();
@@ -1156,26 +1164,26 @@ test("AC-book-public (B-EP09.14): consent gates booking and the policy passes th
   // Exact: this build transmits nothing, so the card confirms the slot and
   // promises nothing beyond it. A substring is satisfied by a longer sentence
   // that does promise something, which is the claim this copy had removed.
-  await expect(page.getByText("Gebucht.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(de["book.confirmed"], { exact: true }),
+  ).toBeVisible();
 });
 
 test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({
   page,
 }) => {
   await page.goto("/#/book/host-1");
-  await page.getByRole("textbox", { name: "Dein Name" }).fill("Jonas Beispiel");
   await page
-    .getByRole("textbox", { name: "Deine E-Mail" })
+    .getByRole("textbox", { name: de["book.name"], exact: true })
+    .fill("Jonas Beispiel");
+  await page
+    .getByRole("textbox", { name: de["book.email"] })
     .fill("jonas@beispiel.example");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: /12:00/ }).click();
-  await expect(
-    page.getByText(
-      "Die Buchung ging nicht durch — es wurde nichts eingetragen.",
-    ),
-  ).toBeVisible();
+  await expect(page.getByText(de["book.failed"])).toBeVisible();
   await expect(page.getByText("slot no longer available")).toBeVisible();
-  await expect(page.getByText("Gebucht.")).toHaveCount(0);
+  await expect(page.getByText(de["book.confirmed"])).toHaveCount(0);
 });
 
 test("AC-onboarding-1: onboarding is the rail-less conversational shell", async ({
@@ -1198,9 +1206,9 @@ test("AC-onboarding-1: onboarding is the rail-less conversational shell", async 
   await page.goto("/#/onboarding");
   await expect(page.locator("nav.rail")).toHaveCount(0);
   await expect(page.locator(".stepper")).toHaveCount(0);
-  await expect(page.getByLabel("Deine Website-Adresse")).toBeVisible();
+  await expect(page.getByLabel("Website-Adresse")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Meine Website lesen" }),
+    page.getByRole("button", { name: "Website lesen" }),
   ).toBeVisible();
   // The thread belongs to the working view, not the gate.
   await expect(
@@ -1351,7 +1359,7 @@ test.describe("§3.8: 390px mobile", () => {
       // merely the first control the row happens to lay out.
       //
       // Taking the first match was wrong in the way that matters: on an
-      // approval row the first control is the evidence link ("Freigabe-Detail"),
+      // approval row the first control is the evidence link ("Details zur Freigabe"),
       // which sits well above the Accept and Reject buttons that actually
       // answer the row. The test passed while the verb a rep presses was still
       // below the fold — a measurement of the wrong control is a green that
@@ -2198,7 +2206,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
         await expect(
           page.getByRole("heading", {
             level: 1,
-            name: "Hallo, ich bin Margince.",
+            name: "Das ist Margince.",
           }),
         ).toBeVisible();
         const overflow = await page.evaluate(
@@ -2285,7 +2293,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
       await expect(
         page.getByRole("heading", {
           level: 1,
-          name: "Hallo, ich bin Margince.",
+          name: "Das ist Margince.",
         }),
       ).toBeAttached();
       // The class, not the tag: see the note beside the other `.auth-task`
@@ -2325,7 +2333,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
     const headings = page.getByRole("heading", { level: 1 });
     await expect(headings).toHaveCount(1);
     await expect(
-      page.getByRole("heading", { level: 1, name: "Hallo, ich bin Margince." }),
+      page.getByRole("heading", { level: 1, name: "Das ist Margince." }),
     ).toBeAttached();
     await expect(
       page.getByRole("heading", { level: 2, name: "Bei Margince anmelden" }),
@@ -2411,7 +2419,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
     // The rail-less surface has no shell to check for; its own h1 is the proof
     // the screen rendered, and the block above already asserts that.
     await expect(
-      page.getByRole("heading", { level: 1, name: "Hallo, ich bin Margince." }),
+      page.getByRole("heading", { level: 1, name: "Das ist Margince." }),
     ).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "login");
@@ -2517,7 +2525,7 @@ test.describe("filters and views", () => {
     // Before anything is authored the count says so, rather than showing a zero
     // that would read as "no companies match".
     await expect(
-      page.getByText("Bedingung hinzufügen, um die Treffer zu sehen"),
+      page.getByText("Bedingung hinzufügen, um Treffer anzuzeigen"),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
@@ -2554,7 +2562,7 @@ test.describe("filters and views", () => {
 
     // The count is the SERVER's — 812 is the fixture's match_count, a number no
     // arithmetic on the two returned rows could produce.
-    await expect(page.getByText("812 Firmen treffen zu")).toBeVisible();
+    await expect(page.getByText("Passende Unternehmen: 812")).toBeVisible();
   });
 
   // #1286 made custom fields and tags selectable beside core fields, and the
@@ -2601,15 +2609,15 @@ test.describe("filters and views", () => {
     // The join control is present before a second clause exists, because it is a
     // property of the GROUP rather than of having two of anything.
     const joins = page.getByRole("group", {
-      name: "Wie diese Gruppe ihre Bedingungen verknüpft",
+      name: "Verknüpfungsmodus",
     });
     await expect(joins).toHaveCount(1);
     await expect(
-      joins.getByRole("button", { name: "ALLE · UND", pressed: true }),
+      joins.getByRole("button", { name: "Alle (UND)", pressed: true }),
     ).toBeVisible();
-    await joins.getByRole("button", { name: "BELIEBIGE · ODER" }).click();
+    await joins.getByRole("button", { name: "Beliebige (ODER)" }).click();
     await expect(
-      joins.getByRole("button", { name: "BELIEBIGE · ODER", pressed: true }),
+      joins.getByRole("button", { name: "Beliebige (ODER)", pressed: true }),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
@@ -2666,7 +2674,7 @@ test.describe("filters and views", () => {
     // the reader is told this is a sample rather than the selection.
     await expect(
       page.getByText(
-        "Die erste Seite der Treffer — genug, um den Filter zu prüfen, nicht die gesamte Auswahl.",
+        "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
       ),
     ).toBeVisible();
   });
@@ -2677,7 +2685,7 @@ test.describe("filters and views", () => {
     await page.goto("/#/filters/deals");
     await expectShellRendered(page);
     const objects = page.getByRole("group", {
-      name: "Welche Datensätze gefiltert werden",
+      name: "Datensatztyp",
     });
     await expect(
       objects.getByRole("button", { name: "Deals", pressed: true }),
@@ -2812,7 +2820,7 @@ test.describe("stage automation, in German", () => {
 
     // The way back is a deliberate act with its own confirmation, not a
     // toggle: lifting a safety stop by mis-click is the failure this guards.
-    await page.getByRole("button", { name: "Wieder starten" }).click();
+    await page.getByRole("button", { name: "Fortsetzen" }).click();
     await expect(
       page.getByText(/überspringt die Schwelle nicht/),
     ).toBeVisible();
@@ -2825,11 +2833,11 @@ test.describe("stage automation, in German", () => {
     await page.goto("/#/settings/stageautomation");
     await page.waitForLoadState("networkidle");
 
-    // "Rückgängig", with the window a contact actually has. A screen that
+    // "Rückgängig machen", with the window a contact actually has. A screen that
     // offered undo without saying how long it lasts leaves somebody to find
     // out by trying it too late.
     await expect(page.getByText(/Rückgängig für 72 h/)).toBeVisible();
     // And nothing about a stop, because there is none.
-    await expect(page.getByText("Margince hat das gestoppt")).toBeHidden();
+    await expect(page.getByText("Von Margince ausgesetzt")).toBeHidden();
   });
 });

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { de } from "../src/i18n/de";
 import { mockApi } from "./seed";
 
 // The mailbox-privacy surfaces, asserted in the language they ship in.
@@ -25,15 +26,15 @@ test("AC-mailbox-1: a mailbox says who may read it, and refuses shared without t
   await expect(row).toBeVisible();
 
   // The stored posture, and the sentence saying what it does.
-  await expect(row).toContainText("Wer E-Mails aus diesem Postfach lesen darf");
-  await expect(row).toContainText("Zurückgehalten bis eingestuft");
+  await expect(row).toContainText("Sichtbarkeit der E-Mails");
+  await expect(row).toContainText("Bis zur Einstufung zurückgehalten");
   await expect(row).toContainText(
-    "Eine neue Nachricht bleibt auf die Beteiligten beschränkt",
+    "Neue Nachrichten bleiben auf die Beteiligten beschränkt",
   );
   // The refusal rides on the ROW, not on the option label: a listbox option
   // ellipsises, and the half that gets cut is the reason a reader needs.
   await expect(row).toContainText(
-    "muss eine Administratorin für diese Firma erlauben",
+    "muss ein Admin für dieses Unternehmen erlauben",
   );
 
   await row.getByRole("combobox").click();
@@ -53,17 +54,19 @@ test("AC-mailbox-2: narrowing the posture offers to narrow the history too", asy
   await page.getByRole("option", { name: "Immer zurückgehalten" }).click();
 
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toContainText("Und die bereits erfassten E-Mails?");
+  await expect(dialog).toContainText("Auf erfasste E-Mails anwenden?");
   // One question and one modifier, never two rival verbs: the German labels do
   // not both fit the compact confirm, and a clipped primary button is what the
   // three-button version shipped as.
   const alsoHistory = dialog.getByRole("checkbox");
   await expect(alsoHistory).not.toBeChecked();
   await alsoHistory.check();
-  await dialog.getByRole("button", { name: "Sichtbarkeit ändern" }).click();
+  await dialog
+    .getByRole("button", { name: "E-Mail-Sichtbarkeit ändern" })
+    .click();
 
   await expect(row).toContainText("Immer zurückgehalten");
-  await expect(row).toContainText("unabhängig von jeder Einstufung");
+  await expect(row).toContainText("unabhängig von der Einstufung");
 });
 
 test("AC-mailbox-3: the admin opt-in states what turning it on asserts", async ({
@@ -91,16 +94,18 @@ test("AC-mailbox-4: the Senders page shows every decision and takes an overrule"
   await page.goto("/#/settings/connections");
   const senders = page.locator(".panel", { hasText: "Absender" }).first();
   await expect(senders).toBeVisible();
-  await expect(senders).toContainText("Eine Person");
-  await expect(senders).toContainText("Ein Newsletter");
-  await expect(senders).toContainText("Privat");
+  await expect(senders).toContainText(de["senders.kind.contact"]);
+  await expect(senders).toContainText(de["senders.kind.newsletter"]);
+  await expect(senders).toContainText(de["senders.kind.personal"]);
 
   const row = senders.locator("tr", { hasText: "news@substack.com" });
   await row.getByRole("button", { name: "Geschäftlich" }).click();
   // An overruled row says whose answer stands, because the reader auditing this
   // list needs to tell their own decisions from the classifier's.
-  await expect(row).toContainText("von dir entschieden");
-  await expect(row.getByRole("button", { name: "Zurücknehmen" })).toBeVisible();
+  await expect(row).toContainText(de["senders.byYou"]);
+  await expect(
+    row.getByRole("button", { name: "Rückgängig machen" }),
+  ).toBeVisible();
 });
 
 test("AC-mailbox-5: a sender kept out is told what that destroys", async ({
@@ -110,28 +115,28 @@ test("AC-mailbox-5: a sender kept out is told what that destroys", async ({
   const senders = page.locator(".panel", { hasText: "Absender" }).first();
   await senders
     .locator("tr", { hasText: "anne@hotmail.com" })
-    .getByRole("button", { name: "Aussperren" })
+    .getByRole("button", { name: "Ausschließen" })
     .click();
 
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toContainText("dauerhaft aussperren");
+  await expect(dialog).toContainText("dauerhaft ausschließen");
   await expect(dialog).toContainText("vernichtet");
   // What SURVIVES is the half a reader cannot guess: a colleague's own import
   // of the same message is theirs, and the purge does not reach it.
-  await expect(dialog).toContainText("bleiben ihr erhalten");
+  await expect(dialog).toContainText("bleiben bei diesem Teammitglied");
 });
 
 test("AC-mailbox-6: the connect form says what happens before it asks for a password", async ({
   page,
 }) => {
   await page.goto("/#/settings/connections");
-  await page.getByRole("button", { name: "Konto verbinden" }).click();
+  await page.getByRole("button", { name: "Connector hinzufügen" }).click();
   await page.getByTestId("connector-add-imap").getByRole("button").click();
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Margince liest dieses Postfach");
   await expect(dialog).toContainText(
-    "Ein neues Postfach ist standardmäßig zurückgehalten",
+    "Ein neues Postfach wird standardmäßig zurückgehalten",
   );
   // The notice asks for nothing: there is no checkbox and no field the server
   // records, and a mailbox connects with it unread. An acknowledgement here

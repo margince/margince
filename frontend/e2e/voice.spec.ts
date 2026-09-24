@@ -220,8 +220,8 @@ test("AC-voice-1: the card says what to hand over and why it matters", async ({
     ".txt,.md,.vtt,.srt,.json,.pdf,.docx",
   );
   // And the card answers "what should I upload?" where the uploading happens.
-  await expect(page.getByText("Was am besten funktioniert")).toBeVisible();
-  await expect(page.getByText("Warum das wichtig ist")).toBeVisible();
+  await expect(page.getByText("Die besten Proben")).toBeVisible();
+  await expect(page.getByText("Warum Proben hinzufügen")).toBeVisible();
 });
 
 test("AC-voice-2: a running build says so, and takes no second press", async ({
@@ -235,8 +235,8 @@ test("AC-voice-2: a running build says so, and takes no second press", async ({
 
   // In WORDS, not only as a spinner: a reader looking at the page was told
   // nothing, pressed again, and had no idea whether a second build started.
-  await expect(page.getByText(/wird gerade gebaut/)).toBeVisible();
-  await expect(page.getByText(/Seite verlassen/)).toBeVisible();
+  await expect(page.getByText(/wird aufgebaut/)).toBeVisible();
+  await expect(page.getByText(/Seite verlässt/)).toBeVisible();
   // Busy, but still reachable by keyboard — a natively disabled button would
   // drop out of the tab order for the minute the build runs.
   await expect(build).toHaveAttribute("aria-busy", "true");
@@ -280,7 +280,9 @@ test("AC-voice-4: a candidate can be read before it is chosen", async ({
   await expect(
     page.getByText("Erst die Bitte, dann der Grund, dann die Frist."),
   ).toBeVisible();
-  await expect(page.getByText(/noch nicht im Einsatz/)).toBeVisible();
+  await expect(
+    page.getByText(/erst genutzt, wenn du sie auswählst/),
+  ).toBeVisible();
 
   // The evidence a reader judges the voice BY, not only the summary of it: a
   // fixture whose keys the parser does not read renders an empty section and
@@ -303,7 +305,7 @@ test("AC-voice-4: a candidate can be read before it is chosen", async ({
     page.getByRole("button", { name: "Diese Version verwenden" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Meine aktuelle Stimme behalten" }),
+    page.getByRole("button", { name: "Aktuelle Stimme behalten" }),
   ).toBeVisible();
 });
 
