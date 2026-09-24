@@ -1181,9 +1181,7 @@
     width: 100%;
   }
 
-  /* The count stops competing with the tabs for the same line, and on a line
-     of its own it wraps rather than ellipsizes. The verbs stay beside the tabs
-     where they fit. */
+  /* Dissolved so the count can drop to a line of its own and the verbs stay. */
   .lt-head-end {
     display: contents;
   }

@@ -46,9 +46,11 @@ The product addresses its user as **du**, and only as du: du, dich, dir, dein,
 deine, deinem, deinen, deiner, deines. Never Sie, Ihr or Ihnen to the user.
 
 - A du-pronoun is **capitalised only where a sentence opens**: at the start of
-  the value, after ". ", "? ", "! " or ": ", straight after „ or (, and after a
+  the value, after ". ", "? " or "! ", straight after „ or (, and after a
   placeholder followed by a space ("{detail} Du kannst …"), whose value may end
-  a sentence. "Prüfe deine Eingaben", never "Prüfe Deine Eingaben".
+  a sentence. After ": " it is capitalised only when a full sentence follows;
+  the gate accepts a capital there either way, so that one is yours to judge.
+  "Prüfe deine Eingaben", never "Prüfe Deine Eingaben".
 - **Address nobody by default**, as the English does. Labels, titles,
   statuses, table headers, menu items and most help text are impersonal. Use du
   only where the English says "you" or "your", or where an error or
