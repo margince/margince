@@ -31,7 +31,7 @@ var euResidentLocations = map[string]bool{
 var nonResidentReason = map[string]string{
 	"europe-west2": "London is outside the EU",
 	"europe-west6": "Zürich is outside the EU",
-	"global":       "the global endpoint may process the prompt anywhere",
+	vertexGlobal:   "the global endpoint may process the prompt anywhere",
 	"us":           "the US multi-region processes in the US",
 }
 
@@ -80,18 +80,26 @@ func requireEULocation(label, location string) error {
 		ProfileEUResident, location, label, reason)
 }
 
+// The jurisdictions a Vertex location is reported under.
+const (
+	jurisdictionEU     = "eu"
+	jurisdictionUS     = "us"
+	jurisdictionOther  = "other"
+	jurisdictionGlobal = "global"
+)
+
 // locationJurisdiction is whose law a Vertex location processes under, by
 // this build's policy: eu exactly when resident, so a location Google adds
 // reads as other until this build names it.
 func locationJurisdiction(location string) string {
 	switch {
 	case euResidentLocations[location]:
-		return "eu"
-	case location == "global":
-		return "global"
+		return jurisdictionEU
+	case location == vertexGlobal:
+		return jurisdictionGlobal
 	case location == "us" || strings.HasPrefix(location, "us-"):
-		return "us"
+		return jurisdictionUS
 	default:
-		return "other"
+		return jurisdictionOther
 	}
 }

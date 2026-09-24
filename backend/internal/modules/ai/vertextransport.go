@@ -24,13 +24,16 @@ var vertexLocationShape = regexp.MustCompile(`^(global|us|eu|[a-z]+-[a-z]+[0-9]{
 // only, carries no customer data, and is served from the global host alone.
 const vertexPublisherModelsURL = "https://aiplatform.googleapis.com/v1beta1/publishers/google/models"
 
+// vertexGlobal is the location Google may process anywhere.
+const vertexGlobal = "global"
+
 // vertexHost is the API host serving one location, which is also where
 // Google processes the call. location must already match vertexLocationShape.
 func vertexHost(location string) string {
 	switch location {
 	case "eu", "us":
 		return "https://aiplatform." + location + ".rep.googleapis.com"
-	case "global":
+	case vertexGlobal:
 		return "https://aiplatform.googleapis.com"
 	default:
 		return "https://" + location + "-aiplatform.googleapis.com"

@@ -211,11 +211,11 @@ func TestAMalformedLocationIsRefusedAsTheCallersFault(t *testing.T) {
 	}
 }
 
-func vertexRouting(premiumModel, location string) RoutingConfig {
+func vertexRouting(location string) RoutingConfig {
 	return RoutingConfig{
 		Profile: ProfileEUResident,
 		Tiers: map[Tier]ProviderConfig{
-			TierPremium:    {Provider: providerGeminiVertex, Location: location, Model: premiumModel},
+			TierPremium:    {Provider: providerGeminiVertex, Location: location, Model: "gemini-3.5-flash"},
 			TierLocalSmall: {Provider: providerOllama, Model: "gemma3"},
 		},
 		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerGeminiVertex, Location: location, Model: "gemini-embedding-001"}},
@@ -234,8 +234,8 @@ func TestSavingRefusesAVertexModelItsLocationDoesNotServe(t *testing.T) {
 		cfg   RoutingConfig
 		names []string
 	}{
-		"not served":  {allCloudKeys(t), vertexRouting("gemini-3.5-flash", "eu"), []string{"tier premium", `"gemini-3.5-flash"`, `"eu"`, "does not serve"}},
-		"no key held": {noCloudKeys(), vertexRouting("gemini-3.5-flash", "europe-west4"), []string{"tier premium", "holds no service-account key"}},
+		"not served":  {allCloudKeys(t), vertexRouting("eu"), []string{"tier premium", `"gemini-3.5-flash"`, `"eu"`, "does not serve"}},
+		"no key held": {noCloudKeys(), vertexRouting("europe-west4"), []string{"tier premium", "holds no service-account key"}},
 	} {
 		store := &RoutingStore{keys: tc.keys, selectBrain: selector}
 		_, err := store.ReplaceIfVersion(admin, tc.cfg, "")
@@ -250,10 +250,10 @@ func TestSavingRefusesAVertexModelItsLocationDoesNotServe(t *testing.T) {
 		}
 	}
 	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
-	if err := store.probeVertexBindings(context.Background(), vertexRouting("gemini-3.5-flash", "europe-west4")); err != nil {
+	if err := store.probeVertexBindings(context.Background(), vertexRouting("europe-west4")); err != nil {
 		t.Errorf("a served model and embedder were refused: %v", err)
 	}
-	embeddingsOnly := vertexRouting("gemini-3.5-flash", "europe-west4")
+	embeddingsOnly := vertexRouting("europe-west4")
 	embeddingsOnly.Embeddings.Model = "gemini-embedding-000"
 	if err := store.probeVertexBindings(context.Background(), embeddingsOnly); err == nil || !strings.Contains(err.Error(), "embeddings") {
 		t.Errorf("an unserved embedder was admitted: %v", err)
@@ -268,8 +268,10 @@ func TestSavingABindingWithoutVertexProbesNothing(t *testing.T) {
 		t.Error("a binding without gemini_vertex built a client on save")
 		return nil, errors.New("unreachable")
 	}}
-	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierPremium: {Provider: providerAnthropic, Model: "m"}},
-		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake, Model: "e"}}}
+	cfg := RoutingConfig{
+		Tiers:      map[Tier]ProviderConfig{TierPremium: {Provider: providerAnthropic, Model: "m"}},
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake, Model: "e"}},
+	}
 	if err := store.probeVertexBindings(context.Background(), cfg); err != nil {
 		t.Errorf("probing a binding without vertex: %v", err)
 	}

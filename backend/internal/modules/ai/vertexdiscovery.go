@@ -27,7 +27,7 @@ import (
 // vertexMetadataLocation builds a client for a call whose host is fixed
 // (the locations list, the token exchange): selectVertex needs a location,
 // and global is the one that names no jurisdiction.
-const vertexMetadataLocation = "global"
+const vertexMetadataLocation = vertexGlobal
 
 // vertexProbeWord is the whole input a probe sends.
 const vertexProbeWord = "ping"
@@ -62,7 +62,8 @@ func (s *RoutingStore) ListProviderLocations(ctx context.Context, provider strin
 		return out, nil
 	}
 	client, err := s.selectBrain.build(
-		ProviderConfig{Provider: providerGeminiVertex, Location: vertexMetadataLocation}, s.resolvedKeys(ctx))
+		ProviderConfig{Provider: providerGeminiVertex, Location: vertexMetadataLocation}, s.resolvedKeys(ctx),
+	)
 	if err != nil {
 		out.Unavailable = unavailableFor(err)
 		return out, nil
@@ -86,9 +87,9 @@ func (s *RoutingStore) ListProviderLocations(ctx context.Context, provider strin
 // vertexMultiRegions are offered whether or not Google's list names them:
 // they are addressable on every project, and eu is the resident default.
 var vertexMultiRegions = map[string]string{
-	"eu":     "EU (multi-region)",
-	"us":     "US (multi-region)",
-	"global": "Global",
+	"eu":         "EU (multi-region)",
+	"us":         "US (multi-region)",
+	vertexGlobal: "Global",
 }
 
 // placedLocations keeps the ids a binding could name, adds the multi-regions
@@ -147,24 +148,34 @@ func (c vertexClient) listLocations(ctx context.Context) (map[string]string, err
 		if err != nil {
 			return nil, err
 		}
-		var page struct {
-			Locations []struct {
-				LocationID  string `json:"locationId"`  //nolint:tagliatelle // Google's wire format (camelCase)
-				DisplayName string `json:"displayName"` //nolint:tagliatelle // Google's wire format (camelCase)
-			} `json:"locations"`
-			NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google's wire format (camelCase)
+		next, err := readLocationPage(raw, found)
+		if err != nil {
+			return nil, err
 		}
-		if err := json.Unmarshal(raw, &page); err != nil {
-			return nil, fmt.Errorf("ai: gemini_vertex: decode location list: %w", err)
-		}
-		for _, l := range page.Locations {
-			found[l.LocationID] = l.DisplayName
-		}
-		if page.NextPageToken == "" || len(found) >= modelListLimit {
+		if next == "" || len(found) >= modelListLimit {
 			return found, nil
 		}
-		pageToken = page.NextPageToken
+		pageToken = next
 	}
+}
+
+// readLocationPage adds one page of Google's location list to found and
+// returns the next page's token.
+func readLocationPage(raw []byte, found map[string]string) (string, error) {
+	var page struct {
+		Locations []struct {
+			LocationID  string `json:"locationId"`  //nolint:tagliatelle // Google's wire format (camelCase)
+			DisplayName string `json:"displayName"` //nolint:tagliatelle // Google's wire format (camelCase)
+		} `json:"locations"`
+		NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google's wire format (camelCase)
+	}
+	if err := json.Unmarshal(raw, &page); err != nil {
+		return "", fmt.Errorf("ai: gemini_vertex: decode location list: %w", err)
+	}
+	for _, l := range page.Locations {
+		found[l.LocationID] = l.DisplayName
+	}
+	return page.NextPageToken, nil
 }
 
 // verifyCredential mints one access token, which is the whole of what a key
