@@ -13,13 +13,10 @@ import "slices"
 // Held by: TestNoGoSourceLiteralSpellsARetiredWord (backend/gates/recordsourcespelling_test.go)
 const RecordSourceManual = "manual"
 
-// retiredRecordSourceSpellings are the words that used to mean
-// RecordSourceManual. `ui` named the screen and `mcp` named the transport;
-// neither named an origin, which is the one thing this column says.
-//
-// `mcp` is still listed although nothing writes it and no row holds it: the
-// sweep that retired it left nothing that fails when it returns, and `ui`
-// has returned on exactly that footing before this gate existed to hold it.
+// retiredRecordSourceSpellings are refused as a record's source: `ui` names a
+// screen and `mcp` a transport, and neither names an origin, which is the one
+// thing this column says. A word stays listed even when nothing writes it —
+// an unlisted word is one nothing fails on, which is how a retired one returns.
 var retiredRecordSourceSpellings = []string{"mcp", "ui"}
 
 // RetiredRecordSourceSpellings lists the retired words, sorted. One owner, so

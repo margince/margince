@@ -13,8 +13,7 @@ import "errors"
 type Provenance struct {
 	// Source identifies the originating record or surface,
 	// e.g. "gmail:msg-18c2…", "ui:contact-form", "api" — a namespaced surface
-	// name, never the record's own RecordSourceManual column, so the retired
-	// bare "ui"/"mcp" spellings never applied here.
+	// name, never the record's own source column (RecordSourceManual).
 	Source string
 
 	// CapturedBy identifies the writing actor,

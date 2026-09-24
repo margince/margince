@@ -8,11 +8,6 @@ package gates
 // A record's `source` names where the row came from, and whoever uses this
 // product is one origin with one spelling.
 //
-// Three words meant it once — `manual` from the web app, `ui` from the project
-// surface, `mcp` from the tool surface. Collapsing them left a comment saying
-// so, and a comment is not a thing that fails, so the words come back. This is
-// what fails.
-//
 // The corpus is provenance.RetiredRecordSourceSpellings(), so adding a fourth
 // retired word arms both halves of this gate at once rather than one.
 //
@@ -80,9 +75,10 @@ var recordSourceExempt = gatekit.Waive(map[string]string{
 // a retired word — a struct field or wire key set in a composite literal, the
 // same site set by a later ASSIGNMENT (`spec.Source = "ui"`, `body["source"] =
 // "ui"`), and the same site read back in a COMPARISON (`args["source"] !=
-// "ui"`), in either operand order. A fixture builds most of its record by
-// literal, overwrites one field for the case under test, and then asserts on
-// what it put there — all three are the same site, spelled three ways.
+// "ui"`), in either operand order and whether written out or branched on by a
+// `switch`. A fixture builds most of its record by literal, overwrites one
+// field for the case under test, and then asserts on what it put there — all
+// three are the same site, spelled three ways.
 //
 // Reported by FILE PATH, not by line: this runs over sources swept from disk
 // by their own path rather than through a shared *token.FileSet, so a position
@@ -127,6 +123,10 @@ func retiredGoSpellings(path string, file *ast.File, retired []string) []string 
 			} else if word, ok := recordSourceValue(node.Y, node.X); ok {
 				report(word)
 			}
+		case *ast.SwitchStmt:
+			for _, word := range retiredSwitchCases(node) {
+				report(word)
+			}
 		}
 		return true
 	})
@@ -143,6 +143,29 @@ func recordSourceValue(target, value ast.Expr) (string, bool) {
 		return "", false
 	}
 	return retiredSourceLiteral(value)
+}
+
+// retiredSwitchCases reports the retired words a switch on a record-source key
+// branches on. A case clause holds plain expressions rather than the BinaryExpr
+// a written-out comparison produces, so `switch m["source"] { case "ui": }`
+// asks the same question in a shape the comparison walk cannot see.
+func retiredSwitchCases(node *ast.SwitchStmt) []string {
+	if node.Tag == nil || !keyIsRecordSource(node.Tag) {
+		return nil
+	}
+	var words []string
+	for _, stmt := range node.Body.List {
+		clause, ok := stmt.(*ast.CaseClause)
+		if !ok {
+			continue
+		}
+		for _, expr := range clause.List {
+			if word, ok := retiredSourceLiteral(expr); ok {
+				words = append(words, word)
+			}
+		}
+	}
+	return words
 }
 
 // keyIsRecordSource reports whether a key or an assignment target names the
@@ -193,6 +216,8 @@ func hasRecordSourceKey(file *ast.File) bool {
 			}
 		case *ast.BinaryExpr:
 			found = keyIsRecordSource(node.X) || keyIsRecordSource(node.Y)
+		case *ast.SwitchStmt:
+			found = node.Tag != nil && keyIsRecordSource(node.Tag)
 		}
 		return !found
 	})
@@ -350,46 +375,67 @@ func TestNoGoSourceLiteralSpellsARetiredWord(t *testing.T) {
 
 func TestTheGoDetectorAnswersEveryPlantedShape(t *testing.T) {
 	t.Parallel()
+	// Both predicates are asserted per shape, because they answer different
+	// questions and only one of them fails loudly. A shape hasRecordSourceKey
+	// does not recognise is never swept, so retiredGoSpellings is never asked
+	// about it and the census reports PASS over a file it did not read.
 	for _, probe := range []struct {
-		name string
-		body string
-		want bool
+		name    string
+		body    string
+		subject bool
+		want    bool
 	}{
 		{"a struct field", `package p
-var _ = struct{ Source string }{Source: "ui"}`, true},
+var _ = struct{ Source string }{Source: "ui"}`, true, true},
 		{"a wire key", `package p
-var _ = map[string]any{"source": "mcp"}`, true},
+var _ = map[string]any{"source": "mcp"}`, true, true},
 		{"the one spelling", `package p
-var _ = struct{ Source string }{Source: "manual"}`, false},
+var _ = struct{ Source string }{Source: "manual"}`, true, false},
 		{"a different provenance field", `package p
-var _ = struct{ SourceSystem string }{SourceSystem: "ui"}`, false},
+var _ = struct{ SourceSystem string }{SourceSystem: "ui"}`, false, false},
 		{"a different vocabulary sharing a word", `package p
-var _ = struct{ Mode string }{Mode: "manual"}`, false},
+var _ = struct{ Mode string }{Mode: "manual"}`, false, false},
 		{"a constant whose VALUE is a retired word", `package p
-const metaUIKey = "ui"`, false},
+const metaUIKey = "ui"`, false, false},
 		{"a source built at runtime", `package p
 var word = "ui"
-var _ = struct{ Source string }{Source: word}`, false},
+var _ = struct{ Source string }{Source: word}`, true, false},
 		{"a struct field set by assignment", `package p
 type T struct{ Source string }
-func f() { var t T; t.Source = "mcp" }`, true},
+func f() { var t T; t.Source = "mcp" }`, true, true},
 		{"a wire key set by assignment", `package p
-func f() { m := map[string]any{}; m["source"] = "ui" }`, true},
+func f() { m := map[string]any{}; m["source"] = "ui" }`, true, true},
 		{"an assignment to a different field", `package p
 type T struct{ SourceSystem string }
-func f() { var t T; t.SourceSystem = "ui" }`, false},
+func f() { var t T; t.SourceSystem = "ui" }`, false, false},
 		{"a comparison, key on the left", `package p
-func f() bool { m := map[string]any{}; return m["source"] != "ui" }`, true},
+func f() bool { m := map[string]any{}; return m["source"] != "ui" }`, true, true},
 		{"a comparison, key on the right", `package p
-func f() bool { m := map[string]any{}; return "mcp" == m["source"] }`, true},
+func f() bool { m := map[string]any{}; return "mcp" == m["source"] }`, true, true},
 		{"a comparison to the one spelling", `package p
-func f() bool { m := map[string]any{}; return m["source"] == "manual" }`, false},
+func f() bool { m := map[string]any{}; return m["source"] == "manual" }`, true, false},
+		{"a switch on the key", `package p
+func f() bool { m := map[string]any{}; switch m["source"] { case "ui": return true }; return false }`, true, true},
+		{"a switch branching on several words at once", `package p
+type T struct{ Source string }
+func f(t T) bool { switch t.Source { case "manual", "mcp": return true }; return false }`, true, true},
+		{"a switch on the one spelling", `package p
+type T struct{ Source string }
+func f(t T) bool { switch t.Source { case "manual": return true }; return false }`, true, false},
+		{"a switch on a different field", `package p
+type T struct{ SourceSystem string }
+func f(t T) bool { switch t.SourceSystem { case "ui": return true }; return false }`, false, false},
+		{"a tagless switch comparing the key", `package p
+func f() bool { m := map[string]any{}; switch { case m["source"] == "ui": return true }; return false }`, true, true},
 	} {
 		t.Run(probe.name, func(t *testing.T) {
 			fset := token.NewFileSet()
 			file, err := parser.ParseFile(fset, "probe.go", probe.body, parser.ParseComments)
 			if err != nil {
 				t.Fatalf("parsing the planted source: %v", err)
+			}
+			if got := hasRecordSourceKey(file); got != probe.subject {
+				t.Errorf("the subject predicate reported %v, want %v, for:\n%s", got, probe.subject, probe.body)
 			}
 			found := retiredGoSpellings("probe.go", file, provenance.RetiredRecordSourceSpellings())
 			if got := len(found) > 0; got != probe.want {
