@@ -10087,4 +10087,83 @@ export const de = {
   "employment.dateHint":
     "JJJJ-MM oder JJJJ-MM-TT. Leer lassen, wenn unbekannt.",
   "employment.more": "Weitere Anstellungen anzeigen",
+
+  "magic.title": "Was Margince erledigt hat",
+  "magic.since": "Seit {when}",
+  "magic.loading": "Wird gelesen, was die Maschinerie getan hat",
+  "magic.lane.done": "Für dich erledigt",
+  "magic.lane.needsYou": "Wartet auf dich",
+  "magic.lane.couldNotComplete": "Konnte nicht abgeschlossen werden",
+  "magic.lane.watching": "Muss wiederhergestellt werden",
+  "magic.empty.done": "In diesem Zeitraum wurde nichts für dich erledigt.",
+  "magic.empty.needsYou": "Keine Entscheidung wartet auf dich.",
+  "magic.empty.couldNotComplete": "Alles Begonnene ist angekommen.",
+  "magic.empty.watching": "Alle Quellen und Regeln sind in Ordnung.",
+  "magic.laneCount_one": "{count} Zeile",
+  "magic.laneCount_other": "{count} Zeilen",
+  "magic.col.what": "Was passiert ist",
+  "magic.col.about": "Betrifft",
+  "magic.col.when": "Wann",
+  "magic.col.wayBack": "Weg zurück",
+  "magic.noRecord": "Kein Datensatz genannt",
+  "magic.undo.fromHistory":
+    "Lässt sich über den Verlauf des Datensatzes zurücknehmen",
+  "magic.undoReason.noCompletedChange":
+    "Es hat sich nichts geändert, also gibt es nichts zurückzunehmen",
+  "magic.undoReason.notEvaluated": "Diese Installation hat es nicht geprüft",
+  "magic.notShown_one": "{count} Änderung wird nicht gezeigt: {reason}",
+  "magic.notShown_other": "{count} Änderungen werden nicht gezeigt: {reason}",
+  "magic.notShown.unadmittedAction": "Routinearbeit ohne Aussage für dich",
+  "magic.notShown.unknownEntityType":
+    "ein Datensatztyp, den diese Seite nicht einordnen kann",
+  "magic.notShown.outOfScope": "außerhalb deiner eigenen Datensätze",
+  "magic.action.advance_stage": "Ein Deal ist eine Phase weitergerückt",
+  "magic.action.promote": "Aus einem Lead wurde ein Deal",
+  "magic.action.update": "Ein Datensatz wurde aktualisiert",
+  "magic.action.assign": "Arbeit wurde neu zugewiesen",
+  "magic.action.activity_relink":
+    "Ein Austausch wurde dem richtigen Datensatz zugeordnet",
+  "magic.action.send_email": "Eine Nachricht wurde gesendet",
+  "magic.action.schedule": "Ein Termin wurde gebucht",
+  "magic.action.disqualify": "Ein Lead wurde disqualifiziert",
+  "magic.action.automation_troubled": "{name} steckt fest: {outcome}",
+  "magic.action.approval_coldstart": "Eine Erstansprache wartet auf dein Wort",
+  "magic.action.approval_send_email": "Eine Nachricht wartet auf dein Wort",
+  "magic.action.approval_advance_deal":
+    "Ein Phasenwechsel wartet auf dein Wort",
+  "magic.action.approval_promote_lead":
+    "Die Umwandlung eines Leads wartet auf dein Wort",
+  "magic.action.approval_overnight":
+    "Ein Vorschlag aus der Nacht wartet auf dein Wort",
+  "magic.action.approval_transcript_proposal":
+    "Ein Vorschlag aus einer Aufzeichnung wartet auf dein Wort",
+  "magic.action.approval_pending":
+    "Ein Vorschlag vom Typ {kind} wartet auf dein Wort",
+  "magic.action.capture_reauth_required":
+    "{provider} muss neu verbunden werden",
+  "magic.action.capture_connection_error": "{provider} war nicht erreichbar",
+  "magic.action.capture_sync_failing": "{provider} kommt nicht hinterher",
+  "magic.action.capture_backfill_failed":
+    "{provider} konnte die eigene Historie nicht zu Ende lesen",
+  "magic.consequence.stage_moved":
+    "Der Deal steht jetzt in einer späteren Phase.",
+  "magic.consequence.lead_promoted": "In der Pipeline steht ein neuer Deal.",
+  "magic.consequence.owner_changed": "Jetzt ist jemand anders zuständig.",
+  "magic.consequence.record_relinked":
+    "Der Austausch steht jetzt beim richtigen Datensatz.",
+  "magic.consequence.message_sent":
+    "Empfangende haben sie, zurückholen geht nicht.",
+  "magic.consequence.meeting_booked": "Der Termin steht im Kalender.",
+  "magic.consequence.lead_disqualified":
+    "Der Lead ist aus der Pipeline heraus.",
+  "magic.consequence.automation_did_nothing":
+    "Nichts von dem, was die Regel zugesagt hat, ist passiert.",
+  "magic.consequence.awaits_your_decision":
+    "Es passiert nichts, bis du entscheidest.",
+  "magic.consequence.capture_not_collecting":
+    "Aus dieser Quelle wird nichts mehr erfasst.",
+  "magic.consequence.capture_may_be_incomplete":
+    "Was du aus dieser Quelle siehst, kann unvollständig sein.",
+  "magic.consequence.capture_history_incomplete":
+    "Älterer Austausch aus dieser Quelle fehlt.",
 } as const satisfies Record<MessageKey, string>;

@@ -9993,4 +9993,78 @@ export const vi = {
   "employment.dateHint":
     "Dùng YYYY-MM hoặc YYYY-MM-DD. Để trống nếu chưa biết.",
   "employment.more": "Xem thêm công việc",
+
+  "magic.title": "Margince đã làm gì",
+  "magic.since": "Kể từ {when}",
+  "magic.loading": "Đang đọc những gì hệ thống đã làm",
+  "magic.lane.done": "Đã làm giúp bạn",
+  "magic.lane.needsYou": "Đang chờ bạn",
+  "magic.lane.couldNotComplete": "Không hoàn tất được",
+  "magic.lane.watching": "Cần khôi phục",
+  "magic.empty.done":
+    "Trong khoảng thời gian này không có gì được làm giúp bạn.",
+  "magic.empty.needsYou": "Không có quyết định nào đang chờ bạn.",
+  "magic.empty.couldNotComplete": "Mọi việc đã bắt đầu đều hoàn tất.",
+  "magic.empty.watching": "Mọi nguồn và quy tắc đều bình thường.",
+  "magic.laneCount_one": "{count} dòng",
+  "magic.laneCount_other": "{count} dòng",
+  "magic.col.what": "Chuyện gì đã xảy ra",
+  "magic.col.about": "Liên quan đến",
+  "magic.col.when": "Khi nào",
+  "magic.col.wayBack": "Cách hoàn tác",
+  "magic.noRecord": "Không nêu bản ghi nào",
+  "magic.undo.fromHistory": "Có thể hoàn tác từ lịch sử của bản ghi",
+  "magic.undoReason.noCompletedChange":
+    "Không có gì thay đổi nên không có gì để hoàn tác",
+  "magic.undoReason.notEvaluated": "Bản cài đặt này chưa kiểm tra",
+  "magic.notShown_one": "{count} thay đổi không được hiển thị: {reason}",
+  "magic.notShown_other": "{count} thay đổi không được hiển thị: {reason}",
+  "magic.notShown.unadmittedAction": "việc bảo trì không có ý nghĩa với bạn",
+  "magic.notShown.unknownEntityType":
+    "một loại bản ghi mà trang này không xếp được",
+  "magic.notShown.outOfScope": "nằm ngoài các bản ghi của bạn",
+  "magic.action.advance_stage": "Một deal đã chuyển sang giai đoạn tiếp theo",
+  "magic.action.promote": "Một lead đã trở thành deal",
+  "magic.action.update": "Một bản ghi đã được cập nhật",
+  "magic.action.assign": "Công việc đã được giao lại",
+  "magic.action.activity_relink": "Một trao đổi đã được xếp vào đúng bản ghi",
+  "magic.action.send_email": "Một tin nhắn đã được gửi",
+  "magic.action.schedule": "Một cuộc hẹn đã được đặt",
+  "magic.action.disqualify": "Một lead đã bị loại",
+  "magic.action.automation_troubled": "{name} đang gặp trục trặc: {outcome}",
+  "magic.action.approval_coldstart":
+    "Một lần tiếp cận đầu tiên đang chờ bạn duyệt",
+  "magic.action.approval_send_email": "Một tin nhắn đang chờ bạn duyệt",
+  "magic.action.approval_advance_deal":
+    "Một bước chuyển giai đoạn đang chờ bạn duyệt",
+  "magic.action.approval_promote_lead":
+    "Việc chuyển một lead thành deal đang chờ bạn duyệt",
+  "magic.action.approval_overnight":
+    "Một đề xuất từ đêm qua đang chờ bạn duyệt",
+  "magic.action.approval_transcript_proposal":
+    "Một đề xuất từ bản ghi âm đang chờ bạn duyệt",
+  "magic.action.approval_pending": "Một đề xuất loại {kind} đang chờ bạn duyệt",
+  "magic.action.capture_reauth_required": "{provider} cần được kết nối lại",
+  "magic.action.capture_connection_error": "Không kết nối được tới {provider}",
+  "magic.action.capture_sync_failing": "{provider} đang không theo kịp",
+  "magic.action.capture_backfill_failed":
+    "{provider} không đọc xong được lịch sử",
+  "magic.consequence.stage_moved": "Deal hiện ở một giai đoạn muộn hơn.",
+  "magic.consequence.lead_promoted": "Pipeline có thêm một deal mới.",
+  "magic.consequence.owner_changed": "Trách nhiệm nay thuộc về bên khác.",
+  "magic.consequence.record_relinked": "Trao đổi nay nằm đúng bản ghi của nó.",
+  "magic.consequence.message_sent":
+    "Bên nhận đã có tin nhắn và không thể thu hồi.",
+  "magic.consequence.meeting_booked": "Cuộc hẹn đã có trong lịch.",
+  "magic.consequence.lead_disqualified": "Lead đã rời khỏi pipeline.",
+  "magic.consequence.automation_did_nothing":
+    "Không điều gì quy tắc hứa hẹn đã xảy ra.",
+  "magic.consequence.awaits_your_decision":
+    "Không có gì diễn ra cho đến khi bạn quyết định.",
+  "magic.consequence.capture_not_collecting":
+    "Không có gì được thu thập từ nguồn này.",
+  "magic.consequence.capture_may_be_incomplete":
+    "Những gì bạn thấy từ nguồn này có thể còn thiếu.",
+  "magic.consequence.capture_history_incomplete":
+    "Các trao đổi cũ hơn từ nguồn này bị thiếu.",
 } as const satisfies Record<MessageKey, string>;

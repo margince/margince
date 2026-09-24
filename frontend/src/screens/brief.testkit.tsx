@@ -85,6 +85,22 @@ const DEFAULTS: Routes = {
       receipts: [],
       truncated: false,
     }),
+  // The receipt at the foot of the page. Every lane, `totals` and both caveat
+  // lists are required by the contract, so the generic empty page would fail
+  // the panel in a way no server could produce — the same reason /worklist is
+  // answered above. A QUIET receipt: nothing ran, and nothing was withheld.
+  "GET /magic": () =>
+    jsonResponse({
+      as_of: "2026-09-13T08:00:00Z",
+      since: "2026-09-12T08:00:00Z",
+      done: [],
+      needs_you: [],
+      could_not_complete: [],
+      watching: [],
+      totals: { done: 0, needs_you: 0, could_not_complete: 0, watching: 0 },
+      not_shown: [],
+      sources_unavailable: [],
+    }),
   // The plan panel reads `commitments` off this, which the contract marks
   // required. The generic empty page carries none, so an unrouted read would
   // fail the panel in a way no server could produce — the same reason
