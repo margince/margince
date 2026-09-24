@@ -72,6 +72,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendidlebase_test.go` | H3 | The deal board and the server must measure silence from the SAME timestamp, or a card ages differently from the list that filed the deal stalled. |
 | `frontendlaneparity_test.go` | H3 | The frontend gate is spelled once as `make check-fe` and run by CI as three parallel jobs. |
 | `frontendlinkedinhosts_test.go` | H3 | Which hosts count as LinkedIn is decided on both sides of the wire, and the two answers are deliberately different sizes. |
+| `frontendmagickeys_test.go` | H2 | Every sentence the receipt emits has a word for it, in the client that draws it and in the catalog that translates it. |
 | `frontendmailproviders_test.go` | H3 | Which capture providers are a MAILBOX is answered on both sides of the wire, and the two answers must be the same three names. |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the SAME table, or the integer they exchange means two different amounts. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
@@ -94,6 +95,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `listsortvocabulary_test.go` | H3 | A sort the list OFFERS is a sort the server ACCEPTS. |
 | `localedoc_test.go` | H2 | The docs name exactly the locales the tree ships, and the catalogs are the set the Go validators admit. |
 | `lockspelling_test.go` | H2 | One lock, two modules, and no import between them. |
+| `magiccaptureconcerns_test.go` | H2 | Every condition capture can raise is a condition the watching lane draws. |
 | `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it (frontend/src/screens/brief.view.ts) and outbound mail links to it (internal/platform/mailcopy/link.go), because a message has to name a view before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly PANEL's labels. |
 | `meetinghorizonparity_test.go` | H2 | How far into the diary a meeting still says a relationship is live, spelled twice in two modules that may not import each other, and held equal here. |

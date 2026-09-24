@@ -81,8 +81,8 @@ func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int, sco
 	return out, nil
 }
 
-// captureHealthRegistry is the ONE spelling of the registry a health lane
-// reads through: bare, with no sink, authority or vault, because
+// captureHealthRegistry composes the registry a health lane reads through:
+// bare, with no sink, authority or vault, because
 // Registry.HealthConcerns stays within what Connections itself reads and
 // anything deeper would be a nil dereference on a request path.
 func captureHealthRegistry(db *database.DB) *capture.Registry {

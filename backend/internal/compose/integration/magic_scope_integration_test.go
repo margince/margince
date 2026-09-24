@@ -496,8 +496,8 @@ func stagedRow(kind string) crmcontracts.Approval {
 
 // THE HEADER MUST AGREE WITH THE PAGE UNDER IT.
 //
-// Each lane is assembled by its own arm and the four totals are written once,
-// after all of them — so a lane added to the array and forgotten in that block
+// Each lane is assembled by its own arm and the four totals are written
+// together, after all of them — so a lane added to the array and forgotten in that block
 // ships a receipt whose own count contradicts what it carries. A client draws
 // "5 of 8" from the total, and an 8 no row supports is worse than no figure.
 //

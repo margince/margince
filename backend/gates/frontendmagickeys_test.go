@@ -15,10 +15,8 @@ package gates
 // string literal, and whether any catalog carries that key is a fact no
 // compiler on either side can see.
 //
-// It went the way that always goes. Nine keys shipped unresolvable: every line
-// the lanes could draw named a word that existed nowhere, and nothing failed,
-// because a missing translation renders as its own key and only a reader
-// notices.
+// A key with no entry in the client registry or the catalog fails nothing
+// anywhere: the line draws, renders as its own key, and only a reader notices.
 //
 // THE STALE DIRECTION IS THE OTHER HALF. A key retired from the Go vocabulary
 // leaves a catalog entry behind that reads exactly like coverage, and the next

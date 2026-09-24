@@ -161,12 +161,12 @@ const systemProposer = "system"
 // machine at all.
 //
 // FAIL CLOSED ON PROVENANCE. An id this build cannot place is refused rather
-// than filed under the system actor, because the one spelling it is most likely
-// to be is a human's: every principal id here is `agent:`, `connector:`,
-// `system` or `human:`, and a default that swept the remainder into `system`
-// would launder exactly the case the contract forbids. An unplaceable proposer
-// is also the shape a NEW principal kind arrives in, and guessing it is the
-// product would be a claim this package cannot support.
+// than filed under the system actor, because the likeliest thing it is, is a
+// human: every principal id here is `agent:`, `connector:`, `system` or
+// `human:`, and a default sweeping the remainder into `system` would launder
+// exactly the case the contract forbids. An unplaceable proposer is also the
+// shape a NEW principal kind arrives in, and guessing it is the product would
+// be a claim this package cannot support.
 func machineProposer(proposedBy string) (crmcontracts.MagicActor, bool) {
 	if proposedBy == systemProposer {
 		return crmcontracts.MagicActor{
