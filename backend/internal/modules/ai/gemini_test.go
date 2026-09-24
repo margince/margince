@@ -157,6 +157,9 @@ func TestGeminiThinkingDefaultsLowOnlyForAStructuredRequest(t *testing.T) {
 		{"free text, caller chose medium", "gemini-3.5-flash", nil, "medium", "medium"},
 		{"structured on flash-lite, no level chosen", "gemini-3.1-flash-lite", schema, "", ""},
 		{"structured on 2.5 flash-lite, no level chosen", "gemini-2.5-flash-lite", schema, "", ""},
+		{"structured on 2.5 flash, no level chosen", "gemini-2.5-flash", schema, "", ""},
+		{"structured on 2.5 pro, no level chosen", "models/gemini-2.5-pro", schema, "", ""},
+		{"structured on an alias, no level chosen", "gemini-flash-latest", schema, "", geminiStructuredThinkingLevel},
 		{"structured on flash-lite, caller chose medium", "gemini-3.1-flash-lite", schema, "medium", "medium"},
 	}
 	for _, tc := range cases {
@@ -196,7 +199,7 @@ func TestGeminiStructuredThinkingFollowsTheRequestedModel(t *testing.T) {
 	for _, tc := range []struct {
 		model string
 		sent  bool
-	}{{"models/gemini-3.1-flash-lite", false}, {"gemini-3.5-flash", true}} {
+	}{{"models/gemini-3.1-flash-lite", false}, {"gemini-3.5-flash", true}, {"gemini-2.5-flash", false}, {"models/gemini-2.5-flash", false}} {
 		var body []byte
 		client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
 			body = readBody(t, r.Body)
