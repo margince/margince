@@ -151,6 +151,14 @@ embeddings: {provider: gemini, model: gemini-embedding-001}
 `,
 			want: "e9c868909349fac6f7aadea107a94281362a37b95f1f7cc5a320193142972377",
 		},
+		"a Vertex binding, which alone marshals a location": {
+			doc: `profile: eu_hosted
+tiers:
+  premium: {provider: gemini_vertex, location: eu, model: gemini-3.5-flash}
+embeddings: {provider: gemini_vertex, location: europe-west4, model: gemini-embedding-001}
+`,
+			want: "70df0c5068f432441c98f6af9b4ae5c6dfb432652b92f04f4d3e5d1c0023602d",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if got := versionOf(t, tc.doc); got != tc.want {

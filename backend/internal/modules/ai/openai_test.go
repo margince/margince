@@ -208,7 +208,7 @@ func TestOpenAIEmbedReturnsVectors(t *testing.T) {
 }
 
 func TestOpenAIReportsNotLocalOnly(t *testing.T) {
-	client, err := SelectBrain(ProviderConfig{Provider: "openai", Model: "gpt-x"}, allCloudKeys())
+	client, err := SelectBrain(ProviderConfig{Provider: "openai", Model: "gpt-x"}, allCloudKeys(t))
 	if err != nil {
 		t.Fatal(err)
 	}

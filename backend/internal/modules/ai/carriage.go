@@ -147,6 +147,7 @@ func wireCarriage() map[string][]string {
 		providerOpenAICompatible: carriesImages,
 		providerOpenAI:           openAICarries,
 		providerGemini:           geminiCarries,
+		providerGeminiVertex:     geminiCarries,
 	}
 }
 

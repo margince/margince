@@ -827,6 +827,7 @@ func (e AiProfileName) Valid() bool {
 const (
 	AiProfileProvidersAnthropic        AiProfileProviders = "anthropic"
 	AiProfileProvidersGemini           AiProfileProviders = "gemini"
+	AiProfileProvidersGeminiVertex     AiProfileProviders = "gemini_vertex"
 	AiProfileProvidersOllama           AiProfileProviders = "ollama"
 	AiProfileProvidersOpenai           AiProfileProviders = "openai"
 	AiProfileProvidersOpenaiCompatible AiProfileProviders = "openai_compatible"
@@ -839,6 +840,8 @@ func (e AiProfileProviders) Valid() bool {
 	case AiProfileProvidersAnthropic:
 		return true
 	case AiProfileProvidersGemini:
+		return true
+	case AiProfileProvidersGeminiVertex:
 		return true
 	case AiProfileProvidersOllama:
 		return true
@@ -1220,6 +1223,7 @@ func (e AssignmentSubjectKind) Valid() bool {
 const (
 	AssistantConfiguredModelProviderAssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
 	AssistantConfiguredModelProviderAssistantModelProviderGemini           AssistantConfiguredModelProvider = "gemini"
+	AssistantConfiguredModelProviderAssistantModelProviderGeminiVertex     AssistantConfiguredModelProvider = "gemini_vertex"
 	AssistantConfiguredModelProviderAssistantModelProviderOllama           AssistantConfiguredModelProvider = "ollama"
 	AssistantConfiguredModelProviderAssistantModelProviderOpenAI           AssistantConfiguredModelProvider = "openai"
 	AssistantConfiguredModelProviderAssistantModelProviderOpenAICompatible AssistantConfiguredModelProvider = "openai_compatible"
@@ -1232,6 +1236,8 @@ func (e AssistantConfiguredModelProvider) Valid() bool {
 	case AssistantConfiguredModelProviderAssistantModelProviderAnthropic:
 		return true
 	case AssistantConfiguredModelProviderAssistantModelProviderGemini:
+		return true
+	case AssistantConfiguredModelProviderAssistantModelProviderGeminiVertex:
 		return true
 	case AssistantConfiguredModelProviderAssistantModelProviderOllama:
 		return true
@@ -1334,6 +1340,7 @@ func (e AssistantProfileName) Valid() bool {
 const (
 	AssistantProfileProvidersAnthropic        AssistantProfileProviders = "anthropic"
 	AssistantProfileProvidersGemini           AssistantProfileProviders = "gemini"
+	AssistantProfileProvidersGeminiVertex     AssistantProfileProviders = "gemini_vertex"
 	AssistantProfileProvidersOllama           AssistantProfileProviders = "ollama"
 	AssistantProfileProvidersOpenai           AssistantProfileProviders = "openai"
 	AssistantProfileProvidersOpenaiCompatible AssistantProfileProviders = "openai_compatible"
@@ -1346,6 +1353,8 @@ func (e AssistantProfileProviders) Valid() bool {
 	case AssistantProfileProvidersAnthropic:
 		return true
 	case AssistantProfileProvidersGemini:
+		return true
+	case AssistantProfileProvidersGeminiVertex:
 		return true
 	case AssistantProfileProvidersOllama:
 		return true
@@ -19174,7 +19183,7 @@ type AiEmbeddingsBinding struct {
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 }
 
@@ -19414,7 +19423,7 @@ type AiTierBinding struct {
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 }
 

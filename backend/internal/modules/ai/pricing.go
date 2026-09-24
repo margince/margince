@@ -204,6 +204,12 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// an operator relying on this cost should reconfirm against the
 		// live sheet the same way the gpt-5-mini row above asks for.
 		embedOn(day, providerGemini, "gemini-embedding-001", 150_000),
+
+		// Gemini on Vertex AI: the same models at the gemini rows' rates. NEEDS
+		// OPERATOR CONFIRMATION against the Vertex sheet for the bound location.
+		rateOn(day, providerGeminiVertex, "gemini-3.5-flash", 1_500_000, 9_000_000, 150_000, 0),
+		rateOn(day, providerGeminiVertex, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
+		embedOn(day, providerGeminiVertex, "gemini-embedding-001", 150_000),
 	}
 }
 

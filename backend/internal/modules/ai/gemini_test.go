@@ -200,7 +200,7 @@ func TestGeminiEmbedReturnsVectorsAndPinsOutputDimensionality(t *testing.T) {
 }
 
 func TestGeminiReportsNotLocalOnly(t *testing.T) {
-	client, err := SelectBrain(ProviderConfig{Provider: "gemini", Model: "gemini-x"}, allCloudKeys())
+	client, err := SelectBrain(ProviderConfig{Provider: "gemini", Model: "gemini-x"}, allCloudKeys(t))
 	if err != nil {
 		t.Fatal(err)
 	}

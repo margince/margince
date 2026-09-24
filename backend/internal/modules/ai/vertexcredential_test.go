@@ -26,24 +26,18 @@ import (
 	"time"
 )
 
-var (
-	testVertexKeyOnce sync.Once
-	testVertexKey     *rsa.PrivateKey
-)
+var testVertexKey = sync.OnceValues(func() (*rsa.PrivateKey, error) { return rsa.GenerateKey(rand.Reader, 2048) })
 
-func vertexTestKey(t *testing.T) *rsa.PrivateKey {
+func vertexTestKey(t testing.TB) *rsa.PrivateKey {
 	t.Helper()
-	testVertexKeyOnce.Do(func() {
-		key, err := rsa.GenerateKey(rand.Reader, 2048)
-		if err != nil {
-			t.Fatalf("generating the test key: %v", err)
-		}
-		testVertexKey = key
-	})
-	return testVertexKey
+	key, err := testVertexKey()
+	if err != nil {
+		t.Fatalf("generating the test key: %v", err)
+	}
+	return key
 }
 
-func pkcs8PEM(t *testing.T, key crypto.PrivateKey) string {
+func pkcs8PEM(t testing.TB, key crypto.PrivateKey) string {
 	t.Helper()
 	der, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
@@ -53,7 +47,7 @@ func pkcs8PEM(t *testing.T, key crypto.PrivateKey) string {
 }
 
 // serviceAccountJSON is a key file shaped like Google's, with overrides.
-func serviceAccountJSON(t *testing.T, overrides map[string]string) string {
+func serviceAccountJSON(t testing.TB, overrides map[string]string) string {
 	t.Helper()
 	file := map[string]string{
 		"type":         "service_account",

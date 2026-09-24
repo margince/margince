@@ -6,6 +6,8 @@ package ai
 import (
 	"context"
 	"net/http"
+
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // geminiTransport is what differs between the hosts that speak the Gemini
@@ -17,6 +19,9 @@ type geminiTransport interface {
 	modelURL(model, verb string) string
 	// modelsURL is the absolute URL of the model collection this host lists.
 	modelsURL() string
+	// readModelPage decodes one page of that collection and its next-page
+	// token; the two hosts list models in different envelopes.
+	readModelPage(raw []byte) ([]model.Info, string, error)
 	authorize(ctx context.Context, r *http.Request) error
 }
 

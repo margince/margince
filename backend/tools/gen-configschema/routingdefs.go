@@ -55,11 +55,12 @@ const routingDefsTemplate = `{
     "required": ["provider"],
     "properties": {
       "provider": {
-        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini. The only place vendor names appear.",
-        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini"]
+        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The only place vendor names appear.",
+        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini", "gemini_vertex"]
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
       "base_url": { "type": "string", "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default." },
+      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only, and REQUIRED there: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4. The host follows from it, so gemini_vertex takes no base_url." },
       "input": {
         "description": "What the bound model can be GIVEN. On openai_compatible/vllm it is the whole answer (the carriage depends on which model was bound). On every other provider it NARROWS the carriage fixed in that adapter's wire — at most what the wire carries, at most what is declared — so it can take image away from a gemini tier and can never add a lane a wire lacks. Omit to take whatever the provider carries; write [text] to send it no attachments. Must include text.",
         "type": "array",
@@ -74,6 +75,14 @@ const routingDefsTemplate = `{
       {
         "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
         "then": { "required": ["base_url"] }
+      },
+      {
+        "if":   { "properties": { "provider": { "const": "gemini_vertex" } } },
+        "then": { "required": ["location"], "not": { "required": ["base_url"] } }
+      },
+      {
+        "if":   { "required": ["location"] },
+        "then": { "properties": { "provider": { "const": "gemini_vertex" } } }
       },
       {
         "if": { "required": ["routing"] },
@@ -143,17 +152,26 @@ const routingDefsTemplate = `{
     "required": ["provider"],
     "properties": {
       "provider": {
-        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini. The only place vendor names appear.",
-        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini"]
+        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The only place vendor names appear.",
+        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini", "gemini_vertex"]
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
       "base_url": { "type": "string", "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default." },
+      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only, and REQUIRED there: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4. The host follows from it, so gemini_vertex takes no base_url." },
       "dimensions": { "type": "integer", "minimum": 0, "maximum": 2000, "description": "Vector width the provider is asked to emit. Optional; 0 or omitted defaults to 1536." }
     },
     "allOf": [
       {
         "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
         "then": { "required": ["base_url"] }
+      },
+      {
+        "if":   { "properties": { "provider": { "const": "gemini_vertex" } } },
+        "then": { "required": ["location"], "not": { "required": ["base_url"] } }
+      },
+      {
+        "if":   { "required": ["location"] },
+        "then": { "properties": { "provider": { "const": "gemini_vertex" } } }
       }
     ]
   }

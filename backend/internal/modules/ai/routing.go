@@ -343,6 +343,9 @@ func (cfg RoutingConfig) validate() error {
 			return err
 		}
 	}
+	if err := validateVertexPlacement("the embeddings lane", cfg.Embeddings.ProviderConfig); err != nil {
+		return err
+	}
 	// The embed lane dials an operator-supplied host like any chat tier, so it
 	// carries the same egress rule on every profile.
 	if err := requireDialableEndpoint("the embeddings lane", cfg.Embeddings.Provider, cfg.Embeddings.BaseURL); err != nil {
@@ -406,6 +409,9 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 		if err := requireSovereignEndpoint(fmt.Sprintf("tier %s", tier), binding.Provider, binding.BaseURL); err != nil {
 			return err
 		}
+	}
+	if err := validateVertexPlacement(fmt.Sprintf("tier %s", tier), binding); err != nil {
+		return err
 	}
 	// EVERY profile, not only sovereign. base_url is the address this server
 	// dials, and outside the sovereign branch above nothing looked at it at

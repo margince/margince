@@ -24675,7 +24675,7 @@ components:
           type: string
           description: |
             The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-            | openai | gemini. The credential is never part of this document.
+            | openai | gemini | gemini_vertex. The credential is never part of this document.
         model: { type: string, description: The provider-native model id. }
         base_url: { type: string, description: 'Endpoint override; empty means the provider default.' }
         input:
@@ -37968,7 +37968,7 @@ components:
           type: array
           uniqueItems: true
           description: Distinct configured provider keys, sorted; fake is never returned.
-          items: { type: string, enum: [anthropic, gemini, ollama, openai, openai_compatible, vllm] }
+          items: { type: string, enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm] }
 
     AiProfile:
       type: object
@@ -37983,7 +37983,7 @@ components:
           type: array
           uniqueItems: true
           description: Distinct configured provider keys, sorted; fake is never returned.
-          items: { type: string, enum: [anthropic, gemini, ollama, openai, openai_compatible, vllm] }
+          items: { type: string, enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm] }
         configured_models:
           type: array
           description: Authenticated tier-to-model bindings. Credentials and endpoints never appear here.
@@ -38000,8 +38000,8 @@ components:
           x-enum-varnames: [AssistantModelTierLocalSmall, AssistantModelTierCheapCloud, AssistantModelTierPremium, AssistantModelTierFrontier, AssistantModelTierLocalLarge]
         provider:
           type: string
-          enum: [anthropic, gemini, ollama, openai, openai_compatible, vllm]
-          x-enum-varnames: [AssistantModelProviderAnthropic, AssistantModelProviderGemini, AssistantModelProviderOllama, AssistantModelProviderOpenAI, AssistantModelProviderOpenAICompatible, AssistantModelProviderVLLM]
+          enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm]
+          x-enum-varnames: [AssistantModelProviderAnthropic, AssistantModelProviderGemini, AssistantModelProviderGeminiVertex, AssistantModelProviderOllama, AssistantModelProviderOpenAI, AssistantModelProviderOpenAICompatible, AssistantModelProviderVLLM]
         model: { type: string }
 
     AuthCapabilities:

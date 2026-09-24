@@ -105,6 +105,8 @@ func publicProvider(provider string) (crmcontracts.AssistantProfileProviders, bo
 		return crmcontracts.AssistantProfileProviders(providerAnthropic), true
 	case providerGemini:
 		return crmcontracts.AssistantProfileProviders(providerGemini), true
+	case providerGeminiVertex:
+		return crmcontracts.AssistantProfileProviders(providerGeminiVertex), true
 	case providerOllama:
 		return crmcontracts.AssistantProfileProviders(providerOllama), true
 	case providerOpenAI:

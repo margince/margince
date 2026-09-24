@@ -219,8 +219,8 @@ func openAIWireModels(
 
 // ---- gemini ----
 
-// ListModels reports GET /v1beta/models, the one vendor list that says what
-// each model is FOR: `supportedGenerationMethods` names `embedContent` for an
+// ListModels reports the transport's model collection. On AI Studio that is
+// GET /v1beta/models, the one vendor list that says what each model is FOR: `supportedGenerationMethods` names `embedContent` for an
 // embedder and `generateContent` for a chat model, so the embeddings lane can
 // be offered real suggestions here where the other vendors leave it to the
 // sheet.
@@ -231,14 +231,6 @@ func (c *geminiClient) ListModels(ctx context.Context) ([]model.Info, error) {
 	var models []model.Info
 	pageToken := ""
 	for {
-		var out struct {
-			Models []struct {
-				Name        string   `json:"name"`
-				DisplayName string   `json:"displayName"`                //nolint:tagliatelle // Google's wire format (camelCase)
-				Methods     []string `json:"supportedGenerationMethods"` //nolint:tagliatelle // Google's wire format (camelCase)
-			} `json:"models"`
-			NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google's wire format (camelCase)
-		}
 		endpoint := c.transport.modelsURL() + "?pageSize=100"
 		if pageToken != "" {
 			endpoint += "&pageToken=" + url.QueryEscape(pageToken)
@@ -249,26 +241,45 @@ func (c *geminiClient) ListModels(ctx context.Context) ([]model.Info, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := json.Unmarshal(raw, &out); err != nil {
-			return nil, fmt.Errorf("ai: gemini: decode model list: %w", err)
+		page, next, err := c.transport.readModelPage(raw)
+		if err != nil {
+			return nil, err
 		}
-		for _, m := range out.Models {
-			models = append(models, model.Info{
-				// The wire namespaces every id `models/gemini-…`; a binding
-				// names the bare id, which is what the adapter puts back when it
-				// builds a request path.
-				ID:          strings.TrimPrefix(m.Name, "models/"),
-				DisplayName: m.DisplayName,
-				Lane:        geminiLane(m.Methods),
-			})
-		}
+		models = append(models, page...)
 		// Stopping on the cap as well as on the last page: a vendor that keeps
 		// handing back a token must not turn this into an unbounded loop.
-		if out.NextPageToken == "" || len(models) >= modelListLimit {
+		if next == "" || len(models) >= modelListLimit {
 			return models, nil
 		}
-		pageToken = out.NextPageToken
+		pageToken = next
 	}
+}
+
+// readModelPage decodes one page of GET /v1beta/models.
+func (t aiStudioTransport) readModelPage(raw []byte) ([]model.Info, string, error) {
+	var out struct {
+		Models []struct {
+			Name        string   `json:"name"`
+			DisplayName string   `json:"displayName"`                //nolint:tagliatelle // Google's wire format (camelCase)
+			Methods     []string `json:"supportedGenerationMethods"` //nolint:tagliatelle // Google's wire format (camelCase)
+		} `json:"models"`
+		NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google's wire format (camelCase)
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, "", fmt.Errorf("ai: gemini: decode model list: %w", err)
+	}
+	models := make([]model.Info, 0, len(out.Models))
+	for _, m := range out.Models {
+		models = append(models, model.Info{
+			// The wire namespaces every id `models/gemini-…`; a binding
+			// names the bare id, which is what the adapter puts back when it
+			// builds a request path.
+			ID:          strings.TrimPrefix(m.Name, "models/"),
+			DisplayName: m.DisplayName,
+			Lane:        geminiLane(m.Methods),
+		})
+	}
+	return models, out.NextPageToken, nil
 }
 
 // geminiLane reads what a Gemini model is for off the methods it supports.
