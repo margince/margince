@@ -23,13 +23,12 @@ const ReasoningOutputMaxTokens = 8192
 // unsetMaxOutputTokens is the output ceiling every adapter sends when a
 // request set none.
 //
-// Every caller in this tree sets MaxTokens, so this number answers a caller
-// bug rather than a lane: without it the wires disagree about what the bug
-// costs — Anthropic refuses a request with no max_tokens, while an
-// OpenAI-compatible host takes an omitted one to mean the model's own limit and
-// a runaway completion is billed to the end. One constant so every wire gives
-// the same answer, small enough that the bug surfaces as a short reply rather
-// than as spend.
+// An unset MaxTokens is a caller bug rather than a lane, and without this the
+// wires disagree about what the bug costs: Anthropic refuses a request with no
+// max_tokens, while an OpenAI-compatible host takes an omitted one to mean the
+// model's own limit and bills a runaway completion to the end. One constant so
+// every wire gives the same answer, small enough that the bug surfaces as a
+// short reply rather than as spend.
 const unsetMaxOutputTokens = 1024
 
 // Unfence is kernel/modelreply.Unfence, re-exported: the reduction lives in

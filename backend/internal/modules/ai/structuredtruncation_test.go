@@ -113,9 +113,9 @@ func (c scriptedClient) Complete(_ context.Context, req model.Request) (model.Re
 	return c.replies[min(n, len(c.replies)-1)], nil
 }
 
-// starvedStep is an attempt whose thinking spent the output ceiling: cut off,
-// with almost nothing of the answer written.
-func starvedStep(ceiling, thinking int) model.Response {
+// cutOffStep is an attempt the output ceiling cut off, having spent thinking
+// of the ceiling on reasoning and the rest on the answer.
+func cutOffStep(ceiling, thinking int) model.Response {
 	return model.Response{Text: `{"ans`, OutputTokens: ceiling, ReasoningTokens: thinking, FinishReason: model.FinishReasonLength}
 }
 
@@ -139,7 +139,7 @@ func structuredWith(t *testing.T, maxTokens int, replies ...model.Response) []mo
 // Thinking that spent the ceiling is recovered by room, not by asking for a
 // shorter answer: the answer was never the long part.
 func TestAnAnswerStarvedByThinkingIsRetriedWithRoomRatherThanBrevity(t *testing.T) {
-	requests := structuredWith(t, 1000, starvedStep(1000, 960), model.Response{Text: `{"ok":true}`})
+	requests := structuredWith(t, 1000, cutOffStep(1000, 960), model.Response{Text: `{"ok":true}`})
 	if len(requests) != 2 {
 		t.Fatalf("made %d calls, want the starved attempt and one retry", len(requests))
 	}
@@ -156,7 +156,7 @@ func TestAnAnswerStarvedByThinkingIsRetriedWithRoomRatherThanBrevity(t *testing.
 // An answer that ran long by itself still gets the brevity retry, and its
 // ceiling is left alone — more room would buy a longer runaway.
 func TestAnAnswerThatRanLongItselfIsStillAskedToBeBrief(t *testing.T) {
-	requests := structuredWith(t, 1000, starvedStep(1000, 200), model.Response{Text: `{"ok":true}`})
+	requests := structuredWith(t, 1000, cutOffStep(1000, 200), model.Response{Text: `{"ok":true}`})
 	if len(requests) != 2 {
 		t.Fatalf("made %d calls, want the cut-off attempt and one retry", len(requests))
 	}
@@ -170,12 +170,13 @@ func TestAnAnswerThatRanLongItselfIsStillAskedToBeBrief(t *testing.T) {
 	}
 }
 
-// A request that set no ceiling was capped by the adapter's default, which the
-// attempt's own output count reports.
+// A request that set no ceiling ran under the adapters' shared default, and
+// that is what grows — not an output count the provider reported, which here
+// claims far more than any ceiling allowed.
 func TestRoomToAnswerStartsFromTheCeilingThatActuallyApplied(t *testing.T) {
-	requests := structuredWith(t, 0, starvedStep(1024, 1000), model.Response{Text: `{"ok":true}`})
-	if len(requests) != 2 || requests[1].MaxTokens != 1024+1000 {
-		t.Fatalf("retry ceiling = %+v, want 1024 plus 1000", requests)
+	requests := structuredWith(t, 0, cutOffStep(500_000_000, 400_000_000), model.Response{Text: `{"ok":true}`})
+	if len(requests) != 2 || requests[1].MaxTokens != 2*unsetMaxOutputTokens {
+		t.Fatalf("retry ceiling = %+v, want the %d default at most doubled", requests, unsetMaxOutputTokens)
 	}
 }
 
@@ -183,7 +184,7 @@ func TestRoomToAnswerStartsFromTheCeilingThatActuallyApplied(t *testing.T) {
 // that keeps thinking to the ceiling cannot ratchet it upward attempt after
 // attempt.
 func TestRoomToAnswerDoesNotCompoundAcrossRetries(t *testing.T) {
-	requests := structuredWith(t, 1000, starvedStep(1000, 900), starvedStep(1900, 1800), starvedStep(1800, 1700))
+	requests := structuredWith(t, 1000, cutOffStep(1000, 900), cutOffStep(1900, 1800), cutOffStep(1800, 1700))
 	if len(requests) != maxLadderWalks {
 		t.Fatalf("made %d calls, want %d", len(requests), maxLadderWalks)
 	}
@@ -193,5 +194,19 @@ func TestRoomToAnswerDoesNotCompoundAcrossRetries(t *testing.T) {
 	if got := requests[2].MaxTokens; got != 2000 {
 		t.Errorf("escalation ceiling = %d, want the caller's 1000 at most doubled, not grown from the "+
 			"retry's 1900", got)
+	}
+}
+
+// A retry stops at the bound every bound model can emit, and a caller ceiling
+// already above that bound is never lowered.
+func TestRoomToAnswerStopsAtTheCeilingEveryBoundModelCanEmit(t *testing.T) {
+	requests := structuredWith(t, 12000, cutOffStep(12000, 11000), model.Response{Text: `{"ok":true}`})
+	if len(requests) != 2 || requests[1].MaxTokens != roomToAnswerMaxTokens {
+		t.Fatalf("retry ceiling = %+v, want 12000+11000 stopped at %d", requests, roomToAnswerMaxTokens)
+	}
+	wide := 3 * roomToAnswerMaxTokens
+	requests = structuredWith(t, wide, cutOffStep(wide, wide-10), model.Response{Text: `{"ok":true}`})
+	if len(requests) != 2 || requests[1].MaxTokens != wide {
+		t.Fatalf("retry ceiling = %+v, want the caller's own %d kept", requests, wide)
 	}
 }

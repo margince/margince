@@ -7,7 +7,10 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -46,7 +49,9 @@ func TestTheCallTraceRecordsWhetherGenerationHeldTheSchema(t *testing.T) {
 			t.Errorf("schema_downgrade = %q, want %q", stored, downgrade)
 		}
 	}
-	if _, err := record("partially"); err == nil {
-		t.Error("a downgrade no adapter reports was stored")
+	_, err := record("partially")
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.ConstraintName != "ai_call_schema_downgrade_check" {
+		t.Errorf("a downgrade no adapter reports must be refused by the column's CHECK, got %v", err)
 	}
 }

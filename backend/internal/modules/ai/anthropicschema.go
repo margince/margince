@@ -9,27 +9,26 @@ package ai
 // subset of the vocabulary: every object closed with additionalProperties
 // false, no numeric bounds, no string length, no array bound beyond a minItems
 // of 0 or 1, no pattern, and string formats from a short list. A schema outside
-// the subset is answered with a 400, and the adapter used to find that out by
-// sending it: any 400 on a schema-carrying request was retried with the schema
-// cleared, so a schema this tree writes every day (a reply draft's maxLength, a
-// score's minimum) silently bought an unconstrained completion — and a 400 for
-// any other reason bought a second call that failed the same way.
+// the subset is answered with a 400 that fails the call, so the fit is decided
+// before sending, the way Anthropic's own SDKs decide it.
 //
-// The fit is decided before sending, the way Anthropic's own SDKs do it: an
-// unenforceable bound moves into the description, where the model reads it
+// An unenforceable bound moves into the description, where the model reads it
 // even though the decoder cannot hold it, and an object that declares its
 // properties is closed. The caller's validator still holds the whole original
 // schema, so a moved bound is checked after generation rather than lost. A
 // shape no fit can express — a free-form object, a type union, a reference —
 // is not sent at all. Either downgrade is reported on the Response, so the call
 // record says which answers generation did not fully hold.
+//
+// The shared schema builder emits nothing outside the subset, so its schemas go
+// verbatim; what reaches the fit is a hand-written schema, or one an extension
+// supplies.
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -61,75 +60,72 @@ var anthropicUnenforcedKeywords = map[string]bool{
 
 // anthropicOutputSchema is what to send as output_config.format for a
 // request's response schema, and the downgrade that cost: the schema verbatim
-// and "" when it already fits, a fitted copy and model.SchemaRelaxed when a
-// bound had to move into a description, and nil with model.SchemaDropped when
-// no fit exists.
+// and "" when it already fits; a fitted copy and "" when fitting only closed an
+// object, which enforces more rather than less; a fitted copy and
+// model.SchemaRelaxed when a bound had to move into a description; nil and
+// model.SchemaDropped when no fit exists.
 func anthropicOutputSchema(raw json.RawMessage) (json.RawMessage, string) {
 	if len(raw) == 0 {
 		return nil, ""
 	}
-	fitted, relaxed, err := fitAnthropicSchema(raw)
+	var fitter anthropicSchemaFitter
+	fitted, err := fitter.fitSubschema(raw)
 	switch {
 	case err != nil:
 		return nil, model.SchemaDropped
-	case relaxed:
+	case fitter.relaxed:
 		return fitted, model.SchemaRelaxed
+	case fitter.changed:
+		return fitted, ""
 	default:
 		return raw, ""
 	}
 }
 
-// fitAnthropicSchema returns raw fitted to the decoder's subset, and whether
-// fitting changed anything the decoder would have enforced as written.
-func fitAnthropicSchema(raw json.RawMessage) (json.RawMessage, bool, error) {
-	var fitter anthropicSchemaFitter
-	fitted, err := fitter.fitRaw(raw)
+// anthropicSchemaFitter walks one schema. changed says the fitted copy differs
+// from what was written, relaxed that some bound in it is no longer enforced —
+// two facts, because closing an object is the first without the second.
+type anthropicSchemaFitter struct{ changed, relaxed bool }
+
+func (f *anthropicSchemaFitter) fitSubschema(raw json.RawMessage) (json.RawMessage, error) {
+	node, err := decodeSchemaObject(raw)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
-	out, err := json.Marshal(fitted)
+	fitted, err := f.fit(node)
 	if err != nil {
-		return nil, false, fmt.Errorf("ai: anthropic: encode fitted schema: %w", err)
+		return nil, err
 	}
-	return out, fitter.relaxed, nil
+	return fitted.encode()
 }
 
-// anthropicSchemaFitter walks one schema, remembering whether any node had to
-// give something up.
-type anthropicSchemaFitter struct{ relaxed bool }
-
-func (f *anthropicSchemaFitter) fitRaw(raw json.RawMessage) (map[string]json.RawMessage, error) {
-	var node map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &node); err != nil {
-		return nil, fmt.Errorf("%w: a subschema is not an object", errSchemaIneligible)
-	}
-	return f.fit(node)
-}
-
-// fit is one node: every keyword kept, fitted or moved, then the node closed if
-// it is an object, then the moved keywords written into its description.
-func (f *anthropicSchemaFitter) fit(node map[string]json.RawMessage) (map[string]json.RawMessage, error) {
-	out := make(map[string]json.RawMessage, len(node))
-	moved := map[string]json.RawMessage{}
-	for key, value := range node {
-		fitted, keep, err := f.fitKeyword(key, value)
+// fit is one node: every keyword kept, fitted or moved, in the order it was
+// written; then the node closed if it is an object; then the moved keywords
+// written into its description.
+func (f *anthropicSchemaFitter) fit(node schemaObject) (schemaObject, error) {
+	out := make(schemaObject, 0, len(node))
+	var moved schemaObject
+	for _, member := range node {
+		fitted, keep, err := f.fitKeyword(member.key, member.value)
 		switch {
 		case err != nil:
 			return nil, err
 		case keep:
-			out[key] = fitted
+			out = append(out, schemaMember{key: member.key, value: fitted})
 		default:
-			moved[key] = value
+			moved = append(moved, member)
 		}
 	}
-	if err := f.close(node, out); err != nil {
+	out, err := f.close(node, out)
+	if err != nil || len(moved) == 0 {
+		return out, err
+	}
+	f.changed, f.relaxed = true, true
+	description, err := describeMoved(out.get("description"), moved)
+	if err != nil {
 		return nil, err
 	}
-	if len(moved) > 0 {
-		f.relaxed = true
-		out["description"] = describeMoved(out["description"], moved)
-	}
-	return out, nil
+	return out.with("description", description), nil
 }
 
 // fitKeyword answers one keyword: kept (possibly with a fitted value), moved
@@ -178,45 +174,48 @@ func (f *anthropicSchemaFitter) fitKeyword(key string, value json.RawMessage) (j
 }
 
 // close gives an object that declares properties the additionalProperties
-// false the decoder requires. That is a real narrowing — the model may no
-// longer add a key the schema would have tolerated — so it counts as relaxing
-// the fit even though nothing the caller asked for is lost. An object with no
+// false the decoder requires. The model may then no longer add a key the
+// schema would have tolerated, which enforces more than was written rather
+// than less, so it changes the schema without relaxing it. An object with no
 // properties to close over is a free-form map, which no closed object can
 // stand in for.
-func (f *anthropicSchemaFitter) close(node, out map[string]json.RawMessage) error {
-	if _, declared := node["additionalProperties"]; declared {
-		return nil
+func (f *anthropicSchemaFitter) close(node, out schemaObject) (schemaObject, error) {
+	if _, declared := node.lookup("additionalProperties"); declared {
+		return out, nil
 	}
 	var name string
-	isObject := json.Unmarshal(node["type"], &name) == nil && name == "object"
-	props, hasProps := node["properties"]
+	isObject := json.Unmarshal(node.get("type"), &name) == nil && name == "object"
+	props, hasProps := node.lookup("properties")
 	if !isObject && !hasProps {
-		return nil
+		return out, nil
 	}
-	if !hasProps || bytes.Equal(bytes.TrimSpace(props), []byte("{}")) {
-		return fmt.Errorf("%w: an object with no declared properties", errSchemaIneligible)
+	if !hasProps {
+		return nil, fmt.Errorf("%w: an object with no declared properties", errSchemaIneligible)
 	}
-	out["additionalProperties"] = json.RawMessage("false")
-	f.relaxed = true
-	return nil
+	if declared, err := decodeSchemaObject(props); err != nil || len(declared) == 0 {
+		return nil, fmt.Errorf("%w: an object with no declared properties", errSchemaIneligible)
+	}
+	f.changed = true
+	return out.with("additionalProperties", json.RawMessage("false")), nil
 }
 
 // fitProperties fits every schema in a `properties` map, whose keys are the
-// caller's property names rather than keywords.
+// caller's property names rather than keywords, keeping them in the order the
+// caller wrote them: a model fills fields in the order it is shown them.
 func (f *anthropicSchemaFitter) fitProperties(value json.RawMessage) (json.RawMessage, bool, error) {
-	var byName map[string]json.RawMessage
-	if err := json.Unmarshal(value, &byName); err != nil {
-		return nil, false, fmt.Errorf("%w: properties is not a map", errSchemaIneligible)
+	byName, err := decodeSchemaObject(value)
+	if err != nil {
+		return nil, false, err
 	}
-	fitted := make(map[string]json.RawMessage, len(byName))
-	for name, sub := range byName {
-		one, err := f.fitSubschema(sub)
+	fitted := make(schemaObject, 0, len(byName))
+	for _, property := range byName {
+		one, err := f.fitSubschema(property.value)
 		if err != nil {
 			return nil, false, err
 		}
-		fitted[name] = one
+		fitted = append(fitted, schemaMember{key: property.key, value: one})
 	}
-	out, err := json.Marshal(fitted)
+	out, err := fitted.encode()
 	return out, err == nil, err
 }
 
@@ -238,18 +237,6 @@ func (f *anthropicSchemaFitter) fitBranches(value json.RawMessage) (json.RawMess
 	return out, err == nil, err
 }
 
-func (f *anthropicSchemaFitter) fitSubschema(raw json.RawMessage) (json.RawMessage, error) {
-	fitted, err := f.fitRaw(raw)
-	if err != nil {
-		return nil, err
-	}
-	out, err := json.Marshal(fitted)
-	if err != nil {
-		return nil, fmt.Errorf("ai: anthropic: encode fitted schema: %w", err)
-	}
-	return out, nil
-}
-
 // scalarEnum refuses an enum holding an object or an array, which the decoder
 // does not take.
 func scalarEnum(value json.RawMessage) error {
@@ -266,18 +253,12 @@ func scalarEnum(value json.RawMessage) error {
 }
 
 // describeMoved appends the moved keywords to a node's description in the
-// spelling Anthropic's SDK uses — "{maxLength: 998, minLength: 1}" after a
-// blank line — sorted so one schema always fits to the same bytes and the
-// result cache keys it once.
-func describeMoved(description json.RawMessage, moved map[string]json.RawMessage) json.RawMessage {
-	keys := make([]string, 0, len(moved))
-	for key := range moved {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	bounds := make([]string, 0, len(keys))
-	for _, key := range keys {
-		bounds = append(bounds, key+": "+string(bytes.TrimSpace(moved[key])))
+// spelling Anthropic's SDK uses — "{minLength: 1, maxLength: 998}" after a
+// blank line — in the order they were written.
+func describeMoved(description json.RawMessage, moved schemaObject) (json.RawMessage, error) {
+	bounds := make([]string, 0, len(moved))
+	for _, member := range moved {
+		bounds = append(bounds, member.key+": "+string(bytes.TrimSpace(member.value)))
 	}
 	text := "{" + strings.Join(bounds, ", ") + "}"
 	var existing string
@@ -286,10 +267,100 @@ func describeMoved(description json.RawMessage, moved map[string]json.RawMessage
 	}
 	out, err := json.Marshal(text)
 	if err != nil {
-		// A Go string always marshals; the branch exists because the
-		// signature says it can fail, and an empty description is the
-		// harmless answer if it ever did.
-		return json.RawMessage(`""`)
+		return nil, fmt.Errorf("ai: anthropic: encode a fitted description: %w", err)
 	}
-	return out
+	return out, nil
+}
+
+// schemaMember is one key of a schema object and its undecoded value.
+type schemaMember struct {
+	key   string
+	value json.RawMessage
+}
+
+// schemaObject is a JSON object decoded with its key order intact, which a Go
+// map would sort away. The order is load-bearing in `properties` — a model
+// writes fields in the order a schema lists them, and schema.Record keeps its
+// caller's order for that reason — so a fitted schema must list them as the
+// caller did.
+type schemaObject []schemaMember
+
+func decodeSchemaObject(raw json.RawMessage) (schemaObject, error) {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	if open, err := dec.Token(); err != nil || open != json.Delim('{') {
+		return nil, fmt.Errorf("%w: a subschema is not an object", errSchemaIneligible)
+	}
+	var out schemaObject
+	for dec.More() {
+		token, err := dec.Token()
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", errSchemaIneligible, err)
+		}
+		key, isKey := token.(string)
+		if !isKey {
+			return nil, fmt.Errorf("%w: an object key that is not a string", errSchemaIneligible)
+		}
+		var value json.RawMessage
+		if err := dec.Decode(&value); err != nil {
+			return nil, fmt.Errorf("%w: %w", errSchemaIneligible, err)
+		}
+		out = append(out, schemaMember{key: key, value: value})
+	}
+	if _, err := dec.Token(); err != nil {
+		return nil, fmt.Errorf("%w: %w", errSchemaIneligible, err)
+	}
+	return out, nil
+}
+
+func (o schemaObject) lookup(key string) (json.RawMessage, bool) {
+	for _, member := range o {
+		if member.key == key {
+			return member.value, true
+		}
+	}
+	return nil, false
+}
+
+// get is lookup for a caller that reads an absent key as a nil value.
+func (o schemaObject) get(key string) json.RawMessage {
+	if value, present := o.lookup(key); present {
+		return value
+	}
+	return nil
+}
+
+// with sets key to value: in place when the key is already there, appended
+// after the caller's keys when it is not.
+func (o schemaObject) with(key string, value json.RawMessage) schemaObject {
+	for i, member := range o {
+		if member.key == key {
+			o[i].value = value
+			return o
+		}
+	}
+	return append(o, schemaMember{key: key, value: value})
+}
+
+// encode writes the object back in its own key order.
+func (o schemaObject) encode() (json.RawMessage, error) {
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+	for i, member := range o {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		key, err := json.Marshal(member.key)
+		if err != nil {
+			return nil, fmt.Errorf("ai: anthropic: encode a schema key: %w", err)
+		}
+		buf.Write(key)
+		buf.WriteByte(':')
+		buf.Write(member.value)
+	}
+	buf.WriteByte('}')
+	var compact bytes.Buffer
+	if err := json.Compact(&compact, buf.Bytes()); err != nil {
+		return nil, fmt.Errorf("ai: anthropic: encode a fitted schema: %w", err)
+	}
+	return compact.Bytes(), nil
 }

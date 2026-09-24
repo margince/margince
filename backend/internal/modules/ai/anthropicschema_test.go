@@ -13,18 +13,19 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
-// What each schema shape is sent as. The shapes are the ones this tree's
-// response schemas actually use: a reply draft's string lengths, a score's
-// numeric bounds, a capped and de-duplicated list, and a free-form map.
+// What each schema shape is sent as, compared byte for byte: a fitted schema
+// keeps its caller's key order, so the expected strings are written in the
+// order the fit produces.
 func TestAnthropicOutputSchemaFitsWhatTheDecoderEnforces(t *testing.T) {
 	cases := []struct {
 		name      string
 		schema    string
 		downgrade string
-		// sent is the schema expected on the wire, compared as JSON; empty
-		// means nothing is sent.
+		// sent is the schema expected on the wire, compacted; empty means
+		// nothing is sent.
 		sent string
 	}{
 		{
@@ -36,25 +37,32 @@ func TestAnthropicOutputSchemaFitsWhatTheDecoderEnforces(t *testing.T) {
 			name:      "string lengths move into the description",
 			schema:    `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","minLength":1,"maxLength":998,"description":"The subject line."}},"required":["subject"]}`,
 			downgrade: model.SchemaRelaxed,
-			sent:      `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","description":"The subject line.\n\n{maxLength: 998, minLength: 1}"}},"required":["subject"]}`,
+			sent:      `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","description":"The subject line.\n\n{minLength: 1, maxLength: 998}"}},"required":["subject"]}`,
 		},
 		{
 			name:      "numeric bounds inside array items move too",
 			schema:    `{"type":"object","additionalProperties":false,"properties":{"scores":{"type":"array","items":{"type":"number","minimum":0,"maximum":1}}},"required":["scores"]}`,
 			downgrade: model.SchemaRelaxed,
-			sent:      `{"type":"object","additionalProperties":false,"properties":{"scores":{"type":"array","items":{"type":"number","description":"{maximum: 1, minimum: 0}"}}},"required":["scores"]}`,
+			sent:      `{"type":"object","additionalProperties":false,"properties":{"scores":{"type":"array","items":{"type":"number","description":"{minimum: 0, maximum: 1}"}}},"required":["scores"]}`,
 		},
 		{
 			name:      "array bounds and an unlisted format move",
 			schema:    `{"type":"array","maxItems":5,"minItems":2,"uniqueItems":true,"items":{"type":"string","format":"phone"}}`,
 			downgrade: model.SchemaRelaxed,
-			sent:      `{"type":"array","description":"{maxItems: 5, minItems: 2, uniqueItems: true}","items":{"type":"string","description":"{format: \"phone\"}"}}`,
+			sent:      `{"type":"array","items":{"type":"string","description":"{format: \"phone\"}"},"description":"{maxItems: 5, minItems: 2, uniqueItems: true}"}`,
 		},
 		{
-			name:      "an object with properties but no closure is closed",
-			schema:    `{"type":"object","properties":{"a":{"type":"string"}},"required":["a"]}`,
+			// Closing enforces more than was written, not less, so it is sent
+			// fitted but reported as no downgrade.
+			name:   "an object with properties but no closure is closed",
+			schema: `{"type":"object","properties":{"a":{"type":"string"}},"required":["a"]}`,
+			sent:   `{"type":"object","properties":{"a":{"type":"string"}},"required":["a"],"additionalProperties":false}`,
+		},
+		{
+			name:      "properties keep the order they were written in",
+			schema:    `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","maxLength":9},"body":{"type":"string"},"acknowledged":{"type":"boolean"}},"required":["subject","body","acknowledged"]}`,
 			downgrade: model.SchemaRelaxed,
-			sent:      `{"type":"object","additionalProperties":false,"properties":{"a":{"type":"string"}},"required":["a"]}`,
+			sent:      `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","description":"{maxLength: 9}"},"body":{"type":"string"},"acknowledged":{"type":"boolean"}},"required":["subject","body","acknowledged"]}`,
 		},
 		{
 			name:      "each branch of a union is fitted",
@@ -84,10 +92,33 @@ func TestAnthropicOutputSchemaFitsWhatTheDecoderEnforces(t *testing.T) {
 				}
 				return
 			}
-			if !jsonEqual(t, sent, json.RawMessage(tc.sent)) {
+			if !bytes.Equal(compacted(t, sent), compacted(t, json.RawMessage(tc.sent))) {
 				t.Fatalf("sent %s\nwant %s", sent, tc.sent)
 			}
 		})
+	}
+}
+
+// What the shared builder composes is inside the decoder's subset, so it goes
+// byte for byte — every constructor, nested the way task schemas nest them. A
+// builder shape that started drawing a downgrade would quietly weaken
+// generation for every Anthropic-bound task that uses it.
+func TestAnthropicSendsWhatTheSchemaBuilderComposesVerbatim(t *testing.T) {
+	leaf := schema.Record(
+		schema.Field("text", schema.String().Describe("what it says")),
+		schema.Field("score", schema.Number()),
+		schema.Field("count", schema.Integer()),
+		schema.Field("kind", schema.Enum("a", "b")),
+	)
+	raw := schema.Must(schema.Record(
+		schema.Field("leaf", leaf),
+		schema.Field("optional", schema.Optional(leaf)),
+		schema.Field("list", schema.Array(schema.Optional(schema.Array(leaf)))),
+		schema.Field("object", schema.Object(map[string]schema.Node{"id": schema.String()}, "id")),
+	))
+	sent, downgrade := anthropicOutputSchema(raw)
+	if downgrade != "" || !bytes.Equal(sent, raw) {
+		t.Fatalf("a builder schema was fitted (downgrade %q):\nsent %s\nwant %s", downgrade, sent, raw)
 	}
 }
 
@@ -200,51 +231,13 @@ func writeAnthropicText(t *testing.T, w http.ResponseWriter, text string) {
 	}
 }
 
-// jsonEqual compares two JSON documents by value, so key order in a fitted
-// schema is not mistaken for a difference.
-func jsonEqual(t *testing.T, a, b json.RawMessage) bool {
+// compacted is a JSON document without insignificant whitespace, so two
+// spellings compare by content and key order alone.
+func compacted(t *testing.T, raw json.RawMessage) []byte {
 	t.Helper()
-	var left, right bytes.Buffer
-	if err := json.Compact(&left, canonical(t, a)); err != nil {
-		t.Fatalf("compacting %s: %v", a, err)
+	var out bytes.Buffer
+	if err := json.Compact(&out, raw); err != nil {
+		t.Fatalf("compacting %s: %v", raw, err)
 	}
-	if err := json.Compact(&right, canonical(t, b)); err != nil {
-		t.Fatalf("compacting %s: %v", b, err)
-	}
-	return bytes.Equal(left.Bytes(), right.Bytes())
-}
-
-// canonical re-encodes a JSON document so every object's keys are sorted, at
-// any depth, including inside arrays.
-func canonical(t *testing.T, raw json.RawMessage) []byte {
-	t.Helper()
-	var tree map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &tree); err == nil {
-		sorted := make(map[string]json.RawMessage, len(tree))
-		for key, value := range tree {
-			sorted[key] = canonical(t, value)
-		}
-		return mustMarshal(t, sorted)
-	}
-	var list []json.RawMessage
-	if err := json.Unmarshal(raw, &list); err == nil {
-		for i, member := range list {
-			list[i] = canonical(t, member)
-		}
-		return mustMarshal(t, list)
-	}
-	var scalar json.RawMessage
-	if err := json.Unmarshal(raw, &scalar); err != nil {
-		t.Fatalf("decoding %s: %v", raw, err)
-	}
-	return scalar
-}
-
-func mustMarshal[T any](t *testing.T, value T) []byte {
-	t.Helper()
-	out, err := json.Marshal(value)
-	if err != nil {
-		t.Fatalf("re-encoding: %v", err)
-	}
-	return out
+	return out.Bytes()
 }
