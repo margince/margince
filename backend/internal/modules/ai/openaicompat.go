@@ -123,8 +123,9 @@ type openAICompatChatResponse struct {
 }
 
 func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	ctx, attempt := trackHTTPAttempt(ctx)
 	resp, err := c.completeChat(ctx, req)
-	return reportSchemaDowngrade(resp, err, strictDowngrade(req.ResponseSchema))
+	return reportSchemaDowngrade(resp, err, strictDowngrade(req.ResponseSchema), attempt)
 }
 
 func (c *openAICompatClient) completeChat(ctx context.Context, req model.Request) (model.Response, error) {
@@ -442,7 +443,7 @@ func (c *openAICompatClient) post(ctx context.Context, path string, payload []by
 	if c.apiKey != "" {
 		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 	}
-	resp, err := c.http.Do(httpReq)
+	resp, err := sendModelRequest(c.http, httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ai: openai-compat: %w", err)
 	}

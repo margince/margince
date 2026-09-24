@@ -135,8 +135,9 @@ type openaiResponse struct {
 }
 
 func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	ctx, attempt := trackHTTPAttempt(ctx)
 	resp, err := c.completeResponse(ctx, req)
-	return reportSchemaDowngrade(resp, err, strictDowngrade(req.ResponseSchema))
+	return reportSchemaDowngrade(resp, err, strictDowngrade(req.ResponseSchema), attempt)
 }
 
 func (c *openaiClient) completeResponse(ctx context.Context, req model.Request) (model.Response, error) {
@@ -343,7 +344,7 @@ func (c *openaiClient) postRaw(ctx context.Context, path string, payload []byte)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
-	resp, err := c.http.Do(httpReq)
+	resp, err := sendModelRequest(c.http, httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ai: openai: %w", err)
 	}

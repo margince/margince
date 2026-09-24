@@ -185,7 +185,7 @@ func TestACacheHitRecordsTheDowngradeItsAnswerWasGeneratedUnder(t *testing.T) {
 // decision, both as a rung the walk fell back from and as the terminal row.
 func TestAFailedRungRecordsTheDowngradeItsErrorCarries(t *testing.T) {
 	failWith := func(downgrade string) stubClient {
-		_, err := reportSchemaDowngrade(model.Response{}, errors.New("upstream down"), downgrade)
+		_, err := reportSchemaDowngrade(model.Response{}, errors.New("upstream down"), downgrade, &httpAttempt{began: true})
 		return stubClient{err: err}
 	}
 	fcs := &fakeCallStore{}
