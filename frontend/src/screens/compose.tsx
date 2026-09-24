@@ -2380,8 +2380,9 @@ export function ComposeModal({
         // The button stays live with fields outstanding. Grey, it refused
         // without saying what for, and the reader was left comparing the form
         // against a control that would not answer. It is disabled only while a
-        // rejection is in flight, which is a genuine "not now".
-        confirmDisabled={rejectionInFlight}
+        // rejection or a draft save is in flight, each a genuine "not now": a
+        // send racing a first save would leave without the draft it discards.
+        confirmDisabled={rejectionInFlight || savedDraft.saving}
         onConfirm={() => {
           // A missing field or a carriage block keeps the press from sending;
           // marking and focusing is harmless when only the latter is present.

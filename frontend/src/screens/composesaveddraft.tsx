@@ -144,6 +144,8 @@ type SaveAsk = Readonly<{
   anchor: SavedDraftAnchor;
   fields: SavedDraftFields;
   version: number | undefined;
+  /** Which send this save was asked under; a later send retires it. */
+  sends: number;
 }>;
 
 async function writeDraft(ask: SaveAsk): Promise<MailDraft> {
@@ -248,6 +250,7 @@ export function useSavedDraft(input: {
   // Reopening the composer puts the draft back on screen with its own Delete,
   // so the toast has said its piece and would otherwise hold the queue.
   const savedToastUp = useRef(false);
+  const sends = useRef(0);
   useEffect(() => {
     if (!open || !savedToastUp.current) return;
     savedToastUp.current = false;
@@ -297,6 +300,9 @@ export function useSavedDraft(input: {
   const save = useMutation({
     mutationFn: writeDraft,
     onSuccess: (saved, ask) => {
+      // A send that left after this save began discarded the draft, so the
+      // save's answer must not bring it back.
+      if (ask.sends !== sends.current) return;
       queryClient.setQueryData(draftKey(ask.anchor), saved);
       setChangedElsewhere(false);
       savedToastUp.current = true;
@@ -352,8 +358,15 @@ export function useSavedDraft(input: {
 
   const saveNow = () => {
     if (!anchor || save.isPending) return;
-    save.mutate({ anchor, fields, version: held?.version });
+    save.mutate({
+      anchor,
+      fields,
+      version: held?.version,
+      sends: sends.current,
+    });
   };
+  const saveFailed =
+    save.isError && problemCodeOf(save.error) !== "version_skew";
   return {
     enabled: anchor !== null,
     held,
@@ -362,19 +375,22 @@ export function useSavedDraft(input: {
     saving: save.isPending,
     // A conflict is not a failure line: the notice above names it and offers
     // the way out.
-    error:
-      save.isError && problemCodeOf(save.error) !== "version_skew"
-        ? problemMessageOf(save.error, t)
-        : remove.isError
-          ? problemMessageOf(remove.error, t)
-          : null,
+    error: saveFailed
+      ? t("compose.savedDraftFailed")
+      : remove.isError
+        ? problemMessageOf(remove.error, t)
+        : null,
     save: saveNow,
     // Closing with words the draft does not hold yet keeps them first; the
-    // close lands when the save does, and a refused save leaves the composer
-    // open over the text rather than dropping it.
+    // close lands when the save does. A refused save leaves the composer open
+    // over the text once, and the line says a second close discards it.
     requestClose: () => {
       if (save.isPending) return;
-      if (anchor && dirty) saveNow();
+      if (saveFailed) {
+        save.reset();
+        onCleared();
+        onClose();
+      } else if (anchor && dirty) saveNow();
       else onClose();
     },
     remove: () => {
@@ -388,6 +404,7 @@ export function useSavedDraft(input: {
     },
     // The send discarded it server-side in the same transaction.
     sent: () => {
+      sends.current += 1;
       if (anchor) queryClient.setQueryData(draftKey(anchor), null);
     },
   };

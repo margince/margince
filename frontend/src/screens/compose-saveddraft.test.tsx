@@ -1,7 +1,9 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
+  renderHook,
   render as rtlRender,
   screen,
   waitFor,
@@ -15,6 +17,7 @@ import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
+import { useSavedDraft } from "./composesaveddraft";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -378,9 +381,9 @@ describe("a saved draft", () => {
     expect(messageText("Body")).toBe("Written in the other tab");
   });
 
-  it("keeps the composer open over a save that failed", async () => {
+  it("keeps the composer open over a failed save once, and a second close discards", async () => {
     const onClose = vi.fn();
-    stubRoutes({
+    const sent = stubRoutes({
       "PUT /mail-drafts": () =>
         new Response(JSON.stringify({ detail: "The draft store is down." }), {
           status: 503,
@@ -394,10 +397,48 @@ describe("a saved draft", () => {
 
     expect(await screen.findByRole("alert")).toHaveProperty(
       "textContent",
-      "The draft store is down.",
+      "The draft was not saved. Save again, or close again to discard the text.",
     );
     expect(onClose).not.toHaveBeenCalled();
     expect(messageText("Body")).toBe("Half written before lunch");
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1);
+    expect(messageText("Body")).toBe("");
+  });
+
+  it("holds the send while a first save is still out", async () => {
+    let answer: (response: Response) => void = () => {};
+    const sent = stubRoutes({
+      "PUT /mail-drafts": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+      "POST /emails": () => jsonResponse({ id: "act-9" }, 202),
+    });
+    render(composer(vi.fn()));
+    await waitFor(() =>
+      expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
+    );
+    writeMessage("Body", "Half written before lunch");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save as draft" }),
+    );
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(send).toHaveProperty("disabled", true);
+    await userEvent.click(send);
+    expect(calls(sent, "POST /emails")).toHaveLength(0);
+
+    answer(jsonResponse(SAVED));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Send" })).toHaveProperty(
+        "disabled",
+        false,
+      ),
+    );
   });
 
   it("is named to the send, which discards it", async () => {
@@ -424,5 +465,66 @@ describe("a saved draft", () => {
     // The server discarded it with the send; the composer asks for nothing.
     expect(calls(sent, "DELETE /mail-drafts/md-1")).toHaveLength(0);
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
+  });
+
+  it("is not brought back by a save that answers after the send", async () => {
+    let answer: ((response: Response) => void) | undefined;
+    const sent = stubRoutes({
+      "PUT /mail-drafts": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const onClose = vi.fn();
+    const { result } = renderHook(
+      () =>
+        useSavedDraft({
+          where: {
+            answering: undefined,
+            entityType: "contact",
+            entityId: "p-1",
+            isChannelReply: false,
+          },
+          open: true,
+          fields: {
+            to: [],
+            cc: [],
+            bcc: [],
+            subject: "",
+            body: "Half written before lunch",
+            html: "<p>Half written before lunch</p>",
+          },
+          replyTo: undefined,
+          offeredRecipient: undefined,
+          onRestore: () => {},
+          onClose,
+        }),
+      {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={client}>
+            <LocaleProvider initial="en">{children}</LocaleProvider>
+          </QueryClientProvider>
+        ),
+      },
+    );
+    await waitFor(() => expect(result.current.enabled).toBe(true));
+
+    act(() => result.current.save());
+    await waitFor(() => expect(answer).toBeDefined());
+    expect(result.current.saving).toBe(true);
+    act(() => result.current.sent());
+    act(() => answer?.(jsonResponse(SAVED)));
+
+    await waitFor(() => expect(result.current.saving).toBe(false));
+    expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1);
+    expect(client.getQueryData(["mail-draft", "contact", "p-1"])).toBeNull();
+    expect(result.current.held).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

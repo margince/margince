@@ -3634,6 +3634,8 @@ export const de = {
     "Beim Speichern bleibt der Text auf dem Bildschirm erhalten. Lade die gespeicherte Fassung, um dort weiterzuschreiben.",
   "compose.savedDraftGoneBody":
     "Er wurde dort gesendet oder gelöscht. Beim Speichern wird der Text auf dem Bildschirm ein neuer Entwurf.",
+  "compose.savedDraftFailed":
+    "Der Entwurf wurde nicht gespeichert. Speichere erneut oder schließe noch einmal, um den Text zu verwerfen.",
   "compose.savedDraftLoad": "Gespeicherte Fassung laden",
   "compose.aiDisclosureTitle": "KI-gestützter Entwurf",
   "compose.aiDisclosureFallback":

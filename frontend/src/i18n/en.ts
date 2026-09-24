@@ -3755,6 +3755,8 @@ export const en = {
     "Saving keeps the text on screen. Load the saved version to continue from it instead.",
   "compose.savedDraftGoneBody":
     "It was sent or deleted there. Saving keeps the text on screen as a new draft.",
+  "compose.savedDraftFailed":
+    "The draft was not saved. Save again, or close again to discard the text.",
   "compose.savedDraftLoad": "Load saved version",
   "compose.aiDisclosureTitle": "AI-assisted draft",
   "compose.aiDisclosureFallback":

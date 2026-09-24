@@ -3609,7 +3609,9 @@ export const vi = {
   "compose.savedDraftChangedBody":
     "Khi lưu, nội dung trên màn hình được giữ lại. Tải phiên bản đã lưu để viết tiếp từ đó.",
   "compose.savedDraftGoneBody":
-    "Bản nháp đã được gửi hoặc xóa ở đó. Khi lưu, nội dung trên màn hình trở thành bản nháp mới.",
+    "Bản nháp đã được gửi hoặc xóa ở nơi khác. Khi lưu, nội dung trên màn hình trở thành bản nháp mới.",
+  "compose.savedDraftFailed":
+    "Bản nháp chưa được lưu. Hãy lưu lại, hoặc đóng lần nữa để bỏ nội dung.",
   "compose.savedDraftLoad": "Tải phiên bản đã lưu",
   "compose.aiDisclosureTitle": "Bản nháp có AI hỗ trợ",
   "compose.aiDisclosureFallback":
