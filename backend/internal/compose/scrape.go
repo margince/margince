@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -177,7 +178,7 @@ func (h scrapeHandlers) ScrapeCompany(w http.ResponseWriter, r *http.Request, id
 				Detail: "This company has no website on file. Add a URL to read from.",
 			})
 		default:
-			httperr.Write(w, r, err)
+			modelfailure.Write(w, r, err)
 		}
 		return
 	}

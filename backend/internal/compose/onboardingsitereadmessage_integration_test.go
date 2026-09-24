@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -87,4 +88,22 @@ func companyReadMessageRequest(ctx context.Context, t *testing.T, readID, messag
 		t.Fatal(err)
 	}
 	return httptest.NewRequest(http.MethodPost, "/v1/company/site-reads/"+readID+"/messages", strings.NewReader(string(body))).WithContext(ctx)
+}
+
+// A question the model lane left unanswered is the assistant being unavailable,
+// not a server fault: the 503 the client has copy for, the same answer the
+// onboarding assistant gives for the same outcome.
+func TestACompanySiteReadMessageTheModelWithheldIsTheAssistantBeingUnavailable(t *testing.T) {
+	env := integration.Setup(t)
+	read := onboardingDraft(t, env)
+	human := env.As(env.Rep1, nil, integration.AdminPerms)
+	brain := &replyBrainStub{err: fmt.Errorf("ai: provider: %w", model.ErrOutputWithheld)}
+	engine := &deepReadEngine{contacts: env.Contacts, brain: brain, runtime: ai.NewRunTransparency(env.DB())}
+
+	recorder := httptest.NewRecorder()
+	engine.messageCompanySiteRead(recorder, companyReadMessageRequest(human, t, read.ID.String(),
+		"What does the website say the company does?"), openapi_types.UUID(read.ID))
+	if recorder.Code != http.StatusServiceUnavailable || !strings.Contains(recorder.Body.String(), "assistant_unavailable") {
+		t.Errorf("want 503 assistant_unavailable, got %d %s", recorder.Code, recorder.Body.String())
+	}
 }

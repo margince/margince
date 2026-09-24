@@ -65,9 +65,10 @@ var errProviderRefused = errors.New("ai: the configured AI provider turned the c
 // naming a reason invented here. Guessing "out of budget" from a bare 429 is
 // what told an operator with unspent credit to go raise a spending limit.
 //
-// EVERY branch carries errProviderRefused, so "did we reach the model?" is one
-// question with one answer whatever the cause turned out to be. A caller that
-// needs the cause asks for the specific sentinel on top.
+// Every 429 carries errProviderRefused, so "did we reach the model?" is one
+// question with one answer whatever the cause turned out to be; any other status
+// is returned as it came. A caller that needs the cause asks for the specific
+// sentinel on top.
 func providerRefusal(resp *http.Response, limitSource string, err error) error {
 	if resp == nil || resp.StatusCode != http.StatusTooManyRequests {
 		return err

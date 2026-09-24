@@ -27,37 +27,53 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 
 	p.WriteString("## Why this page exists\n\n")
 	p.WriteString("A scheduled agent's tool listing is written into the system prompt of **every step**\n")
-	p.WriteString("of its run, and the window never elides it — only the transcript gives way. So a tool\n")
-	p.WriteString("attached to an agent is paid for on every turn of every run for as long as that agent\n")
-	p.WriteString("exists, and what it displaces is the observations the run is reasoning over.\n\n")
-	p.WriteString("Each agent declares its tools in [`backend/api/ai-tasks.yaml`](../../backend/api/ai-tasks.yaml)\n")
-	p.WriteString("under `agent_loop`'s `agents:`. Read the numbers below **before** adding one.\n\n")
-	fmt.Fprintf(&p, "The window is %d tokens. An agent's listing may take %d of them (%d/%d). The whole\n",
+	p.WriteString("of its run, and each tool's input schema rides every step a second time, as its branch\n")
+	p.WriteString("of the step schema the provider enforces. The window elides neither — only the\n")
+	p.WriteString("transcript gives way. So a tool attached to an agent is paid for twice on every turn of\n")
+	p.WriteString("every run for as long as that agent exists, and what it displaces is the observations\n")
+	p.WriteString("the run is reasoning over.\n\n")
+	p.WriteString("`agent_loop` is the engine; each of its sites in\n")
+	p.WriteString("[`backend/api/ai-tasks.yaml`](../../backend/api/ai-tasks.yaml) is one scheduled agent, and\n")
+	p.WriteString("the site's `tools:` are the only tools that run is offered. Read the numbers below\n")
+	p.WriteString("**before** adding one.\n\n")
+	fmt.Fprintf(&p, "The window is %d tokens. What an agent's step pays before its transcript — the frame,\n"+
+		"the listing and the step schema — may take %d of them (%d/%d).\n\n",
 		b.PromptCeiling, b.AgentBudget, listingBudgetNumerator, listingBudgetDenominator)
-	fmt.Fprintf(&p, "served catalog is held to %d — a floor for the certification lane, not a budget any\n", b.CatalogFloor)
-	p.WriteString("feature is expected to argue with.\n\n")
+	p.WriteString("## No run is offered the whole catalog\n\n")
+	p.WriteString("A run attaches the tools its goal needs. The whole served catalog is listed below for\n")
+	p.WriteString("scale only: no scheduled run, and no certification scenario, is ever offered it. These\n")
+	p.WriteString("are the checks that fail when that stops being true:\n\n")
+	p.WriteString("| Check | Refuses |\n|---|---|\n")
+	for _, held := range b.Held {
+		fmt.Fprintf(&p, "| `%s` | %s |\n", held.Check, held.Refuses)
+	}
+	p.WriteString("\n**What this does not hold.** Nothing bounds HOW MANY tools a run attaches below the\n")
+	p.WriteString("whole catalog except the listing budget above; whether each attached tool is one its goal\n")
+	p.WriteString("needs is a reviewer's judgement. And an MCP client connecting from outside is served the\n")
+	p.WriteString("whole catalog by `tools/list` — that is its own agent's window, not a run of this engine.\n\n")
 	fmt.Fprintf(&p, "Before any tool is listed the frame itself costs **%d tokens** — the output contract,\n", b.Catalog.Frame)
 	p.WriteString("the rules and the prompt fence. It is published here because a rule moved OUT of the\n")
-	p.WriteString("per-tool schemas and INTO the frame trades tools × a sentence for one × a sentence,\n")
-	p.WriteString("and only the first half is held by a bound: the floor above measures the LISTING\n")
-	p.WriteString("alone. A frame that grows a paragraph spends it on every run of every agent.\n\n")
+	p.WriteString("per-tool schemas and INTO the frame trades tools × a sentence for one × a sentence.\n")
+	p.WriteString("It is part of every agent's per-step figure below, so a frame that grows a paragraph\n")
+	p.WriteString("spends it on every run of every agent.\n\n")
 
 	p.WriteString("## The declared agents\n\n")
-	p.WriteString("| Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |\n")
-	p.WriteString("|---|---:|---:|---:|---:|---:|---:|\n")
+	p.WriteString("| Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |\n")
+	p.WriteString("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, a := range b.Agents {
-		fmt.Fprintf(&p, "| `%s` | %d | %d | %d%% | %d | %d | %d |\n",
-			a.Name, len(a.Tools), a.Tokens, a.PercentOf,
+		fmt.Fprintf(&p, "| `%s` | %d | %d of %d | %d | %d | %d | %d%% | %d | %d | %d |\n",
+			a.Name, len(a.Tools), len(a.Tools), a.OfServed, a.Listing, a.StepSchema, a.Tokens, a.PercentOf,
 			a.Headroom, len(a.Dangling), a.Temptation)
 	}
-	fmt.Fprintf(&p, "| _whole served catalog, for scale_ | %d | %d | %d%% | — | — | — |\n\n",
+	fmt.Fprintf(&p, "| _whole served catalog's listing, for scale — no run is offered it_ | %d | — | %d | — | — | %d%% | — | — | — |\n\n",
 		b.Catalog.Tools, b.Catalog.Tokens, percentOf(b.Catalog.Tokens, b.PromptCeiling))
 
 	for _, a := range b.Agents {
 		fmt.Fprintf(&p, "### `%s`\n\n", a.Name)
 		fmt.Fprintf(&p, "> %s\n\n", a.Goal)
-		fmt.Fprintf(&p, "Attaches %d tools for %d tokens, leaving %d of its budget and %d tokens of the\n",
-			len(a.Tools), a.Tokens, a.Headroom, b.PromptCeiling-a.Tokens)
+		fmt.Fprintf(&p, "Attaches %d tools and pays %d tokens on every step (%d listing, %d step schema), leaving\n"+
+			"%d of its budget and %d tokens of the\n",
+			len(a.Tools), a.Tokens, a.Listing, a.StepSchema, a.Headroom, b.PromptCeiling-a.Tokens)
 		p.WriteString("window for the goal, the grounding and everything it reads.\n\n")
 		for _, tool := range a.Tools {
 			fmt.Fprintf(&p, "- `%s`\n", tool)
@@ -81,13 +97,12 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 	p.WriteString("`Use X when …` clause — several disambiguation sentences carry no \"Use\" at all.\n\n")
 	p.WriteString("**It is a diagnostic, never a target.** Closing a menu under this relation is\n")
 	p.WriteString("unaffordable: either shipped agent's tools close to 30 tools and ~10,500 tokens, six\n")
-	p.WriteString("times the menu. And lowering it is not always an improvement — adding\n")
-	p.WriteString("`review_commitments` to the sweep *raises* this count while cutting that agent's\n")
-	p.WriteString("temptation weight almost in half.\n\n")
-	fmt.Fprintf(&p, "**Temptation weight** sums, over an agent's tools, how many of the %d certification\n", b.Corpus.Scenarios)
-	fmt.Fprintf(&p, "scenarios name that tool as the WRONG reach. %d of those scenarios offer the model the\n", b.Corpus.OfferingCatalog)
-	p.WriteString("whole catalog and score which tool it picks, so the confusions it names were chosen\n")
-	p.WriteString("against the real surface rather than guessed.\n\n")
+	p.WriteString("times the menu. And lowering it is not always an improvement: a tool its goal needs\n")
+	p.WriteString("raises this count whenever its copy names a neighbour.\n\n")
+	p.WriteString("**Temptation weight** sums, over an agent's tools, how many of THAT agent's own\n")
+	fmt.Fprintf(&p, "certification scenarios (of %d in the corpus) name the tool as the WRONG reach. Each\n", b.Corpus.Scenarios)
+	p.WriteString("scenario certifies one scheduled agent's window — its goal and its tools — so a near\n")
+	p.WriteString("miss is a tool that run can actually see and reach for.\n\n")
 	p.WriteString("**It is an authored count, not an observed error rate.** Each scenario DECLARES\n")
 	p.WriteString("the tools its goal makes tempting, in a `near_misses:` list beside its expected\n")
 	p.WriteString("step. A weight of 5 does not mean a model went wrong five times; it means five\n")
@@ -105,10 +120,13 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 		}
 		p.WriteString("\n")
 	}
-	p.WriteString("**One limit remains.** Each count was authored under a *different* scenario's goal,\n")
-	p.WriteString("so summing them over one agent's fixed goal borrows precision the number does not\n")
-	p.WriteString("have. Read it as an ordering of which tools cause trouble on this surface, not as a\n")
-	p.WriteString("prediction about one agent.\n\n")
+	if len(b.Corpus.Unoffered) > 0 {
+		fmt.Fprintf(&p, "**%d declared near misses name a tool their run is never offered** and are not counted:\n\n", len(b.Corpus.Unoffered))
+		for _, u := range b.Corpus.Unoffered {
+			fmt.Fprintf(&p, "- %s\n", u)
+		}
+		p.WriteString("\n")
+	}
 	if len(b.Corpus.Skipped) > 0 {
 		fmt.Fprintf(&p, "**%d scenarios were skipped by the scan** and are named here rather than dropped:\n\n", len(b.Corpus.Skipped))
 		for _, s := range b.Corpus.Skipped {

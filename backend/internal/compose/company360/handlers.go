@@ -11,6 +11,7 @@ package company360
 import (
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -115,7 +116,7 @@ func (h Handlers) ProposeDealRoles(w http.ResponseWriter, r *http.Request, id cr
 	}
 	out, err := h.svc.ProposeRoles(r.Context(), h.roleLane, ids.From[ids.DealKind](ids.UUID(id)))
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)

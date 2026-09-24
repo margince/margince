@@ -75,11 +75,7 @@ const canaryReply = "{}"
 // takes an answer on trust instead of deriving it, so growing it must cost an
 // argument about where the value comes from in PRODUCTION, never about what
 // made the test pass.
-var codebaseOwnedFixtureKeys = map[string]map[string]string{
-	"agent_loop/loop": {
-		"tools": "the loop names its callable tools and their schemas in the instruction channel by design (runner/window.go's systemPrompt), and that catalog is the governed MCP tool surface this build registers — a scenario carries one only because a loop cannot be seeded without it. The stranger-supplied halves of the same fixture, the goal and the grounding, are stamped and must stay out.",
-	},
-}
+var codebaseOwnedFixtureKeys = map[string]map[string]string{}
 
 func TestNoFixtureTextReachesASystemPrompt(t *testing.T) {
 	census, err := compose.NewTaskCensus()
@@ -95,6 +91,18 @@ func TestNoFixtureTextReachesASystemPrompt(t *testing.T) {
 	bySite := map[string][]aicert.Scenario{}
 	for _, sc := range scenarios {
 		bySite[sc.Task+"/"+sc.Site] = append(bySite[sc.Task+"/"+sc.Site], sc)
+	}
+
+	// An exemption for a site nobody registers exempts nothing today and the
+	// next site to reuse the name tomorrow, so a stale one fails here.
+	registered := map[string]bool{}
+	for _, site := range census.All() {
+		registered[string(site.Task)+"/"+site.Variant] = true
+	}
+	for key := range codebaseOwnedFixtureKeys {
+		if !registered[key] {
+			t.Errorf("codebaseOwnedFixtureKeys exempts %s, which no registered site is — drop the entry", key)
+		}
 	}
 
 	// The obligation is derived from the census, not from the corpus: a site

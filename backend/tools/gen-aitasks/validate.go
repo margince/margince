@@ -111,7 +111,7 @@ func validateTask(name string, def taskDef, tierSet map[string]bool) error {
 			return fmt.Errorf("task %q: site %q has unknown kind %q", name, s.Name, s.Kind)
 		}
 	}
-	if err := validateAgents(name, def); err != nil {
+	if err := validateSiteTools(name, def); err != nil {
 		return err
 	}
 	if err := def.CompanyContext.validate(name); err != nil {

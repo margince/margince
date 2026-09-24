@@ -183,11 +183,13 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 	}
 }
 
-// The tool listing may take at most listingBudgetNumerator/listingBudgetDenominator
-// of the runner's prompt ceiling. The listing lives in the system prompt, which
-// elision never touches — only the transcript gives way — so a catalog that grew
-// past this would not overflow, it would quietly leave the run less and less
-// room for the observations it is reasoning over.
+// What every step pays before its transcript — the frame, the tool listing and
+// the step schema, runner.FixedStepCost — may take at most
+// listingBudgetNumerator/listingBudgetDenominator of the runner's prompt
+// ceiling. Elision never touches any of the three — only the transcript gives
+// way — so a catalog that grew past this would not overflow, it would quietly
+// leave the run less and less room for the observations it is reasoning over.
+// The history below measured the listing alone.
 //
 // It was 1/2, and the comment there said half was "generous next to where the
 // surface sits today". That stopped being true at 33 tools: the catalog reached
@@ -260,21 +262,15 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 // its parts was already agent-readable — it measured ~15,997 before the tool
 // and ~16,160 after it, against 16,000.
 //
-// WHAT CHANGED ON 2026-08-23: the bound stopped being global (#2355).
+// The bound is per declared agent, not global, because no run is offered the
+// whole catalog: each scheduled agent declares its tools in api/ai-tasks.yaml,
+// compose refuses to assemble one that does not, the runner refuses a Job with
+// no Tools, and no file outside the three sanctioned ones may build a Job.
 //
-// Every raise above was paid for the same way, and the pattern is the finding:
-// the whole catalog was measured because a run offered the whole catalog was a
-// legal configuration — Job.Tools empty read as no narrowing, so nothing said
-// otherwise. That is no longer true. Each scheduled agent declares its tools in
-// api/ai-tasks.yaml, compose refuses to assemble one that does not, and no file
-// outside two sanctioned ones may build a Job at all.
-//
-// So the fraction now bounds a DECLARED agent's listing, and the arithmetic it
-// was fighting is gone: the fattest agent that actually runs is an order of
-// magnitude inside it. The figures are NOT written here — they moved with every
-// change that touched a description, and two of them sat wrong in this comment
-// for weeks. docs/reference/agent-tool-budget.md is regenerated from the served
-// surface and is the place that carries them.
+// So the fraction bounds a DECLARED agent's step, and the fattest agent that
+// runs is well inside it. The figures are not written here, because every change
+// to a description moves them: docs/reference/agent-tool-budget.md is
+// regenerated from the served surface and is the place that carries them.
 //
 // The fraction itself is deliberately UNCHANGED at 17/24. Re-tightening it in
 // the change that creates the room would spend the room before anyone can argue
@@ -282,44 +278,6 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 const (
 	listingBudgetNumerator   = 17
 	listingBudgetDenominator = 24
-)
-
-// wholeCatalogBudgetNumerator/Denominator bound the WHOLE catalog, and this is
-// a floor rather than a budget — the distinction is the point.
-//
-// The certification lane really does offer the WHOLE catalog: 21 of the 23
-// agent_loop corpus scenarios declare `tools: catalog`, resolved through
-// agentLoopCatalog(), each building a real window. (The count is deliberately
-// not written here — it said 56 while the surface served 67, and a number in a
-// comment nothing checks is one more thing to go quietly wrong.) If that stopped fitting,
-// NOTHING WOULD BREAK LOUDLY — window.bounded() elides the transcript only,
-// stops at two messages, and sends whatever remains, and the bound providers'
-// real contexts dwarf 24,000. The scenarios would keep passing while measuring
-// a prompt larger than this build's own stated envelope, and no test anywhere
-// would say so.
-//
-// That is what this holds: the lane's measured envelope, not its survival. A
-// certification turn is ONE turn — goal, grounding, one reply, no accumulating
-// transcript — so it does not need the 7/24 a forty-step run reserves. 7/8 of
-// 24,000 leaves 3,000 for those three, which is ample for a one-turn replay.
-//
-// No feature is expected to argue with this number, and one that has to is a
-// signal about the CEILING rather than about itself. That happened at a
-// MinimumPromptWindow of 24,000, where this floor left 63 tokens for a 67-tool
-// catalog and the next verb anyone added failed here (margince/margince#3882).
-// The ceiling is now derived from the local provider's cap rather than picked.
-//
-// THE ROOM IS STILL SMALL: a few hundred tokens, which is one or two more
-// verbs. That is not an oversight to trim the ceiling for — the slack the
-// ceiling holds covers prompt bytes this side cannot count, and spending it
-// here buys tool descriptions at the price of truncating runs. When this fails
-// again, the question is which tools the certification lane needs to offer at
-// once, not how to make the number bigger.
-//
-// The per-agent bound above is the one that rations anything.
-const (
-	wholeCatalogBudgetNumerator   = 7
-	wholeCatalogBudgetDenominator = 8
 )
 
 // oneToolBudgetNumerator/Denominator bound a SINGLE tool's rendered entry.
@@ -418,19 +376,19 @@ func TestTheOneToolBudgetRefusesADescriptionThatFillsTheWindow(t *testing.T) {
 // listingOverBudget names what is wrong with an agent's listing, or "" when
 // nothing is. It is a function over one agent's specs rather than a loop body
 // so the refusal can be proved against a listing that breaks it — no shipped
-// agent is anywhere near the bound (the fattest is under a seventh of it), so a
+// agent is anywhere near the bound (agent-tool-budget.md carries the figures), so a
 // gate written inline here would never once have been seen to fire.
 func listingOverBudget(agent string, specs []mcp.ToolSpec) string {
 	budget := runner.MinimumPromptWindow * listingBudgetNumerator / listingBudgetDenominator
-	tokens := len(runner.ToolListing(specs)) / 4
-	if tokens <= budget {
+	cost := runner.FixedStepCost(specs)
+	if cost.Tokens <= budget {
 		return ""
 	}
 	return fmt.Sprintf(
-		"agent %q offers a tool listing of ~%d tokens against the %d it may take of a %d-token "+
-			"window — the listing is never elided, so what grows here comes out of the observations "+
-			"this run is reasoning over",
-		agent, tokens, budget, runner.MinimumPromptWindow)
+		"agent %q pays ~%d tokens on every step before its transcript (a %d-token listing and a "+
+			"%d-token step schema beside the frame) against the %d it may take of a %d-token window — "+
+			"neither is ever elided, so what grows here comes out of the observations this run is reasoning over",
+		agent, cost.Tokens, cost.Listing, cost.Schema, budget, runner.MinimumPromptWindow)
 }
 
 // The bound is only worth having if it fires. No shipped agent comes near it —
@@ -447,17 +405,27 @@ func TestTheAgentListingBudgetRefusesAListingThatWouldFillTheWindow(t *testing.T
 	}
 }
 
-// The whole catalog is not a run's listing, but it IS the certification lane's,
-// and the lane has no other statement of what it costs.
-func TestTheWholeCatalogStillFitsTheCertificationLanesWindow(t *testing.T) {
-	tokens := len(runner.ToolListing(servedSurface(t).Specs())) / 4
-	floor := runner.MinimumPromptWindow * wholeCatalogBudgetNumerator / wholeCatalogBudgetDenominator
-	if tokens > floor {
-		t.Errorf("the whole catalog renders ~%d tokens against the %d this build's window allows it — "+
-			"21 of the agent_loop corpus scenarios offer exactly this surface, and nothing would fail "+
-			"loudly: the window elides its transcript and sends anyway, so those scenarios would go on "+
-			"passing while measuring a prompt larger than the envelope this build claims",
-			tokens, floor)
+// The budget holds what every step PAYS, and a tool's schema is paid twice: once
+// in the listing and again as its branch of the step schema the provider
+// enforces. A tool whose listing alone fits and whose step does not is over.
+func TestTheAgentListingBudgetCountsTheStepSchemaBesideTheListing(t *testing.T) {
+	budget := runner.MinimumPromptWindow * listingBudgetNumerator / listingBudgetDenominator
+	var properties strings.Builder
+	for i := 0; properties.Len()/4 < budget*3/5; i++ {
+		fmt.Fprintf(&properties, `"member_%d":{"type":"string"},`, i)
+	}
+	wide := mcp.ToolSpec{
+		Name: "takes_every_member", Description: "Takes many members.",
+		InputSchema: json.RawMessage(`{"type":"object","properties":{` +
+			strings.TrimSuffix(properties.String(), ",") + `}}`),
+	}
+
+	if listing := len(runner.ToolListing([]mcp.ToolSpec{wide})) / 4; listing > budget {
+		t.Fatalf("the probe's listing alone is %d tokens against %d, so it proves nothing about the schema", listing, budget)
+	}
+	if listingOverBudget("an_agent_with_one_wide_tool", []mcp.ToolSpec{wide}) == "" {
+		t.Error("a tool whose listing fits and whose step schema doubles it was reported within budget, " +
+			"so the bound misses what rides every step beside the listing")
 	}
 }
 

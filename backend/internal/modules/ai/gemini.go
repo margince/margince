@@ -109,11 +109,16 @@ type geminiResponse struct {
 	ModelVersion string `json:"modelVersion"` //nolint:tagliatelle // Google's wire format (camelCase)
 	Candidates   []struct {
 		Content geminiContent `json:"content"`
-		// FinishReason names why generation stopped; "STOP" is the only clean
-		// finish. SAFETY / MAX_TOKENS / RECITATION / … must surface as errors —
-		// a filtered or truncated answer must never read as a complete one.
+		// FinishReason names why generation stopped. STOP finishes the answer
+		// and MAX_TOKENS truncates it; SAFETY / RECITATION / … withhold it and
+		// surface as errors, so a filtered answer never reads as a complete one.
 		FinishReason string `json:"finishReason"` //nolint:tagliatelle // Google's wire format (camelCase)
 	} `json:"candidates"`
+	// PromptFeedback names why the PROMPT was refused, and is the only signal
+	// a blocked prompt sends: its candidates array is empty.
+	PromptFeedback struct {
+		BlockReason string `json:"blockReason"` //nolint:tagliatelle // Google's wire format (camelCase)
+	} `json:"promptFeedback"` //nolint:tagliatelle // Google's wire format (camelCase)
 	// Error is Google's mid-stream/in-body error object (a 200 stream can
 	// still deliver {"error":{…}} as a chunk).
 	Error struct {
@@ -139,14 +144,24 @@ func (c *geminiClient) Complete(ctx context.Context, req model.Request) (model.R
 	if err := json.NewDecoder(body).Decode(&out); err != nil {
 		return model.Response{}, fmt.Errorf("ai: gemini: decode response: %w", err)
 	}
-	if err := geminiResponseError(out); err != nil {
-		return model.Response{}, err
+	spent := model.Response{
+		InputTokens: out.UsageMetadata.PromptTokenCount,
+		// candidatesTokenCount EXCLUDES thinking tokens, but the port's
+		// OutputTokens invariant is reasoning-inclusive (model.Response) so the
+		// budget meter charges true spend on every provider — add them here.
+		OutputTokens:    out.UsageMetadata.CandidatesTokenCount + out.UsageMetadata.ThoughtsTokenCount,
+		CachedTokens:    out.UsageMetadata.CachedContentTokenCount,
+		ReasoningTokens: out.UsageMetadata.ThoughtsTokenCount,
 	}
-	// A non-stream response is terminal by definition, so it must say STOP —
-	// a candidate with no finishReason is a truncated or non-Responses body,
-	// not a complete answer.
-	if !geminiSawStop(out) {
-		return model.Response{}, fmt.Errorf("ai: gemini: response carries no terminal STOP")
+	if err := geminiResponseError(ctx, out); err != nil {
+		return model.Response{}, withSpend(err, spent)
+	}
+	// A non-stream response is terminal by definition, so it must name its
+	// terminal — a candidate with no finishReason is a body cut short in
+	// transit, not a complete answer.
+	finish, terminal := geminiTerminal(out)
+	if !terminal {
+		return model.Response{}, fmt.Errorf("ai: gemini: response carries no terminal STOP or MAX_TOKENS")
 	}
 	var text strings.Builder
 	var signatures []string
@@ -158,17 +173,10 @@ func (c *geminiClient) Complete(ctx context.Context, req model.Request) (model.R
 			}
 		}
 	}
-	resp := model.Response{
-		Text:        text.String(),
-		InputTokens: out.UsageMetadata.PromptTokenCount,
-		// candidatesTokenCount EXCLUDES thinking tokens, but the port's
-		// OutputTokens invariant is reasoning-inclusive (model.Response) so the
-		// budget meter charges true spend on every provider — add them here.
-		OutputTokens:    out.UsageMetadata.CandidatesTokenCount + out.UsageMetadata.ThoughtsTokenCount,
-		CachedTokens:    out.UsageMetadata.CachedContentTokenCount,
-		ReasoningTokens: out.UsageMetadata.ThoughtsTokenCount,
-		ServedModel:     out.ModelVersion,
-	}
+	resp := spent
+	resp.Text = text.String()
+	resp.ServedModel = out.ModelVersion
+	resp.FinishReason = geminiFinishReason(finish)
 	if len(signatures) > 0 {
 		if meta, err := json.Marshal(map[string][]string{"thought_signatures": signatures}); err == nil {
 			resp.ProviderMetadata = map[string]json.RawMessage{"gemini": meta}
@@ -374,73 +382,29 @@ func (c *geminiClient) post(ctx context.Context, path string, payload []byte) (i
 	if resp.StatusCode != http.StatusOK {
 		//craft:ignore swallowed-errors best-effort close on the error path — the API status error is the answer
 		defer func() { _ = resp.Body.Close() }()
-		return nil, geminiError(resp)
+		return nil, geminiError(ctx, resp)
 	}
 	return resp.Body, nil
-}
-
-// geminiResponseError maps an in-body error object or an abnormal
-// finishReason to an error. STOP (and absent — a non-final stream chunk) is
-// the only clean state; SAFETY, MAX_TOKENS, RECITATION, … otherwise pass for
-// a complete answer because Gemini delivers them inside a 200 body.
-func geminiResponseError(out geminiResponse) error {
-	if out.Error.Message != "" || out.Error.Status != "" {
-		return fmt.Errorf("ai: gemini: %s: %s", out.Error.Status, out.Error.Message)
-	}
-	for _, cand := range out.Candidates {
-		if cand.FinishReason != "" && cand.FinishReason != "STOP" {
-			return stoppedError{reason: cand.FinishReason}
-		}
-	}
-	return nil
-}
-
-// stoppedError is an abnormal finishReason as an error that still NAMES the
-// terminal.
-//
-// Carrying it as data is what keeps the distinction recoverable: every
-// abnormal terminal classifies to the one `provider_error` sentinel, so a
-// truncated answer (MAX_TOKENS), a refused one (SAFETY) and a recited one
-// (RECITATION) are indistinguishable in a stored call unless the reason
-// itself survives. They call for opposite responses — retry smaller, do not
-// retry, change the prompt — so a row that cannot separate them cannot be
-// acted on.
-//
-// The message is byte-identical to the plain error it replaces: callers and
-// tests match on the text, so the reason is additive rather than a reword.
-type stoppedError struct{ reason string }
-
-func (e stoppedError) Error() string { return "ai: gemini: generation stopped: " + e.reason }
-
-// FinishReason satisfies the accessor tracing.go probes for with errors.As,
-// so the terminal reaches the trace without this package's error type
-// leaking into the tracing path's imports.
-func (e stoppedError) FinishReason() string { return e.reason }
-
-// geminiSawStop reports whether any candidate finished with the clean STOP
-// terminal. Intermediate stream chunks legitimately carry no finishReason —
-// only the final chunk (and every non-stream response) does.
-func geminiSawStop(out geminiResponse) bool {
-	for _, cand := range out.Candidates {
-		if cand.FinishReason == "STOP" {
-			return true
-		}
-	}
-	return false
 }
 
 // geminiStream reads the :streamGenerateContent?alt=sse stream. There is no
 // [DONE] sentinel — the final chunk carries finishReason STOP and then the
 // stream closes; text arrives at candidates[0].content.parts[].text on each
-// chunk. sawStop remembers the terminal so an EOF without one (a connection
-// dropped mid-generation) surfaces as an error, not a complete answer.
+// chunk. sawTerminal remembers the terminal so an EOF without one (a
+// connection dropped mid-generation) surfaces as an error, not a complete
+// answer. TokenStream has no terminal to carry a truncation, so a stream cut
+// off at MAX_TOKENS delivers its text and then ends on truncatedError.
 type geminiStream struct {
-	body    io.ReadCloser
-	scanner *bufio.Scanner
-	sawStop bool
+	body        io.ReadCloser
+	scanner     *bufio.Scanner
+	sawTerminal bool
+	cutOff      bool
 }
 
 func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
+	if s.cutOff {
+		return "", false, truncatedError{wire: providerGemini}
+	}
 	for s.scanner.Scan() {
 		if err := ctx.Err(); err != nil {
 			return "", false, err
@@ -454,14 +418,15 @@ func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
 		if err := json.Unmarshal([]byte(data), &ev); err != nil {
 			return "", false, fmt.Errorf("ai: gemini: stream event: %w", err)
 		}
-		// A mid-stream error object or an abnormal finishReason (SAFETY,
-		// MAX_TOKENS, …) arrives inside a 200 chunk — surface it instead of
-		// letting a zero-text chunk fall through to a clean-looking EOF.
-		if err := geminiResponseError(ev); err != nil {
+		// A mid-stream error object or a withholding finishReason (SAFETY, …)
+		// arrives inside a 200 chunk — surface it instead of letting a
+		// zero-text chunk fall through to a clean-looking EOF.
+		if err := geminiResponseError(ctx, ev); err != nil {
 			return "", false, err
 		}
-		if geminiSawStop(ev) {
-			s.sawStop = true
+		if finish, terminal := geminiTerminal(ev); terminal {
+			s.sawTerminal = true
+			s.cutOff = finish == geminiMaxTokens
 		}
 		var chunk strings.Builder
 		for _, cand := range ev.Candidates {
@@ -472,11 +437,14 @@ func (s *geminiStream) Next(ctx context.Context) (string, bool, error) {
 		if chunk.Len() > 0 {
 			return chunk.String(), true, nil
 		}
+		if s.cutOff {
+			return "", false, truncatedError{wire: providerGemini}
+		}
 	}
 	if err := s.scanner.Err(); err != nil {
 		return "", false, fmt.Errorf("ai: gemini: stream: %w", err)
 	}
-	if !s.sawStop {
+	if !s.sawTerminal {
 		// EOF before the STOP terminal: the connection dropped mid-generation.
 		return "", false, fmt.Errorf("ai: gemini: stream ended without a terminal STOP")
 	}

@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // Record is one task×provider×model×environment certification outcome —
@@ -114,7 +116,14 @@ type Record struct {
 	JudgeServedModel     string `json:"judge_served_model"`
 	SelfJudged           bool   `json:"self_judged"`
 	ServedIdentitySource string `json:"served_identity_source"`
-	RanAt                string `json:"ran_at"`
+	// CandidateUpstream and JudgeUpstream are the broker upstream preferences
+	// each binding was served under, absent for a binding none reach. They
+	// change which hosts may answer — the precision, the ceiling, the tail — so
+	// two records of one model are comparable only where these agree; a broker
+	// record without them predates the product default being applied here.
+	CandidateUpstream *ai.OpenRouterRouting `json:"candidate_upstream,omitempty"`
+	JudgeUpstream     *ai.OpenRouterRouting `json:"judge_upstream,omitempty"`
+	RanAt             string                `json:"ran_at"`
 	// Scenarios is every scenario this record pooled, with its own verdict and
 	// its own counts. A record is written per TASK and a task is not one
 	// scenario or even one site — cold_start ships four sites — so the pooled
@@ -146,14 +155,22 @@ type ScenarioRecord struct {
 	// existed, which the report reads as "ask the task stamp instead".
 	Stamp   string `json:"stamp,omitempty"`
 	Verdict string `json:"verdict"`
-	Runs    int    `json:"runs"`
-	Passed  int    `json:"passed"`
+	// JudgeBand is the best verdict this scenario's judge scores alone reach
+	// against its own bands — what a verdict over several rows needs of each.
+	JudgeBand string `json:"judge_band,omitempty"`
+	Runs      int    `json:"runs"`
+	Passed    int    `json:"passed"`
 	// The same reported-outcome counts the task carries, on this scenario's own
 	// runs: they say what came back, never whether it was what was asked for.
 	ReportedAccepted    int `json:"reported_accepted"`
 	ReportedWrongAnswer int `json:"reported_wrong_answer"`
 	ReportedInvalid     int `json:"reported_invalid"`
 	ReportedAbstained   int `json:"reported_abstained"`
+	// Withheld is how many of these runs the provider withheld an answer from,
+	// and WithheldReasons the distinct filters it named, so a reader can tell a
+	// safety stop from a model that answered badly.
+	Withheld        int      `json:"withheld,omitempty"`
+	WithheldReasons []string `json:"withheld_reasons,omitempty"`
 }
 
 // SiteTally is one SITE's share of a task's record, folded from the scenario
@@ -185,21 +202,22 @@ func (t SiteTally) Reliability() float64 {
 // False means this record measured that site not at all — a different thing
 // from measuring it and finding nothing, which is why it is not a zero tally.
 //
-// The verdict folds to the WORST of the site's scenarios, the same way the
-// task's own does: a site is only as certified as its weakest scenario.
+// The verdict is Verdict's rule over the site's scenario rows, the same rule
+// the task's own verdict is.
 func (r Record) ForSite(variant string) (SiteTally, bool) {
 	var tally SiteTally
-	found := false
+	var rows []scenarioTally
 	for _, sc := range r.Scenarios {
 		if sc.Site != variant {
 			continue
 		}
-		if !found {
-			tally.Verdict = sc.Verdict
-			found = true
-		} else {
-			tally.Verdict = worstVerdict(tally.Verdict, sc.Verdict)
+		// A row written before JudgeBand existed: its own verdict is the most its
+		// scores are known to reach, which reproduces the worst-scenario fold.
+		band := sc.JudgeBand
+		if band == "" {
+			band = sc.Verdict
 		}
+		rows = append(rows, scenarioTally{runs: sc.Runs, passed: sc.Passed, judgeBand: band})
 		tally.Runs += sc.Runs
 		tally.Passed += sc.Passed
 		tally.ReportedAccepted += sc.ReportedAccepted
@@ -207,7 +225,11 @@ func (r Record) ForSite(variant string) (SiteTally, bool) {
 		tally.ReportedInvalid += sc.ReportedInvalid
 		tally.ReportedAbstained += sc.ReportedAbstained
 	}
-	return tally, found
+	if len(rows) == 0 {
+		return SiteTally{}, false
+	}
+	tally.Verdict, _ = verdictOver(rows)
+	return tally, true
 }
 
 // sanitizeForPath maps a raw identifier (a provider name, or a served-model

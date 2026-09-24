@@ -31,6 +31,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -301,11 +302,12 @@ func (h coldstartHandlers) acceptColdStartRequest(w http.ResponseWriter, r *http
 
 // writeColdStartError maps an extraction failure onto the honest 422. The
 // client sees a generic, actionable message; the real cause (SSRF refusal,
-// timeout, thin input, empty gate) stays server-side.
+// timeout, thin input, empty gate) stays server-side. A model lane that
+// produced no answer is the assistant being unavailable (modelfailure).
 func writeColdStartError(w http.ResponseWriter, r *http.Request, req crmcontracts.ColdStartRequest, err error) {
 	var unreadable *unreadableError
 	if !errors.As(err, &unreadable) {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	slog.ErrorContext(r.Context(), "coldstart read-back unreadable",

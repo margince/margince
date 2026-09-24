@@ -19,7 +19,6 @@ package aicert_test
 // and a ladder rewritten in tasks_gen.go re-attributes every row.
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -68,10 +67,18 @@ type aiCertPresetTier struct {
 // that pair says. Band and State are empty when nothing measured it.
 type aiCertPresetTask struct {
 	Task  string           `json:"task"`
+	Label string           `json:"label"`
 	Tier  string           `json:"tier"`
 	Model aiCertBindingRef `json:"model"`
 	Band  string           `json:"band"`
 	State string           `json:"state"`
+	// Runs and Passed are the record's pooled counts over every case of the
+	// task, and the two case counts say which half of the rule held a grade
+	// down: a case failing too many of its own runs, or its answers' quality.
+	Runs                 int `json:"runs"`
+	Passed               int `json:"passed"`
+	CasesFailingOften    int `json:"cases_failing_often"`
+	CasesBelowQualityBar int `json:"cases_below_quality_bar"`
 }
 
 // loadAICertPresets reads every preset in the directory through the same
@@ -131,10 +138,10 @@ func tiersOfPreset(cfg ai.RoutingConfig) []aiCertPresetTier {
 }
 
 // attributeAICertPresets fills in each preset's per-task verdict from the
-// document's own records, so the by-preset section can never claim a band the
-// per-site tables below it do not carry.
-func attributeAICertPresets(presets []aiCertPreset, doc aiCertDoc) []aiCertPreset {
-	measured := aiCertBandsByTaskBinding(doc)
+// records the document's site tables carry, so the by-preset section can never
+// claim a band for a pair those tables do not show.
+func attributeAICertPresets(presets []aiCertPreset, doc aiCertDoc, records []aicert.Record) []aiCertPreset {
+	measured := aiCertTaskVerdicts(doc, records)
 	filled := make([]aiCertPreset, 0, len(presets))
 	for _, preset := range presets {
 		bound := map[string]aiCertPresetTier{}
@@ -156,7 +163,7 @@ func attributeAICertPresets(presets []aiCertPreset, doc aiCertDoc) []aiCertPrese
 func presetTaskRow(task string, preset aiCertPreset,
 	bound map[string]aiCertPresetTier, measured map[string]aiCertPresetTask,
 ) aiCertPresetTask {
-	row := aiCertPresetTask{Task: task}
+	row := aiCertPresetTask{Task: task, Label: ai.DisplayName(ai.Task(task))}
 	// The FIRST rung the preset binds, not the first rung the ladder names: a
 	// task whose primary tier this preset leaves unbound is served by the next
 	// one down, and reporting the primary would credit the preset with a model
@@ -169,7 +176,8 @@ func presetTaskRow(task string, preset aiCertPreset,
 		row.Tier = rung.Tier
 		row.Model = aiCertBindingRef{Provider: rung.Provider, Model: rung.Model, Env: preset.Profile}
 		if seen, ok := measured[task+"\x00"+row.Model.label()]; ok {
-			row.Band, row.State = seen.Band, seen.State
+			row.Band, row.State, row.Runs, row.Passed = seen.Band, seen.State, seen.Runs, seen.Passed
+			row.CasesFailingOften, row.CasesBelowQualityBar = seen.CasesFailingOften, seen.CasesBelowQualityBar
 		}
 		return row
 	}
@@ -197,24 +205,56 @@ func countPresetTask(preset *aiCertPreset, row aiCertPresetTask) {
 	}
 }
 
-// aiCertBandsByTaskBinding folds the document's per-site records down to one
-// verdict per (task, binding). A record is written per task and repeated on
-// every site of it, so the fold keeps the WORST band any site of the task
-// reached: a preset's reader is told what the task does end to end, and one
-// site that fails is a task that fails.
-func aiCertBandsByTaskBinding(doc aiCertDoc) map[string]aiCertPresetTask {
-	worst := map[string]aiCertPresetTask{}
+// aiCertTaskVerdicts is one verdict per (task, binding): the record's OWN task
+// verdict, which is what the runner computed over every case of the task, so
+// the preset view and the task verdict are one answer. A pair enters only when
+// a shipped site's table carries it, and its state is the worst any of those
+// sites reports — one site measured on an older version is a task to re-check.
+func aiCertTaskVerdicts(doc aiCertDoc, records []aicert.Record) map[string]aiCertPresetTask {
+	byKey := map[string]aicert.Record{}
+	for _, rec := range records {
+		byKey[rec.Task+"\x00"+bindingRefOf(rec).label()] = rec
+	}
+	verdicts := map[string]aiCertPresetTask{}
 	for _, site := range doc.Sites {
-		for _, rec := range site.Records {
-			key := site.Task + "\x00" + rec.Binding.label()
-			seen, found := worst[key]
-			if found && bandRank(seen.Band) <= bandRank(rec.Band) {
+		for _, siteRec := range site.Records {
+			key := site.Task + "\x00" + siteRec.Binding.label()
+			if seen, found := verdicts[key]; found {
+				if aiCertStateRank(siteRec.State) < aiCertStateRank(seen.State) {
+					seen.State = siteRec.State
+					verdicts[key] = seen
+				}
 				continue
 			}
-			worst[key] = aiCertPresetTask{Band: rec.Band, State: rec.State}
+			rec := byKey[key]
+			failing, belowQuality := aiCertCasesHoldingDown(rec)
+			verdicts[key] = aiCertPresetTask{
+				Band: rec.Verdict, State: siteRec.State, Runs: rec.Runs, Passed: rec.Passed,
+				CasesFailingOften: failing, CasesBelowQualityBar: belowQuality,
+			}
 		}
 	}
-	return worst
+	return verdicts
+}
+
+// aiCertCasesHoldingDown counts the cases that miss each per-case half of the
+// verdict rule. A row written before judge bands were recorded reveals its
+// judge's band only when every run passed, since its stored verdict then has
+// nothing else to reflect; otherwise its quality is unknown and not counted.
+func aiCertCasesHoldingDown(rec aicert.Record) (failingOften, belowQuality int) {
+	for _, sc := range rec.Scenarios {
+		if sc.Passed < aicert.CaseMajority(sc.Runs) {
+			failingOften++
+		}
+		band := sc.JudgeBand
+		if band == "" && sc.Passed == sc.Runs {
+			band = sc.Verdict
+		}
+		if band != "" && band != aicert.VerdictCertified {
+			belowQuality++
+		}
+	}
+	return failingOften, belowQuality
 }
 
 func aiCertTasksOf(doc aiCertDoc) []string {
@@ -228,64 +268,6 @@ func aiCertTasksOf(doc aiCertDoc) []string {
 	}
 	sort.Strings(tasks)
 	return tasks
-}
-
-// writeAICertPresets renders the section, and renders it FIRST: a reader
-// arriving at this page is deciding what to deploy, and the per-site tables
-// below answer a question they have to already know the answer to.
-func writeAICertPresets(page *strings.Builder, presets []aiCertPreset) {
-	page.WriteString("## What each preset gives you\n\n")
-	page.WriteString("An operator deploys a [preset](" + aiCertPresetLink + "README.md), not a model. The preset binds a\n")
-	page.WriteString("model per tier, and each task walks its own ladder until it reaches a tier the\n")
-	page.WriteString("preset bound — so the grade a task gets under a preset is that model's grade,\n")
-	page.WriteString("never the best grade anything reached. `untested` is a gap, not a failure: the\n")
-	page.WriteString("preset binds a model there and no paid run has measured it yet.\n\n")
-	page.WriteString("| Preset | Profile | `certified` | `supported_degraded` | `not_supported` | `untested` | Unbound |\n")
-	page.WriteString("|---|---|---:|---:|---:|---:|---:|\n")
-	for _, p := range presets {
-		fmt.Fprintf(page, "| [`%s`](%s%s) | `%s` | %d | %d | %d | %d | %d |\n",
-			p.File, aiCertPresetLink, p.File, p.Profile,
-			p.Bands.Certified, p.Bands.SupportedDegraded, p.Bands.NotSupported, p.Untested, p.Unbound)
-	}
-	page.WriteString("\nUnbound counts tasks whose whole ladder this preset leaves empty — the router\n")
-	page.WriteString("has nothing to call, so the feature is off rather than degraded.\n\n")
-	for _, p := range presets {
-		writeAICertPresetDetail(page, p)
-	}
-}
-
-func writeAICertPresetDetail(page *strings.Builder, p aiCertPreset) {
-	fmt.Fprintf(page, "### `%s`\n\n", p.File)
-	page.WriteString("| Tier | Provider | Model |\n|---|---|---|\n")
-	for _, tier := range p.Tiers {
-		fmt.Fprintf(page, "| `%s` | `%s` | `%s` |\n", tier.Tier, tier.Provider, tier.Model)
-	}
-	page.WriteString("\n| Task | Served on | Model | Band | State |\n|---|---|---|---|---|\n")
-	for _, row := range p.Tasks {
-		fmt.Fprintf(page, "| `%s` | %s | %s | %s | %s |\n",
-			row.Task, aiCertCell(row.Tier), aiCertCell(row.Model.Model),
-			aiCertBandCell(row), aiCertCell(row.State))
-	}
-	page.WriteString("\n")
-}
-
-// aiCertCell renders an unmeasured or unbound value as the page's own dash
-// rather than as an empty table cell, which reads as a rendering fault.
-func aiCertCell(value string) string {
-	if value == "" {
-		return "-"
-	}
-	return "`" + value + "`"
-}
-
-func aiCertBandCell(row aiCertPresetTask) string {
-	if row.Tier == "" {
-		return "`unbound`"
-	}
-	if row.Band == "" {
-		return "`untested`"
-	}
-	return "`" + row.Band + "`"
 }
 
 // assertAICertPresetsAreAttributed is the guard the drift check cannot be: a
@@ -306,6 +288,11 @@ func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc 
 		if len(p.Tiers) == 0 {
 			t.Errorf("preset %s binds no tier, so every task under it would read as unbound", p.File)
 		}
+		for _, row := range p.Tasks {
+			if row.Label == "" {
+				t.Errorf("task %s has no display name in api/ai-tasks.yaml, so the page would name it by its id", row.Task)
+			}
+		}
 		if p.Unrecognised > 0 {
 			t.Errorf("preset %s carries %d row(s) whose band this rollup has no column for", p.File, p.Unrecognised)
 		}
@@ -316,6 +303,33 @@ func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc 
 		if measured := p.Bands.Certified + p.Bands.SupportedDegraded + p.Bands.NotSupported; measured == 0 {
 			t.Errorf("preset %s reaches no measured band at all — every task reads untested or unbound, "+
 				"which is a claim about the product if true and a broken join if not", p.File)
+		}
+	}
+}
+
+// assertAICertPresetsReadTheRecords holds every measured preset row to the
+// committed record it names, looked up by the record's own key: the grade a
+// preset shows is the task verdict the runner wrote, never a fold of sites.
+func assertAICertPresetsReadTheRecords(t *testing.T, presets []aiCertPreset, records []aicert.Record) {
+	t.Helper()
+	byKey := map[string]aicert.Record{}
+	for _, rec := range records {
+		byKey[aicert.RecordKey(rec)] = rec
+	}
+	for _, p := range presets {
+		for _, row := range p.Tasks {
+			if row.Band == "" {
+				continue
+			}
+			key := row.Task + "/" + row.Model.Provider + "/" + row.Model.Model + "/" + row.Model.Env
+			rec, found := byKey[key]
+			switch {
+			case !found:
+				t.Errorf("preset %s grades %s from no committed record %s", p.File, row.Task, key)
+			case rec.Verdict != row.Band || rec.Runs != row.Runs || rec.Passed != row.Passed:
+				t.Errorf("preset %s shows %s as %s, %d of %d; its record says %s, %d of %d",
+					p.File, row.Task, row.Band, row.Passed, row.Runs, rec.Verdict, rec.Passed, rec.Runs)
+			}
 		}
 	}
 }

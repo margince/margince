@@ -438,7 +438,7 @@ func (d *DocumentExtractor) ask(ctx context.Context, src documentSource) ([]extr
 			return nil, fmt.Errorf("%w: this document's bytes are not the type it is stored as: %w",
 				errRefusedDocument, err)
 		}
-		if errors.Is(err, ai.ErrOutputRejected) {
+		if ai.ModelDeclined(err) {
 			return nil, fmt.Errorf("%w: %w", errRefusedDocument, err)
 		}
 		return nil, err

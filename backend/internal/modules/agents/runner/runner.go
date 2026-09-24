@@ -16,12 +16,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/modelreply"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -107,7 +104,7 @@ type Step struct {
 	Tier        string
 	TokensIn    int
 	TokensOut   int
-	Admission   string // "executed" | "refused" | "staged" | "rejected"
+	Admission   string // "executed" | AdmissionRefused | "staged" | "rejected"
 }
 
 // Pending snapshots a run suspended on a 🟡 staging: the approval to
@@ -153,6 +150,9 @@ func New(tools Invoker, brain Brain) *Runner {
 // Run executes a fresh job until terminal answer, suspension, or a
 // budget guarantee fires.
 func (r *Runner) Run(ctx context.Context, job Job) (Result, error) {
+	if len(job.Tools) == 0 {
+		return r.degrade(Result{}, unscopedJobReason), nil
+	}
 	admitted := r.tools.Offered(ctx)
 	if missing := unfundedTools(job, admitted); len(missing) > 0 {
 		// Before the first completion, so a misconfigured agent costs no
@@ -160,7 +160,7 @@ func (r *Runner) Run(ctx context.Context, job Job) (Result, error) {
 		return r.degrade(Result{}, "this agent's passport does not admit "+
 			strings.Join(missing, ", ")+" — grant the scope those tools need, or narrow the agent's catalog entry"), nil
 	}
-	win := newWindow(job, offeredToJob(job, admitted), r.tools.Specs())
+	win := newWindow(job, job.Narrow(admitted), r.tools.Specs())
 	return r.loop(ctx, job, win, Result{})
 }
 
@@ -176,6 +176,10 @@ type Decision struct {
 // silently changed under an approved diff). Rejected: the refusal is
 // observed and the model re-plans without that action.
 func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, error) {
+	if len(job.Tools) == 0 {
+		return r.degrade(Result{StepsUsed: dec.Pending.StepsUsed, OutputTokens: dec.Pending.OutputTokens},
+			unscopedJobReason), nil
+	}
 	admitted := r.tools.Offered(ctx)
 	// The same shortfall check Run makes, at the same strength. A resumed run
 	// whose entry the passport can no longer fund is as misconfigured as a
@@ -186,7 +190,7 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 			"this agent's passport does not admit "+strings.Join(missing, ", ")+
 				" — the run cannot resume under an entry its passport cannot fund"), nil
 	}
-	win, err := windowFromSnapshot(job, offeredToJob(job, admitted), r.tools.Specs(),
+	win, err := windowFromSnapshot(job, job.Narrow(admitted), r.tools.Specs(),
 		dec.Pending.Window, dec.Pending.Fence, dec.Pending.TranscriptVersion)
 	if err != nil {
 		return Result{}, err
@@ -226,7 +230,7 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 		// "refused" — replay must never claim a mutation that the gate did
 		// not apply.
 		observation = "approved action could not be applied: " + err.Error()
-		admission = "refused"
+		admission = AdmissionRefused
 	}
 	win.observe(dec.Pending.Tool, observation)
 	// The approved staged call redeems here with no fresh model completion —
@@ -238,43 +242,6 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 		Admission: admission,
 	})
 	return r.loop(ctx, job, win, carried)
-}
-
-// observeRefusal feeds a refusal back as an observation and returns the
-// trace step for it. A DECLARED capability gap is called out as terminal,
-// because it is not a fault the model can route around by trying again — and
-// this is the loop with a step budget, so a re-plan that re-calls the same
-// tool spends the run on a permanent no.
-func observeRefusal(win *window, step modelStep, err error, meta Meta, resp model.Response) Step {
-	observation := "tool call refused: " + err.Error()
-	// Telling the model not to retry is an ORDER, so it rides the directive
-	// argument: inside the fence it would be text the prompt has already
-	// declared to be data the model must disregard (observeThen's own doc). The
-	// trace keeps both halves joined — a trace is a record of what happened,
-	// not a prompt.
-	directive := ""
-	switch {
-	case errors.Is(err, apperrors.ErrUnsupportedBySoR):
-		directive = "this workspace's system of record cannot serve this tool at all; do not call it again in this run"
-	case errors.Is(err, errOutsideAgentSpec):
-		// Permanent for the same reason and for a different cause: the
-		// allowlist is code, so no re-plan reaches it within this run.
-		directive = "this tool is outside what this agent may do; do not call it again in this run"
-	}
-	win.observeThen(step.Tool, observation, directive)
-	// Reserve the directive's room inside the cap: provider text whose LENGTH is
-	// influenceable by mirrored content must neither crowd "this was terminal"
-	// out of the trace nor grow the entry past the bound.
-	suffix := ""
-	if directive != "" {
-		suffix = " — " + directive
-	}
-	recorded := truncateTo(observation, traceObservationLimit-len(suffix)) + suffix
-	return Step{
-		Tool: step.Tool, Args: step.Args, Observation: recorded,
-		ModelID: meta.ModelID, Tier: meta.Tier, TokensIn: resp.InputTokens, TokensOut: resp.OutputTokens,
-		Admission: "refused",
-	}
 }
 
 // consecutiveInvalidLimit ends a run whose model cannot produce a valid
@@ -306,7 +273,7 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 		resp, meta, err := r.brain.Complete(ctx,
 			win.asRequest(budget.MaxOutputTokens-acc.OutputTokens, r.brain.PromptWindow()))
 		if err != nil {
-			return r.degradeFromCause(acc, job, reasonModelCallFailed, err), nil
+			return r.degradeFromCause(acc, job, modelCallReason(err), err), nil
 		}
 		acc.OutputTokens += resp.OutputTokens
 
@@ -393,52 +360,6 @@ func suspend(acc Result, approvalID ids.ApprovalID, step modelStep, win *window,
 		OutputTokens:      acc.OutputTokens,
 	}
 	return acc
-}
-
-// modelStep is the step protocol: exactly one of tool-call or final.
-type modelStep struct {
-	Tool  string          `json:"tool"`
-	Args  json.RawMessage `json:"args"`
-	Final json.RawMessage `json:"final"`
-}
-
-func parseStep(text string) (modelStep, error) {
-	// SoleDocument, not Unfence: this channel executes what it reads, so a
-	// reply holding two candidate documents is refused rather than resolved by
-	// size. See modelreply.SoleDocument — largest-wins hands back an injected
-	// step that the model quoted while refusing it.
-	cleaned := modelreply.SoleDocument(text)
-
-	var step modelStep
-	dec := json.NewDecoder(strings.NewReader(cleaned))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&step); err != nil {
-		return modelStep{}, fmt.Errorf(`expected {"tool":..., "args":{...}} or {"final":{...}}: %w`, err)
-	}
-	// A step is the WHOLE document. json.Decoder stops at the first value and
-	// discards what follows it unread, so a reply that LEADS with a quoted
-	// injection — `{…} — I will not do that` — decodes the quotation and the
-	// refusal after it is never seen. The reduction cannot help here: the
-	// document really is at the start of the reply.
-	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
-		return modelStep{}, errors.New("a step must be the whole reply, and this one carries text after the document")
-	}
-	hasTool := step.Tool != ""
-	hasFinal := step.Final != nil
-	if hasTool == hasFinal {
-		return modelStep{}, errors.New(`exactly one of "tool" or "final" must be set`)
-	}
-	if hasTool && len(step.Tool) > maxToolNameLen {
-		// A tool name is a registry identifier, so a long one is not a typo —
-		// it is the model writing a payload into a field the trace persists and
-		// the refusal path echoes. Bound it here, at the one place model output
-		// becomes a step, rather than at each place it is later printed.
-		return modelStep{}, fmt.Errorf("tool name is longer than %d characters", maxToolNameLen)
-	}
-	if hasTool && step.Args == nil {
-		step.Args = json.RawMessage(`{}`)
-	}
-	return step, nil
 }
 
 // retryWithApproval re-makes one step's call presenting the approval a human has

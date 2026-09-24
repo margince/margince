@@ -26,6 +26,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
+// unscopedJobReason is why a job carrying no allowlist never starts.
+//
+// A run attaches the tools its goal needs and never the whole catalog: the
+// listing rides in every step of the window, so an unnarrowed run pays for
+// every verb on every turn and may call any of them. An empty list therefore
+// refuses rather than defaulting to what the passport admits — the one
+// default that would quietly hand a run everything.
+const unscopedJobReason = "this run names no tools — every agent attaches the tools its goal needs " +
+	"in api/ai-tasks.yaml, and a run is never offered the whole catalog"
+
 // errOutsideAgentSpec refuses a tool this run's catalog entry does not name.
 //
 // A runner-local sentinel and not an apperrors one: that registry is fixed and
@@ -39,25 +49,24 @@ var errOutsideAgentSpec = errors.New("this agent's catalog entry does not includ
 // mid-run — so observeRefusal marks it terminal and the model does not spend
 // its budget re-planning into the same no.
 func (j Job) permits(tool string) error {
-	if len(j.Tools) == 0 || slices.Contains(j.Tools, tool) {
+	if slices.Contains(j.Tools, tool) {
 		return nil
 	}
 	return fmt.Errorf("%w: %s", errOutsideAgentSpec, tool)
 }
 
-// offeredToJob is what this run's window lists: what the passport admits,
-// narrowed to what the catalog entry names.
+// Narrow is what this run's window lists: what the passport admits, narrowed
+// to what the catalog entry names. Exported because the certification case
+// must list exactly this set, and a second filter there would be a second
+// answer to what a run is offered.
 //
 // Applied to the OFFERED set and never to the `known` vocabulary the window
 // attributes observations with — a narrowed offer is exactly the kind of
 // narrowing that must not relabel a run's own history (window.go §sourceVocabulary).
-func offeredToJob(job Job, offered []mcp.ToolSpec) []mcp.ToolSpec {
-	if len(job.Tools) == 0 {
-		return offered
-	}
-	kept := make([]mcp.ToolSpec, 0, len(job.Tools))
+func (j Job) Narrow(offered []mcp.ToolSpec) []mcp.ToolSpec {
+	kept := make([]mcp.ToolSpec, 0, len(j.Tools))
 	for _, spec := range offered {
-		if slices.Contains(job.Tools, spec.Name) {
+		if slices.Contains(j.Tools, spec.Name) {
 			kept = append(kept, spec)
 		}
 	}
@@ -76,9 +85,6 @@ func offeredToJob(job Job, offered []mcp.ToolSpec) []mcp.ToolSpec {
 // misconfigured rather than merely constrained, and the operator is owed the
 // name of the missing grant instead of a thin answer.
 func unfundedTools(job Job, offered []mcp.ToolSpec) []string {
-	if len(job.Tools) == 0 {
-		return nil
-	}
 	admitted := make(map[string]bool, len(offered))
 	for _, spec := range offered {
 		admitted[spec.Name] = true

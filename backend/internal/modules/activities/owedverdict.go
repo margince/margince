@@ -250,7 +250,7 @@ func (s *Store) OwedBacklog(ctx context.Context, asOf time.Time, limit, bodyLimi
 		// clause would have done that silently — the statutory-hold check
 		// beside it does not cover a confidentiality narrowing.
 		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own, nil, horizon,
-			`a.owed_verdict IS NULL AND a.audience = 'workspace' AND a.restricted_at IS NULL`)
+			`a.owed_verdict IS NULL AND a.owed_verdict_declined_at IS NULL AND a.audience = 'workspace' AND a.restricted_at IS NULL`)
 		if err != nil {
 			return err
 		}
@@ -335,6 +335,9 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 			   AND a.archived_at IS NULL
 			   AND a.audience = 'workspace'
 			   AND a.restricted_at IS NULL
+			   -- Declined by every rung (MarkOwedVerdictDeclined): its verdict
+			   -- stands rather than being re-sent each time the rules move.
+			   AND a.owed_verdict_declined_at IS NULL
 			   -- A human saying "this is not sales work" is the one rule from the
 			   -- waiting query this read keeps, and it is kept because it is a
 			   -- DECISION rather than a derivation. The clauses left behind are

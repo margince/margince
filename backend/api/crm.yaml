@@ -1483,7 +1483,8 @@ paths:
         **It changes no record.** No field on the contact, no activity, no voice-learning
         signal, and nothing is sent. Sending stays `POST /emails`, with its own consent gate,
         approval token and idempotency key; the absence of those three parameters here is the
-        guarantee rather than a convenience.
+        guarantee rather than a convenience. Keeping the rep's unsent message is a separate,
+        explicit act at `PUT /mail-drafts`, which this route never performs.
 
         Two things it does write, and both are about the CALL rather than the contact: the
         workspace's AI usage meter and the model-call audit row, exactly as every other
@@ -3622,7 +3623,8 @@ paths:
         **It changes no record.** No field on the account, no activity, no voice-learning
         signal, and nothing is sent. Sending stays `POST /emails`, with its own consent
         gate, approval token and idempotency key; the absence of those three parameters
-        here is the guarantee rather than a convenience.
+        here is the guarantee rather than a convenience. Keeping the rep's unsent message
+        is a separate, explicit act at `PUT /mail-drafts`, which this route never performs.
 
         Two things it does write, and both are about the CALL rather than the account:
         the workspace's AI usage meter and the model-call audit row, exactly as every
@@ -6506,7 +6508,10 @@ paths:
       operationId: draftEmail
       x-waits-on-model: always
       summary: Draft a reply/follow-up email for context (the `draft_email` MCP verb).
-      description: Drafting is 🟢 (never auto-sends). The draft is returned, not sent.
+      description: |
+        Drafting is 🟢 (never auto-sends). The draft is returned, not sent. Keeping the rep's
+        unsent message is a separate, explicit act at `PUT /mail-drafts`, which this route
+        never performs.
       x-mcp-tool: { verb: draft_email, record_type: activity, tier: auto_execute, scope: draft }
       requestBody:
         required: false
@@ -6891,6 +6896,107 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '409':
           description: It already fired or was already cancelled.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /mail-drafts:
+    get:
+      tags: [Activities]
+      operationId: getMailDraft
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The caller's own unsent message for one place the composer opens.
+      description: |
+        A draft is the composer's state, kept so that closing it does not lose a message. It
+        is not an activity, not a scheduled send and never on a timeline, and only the seat
+        that wrote it can read it. There is at most one per author and anchor.
+
+        The AI drafting routes still persist nothing: a draft exists only because the rep's
+        composer saved one here.
+      x-agent-access: human-only
+      parameters:
+        - name: anchor_type
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/MailDraftAnchorType' }
+        - name: anchor_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The caller's draft for this anchor.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MailDraft' }
+        '404':
+          description: |
+            No draft of the caller's for this anchor, or an anchor the caller can no longer
+            see. The two are one answer, so a draft is never read back past its author's
+            access to what it was written about. Such a draft is not kept forever: every draft
+            not saved for ninety days is deleted, as is one whose message is sent or scheduled,
+            or whose addressee is erased.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [Activities]
+      operationId: saveMailDraft
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Save the caller's unsent message for one anchor, replacing what was saved before.
+      description: |
+        An upsert keyed on the caller and the anchor. Without `If-Match` it creates the draft
+        and refuses 409 when one already exists; with `If-Match` it replaces the draft at that
+        version and refuses 409 when the draft has moved or gone. Either way two composers
+        open on one place cannot silently overwrite each other.
+
+        Addresses are kept as typed and checked only when the message is sent. Sending or
+        scheduling with `mail_draft_id` discards the draft in the same transaction; a refused
+        send keeps it.
+      x-agent-access: human-only
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MailDraftInput' }
+      responses:
+        '200':
+          description: The saved draft, at its new version.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MailDraft' }
+        '404':
+          description: The anchor does not exist or is outside the caller's row scope.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: |
+            `code: version_skew` — the draft is not at the version you last read: another
+            composer saved or discarded it, or one exists and you sent no `If-Match`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /mail-drafts/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Activities]
+      operationId: discardMailDraft
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Discard one of the caller's unsent messages.
+      x-agent-access: human-only
+      responses:
+        '204':
+          description: Discarded.
+        '404':
+          description: |
+            No such draft for this caller. Somebody else's is not found rather than forbidden.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -8439,7 +8545,9 @@ paths:
         **It changes no record.** No field on the lead, no activity, no voice-learning signal,
         and nothing is sent. Sending stays `POST /emails`, with its own consent gate, approval
         token and idempotency key. The two writes that do happen are about the CALL rather
-        than the lead: the workspace's AI usage meter and the model-call audit row.
+        than the lead: the workspace's AI usage meter and the model-call audit row. Keeping the
+        rep's unsent message is a separate, explicit act at `PUT /mail-drafts`, which this
+        route never performs.
 
         **Grounded, per viewer.** The draft stands on what the lead page stands on: who they
         are, the company they wrote from, where the lead sits on its ladder, and the recent
@@ -26338,10 +26446,17 @@ components:
             out of budget or over its quota, which a human tops up. `provider_throttled` — an
             ordinary burst limit, which clears by itself. `provider_refused` — the provider
             turned the call away and said nothing about why, so the model was never reached and
-            no claim is made about the cause. `provider_error` is the FALLBACK: a provider
-            failure naming none of those three. It covers a connection or TLS fault and a
-            non-429 server error as well as a call the model answered badly, so it says the
-            provider failed and nothing about how far the request got.
+            no claim is made about the cause.
+
+            Two codes are outcomes rather than failures: a model was reached and decided.
+            `output_withheld` — the provider declined to deliver the answer: a refusal, a
+            safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request
+            malformed, which is a defect on the calling side.
+
+            `provider_error` is the FALLBACK: a provider failure naming none of those. It
+            covers a connection or TLS fault and a non-429 server error as well as a call the
+            model answered badly, so it says the provider failed and nothing about how far the
+            request got.
         has_payload: { type: boolean, description: 'A captured payload row exists for this call.' }
     AiCallAttempt:
       type: object
@@ -35545,6 +35660,15 @@ components:
             edited-and-sent metadata. Only a guarded, human-authored final edit may become a
             `draft_signal` corpus source. Omit for independently composed mail; no voice-learning
             outcome is inferred without a valid reference.
+        mail_draft_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The caller's saved draft (`PUT /mail-drafts`) this message was composed in. The
+            send, or the scheduling, discards it in the SAME transaction, so a message that
+            left the composer leaves no draft behind; a refused send commits nothing and the
+            draft stays. Only a human caller's own draft for this message's anchor is
+            discarded — any other id is ignored — and omitting it discards nothing.
         communication_context:
           type: [string, 'null']
           enum: [reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,
@@ -35752,6 +35876,50 @@ components:
             It is a POINTER, never permission: reading the review is gated on its own terms
             (initiator, assignee, or the `communication_exception` grant), so a caller holding
             this id still gets 404 if the review is not theirs to see.
+        version: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    MailDraftAnchorType:
+      type: string
+      enum: [activity, contact, company, deal, lead, project]
+      description: |
+        What the composer opened against: `activity` for a reply to that message, or the
+        record a new conversation starts from.
+
+    MailDraftInput:
+      type: object
+      required: [anchor_type, anchor_id]
+      description: |
+        The composer's fields as they stand. Every content field is optional and an omitted
+        one saves as empty, because a draft is whatever the rep had typed so far.
+      properties:
+        anchor_type: { $ref: '#/components/schemas/MailDraftAnchorType' }
+        anchor_id: { type: string, format: uuid }
+        to: { type: array, maxItems: 100, items: { type: string, maxLength: 320 } }
+        cc: { type: array, maxItems: 100, items: { type: string, maxLength: 320 } }
+        bcc: { type: array, maxItems: 100, items: { type: string, maxLength: 320 } }
+        subject: { type: string, maxLength: 998 }
+        body: { type: string }
+        html_body:
+          type: [string, 'null']
+          description: The editor's markup beside the plain body, so reopening restores the formatting.
+
+    MailDraft:
+      type: object
+      required: [id, anchor_type, anchor_id, to, cc, bcc, subject, body, version, created_at, updated_at]
+      description: |
+        One rep's unsent message, readable by its author and nobody else. Not an activity.
+      properties:
+        id: { type: string, format: uuid }
+        anchor_type: { $ref: '#/components/schemas/MailDraftAnchorType' }
+        anchor_id: { type: string, format: uuid }
+        to: { type: array, items: { type: string } }
+        cc: { type: array, items: { type: string } }
+        bcc: { type: array, items: { type: string } }
+        subject: { type: string }
+        body: { type: string }
+        html_body: { type: [string, 'null'] }
         version: { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -36019,6 +36187,12 @@ components:
           description: |
             Opaque reference returned by the drafting operation, exactly as on `send_email`.
             Omit for independently composed mail.
+        mail_draft_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The caller's saved draft this message was composed in, discarded in the same
+            transaction as the send or the scheduling, exactly as on `send_email`.
         communication_context:
           type: [string, 'null']
           enum: [reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,

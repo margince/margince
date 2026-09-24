@@ -86,7 +86,9 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	multiTurn(ai.TaskColdStart, "company_message", onboardingCompanyMessageCases{})
 	multiTurn(ai.TaskColdStart, "sitereadmessage", companyReadMessageCases{})
 	multiTurn(ai.TaskColdStart, "acts", onboardingActCases{})
-	agentLoop(ai.TaskAgentLoop, "loop", agentLoopCases{})
+	for _, agent := range ai.AgentsFor(ai.TaskAgentLoop) {
+		agentLoop(ai.TaskAgentLoop, agent.Name, agentLoopCases{agent: agent.Name})
+	}
 
 	return r, r.Validate()
 }

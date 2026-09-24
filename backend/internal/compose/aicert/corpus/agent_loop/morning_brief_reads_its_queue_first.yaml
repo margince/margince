@@ -1,0 +1,28 @@
+name: morning_brief_reads_its_queue_first
+task: agent_loop
+site: morning_brief
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  trigger_ref: morning_brief:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202
+  grounding: []
+expect:
+  outcome: accepted
+  answer: read_brief
+  rubric: >
+    The candidate output is the turn's FIRST step only, one tool call; the
+    steps after it are not shown, so never mark it down for them being missing.
+    The goal says to call read_brief first, and retrieval seeded nothing, so the
+    queue this contact sees is not in the window at all. Score high only if the
+    turn calls read_brief. list_records is the near miss the goal itself rules
+    out: it assembles a workspace-wide list where the brief is one contact's
+    ranked queue. annotate_brief is worse: it writes findings about items the
+    turn has not read, and every evidence id it would cite is one it has never
+    seen.
+  near_misses:
+    - list_records
+    - annotate_brief
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

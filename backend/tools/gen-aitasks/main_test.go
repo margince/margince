@@ -166,10 +166,16 @@ func TestParseContractAcceptsTheShippedDeclaration(t *testing.T) {
 		t.Errorf("cold_start declares %d sites, want 4", got)
 	}
 
-	// agent_loop is a cumulative tool-fed window, not a request factory.
+	// agent_loop is the engine; every one of its sites is a scheduled agent,
+	// run in a cumulative tool-fed window and attaching its own tools.
 	loop := c.Tasks["agent_loop"].Sites
-	if len(loop) != 1 || loop[0].Kind != "agent_loop" {
-		t.Errorf("agent_loop sites = %+v, want one site of kind agent_loop", loop)
+	if len(loop) == 0 {
+		t.Error("agent_loop declares no sites, so no scheduled agent runs on it")
+	}
+	for _, site := range loop {
+		if site.Kind != "agent_loop" || len(site.Tools) == 0 {
+			t.Errorf("agent_loop site %+v, want kind agent_loop with its own tools", site)
+		}
 	}
 
 	// A bare site name defaults to one_shot.
@@ -471,9 +477,9 @@ tasks:
 	}
 }
 
-// agentContract declares one agent_loop task carrying an `agents:` mapping —
-// the shape ADR-0074 grows to say WHICH TOOLS each scheduled agent attaches.
-// `bar` is the control: a task with no agent_loop site may not declare agents.
+// agentContract declares one agent_loop task whose two sites are two
+// scheduled agents, each attaching its own tools. `bar` is the control: a
+// task with no agent_loop site has no tool listing to attach anything to.
 const agentContract = `
 tiers: [alpha, beta]
 
@@ -485,12 +491,12 @@ tasks:
     on_budget_exhausted: queue
     status: shipped
     sites:
-      - {name: loop, kind: agent_loop}
-    agents:
-      morning_brief:
-        tools: [list_records, read_record]
-      overnight_sweep:
+      - name: overnight_sweep
+        kind: agent_loop
         tools: [list_records, log_activity]
+      - name: morning_brief
+        kind: agent_loop
+        tools: [list_records, read_record]
   bar: {display_name: "Test task bar", ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned}
 
 degrade_to:
@@ -499,8 +505,8 @@ degrade_to:
 `
 
 // The declaration is only worth having if it reaches the binary, and in an
-// order that does not move between runs: a map has no stable iteration, so the
-// emitted table is walked in sorted name order the way SitesFor's already is.
+// order that does not move between runs: the contract lists the sweep first,
+// and the emitted table is still walked in sorted name order.
 func TestEmitGoProducesTheDeclaredAgentToolAttachment(t *testing.T) {
 	c, err := parseContract([]byte(agentContract))
 	if err != nil {
@@ -519,8 +525,10 @@ func TestEmitGoProducesTheDeclaredAgentToolAttachment(t *testing.T) {
 			t.Errorf("generated source missing %s:\n%s", want, out)
 		}
 	}
-	brief := strings.Index(out, `Name: "morning_brief"`)
-	sweep := strings.Index(out, `Name: "overnight_sweep"`)
+	// Read inside the agent table: the site table above it keeps contract order.
+	_, table, _ := strings.Cut(out, "var taskAgents")
+	brief := strings.Index(table, `Name: "morning_brief"`)
+	sweep := strings.Index(table, `Name: "overnight_sweep"`)
 	if brief < 0 || sweep < 0 || brief > sweep {
 		t.Errorf("agents are not emitted in sorted name order, so the generated file moves between runs")
 	}
@@ -536,9 +544,8 @@ func TestParseContractRefusesAMalformedAgentDeclaration(t *testing.T) {
 		wantErr  string
 	}{
 		{
-			// The allowlist is the whole point of the declaration: an agent
-			// carrying none is read downstream as "no narrowing", which is the
-			// opposite of what declaring it was for.
+			// The allowlist is the whole point of the declaration, and the
+			// runner refuses a job carrying none.
 			name:     "an agent declaring no tools",
 			contract: strings.Replace(agentContract, "tools: [list_records, read_record]", "tools: []", 1),
 			wantErr:  "declares no tools",
@@ -549,24 +556,16 @@ func TestParseContractRefusesAMalformedAgentDeclaration(t *testing.T) {
 			wantErr:  "declares no tools",
 		},
 		{
-			// The absent-by-accident case. Left to the runtime it surfaces as a
-			// panic when the service reads the join at construction.
-			name: "a shipped agent_loop task declaring no agents at all",
+			// Only an agent_loop site runs a tool-fed window, so tools on any
+			// other kind describe a listing that is never assembled.
+			name: "tools on a site that is not an agent_loop",
 			contract: strings.Replace(agentContract,
-				"    agents:\n      morning_brief:\n        tools: [list_records, read_record]\n      overnight_sweep:\n        tools: [list_records, log_activity]\n", "", 1),
-			wantErr: "declares no agents",
-		},
-		{
-			// Only an agent_loop site runs a tool-fed window, so an allowlist
-			// on any other task describes a surface that is never assembled.
-			name: "agents on a task with no agent_loop site",
-			contract: strings.Replace(agentContract,
-				"      - {name: loop, kind: agent_loop}", "      - {name: loop, kind: one_shot}", 1),
-			wantErr: "no agent_loop site",
+				"      - name: morning_brief\n        kind: agent_loop", "      - name: morning_brief\n        kind: one_shot", 1),
+			wantErr: "only an agent_loop site has a tool listing",
 		},
 		{
 			name:     "an agent named outside the identifier rule",
-			contract: strings.Replace(agentContract, "morning_brief:", "Morning-Brief:", 1),
+			contract: strings.Replace(agentContract, "name: morning_brief", "name: Morning-Brief", 1),
 			wantErr:  "must match",
 		},
 		{
@@ -581,6 +580,13 @@ func TestParseContractRefusesAMalformedAgentDeclaration(t *testing.T) {
 			name:     "a typo for the tools key",
 			contract: strings.Replace(agentContract, "        tools: [list_records, read_record]", "        tool: [list_records, read_record]", 1),
 			wantErr:  "field tool not found",
+		},
+		{
+			// The retired spelling must not decode into silence: a contract
+			// still carrying agents{} is refused by name.
+			name:     "the retired agents mapping",
+			contract: strings.Replace(agentContract, "  bar: {", "    agents: {x: {tools: [a]}}\n  bar: {", 1),
+			wantErr:  "field agents not found",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

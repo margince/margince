@@ -6,8 +6,10 @@ package aicert
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -112,7 +114,8 @@ func TestCertifyTaskSupportedDegradedOnPartialReliability(t *testing.T) {
 
 func TestCertifyTaskNotSupportedOnLowScores(t *testing.T) {
 	candidateFake := ai.NewFakeClient().Script("the widget is blue", "the widget is blue", "the widget is blue")
-	judgeFake := ai.NewFakeClient().Script(scoreJSON(10), scoreJSON(10), scoreJSON(10))
+	// A score below certified_min is re-judged twice, so each run asks three times.
+	judgeFake := ai.NewFakeClient().Script(slices.Repeat([]string{scoreJSON(10)}, 9)...)
 
 	sc := testScenario("basic", wideBands)
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
@@ -215,27 +218,25 @@ func TestCertifyTaskJudgeRetriesOnceOnAParseFailureThenScores(t *testing.T) {
 	}
 }
 
-// TestCertifyTaskJudgeScoresZeroWhenBothAttemptsFailToParse proves the
-// "then that run scores 0" half of the spec: two consecutive
-// unparseable judge replies never abort the run — they just cost it the
-// score.
-func TestCertifyTaskJudgeScoresZeroWhenBothAttemptsFailToParse(t *testing.T) {
-	candidateFake := ai.NewFakeClient().Script("the widget is blue and durable")
-	judgeFake := ai.NewFakeClient().Script("still not json", "nope, also not json")
+// A judge that never produced a verdict gave no opinion, so the run it failed
+// to grade is left out of the judge's numbers instead of dragging them to 0.
+func TestCertifyTaskLeavesARunUngradedWhenEveryJudgeAttemptFailsToParse(t *testing.T) {
+	candidateFake := ai.NewFakeClient().Script(slices.Repeat([]string{"the widget is blue and durable"}, 3)...)
+	judgeFake := ai.NewFakeClient().Script(scoreJSON(90), "still not json", "nope, also not json", "not json either", scoreJSON(90))
 
 	sc := testScenario("basic", wideBands)
-	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
+	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 	})
 	if err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}
-	if rec.JudgeScoreP50 != 0 || rec.JudgeScoreMin != 0 {
-		t.Fatalf("score should be 0 after two failed parses, got p50=%d min=%d", rec.JudgeScoreP50, rec.JudgeScoreMin)
+	if rec.JudgeScoreP50 != 90 || rec.JudgeScoreMin != 90 {
+		t.Fatalf("judge_score_p50=%d judge_score_min=%d, want 90 and 90 — the unparsed run must not count as a 0", rec.JudgeScoreP50, rec.JudgeScoreMin)
 	}
-	if rec.Verdict != VerdictNotSupported {
-		t.Fatalf("verdict = %q, want %q", rec.Verdict, VerdictNotSupported)
+	if rec.Verdict != VerdictCertified {
+		t.Fatalf("verdict = %q, want %q", rec.Verdict, VerdictCertified)
 	}
 }
 
@@ -276,13 +277,9 @@ func TestCertifyTaskPassesTheRunsAScenarioSaysShouldAbstain(t *testing.T) {
 	}
 }
 
-// TestCertifyTaskFoldsMultipleScenariosToTheirWorstVerdict pins the
-// multi-scenario rollup: Verdict itself is scoped to ONE scenario's odd
-// run count (score.go panics on an even N), so a task with 2 scenarios ×
-// 3 repeats pools 6 runs total — this proves that pooling never reaches
-// Verdict with an even count, while the task's own verdict still folds
-// to the worse of its two scenarios.
-func TestCertifyTaskFoldsMultipleScenariosToTheirWorstVerdict(t *testing.T) {
+// A task of 2 scenarios × 3 repeats pools an even 6 runs, which never reaches
+// Verdict's odd-count check; one scenario grading below its bands sinks the task.
+func TestCertifyTaskIsNotSupportedWhenOneScenarioGradesBelowItsBands(t *testing.T) {
 	candidateFake := ai.NewFakeClient().Script(
 		"the widget is blue", "the widget is blue", "the widget is blue", // scenario 1
 		"the widget is blue", "the widget is blue", "the widget is blue", // scenario 2
@@ -307,7 +304,41 @@ func TestCertifyTaskFoldsMultipleScenariosToTheirWorstVerdict(t *testing.T) {
 		t.Fatalf("runs = %d, want 6 (2 scenarios x 3 repeats, pooled)", rec.Runs)
 	}
 	if rec.Verdict != VerdictNotSupported {
-		t.Fatalf("verdict = %q, want %q — the task must fold to its worst scenario", rec.Verdict, VerdictNotSupported)
+		t.Fatalf("verdict = %q, want %q — one scenario's median missed its degraded_min", rec.Verdict, VerdictNotSupported)
+	}
+}
+
+// The task verdict is the pass rate over every scenario's runs: 58 of 60 with
+// no scenario failing its majority certifies, though two scenario rows do not.
+func TestCertifyTaskCertifiesAPoolWithTwoScatteredMisses(t *testing.T) {
+	const scenarioCount = 20
+	answers := make([]string, 0, scenarioCount*3)
+	scores := make([]string, 0, scenarioCount*3)
+	scenarios := make([]Scenario, 0, scenarioCount)
+	for i := 0; i < scenarioCount; i++ {
+		scenarios = append(scenarios, testScenario(fmt.Sprintf("case_%02d", i), wideBands))
+		for run := 0; run < 3; run++ {
+			answer := "the widget is blue"
+			if run == 0 && i < 2 {
+				answer = "it is blue"
+			}
+			answers = append(answers, answer)
+			scores = append(scores, scoreJSON(90))
+		}
+	}
+	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, scenarios, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+		candidateOpts: []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(answers...))},
+		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(scores...))},
+	})
+	if err != nil {
+		t.Fatalf("certifyTask: %v", err)
+	}
+	if rec.Passed != 58 || rec.Verdict != VerdictCertified {
+		t.Fatalf("passed=%d verdict=%q, want 58 and %q", rec.Passed, rec.Verdict, VerdictCertified)
+	}
+	if row := rec.Scenarios[0]; row.Verdict != VerdictSupportedDegraded || row.JudgeBand != VerdictCertified {
+		t.Fatalf("row %s: verdict=%q judge_band=%q, want degraded by its own 2 of 3 and a certified judge band",
+			row.Scenario, row.Verdict, row.JudgeBand)
 	}
 }
 

@@ -170,20 +170,6 @@ func TestGroupByTaskFiltersAndSortedTasksOrdersDeterministically(t *testing.T) {
 	}
 }
 
-func TestWorstVerdictRanksNotSupportedBelowDegradedBelowCertified(t *testing.T) {
-	cases := []struct{ a, b, want string }{
-		{VerdictCertified, VerdictNotSupported, VerdictNotSupported},
-		{VerdictCertified, VerdictSupportedDegraded, VerdictSupportedDegraded},
-		{VerdictSupportedDegraded, VerdictNotSupported, VerdictNotSupported},
-		{VerdictCertified, VerdictCertified, VerdictCertified},
-	}
-	for _, c := range cases {
-		if got := worstVerdict(c.a, c.b); got != c.want {
-			t.Errorf("worstVerdict(%s, %s) = %s, want %s", c.a, c.b, got, c.want)
-		}
-	}
-}
-
 func TestPercentileNearestRank(t *testing.T) {
 	sorted := []int64{10, 20, 30}
 	if got := percentile(sorted, 0.50); got != 20 {

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package aicert is the manual-lane AI certification harness's pure-library
-// layer: the scenario corpus format, the §5 verdict math, and the on-disk
+// layer: the scenario corpus format, the verdict math, and the on-disk
 // record format. It has no side effects beyond the file I/O its functions
 // are named for (LoadCorpus, WriteRecord/LoadRecords) — no time.Now, no
 // network, no database — so a certification run is reproducible from a
@@ -88,8 +88,8 @@ func (v JSONValue) MarshalJSON() ([]byte, error) {
 	return v, nil
 }
 
-// Bands are the 0-100 score thresholds a run set is graded against (spec
-// §5): CertifiedMin and DegradedMin gate the median score, Floor gates the
+// Bands are the 0-100 score thresholds one scenario's run set is graded
+// against: CertifiedMin and DegradedMin gate the median score, Floor gates the
 // worst single run.
 type Bands struct {
 	CertifiedMin int `yaml:"certified_min"`
@@ -271,7 +271,7 @@ func validateOutcome(outcome, path string) error {
 		aitasks.OutcomeAccepted, aitasks.OutcomeWrongAnswer, aitasks.OutcomeInvalid, aitasks.OutcomeAbstained)
 }
 
-// validateBands enforces the §5 ordering Verdict (score.go) relies on:
+// validateBands enforces the ordering Verdict (score.go) relies on:
 // CertifiedMin ≤ 100 and ≥ 1 (0 means the author omitted `bands:` entirely,
 // which would otherwise auto-Certify every run — every score is a 0-100
 // int, so a zero CertifiedMin is never a real threshold, only a forgotten
