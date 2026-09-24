@@ -8475,6 +8475,9 @@ export const en = {
     "The embedding store's reindex status — admin/ops only, including viewing it.",
   "embedreindex.withheld":
     "Only an admin or ops can see the search index. Rebuilding it spends tokens for the whole installation, so its status is not shown more widely.",
+  "embedreindex.unbound":
+    "No embeddings model is bound, so there is no search index to rebuild.",
+  "embedreindex.unboundLink": "Bind one in AI settings",
   "embedreindex.statusLabel": "Index status",
   "embedreindex.reindexLabel": "Reindex what changed",
   "embedreindex.reindexHelp":

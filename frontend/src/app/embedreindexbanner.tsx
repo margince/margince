@@ -6,7 +6,10 @@ import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import { throwProblem } from "../screens/common";
-import { embedReindexStatusQueryKey } from "../screens/embedreindex";
+import {
+  embedReindexStatusQueryKey,
+  useEmbedReindexAvailable,
+} from "../screens/embedreindex";
 import { useCan } from "./capability";
 
 // The reindex-needed advisory (v6 B2, rekeyed per ADR-0069 §3a): shown ONLY
@@ -20,10 +23,14 @@ import { useCan } from "./capability";
 // this banner needs is itself RBAC-gated (embedding_reindex:read, granted to
 // admin and ops alone), so the gate below is not a UX preference layered over
 // an open endpoint — it is the same grant the server checks, asked before
-// issuing a query that could only 403.
+// issuing a query that could only 403. The installation's embed binding is
+// asked the same way: with no model bound the read could only 501, and a /me
+// not yet answered, or one predating the field, asks nothing.
 export function EmbedReindexBanner() {
   const t = useT();
-  const enabled = useCan("embedding_reindex", "read");
+  const canRead = useCan("embedding_reindex", "read");
+  const bound = useEmbedReindexAvailable();
+  const enabled = canRead && bound;
   const query = useQuery({
     queryKey: embedReindexStatusQueryKey,
     enabled,
