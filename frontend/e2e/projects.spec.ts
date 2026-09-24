@@ -68,7 +68,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await expect(current).toHaveText("Initiative");
   // The phase history lives in the details column, which is open on arrival,
   // so the birth row is on screen without a press.
-  await expect(page.getByText("Gestartet in Initiative")).toBeVisible();
+  await expect(
+    page.getByText("Gestartet in der Phase „Initiative“"),
+  ).toBeVisible();
   await expect(
     page.getByText("Unter diesem Projekt ist noch nichts abgelegt", {
       exact: false,

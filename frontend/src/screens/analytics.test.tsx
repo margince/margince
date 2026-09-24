@@ -347,13 +347,13 @@ describe("the performance section", () => {
     // The value arrives converted; the screen only formats it.
     expect(screen.getByText(formatMoney(500000, "EUR", "en"))).toBeTruthy();
     // Durations are the server's medians, never a quotient made here.
-    expect(screen.getByText("21 days")).toBeTruthy();
+    expect(screen.getByText("21 d")).toBeTruthy();
     // A withheld percentile is words, not a zero and not a dash: below the
     // sample floor the engine answers null, and the cell says why.
     expect(screen.getByText("Too few deals")).toBeTruthy();
     // The stage-age card names the stage from the pipeline, not by UUID.
     expect(screen.getByText("Qualify")).toBeTruthy();
-    expect(screen.getByText("12 days")).toBeTruthy();
+    expect(screen.getByText("12 d")).toBeTruthy();
   });
 
   it("asks the server for the vocabulary it renders, computing nothing", async () => {

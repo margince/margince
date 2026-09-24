@@ -170,7 +170,7 @@ test.describe("company record — the glance's page shape", () => {
     await expect(call).toHaveCount(1);
     const needs = page.getByRole("heading", { name: "Handlungsbedarf" });
     await expect(needs).toHaveCount(1);
-    const money = page.getByRole("heading", { name: "Geschäft" });
+    const money = page.getByRole("heading", { name: "Geschäftliches" });
     const ask = page.getByRole("heading", {
       name: "Fragen zu diesem Unternehmen",
     });
