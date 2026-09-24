@@ -8055,6 +8055,56 @@ export const de = {
   "aiProviderKeys.withheld":
     "Nur wer die Modellbindung ändern darf, sieht, für welche Anbieter ein Schlüssel vorliegt.",
   "aiProviderKeys.remove": "Entfernen",
+  "aiProviderKeys.serviceAccountConfigured": "Dienstkonto-Schlüssel hinterlegt",
+  "serviceAccountKey.label": "Dienstkonto-Schlüssel (JSON)",
+  "serviceAccountKey.placeholder":
+    "Füge die ganze Schlüsseldatei ein, die Google Cloud heruntergeladen hat",
+  "serviceAccountKey.fileLabel": "Oder wähle die Schlüsseldatei",
+  "serviceAccountKey.fileEmpty":
+    "Zieh die .json-Schlüsseldatei hierher oder klicke, um sie zu wählen",
+  "serviceAccountKey.empty":
+    "Füge den Inhalt der Schlüsseldatei ein oder wähle die Datei.",
+  "serviceAccountKey.notJson":
+    "Das ist kein JSON. Füge die ganze Schlüsseldatei so ein, wie Google Cloud sie heruntergeladen hat.",
+  "serviceAccountKey.notServiceAccount":
+    "Dieses JSON ist kein Dienstkonto-Schlüssel: Es braucht type service_account, eine client_email und einen private_key.",
+  "serviceAccountKey.unreadable":
+    "Die Datei konnte nicht gelesen werden. Wähle sie noch einmal oder füge ihren Inhalt ein.",
+  "aiRouting.location.label": "Standort",
+  "aiRouting.location.help":
+    "Wo Google die Aufrufe dieser Strecke verarbeitet.",
+  "aiRouting.location.residentHelp":
+    "EU-Datenresidenz lässt nur die als EU-resident markierten Standorte zu.",
+  "aiRouting.location.forbidden":
+    "Dieser Standort liegt außerhalb der EU-Datenresidenz, daher lehnt dieses Profil ihn ab. Wähle einen EU-residenten Standort.",
+  "aiRouting.location.loading":
+    "Google wird gefragt, welche Standorte dieser Schlüssel erreicht…",
+  "aiRouting.location.noKey":
+    "Noch ist kein Dienstkonto-Schlüssel hinterlegt. Füge ihn unter Modellanbieter-Schlüssel hinzu, dann erscheinen hier die Standorte, die er erreicht.",
+  "aiRouting.location.unreachable":
+    "Google hat nicht geantwortet, daher steht nur der gespeicherte Standort zur Wahl. Beim Speichern wird erneut geprüft.",
+  "aiRouting.location.noModels":
+    "{location} bedient keines der Modelle, die Google auflistet. Jede ID, die der Standort bedient, funktioniert trotzdem: eintippen.",
+  "aiRouting.location.option": "{group} · {name} ({id})",
+  "aiRouting.location.group.eu": "EU",
+  "aiRouting.location.group.us": "USA",
+  "aiRouting.location.group.other": "Andere",
+  "aiRouting.location.group.global": "Global",
+  "aiRouting.location.resident": "EU-resident",
+  "aiRouting.location.nonResident": "Nicht resident",
+  "aiRouting.location.notResident": "außerhalb der EU-Datenresidenz",
+  "aiRouting.probe.checking":
+    "Es wird geprüft, ob {location} dieses Modell bedient…",
+  "aiRouting.probe.served": "Wird in {location} bedient.",
+  "aiRouting.probe.notServed":
+    "Wird in {location} nicht bedient. Wähle ein anderes Modell oder einen anderen Standort.",
+  "aiRouting.probe.unverified":
+    "Konnte dieses Modell in {location} nicht prüfen. Beim Speichern wird Google erneut gefragt.",
+  "aiRouting.probe.cleared":
+    "{model} wird in {location} nicht bedient, daher wurde das Feld geleert.",
+  "firstRun.ai.euResidency": "EU-Datenresidenz",
+  "firstRun.ai.locationBeforeKey":
+    "EU (Multi-Region) hält jeden Aufruf in der EU. Andere Standorte stehen unter Einstellungen → KI, sobald der Schlüssel gespeichert ist.",
   "aiRouting.withheld":
     "Nur wer die Modellbindung ändern darf, sieht, welche Modelle diese Installation verwendet.",
   "aiRouting.title": "Modell-Routing",

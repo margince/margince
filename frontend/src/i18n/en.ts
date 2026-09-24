@@ -8239,6 +8239,54 @@ export const en = {
   "aiProviderKeys.withheld":
     "Only an operator who may change the model binding can see which vendors hold a key.",
   "aiProviderKeys.remove": "Remove",
+  "aiProviderKeys.serviceAccountConfigured": "Service account key configured",
+  "serviceAccountKey.label": "Service-account key (JSON)",
+  "serviceAccountKey.placeholder":
+    "Paste the whole key file Google Cloud downloaded",
+  "serviceAccountKey.fileLabel": "Or choose the key file",
+  "serviceAccountKey.fileEmpty":
+    "Drop the .json key file here, or click to choose it",
+  "serviceAccountKey.empty":
+    "Paste the key file's contents, or choose the file.",
+  "serviceAccountKey.notJson":
+    "This is not JSON. Paste the whole key file exactly as Google Cloud downloaded it.",
+  "serviceAccountKey.notServiceAccount":
+    "This JSON is not a service-account key: it needs type service_account, a client_email and a private_key.",
+  "serviceAccountKey.unreadable":
+    "The file could not be read. Choose it again, or paste its contents.",
+  "aiRouting.location.label": "Location",
+  "aiRouting.location.help": "Where Google processes this lane's calls.",
+  "aiRouting.location.residentHelp":
+    "EU data residency admits only the locations marked EU resident.",
+  "aiRouting.location.forbidden":
+    "This location is outside EU data residency, so this profile refuses it. Choose an EU-resident location.",
+  "aiRouting.location.loading":
+    "Asking Google which locations this key can reach…",
+  "aiRouting.location.noKey":
+    "No service-account key is held yet. Add it under Model provider keys and the locations it can reach are listed here.",
+  "aiRouting.location.unreachable":
+    "Google did not answer, so only the stored location is offered. Saving checks it again.",
+  "aiRouting.location.noModels":
+    "{location} serves none of the models Google lists. Any id it serves still works: type it.",
+  "aiRouting.location.option": "{group} · {name} ({id})",
+  "aiRouting.location.group.eu": "EU",
+  "aiRouting.location.group.us": "US",
+  "aiRouting.location.group.other": "Other",
+  "aiRouting.location.group.global": "Global",
+  "aiRouting.location.resident": "EU resident",
+  "aiRouting.location.nonResident": "Not resident",
+  "aiRouting.location.notResident": "outside EU data residency",
+  "aiRouting.probe.checking": "Checking whether {location} serves this model…",
+  "aiRouting.probe.served": "Served in {location}.",
+  "aiRouting.probe.notServed":
+    "Not served in {location}. Choose another model or location.",
+  "aiRouting.probe.unverified":
+    "Couldn't verify this model in {location}. Saving asks Google again.",
+  "aiRouting.probe.cleared":
+    "{model} is not served in {location}, so the field was cleared.",
+  "firstRun.ai.euResidency": "EU data residency",
+  "firstRun.ai.locationBeforeKey":
+    "EU (multi-region) keeps every call inside the EU. Other locations are listed under Settings → AI once the key is saved.",
   "aiRouting.withheld":
     "Only an operator who may change the model binding can see which models this installation uses.",
   "aiRouting.title": "Model routing",

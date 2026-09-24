@@ -7962,6 +7962,54 @@ export const vi = {
   "aiProviderKeys.withheld":
     "Chỉ người có quyền thay đổi liên kết mô hình mới thấy nhà cung cấp nào đã có khóa.",
   "aiProviderKeys.remove": "Xóa",
+  "aiProviderKeys.serviceAccountConfigured":
+    "Đã cấu hình khóa tài khoản dịch vụ",
+  "serviceAccountKey.label": "Khóa tài khoản dịch vụ (JSON)",
+  "serviceAccountKey.placeholder":
+    "Dán toàn bộ tệp khóa mà Google Cloud đã tải xuống",
+  "serviceAccountKey.fileLabel": "Hoặc chọn tệp khóa",
+  "serviceAccountKey.fileEmpty": "Thả tệp khóa .json vào đây, hoặc bấm để chọn",
+  "serviceAccountKey.empty": "Dán nội dung tệp khóa, hoặc chọn tệp.",
+  "serviceAccountKey.notJson":
+    "Đây không phải JSON. Hãy dán toàn bộ tệp khóa đúng như Google Cloud đã tải xuống.",
+  "serviceAccountKey.notServiceAccount":
+    "JSON này không phải khóa tài khoản dịch vụ: cần có type service_account, client_email và private_key.",
+  "serviceAccountKey.unreadable":
+    "Không đọc được tệp. Hãy chọn lại, hoặc dán nội dung của nó.",
+  "aiRouting.location.label": "Vị trí",
+  "aiRouting.location.help": "Nơi Google xử lý các lệnh gọi của làn này.",
+  "aiRouting.location.residentHelp":
+    "Lưu trú dữ liệu tại EU chỉ chấp nhận các vị trí được đánh dấu lưu trú EU.",
+  "aiRouting.location.forbidden":
+    "Vị trí này nằm ngoài vùng lưu trú dữ liệu EU, nên hồ sơ này từ chối nó. Hãy chọn một vị trí lưu trú EU.",
+  "aiRouting.location.loading":
+    "Đang hỏi Google khóa này truy cập được những vị trí nào…",
+  "aiRouting.location.noKey":
+    "Chưa có khóa tài khoản dịch vụ. Hãy thêm nó trong Khóa nhà cung cấp mô hình, rồi các vị trí nó truy cập được sẽ hiện ở đây.",
+  "aiRouting.location.unreachable":
+    "Google không phản hồi, nên chỉ có vị trí đã lưu. Khi lưu sẽ kiểm tra lại.",
+  "aiRouting.location.noModels":
+    "{location} không phục vụ mô hình nào trong danh sách của Google. Mọi ID mà nó phục vụ vẫn dùng được: hãy gõ vào.",
+  "aiRouting.location.option": "{group} · {name} ({id})",
+  "aiRouting.location.group.eu": "EU",
+  "aiRouting.location.group.us": "Mỹ",
+  "aiRouting.location.group.other": "Khác",
+  "aiRouting.location.group.global": "Toàn cầu",
+  "aiRouting.location.resident": "Lưu trú EU",
+  "aiRouting.location.nonResident": "Không lưu trú",
+  "aiRouting.location.notResident": "ngoài vùng lưu trú dữ liệu EU",
+  "aiRouting.probe.checking":
+    "Đang kiểm tra {location} có phục vụ mô hình này không…",
+  "aiRouting.probe.served": "Được phục vụ tại {location}.",
+  "aiRouting.probe.notServed":
+    "Không được phục vụ tại {location}. Hãy chọn mô hình hoặc vị trí khác.",
+  "aiRouting.probe.unverified":
+    "Không thể xác minh mô hình này tại {location}. Khi lưu sẽ hỏi lại Google.",
+  "aiRouting.probe.cleared":
+    "{model} không được phục vụ tại {location}, nên trường đã được xóa.",
+  "firstRun.ai.euResidency": "Lưu trú dữ liệu tại EU",
+  "firstRun.ai.locationBeforeKey":
+    "EU (đa vùng) giữ mọi lệnh gọi trong EU. Các vị trí khác sẽ hiện trong Cài đặt → AI sau khi lưu khóa.",
   "aiRouting.withheld":
     "Chỉ người có quyền thay đổi liên kết mô hình mới thấy bản cài đặt này dùng những mô hình nào.",
   "aiRouting.title": "Định tuyến mô hình",

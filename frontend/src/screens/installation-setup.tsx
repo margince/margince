@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "../api/client";
@@ -45,10 +45,17 @@ import { Ignition, useIgnitionCore } from "./onboarding-ignition";
 // in the product from outside the censuses that keep the rest of it honest.
 import "./onboarding-first-run.css";
 import {
+  AiKeyFields,
+  choiceLabel,
+  useBindModels,
+} from "./installation-setup.ai-key";
+import { serviceAccountProblem } from "./service-account-key";
+import {
   SETUP_PROVIDER_IDS,
   SETUP_PROVIDERS,
   type SetupProviderId,
 } from "./setup-providers";
+import { DEFAULT_VERTEX_LOCATION } from "./vertex-location";
 
 /**
  * What a fresh installation must be told before it can be used: the model
@@ -237,64 +244,6 @@ export function outstandingStep(
   );
 }
 
-function useBindModels() {
-  return useMutation({
-    // Same reasoning as the provider-key mutation: nothing here is a secret,
-    // but the two settle together and a stale binding on screen after a
-    // success is the same confusion.
-    gcTime: 0,
-    mutationFn: async (vars: {
-      provider: string;
-      baseUrl?: string;
-      chatModel: string;
-      embedModel: string;
-    }) => {
-      // Every chat tier on the one model the reader chose. A tier left unbound
-      // degrades honestly at runtime, but an onboarding that bound only some of
-      // them would have the product answer for one task and refuse another with
-      // no way for the reader to tell which they had configured.
-      const binding = {
-        provider: vars.provider,
-        model: vars.chatModel,
-        ...(vars.baseUrl ? { base_url: vars.baseUrl } : {}),
-      };
-      const { error } = await api.PUT("/ai/routing", {
-        body: {
-          // eu_hosted rather than a question: `sovereign` and `eu_resident`
-          // forbid the cloud vendors this screen offers, and asking a
-          // first-time admin to choose a location ladder before they have
-          // bound anything is asking a question they cannot yet answer.
-          profile: "eu_hosted",
-          tiers: {
-            local_small: binding,
-            cheap_cloud: binding,
-            premium: binding,
-            frontier: binding,
-          },
-          embeddings: {
-            provider: vars.provider,
-            model: vars.embedModel,
-            ...(vars.baseUrl ? { base_url: vars.baseUrl } : {}),
-          },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    // NO invalidation here, and this is the one mutation in the file that holds
-    // it back. Re-reading the setup report is what moves the screen on, and the
-    // binding is the moment the ignition exists to mark — invalidating on
-    // success would swap the step out from under a sequence the reader is
-    // watching. The refetch happens when they press past it (`onDone`), which
-    // means the screen is theirs to leave rather than the query's to take.
-    //
-    // The write has already landed either way: a reload mid-sequence finds the
-    // server saying `ai_models` is configured and opens the next question, which
-    // is correct and loses nothing but the ceremony.
-  });
-}
-
 /**
  * A step's form, telling the stage above it when a write is in flight.
  *
@@ -361,6 +310,12 @@ function AiStep({
   const [choice, setChoice] = useState<SetupProviderId>("gemini");
   const preset = SETUP_PROVIDERS[choice];
   const [apiKey, setApiKey] = useState("");
+  const [location, setLocation] = useState(
+    preset.location ?? DEFAULT_VERTEX_LOCATION,
+  );
+  // Why the pasted key file cannot be sent, set by a press on Continue.
+  const [keyRefusal, setKeyRefusal] = useState<MessageKey | undefined>();
+  const keyFile = preset.credential === "service_account";
   const [chatModel, setChatModel] = useState(preset.chatModel);
   const [embedModel, setEmbedModel] = useState(preset.embedModel);
   const saveKey = useSetProviderKey();
@@ -380,6 +335,12 @@ function AiStep({
   // mean nothing to this one — leaving them would offer a binding that cannot
   // serve a single call.
   const pick = (next: SetupProviderId) => {
+    // A pasted API key means nothing in a key-file box, nor the reverse.
+    if (SETUP_PROVIDERS[next].credential !== preset.credential) {
+      setApiKey("");
+    }
+    setKeyRefusal(undefined);
+    setLocation(SETUP_PROVIDERS[next].location ?? DEFAULT_VERTEX_LOCATION);
     setChoice(next);
     setChatModel(SETUP_PROVIDERS[next].chatModel);
     setEmbedModel(SETUP_PROVIDERS[next].embedModel);
@@ -389,7 +350,10 @@ function AiStep({
   // What the binding cannot do without, by the label the field wears, so the
   // rail names the same thing the field marks once Continue is pressed early.
   const missing = [
-    [apiKey.trim() === "", t("firstRun.ai.key")],
+    [
+      apiKey.trim() === "",
+      keyFile ? t("serviceAccountKey.label") : t("firstRun.ai.key"),
+    ],
     [chatModel.trim() === "", t("firstRun.ai.chatModel")],
     [embedModel.trim() === "", t("firstRun.ai.embedModel")],
   ]
@@ -417,16 +381,27 @@ function AiStep({
       setAttempted(true);
       return;
     }
+    const problem = keyFile ? serviceAccountProblem(apiKey) : undefined;
+    if (problem) {
+      setKeyRefusal(problem);
+      return;
+    }
     saveKey.reset();
     bind.reset();
     saveKey.mutate(
-      { provider: preset.provider, apiKey: apiKey.trim() },
+      {
+        provider: preset.provider,
+        kind: preset.credential,
+        secret: apiKey.trim(),
+      },
       {
         onSuccess: () =>
           bind.mutate(
             {
               provider: preset.provider,
               baseUrl: preset.baseUrl,
+              location: preset.location ? location : undefined,
+              profile: preset.profile,
               chatModel: chatModel.trim(),
               embedModel: embedModel.trim(),
             },
@@ -479,34 +454,24 @@ function AiStep({
                 }}
                 options={SETUP_PROVIDER_IDS.map((id) => ({
                   value: id,
-                  label: SETUP_PROVIDERS[id].label,
+                  label: choiceLabel(SETUP_PROVIDERS[id], t),
                 }))}
               />
             )}
           </Field>
-          <Field
-            label={t("firstRun.ai.key")}
-            hint={t("firstRun.ai.keyHint")}
-            error={
-              attempted && apiKey.trim() === ""
-                ? t("firstRun.needed")
-                : undefined
-            }
-          >
-            {(control) => (
-              <TextInput
-                {...control}
-                // A password field so the browser does not offer to remember a
-                // credential this app never stores client-side, and a screenshare
-                // does not carry it.
-                type="password"
-                autoComplete="off"
-                value={apiKey}
-                disabled={busy}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-            )}
-          </Field>
+          <AiKeyFields
+            preset={preset}
+            secret={apiKey}
+            refusal={keyRefusal}
+            attempted={attempted}
+            location={location}
+            disabled={busy}
+            onSecret={(next) => {
+              setKeyRefusal(undefined);
+              setApiKey(next);
+            }}
+            onLocation={setLocation}
+          />
           {/* Both fields offer what the sheet can price for the chosen vendor,
             in the lane that field binds — and take anything typed, because the
             server accepts any id its vendor serves and the whole point of the

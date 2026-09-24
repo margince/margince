@@ -23,7 +23,12 @@ const READER: GrantSpec = { ai_routing: ["read"] };
 const NO_GRANT: GrantSpec = { automation: ["read"] };
 
 function story(
-  providers: { provider: string; configured: boolean; env_var: string }[],
+  providers: {
+    provider: string;
+    configured: boolean;
+    env_var: string;
+    credential_kind: "api_key" | "service_account";
+  }[],
   allow: GrantSpec = MANAGER,
 ) {
   return () => {
@@ -43,11 +48,21 @@ const gemini = {
   provider: "gemini",
   configured: true,
   env_var: "GEMINI_API_KEY",
+  credential_kind: "api_key" as const,
 };
 const anthropic = {
   provider: "anthropic",
   configured: false,
   env_var: "ANTHROPIC_API_KEY",
+  credential_kind: "api_key" as const,
+};
+// Keyed by a file rather than a paste: its row reads "Service account key
+// configured" and its editor is the key-file box.
+const vertex = {
+  provider: "gemini_vertex",
+  configured: true,
+  env_var: "GEMINI_VERTEX_SA_JSON",
+  credential_kind: "service_account" as const,
 };
 
 const meta: Meta<typeof AiProviderKeysCard> = {
@@ -90,6 +105,12 @@ export const ReadOnlySeat: Story = {
 // draw an error box, which is what asking the server anyway produced.
 export const Withheld: Story = {
   render: story([gemini, anthropic], NO_GRANT),
+};
+
+// A service-account vendor beside two API-key ones. Open its row with Replace
+// to see the key-file box and picker; the box starts empty like every other.
+export const ServiceAccount: Story = {
+  render: story([gemini, vertex, anthropic]),
 };
 
 // Dark. The configured/not-configured distinction is carried by a Badge tone,

@@ -1,25 +1,30 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useEffect, useState } from "react";
 import type { components } from "../api/schema";
 import { Field, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
 import { Select } from "../design-system/select";
-import { useLocale, useT } from "../i18n";
+import { type Translator, useLocale, useT } from "../i18n";
 import {
   type AvailableModels,
   type ModelCatalogue,
   type ModelLane,
   offeredModels,
   useAvailableModels,
+  useModelProbe,
 } from "./ai-models";
+import { VERTEX_PROVIDER, VertexLocationField } from "./vertex-location";
 
 type Routing = components["schemas"]["AiRouting"];
 // The adapters a tier may name. Written out because the wire carries a free
 // string — the server refuses an unknown one, and a reader choosing from a list
-// should not have to discover that by being refused.
+// should not have to discover that by being refused. A declared mirror of
+// `ai.KnownProviders()`, held both ways by backend/gates/frontendproviders_test.go.
 const PROVIDERS = [
   "gemini",
+  "gemini_vertex",
   "anthropic",
   "openai",
   "openai_compatible",
@@ -32,6 +37,41 @@ const PROVIDERS = [
 // through it, so the endpoint is the binding rather than a tweak to it.
 const OPENAI_WIRE = "openai_compatible";
 
+type AdapterBinding = {
+  provider: string;
+  model: string;
+  base_url?: string;
+  location?: string;
+};
+
+/**
+ * The binding re-pointed at another adapter. `location` belongs to Vertex alone
+ * and `base_url` is refused there, so each is dropped where the server would
+ * refuse it; a Vertex binding keeps its own location or takes the default.
+ */
+export function withProvider<B extends AdapterBinding>(
+  binding: B,
+  provider: string,
+  vertexLocation: string,
+): B {
+  if (provider === VERTEX_PROVIDER) {
+    return {
+      ...binding,
+      provider,
+      base_url: undefined,
+      location: binding.location ?? vertexLocation,
+    };
+  }
+  return { ...binding, provider, location: undefined };
+}
+
+/** One probe: whether `location` serves `model`, and what to do if it does not. */
+type ProbeTarget = Readonly<{
+  location: string;
+  model: string;
+  clearIfUnserved: boolean;
+}>;
+
 // The three controls that name an adapter: which vendor, which model on it,
 // and -- only where the vendor has no address of its own -- where to reach it.
 //
@@ -42,14 +82,14 @@ const OPENAI_WIRE = "openai_compatible";
 // embedding row names itself -- and the LANE, which decides whether this field
 // offers chat models or embedders. An embedder on a chat tier cannot serve a
 // call, so offering one would be worse than offering nothing.
-export function AdapterFields<
-  B extends { provider: string; model: string; base_url?: string },
->({
+export function AdapterFields<B extends AdapterBinding>({
   label,
   lane,
   laneName,
   binding,
   catalogue,
+  profile,
+  vertexLocation,
   disabled,
   onChange,
 }: Readonly<{
@@ -61,16 +101,70 @@ export function AdapterFields<
   laneName: string;
   binding: B;
   catalogue: ModelCatalogue;
+  // The draft's profile, which decides the Vertex locations on offer.
+  profile: string;
+  // Where a lane newly pointed at Vertex starts: another saved Vertex lane's.
+  vertexLocation: string;
   disabled: boolean;
   onChange: (next: B) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const vertex = binding.provider === VERTEX_PROVIDER;
+  const location = binding.location ?? "";
   // Asked of the VENDOR, and only while these fields are open — this is a real
   // round-trip on the installation's own credential, not a table read. The lane
   // travels with it so an installation binding one vendor at two hosts is asked
-  // at the one THIS lane points at.
-  const available = useAvailableModels(binding.provider, laneName, true);
+  // at the one THIS lane points at; a Vertex lane is asked at its location.
+  const available = useAvailableModels(
+    binding.provider,
+    laneName,
+    true,
+    vertex ? location : undefined,
+  );
+  const suggestions = offeredModels(
+    available.data,
+    catalogue,
+    binding.provider,
+    lane,
+    locale,
+  );
+  const [probeTarget, setProbeTarget] = useState<ProbeTarget | undefined>();
+  const [cleared, setCleared] = useState<ProbeTarget | undefined>();
+  const probe = useModelProbe(
+    binding.provider,
+    laneName,
+    vertex ? probeTarget : undefined,
+  );
+  // The probe speaks for the field only while it asked about what the field
+  // holds; a model typed since is a different question.
+  const probed =
+    vertex &&
+    probeTarget !== undefined &&
+    probeTarget.model === binding.model &&
+    probeTarget.location === location;
+  const unserved = probed && probe.data?.unavailable === "no_endpoint";
+  // A location change that the model does not survive empties the field
+  // rather than leaving a binding the save would refuse.
+  useEffect(() => {
+    if (unserved && probeTarget?.clearIfUnserved) {
+      setCleared(probeTarget);
+      // Once: the same model typed back in is flagged, not cleared again.
+      setProbeTarget({ ...probeTarget, clearIfUnserved: false });
+      onChange({ ...binding, model: "" });
+    }
+  }, [unserved, probeTarget, binding, onChange]);
+
+  const hint = vertex
+    ? vertexModelHint({
+        available: available.data,
+        probe: probed ? probe.data : undefined,
+        probing: probed && probe.isFetching,
+        cleared,
+        location,
+        t,
+      })
+    : undefined;
   return (
     <>
       <Field label={label}>
@@ -80,10 +174,34 @@ export function AdapterFields<
             value={binding.provider}
             disabled={disabled}
             options={PROVIDERS.map((p) => ({ value: p, label: p }))}
-            onChange={(provider) => onChange({ ...binding, provider })}
+            onChange={(provider) => {
+              setProbeTarget(undefined);
+              setCleared(undefined);
+              onChange(withProvider(binding, provider, vertexLocation));
+            }}
           />
         )}
       </Field>
+      {vertex && (
+        <VertexLocationField
+          value={location}
+          profile={profile}
+          disabled={disabled}
+          onChange={(next) => {
+            setCleared(undefined);
+            setProbeTarget(
+              binding.model === ""
+                ? undefined
+                : {
+                    location: next,
+                    model: binding.model,
+                    clearIfUnserved: true,
+                  },
+            );
+            onChange({ ...binding, location: next });
+          }}
+        />
+      )}
       {/* What the vendor serves, priced from the sheet where the sheet knows
           it. The list used to be the sheet ALONE, which answers what this
           installation can price rather than what exists — so a model released
@@ -96,24 +214,28 @@ export function AdapterFields<
       <Field
         label={t("aiRouting.model.label")}
         hint={
-          available.data?.unavailable
+          hint?.text ??
+          (available.data?.unavailable
             ? modelSourceNote(available.data.unavailable, t)
-            : t("aiRouting.model.help")
+            : t("aiRouting.model.help"))
         }
+        error={hint?.error}
       >
         {(control) => (
           <ComboBox
             {...control}
             value={binding.model}
-            suggestions={offeredModels(
-              available.data,
-              catalogue,
-              binding.provider,
-              lane,
-              locale,
-            )}
+            suggestions={suggestions}
             disabled={disabled}
-            onChange={(model) => onChange({ ...binding, model })}
+            onChange={(model) => {
+              setCleared(undefined);
+              // A pick from the list is a choice worth checking; a keystroke
+              // is not, and each probe is a call on the service account.
+              if (vertex && suggestions.some((s) => s.value === model)) {
+                setProbeTarget({ location, model, clearIfUnserved: false });
+              }
+              onChange({ ...binding, model });
+            }}
           />
         )}
       </Field>
@@ -183,6 +305,58 @@ export function EmbeddingWidthField({
       )}
     </Field>
   );
+}
+
+/**
+ * What a Vertex lane's model field says: the probe's verdict on the chosen
+ * model when there is one, else what the location's list could tell. Undefined
+ * text falls through to the note every vendor shares.
+ */
+function vertexModelHint({
+  available,
+  probe,
+  probing,
+  cleared,
+  location,
+  t,
+}: Readonly<{
+  available: AvailableModels | undefined;
+  probe: AvailableModels | undefined;
+  probing: boolean;
+  cleared: ProbeTarget | undefined;
+  location: string;
+  t: Translator;
+}>): { text?: string; error?: string } {
+  if (cleared) {
+    return {
+      text: t("aiRouting.probe.cleared", {
+        model: cleared.model,
+        location: cleared.location,
+      }),
+    };
+  }
+  if (probing) {
+    return { text: t("aiRouting.probe.checking", { location }) };
+  }
+  if (probe?.unavailable === "no_endpoint") {
+    return { error: t("aiRouting.probe.notServed", { location }) };
+  }
+  if (probe?.unavailable) {
+    return { text: t("aiRouting.probe.unverified", { location }) };
+  }
+  if (probe) {
+    return { text: t("aiRouting.probe.served", { location }) };
+  }
+  if (available?.unavailable === "no_key") {
+    return { text: t("aiRouting.location.noKey") };
+  }
+  if (available?.unavailable === "profile_forbids") {
+    return { text: t("aiRouting.location.forbidden") };
+  }
+  if (available && !available.unavailable && available.models.length === 0) {
+    return { text: t("aiRouting.location.noModels", { location }) };
+  }
+  return {};
 }
 
 // Said in the field's own hint rather than as an error: the box still binds

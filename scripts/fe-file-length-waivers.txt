@@ -26,7 +26,7 @@
 1031 frontend/src/app/shell.tsx
 1035 frontend/src/App.tsx
 1037 frontend/src/screens/automations.test.tsx
-1042 frontend/src/screens/installation-setup.tsx
+1004 frontend/src/screens/installation-setup.tsx
 928 frontend/src/screens/auth.tsx
 1092 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
 1098 frontend/src/screens/worklist.test.tsx
@@ -127,7 +127,7 @@
 950 frontend/src/screens/automations.tsx
 965 frontend/src/screens/integrations-provider.tsx
 546 frontend/src/design-system/decisiondeck.tsx
-982 frontend/src/screens/ai-routing.tsx
+980 frontend/src/screens/ai-routing.tsx
 878 frontend/src/screens/create.tsx
 822 frontend/src/design-system/decisioncard.tsx
 989 frontend/src/screens/companyheader.tsx
