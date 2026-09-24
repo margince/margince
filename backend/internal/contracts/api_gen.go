@@ -36359,6 +36359,9 @@ type SetTransitionPolicyRequestMode string
 type SettingsAvailability struct {
 	// CompanyContext True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it.
 	CompanyContext bool `json:"company_context"`
+
+	// EmbeddingReindex True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it.
+	EmbeddingReindex bool `json:"embedding_reindex"`
 }
 
 // SettleClaimRequest How a claim finished.

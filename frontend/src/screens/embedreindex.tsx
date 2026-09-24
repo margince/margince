@@ -6,6 +6,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
+import { routeHash } from "../app/router";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CardBoundary } from "../design-system/cardboundary";
@@ -17,6 +18,9 @@ import { type Locale, useLocale, useT } from "../i18n";
 import { bandTone } from "./aiusage";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import "./embedreindex.css";
+import { available } from "./settingscapability";
+import { holds } from "./settingscatalog";
+import { settingsHref } from "./settingsrouting";
 
 // The v6 B2 embedding-reindex surface (ADR-0068 design §5.6-swap). The
 // status read is admin/ops-only server-side now (migration 0115:
@@ -37,6 +41,12 @@ type UtilizationImpact = NonNullable<ReindexPreview["utilization_impact"]>;
 // Shared by the settings card and the app-shell banner so a successful
 // confirm's setQueryData (below) updates both surfaces from the one write.
 export const embedReindexStatusQueryKey = ["embed-reindex-status"];
+
+// Whether this installation has an embed lane bound. The status read answers
+// 501 without one, so both surfaces ask this before issuing it.
+export function useEmbedReindexAvailable(): boolean {
+  return holds(available("embedding_reindex"), useMe().data);
+}
 const embedReindexPreviewQueryKey = ["embed-reindex-preview"];
 
 // impactLabel names the HYPOTHETICAL post-reindex band the estimator
@@ -200,6 +210,7 @@ export function EmbedReindexCard() {
   // card that tells the truth rather than one that 403s on click.
   const canRead = useCan("embedding_reindex", "read");
   const canWrite = useCanWrite("embedding_reindex", "update");
+  const bound = useEmbedReindexAvailable();
   const [mode, setMode] = useState<"reindex" | "rebuild" | null>(null);
   // The identity the operator is previewing against, snapshotted when the
   // dialog opens — NOT re-read from the live status query at confirm time. A
@@ -230,7 +241,7 @@ export function EmbedReindexCard() {
 
   const status = useQuery({
     queryKey: embedReindexStatusQueryKey,
-    enabled: canRead,
+    enabled: canRead && bound,
     queryFn: async (): Promise<ReindexStatus> => {
       const { data, error } = await api.GET("/embeddings/reindex/status");
       if (error) {
@@ -298,10 +309,11 @@ export function EmbedReindexCard() {
   // for them an absent card would read as "this installation has no search index"
   // rather than "this is not yours to see".
   //
-  // The query stays `enabled: canRead` and that half of the reasoning stands:
-  // the answer is already known, so asking for a 403 in order to render it
-  // would turn a settled denial into a "status unavailable" the reader cannot
-  // act on. This runs after every hook call above so the hooks-call-order stays
+  // The query is gated on `canRead && bound`, and each half asks nothing for
+  // the same reason: a denial is already known, and an unbound lane can only
+  // answer 501, so asking for either refusal in order to render it would turn
+  // a settled answer into a "status unavailable" the reader cannot act on.
+  // This runs after every hook call above so the hooks-call-order stays
   // unconditional, and it is gated on the /me probe itself so the notice waits
   // for the grants rather than flashing while they are in flight.
   //
@@ -316,6 +328,22 @@ export function EmbedReindexCard() {
     body = (
       <QueryGate query={me} pendingLabel={t("embedreindex.title")}>
         {() => <EmptyState>{t("embedreindex.withheld")}</EmptyState>}
+      </QueryGate>
+    );
+  } else if (!bound) {
+    // Disabled rather than absent: an admin can bind a model, so the card says
+    // what would make it live. EmptyState, since SurfaceState's sentences are
+    // fixed and none of them names the fix or carries its link.
+    body = (
+      <QueryGate query={me} pendingLabel={t("embedreindex.title")}>
+        {() => (
+          <EmptyState>
+            {t("embedreindex.unbound")}{" "}
+            <a href={routeHash(settingsHref("models"))}>
+              {t("embedreindex.unboundLink")}
+            </a>
+          </EmptyState>
+        )}
       </QueryGate>
     );
   } else {

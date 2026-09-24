@@ -3999,6 +3999,14 @@ export const de = {
     "Es wurde noch nichts geprüft — für diese Installation ist noch kein nächtlicher Lauf abgeschlossen. Die Werte oben beruhen auf den Daten, wie sie sind.",
   "review.nothingToCheck": "Nichts zu prüfen.",
   "review.answer": "Prüfen",
+  "review.colSeverity": "Dringlichkeit",
+  "review.colFinding": "Befund",
+  "review.colDeal": "Deal",
+  "review.colAtStake": "Betroffener Betrag",
+  "review.colSeenSince": "Offen seit",
+  "review.severityHigh": "Hoch",
+  "review.severityMedium": "Mittel",
+  "review.severityLow": "Niedrig",
   "review.closePast": "Abschlussdatum ist verstrichen",
   "review.closeUnconfirmed": "Abschlussdatum nicht bestätigt",
   "review.closePushed": "Abschlussdatum verschiebt sich laufend",
@@ -8297,6 +8305,9 @@ export const de = {
     "Der Neuindizierungsstatus des Embedding-Speichers — nur admin/ops, auch zum Ansehen.",
   "embedreindex.withheld":
     "Nur ein Admin oder Ops sieht den Suchindex. Ihn neu aufzubauen kostet Tokens für die ganze Installation, deshalb wird sein Status nicht breiter gezeigt.",
+  "embedreindex.unbound":
+    "Es ist kein Embedding-Modell gebunden, deshalb gibt es keinen Suchindex, der neu aufgebaut werden könnte.",
+  "embedreindex.unboundLink": "Modell in den KI-Einstellungen binden",
   "embedreindex.statusLabel": "Indexstatus",
   "embedreindex.reindexLabel": "Geändertes neu indexieren",
   "embedreindex.reindexHelp":

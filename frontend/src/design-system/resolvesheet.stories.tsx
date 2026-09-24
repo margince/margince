@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { LocaleProvider } from "../i18n";
+import { ProblemError } from "../screens/common";
 import { Button } from "./atoms";
 import { ResolveSheet, type ResolveSheetLabels } from "./resolvesheet";
 
@@ -69,7 +70,8 @@ const noop = () => {};
  */
 function ResolveSheetDemo({
   pending = false,
-}: Readonly<{ pending?: boolean }>) {
+  error,
+}: Readonly<{ pending?: boolean; error?: unknown }>) {
   const [open, setOpen] = useState(true);
   return (
     <>
@@ -79,6 +81,7 @@ function ResolveSheetDemo({
       <ResolveSheet
         open={open}
         pending={pending}
+        error={error}
         labels={labels}
         onSubmit={noop}
         onClose={() => setOpen(false)}
@@ -95,4 +98,20 @@ export const Open: Story = {
 // gone, so the sheet does not jump under the hand that pressed it.
 export const Saving: Story = {
   render: () => <ResolveSheetDemo pending />,
+};
+
+// A save the server refused: the sheet stays open with the server's reason
+// above the actions, so the answer typed is not lost to a silent failure.
+export const Refused: Story = {
+  render: () => (
+    <ResolveSheetDemo
+      error={
+        new ProblemError({
+          status: 409,
+          title: "Conflict",
+          detail: "This check was already answered by someone else.",
+        })
+      }
+    />
+  ),
 };

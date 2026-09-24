@@ -4121,6 +4121,14 @@ export const en = {
     "Nothing checked yet: no nightly run has completed. The figures above reflect current records.",
   "review.nothingToCheck": "Nothing to check.",
   "review.answer": "Answer",
+  "review.colSeverity": "Severity",
+  "review.colFinding": "Finding",
+  "review.colDeal": "Deal",
+  "review.colAtStake": "At stake",
+  "review.colSeenSince": "Seen since",
+  "review.severityHigh": "High",
+  "review.severityMedium": "Medium",
+  "review.severityLow": "Low",
   "review.closePast": "Close date has passed",
   "review.closeUnconfirmed": "Close date not confirmed",
   "review.closePushed": "Close date keeps moving",
@@ -8418,6 +8426,9 @@ export const en = {
     "Reindex status of the search index. Visible to administrators and operations users only.",
   "embedreindex.withheld":
     "Only an administrator or operations user can see the search index. Rebuilding it spends tokens for the whole installation.",
+  "embedreindex.unbound":
+    "No embedding model is bound, so there is no search index to rebuild.",
+  "embedreindex.unboundLink": "Open AI settings",
   "embedreindex.statusLabel": "Index status",
   "embedreindex.reindexLabel": "Reindex changes",
   "embedreindex.reindexHelp":

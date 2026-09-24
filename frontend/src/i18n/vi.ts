@@ -3964,6 +3964,14 @@ export const vi = {
     "Chưa có gì được kiểm tra — chưa có lần chạy hằng đêm nào hoàn tất cho bản cài đặt này. Các số liệu ở trên dựa trên dữ liệu hiện có.",
   "review.nothingToCheck": "Không có gì để kiểm tra.",
   "review.answer": "Trả lời",
+  "review.colSeverity": "Mức độ",
+  "review.colFinding": "Phát hiện",
+  "review.colDeal": "Thuộc deal",
+  "review.colAtStake": "Số tiền bị ảnh hưởng",
+  "review.colSeenSince": "Thấy từ",
+  "review.severityHigh": "Cao",
+  "review.severityMedium": "Trung bình",
+  "review.severityLow": "Thấp",
   "review.closePast": "Ngày chốt đã qua",
   "review.closeUnconfirmed": "Ngày chốt chưa được xác nhận",
   "review.closePushed": "Ngày chốt liên tục dời",
@@ -8201,6 +8209,9 @@ export const vi = {
     "Trạng thái dựng lại chỉ mục của kho embedding — chỉ quản trị và vận hành, kể cả việc xem.",
   "embedreindex.withheld":
     "Chỉ quản trị viên hoặc ops mới thấy được chỉ mục tìm kiếm. Dựng lại nó tiêu tốn token của cả bản cài đặt, nên trạng thái của nó không được hiển thị rộng hơn.",
+  "embedreindex.unbound":
+    "Chưa gắn mô hình nhúng nào, nên không có chỉ mục tìm kiếm để dựng lại.",
+  "embedreindex.unboundLink": "Gắn một mô hình trong cài đặt AI",
   "embedreindex.statusLabel": "Trạng thái chỉ mục",
   "embedreindex.reindexLabel": "Lập lại chỉ mục phần đã thay đổi",
   "embedreindex.reindexHelp":

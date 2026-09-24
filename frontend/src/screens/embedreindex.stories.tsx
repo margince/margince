@@ -214,3 +214,26 @@ export const WithheldForNonOpsRole: Story = {
     );
   },
 };
+
+// The grant is held but no embeddings model is bound (every `--ai-fake`
+// stack), so there is no index to report on. The card keeps its place and
+// names the fix, one sentence and its link in the card body, and the status
+// read that could only answer 501 is never issued.
+export const Unbound: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            allow: { embedding_reindex: ["read", "update"] },
+            settingsAvailability: { embedding_reindex: false },
+          }),
+        ),
+    });
+    return (
+      <StoryProviders>
+        <EmbedReindexCard />
+      </StoryProviders>
+    );
+  },
+};
