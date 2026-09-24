@@ -9,7 +9,7 @@ import { plain, type SpokenLine } from "./ai-activity-speak";
 // the 1000-line ceiling this tree holds test files to.
 
 const IDLE = "Nothing needs attention";
-const READING = "Reading companies";
+const READING = "Loading companies";
 const WRITING = "Saving the deal";
 
 /** The sentence that names a record, which is the one that carries a link. */

@@ -37,7 +37,7 @@ import {
 type Readings = components["schemas"]["ForecastReadings"];
 
 const SELECTION: AnalyticsSelection = {
-  scope: { kind: "workspace", label: "Whole workspace" },
+  scope: { kind: "workspace", label: "Whole company" },
 };
 
 function readings(over: Partial<Readings> = {}): Readings {

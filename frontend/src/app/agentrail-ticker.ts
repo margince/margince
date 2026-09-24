@@ -176,7 +176,7 @@ function nameInRows(rows: readonly unknown[], id: string): string | null {
 /**
  * What to say about a read, or nothing at all.
  *
- * Named when this tab can name the record: "Reading zenloop" is the whole point
+ * Named when this tab can name the record: "Loading zenloop" is the whole point
  * of the line, and the unnamed phrase is what it falls back to rather than
  * printing an id at somebody. A key in neither table says nothing, which is how
  * the plumbing reads stay out of the line.
@@ -197,7 +197,7 @@ function lineFor(
     return SAID[head] ?? null;
   }
   // A single record, and the NAME is the line. There is no unnamed version of
-  // this sentence: "Reading a contact" tells a reader nothing they cannot see
+  // this sentence: "Loading contact" tells a reader nothing they cannot see
   // from the page they are standing on, and printing it while the name is one
   // moment away is worse than waiting that moment. So a record read says
   // nothing until it can say who.

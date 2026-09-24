@@ -40,7 +40,7 @@ function ShareButtonStory() {
     <StoryProviders>
       <ShareViewButton
         target="forecast"
-        scope={{ kind: "workspace", label: "Whole workspace" }}
+        scope={{ kind: "workspace", label: "Whole company" }}
         snapshotId="snap-1"
       />
     </StoryProviders>

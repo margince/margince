@@ -17,7 +17,7 @@ import { ForecastView } from "./analytics.forecast";
 // The population these tests read under. Workspace because that is what a
 // manager sees, and because a nameable scope is what the editor requires.
 const WORKSPACE_SELECTION = {
-  scope: { kind: "workspace" as const, label: "Whole workspace" },
+  scope: { kind: "workspace" as const, label: "Whole company" },
 };
 
 afterEach(() => {

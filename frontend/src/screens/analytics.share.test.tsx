@@ -55,7 +55,7 @@ describe("sharing a forecast view", () => {
     render(
       <ShareViewButton
         target="forecast"
-        scope={{ kind: "workspace", label: "Whole workspace" }}
+        scope={{ kind: "workspace", label: "Whole company" }}
         snapshotId="snap-1"
       />,
     );
@@ -76,7 +76,7 @@ describe("sharing a forecast view", () => {
     render(
       <ShareViewButton
         target="forecast"
-        scope={{ kind: "workspace", label: "Whole workspace" }}
+        scope={{ kind: "workspace", label: "Whole company" }}
       />,
     );
 
@@ -94,7 +94,7 @@ describe("sharing a forecast view", () => {
     render(
       <ShareViewButton
         target="forecast"
-        scope={{ kind: "workspace", label: "Whole workspace" }}
+        scope={{ kind: "workspace", label: "Whole company" }}
       />,
     );
 
@@ -117,7 +117,7 @@ describe("sharing a forecast view", () => {
     render(
       <ShareViewButton
         target="forecast"
-        scope={{ kind: "workspace", label: "Whole workspace" }}
+        scope={{ kind: "workspace", label: "Whole company" }}
       />,
     );
 
