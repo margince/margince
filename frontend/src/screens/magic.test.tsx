@@ -231,7 +231,7 @@ describe("the receipt draws every lane it promises", () => {
     );
     renderMagic();
     const wayBack = await screen.findByRole("link", {
-      name: "Can be put back from the record's history",
+      name: "Can be put back from the record’s history",
     });
     expect(wayBack.getAttribute("href")).toBe(
       "#/deals/00000000-0000-7000-8000-0000000000aa",

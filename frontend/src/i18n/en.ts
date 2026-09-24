@@ -10312,7 +10312,7 @@ export const en = {
   "magic.failingSince": "Failing since {when}",
   "magic.col.wayBack": "Way back",
   "magic.noRecord": "No record named",
-  "magic.undo.fromHistory": "Can be put back from the record's history",
+  "magic.undo.fromHistory": "Can be put back from the record’s history",
   "magic.undoReason.noCompletedChange":
     "Nothing changed, so there is nothing to put back",
   "magic.undoReason.notEvaluated": "This installation has not checked",
