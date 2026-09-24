@@ -1719,6 +1719,18 @@ func (stubs) GetMagic(w nethttp.ResponseWriter, r *nethttp.Request, params crmco
 	httperr.NotImplemented(w, r, "GetMagic")
 }
 
+func (stubs) GetMailDraft(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMailDraftParams) {
+	httperr.NotImplemented(w, r, "GetMailDraft")
+}
+
+func (stubs) SaveMailDraft(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SaveMailDraftParams) {
+	httperr.NotImplemented(w, r, "SaveMailDraft")
+}
+
+func (stubs) DiscardMailDraft(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DiscardMailDraft")
+}
+
 func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCurrentPrincipal")
 }
