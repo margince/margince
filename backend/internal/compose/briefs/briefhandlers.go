@@ -15,10 +15,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/modelfailure"
-
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"

@@ -11,7 +11,6 @@ import (
 	"net/http"
 
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"

@@ -158,7 +158,7 @@ func TestEveryWorkerReturnsThroughJobsFault(t *testing.T) {
 			if logger := errorLogsAndReturnsNil(fn, pkg); logger != "" {
 				if !nilAfterLogging.Waived(t, recv) {
 					pos := fset.Position(fn.Pos())
-					t.Errorf("%s:%d: %s logs an error (in %s) and returns nil — River will record this job as completed while the work failed. Return the failure, or ratify it in api/jobs.yaml with fault: {nil_after_logging: …} naming the retry policy that makes success honest.",
+					t.Errorf("%s:%d: %s logs an error (in %s) and returns nil — River will record this job as completed while the work failed. Return the failure, or ratify it in api/jobs.yaml with fault: {nil_after_logging: …} naming why its success is honest — a durable retry policy, or a log line that reports a finding rather than a failure.",
 						pos.Filename, pos.Line, recv, logger)
 				}
 			}
@@ -247,9 +247,10 @@ func indexPackageFuncs(fset *token.FileSet, files []*ast.File) map[string]*packa
 // package, that makes an error or warn log call, or "" when none does. Calls
 // are followed without a depth limit; seen stops a recursive pair from looping.
 //
-// Only a call made as a statement — plain, deferred or spawned — is followed:
-// one whose result, if it has one, nobody reads. That is the call a failure disappears into: a helper whose
-// error Work returns has handed the failure back, and whatever it logged on
+// A call is followed when nothing fn returns carries its result: one made as
+// a statement — plain, deferred or spawned — or one whose assigned names no
+// return statement reads. That is the call a failure disappears into. A helper
+// whose error fn returns has handed the failure back, and whatever it logged on
 // the way is the same failure Work then reports through jobs.Fault.
 //
 // What it resolves, without type information: a package-level function called
@@ -261,6 +262,7 @@ func (pkg *packageFuncs) loggerIn(fn *ast.FuncDecl, seen map[*ast.FuncDecl]bool)
 		return ""
 	}
 	seen[fn] = true
+	returned := namesReturned(fn)
 	var logger string
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		if logger != "" {
@@ -275,6 +277,10 @@ func (pkg *packageFuncs) loggerIn(fn *ast.FuncDecl, seen map[*ast.FuncDecl]bool)
 			if call, ok := v.X.(*ast.CallExpr); ok {
 				logger = pkg.loggerThrough(fn, call, seen)
 			}
+		case *ast.AssignStmt:
+			if call, ok := singleCall(v.Rhs); ok && !anyNameIn(v.Lhs, returned) {
+				logger = pkg.loggerThrough(fn, call, seen)
+			}
 		case *ast.DeferStmt:
 			logger = pkg.loggerThrough(fn, v.Call, seen)
 		case *ast.GoStmt:
@@ -283,6 +289,42 @@ func (pkg *packageFuncs) loggerIn(fn *ast.FuncDecl, seen map[*ast.FuncDecl]bool)
 		return logger == ""
 	})
 	return logger
+}
+
+// namesReturned is every identifier any return statement in fn reads.
+func namesReturned(fn *ast.FuncDecl) map[string]bool {
+	names := map[string]bool{}
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		if ret, ok := n.(*ast.ReturnStmt); ok {
+			ast.Inspect(ret, func(m ast.Node) bool {
+				if ident, ok := m.(*ast.Ident); ok {
+					names[ident.Name] = true
+				}
+				return true
+			})
+		}
+		return true
+	})
+	return names
+}
+
+// singleCall is the call an assignment's one right-hand side makes.
+func singleCall(rhs []ast.Expr) (*ast.CallExpr, bool) {
+	if len(rhs) != 1 {
+		return nil, false
+	}
+	call, ok := rhs[0].(*ast.CallExpr)
+	return call, ok
+}
+
+// anyNameIn reports whether any assigned identifier is one of names.
+func anyNameIn(lhs []ast.Expr, names map[string]bool) bool {
+	for _, expr := range lhs {
+		if ident, ok := expr.(*ast.Ident); ok && ident.Name != "_" && names[ident.Name] {
+			return true
+		}
+	}
+	return false
 }
 
 // loggerThrough is loggerIn of what call, made inside fn, resolves to.
@@ -447,6 +489,9 @@ func inner() { slog.Warn("x") }`, "inner"},
 		"a deferred helper": {`type worker struct{}
 func (w *worker) Work() error { defer cleanup(); return nil }
 func cleanup() { slog.Error("x") }`, "cleanup"},
+		"a helper whose result Work reads but never returns": {`type worker struct{}
+func (w *worker) Work() error { n := sweep(); _ = n; return nil }
+func sweep() int { slog.Error("x"); return 0 }`, "sweep"},
 		"a recursive pair that never logs": {`type worker struct{}
 func (w *worker) Work() error { ping(); return nil }
 func ping() { pong() }
