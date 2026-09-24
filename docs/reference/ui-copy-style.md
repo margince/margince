@@ -151,8 +151,10 @@ nouns and are not reworded. Internal jargon never reaches the screen.
 | A classifier's result | result, check | verdict |
 | Capture intake step | intake check | admission check |
 | Loading a record | Loading… | Reading… |
-| Ownership of a deal | owns | carries |
+| Ownership of a deal | owns | carries, carrier |
 | Tabs of a record | (tab labels only) | Parts of this record |
+| Something a party said they would do | commitment | promise |
+| The running Margince system | installation | deployment |
 
 ## Message shapes
 
@@ -187,7 +189,9 @@ hidden for this role."
 ## What the gate holds
 
 `frontend/src/i18n/copy-style.test.ts` checks every value of the `en` catalog,
-one test for each of its twelve rules, and lists each offender as its key and value:
+one test for each of its thirteen rules, and lists each offender as its key and value.
+A fourteenth test fails a retired word the test lists that the Vocabulary table
+above does not name:
 
 | Rule | What fails |
 |---|---|
@@ -203,11 +207,12 @@ one test for each of its twelve rules, and lists each offender as its key and va
 | Never "I" | I, I’m, I’ve, myself, outside keys starting `ob.conv.` or `prefs.wording.` and the consent statements listed in the test |
 | No ampersand | Any `&` outside curly quotes; write "and". A label in “…” is copied from another product's screen and must match it |
 | American spelling | A fixed list of British spellings of words the catalog uses |
+| Retired vocabulary | A word the test lists from the Vocabulary table's Never column, whole word in any case, outside the keys it names with a reason |
 
 Placeholders are removed before the word rules run, so `{name}` never reads as
 copy. The gate cannot see the rest of this page: tone, sentence case, articles,
 periods, tense, voice, a spaced hyphen, w/, numbers and ranges, list form,
-length ceilings, vocabulary, message shapes, a contraction outside its list, and
+length ceilings, vocabulary beyond the retired words, message shapes, a contraction outside its list, and
 "you" used where nobody needed addressing. Those are the author's and the
 reviewer's judgement.
 

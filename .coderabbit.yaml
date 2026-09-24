@@ -57,6 +57,26 @@ reviews:
         the code, narrates how it got here ("used to", "was answered twice", a
         rule or ticket number), or repeats a rule a gate already holds.
         `make comment-budget` fails a change adding more comment lines than code.
+    - path: "frontend/src/i18n/en.ts"
+      instructions: |
+        English is the source catalog; German and Vietnamese are translated from
+        it. Read docs/reference/ui-copy-style.md and review every added or
+        changed value against it:
+        - Voice and address: never "we"; "I" only in onboarding conversation
+          keys (ob.conv.*); "you" only for ownership or the reader's next step.
+        - The Vocabulary table: the "Write" word for each concept.
+        - Sentence case.
+        - Slot register: labels, buttons, menu items and badges carry no
+          period; messages are full sentences; a confirmation title is a
+          question naming the object; a button is never Yes, No, OK or Confirm.
+        - The length ceilings.
+        - The message shapes (error, warning, confirmation, empty state,
+          success, permission denied, in progress).
+        - Legal, privacy, consent and license text keeps every qualifier.
+        Do not flag what frontend/src/i18n/copy-style.test.ts already enforces
+        (dashes, exclamation marks, straight quotes, ellipsis, double spaces,
+        Latin abbreviations, "please", contractions, "we", "I", ampersands,
+        British spelling, retired words).
   auto_review:
     enabled: true
     # Draft PRs get no review — matches the CI path-filter's draft skip (the

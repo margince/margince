@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { en } from "./en";
 
@@ -46,6 +49,55 @@ function spokenByTheReader(key: string): boolean {
   return (
     SPOKEN_BY_THE_READER.has(key) || key.startsWith(SPOKEN_BY_THE_READER_PREFIX)
   );
+}
+
+// Owned by the Vocabulary table's Never column on the style page; the last test
+// fails a word here that the table does not name. The rest of that column is
+// ordinary English in some sense ("account", "queue", "token"), so it stays
+// the reviewer's.
+const RETIRED_WORDS = [
+  "workspace",
+  "verdict",
+  "spine",
+  "backread",
+  "deep read",
+  "admission check",
+  "carrier",
+  "opportunity",
+  "funnel",
+  "promise",
+  "Parts of this record",
+  "deployment",
+];
+
+// Keys where a retired word keeps a sense the table does not retire.
+const RETIRED_WORD_KEPT = new Map<string, string>([
+  ["firstRun.platform.google", "Google Workspace is a product name"],
+  ["company.lifecycle.opportunity", "a lifecycle stage, not the deal record"],
+  ["signal.kind.new_opportunity", "a signal naming an opening, not a deal"],
+  ["worklist.signal.opportunity", "a signal naming an opening, not a deal"],
+]);
+
+function retiredWordPattern(word: string): RegExp {
+  const singularOrPlural = word.endsWith("y")
+    ? `${word.slice(0, -1)}(?:y|ies)`
+    : `${word}s?`;
+  return new RegExp(`\\b${singularOrPlural}\\b`, "i");
+}
+
+function vocabularyNeverColumn(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const page = readFileSync(
+    resolve(here, "..", "..", "..", "docs", "reference", "ui-copy-style.md"),
+    "utf8",
+  );
+  const section = page.split("\n## Vocabulary\n")[1]?.split("\n## ")[0] ?? "";
+  return section
+    .split("\n")
+    .filter((line) => line.startsWith("|") && !line.startsWith("|---"))
+    .slice(1)
+    .map((row) => row.split("|")[3] ?? "")
+    .join("\n");
 }
 
 describe("en copy style", () => {
@@ -121,5 +173,30 @@ describe("en copy style", () => {
   it("writes and, never an ampersand", () => {
     const unquoted = (value: string) => value.replace(/“[^”]*”/g, "");
     expect(offenders(/&/, { text: unquoted })).toEqual([]);
+  });
+
+  it("uses no retired word", () => {
+    const found = RETIRED_WORDS.flatMap((word) =>
+      offenders(retiredWordPattern(word), {
+        text: prose,
+        exempt: (key) => RETIRED_WORD_KEPT.has(key),
+      }),
+    );
+    expect(found).toEqual([]);
+    const stale = [...RETIRED_WORD_KEPT.keys()].filter(
+      (key) =>
+        !RETIRED_WORDS.some((word) =>
+          retiredWordPattern(word).test(prose(catalog[key] ?? "")),
+        ),
+    );
+    expect(stale).toEqual([]);
+  });
+
+  it("retires only words the style page's Vocabulary table retires", () => {
+    const never = vocabularyNeverColumn();
+    expect(never).not.toBe("");
+    expect(
+      RETIRED_WORDS.filter((word) => !retiredWordPattern(word).test(never)),
+    ).toEqual([]);
   });
 });

@@ -1,6 +1,7 @@
 // English catalog. Keys are the contract; every other catalog mirrors them
 // exactly (compile-time via satisfies, runtime via i18n.test.ts). Placeholders
 // use {name} and are filled by t(key, params).
+// Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "aiAdmin.allowance": "Monthly AI allowance",
   "aiAdmin.pool":
