@@ -164,7 +164,7 @@ func (a *httpAPI) ListAfter(ctx context.Context, accessToken, query, pageToken s
 		} `json:"messages"`
 		NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google names this field
 	}
-	q := url.Values{"q": {query}, paramMaxResults: {strconv.Itoa(pageSize)}}
+	q := url.Values{"q": {query}, paramMaxResults: {strconv.Itoa(pageSize)}, includeSpamTrash: {"false"}}
 	if pageToken != "" {
 		q.Set("pageToken", pageToken)
 	}

@@ -83,12 +83,23 @@ type OAuth interface {
 }
 
 // sentLabelID is Gmail's system label for the mailbox owner's own sent mail,
-// and draftLabelID the one for a message still being composed. System label ids
-// are stable strings, not localized names.
+// and draftLabelID the one for a message still being composed. spamLabelID and
+// trashLabelID are the two the owner has already rejected. System label ids are
+// stable strings, not localized names.
 const (
 	sentLabelID  = "SENT"
 	draftLabelID = "DRAFT"
+	spamLabelID  = "SPAM"
+	trashLabelID = "TRASH"
 )
+
+// includeSpamTrash is Gmail's messages.list switch for the spam and trash
+// folders. Its API default is already false, and stating it is the point: a
+// default is the provider's decision and can change under us, where a named
+// parameter is ours and reads as one in the request. The fetch-time refusal in
+// hasRejectedLabel is the half that actually holds — this is the half that says
+// so at enumeration.
+const includeSpamTrash = "includeSpamTrash"
 
 // Message is one fetched Gmail message: the decoded RFC822 bytes plus the one
 // thing the bytes cannot honestly tell us — whether Gmail itself filed the
@@ -225,7 +236,7 @@ func (a *httpAPI) ListRecent(ctx context.Context, accessToken string, maxResults
 			ID string `json:"id"`
 		} `json:"messages"`
 	}
-	q := url.Values{"maxResults": {strconv.Itoa(maxResults)}}
+	q := url.Values{"maxResults": {strconv.Itoa(maxResults)}, includeSpamTrash: {"false"}}
 	if _, err := a.get(ctx, accessToken, "/messages", q, &out, maxJSONResponseBytes); err != nil {
 		return nil, err
 	}
@@ -327,6 +338,19 @@ func hasSentLabel(labelIDs []string) bool {
 // from those of a message that went, so the header cannot tell us.
 func hasDraftLabel(labelIDs []string) bool {
 	return slices.Contains(labelIDs, draftLabelID)
+}
+
+// hasRejectedLabel reports whether Gmail filed this message under SPAM or
+// TRASH — the two dispositions where the owner, or Gmail on their behalf, has
+// already said this mail is not wanted.
+//
+// Read at FETCH time and not only at enumeration because the two are separate
+// calls: messages.list hands back ids, and a message can be moved to Spam or
+// Trash in the gap before messages.get reads it. Excluding it from the listing
+// is therefore necessary and not sufficient, and the sufficient half is here,
+// where the labels of the message actually being captured are in hand.
+func hasRejectedLabel(labelIDs []string) bool {
+	return slices.Contains(labelIDs, spamLabelID) || slices.Contains(labelIDs, trashLabelID)
 }
 
 // Watch registers a users.watch so Gmail publishes change notifications for

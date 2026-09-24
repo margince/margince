@@ -278,6 +278,15 @@ func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounc
 	if hasDraftLabel(fetched.Labels) {
 		return false, nil
 	}
+	// Spam and trash for the same reason and in the same place. Both
+	// enumerations already ask Gmail to leave them out — messages.list carries
+	// includeSpamTrash=false — but neither ask is a guarantee about the message
+	// that finally arrives: ids are listed in one call and read in another, and
+	// a message can be moved between them. The listing narrows what is offered;
+	// this refuses what turns up anyway.
+	if hasRejectedLabel(fetched.Labels) {
+		return false, nil
+	}
 	msg, err := mailmap.Parse(fetched.RFC822, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // a single unparseable message is a skip, not a fatal pull error (mirrors the IMAP connector)

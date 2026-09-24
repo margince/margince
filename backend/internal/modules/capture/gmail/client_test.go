@@ -180,6 +180,41 @@ func TestListRecentReturnsIDs(t *testing.T) {
 	}
 }
 
+// TestBothMessageListingsSayIncludeSpamTrashFalse.
+//
+// The Gmail API already defaults this to false, which is why nothing was
+// broken while the parameter went unsent — and is also why it is worth
+// asserting: a default belongs to Google and can move, a parameter we send
+// belongs to us. Both listings are covered because they are separate calls
+// built in separate files (the sync's ListRecent, the import's ListAfter) and
+// a rule proved at one of them is a rule the other can quietly drop.
+func TestBothMessageListingsSayIncludeSpamTrashFalse(t *testing.T) {
+	var seen []string
+	mux := http.NewServeMux()
+	mux.HandleFunc("/messages", func(w http.ResponseWriter, r *http.Request) {
+		seen = append(seen, r.URL.Query().Get("includeSpamTrash"))
+		writeJSON(w, map[string]any{"messages": []map[string]string{{"id": "m1"}}})
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	api := NewAPI(srv.Client(), srv.URL)
+
+	if _, err := api.ListRecent(context.Background(), "access-2", 50); err != nil {
+		t.Fatalf("ListRecent: %v", err)
+	}
+	if _, _, err := api.ListAfter(context.Background(), "access-2", "after:2026/01/01", "", 50); err != nil {
+		t.Fatalf("ListAfter: %v", err)
+	}
+	if len(seen) != 2 {
+		t.Fatalf("listing calls = %d, want 2 (ListRecent and ListAfter)", len(seen))
+	}
+	for i, got := range seen {
+		if got != "false" {
+			t.Errorf("call %d sent includeSpamTrash=%q, want %q", i, got, "false")
+		}
+	}
+}
+
 func TestGetRawDecodesBase64URL(t *testing.T) {
 	_, api := newTestClients(t)
 	msg, err := api.GetRaw(context.Background(), "access-2", "m1")
