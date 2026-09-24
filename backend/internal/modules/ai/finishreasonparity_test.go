@@ -19,12 +19,15 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -42,7 +45,16 @@ type finishWire struct {
 	contentType string
 	truncated   func(text string) string
 	finished    func(text string) string
+	// withheld holds this wire's spellings of a provider declining to deliver
+	// an answer, by name. Empty only for a wire waived in withholdsNothing.
+	withheld map[string]string
 }
+
+// withholdsNothing names the wires with no withholding terminal at all, and
+// why, so the census below can tell an exemption from an omission.
+var withholdsNothing = gatekit.Waive(map[string]string{
+	providerOllama: "ollama's done_reason is stop, length, load or unload: a local runner has no content filter or refusal terminal between the model and the caller",
+})
 
 // wireText is text as a JSON string literal, so a fixture never hand-escapes.
 func wireText(t *testing.T, text string) string {
@@ -70,6 +82,13 @@ func finishWires(t *testing.T) map[string]finishWire {
 			return `{"model":"m","choices":[{"finish_reason":"` + finishReason + `","message":{"content":` + q(text) + `}}]}`
 		}
 	}
+	compatWithheld := map[string]string{
+		"a content filter": `{"model":"m","choices":[{"finish_reason":"content_filter","native_finish_reason":"SAFETY","message":{"content":""}}]}`,
+		"a refusal": `{"model":"m","choices":[{"finish_reason":"content_filter",` +
+			`"message":{"content":null,"refusal":"I can't help with that."}}]}`,
+		"a refusal under a stop": `{"model":"m","choices":[{"finish_reason":"stop",` +
+			`"message":{"content":null,"refusal":"I can't help with that."}}]}`,
+	}
 	return map[string]finishWire{
 		"openai": {
 			provider: providerOpenAI, contentType: "application/json",
@@ -81,14 +100,20 @@ func finishWires(t *testing.T) map[string]finishWire {
 				return `{"id":"r","model":"gpt-x","status":"completed",` +
 					`"output":[{"type":"message","content":[{"type":"output_text","text":` + q(text) + `}]}]}`
 			},
+			withheld: map[string]string{
+				"a refusal part": `{"id":"r","model":"gpt-x","status":"completed",` +
+					`"output":[{"type":"message","content":[{"type":"refusal","refusal":"I can't help with that."}]}]}`,
+				"a content filter": `{"id":"r","model":"gpt-x","status":"incomplete","incomplete_details":{"reason":"content_filter"},` +
+					`"output":[{"type":"message","content":[{"type":"output_text","text":"par"}]}]}`,
+			},
 		},
 		"openai_compatible": {
 			provider: providerOpenAICompatible, contentType: "application/json",
-			truncated: compatReply("length"), finished: compatReply("stop"),
+			truncated: compatReply("length"), finished: compatReply("stop"), withheld: compatWithheld,
 		},
 		"vllm": {
 			provider: providerVLLM, contentType: "application/json",
-			truncated: compatReply("length"), finished: compatReply("stop"),
+			truncated: compatReply("length"), finished: compatReply("stop"), withheld: compatWithheld,
 		},
 		"anthropic": {
 			provider: providerAnthropic, contentType: "application/json",
@@ -98,11 +123,29 @@ func finishWires(t *testing.T) map[string]finishWire {
 			finished: func(text string) string {
 				return `{"model":"claude-test","stop_reason":"end_turn","content":[{"type":"text","text":` + q(text) + `}]}`
 			},
+			withheld: map[string]string{
+				"a refusal": `{"model":"claude-test","stop_reason":"refusal","content":[]}`,
+			},
+		},
+		// Anthropic's docs: a reply that filled the model's context window is
+		// to be treated as truncated, exactly like one that hit max_tokens.
+		"anthropic context window": {
+			provider: providerAnthropic, contentType: "application/json",
+			truncated: func(text string) string {
+				return `{"model":"claude-test","stop_reason":"model_context_window_exceeded","content":[{"type":"text","text":` + q(text) + `}]}`
+			},
+			finished: func(text string) string {
+				return `{"model":"claude-test","stop_reason":"end_turn","content":[{"type":"text","text":` + q(text) + `}]}`
+			},
+			withheld: map[string]string{
+				"a refusal": `{"model":"claude-test","stop_reason":"refusal","content":[{"type":"text","text":"I"}]}`,
+			},
 		},
 		"anthropic streamed": {
 			provider: providerAnthropic, maxTokens: streamedCompleteThreshold + 1, contentType: "text/event-stream",
 			truncated: anthropicSSE("max_tokens"),
 			finished:  anthropicSSE("end_turn"),
+			withheld:  map[string]string{"a refusal": anthropicSSE("refusal")("I")},
 		},
 		"gemini": {
 			provider: providerGemini, contentType: "application/json",
@@ -111,6 +154,11 @@ func finishWires(t *testing.T) map[string]finishWire {
 			},
 			finished: func(text string) string {
 				return `{"candidates":[{"content":{"parts":[{"text":` + q(text) + `}]},"finishReason":"STOP"}]}`
+			},
+			withheld: map[string]string{
+				"a safety stop":    `{"candidates":[{"content":{"parts":[]},"finishReason":"SAFETY"}]}`,
+				"a recitation":     `{"candidates":[{"content":{"parts":[{"text":"par"}]},"finishReason":"RECITATION"}]}`,
+				"a blocked prompt": `{"promptFeedback":{"blockReason":"PROHIBITED_CONTENT"}}`,
 			},
 		},
 		"ollama": {
@@ -242,9 +290,117 @@ func TestFinishWiresCoverEveryProvider(t *testing.T) {
 	for _, wire := range finishWires(t) {
 		covered[wire.provider] = true
 	}
+	withholds := map[string]bool{}
+	for _, wire := range finishWires(t) {
+		withholds[wire.provider] = withholds[wire.provider] || len(wire.withheld) > 0
+	}
+	defer withholdsNothing.AssertAllMatched(t)
 	for _, provider := range knownProviders {
 		if provider != ProviderFake && !covered[provider] {
 			t.Errorf("provider %q has no row in finishWires, so nothing checks how it reports a cut-off reply", provider)
 		}
+		if provider != ProviderFake && covered[provider] && !withholds[provider] && !withholdsNothing.Waived(t, provider) {
+			t.Errorf("provider %q has no withheld fixture and no withholdsNothing waiver, so nothing checks how it reports a refusal", provider)
+		}
+	}
+}
+
+// A refusal, a safety stop or a blocked prompt is the provider's ANSWER about
+// this content, not an outage: it must reach the caller as model.ErrOutputWithheld
+// and name its terminal for the trace. A wire that returned it as a Response
+// hands the caller an empty or partial body as though it were a whole one; one
+// that returned a bare error sent the cert lane to re-drive it as a dropped
+// connection and then abort the task.
+func TestEveryAdapterReportsAWithheldAnswerAsWithheld(t *testing.T) {
+	for name, wire := range finishWires(t) {
+		for variant, body := range wire.withheld {
+			t.Run(name+"/"+variant, func(t *testing.T) {
+				client, _ := wire.client(t, body)
+				_, err := client.Complete(context.Background(), model.Request{
+					MaxTokens: wire.maxTokens, Messages: []model.Message{{Role: "user", Content: "q"}},
+				})
+				if !errors.Is(err, model.ErrOutputWithheld) {
+					t.Fatalf("err = %v, want model.ErrOutputWithheld", err)
+				}
+				if errors.Is(err, model.ErrRequestRejected) {
+					t.Errorf("a withheld answer also reads as a rejected request: %v", err)
+				}
+				if finishReasonFor("", err) == "" {
+					t.Errorf("the error names no terminal, so the stored call cannot say why the answer was withheld: %v", err)
+				}
+			})
+		}
+	}
+}
+
+// A request the provider refused as malformed is the request's fault, and a
+// 4xx is how every wire says so. It must not read as an outage, and it must
+// not read as a quota refusal either: the two want different remedies.
+func TestEveryAdapterReportsARejectedRequestAsRejected(t *testing.T) {
+	const body = `{"error":{"type":"invalid_request_error","status":"INVALID_ARGUMENT","message":"bad field"}}`
+	for name, wire := range finishWires(t) {
+		for status, wantRejected := range map[int]bool{
+			http.StatusBadRequest: true, http.StatusRequestEntityTooLarge: true, http.StatusUnprocessableEntity: true,
+			// Credentials, a missing model and payment are the binding's, and a
+			// timeout is transient: none is a verdict on the request itself.
+			http.StatusUnauthorized: false, http.StatusForbidden: false, http.StatusNotFound: false,
+			http.StatusPaymentRequired: false, http.StatusRequestTimeout: false,
+			http.StatusTooManyRequests: false, http.StatusInternalServerError: false,
+		} {
+			t.Run(fmt.Sprintf("%s/%d", name, status), func(t *testing.T) {
+				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(status)
+					if _, err := w.Write([]byte(body)); err != nil {
+						t.Errorf("writing fixture reply: %v", err)
+					}
+				}))
+				t.Cleanup(srv.Close)
+				client, err := selectLocalBrain(ProviderConfig{Provider: wire.provider, BaseURL: srv.URL, Model: "m"}, allCloudKeys())
+				if err != nil {
+					t.Fatalf("building the %s adapter: %v", wire.provider, err)
+				}
+				_, err = client.Complete(context.Background(), model.Request{
+					MaxTokens: wire.maxTokens, Messages: []model.Message{{Role: "user", Content: "q"}},
+				})
+				if err == nil {
+					t.Fatal("an HTTP error status was accepted as an answer")
+				}
+				if got := errors.Is(err, model.ErrRequestRejected); got != wantRejected {
+					t.Errorf("errors.Is(err, model.ErrRequestRejected) = %v, want %v: %v", got, wantRejected, err)
+				}
+			})
+		}
+	}
+}
+
+// The ladder stops at a rejected request and walks past a withheld answer, and
+// NEITHER ends as ErrAllTiersFailed: that sentinel says no model was reached,
+// and a caller re-drives on it as an outage.
+func TestTheLadderTreatsAnOutcomeAsAnOutcome(t *testing.T) {
+	for name, tc := range map[string]struct {
+		cause     error
+		want      error
+		wantCalls int
+	}{
+		// A different model may answer what one withheld, so the walk goes on.
+		"withheld": {withheldError{wire: "fake", reason: "refusal"}, model.ErrOutputWithheld, 2},
+		// The same request fails the same way on every rung, and each is billed.
+		"rejected": {fmt.Errorf("%w: bad field", model.ErrRequestRejected), model.ErrRequestRejected, 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			fake := NewFakeClient().ScriptSteps(FakeStep{Err: tc.cause}, FakeStep{Err: tc.cause})
+			r := testRouter(map[Tier]model.Client{TierCheapCloud: fake, TierPremium: fake}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+			_, _, err := r.Complete(wsContext(t), TaskColdStart, model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
+			if !errors.Is(err, tc.want) {
+				t.Fatalf("err = %v, want %v", err, tc.want)
+			}
+			if errors.Is(err, ErrAllTiersFailed) {
+				t.Errorf("an outcome was reported as every tier failing, which the cert lane re-drives as an outage: %v", err)
+			}
+			if got := len(fake.Calls()); got != tc.wantCalls {
+				t.Errorf("the ladder made %d call(s), want %d", got, tc.wantCalls)
+			}
+		})
 	}
 }

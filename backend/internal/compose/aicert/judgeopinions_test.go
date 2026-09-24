@@ -5,6 +5,7 @@ package aicert
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -170,4 +171,30 @@ func TestTheJournalKeepsEveryOpinionARunWasScoredFrom(t *testing.T) {
 			}
 		}
 	})
+}
+
+// A judge whose provider withheld its answer gave no opinion, which is what an
+// unparseable reply already means: the run stays in the record ungraded rather
+// than aborting the task as though the judge were unreachable.
+func TestAWithheldJudgementLeavesTheRunUngraded(t *testing.T) {
+	waited := recordSleeps(t)
+	withheld := ai.FakeStep{Err: fmt.Errorf("%w: SAFETY", model.ErrOutputWithheld)}
+	candidate := ai.NewFakeClient().Script(containsWidget, containsWidget, containsWidget)
+	judge := ai.NewFakeClient().ScriptSteps(slices.Repeat([]ai.FakeStep{withheld}, 2)...).Script(scoreJSON(90), scoreJSON(90))
+
+	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
+		})
+	if err != nil {
+		t.Fatalf("a judge that declined to grade one run aborted the task: %v", err)
+	}
+	if rec.Runs != 3 || rec.Reliability != 1 {
+		t.Errorf("runs=%d reliability=%v, want 3 passing runs — the candidate answered every one", rec.Runs, rec.Reliability)
+	}
+	if len(*waited) != 0 {
+		t.Errorf("waited %v — a withheld judgement is not an outage", *waited)
+	}
 }

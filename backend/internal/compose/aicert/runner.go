@@ -366,7 +366,7 @@ type taskAccumulation struct {
 // an error — voiding the whole task's record — when a later run's
 // provider or served model diverges from that baseline.
 func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, outcome runOutcome) error {
-	if acc.identitySet && (outcome.Provider != acc.provider || outcome.ServedModel != acc.servedModel) {
+	if acc.identitySet && !outcome.Unanswered && (outcome.Provider != acc.provider || outcome.ServedModel != acc.servedModel) {
 		return fmt.Errorf(
 			"aicert: task %s scenario %s run %d: candidate served by %s:%s, but run 1 was served by %s:%s — refusing to certify a mixed run set",
 			task, sc.Name, runIndex+1, outcome.Provider, outcome.ServedModel, acc.provider, acc.servedModel,
@@ -378,8 +378,12 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 	acc.tokensOutTotal += outcome.TokensOut
 	acc.cachedTokensTotal += outcome.CachedTokens
 	acc.cacheWriteTokensTotal += outcome.CacheWriteTokens
-	acc.provider, acc.servedModel, acc.identitySource = outcome.Provider, outcome.ServedModel, outcome.ServedIdentitySource
-	acc.identitySet = true
+	// An unanswered run names the binding, which stands in only until a served
+	// run supplies the identity that actually answered.
+	if !outcome.Unanswered || !acc.identitySet {
+		acc.provider, acc.servedModel, acc.identitySource = outcome.Provider, outcome.ServedModel, outcome.ServedIdentitySource
+	}
+	acc.identitySet = acc.identitySet || !outcome.Unanswered
 	acc.certifiedScope = aitasks.NarrowerScope(acc.certifiedScope, outcome.CertifiedScope)
 	// A run no judge saw says nothing about the judge. Capturing its empty
 	// identity would let one truncated run at the END of a set erase the grader

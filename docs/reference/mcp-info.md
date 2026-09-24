@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 76 |
 | Resources | 12 |
-| Tool catalog | 218.6 KB |
+| Tool catalog | 219.3 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 57102 |
+| Approx. wire tokens | 57277 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 99.6 KB | 45% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 57.5 KB | 26% | Yes, every step |
-| Input schemas | 45.4 KB | 20% | Yes, every step |
+| Input schemas | 46.1 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.0 KB | 7% | Partly |
-| **Description + input schema** | **102.9 KB** | **47%** | **the recurring cost** |
+| **Description + input schema** | **103.6 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -104,7 +104,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.4 KB |
 | [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.3 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
-| [`list_records`](#list_records) | List records | yes |  | 3.4 KB |
+| [`list_records`](#list_records) | List records | yes |  | 4.1 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 3.9 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
@@ -7068,10 +7068,76 @@ Enumerate the contacts, companies, deals, leads or projects that meet exact cond
       "type": "string"
     },
     "filters": {
-      "additionalProperties": {
-        "type": "string"
-      },
+      "additionalProperties": false,
       "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+      "properties": {
+        "acquisition_source": {
+          "type": "string"
+        },
+        "commercial_motion": {
+          "type": "string"
+        },
+        "company_id": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "forecast_category": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "lifecycle": {
+          "type": "string"
+        },
+        "min_score": {
+          "type": "string"
+        },
+        "owner_id": {
+          "type": "string"
+        },
+        "partner_attribution": {
+          "type": "string"
+        },
+        "partner_company_id": {
+          "type": "string"
+        },
+        "partner_sourced": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "pipeline_id": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "relationship_type": {
+          "type": "string"
+        },
+        "stage_id": {
+          "type": "string"
+        },
+        "stalled": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "tag_id": {
+          "type": "string"
+        },
+        "tag_mode": {
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "limit": {

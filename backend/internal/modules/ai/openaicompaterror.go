@@ -34,7 +34,7 @@ import (
 // returned error" for everything — and puts the upstream vendor's sentence in
 // metadata.raw. Reading only the outer message produced log lines that named
 // no cause and a build failure the operator could do nothing with.
-func openAICompatError(resp *http.Response) error {
+func openAICompatError(ctx context.Context, resp *http.Response) error {
 	var apiErr struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
@@ -50,13 +50,13 @@ func openAICompatError(resp *http.Response) error {
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil {
-		if detail := compatErrorDetail(apiErr.Error.Message, apiErr.Error.Metadata.Raw, apiErr.Error.Metadata.ProviderName); detail != "" {
+		if detail := compatErrorDetail(ctx, apiErr.Error.Message, apiErr.Error.Metadata.Raw, apiErr.Error.Metadata.ProviderName); detail != "" {
 			return providerRefusal(resp, apiErr.Error.Metadata.LimitSource,
-				fmt.Errorf("ai: openai-compat: %s: %s (http %d)", safeProviderText(apiErr.Error.Type), detail, resp.StatusCode))
+				fmt.Errorf("ai: openai-compat: %s: %s (http %d)", safeProviderText(ctx, apiErr.Error.Type), detail, resp.StatusCode))
 		}
 		if apiErr.Message != "" {
 			return providerRefusal(resp, "", fmt.Errorf("ai: openai-compat: %s: %s (http %d)",
-				safeProviderText(apiErr.Type), safeProviderText(apiErr.Message), resp.StatusCode))
+				safeProviderText(ctx, apiErr.Type), safeProviderText(ctx, apiErr.Message), resp.StatusCode))
 		}
 	}
 	return providerRefusal(resp, "", fmt.Errorf("ai: openai-compat: http %d", resp.StatusCode))
@@ -75,15 +75,15 @@ func openAICompatError(resp *http.Response) error {
 // through a path nothing else guards. Redacted through the same stripper the
 // model payloads use, and capped: a vendor's cause is one sentence, and
 // anything longer is a body that lost its way into a message field.
-func compatErrorDetail(message, upstreamRaw, providerName string) string {
+func compatErrorDetail(ctx context.Context, message, upstreamRaw, providerName string) string {
 	upstreamRaw = strings.TrimSpace(upstreamRaw)
 	if upstreamRaw == "" {
-		return safeProviderText(message)
+		return safeProviderText(ctx, message)
 	}
 	if providerName == "" {
-		return safeProviderText(upstreamRaw)
+		return safeProviderText(ctx, upstreamRaw)
 	}
-	return safeProviderText(providerName + ": " + upstreamRaw)
+	return safeProviderText(ctx, providerName+": "+upstreamRaw)
 }
 
 // providerTextMax bounds one logged vendor sentence.
@@ -96,12 +96,12 @@ const providerTextMax = 300
 // it is a string an upstream chose, so it can be long or carry the request back.
 // Every remote field on this path goes through here or none of it is worth
 // having.
-func safeProviderText(text string) string {
+func safeProviderText(ctx context.Context, text string) string {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		return ""
 	}
-	stripped, _, err := NewSecretStripper().Strip(context.Background(), []byte(text))
+	stripped, _, err := NewSecretStripper().Strip(ctx, []byte(text))
 	if err != nil {
 		// The stripper could not vouch for it, so none of it is logged: a
 		// vendor sentence is worth having, never at the price of writing an

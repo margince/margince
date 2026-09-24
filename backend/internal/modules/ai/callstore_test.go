@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func TestClassifyError(t *testing.T) {
@@ -41,6 +43,10 @@ func TestClassifyError(t *testing.T) {
 				errors.New("http 429")),
 			"provider_refused",
 		},
+		// The two outcomes stay on the published fallback code: error_sentinel
+		// names what an operator does next, and for both it is "read the call".
+		{"an answer the model withheld", withheldError{wire: providerAnthropic, reason: finishRefusal}, "provider_error"},
+		{"a request the provider rejected", fmt.Errorf("%w: http 400", model.ErrRequestRejected), "provider_error"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -114,6 +114,11 @@ type geminiResponse struct {
 		// surface as errors, so a filtered answer never reads as a complete one.
 		FinishReason string `json:"finishReason"` //nolint:tagliatelle // Google's wire format (camelCase)
 	} `json:"candidates"`
+	// PromptFeedback names why the PROMPT was refused, and is the only signal
+	// a blocked prompt sends: its candidates array is empty.
+	PromptFeedback struct {
+		BlockReason string `json:"blockReason"` //nolint:tagliatelle // Google's wire format (camelCase)
+	} `json:"promptFeedback"` //nolint:tagliatelle // Google's wire format (camelCase)
 	// Error is Google's mid-stream/in-body error object (a 200 stream can
 	// still deliver {"error":{…}} as a chunk).
 	Error struct {

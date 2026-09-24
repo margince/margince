@@ -275,7 +275,7 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 		resp, meta, err := r.brain.Complete(ctx,
 			win.asRequest(budget.MaxOutputTokens-acc.OutputTokens, r.brain.PromptWindow()))
 		if err != nil {
-			return r.degradeFromCause(acc, job, reasonModelCallFailed, err), nil
+			return r.degradeFromCause(acc, job, modelCallReason(err), err), nil
 		}
 		acc.OutputTokens += resp.OutputTokens
 

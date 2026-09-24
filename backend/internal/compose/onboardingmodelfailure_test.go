@@ -7,11 +7,17 @@ package compose
 // wizard is the first screen anybody ever sees.
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // THE AGGREGATE IS RECOGNISABLE, which is what lets the wizard answer 503 with
@@ -64,5 +70,60 @@ func TestAnOrdinaryProviderFailureStillDegradesRatherThanFallingThrough(t *testi
 				t.Error("the walk ended with no answer and the wizard would still report an opaque 500")
 			}
 		})
+	}
+}
+
+// A WALK THAT STOPPED EARLY still left the wizard with no draft. A withheld
+// answer, a rejected request and an empty account each end the walk without
+// the every-tier aggregate, and each is the same fact from the wizard's seat:
+// the assistant did not answer, and the fields can be typed by hand.
+func TestAWalkThatEndedOnAnOutcomeIsAnsweredAsTheAssistantNotAnswering(t *testing.T) {
+	const providerText = "I can't help with that PROVIDER-OWN-WORDS"
+	for name, tc := range map[string]struct {
+		cause     error
+		wantLevel string
+	}{
+		"a withheld answer":    {cause: model.ErrOutputWithheld, wantLevel: ""},
+		"a rejected request":   {cause: model.ErrRequestRejected, wantLevel: "level=ERROR"},
+		"an exhausted account": {cause: ai.ErrProviderQuota, wantLevel: ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var logged bytes.Buffer
+			restore := slog.Default()
+			slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelError})))
+			t.Cleanup(func() { slog.SetDefault(restore) })
+
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/onboarding/company/messages", nil)
+			if !answerModelFailure(rec, req, fmt.Errorf("ai: anthropic: %s: %w", providerText, tc.cause)) {
+				t.Fatal("the walk ended with no answer and the wizard would still report an opaque 500")
+			}
+			if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), codeAssistantUnavailable) {
+				t.Errorf("want 503 %s, got %d %s", codeAssistantUnavailable, rec.Code, rec.Body.String())
+			}
+			if strings.Contains(rec.Body.String(), "PROVIDER-OWN-WORDS") {
+				t.Errorf("the provider's own text reached the client: %s", rec.Body.String())
+			}
+			if tc.wantLevel == "" {
+				if logged.Len() != 0 {
+					t.Errorf("an outcome that is not our defect was logged as an error: %q", logged.String())
+				}
+				return
+			}
+			// Our own request being refused is a defect nobody sees on the
+			// wizard, so the operator log is the only place it can be found.
+			if entry := logged.String(); !strings.Contains(entry, tc.wantLevel) || !strings.Contains(entry, "PROVIDER-OWN-WORDS") {
+				t.Errorf("a rejected request must reach the operator log at %s, log was: %q", tc.wantLevel, entry)
+			}
+		})
+	}
+}
+
+// An error that is not the model lane is left for httperr.Write to answer.
+func TestAnErrorThatIsNotTheModelLaneIsNotAnsweredAsOne(t *testing.T) {
+	t.Parallel()
+	rec := httptest.NewRecorder()
+	if answerModelFailure(rec, httptest.NewRequest(http.MethodPost, "/", nil), errors.New("history: too many messages")) {
+		t.Errorf("an ordinary error was answered as the assistant being unavailable: %d", rec.Code)
 	}
 }

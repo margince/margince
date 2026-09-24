@@ -128,6 +128,10 @@ func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (mode
 			text.Write(blockJSON)
 		}
 	}
+	finish, err := anthropicFinishReason(out.StopReason)
+	if err != nil {
+		return model.Response{}, err
+	}
 	return model.Response{
 		Text:             text.String(),
 		InputTokens:      out.Usage.InputTokens + out.Usage.CacheReadInputTokens + out.Usage.CacheCreationInputTokens,
@@ -135,19 +139,25 @@ func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (mode
 		CachedTokens:     out.Usage.CacheReadInputTokens,
 		CacheWriteTokens: out.Usage.CacheCreationInputTokens,
 		ServedModel:      out.Model,
-		FinishReason:     anthropicFinishReason(out.StopReason),
+		FinishReason:     finish,
 	}, nil
 }
 
-// anthropicFinishReason is a stop_reason in the port's vocabulary: a reply cut
-// off at max_tokens is model.FinishReasonLength on every wire, because the
-// structured retry and the cert lane's ungraded run read that value and no
-// other.
-func anthropicFinishReason(stopReason string) string {
-	if stopReason == "max_tokens" {
-		return model.FinishReasonLength
+// anthropicFinishReason is a stop_reason in the port's vocabulary. Both ceilings
+// — max_tokens and the model's own context window — are
+// model.FinishReasonLength, because the structured retry and the cert lane's
+// ungraded run read that value and no other. A refusal arrives as a 200 with
+// whatever text preceded it, so it is withheld rather than returned as though
+// it were the answer.
+func anthropicFinishReason(stopReason string) (string, error) {
+	switch stopReason {
+	case "max_tokens", "model_context_window_exceeded":
+		return model.FinishReasonLength, nil
+	case finishRefusal:
+		return "", withheldError{wire: providerAnthropic, reason: stopReason}
+	default:
+		return stopReason, nil
 	}
-	return stopReason
 }
 
 // completeStreamed is Complete over the SSE wire: text deltas (and
@@ -211,7 +221,11 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 			text.WriteString(ev.Delta.PartialJSON)
 		case "message_delta":
 			resp.OutputTokens = ev.Usage.OutputTokens
-			resp.FinishReason = anthropicFinishReason(ev.Delta.StopReason)
+			finish, err := anthropicFinishReason(ev.Delta.StopReason)
+			if err != nil {
+				return model.Response{}, err
+			}
+			resp.FinishReason = finish
 		case "message_stop":
 			resp.Text = text.String()
 			return resp, nil

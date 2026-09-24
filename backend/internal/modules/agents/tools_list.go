@@ -109,9 +109,8 @@ func (t listRecords) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","project"]},
-			"filters":{"type":"object","additionalProperties":{"type":"string"},"description":` +
-			strconv.Quote(t.describeFilters()) + `},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","project"]},` +
+			t.filtersProperty() + `
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from a previous page's next_cursor"}},
 			"additionalProperties":false}`),
@@ -119,15 +118,46 @@ func (t listRecords) Spec() mcp.ToolSpec {
 	}
 }
 
-// describeFilters writes the per-type vocabulary into the one place a caller
-// reads it.
+// filtersProperty declares `filters` with every published filter name as a key,
+// or leaves it out when this deployment publishes none.
 //
-// It is prose rather than JSON Schema `properties` because the names are not
+// The keys are DECLARED because a schema-constrained decoder writes no key into
+// an object whose schema lists none — Gemini padded such an object with
+// whitespace to the output ceiling — and `additionalProperties` does not reopen
+// it. The handler still reads the same object of string operands.
+//
+// Each key is only a string here. Which record type takes it, and the closed
+// vocabulary it takes there, stay in the description, because the names are not
 // type-independent: `status` is one of open|won|lost on a deal and
-// new|contacted|engaged|promoted|disqualified on a lead, so a single union of properties
-// would have to publish one of those two enums for both — advertising a
-// vocabulary the handler then refuses, which is the specific dishonesty A139
-// objects to.
+// new|contacted|engaged|promoted|disqualified on a lead, so one enum per key
+// would publish one of those two for both — advertising a vocabulary the handler
+// then refuses, which is the specific dishonesty A139 objects to.
+func (t listRecords) filtersProperty() string {
+	names := t.publishedFilterNames()
+	if len(names) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(names))
+	for _, name := range names {
+		keys = append(keys, strconv.Quote(name)+`:{"type":"string"}`)
+	}
+	return `"filters":{"type":"object","properties":{` + strings.Join(keys, ",") +
+		`},"additionalProperties":false,"description":` + strconv.Quote(t.describeFilters()) + `},`
+}
+
+// publishedFilterNames returns the filter names any record type publishes, sorted.
+func (t listRecords) publishedFilterNames() []string {
+	seen := map[string]bool{}
+	for _, filters := range t.filters {
+		for _, filter := range filters {
+			seen[filter.Name] = true
+		}
+	}
+	return slices.Sorted(maps.Keys(seen))
+}
+
+// describeFilters writes the per-type vocabulary into the one place a caller
+// reads it: which record type takes which key, and the operand each takes.
 func (t listRecords) describeFilters() string {
 	lines := make([]string, 0, len(listRecordTypes)+1)
 	lines = append(lines, "Narrow the list. Every operand is a string, booleans included (\"true\"). "+

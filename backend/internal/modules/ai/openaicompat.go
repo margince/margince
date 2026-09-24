@@ -102,25 +102,9 @@ type openAICompatChatResponse struct {
 	//
 	// Absent on a single-vendor OpenAI-wire host (a vLLM deployment), which
 	// leaves it empty: there, the host we called is the host that served.
-	Provider string `json:"provider"`
-	Choices  []struct {
-		// FinishReason is the normalized stop reason. The wire also carries the
-		// upstream's own unmapped string beside it; that is not decoded here
-		// because nothing reads it yet, and a decoded field no caller consumes
-		// is a claim that it is used.
-		FinishReason string `json:"finish_reason"`
-		Message      struct {
-			Content string `json:"content"`
-			// Reasoning is a reasoning model's thinking text, which this wire
-			// carries BESIDE Content rather than inside it. It matters to a
-			// non-reasoning caller for one reason: when the output budget is
-			// spent before the answer begins, Content arrives null and all the
-			// generated tokens are here. Reading Content alone then returns
-			// empty text for a call that was billed in full.
-			Reasoning string `json:"reasoning"`
-		} `json:"message"`
-	} `json:"choices"`
-	Usage struct {
+	Provider string               `json:"provider"`
+	Choices  []openAICompatChoice `json:"choices"`
+	Usage    struct {
 		PromptTokens     int `json:"prompt_tokens"`
 		CompletionTokens int `json:"completion_tokens"`
 		// CompletionTokensDetails itemizes reasoning spend inside
@@ -147,14 +131,18 @@ func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (m
 		return model.Response{}, fmt.Errorf("ai: openai-compat: response has no choices")
 	}
 	choice := out.Choices[0]
+	finish, err := choice.terminal(ctx)
+	if err != nil {
+		return model.Response{}, err
+	}
 	return model.Response{
-		Text:            completionText(choice.Message.Content, choice.Message.Reasoning, choice.FinishReason),
+		Text:            completionText(choice.Message.Content, choice.Message.Reasoning, finish),
 		InputTokens:     out.Usage.PromptTokens,
 		OutputTokens:    out.Usage.CompletionTokens,
 		ReasoningTokens: reasoningWithin(out.Usage.CompletionTokens, out.Usage.CompletionTokensDetails.ReasoningTokens),
 		ServedModel:     out.Model,
 		ServedProvider:  out.Provider,
-		FinishReason:    choice.FinishReason,
+		FinishReason:    finish,
 	}, nil
 }
 
@@ -444,7 +432,7 @@ func (c *openAICompatClient) post(ctx context.Context, path string, payload []by
 	if resp.StatusCode != http.StatusOK {
 		//craft:ignore swallowed-errors best-effort close on the error path — the API status error is the answer
 		defer func() { _ = resp.Body.Close() }()
-		return nil, openAICompatError(resp)
+		return nil, openAICompatError(ctx, resp)
 	}
 	return resp.Body, nil
 }

@@ -238,7 +238,7 @@ func (r *StageEvidenceReader) ask(
 	validate := stageEvidenceValid(criteria, spans)
 	resp, err := ai.Ask(ctx, r.brain, req, validate)
 	if err != nil {
-		if errors.Is(err, ai.ErrOutputRejected) {
+		if ai.ModelDeclined(err) {
 			r.log.InfoContext(ctx, "stage evidence read: refusing the model's reading",
 				"error", clampToken(err.Error()))
 			return nil, nil

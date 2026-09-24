@@ -242,6 +242,31 @@ func TestSafeVoiceBuildFailureNamesTheCause(t *testing.T) {
 	}
 }
 
+// A provider that was reached and answered with an outcome gets a sentence that
+// says so: a model that declined is not a model that answered unreadably, and a
+// request refused as malformed is our fault, not the operator's samples.
+func TestSafeVoiceBuildFailureNamesAProviderOutcome(t *testing.T) {
+	const providerText = "PROVIDER-OWN-WORDS"
+	unreadable := SafeVoiceBuildFailure(errors.New("voice build model call: ai: output rejected by the validator"))
+	for name, tc := range map[string]struct {
+		cause error
+		want  string
+	}{
+		"withheld": {cause: model.ErrOutputWithheld, want: "declined"},
+		"rejected": {cause: model.ErrRequestRejected, want: "rejected the build request"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			message := SafeVoiceBuildFailure(fmt.Errorf("voice build model call: ai: anthropic: %s: %w", providerText, tc.cause))
+			if !strings.Contains(message, tc.want) || message == unreadable {
+				t.Errorf("want a message naming %q, got %q", tc.want, message)
+			}
+			if strings.Contains(message, providerText) {
+				t.Errorf("the provider's own words reached the build row: %q", message)
+			}
+		})
+	}
+}
+
 // Every provider ADAPTER classifies its own 429, asserted through the real
 // error functions rather than the helper they share — testing the helper alone
 // let three of four adapters drop their wrap with the suite still green.
@@ -278,7 +303,7 @@ func TestEveryProviderAdapterClassifiesItsRefusal(t *testing.T) {
 			name:     "openai-compat",
 			quota:    `{"error":{"message":"Provider returned error","metadata":{"provider_name":"Mistral","raw":"Insufficient credits to run this request.","limit_source":"account_credits"}}}`,
 			throttle: `{"error":{"message":"Provider returned error","metadata":{"provider_name":"Mistral","raw":"mistralai/mistral-large-2512 is temporarily rate-limited upstream. Please retry shortly","limit_source":"upstream_provider_shared_pool"}}}`,
-			read:     openAICompatError,
+			read:     func(resp *http.Response) error { return openAICompatError(t.Context(), resp) },
 		},
 	}
 	for _, adapter := range adapters {
@@ -341,7 +366,7 @@ func TestABrokerRefusalQuotesTheUpstreamVendor(t *testing.T) {
 		}
 	}()
 
-	err := openAICompatError(resp)
+	err := openAICompatError(t.Context(), resp)
 	for _, want := range []string{"Mistral", "temporarily rate-limited upstream"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("the logged failure carries %q: %v", want, err)
@@ -409,7 +434,7 @@ func TestABrokerSentenceIsRedactedAndBoundedBeforeItIsLogged(t *testing.T) {
 		}
 	}()
 
-	err := openAICompatError(resp)
+	err := openAICompatError(t.Context(), resp)
 	if strings.Contains(err.Error(), "sk-or-v1-abcdefghijklmnopqrstuvwxyz012345") {
 		t.Fatalf("a credential a vendor echoed back must not reach the log: %v", err)
 	}
@@ -426,7 +451,7 @@ func TestABrokerSentenceIsRedactedAndBoundedBeforeItIsLogged(t *testing.T) {
 			t.Errorf("closing the provider response: %v", closeErr)
 		}
 	}()
-	if got := len(openAICompatError(longResp).Error()); got > providerTextMax+120 {
+	if got := len(openAICompatError(t.Context(), longResp).Error()); got > providerTextMax+120 {
 		t.Fatalf("one logged vendor sentence is bounded; got %d characters", got)
 	}
 }

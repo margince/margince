@@ -185,13 +185,18 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			// a premium provider for every call while the configured cheap one
 			// is unusable and nobody is told. A throttle keeps escalating,
 			// because it clears by itself and names no account to fix.
-			if errors.Is(callErr, ErrProviderQuota) {
+			//
+			// A rejected request stops here for the same reason and one more:
+			// the rung above is sent the same request, and refuses it the same way.
+			if errors.Is(callErr, ErrProviderQuota) || errors.Is(callErr, model.ErrRequestRejected) {
 				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
 				// Not an exhausted ladder — the rungs above were never tried.
 				// Reported as the refusal alone so a caller cannot read "every
 				// tier failed" off a walk that stopped at the first one.
 				return model.Response{}, t, false, callErr
 			}
+			// A withheld answer walks on: a different model may answer what this
+			// one declined, and the content is the caller's own to send it.
 			if i < len(boundRungs)-1 {
 				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
 			}
@@ -222,6 +227,13 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		// "the request was wrong" without matching the message: the two are
 		// different HTTP answers, and a caller that cannot separate them has to
 		// report a dependency being down as an internal fault.
+		//
+		// Except when the last rung WITHHELD: a model was reached and decided,
+		// so the walk ended on an outcome, and ErrAllTiersFailed would send a
+		// caller to re-drive it as an outage.
+		if errors.Is(lastErr, model.ErrOutputWithheld) {
+			return model.Response{}, lastTier, false, lastErr
+		}
 		return model.Response{}, lastTier, false, fmt.Errorf("%w for %s: %w", ErrAllTiersFailed, task, lastErr)
 	}
 	return model.Response{}, "", false, nil

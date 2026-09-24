@@ -83,7 +83,7 @@ func TestOpenAICompleteMapsResponsesAPIUsageAndReasoning(t *testing.T) {
 	}
 }
 
-func TestOpenAISendsStrictJSONSchemaUnderTextFormat(t *testing.T) {
+func TestOpenAISendsTheJSONSchemaUnderTextFormat(t *testing.T) {
 	schema := json.RawMessage(`{"type":"object","properties":{"ok":{"type":"boolean"}}}`)
 	var body []byte
 	client := newOpenAIForTest(t, func(w http.ResponseWriter, r *http.Request) {
@@ -109,8 +109,13 @@ func TestOpenAISendsStrictJSONSchemaUnderTextFormat(t *testing.T) {
 	if err := json.Unmarshal(body, &wire); err != nil {
 		t.Fatal(err)
 	}
-	if wire.Text.Format.Type != "json_schema" || wire.Text.Format.Name == "" || !wire.Text.Format.Strict {
+	if wire.Text.Format.Type != "json_schema" || wire.Text.Format.Name == "" {
 		t.Fatalf("text.format shape wrong: %+v", wire.Text.Format)
+	}
+	// This schema leaves its object open, which OpenAI's strict mode refuses
+	// with an error, so it goes unenforced rather than failing the call.
+	if wire.Text.Format.Strict {
+		t.Fatalf("an open schema was sent strict: %+v", wire.Text.Format)
 	}
 	if !bytes.Equal(bytes.TrimSpace(wire.Text.Format.Schema), bytes.TrimSpace(schema)) {
 		t.Fatalf("schema not verbatim: %s", wire.Text.Format.Schema)

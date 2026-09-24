@@ -510,3 +510,18 @@ func TestGeminiStreamEOFWithoutStopIsAnError(t *testing.T) {
 		t.Fatalf("EOF without STOP must be an error, got %v", err)
 	}
 }
+
+// A prompt Gemini refused to read comes back with no candidates at all and the
+// reason under promptFeedback; the trace has to name that reason, or a blocked
+// prompt is indistinguishable from a body cut short in transit.
+func TestGeminiNamesTheReasonAPromptWasBlocked(t *testing.T) {
+	wire := finishWires(t)["gemini"]
+	client, _ := wire.client(t, `{"promptFeedback":{"blockReason":"PROHIBITED_CONTENT"}}`)
+	_, err := client.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
+	if !errors.Is(err, model.ErrOutputWithheld) {
+		t.Fatalf("err = %v, want model.ErrOutputWithheld", err)
+	}
+	if got := finishReasonFor("", err); !strings.Contains(got, "PROHIBITED_CONTENT") {
+		t.Errorf("finish reason = %q, want it to name PROHIBITED_CONTENT", got)
+	}
+}

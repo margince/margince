@@ -166,7 +166,8 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 // returns the refusal alone, never ErrAllTiersFailed, so a spending cap can
 // never be retried into — and one place decides what "the ladder ran out" means.
 // A throttle keeps the sentinel and stays retryable, because backoff is exactly
-// what it asks for.
+// what it asks for. A withheld answer and a rejected request never carry it:
+// driveCandidate records them as the run's outcome before this is asked.
 func worthRedriving(err error) bool {
 	return errors.Is(err, ai.ErrAllTiersFailed)
 }
@@ -217,6 +218,9 @@ type runOutcome struct {
 	JudgeServedModel     string `json:"judge_served_model"`
 	CertifiedScope       string `json:"certified_scope"`
 	JudgeDegraded        bool   `json:"judge_degraded"`
+	// Unanswered says no model served this run, so its identity is the binding
+	// it was sent to and is not compared against the runs that were served.
+	Unanswered bool `json:"unanswered,omitempty"`
 }
 
 // runOnce drives exactly one prepared case and its judge score, cache off, so
@@ -253,6 +257,17 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	}
 	if pooled.Degraded {
 		return runOutcome{RunResult: RunResult{Degraded: true}}, nil
+	}
+	// Recorded as the site's own path would read it — no usable reply — and
+	// never sent to the judge, which would be grading an absence.
+	if pooled.Unanswered != "" {
+		log.WarnContext(ctx, "aicert: the provider withheld the answer or rejected the request, so this run fails ungraded",
+			"task", string(task), "scenario", sc.Name, "site", sc.Site, "err", pooled.Unanswered)
+		out := candidateSideRun(candidateSide{
+			outcome: aitasks.OutcomeInvalid, passed: false, scope: aitasks.ScopeOf(factory), pooled: pooled,
+		})
+		out.Ungraded, out.Unanswered = true, true
+		return out, nil
 	}
 
 	// The site's own validator, over the site's own trace: Evaluate reports a
@@ -384,20 +399,29 @@ func driveCandidate(ctx context.Context, prepared aitasks.PreparedCase, candidat
 	task ai.Task, sc Scenario, run, attempt int, trace *payloadTrace, log *slog.Logger,
 ) (aitasks.Trace, runCalls, error) {
 	mark := candidateRec.mark()
-	caseTrace, err := prepared.Run(ctx, routedCompleter{router: candidate, task: task})
-	if err != nil {
+	caseTrace, runErr := prepared.Run(ctx, routedCompleter{router: candidate, task: task})
+	unanswered := unansweredReason(runErr)
+	if runErr != nil {
 		traceSpentCalls(ctx, trace, "candidate", task, sc, run, attempt, candidateRec, mark, log)
-		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", err)
+	}
+	if runErr != nil && unanswered == "" {
+		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", runErr)
 	}
 	calls, err := candidateRec.terminalsSince(mark)
 	if err != nil {
 		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", err)
 	}
-	traceCalls(ctx, trace, "candidate", task, sc, run, attempt, calls, log)
 	pooled, err := poolRunCalls(calls)
 	if err != nil {
 		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", err)
 	}
+	// Already traced above, and exempt from the uniformity check: a call that
+	// delivered nothing names the binding it was sent to, not a model that served.
+	if unanswered != "" {
+		pooled.Unanswered = unanswered
+		return aitasks.Trace{}, pooled, nil
+	}
+	traceCalls(ctx, trace, "candidate", task, sc, run, attempt, calls, log)
 	if err := pooled.servedUniformly(); err != nil {
 		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", err)
 	}

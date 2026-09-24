@@ -4,6 +4,7 @@
 package aicert
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -195,5 +196,72 @@ func TestATaskCutOffOnEveryAttemptIsRecordedNotAborted(t *testing.T) {
 	}
 	if got := len(judge.Calls()); got != 0 {
 		t.Errorf("the judge was called %d time(s) on answers that never finished", got)
+	}
+}
+
+// A candidate the provider withheld an answer from, or whose request it
+// rejected, is a MEASUREMENT of that binding: each run counts, fails and goes
+// ungraded, exactly as a truncation does. Neither is an outage, so none is
+// re-driven and the task still gets its record.
+func TestAWithheldOrRejectedCandidateIsRecordedNotAborted(t *testing.T) {
+	for name, cause := range map[string]error{
+		"withheld": fmt.Errorf("%w: refusal", model.ErrOutputWithheld),
+		"rejected": fmt.Errorf("%w: bad field (http 400)", model.ErrRequestRejected),
+	} {
+		t.Run(name, func(t *testing.T) {
+			waited := recordSleeps(t)
+			steps := make([]ai.FakeStep, 12)
+			for i := range steps {
+				steps[i] = ai.FakeStep{Err: cause}
+			}
+			candidate := ai.NewFakeClient().ScriptSteps(steps...)
+			judge := ai.NewFakeClient()
+
+			rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+				ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+				ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+					candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
+					judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
+				})
+			if err != nil {
+				t.Fatalf("a provider's answer about this content aborted the task with no record: %v", err)
+			}
+			if rec.Runs != 3 || rec.Reliability != 0 || rec.Verdict != VerdictNotSupported {
+				t.Errorf("runs=%d reliability=%v verdict=%q, want 3 failed runs and %q", rec.Runs, rec.Reliability, rec.Verdict, VerdictNotSupported)
+			}
+			if len(*waited) != 0 {
+				t.Errorf("waited %v — an outcome is not an outage to back off from", *waited)
+			}
+			if got := len(judge.Calls()); got != 0 {
+				t.Errorf("the judge was called %d time(s) on runs with no answer", got)
+			}
+		})
+	}
+}
+
+// An unanswered run names the binding it was sent to, which is not the identity
+// a served run reports — a native vendor answers with a dated version of the
+// model id it was asked for. Compared as though it had served, it would void a
+// set whose served runs were all one model.
+func TestAnUnansweredRunNeitherSetsNorBreaksTheServedIdentity(t *testing.T) {
+	t.Parallel()
+	unanswered := runOutcome{Provider: "gemini", ServedModel: "gemini-flash", Unanswered: true}
+	served := runOutcome{Provider: "gemini", ServedModel: "gemini-flash-001"}
+	for name, order := range map[string][]runOutcome{
+		"unanswered first": {unanswered, served, unanswered},
+		"served first":     {served, unanswered, served},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			acc := &taskAccumulation{}
+			for i, outcome := range order {
+				if err := acc.addRun(ai.TaskSummarize, testScenario("basic", wideBands), i, outcome); err != nil {
+					t.Fatalf("run %d: %v", i+1, err)
+				}
+			}
+			if acc.servedModel != served.ServedModel {
+				t.Errorf("record identity = %q, want the model that served, %q", acc.servedModel, served.ServedModel)
+			}
+		})
 	}
 }

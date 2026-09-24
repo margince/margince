@@ -261,9 +261,9 @@ func recordExtractedEvent(
 // opposed to a provider or budget error, where the thread is owed a retry.
 //
 // It arrives two ways, and both are real: a brain that validates for us
-// (production) exhausts its retry policy and returns ai.ErrOutputRejected,
-// and a brain that does not leaves the parse and the fidelity rules below to
-// ask itself.
+// (production) exhausts its retry policy or meets a withheld answer
+// (ai.ModelDeclined), and a brain that does not leaves the parse and the
+// fidelity rules below to ask itself.
 var errRefusedReading = errors.New("signal extract: the model's reading was refused")
 
 // ask makes the one structured call that reads a conversation.
@@ -279,11 +279,10 @@ func (x *SignalExtractor) ask(ctx context.Context, thread settledThread) ([]extr
 	resp, err := ai.Ask(ai.WithSubject(ctx, ids.From[ids.CompanyKind](thread.CompanyID).Ref(), ""),
 		x.brain, req, validate)
 	if err != nil {
-		// The validator ran inside CompleteStructured and its policy is spent:
-		// three attempts, the last escalated, still refused. Re-reading the
-		// same conversation buys the same refusal, so it is this thread's
-		// answer rather than a provider's bad minute.
-		if errors.Is(err, ai.ErrOutputRejected) {
+		// The validator's policy is spent, or every model withheld its answer.
+		// Re-reading the same conversation buys the same refusal, so it is this
+		// thread's answer rather than a provider's bad minute.
+		if ai.ModelDeclined(err) {
 			return nil, fmt.Errorf("%w: %w", errRefusedReading, err)
 		}
 		return nil, err

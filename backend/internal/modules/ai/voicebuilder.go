@@ -71,6 +71,16 @@ func SafeVoiceBuildFailure(err error) string {
 	if errors.Is(err, errProviderRefused) {
 		return "Our AI provider turned the call away, so the build never ran. Your previous version is unchanged. Check the provider's status and account, then build again."
 	}
+	// Two answers that are not a profile and not an outage. A model that
+	// declined made a decision the same corpus will usually meet again; a
+	// request refused as malformed is ours to fix, and says nothing of the
+	// samples.
+	if errors.Is(err, model.ErrOutputWithheld) {
+		return "The AI model declined to write this voice profile, so the build produced nothing. Your previous version is unchanged. Building again may meet the same answer; a model bound to another vendor under Settings → AI may not."
+	}
+	if errors.Is(err, model.ErrRequestRejected) {
+		return "Our AI provider rejected the build request as malformed, so the build never ran. Your previous version is unchanged. This is a fault on our side rather than in your samples; the server log carries the provider's reason."
+	}
 	text := strings.ToLower(err.Error())
 	switch {
 	// Only OUR OWN word-floor message is safe verbatim: match its exact

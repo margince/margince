@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 47,
-    "sites_best_current": 2,
+    "sites_best_current": 0,
     "sites_best_partial": 0,
-    "sites_best_stale": 45,
+    "sites_best_stale": 47,
     "sites_absent": 0,
     "scenarios": 152,
     "records": 136,
@@ -563,7 +563,7 @@
             "env": "eu_hosted"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 18,
           "passed": 16,
           "cases_failing_often": 1,
@@ -2020,9 +2020,9 @@
         "env": "eu_hosted"
       },
       "sites": 41,
-      "sites_current": 2,
+      "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 39,
+      "sites_stale": 41,
       "runs": 405,
       "passed": 365,
       "reliability": 0.9012345679012346,
@@ -2487,17 +2487,8 @@
         "sales",
         "offer"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "morning_brief_a_retrieved_deal_is_not_the_queue",
@@ -2522,9 +2513,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -2537,7 +2528,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         }
       ]
     },
@@ -2552,17 +2550,8 @@
         "sales",
         "offer"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
-        },
-        "band": "not_supported",
-        "reliability": 0.7777777777777778,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "overnight_sweep_one_quiet_deal_is_not_the_book",
@@ -2587,9 +2576,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 7,
@@ -2602,7 +2591,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         }
       ]
     },
@@ -7414,8 +7410,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ],
             "grader_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_settles_a_request_and_an_acknowledgement_does_not",
@@ -7445,8 +7447,14 @@
             "invalid": 4,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ],
             "grader_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_settles_a_request_and_an_acknowledgement_does_not",
@@ -7476,8 +7484,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ],
             "grader_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_settles_a_request_and_an_acknowledgement_does_not",
@@ -7507,8 +7521,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ],
             "grader_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_settles_a_request_and_an_acknowledgement_does_not",

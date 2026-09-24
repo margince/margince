@@ -75,8 +75,10 @@ type openaiText struct {
 
 // openaiResponseFormat is the Responses API structured-output shape: the
 // json_schema descriptor sits directly under text.format (siblings, no
-// json_schema:{} wrapper). strict:true — OpenAI guarantees conformance, so
-// unlike the lenient openai_compatible strict:false, this enforces the schema.
+// json_schema:{} wrapper). Strict is derived exactly as on the
+// openai_compatible wire: OpenAI answers strict over a schema outside its
+// supported subset with an error, so only a schema that already fits is sent
+// enforced.
 type openaiResponseFormat struct {
 	Type   string          `json:"type"`
 	Name   string          `json:"name"`
@@ -158,8 +160,8 @@ func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.R
 			switch part.Type {
 			case "output_text":
 				text.WriteString(part.Text)
-			case "refusal":
-				return model.Response{}, fmt.Errorf("ai: openai: model refusal: %s", part.Refusal)
+			case finishRefusal:
+				return model.Response{}, withheldError{wire: providerOpenAI, reason: finishRefusal, detail: safeProviderText(ctx, part.Refusal)}
 			}
 		}
 	}
@@ -220,7 +222,8 @@ func (c *openaiClient) post(ctx context.Context, path string, req model.Request,
 	wire.Input = openaiInputMessages(req.System, req.Messages, req.Attachments)
 	if len(req.ResponseSchema) > 0 {
 		wire.Text = &openaiText{Format: openaiResponseFormat{
-			Type: jsonSchemaFormatType, Name: openAICompatSchemaName, Schema: req.ResponseSchema, Strict: true,
+			Type: jsonSchemaFormatType, Name: openAICompatSchemaName, Schema: req.ResponseSchema,
+			Strict: schemaAllowsStrict(req.ResponseSchema),
 		}}
 	}
 	effort, err := openaiReasoningEffort(req.ProviderOptions)
@@ -361,6 +364,10 @@ func openaiCutOff(out openaiResponse) bool {
 	return out.Status == "incomplete" && out.IncompleteDetails.Reason == "max_output_tokens"
 }
 
+// openaiContentFilter is the incomplete_details reason for an answer a filter
+// stopped part-way, which is withheld rather than truncated.
+const openaiContentFilter = "content_filter"
+
 // openaiTerminalStatus maps a non-completed Responses object to an error: a
 // failed call carries the API's error, an incomplete one names why generation
 // stopped (max_output_tokens, content_filter), and a missing status means the
@@ -374,6 +381,9 @@ func openaiTerminalStatus(out openaiResponse) error {
 	case "failed":
 		return fmt.Errorf("ai: openai: response failed: %s: %s", out.Error.Code, out.Error.Message)
 	case "incomplete":
+		if out.IncompleteDetails.Reason == openaiContentFilter {
+			return withheldError{wire: providerOpenAI, reason: openaiContentFilter}
+		}
 		return fmt.Errorf("ai: openai: response incomplete: %s", out.IncompleteDetails.Reason)
 	case "":
 		return fmt.Errorf("ai: openai: response carries no terminal status")

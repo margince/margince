@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // roleUser is the model.Message role a request's own asks carry. The port
@@ -187,12 +188,20 @@ func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc 
 			_, err := compose.ParseJudgeVerdict(text)
 			return err
 		})
-	if callErr != nil && !errors.Is(callErr, ai.ErrOutputRejected) {
+	// A withheld judgement is no opinion, as an unparseable one is. A REJECTED
+	// one is not let through: the same request is refused on every run, so the
+	// grader's binding is what is broken and the run should stop and say so.
+	if callErr != nil && !ai.ModelDeclined(callErr) {
 		return opinion{}, fmt.Errorf("judge call: %w", callErr)
 	}
 	term, ok := rec.lastTerminal()
 	if !ok {
 		return opinion{}, fmt.Errorf("judge call: no terminal trace recorded")
+	}
+	if errors.Is(callErr, model.ErrOutputWithheld) {
+		log.WarnContext(ctx, "aicert: the judge's provider withheld its answer — this opinion is left ungraded",
+			"scenario", sc.Name, "err", callErr)
+		return opinion{servedModel: term.ServedModel}, nil
 	}
 
 	verdict, parseErr := compose.ParseJudgeVerdict(resp.Text)

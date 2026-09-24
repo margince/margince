@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -108,7 +109,7 @@ func TestADegradeReasonNeverCarriesTheCauseItDegradedOn(t *testing.T) {
 // arms and the out-of-loop closes are one list because they are one column.
 func TestEveryClosedReasonSaysWhatStoppedTheRun(t *testing.T) {
 	for _, reason := range []string{
-		reasonWallClockExceeded, reasonModelCallFailed,
+		reasonWallClockExceeded, reasonModelCallFailed, reasonModelWithheld,
 		reasonStepBudgetExhausted, reasonOutputTokenBudgetExhausted,
 		invalidOutputReason(consecutiveInvalidLimit),
 		string(FailureEditedApprovalCarriedNoChange), string(FailurePassportNoLongerValid),
@@ -210,4 +211,48 @@ func TestNoFailureReasonIsDeclaredWithoutBeingCovered(t *testing.T) {
 func isFailureReason(expr ast.Expr) bool {
 	ident, ok := expr.(*ast.Ident)
 	return ok && ident.Name == "FailureReason"
+}
+
+// outcomeBrain is a provider that was reached and answered with an outcome
+// rather than a step: it withheld the answer, or rejected the request.
+type outcomeBrain struct {
+	flooredWindow
+	outcome error
+}
+
+func (b outcomeBrain) Complete(context.Context, model.Request) (model.Response, Meta, error) {
+	return model.Response{}, Meta{}, fmt.Errorf("ai: anthropic: %s: %w", providerLeak, b.outcome)
+}
+
+// A withheld step is the provider declining, and the reader is owed that rather
+// than "did not answer"; a rejected request is our own defect, so the reader gets
+// the ordinary failure while the operator log carries it at error level.
+func TestAProviderOutcomeDegradesOnItsOwnReason(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		outcome    error
+		wantReason string
+		wantLevel  string
+	}{
+		{name: "withheld", outcome: model.ErrOutputWithheld, wantReason: reasonModelWithheld, wantLevel: "level=WARN"},
+		{name: "rejected", outcome: model.ErrRequestRejected, wantReason: reasonModelCallFailed, wantLevel: "level=ERROR"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			logged := captureRunnerLog(t)
+			res, err := New(&fakeSurface{}, outcomeBrain{outcome: tc.outcome}).Run(context.Background(),
+				Job{Goal: "g", TriggerRef: "morning_brief:2026-08-21", Tools: []string{"read_record"}})
+			if err != nil {
+				t.Fatalf("a degrade is an answer, not an error: %v", err)
+			}
+			if res.DegradeReason != tc.wantReason {
+				t.Errorf("degrade reason = %q, want %q", res.DegradeReason, tc.wantReason)
+			}
+			if strings.Contains(res.DegradeReason, providerLeak) {
+				t.Errorf("the provider's text reached the reader: %q", res.DegradeReason)
+			}
+			if entry := logged.String(); !strings.Contains(entry, tc.wantLevel) || !strings.Contains(entry, providerLeak) {
+				t.Errorf("the operator log must carry the cause at %s, log was: %q", tc.wantLevel, entry)
+			}
+		})
+	}
 }

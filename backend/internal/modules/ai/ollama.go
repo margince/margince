@@ -422,9 +422,9 @@ func (c *ollamaClient) post(ctx context.Context, path string, payload []byte) (i
 		defer func() { _ = resp.Body.Close() }()
 		raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		if readErr != nil {
-			return nil, fmt.Errorf("ai: ollama: http %d", resp.StatusCode)
+			return nil, providerRefusal(resp, "", fmt.Errorf("ai: ollama: http %d", resp.StatusCode))
 		}
-		return nil, fmt.Errorf("ai: ollama: http %d: %s", resp.StatusCode, bytes.TrimSpace(raw))
+		return nil, providerRefusal(resp, "", fmt.Errorf("ai: ollama: http %d: %s", resp.StatusCode, bytes.TrimSpace(raw)))
 	}
 	return resp.Body, nil
 }

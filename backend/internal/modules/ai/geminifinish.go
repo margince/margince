@@ -21,6 +21,12 @@ func geminiResponseError(out geminiResponse) error {
 	if out.Error.Message != "" || out.Error.Status != "" {
 		return fmt.Errorf("ai: gemini: %s: %s", out.Error.Status, out.Error.Message)
 	}
+	// A blocked PROMPT has no candidate to carry a finishReason at all: the
+	// reason is under promptFeedback, and without reading it the reply looks
+	// like a body cut short in transit.
+	if len(out.Candidates) == 0 && out.PromptFeedback.BlockReason != "" {
+		return withheldError{wire: providerGemini, reason: "PROMPT_BLOCKED_" + out.PromptFeedback.BlockReason, detail: "the prompt was blocked"}
+	}
 	for _, cand := range out.Candidates {
 		switch cand.FinishReason {
 		case "", geminiStop, geminiMaxTokens:
@@ -36,6 +42,9 @@ func geminiResponseError(out geminiResponse) error {
 const (
 	geminiStop      = "STOP"
 	geminiMaxTokens = "MAX_TOKENS"
+	// geminiMissingThoughtSignature is the terminal for a multi-turn request
+	// that dropped the signature a thinking model's earlier turn carried.
+	geminiMissingThoughtSignature = "MISSING_THOUGHT_SIGNATURE"
 )
 
 // geminiFinishReason is Gemini's terminal in the port's vocabulary: a cut-off
@@ -68,6 +77,21 @@ func (e stoppedError) Error() string { return "ai: gemini: generation stopped: "
 // so the terminal reaches the trace without this package's error type
 // leaking into the tracing path's imports.
 func (e stoppedError) FinishReason() string { return e.reason }
+
+// Unwrap classifies the terminal. Every reason but the two that deliver text is
+// the provider's decision about this reply, so it is withheld; the exception is
+// a thought signature the REQUEST failed to echo back, which is ours to fix and
+// fails the same way on every retry.
+func (e stoppedError) Unwrap() error {
+	switch e.reason {
+	case geminiMaxTokens:
+		return nil
+	case geminiMissingThoughtSignature:
+		return model.ErrRequestRejected
+	default:
+		return model.ErrOutputWithheld
+	}
+}
 
 // geminiTerminal returns the terminal a candidate finished with, when one
 // delivered an answer. Intermediate stream chunks legitimately carry no

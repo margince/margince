@@ -10,6 +10,7 @@ package runner
 import (
 	"encoding/json"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -34,13 +35,19 @@ import (
 // NO OBJECT HERE MAY BE DECLARED WITHOUT ITS KEYS. Gemini's decoder admits no
 // key into an object whose schema lists no properties, open or not: a model
 // that wanted to write arguments padded `"args": {` with whitespace to the
-// output ceiling, and a closing step wrote `"final": { }`. So args is one of
-// the offered tools' own input schemas and final declares its summary.
+// output ceiling, and a closing step wrote `"final": { }`. So args is the named
+// tool's own input schema and final declares its summary.
 //
-// A branch per step shape, each REQUIRING its keys, because an optional args
-// was simply skipped: the same decoder closed the object after "tool" in every
-// measured call. The branches are also the exactly-one-of rule parseStep holds,
-// and each is closed to mirror its DisallowUnknownFields.
+// ONE BRANCH PER OFFERED TOOL, pairing `tool` with that tool's own `args`. A
+// single tool-call branch whose args was an anyOf over every tool let
+// `{"tool":"read_record","args":{}}` through — a zero-argument tool's schema
+// admits `{}` — so no tool's `required` was enforced, and `tool` was any string.
+// `enum`, not `const`: Gemini's documented keyword subset has no `const`.
+//
+// Each branch REQUIRES its keys, because an optional args was simply skipped:
+// the same decoder closed the object after "tool" in every measured call. The
+// branches are also the exactly-one-of rule parseStep holds, and each is closed
+// to mirror its DisallowUnknownFields.
 //
 // The schema is O(offered tools) and rides every step, so window.bounded counts
 // it against the prompt window with the rest of the request.
@@ -49,10 +56,9 @@ import (
 func stepSchema(offered []mcp.ToolSpec) json.RawMessage {
 	var b strings.Builder
 	b.WriteString(`{"anyOf":[`)
-	if len(offered) > 0 {
-		b.WriteString(`{"type":"object","properties":{"tool":{"type":"string"},"args":{"anyOf":[`)
-		b.WriteString(strings.Join(argsSchemas(offered), ","))
-		b.WriteString(`]}},"required":["tool","args"],"additionalProperties":false},`)
+	for _, branch := range toolCallBranches(offered) {
+		b.WriteString(branch)
+		b.WriteString(",")
 	}
 	b.WriteString(`{"type":"object","properties":{"final":{"type":"object",` +
 		`"properties":{"summary":{"type":"string"}},"required":["summary"]}},` +
@@ -60,20 +66,22 @@ func stepSchema(offered []mcp.ToolSpec) json.RawMessage {
 	return json.RawMessage(b.String())
 }
 
-// argsSchemas is each offered tool's input schema as the listing renders it, in
-// the listing's name order so one catalog always yields one request.
-func argsSchemas(offered []mcp.ToolSpec) []string {
+// toolCallBranches renders one branch per offered tool, in the listing's name
+// order so one catalog always yields one request. Each is written tool, then
+// args: the order that was measured.
+//
+// There is NO fallback for a schema that will not parse. Registration panics on
+// one at boot (assertObjectSchemas), and one that bypassed it is carried
+// verbatim, so the adapter refuses to encode the request instead of the model
+// being offered a bare `args` — the exact shape this schema keeps off the wire.
+func toolCallBranches(offered []mcp.ToolSpec) []string {
 	sorted := append([]mcp.ToolSpec(nil), offered...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
-	schemas := make([]string, 0, len(sorted))
+	branches := make([]string, 0, len(sorted))
 	for _, spec := range sorted {
-		compacted := CompactSchema(spec)
-		// The registry refuses a tool without an object schema at boot; one that
-		// reached here anyway must not make the whole request invalid JSON.
-		if !json.Valid([]byte(compacted)) {
-			compacted = `{"type":"object"}`
-		}
-		schemas = append(schemas, compacted)
+		branches = append(branches, `{"type":"object","properties":{"tool":{"type":"string","enum":[`+
+			strconv.Quote(spec.Name)+`]},"args":`+CompactSchema(spec)+
+			`},"required":["tool","args"],"additionalProperties":false}`)
 	}
-	return schemas
+	return branches
 }

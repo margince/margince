@@ -9,6 +9,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // Every verdict this site will ACCEPT is a verdict its prompt TEACHES.
@@ -66,7 +67,7 @@ func TestTheSchemasVerdictsAreTheOnesTheValidatorAdmits(t *testing.T) {
 //
 // The check was one-directional: prose on a settled or unsure verdict was
 // refused, and a still_owed carrying NOTHING was accepted. So was everything
-// else in the stack — the schema's required list is id/verdict/confidence, and
+// else in the stack — the schema's required list was id/verdict/confidence, and
 // the column's CHECK is `verdict = 'still_owed' OR (remaining IS NULL AND
 // due_at IS NULL)`, which constrains the same one direction. Only the
 // certification scenario asked for the phrase, and five of nine failures on
@@ -113,5 +114,22 @@ func TestAStillOwedVerdictMustNameWhatIsOwed(t *testing.T) {
 				t.Errorf("a well-formed reply was refused: %s", msg)
 			}
 		})
+	}
+}
+
+// A reply that leaves `remaining` out violates the schema, not only the
+// validator. A key the schema makes optional is one a constrained decoder may
+// skip, and a still_owed that skipped it is then refused after the call is
+// paid for; required, the decoder writes it — empty where the verdict is not
+// still_owed, as the prompt says.
+func TestAReplyMissingRemainingViolatesTheSchema(t *testing.T) {
+	t.Parallel()
+	missing := `{"results":[{"id":"r1","verdict":"still_owed","due_at":"","confidence":0.9}]}`
+	if err := schema.ValidateJSON(settleSchema(), missing); err == nil {
+		t.Error("the response schema admits a verdict with no remaining key, which the validator then refuses on still_owed")
+	}
+	present := `{"results":[{"id":"r1","verdict":"settled","remaining":"","due_at":"","confidence":0.9}]}`
+	if err := schema.ValidateJSON(settleSchema(), present); err != nil {
+		t.Errorf("a settled verdict with an empty remaining violates the schema: %v", err)
 	}
 }

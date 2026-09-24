@@ -5,6 +5,7 @@ package runner
 
 import (
 	"encoding/json"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -55,14 +56,14 @@ func TestTheStepRequestCarriesTheSchemaItsReplyMustMatch(t *testing.T) {
 // admitting a shape the parser then refuses. So every shape named here is put
 // through the real parser.
 func TestTheStepSchemaAdmitsExactlyWhatTheStepParserAccepts(t *testing.T) {
-	branches := stepBranches(t, stepSchemaOffering(readRecordSpec()))
-	if len(branches) != 2 {
-		t.Fatalf("the step schema has %d branches; a step is a tool call or a final, so 2", len(branches))
+	branches := stepBranches(t, stepSchemaOffering(readRecordSpec(), zeroArgumentSpec()))
+	if len(branches) != 3 {
+		t.Fatalf("the step schema has %d branches; a step is a call to one of the 2 offered tools or a final, so 3", len(branches))
 	}
 	// Each branch REQUIRES exactly the keys of its shape, and is closed the way
 	// parseStep's DisallowUnknownFields is: open, constrained decoding could
 	// produce a step the parser then refuses; optional, a decoder may skip it.
-	for i, want := range [][]string{{"tool", "args"}, {"final"}} {
+	for i, want := range [][]string{{"tool", "args"}, {"tool", "args"}, {"final"}} {
 		branch := branches[i]
 		if branch.Type != "object" {
 			t.Errorf("branch %d declares type %q; a step is an object", i, branch.Type)
@@ -80,12 +81,67 @@ func TestTheStepSchemaAdmitsExactlyWhatTheStepParserAccepts(t *testing.T) {
 	}
 
 	for name, step := range map[string]string{
-		"tool call": `{"tool":"read_record","args":{"record_id":"x"}}`,
-		"final":     `{"final":{"summary":"done"}}`,
+		"tool call":          `{"tool":"read_record","args":{"record_id":"x"}}`,
+		"zero-argument call": `{"tool":"at_risk_relationships","args":{}}`,
+		"final":              `{"final":{"summary":"done"}}`,
 	} {
 		if _, err := parseStep(step); err != nil {
 			t.Errorf("%s is a shape the schema admits but parseStep refuses: %v", name, err)
 		}
+	}
+}
+
+// Each tool-call branch names ONE tool and carries that tool's own schema as
+// args, so the provider holds a call to the arguments of the tool it names.
+//
+// With one branch whose args was an anyOf over every offered tool, `tool` and
+// `args` were unrelated: any listed schema satisfied any name, and a
+// zero-argument tool's `{}` satisfied every one of them.
+func TestEachToolCallBranchPairsOneToolWithItsOwnArguments(t *testing.T) {
+	offered := []mcp.ToolSpec{readRecordSpec(), zeroArgumentSpec()}
+	branches := stepBranches(t, stepSchemaOffering(offered...))
+
+	for i, spec := range []mcp.ToolSpec{offered[1], offered[0]} {
+		named := branchTool(t, branches[i])
+		if named.Type != "string" || strings.Join(named.Enum, ",") != spec.Name {
+			t.Errorf("branch %d's tool is %+v; want a string enum of exactly %q, in name order — "+
+				"`enum` rather than `const`, which Gemini's keyword subset lacks", i, named, spec.Name)
+		}
+		if got, want := string(branches[i].Properties["args"]), CompactSchema(spec); got != want {
+			t.Errorf("branch %d (%s) carries args\n%s\nwant that tool's own listed schema\n%s", i, spec.Name, got, want)
+		}
+	}
+}
+
+// A call the named tool's own schema refuses is refused by the step schema.
+//
+// `read_record` requires `record_id`; the only branch that admits the name
+// requires it too, so `{}` cannot reach the tool by borrowing a zero-argument
+// tool's schema.
+func TestTheStepSchemaRefusesArgumentsTheNamedToolRefuses(t *testing.T) {
+	branches := stepBranches(t, stepSchemaOffering(readRecordSpec(), zeroArgumentSpec()))
+
+	admitting := branchesNaming(t, branches, "read_record")
+	if len(admitting) != 1 {
+		t.Fatalf("%d branches admit tool read_record; exactly one must, or its args are not its own", len(admitting))
+	}
+	var args struct {
+		Required []string `json:"required"`
+	}
+	if err := json.Unmarshal(admitting[0].Properties["args"], &args); err != nil {
+		t.Fatalf("read_record's args is not an object schema: %v", err)
+	}
+	if !slices.Contains(args.Required, "record_id") {
+		t.Errorf("the branch naming read_record requires %v of its args, so "+
+			`{"tool":"read_record","args":{}} satisfies the schema`, args.Required)
+	}
+}
+
+// A tool the window does not offer is not a value `tool` may take.
+func TestTheStepSchemaRefusesAToolItDoesNotOffer(t *testing.T) {
+	branches := stepBranches(t, stepSchemaOffering(readRecordSpec(), zeroArgumentSpec()))
+	if admitting := branchesNaming(t, branches, "send_email"); len(admitting) != 0 {
+		t.Errorf("%d branches admit tool send_email, which this window never offered", len(admitting))
 	}
 }
 
@@ -95,44 +151,32 @@ func TestTheStepSchemaAdmitsExactlyWhatTheStepParserAccepts(t *testing.T) {
 // `additionalProperties` does not reopen it. Measured on one agent_loop
 // request, 20 calls each: with args as a bare object not one call carried an
 // argument, and a closing step wrote `{"final": { }}` or padded whitespace to
-// the 4,096-token ceiling. So args is the offered tool's own schema — exactly
-// what the listing shows, one per tool — and final declares its summary.
+// the 4,096-token ceiling. So each branch declares tool and args, args is the
+// named tool's own schema, and final declares its summary.
 func TestTheStepSchemaNamesTheKeysOfEveryObjectItDeclares(t *testing.T) {
-	offered := []mcp.ToolSpec{readRecordSpec(), {
-		Name:        "at_risk_relationships",
-		InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
-	}}
-	branches := stepBranches(t, stepSchemaOffering(offered...))
-
-	var args struct {
-		AnyOf []json.RawMessage `json:"anyOf"` //nolint:tagliatelle // JSON Schema's own key spelling
-	}
-	if err := json.Unmarshal(branches[0].Properties["args"], &args); err != nil {
-		t.Fatalf("args is not an anyOf over the offered tools: %v", err)
-	}
-	var want []string
-	for _, spec := range []mcp.ToolSpec{offered[1], offered[0]} {
-		want = append(want, CompactSchema(spec))
-	}
-	var got []string
-	for _, member := range args.AnyOf {
-		got = append(got, string(member))
-	}
-	if strings.Join(got, "\n") != strings.Join(want, "\n") {
-		t.Errorf("args admits\n%s\nwant each offered tool's listed schema, in name order\n%s",
-			strings.Join(got, "\n"), strings.Join(want, "\n"))
-	}
+	branches := stepBranches(t, stepSchemaOffering(readRecordSpec()))
 
 	var final struct {
 		Properties map[string]json.RawMessage `json:"properties"`
 		Required   []string                   `json:"required"`
 	}
-	if err := json.Unmarshal(branches[1].Properties["final"], &final); err != nil {
+	if err := json.Unmarshal(branches[len(branches)-1].Properties["final"], &final); err != nil {
 		t.Fatalf("final is not an object schema: %v", err)
 	}
 	if _, named := final.Properties["summary"]; !named || strings.Join(final.Required, ",") != "summary" {
 		t.Errorf("final must declare and require summary, or a decoder enforcing it writes "+
-			"an empty final; got %s", branches[1].Properties["final"])
+			"an empty final; got %s", branches[len(branches)-1].Properties["final"])
+	}
+}
+
+// A tool whose schema will not parse is never offered with a bare `args` — the
+// very shape this schema keeps off the wire. Registration refuses one at boot;
+// one that bypassed it is carried verbatim, so the request fails to encode.
+func TestAToolWhoseSchemaCannotBeCarriedIsNotOfferedAsABareObject(t *testing.T) {
+	declared := stepSchema([]mcp.ToolSpec{{Name: "broken", InputSchema: json.RawMessage(`{"type":`)}})
+	if json.Valid(declared) {
+		t.Errorf("a tool with an unparsable input schema produced a valid step schema, so something "+
+			"stood in for its arguments: %s", declared)
 	}
 }
 
@@ -353,6 +397,41 @@ func stepBranches(t *testing.T, schema json.RawMessage) []stepBranch {
 		t.Fatalf("the step schema is not an anyOf over the step shapes (%v): %s", err, schema)
 	}
 	return root.AnyOf
+}
+
+type toolNameSchema struct {
+	Type string   `json:"type"`
+	Enum []string `json:"enum"`
+}
+
+// branchTool reads the schema a branch gives its `tool` key.
+func branchTool(t *testing.T, branch stepBranch) toolNameSchema {
+	t.Helper()
+	var named toolNameSchema
+	if err := json.Unmarshal(branch.Properties["tool"], &named); err != nil {
+		t.Fatalf("a tool-call branch's tool is not a schema: %v", err)
+	}
+	return named
+}
+
+// branchesNaming returns the tool-call branches whose `tool` admits name. A `tool`
+// with no enum admits every string, which is what JSON Schema makes of it.
+func branchesNaming(t *testing.T, branches []stepBranch, name string) []stepBranch {
+	t.Helper()
+	var admitting []stepBranch
+	for _, branch := range branches {
+		if _, isCall := branch.Properties["tool"]; !isCall {
+			continue
+		}
+		if enum := branchTool(t, branch).Enum; len(enum) == 0 || slices.Contains(enum, name) {
+			admitting = append(admitting, branch)
+		}
+	}
+	return admitting
+}
+
+func zeroArgumentSpec() mcp.ToolSpec {
+	return mcp.ToolSpec{Name: "at_risk_relationships", InputSchema: json.RawMessage(`{"type":"object","properties":{}}`)}
 }
 
 func readRecordSpec() mcp.ToolSpec {

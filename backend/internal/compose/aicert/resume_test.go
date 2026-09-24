@@ -294,7 +294,7 @@ func TestAJournaledRunCarriesEveryFieldOfARunOutcome(t *testing.T) {
 		},
 		Provider: "openai_compatible", ServedModel: "z-ai/glm-5.2",
 		ServedIdentitySource: "provider_reported", JudgeServedModel: "claude-haiku-4.5",
-		CertifiedScope: "full_invocation", JudgeDegraded: true,
+		CertifiedScope: "full_invocation", JudgeDegraded: true, Unanswered: true,
 	}
 	assertNoZeroField(t, reflect.ValueOf(want), "runOutcome")
 
