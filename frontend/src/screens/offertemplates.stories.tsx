@@ -87,8 +87,8 @@ export const LoadError: Story = {
 };
 
 // The list at 390px, which is the one width ListTable's own devices all have to
-// answer at once. `.lt-head` is a non-wrapping row holding the count and the New
-// action; the locale filter chip sits under it; and the table itself is
+// answer at once. `.lt-head` wraps, and at this width the count takes its own
+// line above the New action; the locale filter chip sits under it; the table is
 // `table-layout: fixed` with a `--lt-floor` min-width, so past that floor the
 // BODY scrolls sideways under a stuck header while the pinned name column casts
 // its shadow over what passes beneath. What to check is that the sideways scroll

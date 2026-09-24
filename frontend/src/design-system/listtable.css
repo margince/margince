@@ -25,8 +25,12 @@
 
 /* ---- header: views, count, primary action ---- */
 
+/* The row wraps, and what gives way first is the count (`.lt-count`): the tabs
+   and the verbs are what a reader presses, so neither is ever squeezed out to
+   keep a sentence on the first line. */
 .lt-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
@@ -76,13 +80,37 @@
   color: var(--accentText);
 }
 
-/* Pushed to the right of the views, but stays left of the action. */
+/* The count and the verbs wrap as ONE item, so a row that cannot hold the
+   whole sentence moves both to the next line rather than cutting the sentence
+   or stranding the verbs under it. */
+.lt-head-end {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Only a sentence longer than a line of its own ellipsizes, and `HeadCount`
+   puts the rest in the truncation tip. */
 .lt-count {
-  margin-left: auto;
+  flex: 1 1 auto;
+  min-width: 0;
   /* Holds its line while the rows are loading, so the header does not resize
    * under the reader when the count appears. */
   min-height: 1em;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: end;
+}
+
+.lt-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--gapActions);
+  margin-inline-start: auto;
 }
 
 /* Any sentence laid straight onto the surface's ground takes the surface's own
@@ -502,7 +530,8 @@
    read as a rule. */
 @media (max-width: 1100px) {
   .lt-views {
-    flex: 1 1 auto;
+    /* No grow: the room the tabs leave is the count's. */
+    flex: 0 1 auto;
     min-width: 0;
     overflow-x: auto;
     scrollbar-width: none;
@@ -1140,7 +1169,6 @@
     content: none;
   }
 
-  .lt-head,
   .lt-tools,
   .lt-foot {
     flex-wrap: wrap;
@@ -1153,11 +1181,17 @@
     width: 100%;
   }
 
-  /* The count stops competing with the tabs for the same line. */
+  /* The count stops competing with the tabs for the same line, and on a line
+     of its own it wraps rather than ellipsizes. The verbs stay beside the tabs
+     where they fit. */
+  .lt-head-end {
+    display: contents;
+  }
   .lt-count {
     order: 9;
     width: 100%;
-    margin-left: 0;
+    white-space: normal;
+    text-align: start;
   }
 
   /* The view rail is ONE row that continues sideways, never two rows that

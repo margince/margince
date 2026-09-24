@@ -248,3 +248,24 @@ it("closes the whole menu on Escape, from either step", async () => {
     screen.getByLabelText("Filter", { selector: "fieldset" }),
   ).toHaveAttribute("inert");
 });
+
+// The count gives way on screen, never in the text: however narrow the row, the
+// whole sentence is there for a screen reader, and it reads before the verbs it
+// sits beside.
+it("keeps the whole count sentence, read before the header's verbs", () => {
+  render(
+    <ListSurface
+      count="1 to 25 of 1,312 companies loaded, sorted by Last updated"
+      action={<button type="button">New company</button>}
+    >
+      <p>rows</p>
+    </ListSurface>,
+  );
+
+  const count = screen.getByText(
+    "1 to 25 of 1,312 companies loaded, sorted by Last updated",
+  );
+  expect(
+    precedes(count, screen.getByRole("button", { name: "New company" })),
+  ).toBe(true);
+});
