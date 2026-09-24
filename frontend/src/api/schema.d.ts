@@ -23540,7 +23540,10 @@ export interface components {
              * @description Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
              */
             expected_arr_minor?: number | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The account this deal is for. Moving it is refused 422 (`deal_contracts_cross_company`) while agreements filed against the deal still name the previous company — a deal and its agreements must name the same one, because a contract with a deal is visible through that deal alone. The refusal names the agreements that block; detach them (`deal_id: null` on each) or record them against the new company first. Null forgets the account, which is not refused: a deal naming nobody publishes its agreements to exactly the readers its own scope already admits.
+             */
             company_id?: string | null;
             /**
              * Format: uuid
@@ -23873,7 +23876,10 @@ export interface components {
         };
         /** @description Partial. Status is absent by design — it moves through changeContractStatus. */
         UpdateContractRequest: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The deal this agreement came from. Null DETACHES it, leaving the agreement anchored to its own company — the move a refused deal-company change tells the caller to make. The deal must belong to the same company as the agreement (else 422 `cross_company_link`).
+             */
             deal_id?: string | null;
             /** Format: uuid */
             project_id?: string | null;
