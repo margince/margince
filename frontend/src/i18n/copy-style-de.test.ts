@@ -58,10 +58,10 @@ function spokenByTheReader(key: string): boolean {
   );
 }
 
-// Owned by the Vocabulary table's Never column on the German style page; the
-// last test fails a word here that the table does not name. Whole words and
-// case-sensitive, so the noun "Versprechen" is retired and a closed compound
-// such as "Nutzerkonto" is not.
+// Owned by the Vocabulary table's Never column on the German style page, which
+// sets each of these words in code format; the last test holds the two equal.
+// Whole words and case-sensitive, so the noun "Versprechen" is retired and a
+// closed compound such as "Nutzerkonto" is not.
 const RETIRED_WORDS = [
   "Firma",
   "Firmen",
@@ -143,10 +143,19 @@ const RETIRED_WORDS = [
 // Keys where a retired word keeps a sense the table does not retire.
 const RETIRED_WORD_KEPT = new Map<string, string>([
   ["firstRun.platform.google", "Google Workspace is a product name"],
+  ["oauthApp.tenant", "Microsoft Entra labels the directory tenant Mandant"],
 ]);
 
 function retiredWordPattern(retired: string): RegExp {
   return word(retired.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+}
+
+// The words the Never column marks as gated. A plain word there is the
+// reviewer's, held only in the sense its row gives.
+function gatedNeverWords(): string[] {
+  return [...vocabularyNeverColumn().matchAll(/`([^`]+)`/g)].map(
+    ([, gated]) => gated,
+  );
 }
 
 function vocabularyNeverColumn(): string {
@@ -270,13 +279,12 @@ describe("de copy style", () => {
     expect(stale).toEqual([]);
   });
 
-  it("retires only words the German style page's Vocabulary table retires", () => {
-    const never = vocabularyNeverColumn();
-    expect(never).not.toBe("");
-    expect(
-      RETIRED_WORDS.filter(
-        (retired) => !retiredWordPattern(retired).test(never),
-      ),
-    ).toEqual([]);
+  it("retires exactly the words the Vocabulary table sets in code format", () => {
+    const gated = gatedNeverWords();
+    expect(gated.length).toBeGreaterThan(0);
+    expect(RETIRED_WORDS.filter((retired) => !gated.includes(retired))).toEqual(
+      [],
+    );
+    expect(gated.filter((word) => !RETIRED_WORDS.includes(word))).toEqual([]);
   });
 });

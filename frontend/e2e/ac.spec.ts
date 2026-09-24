@@ -933,7 +933,7 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await expect(card).toBeVisible();
   const won = page.locator('[data-stage="s4"]');
   await card.dragTo(won);
-  await expect(page.getByText("Nach Won verschieben?")).toBeVisible();
+  await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
 
   // The first Confirm is REFUSED, and that is the criterion rather than a
   // detour: this deal carries no signed contract, and a win without paper has
@@ -2615,9 +2615,12 @@ test.describe("filters and views", () => {
     await expect(
       joins.getByRole("button", { name: "Alle (UND)", pressed: true }),
     ).toBeVisible();
-    await joins.getByRole("button", { name: "Beliebige (ODER)" }).click();
+    await joins.getByRole("button", { name: "Mindestens eine (ODER)" }).click();
     await expect(
-      joins.getByRole("button", { name: "Beliebige (ODER)", pressed: true }),
+      joins.getByRole("button", {
+        name: "Mindestens eine (ODER)",
+        pressed: true,
+      }),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();

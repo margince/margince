@@ -162,7 +162,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     .getByRole("group", { name: "Phase" })
     .getByRole("button", { name: "Won" })
     .click();
-  await expect(page.getByText("Nach Won verschieben?")).toBeVisible();
+  await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
   // The first confirm is refused: no contract is on the deal, so the server
   // answers win_evidence_required and the dialog stays open asking how it was
   // won. Only the answered second confirm is the win.

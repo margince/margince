@@ -305,7 +305,7 @@ test("AC-voice-4: a candidate can be read before it is chosen", async ({
     page.getByRole("button", { name: "Diese Version verwenden" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Aktuelle Stimme behalten" }),
+    page.getByRole("button", { name: "Aktuellen Schreibstil behalten" }),
   ).toBeVisible();
 });
 
