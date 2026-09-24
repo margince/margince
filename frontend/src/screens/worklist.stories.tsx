@@ -427,7 +427,7 @@ export const ALeadsDay: Story = {
 export const ATeamBiggerThanTheBoardCanCount: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
-      await within(canvasElement).findByRole("button", { name: "My team" }),
+      await within(canvasElement).findByRole("button", { name: "Team" }),
     );
   },
   render: () => {

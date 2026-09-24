@@ -423,7 +423,7 @@ export const ChannelReplyFiled: Story = {
   ),
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await dialog.findByText(/Will be filed under ERP-27 · ERP rollout/);
+    await dialog.findByText(/Sending files it under ERP-27 · ERP rollout/);
   },
 };
 
@@ -439,7 +439,7 @@ export const ChannelReplyUnfiled: Story = {
     // found the editor would pass just as well over a reply that announced a
     // filing nobody asked for, which is the whole subject of this story.
     await dialog.findByRole("textbox", { name: "Body" });
-    expect(dialog.queryByText(/Will be filed under/)).toBeNull();
+    expect(dialog.queryByText(/Sending files it under/)).toBeNull();
   },
 };
 

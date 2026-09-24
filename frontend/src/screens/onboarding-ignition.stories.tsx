@@ -95,7 +95,7 @@ export const Settled: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "Give it a pulse" }),
     );
-    const carryOn = await canvas.findByRole("button", { name: "Carry on" });
+    const carryOn = await canvas.findByRole("button", { name: "Continue" });
     await waitFor(
       () => {
         const go = carryOn.closest(".ob-ig-go");
