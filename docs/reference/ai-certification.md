@@ -39,8 +39,18 @@ feature can be ready under one preset and not under another.
 | [`openrouter_cloud`](#openrouter_cloud) | EU-hosted cloud | 6 | 4 | 14 | 5 | 6 of 29 features ready |
 | [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 10 | 1 | 17 | 1 | 10 of 29 features ready |
 
-✅ Ready: rely on it. ⚠️ Usable with care: it works, but check what it produces.
-❌ Not reliable yet: leave it off, or check every answer. ❔ Not measured: nobody has tested it on this preset yet.
+**What the grades mean**
+
+| Grade | What we measured | What to do |
+|---|---|---|
+| ✅ Ready | Right in at least 95 of every 100 tries, no test case failing again and again, and good answers. | Turn it on and rely on it. |
+| ⚠️ Usable with care | Right in at least 2 of every 3 tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |
+| ❌ Not reliable yet | Wrong too often, or answers below the quality bar. | Leave it off, or check every answer by hand. |
+| ❔ Not measured | This preset has a model for the feature, but nobody has tested it yet. | Ask for a test before relying on it. |
+
+*re-check pending* after a grade means the product has changed since it was
+measured. The grade is the last one we have, and it is shown until the next test replaces it.
+[How the scoring works](#how-the-scoring-works) explains how a grade is reached.
 
 Every grade above was measured on an older version of the product, so each one
 is waiting to be re-checked.
@@ -377,15 +387,32 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 </details>
 
-## How we grade
+## How the scoring works
 
-Every feature has a set of test cases, and each case is tried several times.
-✅ Ready means the answer was right in at least 95 of every 100 tries, every case
-was right in at least 2 of every 3 of its own tries, and the answers were good.
-⚠️ Usable with care means right in at least 2 of every 3 tries, with acceptable answers.
-❌ Not reliable yet means below that.
-Quality is scored by a second AI model, chosen so that it is not the model being
-tested, and a low score is double-checked by asking it twice more before it counts.
+1. **Real test cases.** Every feature has a set of test cases: a realistic
+   situation (an email, an account, a web page) and the answer we expect. The
+   model receives exactly the prompt the product sends in real use.
+2. **Several tries.** Each test case is run more than once, usually three times,
+   because a model can answer the same question differently each time.
+3. **Two checks on every try.**
+   - *Is it right?* The answer is checked mechanically against what we expect: the
+     right label, the right record, no invented facts, fast enough.
+   - *Is it good?* A second AI model — never the one being tested — scores the
+     answer from 0 to 100 against a written description of a good answer.
+4. **A low score is double-checked.** When the quality score is below the bar, the
+   scoring model is asked twice more and the middle of the three scores counts, so
+   one bad reading cannot fail a good answer.
+5. **The grade.** All the tries of a feature are then added up:
+
+| Grade | Right answers | Every test case | Quality |
+|---|---|---|---|
+| ✅ Ready | at least 95 of every 100 tries | right in at least 2 of its 3 tries | good in every case, no very poor answer |
+| ⚠️ Usable with care | at least 2 of every 3 tries | — | acceptable in every case |
+| ❌ Not reliable yet | anything less | | |
+
+A feature does not have to be perfect to be ready: a stray miss among many tries
+is allowed. A test case that fails again and again is not — that is a real
+weakness, not bad luck — and it holds the whole feature back.
 
 <details>
 <summary>The exact rule</summary>

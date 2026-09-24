@@ -160,17 +160,32 @@ func writeAICertPresetSummary(page *strings.Builder, presets []aiCertPreset) {
 			p.Bands.Certified, p.Bands.SupportedDegraded, p.Bands.NotSupported, p.Untested, aiCertBottomLine(p))
 		anyOff = anyOff || p.Unbound > 0
 	}
-	page.WriteString("\n" + aiCertReady + ": rely on it. " + aiCertCare + ": it works, but check what it produces.\n")
-	page.WriteString(aiCertNotYet + ": leave it off, or check every answer. " + aiCertUnproven +
-		": nobody has tested it on this preset yet.")
-	if anyOff {
-		page.WriteString(" " + aiCertOff + ": the preset has no model for it, so the feature is switched off.")
-	}
-	page.WriteString("\n\n")
+	page.WriteString("\n")
+	writeAICertLegend(page, anyOff)
 	writeAICertOlderVersionNote(page, presets)
 	for _, p := range presets {
 		writeAICertPresetDetail(page, p)
 	}
+}
+
+// writeAICertLegend says what each grade means for the reader's own decision:
+// what was measured, and what to do about it. Off is listed only when a preset
+// switches something off, so the legend never explains a mark the page lacks.
+func writeAICertLegend(page *strings.Builder, anyOff bool) {
+	page.WriteString("**What the grades mean**\n\n")
+	page.WriteString("| Grade | What we measured | What to do |\n|---|---|---|\n")
+	fmt.Fprintf(page, "| %s | Right in at least %d of every 100 tries, no test case failing again and again, and good answers. | Turn it on and rely on it. |\n",
+		aiCertReady, aicert.CertifiedPassPercent)
+	fmt.Fprintf(page, "| %s | Right in at least %d of every 3 tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |\n",
+		aiCertCare, aicert.CaseMajority(3))
+	fmt.Fprintf(page, "| %s | Wrong too often, or answers below the quality bar. | Leave it off, or check every answer by hand. |\n", aiCertNotYet)
+	fmt.Fprintf(page, "| %s | This preset has a model for the feature, but nobody has tested it yet. | Ask for a test before relying on it. |\n", aiCertUnproven)
+	if anyOff {
+		fmt.Fprintf(page, "| %s | This preset has no model for the feature. | Nothing — the feature is switched off. |\n", aiCertOff)
+	}
+	page.WriteString("\n*re-check pending* after a grade means the product has changed since it was\n")
+	page.WriteString("measured. The grade is the last one we have, and it is shown until the next test replaces it.\n")
+	page.WriteString("[How the scoring works](#how-the-scoring-works) explains how a grade is reached.\n\n")
 }
 
 func aiCertPresetName(p aiCertPreset) string { return strings.TrimSuffix(p.File, ".yaml") }
@@ -311,15 +326,29 @@ func aiCertCases(n int) string {
 // for whoever needs to argue with one. The numbers in the words are the rule's
 // own: the pass rate is its constant and the majority is its function.
 func writeAICertGrading(page *strings.Builder, rule string, selfJudged int) {
-	page.WriteString("## How we grade\n\n")
-	page.WriteString("Every feature has a set of test cases, and each case is tried several times.\n")
-	fmt.Fprintf(page, "%s means the answer was right in at least %d of every 100 tries, every case\n"+
-		"was right in at least %d of every 3 of its own tries, and the answers were good.\n"+
-		"%s means right in at least %d of every 3 tries, with acceptable answers.\n"+
-		"%s means below that.\n",
-		aiCertReady, aicert.CertifiedPassPercent, aicert.CaseMajority(3), aiCertCare, aicert.CaseMajority(3), aiCertNotYet)
-	page.WriteString("Quality is scored by a second AI model, chosen so that it is not the model being\n")
-	page.WriteString("tested, and a low score is double-checked by asking it twice more before it counts.\n\n")
+	page.WriteString("## How the scoring works\n\n")
+	page.WriteString("1. **Real test cases.** Every feature has a set of test cases: a realistic\n")
+	page.WriteString("   situation (an email, an account, a web page) and the answer we expect. The\n")
+	page.WriteString("   model receives exactly the prompt the product sends in real use.\n")
+	page.WriteString("2. **Several tries.** Each test case is run more than once, usually three times,\n")
+	page.WriteString("   because a model can answer the same question differently each time.\n")
+	page.WriteString("3. **Two checks on every try.**\n")
+	page.WriteString("   - *Is it right?* The answer is checked mechanically against what we expect: the\n")
+	page.WriteString("     right label, the right record, no invented facts, fast enough.\n")
+	page.WriteString("   - *Is it good?* A second AI model — never the one being tested — scores the\n")
+	page.WriteString("     answer from 0 to 100 against a written description of a good answer.\n")
+	page.WriteString("4. **A low score is double-checked.** When the quality score is below the bar, the\n")
+	page.WriteString("   scoring model is asked twice more and the middle of the three scores counts, so\n")
+	page.WriteString("   one bad reading cannot fail a good answer.\n")
+	page.WriteString("5. **The grade.** All the tries of a feature are then added up:\n\n")
+	page.WriteString("| Grade | Right answers | Every test case | Quality |\n|---|---|---|---|\n")
+	fmt.Fprintf(page, "| %s | at least %d of every 100 tries | right in at least %d of its 3 tries | good in every case, no very poor answer |\n",
+		aiCertReady, aicert.CertifiedPassPercent, aicert.CaseMajority(3))
+	fmt.Fprintf(page, "| %s | at least %d of every 3 tries | — | acceptable in every case |\n", aiCertCare, aicert.CaseMajority(3))
+	fmt.Fprintf(page, "| %s | anything less | | |\n\n", aiCertNotYet)
+	page.WriteString("A feature does not have to be perfect to be ready: a stray miss among many tries\n")
+	page.WriteString("is allowed. A test case that fails again and again is not — that is a real\n")
+	page.WriteString("weakness, not bad luck — and it holds the whole feature back.\n\n")
 	page.WriteString("<details>\n<summary>The exact rule</summary>\n\n")
 	page.WriteString("From `Verdict` in [`" + aiCertVerdictSource + "`](" + corpusLinkPrefix + aiCertCorpusDocs +
 		aiCertVerdictSource + "), applied to every case of a task at once:\n\n")
