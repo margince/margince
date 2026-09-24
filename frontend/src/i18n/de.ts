@@ -3623,6 +3623,18 @@ export const de = {
   "compose.discardDraft": "Entwurf verwerfen",
   "compose.discardDraftHint":
     "Meldet deiner Voice DNA, dass dieser Entwurf danebenlag. Der erzeugte Text wird nie gespeichert.",
+  "compose.saveDraft": "Als Entwurf speichern",
+  "compose.savedDraftSaved": "Entwurf gespeichert",
+  "compose.savedDraftDelete": "Löschen",
+  "compose.savedDraftDeleted": "Gespeicherter Entwurf gelöscht",
+  "compose.savedDraftRestored": "Gespeicherter Entwurf wiederhergestellt",
+  "compose.savedDraftRemove": "Gespeicherten Entwurf löschen",
+  "compose.savedDraftChangedTitle": "Entwurf in anderem Fenster geändert",
+  "compose.savedDraftChangedBody":
+    "Beim Speichern bleibt der Text auf dem Bildschirm erhalten. Lade die gespeicherte Fassung, um dort weiterzuschreiben.",
+  "compose.savedDraftGoneBody":
+    "Er wurde dort gesendet oder gelöscht. Beim Speichern wird der Text auf dem Bildschirm ein neuer Entwurf.",
+  "compose.savedDraftLoad": "Gespeicherte Fassung laden",
   "compose.aiDisclosureTitle": "KI-gestützter Entwurf",
   "compose.aiDisclosureFallback":
     "Dieser Entwurf stammt von einer KI. Lies ihn und überarbeite ihn, bevor du sendest.",

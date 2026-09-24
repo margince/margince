@@ -63,6 +63,11 @@ import {
 import { deadRecipientsAmong } from "./composereachability";
 import { RELINK_KINDS, type RelinkKind, RelinkModal } from "./composerelink";
 import {
+  type SavedDraftFields,
+  SavedDraftNotices,
+  useSavedDraft,
+} from "./composesaveddraft";
+import {
   momentLabel,
   momentOf,
   ScheduleDialog,
@@ -821,6 +826,7 @@ async function sendFrom(args: {
     // this is a set of references and never bytes.
     attachment_ids?: string[];
     draft_ref?: string;
+    mail_draft_id?: string;
     // OMITTED on a reply, deliberately. The engine resolves reply_to_inbound
     // from the anchor, and a claim added on top could only agree with it or
     // contradict it — and a contradiction is recorded as a claim the evidence
@@ -1998,6 +2004,28 @@ export function ComposeModal({
     },
   });
 
+  const restoreFields = useCallback((saved: SavedDraftFields) => {
+    draftEpoch.current += 1;
+    offered.current = true;
+    setTo([...saved.to]);
+    setCc([...saved.cc]);
+    setBcc([...saved.bcc]);
+    if (saved.bcc.length > 0) setBccOpen(true);
+    setSubject(saved.subject);
+    setBody(saved.body);
+    setHtml(saved.html);
+    setDraftRef(null);
+    setProvenance(null);
+  }, []);
+  const savedDraft = useSavedDraft({
+    where: { answering, entityType, entityId, isChannelReply },
+    open,
+    fields: { to, cc, bcc, subject, body, html },
+    replyTo: anchorActivity,
+    offeredRecipient: offeredAddress.current,
+    onRestore: restoreFields,
+    onClose,
+  });
   const send = useMutation({
     mutationKey: ["email", entityId],
     // The grounding is the variable, not a closure read: a stale closure
@@ -2026,6 +2054,7 @@ export function ComposeModal({
         setSendUnavailable(true);
         return;
       }
+      savedDraft.sent();
       for (const queryKey of entityTimelineKeys(entityType, entityId)) {
         queryClient.invalidateQueries({ queryKey });
       }
@@ -2324,7 +2353,7 @@ export function ComposeModal({
       <ConfirmModal
         initialFocusTo={() => document.getElementById(bodyId)}
         open={open}
-        onClose={onClose}
+        onClose={savedDraft.requestClose}
         title={t(
           isChannelReply
             ? "compose.sendMessageConfirmTitle"
@@ -2377,6 +2406,7 @@ export function ComposeModal({
               bcc: bcc.length ? bcc : undefined,
               attachment_ids: attachmentIds,
               draft_ref: draftRef ?? undefined,
+              mail_draft_id: savedDraft.held?.id,
               communication_context: claimedContext,
               ...scheduleFields(sendAt),
             },
@@ -2393,7 +2423,7 @@ export function ComposeModal({
           });
         }}
         pending={send.isPending}
-        error={sendError}
+        error={sendError ?? savedDraft.error}
         // The mark leads the footer row, before discard and the send controls:
         // it is what a rep checks before pressing anything. The Callout in the
         // body explains a refusal; this says the engine looked and found
@@ -2419,6 +2449,15 @@ export function ComposeModal({
                 title={t("compose.discardDraftHint")}
               >
                 {t("compose.discardDraft")}
+              </Button>
+            )}
+            {savedDraft.enabled && (
+              <Button
+                onClick={savedDraft.save}
+                pending={savedDraft.saving}
+                disabled={send.isPending || rejectionInFlight}
+              >
+                {t("compose.saveDraft")}
               </Button>
             )}
           </>
@@ -2461,6 +2500,7 @@ export function ComposeModal({
             />
           )}
           <div className="compose-fields">
+            <SavedDraftNotices draft={savedDraft} />
             {draftKept && <p role="status">{t("compose.draftKept")}</p>}
             {/* HOW this is going, above everything that depends on it. A reader
             who changes the dial changes what the rest of the head even is —

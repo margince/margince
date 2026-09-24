@@ -3744,6 +3744,18 @@ export const en = {
   "compose.discardDraft": "Discard draft",
   "compose.discardDraftHint":
     "Marks this draft as a miss for your Voice DNA. The generated text is never kept.",
+  "compose.saveDraft": "Save as draft",
+  "compose.savedDraftSaved": "Draft saved",
+  "compose.savedDraftDelete": "Delete",
+  "compose.savedDraftDeleted": "Saved draft deleted",
+  "compose.savedDraftRestored": "Saved draft restored",
+  "compose.savedDraftRemove": "Delete saved draft",
+  "compose.savedDraftChangedTitle": "Draft changed in another window",
+  "compose.savedDraftChangedBody":
+    "Saving keeps the text on screen. Load the saved version to continue from it instead.",
+  "compose.savedDraftGoneBody":
+    "It was sent or deleted there. Saving keeps the text on screen as a new draft.",
+  "compose.savedDraftLoad": "Load saved version",
   "compose.aiDisclosureTitle": "AI-assisted draft",
   "compose.aiDisclosureFallback":
     "This draft was written by AI. Review and edit it before sending.",
