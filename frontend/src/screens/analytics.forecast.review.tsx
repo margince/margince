@@ -218,26 +218,37 @@ function CheckTable({
     null,
   );
   const table = useRef<HTMLDivElement>(null);
-  const opener = useRef<HTMLElement | null>(null);
+  const opener = useRef<{ button: HTMLElement; row: number } | null>(null);
   const close = () => setSheet((was) => was && { ...was, open: false });
-  const resolve = useResolveCheck(close);
+  // A save outlives its sheet: the reader may cancel, open another finding and
+  // still be answering it when the first save lands, so only its own sheet closes.
+  const resolve = useResolveCheck((id) =>
+    setSheet((was) => (was?.id === id ? { ...was, open: false } : was)),
+  );
   // A finding a refetch took away is no longer the server's to answer, so the
   // sheet follows the list rather than the click that opened it.
   const open =
     sheet?.open === true && checks.some((check) => check.id === sheet.id);
 
+  const answerButtons = (): HTMLElement[] => [
+    ...(table.current?.querySelectorAll<HTMLElement>(".cell-actions button") ??
+      []),
+  ];
   const answer = (check: InputCheck, button: HTMLElement) => {
-    opener.current = button;
+    opener.current = { button, row: answerButtons().indexOf(button) };
     resolve.reset();
     setSheet({ id: check.id, open: true });
   };
-  // An answered finding leaves the list with its own button, so focus goes to
-  // the next Answer rather than falling to the page.
+  // An answered finding leaves the list with its own button. The Answer now at
+  // its row index is the FOLLOWING finding's (the last one's when it was last),
+  // so a keyboard reader moves down the list rather than back up it.
   const focusAfterClose = (): HTMLElement | null => {
-    if (opener.current?.isConnected) {
-      return opener.current;
+    const from = opener.current;
+    if (from === null || from.button.isConnected) {
+      return from?.button ?? null;
     }
-    return table.current?.querySelector<HTMLElement>("button") ?? null;
+    const left = answerButtons();
+    return left[Math.min(from.row, left.length - 1)] ?? null;
   };
 
   return (
@@ -331,7 +342,7 @@ function checkColumns(
 // The finding and the answer travel as VARIABLES. Read from the closure they
 // would be whatever the last render saw, which is the wrong finding exactly
 // when a save races a refetch.
-function useResolveCheck(onResolved: () => void) {
+function useResolveCheck(onResolved: (id: string) => void) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, answer }: Resolution) => {
@@ -351,12 +362,12 @@ function useResolveCheck(onResolved: () => void) {
         throwProblem(error);
       }
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, { id }) => {
       // Both lists move: the finding leaves this one, and the run's readiness
       // may change with it.
       await client.invalidateQueries({ queryKey: ["input-checks"] });
       await client.invalidateQueries({ queryKey: ["forecast-assurance"] });
-      onResolved();
+      onResolved(id);
     },
   });
 }

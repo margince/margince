@@ -47,10 +47,18 @@ const SECOND = check("e-2", SECOND_DEAL);
 
 type Posted = { url: string; body: unknown };
 
-// The server as the screen meets it: a resolved finding leaves the list, and
-// `refuse` answers every save with a problem instead.
-function show(refuse?: { status: number; detail: string }) {
+// The server as the screen meets it: a resolved finding leaves the list.
+// `refuse` answers every save with a problem instead; `hold` keeps each save
+// in flight until the test settles it.
+function show({
+  refuse,
+  hold,
+}: {
+  refuse?: { status: number; detail: string };
+  hold?: Promise<void>;
+} = {}) {
   const posted: Posted[] = [];
+  const reads = { assurance: 0 };
   const resolved = new Set<string>();
   vi.stubGlobal(
     "fetch",
@@ -59,6 +67,7 @@ function show(refuse?: { status: number; detail: string }) {
       const url = String(request ? request.url : input);
       if (request?.method === "POST") {
         posted.push({ url, body: await request.json() });
+        await hold;
         if (refuse) {
           return jsonResponse(
             { title: "Conflict", status: refuse.status, detail: refuse.detail },
@@ -77,6 +86,7 @@ function show(refuse?: { status: number; detail: string }) {
         });
       }
       if (url.includes("/forecast/assurance")) {
+        reads.assurance += 1;
         return jsonResponse({ status: "complete", readiness: "needs_review" });
       }
       return jsonResponse({}, 404);
@@ -98,7 +108,7 @@ function show(refuse?: { status: number; detail: string }) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return posted;
+  return { posted, reads };
 }
 
 // The Answer button on the row that names `deal`.
@@ -119,7 +129,7 @@ afterEach(() => {
 describe("answering a forecast finding", () => {
   it("posts the answer for the row it was opened from, then closes", async () => {
     const user = userEvent.setup();
-    const posted = show();
+    const { posted } = show();
 
     await user.click(await answerButton(SECOND_DEAL));
     const sheet = await screen.findByRole("dialog");
@@ -166,7 +176,9 @@ describe("answering a forecast finding", () => {
 
   it("keeps the sheet open and says why when the server refuses", async () => {
     const user = userEvent.setup();
-    show({ status: 409, detail: "This check was already answered." });
+    show({
+      refuse: { status: 409, detail: "This check was already answered." },
+    });
 
     await user.click(await answerButton(FIRST_DEAL));
     const sheet = await screen.findByRole("dialog");
@@ -180,5 +192,40 @@ describe("answering a forecast finding", () => {
     const alert = await within(sheet).findByRole("alert");
     expect(alert.textContent).toContain("This check was already answered.");
     expect(screen.getByRole("dialog")).toBe(sheet);
+  });
+
+  it("leaves the sheet open on another finding when an earlier save lands", async () => {
+    const user = userEvent.setup();
+    let land = () => {};
+    const { posted, reads } = show({
+      hold: new Promise<void>((settle) => {
+        land = settle;
+      }),
+    });
+
+    await user.click(await answerButton(FIRST_DEAL));
+    const first = await screen.findByRole("dialog");
+    await user.click(
+      within(first).getByRole("radio", { name: /I corrected the record/ }),
+    );
+    await user.click(
+      within(first).getByRole("button", { name: "Save answer" }),
+    );
+    await user.click(within(first).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    await user.click(await answerButton(SECOND_DEAL));
+    const second = await screen.findByRole("dialog");
+    land();
+    // The first save has run its course once its row has left the table and
+    // the readiness it may move has been read again.
+    await waitFor(() => {
+      expect(screen.queryByRole("link", { name: FIRST_DEAL })).toBeNull();
+      expect(reads.assurance).toBeGreaterThanOrEqual(2);
+    });
+    expect(posted).toHaveLength(1);
+    // And the reader is still answering the second finding.
+    await user.click(within(second).getByRole("radio", { name: /Not now/ }));
+    expect(screen.getByRole("dialog")).toBe(second);
   });
 });
