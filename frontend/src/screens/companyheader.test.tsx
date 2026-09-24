@@ -168,7 +168,9 @@ describe("who owns this record", () => {
     // "no longer in the user list" is a claim about a read that came back. Said
     // over one still running, it reports an owner as departed on the evidence
     // of nothing having arrived yet.
-    expect(await screen.findByText("Loading…")).toBeTruthy();
+    expect(
+      (await screen.findByRole("button", { name: "Change Owner" })).textContent,
+    ).toContain("Loading…");
     expect(
       screen.queryByText("Current owner (no longer in the user list)"),
     ).toBeNull();
@@ -195,7 +197,7 @@ describe("who owns this record", () => {
     // A refused read excludes nobody. Reading it as "no longer in the user
     // list" turns a 403 into a fact about who owns this account, which is the
     // one thing this control is here to get right.
-    expect(await screen.findByText("Name didn't load")).toBeTruthy();
+    expect(await screen.findByText("Name did not load")).toBeTruthy();
     expect(
       screen.queryByText("Current owner (no longer in the user list)"),
     ).toBeNull();
@@ -267,7 +269,7 @@ describe("an archived account's verbs", () => {
       // sentence the control does not point at reaches no reader who needed it.
       const describedBy = control.getAttribute("aria-describedby");
       expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-        "This company is archived. Restore it to change anything on it.",
+        "This company is archived. Restore it to make changes.",
       );
     }
     // The reads next to them are untouched: what happened to a record is
@@ -402,7 +404,7 @@ it("does not offer to clear a company's lifecycle", async () => {
   const user = userEvent.setup();
   renderInApp(<CompanyDetails company={COMPANY} />);
   await user.click(
-    await screen.findByRole("button", { name: "Change Account lifecycle" }),
+    await screen.findByRole("button", { name: "Change Lifecycle" }),
   );
   await user.click(screen.getByRole("combobox"));
   expect(screen.queryByRole("option", { name: "Not set" })).toBeNull();

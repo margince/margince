@@ -192,9 +192,7 @@ describe("what a rep is shown", () => {
         }),
       ),
     );
-    expect(
-      screen.getByText(/asked not to receive marketing/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/objected to marketing/i)).toBeInTheDocument();
     expect(screen.getByText(/including an administrator/i)).toBeInTheDocument();
   });
 
@@ -221,7 +219,7 @@ describe("what a rep is shown", () => {
       () => {},
     );
     expect(
-      screen.getByRole("button", { name: /say why/i }),
+      screen.getByRole("button", { name: /record reason for contact/i }),
     ).toBeInTheDocument();
   });
 
@@ -230,7 +228,7 @@ describe("what a rep is shown", () => {
   it("explains without a control when the surface cannot take an override", () => {
     draw(preview(answer({ would_refuse: true, can_be_overruled: true })));
     expect(
-      screen.getByText(/no record of why you may write/i),
+      screen.getByText(/no recorded reason to contact/i),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button")).toBeNull();
   });
@@ -247,7 +245,7 @@ describe("what a rep is shown", () => {
       ),
     );
     expect(screen.queryByText(/frequency_cap_reached/)).toBeNull();
-    expect(screen.getByText(/clears on its own/i)).toBeInTheDocument();
+    expect(screen.getByText(/clears automatically/i)).toBeInTheDocument();
   });
 });
 
@@ -259,14 +257,18 @@ describe("what the hint tells a rep to do", () => {
       preview(answer({ would_refuse: true, can_be_overruled: true })),
       () => {},
     );
-    expect(screen.getByText(/say so/i)).toBeInTheDocument();
-    expect(screen.queryByText(/will be refused/i)).toBeNull();
+    expect(screen.getByText(/record it under your name/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/refused until a reason is recorded/i),
+    ).toBeNull();
   });
 
   it("says what happens to the message where nobody can answer here", () => {
     draw(preview(answer({ would_refuse: true, can_be_overruled: true })));
-    expect(screen.getByText(/will be refused/i)).toBeInTheDocument();
-    expect(screen.queryByText(/say so/i)).toBeNull();
+    expect(
+      screen.getByText(/refused until a reason is recorded/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/record it under your name/i)).toBeNull();
   });
 });
 
@@ -276,7 +278,9 @@ describe("when the question did not arrive", () => {
   // the component exists to end.
   it("says the check did not happen rather than falling silent", () => {
     draw(undefined, undefined, true);
-    expect(screen.getByRole("status")).toHaveTextContent(/could not check/i);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /send check did not complete/i,
+    );
   });
 
   // A stale answer must not outrank the fact that the latest ask failed: the
@@ -294,8 +298,10 @@ describe("when the question did not arrive", () => {
       undefined,
       true,
     );
-    expect(screen.getByText(/could not check/i)).toBeInTheDocument();
-    expect(screen.queryByText(/asked not to receive marketing/i)).toBeNull();
+    expect(
+      screen.getByText(/send check did not complete/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/objected to marketing/i)).toBeNull();
   });
 });
 

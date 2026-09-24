@@ -96,7 +96,7 @@ async function findRow(
 }
 
 const meta: Meta<typeof PrivacyInboxCard> = {
-  title: "Settings/Governance/Privacy & retention/Subject requests",
+  title: "Settings/Governance/Privacy and retention/Subject requests",
   component: PrivacyInboxCard,
 };
 export default meta;
@@ -197,7 +197,7 @@ const driveToLegalHold = async ({
   await armErasureConfirm(canvasElement);
   // Portalled too, and the refusal it produces is portalled with it.
   await userEvent.click(
-    screen.getByRole("button", { name: /erase \+ suppress/i }),
+    screen.getByRole("button", { name: /erase and suppress/i }),
   );
   await screen.findByText(/legal hold/i);
 };

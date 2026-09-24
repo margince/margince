@@ -55,7 +55,7 @@ describe("what the ranked queue tells a reader", () => {
 
     expect(
       await screen.findByText(
-        "No tasks are due today or overdue. Later work is on each record's own Tasks tab.",
+        "No tasks due today or overdue. Later tasks are on each record’s Tasks tab.",
       ),
     ).toBeTruthy();
     // The unqualified sentence is the one that misled: it must not be what a
@@ -223,7 +223,7 @@ describe("what the ranked queue tells a reader", () => {
     // The read stopped at its own bound with members left over. "200" would be
     // a wrong number; "200+" is a bounded one.
     expect(
-      await screen.findByText("200+ drafts waiting to be sent"),
+      await screen.findByText("Drafts waiting to send: 200+"),
     ).toBeTruthy();
   });
 
@@ -318,7 +318,7 @@ describe("what the ranked queue tells a reader", () => {
     // pages twenty at a time, so the page alone left an officer with no sign
     // of which row they were sent to read.
     const request = await screen.findByRole("link", {
-      name: "An open privacy request",
+      name: "Open privacy request",
     });
     const dsr = "01a05500-0000-7000-8000-00000000dddd";
     expect(request.getAttribute("href")).toBe(`#/settings/privacy?case=${dsr}`);
@@ -333,9 +333,7 @@ describe("what the ranked queue tells a reader", () => {
     );
     renderWorklist();
 
-    expect(
-      await screen.findByText("If you do nothing, it slips."),
-    ).toBeTruthy();
+    expect(await screen.findByText("If ignored, the task slips.")).toBeTruthy();
   });
 
   it("says why a row sits above the one below it", async () => {
@@ -358,7 +356,7 @@ describe("what the ranked queue tells a reader", () => {
     );
     const { container } = renderWorklist();
 
-    expect(await screen.findByText(/Above the next:/)).toBeTruthy();
+    expect(await screen.findByText(/Ranked above the next item:/)).toBeTruthy();
     // The server's order is the page's order. Rendering the rows sorted or
     // reversed would still show a reason line, so the DOM order is what this
     // asserts.
@@ -388,7 +386,7 @@ describe("what the ranked queue tells a reader", () => {
     );
     const { container } = renderWorklist();
 
-    await screen.findByText("A decision is waiting");
+    await screen.findByText("Approval waiting");
     // Named values, not a blanket ban on underscores: a real title may carry
     // one ("ACME_Q3"), and the raw words that actually leak — a kind, a source,
     // a reason, an i18n key — mostly carry none.
@@ -419,7 +417,7 @@ describe("what the ranked queue tells a reader", () => {
     );
     const { container } = renderWorklist();
 
-    await screen.findByText("A task");
+    await screen.findAllByText(en["worklist.category.tasks"]);
     expect(container.textContent).not.toContain("customer_escalated");
     expect(container.textContent).not.toContain("worklist.because");
   });
@@ -519,7 +517,7 @@ describe("what the ranked queue tells a reader", () => {
     );
     const { container } = renderWorklist();
 
-    await screen.findByText("A task");
+    await screen.findAllByText(en["worklist.category.tasks"]);
     expect(container.textContent).toContain(en["worklist.because.unassigned"]);
     expect(
       container.querySelector("details.worklist-row-because-fold"),
@@ -544,7 +542,7 @@ describe("what the ranked queue tells a reader", () => {
           }),
           row({
             id: "no-destination",
-            title: "Add someone from your mail",
+            title: "Add contact from mail",
             source: "approval",
             category: "decisions",
             consequence: "data_drifts",
@@ -639,20 +637,24 @@ describe("what the ranked queue tells a reader", () => {
     stub(day({ queue: [row()] }));
     renderWorklist();
 
-    await screen.findByText("A task");
+    await screen.findAllByText(en["worklist.untitled.task"]);
     // SegmentedControl draws a fieldset of pressed buttons, so the absence is
     // asserted on what it actually renders — a role it never uses would make
     // this pass over a control drawn unconditionally.
     expect(screen.queryByRole("group", { name: "Whose work" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "My team" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["worklist.scope.team"] }),
+    ).toBeNull();
   });
 
   it("offers the scope control when the reader may ask for more", async () => {
     stub(day({ queue: [row()], scope_options: ["mine", "team", "all"] }));
     renderWorklist();
 
-    await screen.findByText("A task");
-    expect(screen.getAllByText("My team").length).toBeGreaterThan(0);
+    await screen.findAllByText(en["worklist.untitled.task"]);
+    expect(
+      screen.getAllByText(en["worklist.scope.team"]).length,
+    ).toBeGreaterThan(0);
   });
 
   it("AC-WORKLIST-SDR-05: warns rather than claiming a clear day it could not read", async () => {
@@ -664,9 +666,7 @@ describe("what the ranked queue tells a reader", () => {
     renderWorklist();
 
     expect(
-      await screen.findByText(
-        "Nothing is waiting among the sources that answered.",
-      ),
+      await screen.findByText("No items in the sources that loaded."),
     ).toBeTruthy();
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
   });
@@ -746,7 +746,9 @@ describe("a lead still owed its first reply", () => {
     renderWorklist();
 
     expect(
-      await screen.findByText(en["worklist.untitled.lead_response"]),
+      await screen.findByRole("link", {
+        name: en["worklist.untitled.lead_response"],
+      }),
     ).toBeTruthy();
   });
 
@@ -989,8 +991,8 @@ describe("the address opens a queue", () => {
 
 // The label moves with the route.
 //
-// The row's own comment refused to say "Draft the reply" while the click only
-// navigated: "a link labelled 'Draft the reply' would promise something the
+// The row's own comment refused to say "Draft reply" while the click only
+// navigated: "a link labelled 'Draft reply' would promise something the
 // click does not do… the label moves back when it lands". This is the assertion
 // that the two halves stay together — mutate either and one of these fails.
 describe("the draft_reply verb says what the click does", () => {

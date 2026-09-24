@@ -87,7 +87,7 @@ test("sends the deal when there is one, and both required ids", async () => {
     />,
   );
   await user.click(
-    await screen.findByRole("button", { name: /Write the message/i }),
+    await screen.findByRole("button", { name: /Draft message/i }),
   );
   await screen.findByDisplayValue(/Could you introduce me to Philipp Königs/);
   const sent = calls.find((call) => call.url.includes("intro-request-draft"));
@@ -108,7 +108,7 @@ test("the message becomes the reader's once they edit it", async () => {
     <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
   );
   await user.click(
-    await screen.findByRole("button", { name: /Write the message/i }),
+    await screen.findByRole("button", { name: /Draft message/i }),
   );
 
   const body = await screen.findByLabelText("Message");
@@ -129,7 +129,7 @@ test("a typo fix does not claim the message as the reader's", async () => {
     <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
   );
   await user.click(
-    await screen.findByRole("button", { name: /Write the message/i }),
+    await screen.findByRole("button", { name: /Draft message/i }),
   );
   await user.type(await screen.findByLabelText("Message"), "!");
   expect(screen.queryByText(/typed by you/i)).toBeNull();
@@ -145,16 +145,14 @@ test("says so when the browser will not let the page copy", async () => {
     <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
   );
   await user.click(
-    await screen.findByRole("button", { name: /Write the message/i }),
+    await screen.findByRole("button", { name: /Draft message/i }),
   );
   // AFTER setup, which installs a clipboard of its own — taken away here to
   // model the browser that never offered one.
   stubClipboard("absent");
   await user.click(await screen.findByRole("button", { name: /^Copy$/ }));
-  expect(
-    await screen.findByText(/this browser refused the clipboard/i),
-  ).toBeTruthy();
-  expect(screen.getByText(/copy it yourself/i)).toBeTruthy();
+  expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
+  expect(screen.getByText(/copy it manually/i)).toBeTruthy();
 });
 
 // With no model configured the endpoint answers from a template. Saying so is
@@ -167,7 +165,7 @@ test("says when the message came from a template rather than a model", async () 
     <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
   );
   await user.click(
-    await screen.findByRole("button", { name: /Write the message/i }),
+    await screen.findByRole("button", { name: /Draft message/i }),
   );
   expect(await screen.findByText(/Written from a template/)).toBeTruthy();
 });
@@ -181,7 +179,7 @@ test("shows the refusal rather than an empty form", async () => {
     <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
   );
   await user.click(
-    await screen.findByRole("button", { name: /Write the message/i }),
+    await screen.findByRole("button", { name: /Draft message/i }),
   );
   // The SERVER'S OWN WORDS. Asserting only that some text appeared passed
   // against a version that threw the raw body, where every refusal — 403, 404
@@ -213,7 +211,7 @@ test("a fresh target starts with no draft", async () => {
     <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
   );
   await user.click(
-    await screen.findByRole("button", { name: /Write the message/i }),
+    await screen.findByRole("button", { name: /Draft message/i }),
   );
   await screen.findByLabelText("Message");
   first.unmount();
@@ -228,6 +226,6 @@ test("a fresh target starts with no draft", async () => {
   // No message yet: the verb is offered, not somebody else's draft.
   expect(screen.queryByLabelText("Message")).toBeNull();
   expect(
-    await screen.findByRole("button", { name: /Write the message/i }),
+    await screen.findByRole("button", { name: /Draft message/i }),
   ).toBeTruthy();
 });

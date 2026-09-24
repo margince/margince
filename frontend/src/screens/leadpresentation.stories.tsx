@@ -80,8 +80,6 @@ export const CountsUnavailable: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       await within(canvasElement).findByRole("alert"),
-    ).toHaveTextContent(
-      "The Qualified and Disqualified counts could not be read.",
-    );
+    ).toHaveTextContent("Qualified and Disqualified counts did not load.");
   },
 };

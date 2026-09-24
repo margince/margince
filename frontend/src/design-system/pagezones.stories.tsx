@@ -28,7 +28,7 @@ export default meta;
 type Story = StoryObj<typeof PageZones>;
 
 const work = (
-  <Panel title="What is happening">
+  <Panel title="Note">
     <PanelBody>
       <p>
         The work column. It takes the largest share of the page at every shape,

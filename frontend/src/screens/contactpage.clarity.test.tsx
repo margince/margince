@@ -160,14 +160,14 @@ describe("a contact with little context", () => {
       },
     });
     const manage = await screen.findByRole("button", {
-      name: "Manage consent & proof history",
+      name: "Manage consent and proof history",
     });
     expect(ledgerReads).toBe(0);
     expect(screen.getAllByTestId("confirm-details-ask")).toHaveLength(1);
     expect(screen.getByText("Send to dana@brandt.example")).toBeTruthy();
     await user.click(manage);
     const dialog = await screen.findByRole("dialog", {
-      name: "Manage consent & proof history",
+      name: "Manage consent and proof history",
     });
     await user.click(
       await within(dialog).findByRole("button", { name: "Record consent" }),
@@ -185,7 +185,7 @@ describe("a contact with little context", () => {
       contact: { ...sparse.contact, writable: false },
     });
     await screen.findByRole("button", {
-      name: "Manage consent & proof history",
+      name: "Manage consent and proof history",
     });
     expect(screen.queryByTestId("confirm-details-ask")).toBeNull();
   });
@@ -210,14 +210,14 @@ it("opens details and permissions in a narrow-screen drawer and restores focus",
   }));
   mount("overview", sparse);
   const toggle = await screen.findByRole("button", {
-    name: "Show details & permissions",
+    name: "Show details and permissions",
   });
   expect(
     screen.queryByRole("heading", { name: "Communication permissions" }),
   ).toBeNull();
   await user.click(toggle);
   const dialog = await screen.findByRole("dialog", {
-    name: "Details & permissions",
+    name: "Details and permissions",
   });
   expect(
     within(dialog).getByRole("heading", { name: "Communication permissions" }),
@@ -258,7 +258,7 @@ it("names restricted overview sections even when an open commitment leads", asyn
   ).toBeTruthy();
   expect(
     screen.getByText(
-      /Not shown: Activity, Where this contact stands, Margince's findings, open tasks/,
+      /Not shown: Activity, Contact status, Margince findings, open tasks/,
     ),
   ).toBeTruthy();
   expect(screen.queryByText("No interactions recorded")).toBeNull();
@@ -318,11 +318,11 @@ it("keeps a mobile Details edit open until it is saved or cancelled", async () =
   ));
   await user.click(
     await screen.findByRole("button", {
-      name: "Show details & permissions",
+      name: "Show details and permissions",
     }),
   );
   const dialog = await screen.findByRole("dialog", {
-    name: "Details & permissions",
+    name: "Details and permissions",
   });
   await user.click(
     await within(dialog).findByRole("button", { name: "Change Title" }),
@@ -342,7 +342,7 @@ it("keeps a mobile Details edit open until it is saved or cancelled", async () =
   expect(within(dialog).getByDisplayValue("Director")).toBeTruthy();
   await user.keyboard("{Escape}");
   expect(
-    screen.getByRole("dialog", { name: "Details & permissions" }),
+    screen.getByRole("dialog", { name: "Details and permissions" }),
   ).toBeTruthy();
   await user.click(within(dialog).getByRole("button", { name: "Close" }));
   expect(screen.queryByRole("dialog")).toBeNull();

@@ -130,7 +130,7 @@ it("carets the triggers that open a list, and only those", async () => {
   await user.click(screen.getByRole("button", { name: "Status" }));
   await user.click(screen.getByRole("radio", { name: "Open" }));
 
-  const add = screen.getByRole("button", { name: "Add a filter" });
+  const add = screen.getByRole("button", { name: "Add filter" });
   expect(add.querySelector(".lucide-plus")).toBeTruthy();
   expect(add.querySelector(".lt-caret")).toBeNull();
 });
@@ -155,9 +155,9 @@ it("stands an applied filter's row ahead of the button that adds another", async
 
   const row = screen.getByRole("group", { name: "Status: Open" });
   expect(
-    precedes(row, screen.getByRole("button", { name: "Add a filter" })),
+    precedes(row, screen.getByRole("button", { name: "Add filter" })),
   ).toBe(true);
-  await user.click(screen.getByRole("button", { name: "Add a filter" }));
+  await user.click(screen.getByRole("button", { name: "Add filter" }));
   expect(screen.queryByRole("button", { name: "Status" })).toBeNull();
 });
 
@@ -210,7 +210,7 @@ it("hands focus back to the trigger when a value is picked", async () => {
 
   // The trigger the press LEFT behind: applying the first filter turns the
   // labelled button into the bare "+".
-  expect(screen.getByRole("button", { name: "Add a filter" })).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Add filter" })).toHaveFocus();
 });
 
 // Last on the row is the surface's own promise now, not something each screen

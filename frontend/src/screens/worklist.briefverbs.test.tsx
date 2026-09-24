@@ -184,7 +184,7 @@ describe("a brief item is answerable from the queue", () => {
 
     // The prefix alone: the instant is tomorrow's local morning, and asserting
     // the formatted time here would pin the suite to the runner's zone.
-    expect(await screen.findByText(/Set aside until /)).toBeTruthy();
+    expect(await screen.findByText(/Snoozed until /)).toBeTruthy();
   });
 
   // AN ITEM BACK IN THE QUEUE IS ANSWERABLE AGAIN.

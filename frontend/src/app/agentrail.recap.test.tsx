@@ -127,7 +127,7 @@ describe("the agent panel's recap", () => {
       if (!found) throw new Error("no recap row on the panel yet");
       return found as HTMLElement;
     });
-    expect(row.textContent).toContain("I've read the");
+    expect(row.textContent).toContain("Read of the");
     expect(
       within(row).getByRole("link", { name: "Acme GmbH" }).getAttribute("href"),
     ).toBe(`#/companies/${SETTLED_SITE_READ.subject_id}`);

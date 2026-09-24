@@ -119,8 +119,8 @@ function coverageAnswer(opts: ReportsStubOpts) {
 function contextAnswer(opts: ReportsStubOpts) {
   return (
     opts.context ?? {
-      default_scope: { kind: "workspace", label: "Whole workspace" },
-      allowed_scopes: [{ kind: "workspace", label: "Whole workspace" }],
+      default_scope: { kind: "workspace", label: "Whole company" },
+      allowed_scopes: [{ kind: "workspace", label: "Whole company" }],
       capabilities: {
         view_manager_forecast: true,
         submit_manager_forecast: true,

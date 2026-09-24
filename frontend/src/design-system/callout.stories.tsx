@@ -69,7 +69,7 @@ export const Tones: Story = {
       <Callout tone="warning" title="Reindex needed">
         Search is answering from an index that is behind the records.
       </Callout>
-      <Callout tone="danger" title="That did not save">
+      <Callout tone="danger" title="Change not saved">
         The role changed while you were editing. Re-read it and try again.
       </Callout>
       <Callout tone="success" title="The mailbox is connected">
@@ -107,7 +107,7 @@ export const AlertAnatomy: Story = {
       <Callout
         tone="danger"
         kind="outcome"
-        title="That did not save"
+        title="Change not saved"
         actions={<Button variant="primary">Retry</Button>}
       >
         <p>The record changed while you were editing it:</p>
@@ -149,7 +149,7 @@ export const Kinds: Story = {
   render: () => (
     <Stack>
       <Derives announces='kind="outcome" + danger → role="alert"'>
-        <Callout tone="danger" kind="outcome" title="That did not save">
+        <Callout tone="danger" kind="outcome" title="Change not saved">
           The role changed while you were editing.
         </Callout>
       </Derives>

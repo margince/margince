@@ -237,7 +237,7 @@ it("renders call badges and expands the attempt and payload detail", async () =>
   // The disclosure is a real button now, not the row: a `<tr onClick>`
   // could only ever be reached by pointer.
   const toggle = screen.getByRole("button", {
-    name: /show the attempt trail/i,
+    name: /show attempts/i,
   });
   // The chevron is turned by this attribute (aicalls.css), so what the reader
   // sees and what a screen reader hears are one fact rather than two that can
@@ -249,7 +249,7 @@ it("renders call badges and expands the attempt and payload detail", async () =>
   expect(toggle.getAttribute("aria-expanded")).toBe("true");
   expect(await screen.findByText(/retry_on_5xx/)).toBeTruthy();
   expect(screen.getByText("Request payload")).toBeTruthy();
-  expect(screen.getByText("Export as cert scenario")).toBeTruthy();
+  expect(screen.getByText("Export certification scenario")).toBeTruthy();
 });
 
 // The filter is a settings row now: the row draws the label and the Select is
@@ -269,13 +269,13 @@ it("names the task filter from its row, and stacks the trace under its own label
 it("distinguishes capture disabled from a call without payload", async () => {
   mount(false, false);
   await userEvent.click(
-    await screen.findByRole("button", { name: /show the attempt trail/i }),
+    await screen.findByRole("button", { name: /show attempts/i }),
   );
   expect(await screen.findByText(/Payload capture is off/)).toBeTruthy();
   cleanup();
   mount(true, false);
   await userEvent.click(
-    await screen.findByRole("button", { name: /show the attempt trail/i }),
+    await screen.findByRole("button", { name: /show attempts/i }),
   );
   expect(
     await screen.findByText("No payload captured for this call."),
@@ -289,7 +289,9 @@ it("withholds the trace from a principal without the diagnostics read, and asks 
   const { seen } = mount(true, true, { automation: ["read", "update"] });
 
   expect(
-    await screen.findByText(/only an operator can read the per-call trace/i),
+    await screen.findByText(
+      /only an administrator or operations user can read the call trace/i,
+    ),
   ).toBeTruthy();
   expect(screen.getByText("AI call trace")).toBeTruthy();
   expect(seen.some((path) => path.includes("/ai/calls"))).toBe(false);

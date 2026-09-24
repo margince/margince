@@ -105,7 +105,7 @@ describe("a failed automation reaches the page that owns it", () => {
     renderWorklist();
 
     await screen.findByText(/Notify sales on a new lead/);
-    expect(screen.queryByRole("button", { name: /run it again/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /run again/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /Investigate/i })).toBeNull();
   });
 
@@ -120,12 +120,10 @@ describe("a failed automation reaches the page that owns it", () => {
     const user = userEvent.setup();
     renderUnderAToastRegion();
 
-    await user.click(
-      await screen.findByRole("button", { name: /run it again/i }),
-    );
+    await user.click(await screen.findByRole("button", { name: /run again/i }));
     // findByText throws when the text never arrives, so reaching this line is
     // the assertion; the null check states it rather than leaving it implied.
-    expect(await screen.findByText(/Running the rule again/i)).not.toBeNull();
+    expect(await screen.findByText(/Rerunning rule/i)).not.toBeNull();
   });
 
   it("says WHY a refused retry did nothing, rather than falling silent", async () => {
@@ -142,11 +140,9 @@ describe("a failed automation reaches the page that owns it", () => {
     const user = userEvent.setup();
     renderUnderAToastRegion();
 
-    await user.click(
-      await screen.findByRole("button", { name: /run it again/i }),
-    );
+    await user.click(await screen.findByRole("button", { name: /run again/i }));
     expect(
-      await screen.findByText(/event behind this firing is gone/i),
+      await screen.findByText(/triggering event no longer exists/i),
     ).not.toBeNull();
   });
 });

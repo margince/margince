@@ -76,7 +76,7 @@ const ROWS: readonly ReviewRow[] = [
   ),
   row(
     "offer_summary",
-    "What do you sell?",
+    "Products and services",
     "Route planning software for freight forwarders.",
     "quoted",
     cited("/product", "Route planning software for freight forwarders."),

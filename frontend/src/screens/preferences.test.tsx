@@ -367,7 +367,9 @@ describe("one-click unsubscribe (G-7)", () => {
       await screen.findByRole("button", { name: en["prefs.unsubscribeAll"] }),
     );
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
-    expect(await screen.findByText(/you're off/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/you are unsubscribed/i),
+    ).toBeInTheDocument();
     // "no purpose is named" is a claim about the request itself — pin the
     // URL, not just that some POST happened: no ?purpose= rode along.
     expect(
@@ -405,7 +407,7 @@ describe("one-click unsubscribe (G-7)", () => {
     );
     expect(await screen.findByText(/too many attempts/i)).toBeInTheDocument();
     expect(
-      screen.queryByText(/you're off|already off/i),
+      screen.queryByText(/you are unsubscribed|already off/i),
     ).not.toBeInTheDocument();
   });
 
@@ -570,7 +572,7 @@ describe("one-click unsubscribe (G-7)", () => {
     await userEvent.click(screen.getByRole("button", { name: /save/i }));
 
     expect(
-      await screen.findByText(/could not send the confirmation/i),
+      await screen.findByText(/confirmation email for .* could not be sent/i),
     ).toBeInTheDocument();
     // And NOT the success sentence: telling somebody to check their email for
     // a message this installation could not send sends them looking for a

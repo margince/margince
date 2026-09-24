@@ -161,7 +161,11 @@ describe("KnowledgeCard", () => {
 
     // "Not yours to see" and "there are none" are different statements, and an
     // empty card would make a claim about the DATA that nobody checked.
-    expect(await screen.findByText(/not yours to see/i)).toBeTruthy();
+    expect(
+      await screen.findByText(
+        /do not have access to the list of document sets/i,
+      ),
+    ).toBeTruthy();
     expect(screen.queryByText("How-to")).toBeNull();
   });
 
@@ -175,7 +179,7 @@ describe("KnowledgeCard", () => {
     // There is nothing for the reader to do but wait, and the copy has to say
     // so — "not ready" would send them looking for a document to finish
     // uploading.
-    expect(await screen.findByText(/being re-read/i)).toBeTruthy();
+    expect(await screen.findByText(/reindexing this set/i)).toBeTruthy();
   });
 
   it("names the file that could not be read, and why", async () => {
@@ -258,7 +262,7 @@ describe("KnowledgeCard", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /show documents/i }),
     );
-    const input = await screen.findByLabelText(/add a document/i);
+    const input = await screen.findByLabelText(/add document/i);
     await userEvent.upload(
       input,
       new File(["first folder"], "notes.md", { type: "text/markdown" }),

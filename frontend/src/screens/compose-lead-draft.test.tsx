@@ -54,7 +54,7 @@ const LEAD_DRAFT = {
   body: "Hi Dung,\n\nYou asked what this would cost for 40 seats.",
   generated_by: "model",
   ai_generated: true,
-  ai_disclosure: "This message was drafted with AI assistance.",
+  ai_disclosure: "Drafted with AI assistance. Review before sending.",
 };
 
 function stubRoutes(
@@ -159,7 +159,7 @@ describe("drafting to a lead", () => {
     );
 
     await userEvent.type(
-      screen.getByPlaceholderText(/What should this email achieve|Reply with/),
+      screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "shorter",
     );
     await userEvent.click(

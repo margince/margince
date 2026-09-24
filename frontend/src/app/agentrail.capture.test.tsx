@@ -146,7 +146,7 @@ describe("a mailbox import", () => {
     const { container } = mount({ connectors: [mailbox(IMPORTING)] });
     await waitFor(() =>
       expect(container.querySelector(".arline")?.textContent).toBe(
-        "Importing mail history · 42%",
+        `${en["shell.capture.importing"]} · 42%`,
       ),
     );
   });
@@ -163,7 +163,7 @@ describe("a mailbox import", () => {
     });
     await waitFor(() =>
       expect(container.querySelector(".arline")?.textContent).toBe(
-        "Importing mail history",
+        "Importing mailbox history",
       ),
     );
     expect(block(container).getAttribute("data-core-state")).toBe("ingest");

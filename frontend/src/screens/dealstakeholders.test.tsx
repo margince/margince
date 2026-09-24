@@ -142,9 +142,9 @@ describe("the stakeholders on a deal", () => {
     renderPanel();
 
     expect(await screen.findByText("Stakeholders")).toBeTruthy();
-    // "People & companies" is the contact and company panel's heading, and it
+    // "People and companies" is the contact and company panel's heading, and it
     // sends a reader on a deal looking for a control this page does not have.
-    expect(screen.queryByText("People & companies")).toBeNull();
+    expect(screen.queryByText("People and companies")).toBeNull();
   });
 
   // A deal anchors one kind, so a Kind column repeats one badge down every row
@@ -194,7 +194,7 @@ describe("the stakeholders on a deal", () => {
     renderPanel();
 
     expect(
-      await screen.findByText("No stakeholder is recorded on this deal"),
+      await screen.findByText("No stakeholders on this deal"),
     ).toBeTruthy();
   });
 

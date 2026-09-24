@@ -37,7 +37,7 @@ import {
 type Readings = components["schemas"]["ForecastReadings"];
 
 const SELECTION: AnalyticsSelection = {
-  scope: { kind: "workspace", label: "Whole workspace" },
+  scope: { kind: "workspace", label: "Whole company" },
 };
 
 function readings(over: Partial<Readings> = {}): Readings {
@@ -136,7 +136,7 @@ export const RecordingACall: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Update the current call",
+        name: "Update call",
       }),
     );
   },

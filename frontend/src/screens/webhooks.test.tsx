@@ -248,7 +248,9 @@ describe("WebhooksCard", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText(/only an admin or ops can change subscriptions/i),
+        screen.getByText(
+          /only an administrator or operations user can change subscriptions/i,
+        ),
       ).toBeTruthy(),
     );
     expect(screen.queryByTestId("new-webhook-subscription")).toBeNull();
@@ -273,7 +275,9 @@ describe("WebhooksCard", () => {
       expect(screen.getByTestId("new-webhook-subscription")).toBeTruthy(),
     );
     expect(
-      screen.queryByText(/only an admin or ops can change subscriptions/i),
+      screen.queryByText(
+        /only an administrator or operations user can change subscriptions/i,
+      ),
     ).toBeNull();
   });
 
@@ -289,10 +293,14 @@ describe("WebhooksCard", () => {
     render(<WebhooksCard />);
 
     await waitFor(() =>
-      expect(screen.getByText(/not enabled on this deployment/i)).toBeTruthy(),
+      expect(
+        screen.getByText(/not enabled on this installation/i),
+      ).toBeTruthy(),
     );
     expect(
-      screen.queryByText(/only an admin or ops can change subscriptions/i),
+      screen.queryByText(
+        /only an administrator or operations user can change subscriptions/i,
+      ),
     ).toBeNull();
     expect(screen.queryByTestId("new-webhook-subscription")).toBeNull();
   });
@@ -302,7 +310,9 @@ describe("WebhooksCard", () => {
     render(<WebhooksCard />);
 
     await waitFor(() =>
-      expect(screen.getByText(/not enabled on this deployment/i)).toBeTruthy(),
+      expect(
+        screen.getByText(/not enabled on this installation/i),
+      ).toBeTruthy(),
     );
     expect(screen.queryByTestId("new-webhook-subscription")).toBeNull();
   });
@@ -337,7 +347,7 @@ describe("WebhooksCard", () => {
         screen.getByText("https://example.test/hooks/margince"),
       ).toBeTruthy(),
     );
-    expect(screen.getByText(/not enabled on this deployment/i)).toBeTruthy();
+    expect(screen.getByText(/not enabled on this installation/i)).toBeTruthy();
     // Even for an admin, no create / rotate affordances when delivery is off.
     expect(screen.queryByTestId("new-webhook-subscription")).toBeNull();
     expect(screen.queryByTestId("rotate-webhook-secret")).toBeNull();
@@ -550,7 +560,7 @@ describe("WebhooksCard — pause/resume + re-target (EditAction)", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          "This record changed since you opened it — reload and try again.",
+          "This record changed since it was opened. Reload and retry.",
         ),
       ).toBeTruthy(),
     );

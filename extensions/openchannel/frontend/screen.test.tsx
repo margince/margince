@@ -603,7 +603,9 @@ describe("the openchannel screen", () => {
     // The read failure announces itself, and nothing on the page claims the
     // member has no endpoint.
     const alert = await screen.findByRole("alert");
-    expect(within(alert).getByText("Couldn't load this view.")).toBeTruthy();
+    expect(
+      within(alert).getByText("Could not load this view. Reload the page."),
+    ).toBeTruthy();
     expect(screen.queryByText("No endpoint open")).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Open my endpoint" }),

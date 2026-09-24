@@ -26,17 +26,17 @@ type Story = StoryObj;
 
 const labels: ResolveSheetLabels = {
   title: "Acme — close date may be wrong",
-  outcomeLegend: "What kind of answer is this?",
+  outcomeLegend: "Answer type",
   outcomes: [
     {
       value: "fixed_record",
-      label: "I corrected the record",
+      label: "Record corrected",
       description: "The date moved to what the buyer confirmed.",
     },
-    { value: "added_evidence", label: "I added the evidence" },
+    { value: "added_evidence", label: "Evidence added" },
     {
       value: "value_correct",
-      label: "The value is correct",
+      label: "Value is correct",
       description: "Hides this check until the expiry.",
     },
     {
@@ -45,15 +45,14 @@ const labels: ResolveSheetLabels = {
       description: "Hides this check until the expiry.",
     },
     { value: "remind_later", label: "Not now" },
-    { value: "reassign", label: "Somebody else's to answer" },
+    { value: "reassign", label: "Someone else’s to answer" },
   ],
   reason: "Why",
   reasonHelp:
-    "The next person to see this number is owed the reason it is not flagged.",
-  remindAt: "Bring it back on",
-  expiresAt: "Stops holding on",
-  expiresHelp:
-    "At most 90 days: a value that was correct in May is a claim about May.",
+    "The next person to see this number needs the reason it is not flagged.",
+  remindAt: "Remind on",
+  expiresAt: "Expires on",
+  expiresHelp: "At most 90 days: a value correct in May describes May.",
   cancel: "Cancel",
   submit: "Save answer",
 };

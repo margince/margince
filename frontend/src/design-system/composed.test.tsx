@@ -289,7 +289,7 @@ describe("DealCard + PipelineBoard", () => {
     // no sing…" in a 240px stage. Matched on the words alone, the assertion
     // stayed green through exactly that.
     expect(
-      screen.getByText("several currencies — no single total", {
+      screen.getByText("several currencies, no single total", {
         selector: ".board-col-refusal",
       }),
     ).toBeTruthy();

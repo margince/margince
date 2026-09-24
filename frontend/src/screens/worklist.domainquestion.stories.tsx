@@ -89,7 +89,7 @@ function line(item: WorklistItem, stub: () => void) {
     return (
       <StoryProviders>
         <ToastProvider>
-          <Panel title="A domain nobody has judged yet">
+          <Panel title="Unreviewed domain">
             <PanelBody>
               <p className="t-caption">{item.detail}</p>
               <div className="worklist-row-acts">
@@ -107,7 +107,7 @@ function line(item: WorklistItem, stub: () => void) {
 const pressKeep = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
   const canvas = within(canvasElement);
   await userEvent.click(
-    await canvas.findByRole("button", { name: "It's a company" }),
+    await canvas.findByRole("button", { name: "Create company" }),
   );
 };
 

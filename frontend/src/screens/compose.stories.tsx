@@ -28,8 +28,8 @@ import {
 // It is the WHY that satisfies the send precondition. The consent purposes are
 // served below because the composer reads them, but a reader never picks one —
 // the answer here is what the send derives its purpose from.
-const WHY_ASK = "Why are you writing?";
-const WHY_ANSWER = "They asked me to get in touch";
+const WHY_ASK = "Reason for contact";
+const WHY_ANSWER = "Follow-up they requested";
 
 // One consent purpose is enough to satisfy the Send precondition and populate
 // the purpose dropdown; its `label` is what the story clicks and its `key`
@@ -53,7 +53,7 @@ const DRAFT: components["schemas"]["EmailDraft"] = {
   body: "Thanks for the note — following up as promised.",
   to: ["buyer@acme.test"],
   ai_generated: true,
-  ai_disclosure: "AI-assisted draft (Art. 50): reviewed and sent by a human.",
+  ai_disclosure: "Drafted with AI assistance. Review before sending.",
   // A voice-styled draft: the profile version is the provenance the banner
   // reports, and the reference is what a send or a discard binds its outcome
   // to. Both are null on a draft no voice profile shaped.
@@ -156,7 +156,7 @@ async function composerOnScreen() {
 // so a story reaches the send outcome (409 gate / 501 unavailable) it captures.
 //
 // EVERY FIELD BY THE NAME A READER SEES, never by a placeholder: the subject's
-// placeholder is the example copy ("What it is about") and the body is a
+// placeholder is the example copy ("Topic of the email") and the body is a
 // contentEditable `RichText` that has none at all, so the placeholder queries
 // this helper used to make could not match anything the composer draws.
 //
@@ -423,7 +423,7 @@ export const ChannelReplyFiled: Story = {
   ),
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await dialog.findByText(/Will be filed under ERP-27 · ERP rollout/);
+    await dialog.findByText(/Sending files it under ERP-27 · ERP rollout/);
   },
 };
 
@@ -439,7 +439,7 @@ export const ChannelReplyUnfiled: Story = {
     // found the editor would pass just as well over a reply that announced a
     // filing nobody asked for, which is the whole subject of this story.
     await dialog.findByRole("textbox", { name: "Body" });
-    expect(dialog.queryByText(/Will be filed under/)).toBeNull();
+    expect(dialog.queryByText(/Sending files it under/)).toBeNull();
   },
 };
 

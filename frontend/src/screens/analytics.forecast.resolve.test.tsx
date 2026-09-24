@@ -134,7 +134,7 @@ describe("answering a forecast finding", () => {
     await user.click(await answerButton(SECOND_DEAL));
     const sheet = await screen.findByRole("dialog");
     await user.click(
-      within(sheet).getByRole("radio", { name: /I corrected the record/ }),
+      within(sheet).getByRole("radio", { name: /Record corrected/ }),
     );
     await user.click(
       within(sheet).getByRole("button", { name: "Save answer" }),
@@ -155,10 +155,10 @@ describe("answering a forecast finding", () => {
     await user.click(await answerButton(FIRST_DEAL));
     const first = await screen.findByRole("dialog");
     await user.click(
-      within(first).getByRole("radio", { name: /The value is correct/ }),
+      within(first).getByRole("radio", { name: /Value is correct/ }),
     );
     await user.type(
-      within(first).getByRole("textbox", { name: /Why/ }),
+      within(first).getByRole("textbox", { name: /Reason/ }),
       "Buyer confirmed on the call",
     );
     await user.click(within(first).getByRole("button", { name: "Cancel" }));
@@ -171,7 +171,9 @@ describe("answering a forecast finding", () => {
     }
     // No outcome picked means no reason field at all, so nothing typed for the
     // first finding can be sitting in it.
-    expect(within(second).queryByRole("textbox", { name: /Why/ })).toBeNull();
+    expect(
+      within(second).queryByRole("textbox", { name: /Reason/ }),
+    ).toBeNull();
   });
 
   it("keeps the sheet open and says why when the server refuses", async () => {
@@ -183,7 +185,7 @@ describe("answering a forecast finding", () => {
     await user.click(await answerButton(FIRST_DEAL));
     const sheet = await screen.findByRole("dialog");
     await user.click(
-      within(sheet).getByRole("radio", { name: /I corrected the record/ }),
+      within(sheet).getByRole("radio", { name: /Record corrected/ }),
     );
     await user.click(
       within(sheet).getByRole("button", { name: "Save answer" }),
@@ -206,7 +208,7 @@ describe("answering a forecast finding", () => {
     await user.click(await answerButton(FIRST_DEAL));
     const first = await screen.findByRole("dialog");
     await user.click(
-      within(first).getByRole("radio", { name: /I corrected the record/ }),
+      within(first).getByRole("radio", { name: /Record corrected/ }),
     );
     await user.click(
       within(first).getByRole("button", { name: "Save answer" }),
@@ -225,7 +227,9 @@ describe("answering a forecast finding", () => {
     });
     expect(posted).toHaveLength(1);
     // And the reader is still answering the second finding.
-    await user.click(within(second).getByRole("radio", { name: /Not now/ }));
+    await user.click(
+      within(second).getByRole("radio", { name: /Remind later/ }),
+    );
     expect(screen.getByRole("dialog")).toBe(second);
   });
 });

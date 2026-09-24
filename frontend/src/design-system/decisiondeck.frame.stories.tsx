@@ -54,9 +54,9 @@ const LABELS: DecisionDeckLabels = {
   skipped: (count: number) => `${count} skipped`,
   edited: (count: number) => `${count} being edited`,
   staged: (count: number) => `${count} decisions staged`,
-  commitNothingToSend: "Finish these",
+  commitNothingToSend: "Clear skipped",
   commit: "Send staged decisions",
-  unstage: "Undo the last one",
+  unstage: "Undo last",
   // Below here is what the TYPE requires and this frame never draws. They were
   // missing while a cast stood in front of the annotation, so the fixture was
   // not the shape the deck is handed — and a frame story is the picture the

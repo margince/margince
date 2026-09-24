@@ -34,7 +34,7 @@ const LABELS: DecisionCardLabels = {
   expired: "This ran out of time.",
   draftSubject: "Subject",
   draftBody: "Message",
-  showMore: "Show the whole message",
+  showMore: "Show full message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",
   loading: "Reading the proposal",
@@ -189,8 +189,8 @@ describe("DecisionCard — a kind that says what it shows", () => {
     },
     {
       field: "flags",
-      label: "What is wrong with it",
-      value: "nothing has moved on it",
+      label: "Issues",
+      value: "no recent progress",
     },
   ];
 
@@ -215,8 +215,8 @@ describe("DecisionCard — a kind that says what it shows", () => {
     render(card({ approval: CLOSE_DATE, display: CLOSE_DATE_DISPLAY }));
     expect(screen.getByText("Proposed date")).toBeInTheDocument();
     expect(screen.getByText("01.10.2026")).toBeInTheDocument();
-    expect(screen.getByText("What is wrong with it")).toBeInTheDocument();
-    expect(screen.getByText("nothing has moved on it")).toBeInTheDocument();
+    expect(screen.getByText("Issues")).toBeInTheDocument();
+    expect(screen.getByText("no recent progress")).toBeInTheDocument();
     // Never the wire.
     expect(screen.queryByText("deal_id")).not.toBeInTheDocument();
     expect(
@@ -236,13 +236,13 @@ describe("DecisionCard — a kind that says what it shows", () => {
           ...CLOSE_DATE_DISPLAY,
           {
             field: "previous_close_date",
-            label: "Date on it now",
+            label: "Current close date",
             value: null,
           },
         ],
       }),
     );
-    expect(screen.queryByText("Date on it now")).not.toBeInTheDocument();
+    expect(screen.queryByText("Current close date")).not.toBeInTheDocument();
   });
 
   // A declared kind keeps its reason AND its fields on a row. The deck-only
@@ -520,7 +520,7 @@ describe("DecisionStatusChip", () => {
 // may NOT carry — a queue of these is scanned, and anything on the line that a
 // reader has to weigh is a line they have to stop at.
 describe("DecisionCard at list density", () => {
-  const COMPACT = { detail: "What is being proposed", more: "Other answers" };
+  const COMPACT = { detail: "Proposal", more: "More options" };
 
   it("keeps the proposal off the line and behind a control", async () => {
     const user = userEvent.setup();

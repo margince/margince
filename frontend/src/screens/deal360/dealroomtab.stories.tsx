@@ -112,7 +112,7 @@ export const TextRefused: Story = {
       <StoryProviders>
         <RoomText
           room={room({ state: "closed" })}
-          refusal="This room is finished, so what it shared is now a record."
+          refusal="This room has ended. Its shared content is kept as a record."
         />
       </StoryProviders>
     );

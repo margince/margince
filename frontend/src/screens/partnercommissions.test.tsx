@@ -219,7 +219,7 @@ describe("the commission panel", () => {
 
     render(<PartnerCommissions companyId="o-1" />);
 
-    expect(await screen.findByText("Nothing earned yet")).toBeTruthy();
+    expect(await screen.findByText("No commission yet")).toBeTruthy();
     expect(screen.queryByTestId("commission-ledger")).toBeNull();
   });
 });

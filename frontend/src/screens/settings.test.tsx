@@ -201,13 +201,13 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     await user.click(screen.getByRole("button", { name: "Edit signature" }));
-    const draft = await screen.findByRole("textbox", { name: "Your sign-off" });
+    const draft = await screen.findByRole("textbox", { name: "Sign-off" });
     await user.type(draft, "half a sign-off nobody meant to keep");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     await user.click(screen.getByRole("button", { name: "Edit signature" }));
     const reopened = await screen.findByRole("textbox", {
-      name: "Your sign-off",
+      name: "Sign-off",
     });
     if (!(reopened instanceof HTMLTextAreaElement)) {
       throw new Error("the sign-off box is not a textarea");
@@ -246,7 +246,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    const field = screen.getByRole("textbox", { name: "Your name" });
+    const field = screen.getByRole("textbox", { name: "Display name" });
     await user.clear(field);
     await user.type(field, "  Ada Lovelace  ");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -273,7 +273,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(save).toHaveProperty("disabled", true);
 
     // A name of only whitespace is not a name, so it does not enable it either.
-    const field = screen.getByRole("textbox", { name: "Your name" });
+    const field = screen.getByRole("textbox", { name: "Display name" });
     await user.clear(field);
     await user.type(field, "   ");
     expect(screen.getByRole("button", { name: "Save" })).toHaveProperty(
@@ -358,11 +358,11 @@ describe("SettingsScreen RBAC surfaces", () => {
     // who may read it. No request is made for it, so a rep never hits a 403
     // error box (GET /ai/usage).
     expect(
-      await screen.findByText("Estimated AI spend & usage history"),
+      await screen.findByText("Estimated AI spend and usage"),
     ).toBeTruthy();
     expect(
       await screen.findByText(
-        /only an operator can see what the AI runtime spent/i,
+        /only an administrator or operations user can see AI spend/i,
       ),
     ).toBeTruthy();
   });
@@ -391,9 +391,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // is also what renders while the snapshot is in flight, so asserting it
     // alone would pass against a page that goes on to render the trace.
     await waitFor(() =>
-      expect(
-        screen.getByText(/this settings page is not yours to open/i),
-      ).toBeTruthy(),
+      expect(screen.getByText(/no access to this settings page/i)).toBeTruthy(),
     );
     // The chrome agrees: no page is current, where the fallback used to mark
     // Account.
@@ -549,7 +547,7 @@ describe("SettingsScreen restructured pages", () => {
     await waitFor(() =>
       expect(
         screen
-          .getByRole("link", { name: "Privacy & retention" })
+          .getByRole("link", { name: "Privacy and retention" })
           .getAttribute("aria-current"),
       ).toBe("page"),
     );
@@ -683,7 +681,7 @@ describe("SettingsScreen restructured pages", () => {
       screen.getByRole("heading", { name: "Background jobs" }),
     ).toBeTruthy();
     expect(
-      screen.getByText(/background-job health needs permission/i),
+      screen.getByText(/background job health covers the whole installation/i),
     ).toBeTruthy();
   });
 

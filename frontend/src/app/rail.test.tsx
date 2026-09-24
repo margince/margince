@@ -100,7 +100,7 @@ const CANONICAL_ORDER = [
   "Leads",
   "Deals",
   "Projects",
-  "Filters & views",
+  "Filters and views",
   "Analytics",
 ];
 
@@ -462,10 +462,10 @@ describe("Rail levels (a section's entries as the second level)", () => {
     // The destinations are GONE, not pushed below a second list: 56px cannot
     // carry two levels and 256px carrying both is a list of twenty places to go.
     expect(screen.queryByRole("link", { name: "Deals" })).toBeNull();
-    expect(levelLabels()).toEqual(["Account", "Privacy & retention"]);
+    expect(levelLabels()).toEqual(["Account", "Privacy and retention"]);
     expect(
       screen
-        .getByRole("link", { name: "Privacy & retention" })
+        .getByRole("link", { name: "Privacy and retention" })
         .getAttribute("href"),
     ).toBe("#/settings/deep");
     // Exactly one row claims the current page, and it is the entry the SECTION
@@ -849,7 +849,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     );
     expect(levelLabels()).toEqual(["Data model"]);
     expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
-    expect(navGroupNames()).toEqual(["Privacy & retention"]);
+    expect(navGroupNames()).toEqual(["Privacy and retention"]);
   });
 
   it("renders a third level from the data, addressed under the entry that opens it", () => {
@@ -864,7 +864,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(
       screen.getByRole("link", { name: "Data model" }).getAttribute("href"),
     ).toBe("#/settings/deep/deeper");
-    expect(navGroupNames()).toEqual(["Privacy & retention"]);
+    expect(navGroupNames()).toEqual(["Privacy and retention"]);
   });
 
   // One step at a time, and the step is an ADDRESS: below the section's own
@@ -896,7 +896,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     );
     const account = screen.getByRole("link", { name: "Account" });
     const privacyEntry = screen.getByRole("link", {
-      name: "Privacy & retention",
+      name: "Privacy and retention",
     });
     expect(screen.queryByRole("tooltip")).toBeNull();
 
@@ -911,7 +911,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     privacyEntry.focus();
     await waitFor(() =>
       expect(screen.getByRole("tooltip").textContent).toBe(
-        "Privacy & retention",
+        "Privacy and retention",
       ),
     );
     expect(screen.getAllByRole("tooltip")).toHaveLength(1);
@@ -939,7 +939,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     // No level at all: no entries, no way back up, and no `leveled` arrangement
     // for the bar to be rearranged by.
     expect(
-      screen.queryByRole("link", { name: "Privacy & retention" }),
+      screen.queryByRole("link", { name: "Privacy and retention" }),
     ).toBeNull();
     expect(screen.queryByRole("button", { name: /^Back/ })).toBeNull();
     expect(
@@ -951,7 +951,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     await user.click(screen.getByRole("button", { name: "More" }));
     expect(levelLabels()).toEqual(CANONICAL_ORDER);
     expect(
-      screen.queryByRole("link", { name: "Privacy & retention" }),
+      screen.queryByRole("link", { name: "Privacy and retention" }),
     ).toBeNull();
   });
 
@@ -965,7 +965,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
         section={fixtureSection("account")}
       />,
     );
-    expect(levelLabels()).toEqual(["Account", "Privacy & retention"]);
+    expect(levelLabels()).toEqual(["Account", "Privacy and retention"]);
     expect(
       screen.getByRole("navigation", { name: "Primary navigation" }).className,
     ).toContain("leveled");

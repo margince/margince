@@ -66,7 +66,7 @@ export const BeingDecided: Story = {
   render: () => (
     <Lines>
       <DigestLine
-        row={row("offer_summary", "What they sell", "European road freight")}
+        row={row("offer_summary", "Offering", "European road freight")}
         n={2}
         active
       />

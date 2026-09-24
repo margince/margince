@@ -49,7 +49,7 @@ const LABELS: DecisionCardLabels = {
   expired: "This ran out of time before anyone answered it.",
   draftSubject: "Subject",
   draftBody: "Message",
-  showMore: "Show the whole message",
+  showMore: "Show full message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",
   loading: "Reading the proposal",

@@ -54,7 +54,7 @@ const LABELS: DecisionCardLabels = {
   expired: "This ran out of time before anyone answered it.",
   draftSubject: "Subject",
   draftBody: "Message",
-  showMore: "Show the whole message",
+  showMore: "Show full message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",
   loading: "Reading the proposal",
@@ -196,7 +196,7 @@ export const CompactRow: Story = {
   args: {
     ...Deck.args,
     layout: "row",
-    compact: { detail: "What is being proposed", more: "Other answers" },
+    compact: { detail: "Proposal", more: "More options" },
   },
 };
 
@@ -210,7 +210,7 @@ export const CompactRowOpen: Story = {
     // The panel is portalled to the body, so the frame is the OPEN row rather
     // than the panel — which is what a reader of the catalog is checking here.
     await userEvent.click(
-      await canvas.findByRole("button", { name: "What is being proposed" }),
+      await canvas.findByRole("button", { name: "Proposal" }),
     );
   },
 };
@@ -380,8 +380,8 @@ export const DeclaredFields: Story = {
       },
       {
         field: "flags",
-        label: "What is wrong with it",
-        value: "nothing has moved on it",
+        label: "Issues",
+        value: "no recent progress",
       },
     ],
   },

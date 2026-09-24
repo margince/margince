@@ -316,9 +316,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
     await userEvent.type(screen.getByRole("searchbox"), "acme");
 
-    expect(
-      await screen.findByText(/Records could not be searched/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Search failed/)).toBeTruthy();
     // Not the empty state: the list is not empty, and saying so would be the
     // false claim this replaces.
     expect(screen.queryByText("No matches.")).toBeNull();
@@ -610,7 +608,7 @@ describe("useBuiltinCommands", () => {
     // command, so matching on it proves the row carries the screen's own words.
     await user.type(screen.getByRole("searchbox"), "views");
     const rows = destinationRows();
-    expect(rows[0].textContent).toContain("Filters & views");
+    expect(rows[0].textContent).toContain("Filters and views");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/filters");
   });

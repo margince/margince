@@ -130,7 +130,7 @@ describe("drafting a reply to a message that is gone", () => {
     // The fresh-mail composer will not draft without a purpose, so the click
     // below would otherwise be a no-op and this test would pass vacuously.
     await userEvent.type(
-      screen.getByPlaceholderText(/What should this email achieve|Reply with/),
+      screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "Ask about the rollout",
     );
     await userEvent.click(
@@ -174,9 +174,7 @@ describe("drafting a reply to a message that is gone", () => {
 
     // The shared line for a failure with no reader-facing cause, which is
     // what a 502 is. What matters is the branch it is NOT on.
-    expect(
-      await screen.findByText(/did not finish this request/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/did not finish the request/i)).toBeTruthy();
     expect(screen.queryByText(/no longer available/i)).toBeNull();
   });
 });

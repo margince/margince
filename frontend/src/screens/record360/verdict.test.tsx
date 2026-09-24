@@ -23,7 +23,7 @@ function renderHead(restsOn?: Grounding[]) {
       <VerdictHead
         label="At risk"
         tone="danger"
-        because="Waiting on them"
+        because="Awaiting reply"
         restsOn={restsOn}
       />
     </LocaleProvider>,
@@ -40,7 +40,7 @@ describe("VerdictHead grounding", () => {
     // Shut: the quotes are not merely hidden from view, they are not rendered,
     // so a screen reader walking the head meets the call and not the working.
     expect(screen.queryByText("No reply in 18 days")).toBeNull();
-    const toggle = screen.getByRole("button", { name: /What this rests on/ });
+    const toggle = screen.getByRole("button", { name: /Sources/ });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     // The count is what makes a shut block judgeable rather than a mystery.
     expect(toggle.textContent).toContain("2");
@@ -48,9 +48,7 @@ describe("VerdictHead grounding", () => {
 
   it("opens the working on a click, quote beside source", async () => {
     renderHead(GROUNDS);
-    await userEvent.click(
-      screen.getByRole("button", { name: /What this rests on/ }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /Sources/ }));
     expect(screen.getByText("No reply in 18 days")).toBeTruthy();
     expect(screen.getByText("Relationship")).toBeTruthy();
     expect(screen.getByText("Pays 9 days after due")).toBeTruthy();
@@ -61,9 +59,7 @@ describe("VerdictHead grounding", () => {
     // call, and an empty trigger reading "0" would invite a click onto a
     // block with nothing in it.
     renderHead([]);
-    expect(screen.queryByRole("button", { name: /What this rests on/ })).toBe(
-      null,
-    );
+    expect(screen.queryByRole("button", { name: /Sources/ })).toBe(null);
     expect(screen.getByText("At risk")).toBeTruthy();
   });
 
@@ -99,7 +95,7 @@ describe("VerdictHead scale", () => {
         <VerdictHead
           label="At risk"
           tone="danger"
-          because="Waiting on them"
+          because="Awaiting reply"
           scale="compact"
         />
       </LocaleProvider>,
@@ -124,7 +120,7 @@ describe("VerdictHead scale", () => {
         <VerdictHead
           label="At risk"
           tone="danger"
-          because="Waiting on them"
+          because="Awaiting reply"
           scale="compact"
         />
       </LocaleProvider>,

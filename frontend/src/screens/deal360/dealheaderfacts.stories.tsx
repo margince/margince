@@ -38,7 +38,7 @@ export const Facts: Story = {
     // unresolved-owner fallback as the normal state.
     installFetchStub({
       // The strip asks the session who the reader IS, because the Source cell
-      // can only say "typed by you" of a row the reader captured. Unrouted, the
+      // can only say "entered by you" of a row the reader captured. Unrouted, the
       // probe answers loudly and the story documents a reader with no identity.
       "GET /me": meRoute({ deal: ["read"] }),
       "GET /users": () =>

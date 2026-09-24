@@ -18,7 +18,7 @@ import { PageZones } from "./pagezones";
 
 afterEach(cleanup);
 
-const WORK = "What is happening";
+const WORK = "Note";
 const PROFILE = "Profile";
 const CONTEXT = "Context";
 

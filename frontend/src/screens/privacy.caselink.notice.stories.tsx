@@ -20,7 +20,7 @@ import { StoryProviders } from "./story-utils";
 const ABSENT = { kind: "absent", id: "dsr-9" } as const;
 
 const meta: Meta<typeof LinkedCaseNotice> = {
-  title: "Settings/Governance/Privacy & retention/Linked case notice",
+  title: "Settings/Governance/Privacy and retention/Linked case notice",
   component: LinkedCaseNotice,
   parameters: { layout: "padded" },
 };

@@ -12,8 +12,8 @@ import { TimelineThread } from "./timelinethread";
 
 type Activity = components["schemas"]["Activity"];
 
-const FAILED = "The thread could not be read.";
-const LOADING = "Loading this record’s history…";
+const FAILED = "The thread could not be loaded.";
+const LOADING = "Loading history…";
 
 function row(extra: Partial<Activity>): Activity {
   return {
@@ -102,7 +102,7 @@ describe("TimelineThread", () => {
     );
     expect(screen.queryByText(FAILED)).toBeNull();
     expect(screen.getByText("Today")).toBeTruthy();
-    expect(screen.getByText("More conversations before this")).toBeTruthy();
+    expect(screen.getByText("More threads before this")).toBeTruthy();
   });
 
   // The spine names each past conversation by its subject. Naming one without

@@ -26,11 +26,11 @@ type Story = StoryObj<typeof AiPending>;
 
 export const ReadingAnAccount: Story = {
   args: {
-    label: "Margince is reading this account's exchanges and deals.",
+    label: "Margince is analyzing this company’s exchanges and deals.",
     lines: 3,
   },
   render: (args) => (
-    <Panel title="What needs you">
+    <Panel title="Needs attention">
       <PanelBody>
         <AiPending {...args} />
       </PanelBody>

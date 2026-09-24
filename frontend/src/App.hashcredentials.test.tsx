@@ -142,7 +142,7 @@ const CARRIERS: readonly Carrier[] = [
     address: (credential) => `#/reset-password?token=${credential}`,
     scrubbed: "#/reset-password",
     onScreen: () =>
-      screen.findByRole("heading", { name: "Choose a new password" }),
+      screen.findByRole("heading", { name: "Choose new password" }),
     spend: async (user) => {
       await user.clear(screen.getByLabelText("New password"));
       await user.type(screen.getByLabelText("New password"), PASSWORD);
@@ -220,9 +220,7 @@ describe.each(CARRIERS)("$what, and the gates above the route", (carrier) => {
     // one render pass has happened, it rendered the gate instead of the route,
     // and the address is already clean. Awaiting either would let a later scrub
     // pass for this one.
-    expect(
-      screen.getByText("This installation is part-way through an update"),
-    ).toBeTruthy();
+    expect(screen.getByText("App and server versions differ")).toBeTruthy();
     expect(globalThis.location.hash).toBe(carrier.scrubbed);
     expect(globalThis.location.href).not.toContain("cred_midupgrade");
     // And it was not spent to achieve that: the screen that spends it never
@@ -246,9 +244,7 @@ describe.each(CARRIERS)("$what, and the gates above the route", (carrier) => {
       expect(globalThis.location.hash).toBe(carrier.scrubbed),
     );
     expect(globalThis.location.href).not.toContain("cred_pasted");
-    expect(
-      screen.getByText("This installation is part-way through an update"),
-    ).toBeTruthy();
+    expect(screen.getByText("App and server versions differ")).toBeTruthy();
     expect(sentTo(sent, carrier)).toEqual([]);
   });
 

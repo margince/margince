@@ -156,14 +156,10 @@ describe("the research tab's enrichment evidence", () => {
         })}
       />,
     );
-    expect(
-      screen.getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
+    expect(screen.getByText("Hidden for your role")).toBeTruthy();
     // A withheld section is not merely "nothing here" — the tab-wide empty
     // sentence must not also fire while the fields panel still has rows.
-    expect(
-      screen.queryByText("Nothing has been researched about them yet."),
-    ).toBeNull();
+    expect(screen.queryByText("No research on this contact yet.")).toBeNull();
   });
 
   it("says the enrichment evidence is withheld rather than claiming no field carries evidence", () => {
@@ -174,23 +170,19 @@ describe("the research tab's enrichment evidence", () => {
         })}
       />,
     );
+    expect(screen.getByText("Hidden for your role")).toBeTruthy();
     expect(
-      screen.getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
-    expect(
-      screen.queryByText("No enriched field carries evidence yet."),
+      screen.queryByText("No enriched fields have evidence yet."),
     ).toBeNull();
   });
 
   it("says the tab has nothing once, not twice, when neither half has anything to show", () => {
     withProviders(<ContactResearchTab view={view({ profile_fields: [] })} />);
-    expect(
-      screen.getByText("Nothing has been researched about them yet."),
-    ).toBeTruthy();
+    expect(screen.getByText("No research on this contact yet.")).toBeTruthy();
     // The fields panel's own empty sentence must not ALSO render beside the
     // tab-wide one — that would be the same fact stated twice.
     expect(
-      screen.queryByText("No enriched field carries evidence yet."),
+      screen.queryByText("No enriched fields have evidence yet."),
     ).toBeNull();
   });
 });

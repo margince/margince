@@ -56,7 +56,9 @@ describe("the settings search box", () => {
     await user.type(box(), "audit");
 
     expect(options()).toHaveLength(0);
-    expect(screen.getByRole("status").textContent).toMatch(/0 settings pages/);
+    expect(screen.getByRole("status").textContent).toMatch(
+      /Matching settings pages: 0/,
+    );
   });
 
   // A word that matches nothing is SAID. A box that did nothing would leave a

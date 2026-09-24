@@ -64,7 +64,7 @@ export const CreateTaskRefused: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Add this task" }),
+      await canvas.findByRole("button", { name: "Add task" }),
     );
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "The deal this task names is archived.",

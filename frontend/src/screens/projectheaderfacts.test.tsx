@@ -87,12 +87,12 @@ describe("the target-end cell says the day and how far off it is", () => {
 
   it("counts a day past the date in the singular too", () => {
     facts("2026-09-16");
-    expect(screen.getByText(/1 day past the date$/)).toBeTruthy();
+    expect(screen.getByText(/1 day overdue$/)).toBeTruthy();
   });
 
   it("counts the days past a date nobody met", () => {
     facts("2026-09-10");
-    expect(screen.getByText(/7 days past the date$/)).toBeTruthy();
+    expect(screen.getByText(/7 days overdue$/)).toBeTruthy();
   });
 
   // The date and the count are two halves of one line, so they have to name

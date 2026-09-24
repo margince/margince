@@ -183,14 +183,14 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     stubApi();
     render(<VoiceDnaCard />);
     // The row names the sample; the zone under it is the control.
-    expect(await screen.findByLabelText("Your first writing sample")).toBe(
+    expect(await screen.findByLabelText("First writing sample")).toBe(
       fileInput(),
     );
     // What to add, why, and how much: the part onboarding narrates and a bare
     // row used to leave out.
-    expect(screen.getByText("What works best")).toBeTruthy();
-    expect(screen.getByText("Why this matters")).toBeTruthy();
-    expect(screen.getByText(/800 words minimum/)).toBeTruthy();
+    expect(screen.getByText("Best samples")).toBeTruthy();
+    expect(screen.getByText("Why add samples")).toBeTruthy();
+    expect(screen.getByText(/at least 800 words/)).toBeTruthy();
     // No paste box: files are the one way in here.
     expect(screen.queryByRole("textbox")).toBeNull();
   });
@@ -198,7 +198,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
   it("mints exactly one profile on the first add and then shows the build control", async () => {
     const calls = stubApi();
     render(<VoiceDnaCard />);
-    await screen.findByLabelText("Your first writing sample");
+    await screen.findByLabelText("First writing sample");
     await userEvent.upload(
       fileInput(),
       new File(["Short sentences. Concrete nouns."], "letter.txt", {
@@ -210,7 +210,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     // so its appearance is the proof the card left the dead end. Before any
     // build it is named for the first build, not a rebuild.
     expect(
-      await screen.findByRole("button", { name: /Build my Voice DNA/ }),
+      await screen.findByRole("button", { name: /Build Voice DNA/ }),
     ).toBeTruthy();
     expect(calls.filter((c) => c === "POST /voice-profiles")).toHaveLength(1);
     expect(calls).toContain("POST /voice-profiles/vp-1/sources");
@@ -224,11 +224,9 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     stubApi({ voice_profile: ["read"] });
     render(<VoiceDnaCard />);
     expect(
-      await screen.findByText(
-        /you do not have permission to change your Voice DNA/i,
-      ),
+      await screen.findByText(/Your role cannot change Voice DNA/i),
     ).toBeTruthy();
-    expect(screen.queryByLabelText("Your first writing sample")).toBeNull();
+    expect(screen.queryByLabelText("First writing sample")).toBeNull();
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
@@ -246,7 +244,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     }
     // The preferences and the derived text are rows inside the voice card once
     // there is a profile; with none, neither is named at all.
-    for (const absent of ["Your preferences", "Your derived voice"]) {
+    for (const absent of ["Preferences", "Derived voice"]) {
       expect(screen.queryByText(absent)).toBeNull();
     }
   });
@@ -296,8 +294,8 @@ describe("the Settings Voice DNA card with a profile", () => {
     if (!voice) {
       throw new Error("the voice heading is not inside a card");
     }
-    expect(within(voice).getByText("Your preferences")).toBeTruthy();
-    expect(within(voice).getByText("Your derived voice")).toBeTruthy();
+    expect(within(voice).getByText("Preferences")).toBeTruthy();
+    expect(within(voice).getByText("Derived voice")).toBeTruthy();
   });
 
   it("keeps the corpus and the way to add to it in one card", async () => {
@@ -330,7 +328,7 @@ describe("the Settings Voice DNA card with a profile", () => {
     // The preferences box takes its name from the row that names the decision,
     // so the words on screen and the name it announces are one string.
     expect(
-      await screen.findByRole("textbox", { name: "Your preferences" }),
+      await screen.findByRole("textbox", { name: "Preferences" }),
     ).toBeTruthy();
     // The file control takes its name from the row above the zone.
     expect(screen.getByLabelText("Add writing samples")).toBe(fileInput());
@@ -372,7 +370,7 @@ describe("a build that fails", () => {
   async function pressRebuild() {
     render(<VoiceDnaCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /Build my Voice DNA/ }),
+      await screen.findByRole("button", { name: /Build Voice DNA/ }),
     );
   }
 
@@ -430,7 +428,7 @@ describe("a build that fails", () => {
 
     await pressRebuild();
 
-    const running = await screen.findByText(/Building your voice now/);
+    const running = await screen.findByText(/Building voice\./);
     expect(running).toBeTruthy();
     // The wait outlives this page, and a reader who does not know that sits
     // and watches it.
@@ -438,7 +436,7 @@ describe("a build that fails", () => {
 
     // The button is not natively disabled — that would drop it out of the tab
     // order mid-wait — but it announces itself busy and takes no second press.
-    const button = screen.getByRole("button", { name: /Build my Voice DNA/ });
+    const button = screen.getByRole("button", { name: /Build Voice DNA/ });
     expect(button.getAttribute("aria-busy")).toBe("true");
     expect(button.hasAttribute("disabled")).toBe(false);
 
@@ -483,7 +481,7 @@ describe("a build that fails", () => {
     expect(await screen.findByText(detail)).toBeTruthy();
     // The old catch-all is gone, so a reader is never told to retry something
     // that cannot succeed until somebody raises a spending limit.
-    expect(screen.queryByText(/The build didn't finish/)).toBeNull();
+    expect(screen.queryByText(/Build did not finish/)).toBeNull();
   });
 
   // An older server, or an outcome the server had nothing to add about, still
@@ -519,7 +517,7 @@ describe("a build that fails", () => {
 
     await pressRebuild();
 
-    expect(await screen.findByText(/The build didn't finish/)).toBeTruthy();
+    expect(await screen.findByText(/Build did not finish/)).toBeTruthy();
   });
 
   it("shows the server's own cause when the server composed one", async () => {
@@ -562,7 +560,7 @@ describe("what the build button is called", () => {
     stubWith({ ...PROFILE, maturity: "provisional" });
     render(<VoiceDnaCard />);
     expect(
-      await screen.findByRole("button", { name: /Build my Voice DNA/ }),
+      await screen.findByRole("button", { name: /Build Voice DNA/ }),
     ).toBeTruthy();
   });
 

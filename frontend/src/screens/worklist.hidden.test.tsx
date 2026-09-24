@@ -75,10 +75,10 @@ describe("the hidden-backlog panel", () => {
     draw(backlog({ clear: false, past_horizon: 3, not_sales: 7 }));
 
     await waitFor(() =>
-      expect(screen.getByText("Too old for the queue")).toBeTruthy(),
+      expect(screen.getByText("Too old for the Worklist")).toBeTruthy(),
     );
     expect(screen.getByText("3 waiting")).toBeTruthy();
-    expect(screen.getByText("Judged not sales work")).toBeTruthy();
+    expect(screen.getByText("Marked not sales work")).toBeTruthy();
     expect(screen.getByText("7 waiting")).toBeTruthy();
   });
 
@@ -88,10 +88,10 @@ describe("the hidden-backlog panel", () => {
     draw(backlog({ clear: false, past_horizon: 3 }));
 
     await waitFor(() =>
-      expect(screen.getByText("Too old for the queue")).toBeTruthy(),
+      expect(screen.getByText("Too old for the Worklist")).toBeTruthy(),
     );
     expect(screen.queryByText("Set aside by you")).toBeNull();
-    expect(screen.queryByText("Judged not sales work")).toBeNull();
+    expect(screen.queryByText("Marked not sales work")).toBeNull();
   });
 
   // THE failure this whole reading exists for. A read cut short by its own scan
@@ -102,7 +102,7 @@ describe("the hidden-backlog panel", () => {
     draw(backlog({ clear: false, truncated: true, past_horizon: 2 }));
 
     await waitFor(() =>
-      expect(screen.getByText(/floors, not totals/)).toBeTruthy(),
+      expect(screen.getByText(/Each figure is a minimum/)).toBeTruthy(),
     );
   });
 
@@ -116,9 +116,9 @@ describe("the hidden-backlog panel", () => {
     // nothing at all, which is how the first version of this test survived a
     // mutation that dropped the error state entirely.
     await waitFor(() =>
-      expect(screen.getByText(/Could not be loaded/)).toBeTruthy(),
+      expect(screen.getByText(/Some data did not load/)).toBeTruthy(),
     );
-    expect(screen.queryByText(/Nothing is being held back/)).toBeNull();
+    expect(screen.queryByText(/Nothing is hidden/)).toBeNull();
   });
 
   // The same failure from the other side: the READING is gone from the body on
@@ -129,7 +129,7 @@ describe("the hidden-backlog panel", () => {
   it("withholds the queue's own figure when a refetch fails under it", async () => {
     const { client } = draw(backlog({ clear: false, past_horizon: 3 }));
     await waitFor(() =>
-      expect(screen.getByText("The queue itself carries 12.")).toBeTruthy(),
+      expect(screen.getByText("The Worklist shows 12.")).toBeTruthy(),
     );
 
     vi.stubGlobal(
@@ -141,16 +141,16 @@ describe("the hidden-backlog panel", () => {
     });
 
     await waitFor(() =>
-      expect(screen.getByText(/Could not be loaded/)).toBeTruthy(),
+      expect(screen.getByText(/Some data did not load/)).toBeTruthy(),
     );
-    expect(screen.queryByText(/The queue itself carries/)).toBeNull();
+    expect(screen.queryByText(/The Worklist shows/)).toBeNull();
   });
 
   it("says so plainly when nothing is held back", async () => {
     draw(backlog());
 
     await waitFor(() =>
-      expect(screen.getByText(/Nothing is being held back/)).toBeTruthy(),
+      expect(screen.getByText(/Nothing is hidden/)).toBeTruthy(),
     );
   });
 

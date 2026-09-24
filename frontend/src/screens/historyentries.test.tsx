@@ -109,7 +109,7 @@ describe("putting one change back", () => {
       <RecordHistory kind="deal" id="d1" currency="EUR" restore={RESTORE} />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /put back/i }));
+    await user.click(await screen.findByRole("button", { name: /^undo$/i }));
 
     await waitFor(() => expect(restoreCalls(fetchMock)).toHaveLength(1));
     const [request] = restoreCalls(fetchMock);
@@ -138,9 +138,9 @@ describe("putting one change back", () => {
       <RecordHistory kind="deal" id="d1" currency="EUR" restore={RESTORE} />,
     );
 
-    const button = await screen.findByRole("button", { name: /put back/i });
+    const button = await screen.findByRole("button", { name: /^undo$/i });
     expect(button.hasAttribute("disabled")).toBe(true);
-    expect(screen.getByText(/changed these fields since/i)).toBeTruthy();
+    expect(screen.getByText(/fields have changed since/i)).toBeTruthy();
   });
 
   // The same words on both sides of the press. A refusal discovered at press
@@ -165,9 +165,9 @@ describe("putting one change back", () => {
       <RecordHistory kind="deal" id="d1" currency="EUR" restore={RESTORE} />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /put back/i }));
+    await user.click(await screen.findByRole("button", { name: /^undo$/i }));
 
-    expect(await screen.findByText(/has already been put back/i)).toBeTruthy();
+    expect(await screen.findByText(/was already undone/i)).toBeTruthy();
   });
 
   // The record moved, not the change. The reader is told so and the history is
@@ -198,9 +198,9 @@ describe("putting one change back", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /put back/i }));
+    await user.click(await screen.findByRole("button", { name: /^undo$/i }));
 
-    expect(await screen.findByText(/record moved/i)).toBeTruthy();
+    expect(await screen.findByText(/record changed while open/i)).toBeTruthy();
     expect(reread).toHaveBeenCalled();
   });
 
@@ -214,15 +214,15 @@ describe("putting one change back", () => {
       <RecordHistory kind="deal" id="d1" currency="EUR" restore={RESTORE} />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /put back/i }));
+    await user.click(await screen.findByRole("button", { name: /^undo$/i }));
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/2 fields/i)).toBeTruthy();
+    expect(within(dialog).getByText(/before this change: 2/i)).toBeTruthy();
     expect(within(dialog).getByText("Value")).toBeTruthy();
     expect(within(dialog).getByText("Name")).toBeTruthy();
     expect(restoreCalls(fetchMock)).toHaveLength(0);
 
-    await user.click(within(dialog).getByRole("button", { name: /put back/i }));
+    await user.click(within(dialog).getByRole("button", { name: /^undo$/i }));
     await waitFor(() => expect(restoreCalls(fetchMock)).toHaveLength(1));
   });
 
@@ -240,6 +240,6 @@ describe("putting one change back", () => {
     );
 
     expect(await screen.findByText("Value")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /put back/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^undo$/i })).toBeNull();
   });
 });

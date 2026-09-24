@@ -19,13 +19,13 @@ it("shows only the selected window's server date, and tolerates older servers", 
       <ImportWindowPicker value="120m" onChange={onChange} preview={preview} />
     </LocaleProvider>,
   );
-  expect(screen.getByText(/Import emails since/)).toHaveTextContent("2016");
+  expect(screen.getByText(/Imports email since/)).toHaveTextContent("2016");
   rerender(
     <LocaleProvider initial="en">
       <ImportWindowPicker value="84m" onChange={onChange} preview={preview} />
     </LocaleProvider>,
   );
-  expect(screen.queryByText(/Import emails since/)).toBeNull();
+  expect(screen.queryByText(/Imports email since/)).toBeNull();
   rerender(
     <LocaleProvider initial="en">
       <ImportWindowPicker
@@ -39,7 +39,7 @@ it("shows only the selected window's server date, and tolerates older servers", 
       />
     </LocaleProvider>,
   );
-  expect(screen.queryByText(/Import emails since/)).toBeNull();
+  expect(screen.queryByText(/Imports email since/)).toBeNull();
   expect(
     screen.getByRole("combobox", { name: "Import window" }),
   ).toHaveTextContent("10 years");

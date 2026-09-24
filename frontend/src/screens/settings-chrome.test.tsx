@@ -80,7 +80,7 @@ describe("SettingsScreen page layout", () => {
       "Members",
       "Fields",
       "Pipelines",
-      "Privacy & retention",
+      "Privacy and retention",
     ]) {
       expect(screen.getByRole("link", { name: label })).toBeTruthy();
     }

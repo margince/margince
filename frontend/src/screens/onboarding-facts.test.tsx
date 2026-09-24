@@ -119,8 +119,7 @@ const MANY = Array.from({ length: 120 }, (_, index) =>
 
 // The ceiling as the reader is told it, spelled once: the claim is that this
 // sentence reaches a screen reader exactly one time per surface stack.
-const CAP_SENTENCE =
-  "You can save up to 100 facts. Clear one to make room for another.";
+const CAP_SENTENCE = "Up to 100 facts can be saved. Clear one to add another.";
 
 // Confidence RISES with wire position, so "the first N on the wire" and "the N
 // most certain" name different facts throughout: a seed that trusted the wire
@@ -579,7 +578,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     renderTriage([]);
 
     expect(
-      screen.getByText("Nothing more needed — you can continue."),
+      screen.getByText("Nothing more needed. You can continue."),
     ).toBeInTheDocument();
   });
 
@@ -676,7 +675,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     // No triangle glyph on an advisory row — only its own name — but the
     // tier still reaches a screen reader on the row itself.
     expect(
-      within(buyingIntents).getByText("Worth a check", {
+      within(buyingIntents).getByText("To review", {
         selector: ".sr-only",
       }),
     ).toBeInTheDocument();
@@ -757,7 +756,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     await user.click(row);
 
     expect(
-      screen.getByRole("textbox", { name: /What do you sell\?/ }),
+      screen.getByRole("textbox", { name: /Products and services/ }),
     ).toHaveValue(LONG_OFFER);
   });
 
@@ -899,7 +898,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     expect(named).toEqual([
       "Company name",
       "Registered address",
-      "Register / VAT ID",
+      "Register and VAT ID",
       "Legal form",
       "Register court",
     ]);
@@ -925,13 +924,13 @@ describe("CompanyConfirmCard as a triage surface", () => {
     );
 
     const advisoryItem = within(nav).getByRole("button", {
-      name: /Register court.*Worth a check/,
+      name: /Register court.*To review/,
     });
     expect(advisoryItem.querySelector("span:not(.sr-only)")).toHaveTextContent(
       "Register court",
     );
     expect(advisoryItem.querySelector(".sr-only")).toHaveTextContent(
-      "Worth a check",
+      "To review",
     );
   });
 
@@ -1146,10 +1145,8 @@ describe("CompanyConfirmCard as a triage surface", () => {
   it("keeps the read's coverage honesty in the tail, since it is provenance, not a company fact", () => {
     renderTriage([], readWith([]));
 
-    expect(
-      screen.getByText("What I read, and what I skipped"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Background, not work")).toBeInTheDocument();
+    expect(screen.getByText("Pages read and skipped")).toBeInTheDocument();
+    expect(screen.getByText("Background information")).toBeInTheDocument();
     expect(
       screen.queryByText("Everything else I found"),
     ).not.toBeInTheDocument();
@@ -1230,7 +1227,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     expect(
       within(row).getByText(
-        "Not stated on your legal or imprint page. Yours to add.",
+        "Not stated on your legal notice or imprint page. Add it manually.",
       ),
     ).toBeInTheDocument();
   });
@@ -1247,7 +1244,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     expect(
       within(row).getByText(
-        "I did not find a legal or imprint page on your site to check. Yours to add.",
+        "I found no legal notice or imprint page on your site. Add it manually.",
       ),
     ).toBeInTheDocument();
   });
@@ -1692,7 +1689,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     );
 
     await user.click(
-      screen.getByRole("checkbox", { name: "Save the fact: Founded 2011" }),
+      screen.getByRole("checkbox", { name: "Save fact: Founded 2011" }),
     );
 
     expect(setSelectedFactKeys).toHaveBeenCalledWith([

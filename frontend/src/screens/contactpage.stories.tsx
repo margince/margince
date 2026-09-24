@@ -478,7 +478,7 @@ const nothingNeededMoment: components["schemas"]["ContactMoment"] = {
   ],
   recommended_action: {
     kind: "open_record",
-    label: "Open the record",
+    label: "Open record",
     destination: {
       surface: "record",
       entity_type: "contact",
@@ -692,7 +692,7 @@ function Page({
 export const PageStory: Story = { name: "Page", render: () => <Page /> };
 
 // A provider is connected and nobody has looked this contact up, so the tab
-// strip carries a dot on "Data & tools". The dot is decorative — the panel
+// strip carries a dot on "Data and tools". The dot is decorative — the panel
 // behind it says the same thing in words — so this story is about whether the
 // invitation is VISIBLE from a page the reader is already on.
 const neverBought: View = {

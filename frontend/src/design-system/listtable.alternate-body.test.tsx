@@ -56,7 +56,7 @@ describe("ListTable alternate body paging ownership", () => {
       </LocaleProvider>,
     );
 
-    expect(screen.getByText("1–1 of 1 rows loaded so far")).toBeTruthy();
+    expect(screen.getByText("1 to 1 of 1 rows loaded")).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "Pages" })).toBeTruthy();
   });
 });

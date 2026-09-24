@@ -295,7 +295,7 @@ function render(ui: ReactNode) {
 
 async function submitWebsite() {
   const composer = await screen.findByRole("textbox", {
-    name: /Your website address/,
+    name: /Website address/,
   });
   await userEvent.type(composer, "gradion.com{Enter}");
 }
@@ -405,7 +405,7 @@ describe("the conversational company act", () => {
 
     // Only the selection-authorized change lands in the review; the model's
     // extra proposal never auto-applies.
-    await screen.findByRole("heading", { name: "It will not guess at these." });
+    await screen.findByRole("heading", { name: "Questions for you" });
     const digest = digestElement();
     await waitFor(() => {
       expect(
@@ -442,11 +442,11 @@ describe("the conversational company act", () => {
     // Confirm presses whatever is open, and an early press names the three
     // rather than going anywhere: nothing is posted.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Confirm the profile" }),
+      await screen.findByRole("button", { name: "Confirm profile" }),
     );
     expect(
       await screen.findByText(
-        "Still needed: Company name, What do you sell?, Ideal customer",
+        "Still needed: Company name, Products and services, Ideal customer",
       ),
     ).toBeTruthy();
     expect(requestsTo(calls, "/confirm", "POST")).toHaveLength(0);
@@ -460,7 +460,7 @@ describe("the conversational company act", () => {
     }
     expect(blockingLabels).toEqual([
       "Company name",
-      "What do you sell?",
+      "Products and services",
       "Ideal customer",
     ]);
   });
@@ -484,7 +484,7 @@ describe("the conversational company act", () => {
     await submitWebsite();
 
     const accept = (await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     })) as HTMLButtonElement;
 
     // The deck's own control carries the question as its accessible name.
@@ -494,7 +494,7 @@ describe("the conversational company act", () => {
     // away mid-word, which is why the card stays put until it is dismissed.
     const values: Readonly<Record<string, string>> = {
       "Company name": "Gradion",
-      "What do you sell?": "Revenue software for manufacturers",
+      "Products and services": "Revenue software for manufacturers",
       "Ideal customer": "Mid-market manufacturers",
     };
     for (const _ of Object.keys(values)) {
@@ -520,7 +520,7 @@ describe("the conversational company act", () => {
     await submitWebsite();
 
     const accept = (await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -548,14 +548,16 @@ describe("the conversational company act", () => {
     // heading is the first proof the confirm landed, and Continue carries the
     // installation's prefilled reporting basis forward unchanged.
     await screen.findByRole("heading", {
-      name: "First, the basis.",
+      name: "Set the reporting basis",
     });
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
-      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
+      await screen.findByRole("radio", {
+        name: /Yes, I will work in Margince/,
+      }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
+    expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
   });
 
   // The invariant the double-confirm dead end violated: a 409 always leaves
@@ -579,7 +581,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -589,7 +591,7 @@ describe("the conversational company act", () => {
     // The dedicated notice, not the raw server detail glued into the
     // generic "I could not save" sentence.
     expect(
-      await screen.findByText(/Your review just picked up newer information/),
+      await screen.findByText(/Your review received newer information/),
     ).toBeTruthy();
     expect(screen.queryByText(/draft changed/)).toBeNull();
     // The read AND the proposal are both re-fetched so the NEXT retry sends
@@ -623,7 +625,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -638,7 +640,7 @@ describe("the conversational company act", () => {
     // confirmation any more.
     expect(
       await screen.findByRole("heading", {
-        name: "First, the basis.",
+        name: "Set the reporting basis",
       }),
     ).toBeTruthy();
     expect(screen.queryByText(/already confirmed/)).toBeNull();
@@ -657,7 +659,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -670,7 +672,7 @@ describe("the conversational company act", () => {
     // re-check, so the machine is still sitting in the company act.
     expect(
       screen.queryByRole("heading", {
-        name: "Will you be working in Margince yourself?",
+        name: "Will you work in Margince yourself?",
       }),
     ).toBeNull();
   });
@@ -681,7 +683,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -697,14 +699,16 @@ describe("the conversational company act", () => {
     // heading is the first proof the confirm landed, and Continue carries the
     // installation's prefilled reporting basis forward unchanged.
     await screen.findByRole("heading", {
-      name: "First, the basis.",
+      name: "Set the reporting basis",
     });
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
-      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
+      await screen.findByRole("radio", {
+        name: /Yes, I will work in Margince/,
+      }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await screen.findByText(/Teach me how you write\./);
+    await screen.findByText(/Train your writing voice/);
 
     // The next act mounts its own shell. The rail, the brand line, the orb and
     // the runtime chip are already on screen by now — they are the frame, so
@@ -741,7 +745,7 @@ describe("the conversational company act", () => {
     // The act never stalls: the review still lands, built from the
     // site-read snapshot itself rather than the failed proposal.
     expect(
-      await screen.findByRole("button", { name: "Confirm the profile" }),
+      await screen.findByRole("button", { name: "Confirm profile" }),
     ).toBeTruthy();
     // "Gradion GmbH" names both the identity summary and its own row.
     expect(
@@ -760,11 +764,11 @@ describe("the conversational company act", () => {
     // another URL, or tell me directly") is now the two controls in front of
     // the reader rather than a second sentence repeating them.
     expect(
-      await screen.findByText(/I lost the connection while reading/),
+      await screen.findByText(/The connection dropped during reading/),
     ).toBeTruthy();
-    expect(await screen.findByLabelText(/Your website address/)).toBeTruthy();
+    expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: /Enter the details yourself/ }),
+      screen.getByRole("button", { name: /Enter details manually/ }),
     ).toBeTruthy();
   });
 
@@ -788,7 +792,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
 
-    await screen.findByRole("heading", { name: "It will not guess at these." });
+    await screen.findByRole("heading", { name: "Questions for you" });
     const digest = digestElement();
     // "Gradion GmbH" names both the identity summary at the top of the
     // digest and its own settled line further down.
@@ -836,7 +840,7 @@ describe("the conversational company act", () => {
 
     await userEvent.click(screen.getByRole("radio", { name: /Gradion GmbH/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await screen.findByRole("heading", { name: "It will not guess at these." });
+    await screen.findByRole("heading", { name: "Questions for you" });
 
     // The review's own textboxes are the deck's field controls — an answer
     // to a specific, asked question — never a free-text composer beside it.
@@ -918,7 +922,7 @@ describe("the conversational company act", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(
       await screen.findByRole("heading", {
-        name: "It will not guess at these.",
+        name: "Questions for you",
       }),
     ).toBeTruthy();
     expect(

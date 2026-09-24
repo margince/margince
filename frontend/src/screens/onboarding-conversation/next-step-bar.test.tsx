@@ -266,7 +266,7 @@ function stubApi(proposal: Proposal) {
 
 async function submitWebsite() {
   const composer = await screen.findByRole("textbox", {
-    name: /Your website address/,
+    name: /Website address/,
   });
   await userEvent.type(composer, "gradion.com{Enter}");
 }

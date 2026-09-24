@@ -81,7 +81,7 @@ it("explains pooled tokens, UTC reset and unchanged model selection", async () =
     await screen.findByText(/22,453,486 of 24,000,000 tokens/),
   ).toBeTruthy();
   expect(
-    screen.getByText(/not an individual quota or a dollar spending cap/),
+    screen.getByText(/Not an individual quota or a dollar spending cap/),
   ).toBeTruthy();
   expect(await screen.findByText("Same model selection")).toBeTruthy();
   expect(screen.getByText(/UTC/)).toBeTruthy();
@@ -126,9 +126,7 @@ it("keeps a rejected draft visible after a concurrent edit", async () => {
     ).not.toBeDisabled(),
   );
   await user.click(screen.getByRole("button", { name: "Save allowance" }));
-  expect(
-    await screen.findByText("The change could not be applied"),
-  ).toBeTruthy();
+  expect(await screen.findByText("Change not applied")).toBeTruthy();
   expect(screen.getByLabelText("Tokens per full user per month")).toHaveValue(
     "12000000",
   );
@@ -151,7 +149,7 @@ it.each([
   expect(await screen.findByText("AI by activity")).toBeTruthy();
   expect(
     screen.getByText(
-      "Only a reader who holds both AI diagnostics read and AI allowance read can see which features are live right now.",
+      "Only a user with both AI diagnostics read and AI allowance read can see which features are live now.",
     ),
   ).toBeTruthy();
   expect(screen.queryByRole("table")).toBeNull();
@@ -219,7 +217,7 @@ it("reports a failed carrier reading as unavailable", async () => {
   await user.click(
     await screen.findByText("Recorded work waiting on the allowance"),
   );
-  expect(screen.getByText(/Account scans: Unavailable/)).toBeTruthy();
+  expect(screen.getByText(/Company scans: Unavailable/)).toBeTruthy();
 });
 it("explains the one-user floor when there are no eligible full users", async () => {
   mount(undefined, false, {
@@ -228,7 +226,7 @@ it("explains the one-user floor when there are no eligible full users", async ()
   });
   expect(
     await screen.findByText(
-      /With no eligible users, the allowance counts one user/,
+      /With no eligible users, the allowance counts 1 user/,
     ),
   ).toBeTruthy();
 });
