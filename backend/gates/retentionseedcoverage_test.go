@@ -50,7 +50,9 @@ var seedRowRE = regexp.MustCompile(`\(\s*'([a-z_]+)'\s*,\s*(?:'([a-z_]+)'|NULL)\
 // runtime value, so parsing it is the honest shape as well as the permitted one.
 var selectorKeyRE = regexp.MustCompile("(?m)^\\t\"([a-z_]+/[a-z_]*)\": `")
 
-// actionableScopes is every scope the engine has a selector for.
+// actionableScopes reads the scope keys off the engine's selector table. It
+// claims no completeness beyond what the parse finds: an empty result fails
+// loudly below, because a gate reading nothing passes over everything.
 func actionableScopes(t *testing.T) []string {
 	t.Helper()
 	src, err := os.ReadFile("internal/modules/privacy/retentionselectors.go")
