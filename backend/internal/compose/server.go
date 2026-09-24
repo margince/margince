@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
-	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
@@ -287,18 +286,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// released into another would read, from the human's side, as an approval
 	// that did nothing.
 	srv.approvalsHandlers = approvalsHandlersWithEffects(pool, srv.volumeMeter, log)
-	// The day's surface reads the SAME approvals engine the inbox decides
-	// through, so a card here and a row there are one queue rather than two
-	// readings of it.
-	staged := approvalsServiceWithEffects(pool)
-	srv.attentionHandlers = newAttentionHandlers(pool, staged)
-	// The machinery's receipt: what ran without being asked, in the window since
-	// the reader last looked. It reads the same clock the rest of the surface
-	// does, so "since your brief" means the same instant everywhere, and the
-	// same staged queue the day's surface reads, so a decision counted here and
-	// a card there are one thing.
-	srv.magicService = newMagicService(pool, staged, time.Now)
-	srv.magicHandlers = magic.NewHandlers(srv.magicService)
+	srv.wireStagedSurfaces(pool)
 	srv.wireAnalyticsSurface(pool)
 	srv.wireCaptureSettingsSurface(pool)
 	srv.wireExportSurface(pool, log)
