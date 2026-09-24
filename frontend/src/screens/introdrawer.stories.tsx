@@ -54,7 +54,7 @@ const meta: Meta<typeof IntroDrawer> = {
   component: IntroDrawer,
   play: async () => {
     const drawer = within(await screen.findByRole("dialog"));
-    await drawer.findByText("Why you are asking");
+    await drawer.findByText("Reason for request");
   },
 };
 export default meta;

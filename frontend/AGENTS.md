@@ -3,7 +3,7 @@
 Scoped to this directory. The root [AGENTS.md](../AGENTS.md) still governs
 everything else: the branch/PR loop, the license header, the commit rules. (The
 `CLAUDE.md` beside it is a one-line import of that file, not a second rulebook.)
-Three things are frontend-only and none has a gate that will catch it for
+Four things are frontend-only and none has a gate that will catch it for
 you, so they are written down here.
 
 `craft static` sweeps the Go trees only. No `*.test.tsx` in this repo is in
@@ -75,6 +75,13 @@ Why, plus the token table and `ProvenanceTag`, the rule at its smallest:
 [`src/design-system/README.md`](src/design-system/README.md). `check-ds-purity.sh`
 holds that colours come from tokens; nothing can tell you the token you picked
 means the wrong thing.
+
+## English copy follows the style page
+
+English catalog text follows [`docs/reference/ui-copy-style.md`](../docs/reference/ui-copy-style.md),
+and German and Vietnamese are translated from it. `copy-style.test.ts` holds
+only the mechanical rules; tone, vocabulary, length and message shape are yours
+to check against that page before you add or change a value.
 
 ## A test may not depend on how busy the machine is
 

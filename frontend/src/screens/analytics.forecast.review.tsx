@@ -1,22 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { isEntityKind } from "../app/entity";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button } from "../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { DataTable } from "../design-system/datatable";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   type ResolveAnswer,
   ResolveSheet,
   type ResolveSheetLabels,
 } from "../design-system/resolvesheet";
-import { formatMoneyOrAbsent } from "../format/format";
+import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type Assurance = components["schemas"]["ForecastAssurance"];
+type Resolution = { id: string; answer: ResolveAnswer };
+type CheckColumn = {
+  key: string;
+  header: string;
+  render: (check: InputCheck) => ReactNode;
+};
 
 // What should be checked before the call.
 //
@@ -108,9 +116,7 @@ function ReviewPanel({
               <p className="sub">{t("review.nothingToCheck")}</p>
             </PanelBody>
           ) : (
-            found.map((check) => (
-              <CheckRow key={check.id} check={check} locale={locale} />
-            ))
+            <CheckTable checks={found} locale={locale} title={title} />
           )
         }
       </QueryGate>
@@ -195,24 +201,155 @@ export function sourceName(source: string, t: ReturnType<typeof useT>): string {
   }
 }
 
-// One finding, and the way to answer it.
-function CheckRow({
-  check,
+// The findings, and the one sheet that answers whichever was picked.
+//
+// The order is the server's: severity first, then money at stake, which is the
+// endpoint's stated contract. Re-sorting here would be a second opinion on it.
+function CheckTable({
+  checks,
   locale,
-}: Readonly<{ check: InputCheck; locale: Locale }>) {
+  title,
+}: Readonly<{ checks: InputCheck[]; locale: Locale; title: string }>) {
   const t = useT();
-  const client = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const zone = useRecordZone();
+  // Closing keeps `id`, so the sheet's key holds and the Modal closes and
+  // returns focus normally; a DIFFERENT finding changes the key and starts blank.
+  const [sheet, setSheet] = useState<{ id: string; open: boolean } | null>(
+    null,
+  );
+  const table = useRef<HTMLDivElement>(null);
+  const opener = useRef<{ button: HTMLElement; row: number } | null>(null);
+  const close = () => setSheet((was) => was && { ...was, open: false });
+  // A save outlives its sheet: the reader may cancel, open another finding and
+  // still be answering it when the first save lands, so only its own sheet closes.
+  const resolve = useResolveCheck((id) =>
+    setSheet((was) => (was?.id === id ? { ...was, open: false } : was)),
+  );
+  // A finding a refetch took away is no longer the server's to answer, so the
+  // sheet follows the list rather than the click that opened it.
+  const open =
+    sheet?.open === true && checks.some((check) => check.id === sheet.id);
 
-  const resolve = useMutation({
-    // The answer travels as a VARIABLE. Read from the closure it would be
-    // whatever the last render saw, which is the wrong answer exactly when a
-    // save races a refetch.
-    mutationFn: async (answer: ResolveAnswer) => {
+  const answerButtons = (): HTMLElement[] => [
+    ...(table.current?.querySelectorAll<HTMLElement>(".cell-actions button") ??
+      []),
+  ];
+  const answer = (check: InputCheck, button: HTMLElement) => {
+    opener.current = { button, row: answerButtons().indexOf(button) };
+    resolve.reset();
+    setSheet({ id: check.id, open: true });
+  };
+  // An answered finding leaves the list with its own button. The Answer now at
+  // its row index is the FOLLOWING finding's (the last one's when it was last),
+  // so a keyboard reader moves down the list rather than back up it.
+  const focusAfterClose = (): HTMLElement | null => {
+    const from = opener.current;
+    if (from === null || from.button.isConnected) {
+      return from?.button ?? null;
+    }
+    const left = answerButtons();
+    return left[Math.min(from.row, left.length - 1)] ?? null;
+  };
+
+  return (
+    <>
+      <PanelBody>
+        <div ref={table}>
+          <DataTable<InputCheck>
+            label={title}
+            rows={checks}
+            rowKey={(check) => check.id}
+            columns={checkColumns(t, locale, zone, answer)}
+          />
+        </div>
+      </PanelBody>
+      <ResolveSheet
+        key={sheet?.id}
+        open={open}
+        pending={resolve.isPending}
+        error={resolve.error}
+        labels={sheetLabels(t)}
+        returnFocusTo={focusAfterClose}
+        onSubmit={(given) => {
+          if (sheet !== null) {
+            resolve.mutate({ id: sheet.id, answer: given });
+          }
+        }}
+        onClose={close}
+      />
+    </>
+  );
+}
+
+function checkColumns(
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  zone: string,
+  answer: (check: InputCheck, button: HTMLElement) => void,
+): CheckColumn[] {
+  return [
+    {
+      key: "severity",
+      header: t("review.colSeverity"),
+      render: (check) => <SeverityBadge severity={check.severity} />,
+    },
+    {
+      key: "finding",
+      header: t("review.colFinding"),
+      render: (check) => t(checkLabel(check.type)),
+    },
+    {
+      key: "deal",
+      header: t("review.colDeal"),
+      render: (check) => <SubjectCell check={check} />,
+    },
+    {
+      key: "stake",
+      header: t("review.colAtStake"),
+      render: (check) => (
+        <span className="t-num">
+          {formatMoneyOrAbsent(
+            check.affected_minor ?? null,
+            check.currency ?? "",
+            locale,
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "since",
+      // The record's clock, not the reader's: colleagues quote this date to
+      // each other, and two of them must read the same day.
+      header: t("review.colSeenSince"),
+      render: (check) => formatDate(check.first_seen_at, locale, zone),
+    },
+    {
+      key: "answer",
+      header: t("table.actions"),
+      render: (check) => (
+        <div className="cell-actions">
+          <Button onClick={(event) => answer(check, event.currentTarget)}>
+            {t("review.answer")}
+          </Button>
+        </div>
+      ),
+    },
+  ];
+}
+
+// The answer to one finding, sent.
+//
+// The finding and the answer travel as VARIABLES. Read from the closure they
+// would be whatever the last render saw, which is the wrong finding exactly
+// when a save races a refetch.
+function useResolveCheck(onResolved: (id: string) => void) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, answer }: Resolution) => {
       const { error } = await api.POST(
         "/forecast/assurance/exceptions/{id}/resolve",
         {
-          params: { path: { id: check.id } },
+          params: { path: { id } },
           body: {
             outcome: answer.outcome,
             reason: answer.reason,
@@ -225,49 +362,45 @@ function CheckRow({
         throwProblem(error);
       }
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, { id }) => {
       // Both lists move: the finding leaves this one, and the run's readiness
       // may change with it.
       await client.invalidateQueries({ queryKey: ["input-checks"] });
       await client.invalidateQueries({ queryKey: ["forecast-assurance"] });
-      setOpen(false);
+      onResolved(id);
     },
   });
+}
 
+// How urgent a finding is, as a word in the tone the rest of the product gives
+// that urgency.
+function SeverityBadge({
+  severity,
+}: Readonly<{ severity: InputCheck["severity"] }>) {
+  const t = useT();
+  const tone = { high: "danger", medium: "warning", low: "default" } as const;
+  const label = {
+    high: "review.severityHigh",
+    medium: "review.severityMedium",
+    low: "review.severityLow",
+  } as const;
+  return <Badge tone={tone[severity]}>{t(label[severity])}</Badge>;
+}
+
+// WHICH deal. Without it a manager reading the review before a call knew
+// something was wrong and not what it was wrong about. An older server sends no
+// subject, and a kind the registry has no screen for is left out the same way
+// the Worklist's own rows leave it: the cell stays empty.
+function SubjectCell({ check }: Readonly<{ check: InputCheck }>) {
+  if (!check.subject || !isEntityKind(check.subject.type)) {
+    return null;
+  }
   return (
-    <>
-      <PanelRow>
-        <span>{t(checkLabel(check.type))}</span>
-        {/* WHICH deal. The row named the check and the money and left the
-            record to a uuid on the wire, so a manager reading the review
-            before a call knew something was wrong and not what it was wrong
-            about. An older server sends no subject and the row reads as it
-            did, and so does a subject kind the registry has no screen for —
-            the same guard the Worklist's own rows apply. */}
-        {check.subject && isEntityKind(check.subject.type) && (
-          <EntityRef
-            kind={check.subject.type}
-            id={check.subject.id}
-            name={check.subject.label}
-          />
-        )}
-        <span className="t-num">
-          {formatMoneyOrAbsent(
-            check.affected_minor ?? null,
-            check.currency ?? "",
-            locale,
-          )}
-        </span>
-        <Button onClick={() => setOpen(true)}>{t("review.answer")}</Button>
-      </PanelRow>
-      <ResolveSheet
-        open={open}
-        pending={resolve.isPending}
-        labels={sheetLabels(t)}
-        onSubmit={(answer) => resolve.mutate(answer)}
-        onClose={() => setOpen(false)}
-      />
-    </>
+    <EntityRef
+      kind={check.subject.type}
+      id={check.subject.id}
+      name={check.subject.label}
+    />
   );
 }
 

@@ -380,7 +380,7 @@ it("marks a required Field once for the eye and once for the control", () => {
 // states the fact in words. A mark that carried the meaning alone would be
 // invisible to a screen reader and to a reader who cannot see the colour.
 const TABS = ["overview", "research"] as const;
-const TAB_LABELS = { overview: "Overview", research: "Data & tools" };
+const TAB_LABELS = { overview: "Overview", research: "Data and tools" };
 
 it("marks only the options told to carry one", () => {
   const { container } = render(
@@ -396,7 +396,7 @@ it("marks only the options told to carry one", () => {
   expect(marks.length).toBe(1);
   expect(
     screen
-      .getByRole("button", { name: "Data & tools" })
+      .getByRole("button", { name: "Data and tools" })
       .querySelector(".segmented-mark"),
   ).not.toBeNull();
 });
@@ -415,10 +415,10 @@ it("hides the mark from the accessibility tree", () => {
   // empty span, so a name assertion passes whether or not it is hidden and
   // proves nothing about the contract this test is named for.
   const mark = screen
-    .getByRole("button", { name: "Data & tools" })
+    .getByRole("button", { name: "Data and tools" })
     .querySelector(".segmented-mark");
   expect(mark?.getAttribute("aria-hidden")).toBe("true");
-  expect(screen.getByRole("button", { name: "Data & tools" })).toBeDefined();
+  expect(screen.getByRole("button", { name: "Data and tools" })).toBeDefined();
 });
 
 it("draws no mark when no option carries one", () => {

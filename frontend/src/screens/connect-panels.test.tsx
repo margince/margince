@@ -61,7 +61,7 @@ it("OAuthConnectPanel posts the given provider and redirects", async () => {
   });
   render(<OAuthConnectPanel provider="graph" onDismiss={() => {}} />);
   await userEvent.click(
-    screen.getByRole("button", { name: "Allow access to my Microsoft" }),
+    screen.getByRole("button", { name: "Connect Microsoft" }),
   );
   await waitFor(() =>
     expect(assign).toHaveBeenCalledWith("https://login.microsoftonline/x"),
@@ -130,7 +130,7 @@ it("OAuthReturnPanel reports a confirm-failure when the returning provider is no
   });
   render(<OAuthReturnPanel outcome="ok" provider="graph" onDone={vi.fn()} />);
   expect(
-    await screen.findByText("We couldn't confirm the connection."),
+    await screen.findByText("The connection could not be confirmed."),
   ).toBeTruthy();
 });
 
@@ -154,7 +154,7 @@ it("OAuthReturnPanel refuses to offer an import for an unrecognized provider seg
   });
   render(<OAuthReturnPanel outcome="ok" provider="bogus" onDone={vi.fn()} />);
   expect(
-    await screen.findByText("We couldn't confirm the connection."),
+    await screen.findByText("The connection could not be confirmed."),
   ).toBeTruthy();
   expect(screen.queryByText("Live and capturing")).toBeNull();
   // The backfill panel reads the run for the mailbox it is offered for; the
@@ -166,7 +166,7 @@ it("OAuthReturnPanel reports a confirm-failure when no connection came back", as
   installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
   render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
   expect(
-    await screen.findByText("We couldn't confirm the connection."),
+    await screen.findByText("The connection could not be confirmed."),
   ).toBeTruthy();
 });
 
@@ -178,19 +178,19 @@ it("OAuthReturnPanel names the remedy when the provider's API is not enabled", a
   installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
   render(<OAuthReturnPanel outcome="misconfigured" onDone={vi.fn()} />);
   expect(
-    await screen.findByText(/administrator needs to enable it/i),
+    await screen.findByText(en["connectors.oauthMisconfigured"]),
   ).toBeTruthy();
-  expect(screen.queryByText(/try connecting again/i)).toBeNull();
+  expect(screen.queryByText(en["ob.s4.connectRetry"])).toBeNull();
 });
 
 it("OAuthReturnPanel tells the reader what to accept when the provider declined", async () => {
   installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
   render(<OAuthReturnPanel outcome="rejected" onDone={vi.fn()} />);
-  expect(await screen.findByText(/accept every permission/i)).toBeTruthy();
+  expect(await screen.findByText(en["connectors.oauthRejected"])).toBeTruthy();
   // Retrying IS the right advice once the permissions are accepted, so this copy
   // may say so — what it must not do is fall back to the generic panel text that
   // names no remedy at all.
-  expect(screen.queryByText(/Head to Settings/i)).toBeNull();
+  expect(screen.queryByText(en["ob.s4.connectRetry"])).toBeNull();
 });
 
 // An outcome this panel does not know must still land on the honest generic
@@ -199,7 +199,7 @@ it("OAuthReturnPanel keeps the generic failure for an unrecognized outcome", asy
   installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
   render(<OAuthReturnPanel outcome="something-new" onDone={vi.fn()} />);
   expect(
-    await screen.findByText(/couldn't confirm the connection/i),
+    await screen.findByText(en["ob.s4.connectConfirmFailed"]),
   ).toBeTruthy();
 });
 

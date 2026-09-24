@@ -16,7 +16,7 @@ const task = {
 
 it("addresses the assigned reader while preserving the stored promise", () => {
   expect(readerTask(task, viewer, t).title).toBe(
-    "You need to prepare two options.",
+    "Your task: prepare two options.",
   );
   expect(task.title).toBe("Dana Weiss will prepare two options.");
 });
@@ -56,7 +56,7 @@ it("attributes the original change, including self and legacy unknowns", () => {
   expect(noticeDetail(notice, undefined, t)).toContain("Dana Weiss");
   expect(
     noticeDetail({ ...notice, notice_origin: undefined }, viewer, t),
-  ).toContain("We don’t know who made this change.");
+  ).toContain("Change author unknown.");
 });
 
 it("renders the recorded stages in each language without inventing a missing stage", () => {

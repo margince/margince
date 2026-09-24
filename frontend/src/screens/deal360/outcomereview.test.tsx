@@ -162,7 +162,7 @@ it("marks a review written about an earlier closing", async () => {
   // Reopening and reclosing makes a new outcome. The old review stays readable
   // and says which closing it was about, so nobody reads March's loss review
   // as a verdict on June's win.
-  expect(await screen.findByText(/About an earlier closing/)).toBeTruthy();
+  expect(await screen.findByText(/From an earlier close/)).toBeTruthy();
 });
 
 it("says which question went unanswered rather than dropping the row", async () => {

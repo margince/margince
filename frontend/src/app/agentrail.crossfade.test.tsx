@@ -8,15 +8,15 @@ import { plain, type SpokenLine } from "./ai-activity-speak";
 // The rail's own line, split out of agentrail.test.tsx because that file is over
 // the 1000-line ceiling this tree holds test files to.
 
-const IDLE = "Nothing needs you";
-const READING = "Reading companies";
+const IDLE = "Nothing needs attention";
+const READING = "Loading companies";
 const WRITING = "Saving the deal";
 
 /** The sentence that names a record, which is the one that carries a link. */
 const NAMED: SpokenLine = {
-  before: "I'm summarising ",
+  before: "Summarizing ",
   subject: { name: "Acme", route: { screen: "companies" } },
-  after: ".",
+  after: "…",
 };
 
 function live(container: HTMLElement): HTMLElement | null {

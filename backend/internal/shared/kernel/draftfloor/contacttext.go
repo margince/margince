@@ -152,10 +152,8 @@ func wordRune(r rune) bool {
 // AIProvenanceNotice tells the rep reviewing a draft that a model wrote it, in
 // the draft's own language, and it is the ONLY spelling of it in the tree.
 //
-// IT DISCHARGES NO DISCLOSURE DUTY, whatever its wording says: it asks the rep
-// to read the draft before sending, and that review is what keeps an Art. 50
-// duty from attaching in the first place. Why that is so, and what would make it
-// stop being so: docs/explanation/ai-provenance-notice.md.
+// It asks the rep to review the draft before sending and discharges no
+// disclosure duty; why: docs/explanation/ai-provenance-notice.md.
 //
 // WHO SEES IT depends on the surface, so do not generalise from one. The
 // composer and offer banners carry it as its own field beside the draft and
@@ -169,20 +167,16 @@ func wordRune(r rune) bool {
 // sentence appeared depended on which surface wrote the draft. That is the
 // shape of defect nobody notices until two drafts are compared side by side.
 //
-// The wording still calls itself an Art. 50 disclosure, which is the half this
-// rename did not fix — it is user-visible copy in three languages and a product
-// call. Tracked in margince#5920.
-//
 // Held by: TestTheAIProvenanceNoticeHasOneSpelling
 // (backend/gates/aiprovenancenotice_test.go)
 func AIProvenanceNotice(lang textlang.Lang) string {
 	switch lang {
 	case textlang.German:
-		return "Diese Nachricht wurde mit KI-Unterstützung verfasst (Offenlegung nach Art. 50 EU-KI-Verordnung)."
+		return "Mit KI-Unterstützung verfasst. Vor dem Senden prüfen."
 	case textlang.Vietnamese:
-		return "Tin nhắn này được soạn với sự hỗ trợ của AI (công bố theo Điều 50 Đạo luật AI của EU)."
+		return "Được soạn với sự hỗ trợ của AI. Kiểm tra trước khi gửi."
 	default:
-		return "This message was drafted with AI assistance (EU AI Act Art. 50 disclosure)."
+		return "Drafted with AI assistance. Review before sending."
 	}
 }
 

@@ -122,7 +122,7 @@ describe("a meeting that owes an answer", () => {
     expect(
       await screen.findByRole("button", { name: /update/i }),
     ).not.toBeNull();
-    expect(screen.getByRole("button", { name: /^cancelled$/i })).not.toBeNull();
+    expect(screen.getByRole("button", { name: /^canceled$/i })).not.toBeNull();
     // The two statuses that need prose are answers INSIDE the composer, not
     // verbs on the card: a row that still offered them would write one word and
     // close, which is the whole behaviour this replaced.
@@ -137,11 +137,9 @@ describe("a meeting that owes an answer", () => {
     renderUnderAToastRegion();
 
     await user.click(
-      await screen.findByRole("button", { name: /^cancelled$/i }),
+      await screen.findByRole("button", { name: /^canceled$/i }),
     );
-    expect(
-      await screen.findByText(/Recorded how the meeting went/i),
-    ).not.toBeNull();
+    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     expect(sent).toEqual([{ meeting_status: "canceled" }]);
   });
 
@@ -176,9 +174,7 @@ describe("a meeting that owes an answer", () => {
     await user.type(details, "They want a pilot in Q1.");
     await user.click(screen.getByRole("button", { name: /^log$/i }));
 
-    expect(
-      await screen.findByText(/Recorded how the meeting went/i),
-    ).not.toBeNull();
+    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     // ONE write, and it carries the outcome. A POST would have created a second
     // activity and left this meeting in the queue.
     expect(sent).toHaveLength(1);
@@ -195,11 +191,11 @@ describe("a meeting that owes an answer", () => {
     renderUnderAToastRegion();
 
     await user.click(
-      await screen.findByRole("button", { name: /^cancelled$/i }),
+      await screen.findByRole("button", { name: /^canceled$/i }),
     );
     // A refused write leaves the row exactly as it was, which renders the same
     // as a click that did nothing.
-    expect(await screen.findByText(/could not be recorded/i)).not.toBeNull();
+    expect(await screen.findByText(/Outcome was not recorded/i)).not.toBeNull();
   });
 });
 

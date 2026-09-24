@@ -90,7 +90,7 @@ it("names a refused licence and links to the seats settings", async () => {
   expect(await screen.findByText("License refused")).toBeTruthy();
   expect(
     screen.getByText(
-      "This installation's license token was checked and refused.",
+      "This installation’s license token was checked and refused.",
     ),
   ).toBeTruthy();
   const link = screen.getByRole("link", {

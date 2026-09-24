@@ -88,7 +88,7 @@ describe("the booking page", () => {
 
     await user.click(picked);
 
-    await screen.findByText("Booked.");
+    await screen.findByText("Meeting booked");
     const bookings = calls.filter((call) => call.method === "POST");
     expect(bookings).toEqual([
       {
@@ -124,7 +124,7 @@ describe("the booking page", () => {
 
     await user.click(first);
 
-    await screen.findByText("Booked.");
+    await screen.findByText("Meeting booked");
     const bookings = calls.filter((call) => call.method === "POST");
     expect(bookings).toEqual([
       {

@@ -88,7 +88,7 @@ describe("the contract row menu", () => {
     expect(screen.getByRole("button", { name: "Renew" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Change status" })).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Cancel agreement" }),
+      screen.getByRole("button", { name: "Cancel contract" }),
     ).toBeTruthy();
   });
 
@@ -111,7 +111,7 @@ describe("the contract row menu", () => {
     // never refuses on a terminal row, so a form withholding it here would
     // refuse more than the server does.
     expect(
-      screen.getByRole("button", { name: "Cancel agreement" }),
+      screen.getByRole("button", { name: "Cancel contract" }),
     ).toBeTruthy();
   });
 
@@ -145,7 +145,7 @@ describe("the contract row menu", () => {
     expect(screen.queryByRole("button", { name: "Renew" })).toBeNull();
     expect(screen.getByRole("button", { name: "Change status" })).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Cancel agreement" }),
+      screen.getByRole("button", { name: "Cancel contract" }),
     ).toBeTruthy();
   });
 

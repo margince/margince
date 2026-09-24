@@ -195,11 +195,11 @@ const HELD_REFETCH_TEST_MS = SETTLE_MS + WRITE_TEST_MS;
 // the server admits neither for a manager, a rep or a read_only seat.
 describe("ProviderCard write posture", () => {
   const READ_ONLY =
-    "Read-only view — connecting a provider spends money, so it is an admin or ops action.";
-  const CONNECT = "Replace the key";
+    "Read-only: connecting a provider costs money, so only an administrator or operations user can do it.";
+  const CONNECT = "Replace API key";
   const DISCONNECT = "Disconnect";
-  const DELETE_DATA = "Delete bought data";
-  const KEY_FIELD = "Replace the API key";
+  const DELETE_DATA = "Delete purchased data";
+  const KEY_FIELD = "Replace API key";
   const AUTOMATIC_LOOKUP = en["provider.automaticLookup"];
   // Disconnect and delete-data live behind the overflow, because neither is the
   // same weight as Connect: one is recoverable and the other irreversibly
@@ -382,9 +382,9 @@ describe("ProviderCard write posture", () => {
       // row's description printed it twice on the card and read it twice to a
       // screen reader, and a `getAllByText(...).length > 0` assertion passed
       // over exactly that.
-      expect(screen.getAllByText(/only alongside the work email/)).toHaveLength(
-        1,
-      );
+      expect(
+        screen.getAllByText(/only together with the work email/),
+      ).toHaveLength(1);
 
       // The row it depends on is unaffected — the dependency runs one way.
       expect(

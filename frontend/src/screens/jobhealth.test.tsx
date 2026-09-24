@@ -157,7 +157,7 @@ describe("JobHealthCard", () => {
     // The dispatcher row is separated from the workspace's own work, and says
     // whose counts they are.
     expect(screen.getByText("retention_sweep_dispatch")).toBeInTheDocument();
-    expect(screen.getByText(/carry no company/i)).toBeInTheDocument();
+    expect(screen.getByText(/rows with no company/i)).toBeInTheDocument();
     // Each of the three readings is a NAMED row. The counts and the failures
     // are the same shape on screen, so a reading that lost its naming would
     // leave an operator reading fleet work as this company's.
@@ -188,7 +188,7 @@ describe("JobHealthCard", () => {
       await screen.findByText("the model provider refused the request"),
     ).toBeInTheDocument();
     expect(screen.getByText(/attempt 2 of 5/)).toBeInTheDocument();
-    expect(screen.getByText(/job layer's own wording/i)).toBeInTheDocument();
+    expect(screen.getByText(/come from the job layer/i)).toBeInTheDocument();
   });
 
   it("names the class, the remedy, the row and how long it has been failing", async () => {
@@ -302,11 +302,11 @@ describe("JobHealthCard", () => {
     // its own, so it must not be something a reader can scroll past.
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveClass("callout-danger");
-    expect(alert).toHaveTextContent(/will not happen without intervention/i);
-    expect(alert).toHaveTextContent(/3 jobs/);
+    expect(alert).toHaveTextContent(/will not run without intervention/i);
+    expect(alert).toHaveTextContent(/intervention: 3\./);
     // The span, in the sentence. A count with no window asks the reader to
     // guess, and the guess is "since forever".
-    expect(alert).toHaveTextContent(/last 24 hours/i);
+    expect(alert).toHaveTextContent(/last 24h/i);
     // Nothing to say about a week that holds no more than the day does.
     expect(alert).not.toHaveTextContent(/7 days/i);
     // And the count itself carries the tone on the row it belongs to.
@@ -350,9 +350,9 @@ describe("JobHealthCard", () => {
     });
     render(<JobHealthCard />);
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/4 jobs died in the last 24 hours/i);
+    expect(alert).toHaveTextContent(/Dead jobs in the last 24h: 4/i);
     expect(alert).toHaveTextContent(
-      /531 discarded or cancelled in the last 7 days/i,
+      /531 discarded or canceled in the last 7 days/i,
     );
   });
 
@@ -370,7 +370,9 @@ describe("JobHealthCard", () => {
       "GET /me": () => jsonResponse(meFixture({ roles: ["ops"] })),
     });
     render(<JobHealthCard />);
-    await screen.findByText(/background-job health needs permission/i);
+    await screen.findByText(
+      /background job health covers the whole installation/i,
+    );
     expect(screen.queryByText("capture_classify")).not.toBeInTheDocument();
     // And it never issued the call the server would only refuse. An ops seat
     // reaching this page for its other sections must not generate a 403.
@@ -418,7 +420,7 @@ describe("JobHealthCard", () => {
     });
     render(<JobHealthCard />);
     expect(
-      await screen.findByText(/nothing in the background queue/i),
+      await screen.findByText(/background queue is empty/i),
     ).toBeInTheDocument();
     // In its own words, INSTEAD of the readings — not three named rows each
     // saying it has nothing. That the background system is idle is one finding,
@@ -427,7 +429,7 @@ describe("JobHealthCard", () => {
     expect(screen.queryByText("Recent failures")).not.toBeInTheDocument();
     // The stamp stands even here. An operator acting on "nothing is queued" is
     // trusting a reading, and a reading with no time on it cannot be trusted.
-    expect(screen.getByText(/read at/i)).toBeInTheDocument();
+    expect(screen.getByText(/\bas of\b/i)).toBeInTheDocument();
   });
 
   it("dates the report in the card's own footer, and only when there is one", async () => {
@@ -435,10 +437,12 @@ describe("JobHealthCard", () => {
       "GET /me": () => jsonResponse(meFixture({ roles: ["ops"] })),
     });
     render(<JobHealthCard />);
-    await screen.findByText(/background-job health needs permission/i);
+    await screen.findByText(
+      /background job health covers the whole installation/i,
+    );
     // No report, no stamp: a time under a withheld body would date a reading
     // this card is not showing.
-    expect(screen.queryByText(/read at/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\bas of\b/i)).not.toBeInTheDocument();
     cleanup();
 
     stubRoutes();
@@ -446,7 +450,7 @@ describe("JobHealthCard", () => {
     // When the report was read belongs to the whole card rather than to any one
     // reading in it, so it stands in the panel's own footer band rather than as
     // one more line after the last row.
-    const stamp = await screen.findByText(/read at/i);
+    const stamp = await screen.findByText(/\bas of\b/i);
     expect(stamp.closest("footer")).not.toBeNull();
   });
 });

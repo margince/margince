@@ -74,7 +74,7 @@ const tools = () =>
       },
       {
         name: "send_email",
-        title: "Send an email",
+        title: "Send email",
         description:
           'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
         required_scope: "send",

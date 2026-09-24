@@ -121,7 +121,7 @@ describe("the meeting brief drawer", () => {
       </StoryProviders>,
     );
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Try again" }));
+    await user.click(await screen.findByRole("button", { name: "Retry" }));
     await waitFor(() => expect(urls).toHaveLength(2));
     expect(await screen.findByText("Goal for this meeting")).toBeTruthy();
   });

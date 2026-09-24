@@ -122,7 +122,9 @@ describe("reviewing a candidate voice", () => {
     ).toBeTruthy();
     expect(screen.getByText(/Direct, concrete/)).toBeTruthy();
     // And the fact that nothing is written in it yet.
-    expect(screen.getByText(/It is not in use yet/)).toBeTruthy();
+    expect(
+      screen.getByText(/It is not used for drafts until you select it/),
+    ).toBeTruthy();
   });
 
   // The evaluator writes for an operator reading a log. "median voice score
@@ -144,11 +146,9 @@ describe("reviewing a candidate voice", () => {
     );
 
     expect(
-      await screen.findByText(/scored 0.56 against your own writing/),
+      await screen.findByText(/scored 0.56 against your writing/),
     ).toBeTruthy();
-    expect(
-      screen.getByText(/could not read some of the sample drafts/),
-    ).toBeTruthy();
+    expect(screen.getByText(/could not read some sample drafts/)).toBeTruthy();
     // The raw operator sentences are gone from the reader's view.
     expect(screen.queryByText(/below the 0.60 floor/)).toBeNull();
     // And the reader is told what each answer means for them.

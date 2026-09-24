@@ -135,10 +135,10 @@ describe("LeadSourcesCard", () => {
     );
     expect(screen.getByText("Built-in")).toBeTruthy();
     expect(screen.getByText("3 leads")).toBeTruthy();
-    // The built-in, in-use source says "switch off instead"; the unused
+    // The built-in, in-use source says "deactivate instead"; the unused
     // custom one gets the Remove button.
     const manual = screen.getByTestId("lead-source-manual");
-    expect(manual.textContent).toContain("switch off instead");
+    expect(manual.textContent).toContain("deactivate instead");
     const trade = screen.getByTestId("lead-source-trade_show");
     expect(within(trade).getByRole("button", { name: "Remove" })).toBeTruthy();
     expect(within(manual).queryByRole("button", { name: "Remove" })).toBeNull();
@@ -171,7 +171,7 @@ describe("LeadSourcesCard", () => {
     await userEvent.click(
       screen.getByRole("combobox", { name: "Intent of Trade show" }),
     );
-    await userEvent.click(screen.getByRole("option", { name: "Low interest" }));
+    await userEvent.click(screen.getByRole("option", { name: "Low intent" }));
     await waitFor(() =>
       expect(
         calls.some(
@@ -247,7 +247,9 @@ describe("LeadSourcesCard", () => {
     // The card's band says the posture as a heading, so it carries no full
     // stop; the same claim reaches the handling card's switch as a sentence.
     expect(
-      screen.getByText("Only an admin or ops seat changes this list"),
+      screen.getByText(
+        "Only an administrator or operations user can change this list",
+      ),
     ).toBeTruthy();
     // Both verbs the card offers a writer: the one that OPENS the dialog and
     // the one that submits it. Read from the catalog under the keys the card
@@ -277,7 +279,7 @@ describe("LeadDisqualifyReasonsCard", () => {
       expect(screen.getByDisplayValue("Bad timing")).toBeTruthy(),
     );
     expect(screen.getByTestId("lead-reason-src-r1").textContent).toContain(
-      "switch off instead",
+      "deactivate instead",
     );
     expect(
       within(screen.getByTestId("lead-reason-src-r2")).getByRole("button", {
@@ -334,7 +336,7 @@ describe("LeadHandlingCard", () => {
     // The refusal is announced and attached to the control that holds the
     // value, so a reader who cannot see the row still hears the rule.
     const refusal = await screen.findByRole("alert");
-    expect(refusal.textContent).toContain("between 15 and 10080");
+    expect(refusal.textContent).toContain("from 15 to 10,080");
     expect(minutes.getAttribute("aria-invalid")).toBe("true");
     expect(minutes.getAttribute("aria-describedby")).toContain(refusal.id);
     expect(
@@ -358,7 +360,9 @@ describe("LeadHandlingCard", () => {
     )) as HTMLButtonElement;
     expect(toggle.disabled).toBe(true);
     expect(
-      screen.getByText("Only an admin or ops seat changes this list."),
+      screen.getByText(
+        "Only an administrator or operations user can change this list.",
+      ),
     ).toBeTruthy();
   });
 });

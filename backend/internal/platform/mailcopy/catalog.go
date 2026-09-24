@@ -139,7 +139,7 @@ func weeklyFigureLines(line writeLine) {
 		"Bewegt",
 		"Đã chuyển")
 	line(func(c *Copy) *string { return &c.WeeklyDecided },
-		"You decided",
+		"Proposals decided",
 		"Von dir entschieden",
 		"Bạn đã quyết")
 	weeklyDecisionLines(line)
@@ -169,7 +169,7 @@ func weeklyDecisionLines(line writeLine) {
 // with the week, and what it carried into the next one.
 func weeklyQueueLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyQueue },
-		"Morning queue",
+		"Morning brief items",
 		"Morgen-Liste",
 		"Danh sách buổi sáng")
 	line(func(c *Copy) *string { return &c.WeeklyActed },
@@ -280,15 +280,15 @@ func confirmAskLines(line writeLine) {
 	// proof can name a published row rather than quoting whatever arrived with
 	// the answer.
 	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
-		"News from time to time, roughly once a month. You decide, and I will hold to it.",
+		"News from time to time, roughly once a month. Your choice is respected.",
 		"Neuigkeiten ab und zu, etwa einmal im Monat. Sie entscheiden, ich halte mich daran.",
 		"Tin tức thỉnh thoảng, khoảng mỗi tháng một lần. Bạn quyết định, và tôi sẽ tuân theo.")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
-		"Yes, keep me posted",
+		"Subscribe to news",
 		"Ja, halten Sie mich auf dem Laufenden",
 		"Có, hãy gửi tin cho tôi")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingNo },
-		"No thanks, just keep my details correct",
+		"Do not send news",
 		"Nein danke, nur meine Daten korrekt halten",
 		"Không, chỉ cần giữ thông tin của tôi chính xác")
 	// THE DEDICATED SUBSCRIPTION LINK'S OWN QUESTION, which names the purpose
@@ -299,7 +299,7 @@ func confirmAskLines(line writeLine) {
 		"Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
 		"Xác nhận rằng bạn muốn nhận {purpose}.")
 	line(func(c *Copy) *string { return &c.ConfirmSubscriptionConfirm },
-		"Yes, subscribe me",
+		"Confirm subscription",
 		"Ja, ich möchte das Abo",
 		"Có, đăng ký cho tôi")
 }

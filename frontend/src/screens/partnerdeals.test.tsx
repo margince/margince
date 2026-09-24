@@ -127,7 +127,7 @@ describe("the deals a partner brought", () => {
       (cell) => cell.textContent,
     );
 
-    expect(cells[2]).toBe("Brought us this deal (earns commission)");
+    expect(cells[2]).toBe("Sourced the deal (earns commission)");
     expect(cells[3]).toBe("€48,000.00");
     expect(cells[4]).toContain("open");
   });
@@ -152,7 +152,7 @@ describe("the deals a partner brought", () => {
 
     expect(rows).toHaveLength(2);
     expect(rows[1]?.textContent).toContain(
-      "Helped on a deal we already had (no commission)",
+      "Influenced an existing deal (no commission)",
     );
   });
 
@@ -195,7 +195,7 @@ describe("the deals a partner brought", () => {
 
     render(<PartnerDeals companyId="o-1" />);
 
-    expect(await screen.findByText("No deals brought in yet")).toBeTruthy();
+    expect(await screen.findByText("No partner deals yet")).toBeTruthy();
     expect(screen.queryByTestId("partner-deals")).toBeNull();
   });
 });

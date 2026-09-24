@@ -190,7 +190,7 @@ describe("RecordContextPanel", () => {
     );
     render(<RecordContextPanel entityType="contact" id="p1" />);
     await waitFor(() =>
-      expect(screen.getByText("Nothing related yet.")).toBeTruthy(),
+      expect(screen.getByText("No related records.")).toBeTruthy(),
     );
   });
 });

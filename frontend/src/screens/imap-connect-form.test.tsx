@@ -110,7 +110,8 @@ describe("ImapConnectForm", () => {
         jsonResponse(
           {
             code: "imap_unreachable",
-            detail: "The mail server could not be reached.",
+            detail:
+              "The mail server could not be reached. Check the host and port.",
           },
           502,
         ),
@@ -137,11 +138,9 @@ describe("ImapConnectForm", () => {
     render(<ImapConnectForm open onClose={() => {}} />);
     await userEvent.click(screen.getByRole("button", { name: "Connect" }));
     expect(
-      screen.getByText(
-        "Still needed: IMAP server, Email address, App password",
-      ),
+      screen.getByText("Required: IMAP server, Email address, App password"),
     ).toBeInTheDocument();
-    expect(screen.getAllByText("Needed to connect")).toHaveLength(3);
+    expect(screen.getAllByText("Required fields")).toHaveLength(3);
     expect(calls).toHaveLength(0);
   });
 

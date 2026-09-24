@@ -209,7 +209,7 @@ describe("LeadBulkBar — disqualify", () => {
 
     // The sentence is the refusal: the reader is told what to answer, not
     // handed a dimmed button with no explanation.
-    const sentence = await screen.findByText("Pick a reason first.");
+    const sentence = await screen.findByText("Choose a reason first.");
     const verb = disqualifyButton();
     expect(verb.hasAttribute("disabled")).toBe(true);
     // And the sentence is attached to the control, not merely near it — a

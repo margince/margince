@@ -88,7 +88,9 @@ export const ProvenanceOpen: Story = {
 export const Closed: Story = {
   render: () => {
     stubSignalRoutes();
-    return <Panel readOnlyReason="This lead is closed and takes no changes." />;
+    return (
+      <Panel readOnlyReason="This lead is closed and cannot be changed." />
+    );
   },
 };
 

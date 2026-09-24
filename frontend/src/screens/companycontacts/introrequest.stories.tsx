@@ -61,7 +61,7 @@ export const BeforeWriting: Story = {
 
 /**
  * A model wrote it, and the tag says so. Press into the message and the tag
- * becomes "typed by you" — a sentence a contact rewrote is no longer the
+ * becomes "entered by you" — a sentence a contact rewrote is no longer the
  * machine's.
  */
 export const ModelDraft: Story = {

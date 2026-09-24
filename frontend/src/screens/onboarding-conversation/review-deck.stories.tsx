@@ -27,7 +27,7 @@ const NO_EVIDENCE: DeckCard = {
 
 const WITH_EVIDENCE: DeckCard = {
   field: "offer_summary",
-  question: "What do you sell?",
+  question: "Products and services",
   evidence: "We build inventory tools for growing retailers.",
   source: "gradion.test/product",
   required: true,

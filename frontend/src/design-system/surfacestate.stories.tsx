@@ -65,7 +65,7 @@ function AllStates() {
           <SurfaceState
             loadingLabel="Loading the section"
             state={state}
-            emptyLabel="No open deal on this account."
+            emptyLabel="No open deals for this company."
             detail={DETAIL}
           >
             {ROWS}
@@ -89,7 +89,7 @@ function OrderDemo() {
         <SurfaceState
           loadingLabel="Loading the section"
           state="stale"
-          emptyLabel="No open deal on this account."
+          emptyLabel="No open deals for this company."
           detail={{ staleAsOf: "9:15 this morning" }}
         >
           {ROWS}
@@ -99,7 +99,7 @@ function OrderDemo() {
         <SurfaceState
           loadingLabel="Loading the section"
           state="partial"
-          emptyLabel="No open deal on this account."
+          emptyLabel="No open deals for this company."
           detail={{ remaining: 4 }}
         >
           {ROWS}

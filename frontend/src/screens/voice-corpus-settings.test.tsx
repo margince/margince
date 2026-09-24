@@ -177,9 +177,9 @@ describe("handing a file to the Settings voice card", () => {
     expect(input.multiple).toBe(true);
     expect(screen.getByLabelText("Add writing samples")).toBe(input);
     // The zone says what teaches the voice, beside the control, every time.
-    expect(screen.getByText("What works best")).toBeTruthy();
-    expect(screen.getByText(/Sent emails, saved as/)).toBeTruthy();
-    expect(screen.getByText(/Leave out what others wrote/)).toBeTruthy();
+    expect(screen.getByText("Best samples")).toBeTruthy();
+    expect(screen.getByText(/Sent emails saved as/)).toBeTruthy();
+    expect(screen.getByText(/Leave out text others wrote/)).toBeTruthy();
   });
 
   // Before a profile exists there is no corpus meter to say how far the floor
@@ -189,10 +189,10 @@ describe("handing a file to the Settings voice card", () => {
     const view = render(
       <VoiceCorpusIntake first profileId={null} onChanged={() => {}} />,
     );
-    expect(screen.getByText(/800 words minimum/)).toBeTruthy();
+    expect(screen.getByText(/at least 800 words/)).toBeTruthy();
     view.unmount();
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
-    expect(screen.queryByText(/800 words minimum/)).toBeNull();
+    expect(screen.queryByText(/at least 800 words/)).toBeNull();
   });
 
   // source_ref is persisted, and two earlier spellings are already in
@@ -245,7 +245,7 @@ describe("handing a file to the Settings voice card", () => {
       fileOf("standup.vtt", "Lars: we ship Friday. Sam: agreed."),
     );
 
-    expect(await screen.findByText(/Which speaker is you/)).toBeTruthy();
+    expect(await screen.findByText(/Which speaker are you/)).toBeTruthy();
     expect(screen.getByText(/Lars · 640 words, 12 turns/)).toBeTruthy();
     expect(bodies).toHaveLength(0);
   });
@@ -258,10 +258,10 @@ describe("handing a file to the Settings voice card", () => {
       fileInput(),
       fileOf("standup.vtt", "Lars: we ship Friday."),
     );
-    await screen.findByText(/Which speaker is you/);
+    await screen.findByText(/Which speaker are you/);
     await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
     await userEvent.click(
-      screen.getByRole("button", { name: "That one is me" }),
+      screen.getByRole("button", { name: "Use this speaker" }),
     );
 
     await waitFor(() => expect(bodies).toHaveLength(1));
@@ -285,11 +285,11 @@ describe("handing a file to the Settings voice card", () => {
       fileOf("one.vtt", "Lars: first. Sam: ok."),
       fileOf("two.vtt", "Lars: second. Sam: ok."),
     ]);
-    await screen.findByText(/Which speaker is you/);
+    await screen.findByText(/Which speaker are you/);
 
     await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
     await userEvent.click(
-      screen.getByRole("button", { name: "That one is me" }),
+      screen.getByRole("button", { name: "Use this speaker" }),
     );
 
     // The next question is a question, not a pre-filled answer.
@@ -302,7 +302,7 @@ describe("handing a file to the Settings voice card", () => {
     });
     expect(
       screen
-        .getByRole("button", { name: "That one is me" })
+        .getByRole("button", { name: "Use this speaker" })
         .hasAttribute("disabled"),
     ).toBe(true);
     // Only the answered file was written.
@@ -316,7 +316,7 @@ describe("handing a file to the Settings voice card", () => {
     const bodies = stubApi(CONVERSATION);
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
     await userEvent.upload(fileInput(), fileOf("standup.vtt", "Lars: hi."));
-    await screen.findByText(/Which speaker is you/);
+    await screen.findByText(/Which speaker are you/);
 
     dropOnZone([fileOf("two.vtt", "Lars: again. Sam: ok.")]);
 
@@ -325,7 +325,7 @@ describe("handing a file to the Settings voice card", () => {
     expect(screen.getByText(/“standup\.vtt”/)).toBeTruthy();
     await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
     await userEvent.click(
-      screen.getByRole("button", { name: "That one is me" }),
+      screen.getByRole("button", { name: "Use this speaker" }),
     );
     expect(await screen.findByText(/“two\.vtt”/)).toBeTruthy();
     expect(bodies).toHaveLength(1);
@@ -336,13 +336,13 @@ describe("handing a file to the Settings voice card", () => {
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
 
     await userEvent.upload(fileInput(), fileOf("standup.vtt", "Lars: hi."));
-    await screen.findByText(/Which speaker is you/);
+    await screen.findByText(/Which speaker are you/);
     await userEvent.click(
       screen.getByRole("button", { name: "Skip this file" }),
     );
 
     expect(
-      await screen.findByText(/nothing in it could be attributed to you/),
+      await screen.findByText(/None of it could be attributed to you/),
     ).toBeTruthy();
     expect(bodies).toHaveLength(0);
   });
@@ -358,7 +358,7 @@ describe("handing a file to the Settings voice card", () => {
 
     expect(
       await screen.findByText(
-        /photo\.png was skipped — I read .txt, .md, .pdf, .docx/,
+        /photo\.png was skipped\. Supported formats: \.txt, \.md, \.pdf, \.docx/,
       ),
     ).toBeTruthy();
     expect(bodies).toHaveLength(0);
@@ -540,14 +540,14 @@ describe("adding many files at once", () => {
     // brings up the next, five times over. Counting refusals alone would pass
     // just as happily if questions had been dropped instead of queued.
     for (let answered = 0; answered < 5; answered++) {
-      await screen.findByText(/Which speaker is you/);
+      await screen.findByText(/Which speaker are you/);
       await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
       await userEvent.click(
-        screen.getByRole("button", { name: "That one is me" }),
+        screen.getByRole("button", { name: "Use this speaker" }),
       );
     }
     await waitFor(() => {
-      expect(screen.queryByText(/Which speaker is you/)).toBeNull();
+      expect(screen.queryByText(/Which speaker are you/)).toBeNull();
     });
   });
 });

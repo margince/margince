@@ -38,7 +38,7 @@ What you are offered comes from the server, labels and all, and the request is
 checked again on the way in. Nothing in the browser decides who may measure
 what.
 
-- An unbounded seat is offered **Whole workspace**, every live team, and their
+- An unbounded seat is offered **Whole company**, every live team, and their
   own records.
 - A team-scoped seat is offered **My teams**, each of their own live teams, and
   their own records.

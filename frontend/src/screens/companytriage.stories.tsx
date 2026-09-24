@@ -68,7 +68,7 @@ const openIt = async ({
   canvasElement,
 }: Readonly<{ canvasElement: HTMLElement }>) => {
   await userEvent.click(
-    await within(canvasElement).findByText("Where this company came from"),
+    await within(canvasElement).findByText("Company origin"),
   );
 };
 

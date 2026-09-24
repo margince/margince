@@ -63,7 +63,7 @@ export const VersionSkewError: Story = {
       fields={fields}
       record={record}
       pending={false}
-      error="This record changed since you opened it — reload and try again."
+      error="This record changed since it was opened. Reload and retry."
       onSubmit={() => undefined}
     />
   ),

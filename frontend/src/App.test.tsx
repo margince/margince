@@ -254,11 +254,7 @@ describe("extension routes (vanilla registry)", () => {
         "No extension named \u201Cnotes\u201D is enabled on this installation.",
       ),
     ).toBeTruthy();
-    expect(
-      screen.queryByText(
-        "Not built yet — this surface arrives with its build ticket.",
-      ),
-    ).toBeNull();
+    expect(screen.queryByText("This screen is not available yet.")).toBeNull();
   });
 });
 
@@ -342,7 +338,7 @@ describe("auth boundary states (login spec §4)", () => {
     vi.stubGlobal("fetch", probe(500));
     mount();
     expect(
-      await screen.findByText("Margince couldn't be reached"),
+      await screen.findByText("Margince could not be reached"),
     ).toBeTruthy();
     expect(screen.queryByLabelText("Email")).toBeNull();
   });
@@ -353,7 +349,7 @@ describe("auth boundary states (login spec §4)", () => {
     mount();
     expect(await screen.findByText("Installation not ready")).toBeTruthy();
     const before = fetchMock.mock.calls.length;
-    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() =>
       expect(fetchMock.mock.calls.length).toBeGreaterThan(before),
     );
@@ -442,7 +438,7 @@ describe("auth boundary states (login spec §4)", () => {
     );
     mount();
     expect(await screen.findByText("Installation not ready")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(
       await screen.findByRole("heading", { name: "Claim this installation" }),
     ).toBeTruthy();
@@ -469,7 +465,7 @@ describe("auth boundary states (login spec §4)", () => {
     );
     mount();
     expect(
-      await screen.findByRole("heading", { name: "Choose your own password" }),
+      await screen.findByRole("heading", { name: "Set your own password" }),
     ).toBeTruthy();
     // Not the login screen: the password they have is correct, and being asked
     // for it again explains nothing.
@@ -509,7 +505,7 @@ describe("auth boundary states (login spec §4)", () => {
     );
     mount();
     expect(
-      await screen.findByText("Margince couldn't be reached"),
+      await screen.findByText("Margince could not be reached"),
     ).toBeTruthy();
   });
 });

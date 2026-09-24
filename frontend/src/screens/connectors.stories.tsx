@@ -175,12 +175,12 @@ export const Empty: Story = {
 async function openAddDialog(canvasElement: HTMLElement) {
   const body = within(canvasElement.ownerDocument.body);
   await userEvent.click(
-    await body.findByRole("button", { name: "Connect an account" }),
+    await body.findByRole("button", { name: "Add connector" }),
   );
-  await body.findByRole("dialog", { name: "Add a connection" });
+  await body.findByRole("dialog", { name: "Add connector" });
 }
 
-// The "Add a connection" affordance (Task 1): ONE verb in the card's header,
+// The "Add connector" affordance (Task 1): ONE verb in the card's header,
 // and the picks in the dialog it opens. What to check is that four providers
 // each carrying a sentence read as four rows of one list — the shape they
 // replaced was a strip of four buttons squeezed against a wrapping description,

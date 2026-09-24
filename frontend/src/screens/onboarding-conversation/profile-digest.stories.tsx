@@ -17,7 +17,7 @@ import "./conversation.css";
 import "../../design-system/panel.css";
 
 // The digest's two faces: the deck's narrow companion, and the whole-record
-// document a reader reaches through "Read the whole profile". The document
+// document a reader reaches through "Read full profile". The document
 // is what carries the states worth reviewing — open lines, a settled record,
 // a sparse read, and a page cited from every direction — because that is
 // where the header's figures, the dashed unanswered rows and the sidebar all
@@ -106,7 +106,7 @@ const OPEN_ROWS: ReviewRow[] = [
   ),
   row(
     "offer_summary",
-    "What do you sell?",
+    "Products and services",
     "Route planning software for freight forwarders.",
     "quoted",
     cited("/product", "Route planning software for freight forwarders."),

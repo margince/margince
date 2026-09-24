@@ -126,7 +126,7 @@ describe("ContactNetworkPanel", () => {
     });
     render(<ContactNetworkPanel id="p-1" />);
     expect(
-      await screen.findByText(/nobody here has been in touch/i),
+      await screen.findByText(/no colleague has been in touch/i),
     ).toBeInTheDocument();
   });
 });

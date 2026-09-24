@@ -367,7 +367,7 @@ describe("the relationship brief's source chips", () => {
     );
 
     const chip = chipTransportCell(container);
-    expect(chip.textContent).toBe("Conversation");
+    expect(chip.textContent).toBe("Activity");
     expect(chip.querySelector(".lucide-mail")).toBeNull();
     expect(chip.querySelector(".lucide-message-square")).toBeNull();
   });

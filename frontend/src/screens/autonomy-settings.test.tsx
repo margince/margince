@@ -158,9 +158,7 @@ describe("AutonomySettingsCard", () => {
     expect(toggle.getAttribute("aria-checked")).toBe("false");
     // The offer stands on the description alone when there is no record, so the
     // card must say there is none rather than printing three zeroes.
-    expect(
-      screen.getByText(/have not decided one of these yet/i),
-    ).not.toBeNull();
+    expect(screen.getByText(/No decisions of this kind yet/i)).not.toBeNull();
   });
 
   // A PERMANENT ZERO DESERVES A READING. The card is shown to every seat on

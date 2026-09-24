@@ -257,7 +257,7 @@ describe("ConnectedAgentsCard", () => {
     vi.stubGlobal("fetch", backend({ passports: [MINTED] }));
     render(<ConnectedAgentsCard />);
     await waitFor(() =>
-      expect(screen.getByText("No agent is connected yet.")).toBeTruthy(),
+      expect(screen.getByText("No agents connected yet.")).toBeTruthy(),
     );
   });
 
@@ -270,7 +270,7 @@ describe("ConnectedAgentsCard", () => {
     vi.stubGlobal("fetch", backend({ passports: [] }));
     render(<ConnectedAgentsCard />);
     await waitFor(() =>
-      expect(screen.getByText("No agent is connected yet.")).toBeTruthy(),
+      expect(screen.getByText("No agents connected yet.")).toBeTruthy(),
     );
     const guide = screen.getByText("Connect an agent").closest("details");
     if (!(guide instanceof HTMLDetailsElement)) {
@@ -358,7 +358,7 @@ describe("ConnectedAgentsCard", () => {
       expect(screen.queryByRole("button", { name: /^Disconnect/ })).toBeNull();
       expect(
         screen.getByRole("button", {
-          name: "End the connection to Claude Code",
+          name: "End connection to Claude Code",
         }),
       ).toBeTruthy();
     } finally {
@@ -431,7 +431,7 @@ describe("ConnectedAgentsCard", () => {
     // The DELETE firing is not the claim — the row leaving the list is. Without
     // this the test passes on a refetch that never happens.
     await waitFor(() =>
-      expect(screen.getByText("No agent is connected yet.")).toBeTruthy(),
+      expect(screen.getByText("No agents connected yet.")).toBeTruthy(),
     );
     expect(document.querySelector('[data-testid^="connection-"]')).toBeNull();
   });
@@ -455,7 +455,7 @@ describe("ConnectedAgentsCard", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("No agent is connected yet.")).toBeTruthy(),
+      expect(screen.getByText("No agents connected yet.")).toBeTruthy(),
     );
     expect(opener.isConnected).toBe(false);
     // The region that held the row, which now reads back what is left — the
@@ -465,7 +465,7 @@ describe("ConnectedAgentsCard", () => {
       throw new Error("focus left the document entirely after the disconnect");
     }
     expect(landed).not.toBe(document.body);
-    expect(landed.textContent).toContain("No agent is connected yet.");
+    expect(landed.textContent).toContain("No agents connected yet.");
   });
 });
 

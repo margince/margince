@@ -43,13 +43,13 @@ function Scene() {
         coreState={ignited ? core.state : "idle"}
         coreProgress={core.progress}
         coreFlash={ignited}
-        coreStateLabel={ignited ? "core · taking it in" : "core · at rest"}
-        progress={{ steps: ["The model", "Your platform"], at: 0 }}
+        coreStateLabel={ignited ? "Core · reading input" : "Core · idle"}
+        progress={{ steps: ["The model", "Platform"], at: 0 }}
         eyebrow="First run · 1 of 2"
-        title={ignited ? "It has a pulse." : "Choose a model provider"}
+        title={ignited ? "Model connected" : "Choose a model provider"}
         sub={
           ignited
-            ? "The key is sealed and the model answered. Here is what that changes."
+            ? "The key is stored and the model responded. This is what changes."
             : "Margince provides no inference of its own, so it works through your vendor account."
         }
       >
@@ -95,7 +95,7 @@ export const Settled: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "Give it a pulse" }),
     );
-    const carryOn = await canvas.findByRole("button", { name: "Carry on" });
+    const carryOn = await canvas.findByRole("button", { name: "Continue" });
     await waitFor(
       () => {
         const go = carryOn.closest(".ob-ig-go");

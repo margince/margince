@@ -216,7 +216,7 @@ describe("the onboarding gate and the wizard's restore", () => {
 
     // The company act reopens rather than reporting a completion the profile
     // does not support, so the gate's destination is where the reader stays.
-    expect(await screen.findByLabelText(/Your website address/)).toBeTruthy();
+    expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
     await waitFor(() => {
       expect(window.location.hash).toBe(GATE_TARGET);
     });
@@ -250,7 +250,7 @@ describe("the onboarding gate and the wizard's restore", () => {
     const onArrival = window.history.length;
     mount({ companySaved: false }, BRIEF);
 
-    expect(await screen.findByLabelText(/Your website address/)).toBeTruthy();
+    expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
     await waitFor(() => {
       expect(window.location.hash).toBe(GATE_TARGET);
     });

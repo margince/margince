@@ -85,7 +85,7 @@ describe("what moved since the reader was last here", () => {
       </LocaleProvider>,
     );
     expect(
-      screen.getByText("You are opening this account for the first time."),
+      screen.getByText("You have not opened this company before."),
     ).toBeTruthy();
   });
 

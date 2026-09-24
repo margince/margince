@@ -13,7 +13,7 @@ import { mockApi } from "./seed";
  * link.
  *
  * THE ONE ASSERTION THAT MATTERS MOST is that nothing renders as zero when it
- * means something else. "Too few to say", "no project has gone quiet", "not
+ * means something else. "Too few deals", "no project has gone quiet", "not
  * checked yet" and "0" are four different facts, and an analytics screen that
  * collapses them is worse than one that shows nothing: a manager acts on a
  * number that was never measured. The fixtures are built to put an honest

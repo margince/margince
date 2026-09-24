@@ -92,8 +92,8 @@ afterEach(() => {
 describe("model lane health", () => {
   it("tells a lane that answered from one that answered nothing", async () => {
     renderCard([ANSWERING, DEAD]);
-    expect(await screen.findByText(/^Answering$/)).toBeInTheDocument();
-    expect(screen.getByText(/^Not answering$/)).toBeInTheDocument();
+    expect(await screen.findByText(/^Responding$/)).toBeInTheDocument();
+    expect(screen.getByText(/^Not responding$/)).toBeInTheDocument();
   });
 
   it("names the error a failing lane reported", async () => {
@@ -113,7 +113,7 @@ describe("model lane health", () => {
     // table would read as one.
     renderCard([]);
     expect(
-      await screen.findByText(/no model was called in the last 1 hour/i),
+      await screen.findByText(/no model calls in the last 1h/i),
     ).toBeInTheDocument();
   });
 
@@ -125,7 +125,9 @@ describe("model lane health", () => {
     // re-issues the doomed call every minute.
     renderCard([ANSWERING], 1, { automation: ["read", "update"] });
     expect(
-      await screen.findByText(/only an operator can read whether/i),
+      await screen.findByText(
+        /only an administrator or operations user can see whether model tiers respond/i,
+      ),
     ).toBeInTheDocument();
     // The lane that WOULD have rendered is absent, so this is the withheld
     // state and not merely a card that failed to draw its table.
@@ -137,7 +139,9 @@ describe("model lane health", () => {
     // withheld reader from a 403 they cannot act on, and a refetchInterval
     // left standing would resume the call the moment a grant changed.
     renderCard([ANSWERING], 1, { automation: ["read", "update"] });
-    await screen.findByText(/only an operator can read whether/i);
+    await screen.findByText(
+      /only an administrator or operations user can see whether model tiers respond/i,
+    );
     const calls = (
       globalThis.fetch as unknown as { mock: { calls: unknown[][] } }
     ).mock.calls;

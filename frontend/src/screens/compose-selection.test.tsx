@@ -127,7 +127,7 @@ it("requires a purpose for a new AI email, then sends that purpose to the contac
   const draft = screen.getByRole("button", { name: "Draft with AI" });
   expect(draft.hasAttribute("disabled")).toBe(true);
   await user.type(
-    screen.getByPlaceholderText("What should this email achieve?"),
+    screen.getByPlaceholderText("Purpose of the email"),
     "Offer a discovery call",
   );
   await user.click(draft);
@@ -236,9 +236,7 @@ it("keeps edits made while the selected email's AI draft is in flight", async ()
   await waitFor(() => expect(finish).toBeTypeOf("function"));
   writeMessage("Body", "My answer written while waiting");
   finish?.(json({ subject: "Re: Pricing", body: "Late generated text" }));
-  await screen.findByText(
-    "Your edits were kept. Draft again when you are ready.",
-  );
+  await screen.findByText("Your edits were kept. Draft again when ready.");
   expect(messageText("Body")).toBe("My answer written while waiting");
 });
 
@@ -257,7 +255,7 @@ it("preserves recipient choices and instructions separately for each reply", asy
     "archive@example.test{Enter}",
   );
   await user.type(
-    screen.getByPlaceholderText("Reply with…"),
+    screen.getByPlaceholderText("Purpose of the reply"),
     "Confirm the price",
   );
   await user.click(screen.getByRole("button", { name: /Re: Delivery/ }));
@@ -305,7 +303,7 @@ it("retries a failed selected-message read before enabling reply drafting", asyn
       .getByRole("button", { name: "Draft reply with AI" })
       .hasAttribute("disabled"),
   ).toBe(true);
-  await user.click(screen.getByRole("button", { name: "Try again" }));
+  await user.click(screen.getByRole("button", { name: "Retry" }));
   await screen.findByDisplayValue("Re: Pricing");
   expect(
     screen
@@ -349,7 +347,7 @@ it("files a delayed upload on the draft that started it, even after switching", 
   await screen.findByDisplayValue("Re: Pricing");
   await user.click(screen.getByRole("button", { name: /Attach/ }));
   await user.upload(
-    screen.getByLabelText("Send a new file"),
+    screen.getByLabelText("Upload file"),
     new File(["Offer"], "pricing.txt", { type: "text/plain" }),
   );
   await waitFor(() => expect(finish).toBeTypeOf("function"));

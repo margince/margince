@@ -1235,13 +1235,13 @@ export function AgentRail({
       ? resting
       : barLine(state, signals, t("auth.coreDevelopment"), agentLine, said);
   // ONE line under the orb, whoever is talking. While this tab is fetching
-  // something it can name, that sentence is the orb's line — "Reading Acme" is
+  // something it can name, that sentence is the orb's line — "Loading Acme" is
   // the status a reader is waiting on at that moment — and the agent's own line
   // has the slot back the instant the read settles. Two stacked lines read as
   // two statuses, and a reader asked which one was the status.
   //
   // A fault keeps the slot regardless: the colour and the caption are always
-  // about the same thing, and an amber orb captioned "Reading the pipeline"
+  // about the same thing, and an amber orb captioned "Loading pipeline"
   // tells a reader the pipeline is the fault.
   const holdsFault = state === "warning" || state === "error";
   const shown = ticker.length > 0 && !holdsFault ? plain(ticker[0].said) : line;

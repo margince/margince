@@ -125,11 +125,11 @@ describe("CoverageCard", () => {
     // Still said — the page counts beside it would otherwise read as the whole
     // site — but said as a note, because this is the size the read was
     // configured for rather than something that went wrong.
-    expect(screen.getByText("Read up to its limit")).toBeTruthy();
+    expect(screen.getByText("Limit reached")).toBeTruthy();
     expect(screen.queryByText("Stopped early")).toBeNull();
     expect(
       screen.getByText(
-        "I reached the page limit for one read, so there is more of your site I did not open.",
+        "The page limit for one read was reached, so some pages were not opened.",
       ),
     ).toBeTruthy();
     expect(
@@ -148,7 +148,7 @@ describe("CoverageCard", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /Review/ }));
 
-    expect(screen.getByText("Read up to its limit")).toBeTruthy();
+    expect(screen.getByText("Limit reached")).toBeTruthy();
     expect(screen.queryByText("Stopped early")).toBeNull();
     expect(
       document.querySelector('.ob-live-coverage[data-kind="note"]'),
@@ -162,7 +162,7 @@ describe("CoverageCard", () => {
     await userEvent.click(screen.getByRole("button", { name: /Review/ }));
 
     expect(screen.getByText("Stopped early")).toBeTruthy();
-    expect(screen.queryByText("Read up to its limit")).toBeNull();
+    expect(screen.queryByText("Limit reached")).toBeNull();
     expect(
       document.querySelector('.ob-live-coverage[data-kind="warning"]'),
     ).toBeTruthy();
@@ -241,7 +241,7 @@ describe("CoverageCard", () => {
     await userEvent.click(screen.getByRole("button", { name: /Review/ }));
     expect(
       screen.getByText(
-        "Every page I tried came back. Nothing was skipped and nothing failed.",
+        "Every page returned. Nothing was skipped and nothing failed.",
       ),
     ).toBeTruthy();
   });

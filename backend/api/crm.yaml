@@ -39377,7 +39377,7 @@ components:
     SettingsAvailability:
       type: object
       additionalProperties: false
-      required: [company_context]
+      required: [company_context, embedding_reindex]
       description: >
         Which settings surfaces EXIST in this installation, independently of whether this
         caller may read them. A surface can be absent for two unrelated reasons — the
@@ -39406,6 +39406,14 @@ components:
             same predicate `GET /company-context/capabilities` reports as `read_enabled`, and
             the same one its own endpoints gate on. False leaves the Company page to the
             installation and currency settings beside it.
+        embedding_reindex:
+          type: boolean
+          description: >
+            True when an embeddings model is bound, so the reindex surface
+            (`/embeddings/reindex*`) exists. False is the posture under which those routes
+            answer 501: `--ai-fake`, or a routing document that binds no embeddings model.
+            Bound or unbound only — deliberately not which model, which is the reindex
+            status's own answer to a caller who may read it.
 
     # ---- Role administration (the /roles editor) ----
 

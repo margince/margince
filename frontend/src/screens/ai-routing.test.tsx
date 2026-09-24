@@ -298,7 +298,7 @@ describe("AiRoutingCard", () => {
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
 
-    expect(await screen.findByText(/add a model provider key/i)).toBeTruthy();
+    expect(await screen.findByText(/add a provider key/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /start from/i })).toBeNull();
   });
 
@@ -343,7 +343,7 @@ describe("AiRoutingCard", () => {
     expect(screen.getByText("AI by activity")).toBeTruthy();
     expect(
       screen.getByText(
-        "Only a reader who holds both AI diagnostics read and AI allowance read can see which features are live right now.",
+        "Only a user with both AI diagnostics read and AI allowance read can see which features are live now.",
       ),
     ).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
@@ -688,7 +688,9 @@ describe("AiRoutingCard", () => {
       within(tier).getByRole("combobox", { name: "Provider" }),
       "anthropic",
     );
-    expect(await within(tier).findByText(/holds no key/i)).toBeTruthy();
+    expect(
+      await within(tier).findByText(/this provider has no key/i),
+    ).toBeTruthy();
     // And the sheet's own anthropic row is still offered, so the field is not
     // left empty by a vendor it could not reach. The box is cleared first: it
     // still holds the previous vendor's model, and the list filters on what is

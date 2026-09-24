@@ -131,7 +131,7 @@ export const TheServerRefusesTheImage: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Add a square icon" }),
+      await canvas.findByRole("button", { name: "Add square icon" }),
     );
     const icon = within(canvas.getByRole("region", { name: "Square icon" }));
     await userEvent.upload(

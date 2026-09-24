@@ -271,7 +271,7 @@ describe("the connect-time backfill payoff", () => {
     render(<BackfillPanel provider="gmail" />);
 
     await screen.findByText(/400 messages in that period/);
-    await user.click(screen.getByRole("button", { name: /Start the import/ }));
+    await user.click(screen.getByRole("button", { name: /Start import/ }));
 
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "POST").length).toBe(1),
@@ -291,8 +291,8 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    expect(await screen.findByText("Counting your mailbox…")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: /Start the import/ }));
+    expect(await screen.findByText("Counting messages…")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Start import/ }));
 
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "POST").length).toBe(1),
@@ -314,7 +314,7 @@ describe("the connect-time backfill payoff", () => {
     render(<BackfillPanel provider="gmail" />);
 
     expect(await screen.findByText(/No answer from Gmail\./)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: /Start the import/ }));
+    await user.click(screen.getByRole("button", { name: /Start import/ }));
 
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "POST").length).toBe(1),
@@ -371,7 +371,7 @@ describe("the connect-time backfill payoff", () => {
     render(<BackfillPanel provider="gmail" />);
 
     await user.click(
-      await screen.findByRole("button", { name: /Stop the import/ }),
+      await screen.findByRole("button", { name: /Stop import/ }),
     );
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "DELETE").length).toBe(1),
@@ -409,7 +409,7 @@ describe("the connect-time backfill payoff", () => {
     ).toContain("1 year");
 
     await user.click(
-      await screen.findByRole("button", { name: /Start the import/ }),
+      await screen.findByRole("button", { name: /Start import/ }),
     );
     await waitFor(async () => {
       const starts = requestsTo(calls, "/backfill", "POST");
@@ -444,7 +444,9 @@ describe("honest capability and staleness", () => {
     });
     render(<BackfillPanel provider="imap" initial={{ state: "none" }} />);
 
-    expect(await screen.findByText(/can't be backfilled/i)).toBeTruthy();
+    expect(
+      await screen.findByText(/does not support history import/i),
+    ).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     // Not a retryable error state: no window picker offered for a provider
     // that structurally can't run this op.
@@ -538,7 +540,7 @@ describe("honest capability and staleness", () => {
     render(<BackfillPanel provider="gmail" initial={{ state: "none" }} />);
 
     await user.click(
-      await screen.findByRole("button", { name: /Start the import/ }),
+      await screen.findByRole("button", { name: /Start import/ }),
     );
 
     expect(await screen.findByText(/only be widened/i)).toBeTruthy();
@@ -560,7 +562,7 @@ describe("a failure nobody wrote for a reader", () => {
     render(<BackfillPanel provider="gmail" initial={{ state: "none" }} />);
 
     await user.click(
-      await screen.findByRole("button", { name: /Start the import/ }),
+      await screen.findByRole("button", { name: /Start import/ }),
     );
 
     expect(
@@ -583,7 +585,7 @@ describe("a failure nobody wrote for a reader", () => {
     render(<BackfillPanel provider="gmail" initial={{ state: "none" }} />);
 
     await user.click(
-      await screen.findByRole("button", { name: /Start the import/ }),
+      await screen.findByRole("button", { name: /Start import/ }),
     );
 
     expect(

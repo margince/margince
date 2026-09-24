@@ -1152,8 +1152,9 @@ describe("DealsScreen", () => {
     // empty column has no sum to refuse, and a board of empty columns each
     // repeating the sentence read as a board of errors.
     expect(
-      screen.getAllByText("Loaded only — filter to My deals for the total")
-        .length,
+      screen.getAllByText(
+        "Loaded deals only. Filter to My deals for the total.",
+      ).length,
     ).toBe(1);
   });
 
@@ -1170,10 +1171,14 @@ describe("DealsScreen", () => {
 
     // Only the column holding a deal (s1) says so — empty columns stay quiet.
     expect(
-      screen.getAllByText("Loaded only — no total while a tag filters").length,
+      screen.getAllByText(
+        "Loaded deals only. No total while a tag filter is on.",
+      ).length,
     ).toBe(1);
     expect(
-      screen.queryByText("Loaded only — filter to My deals for the total"),
+      screen.queryByText(
+        "Loaded deals only. Filter to My deals for the total.",
+      ),
     ).toBeNull();
   });
 
@@ -1281,7 +1286,7 @@ describe("DealsScreen", () => {
     });
   });
 
-  // "Something else" is the one member that explains nothing on its own, so the
+  // "Other" is the one member that explains nothing on its own, so the
   // server demands a detail after it. Sending the reason without one would be a
   // refusal the reader could have been spared.
   it('picking "Something else" holds Confirm until the detail says what it was', async () => {
@@ -1309,13 +1314,13 @@ describe("DealsScreen", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "How was it won?" }),
-      "Something else",
+      "Other",
     );
 
     const confirm = screen.getByRole("button", { name: "Confirm" });
     expect(confirm.hasAttribute("disabled")).toBe(true);
 
-    await user.type(screen.getByLabelText("What was it?"), "a barter deal");
+    await user.type(screen.getByLabelText("Details"), "a barter deal");
     expect(confirm.hasAttribute("disabled")).toBe(false);
     await user.click(confirm);
 
@@ -1381,7 +1386,7 @@ describe("DealsScreen", () => {
     await waitFor(() => expect(screen.queryByText("Move to Won?")).toBeNull());
   });
 
-  // The detail belongs to "Something else" alone. Carried across a change of
+  // The detail belongs to "Other" alone. Carried across a change of
   // reason it would be stored anyway — the server writes both columns as given
   // — leaving text on the deal behind a field the reader can no longer see.
   it('changing away from "Something else" does not send the detail', async () => {
@@ -1409,9 +1414,9 @@ describe("DealsScreen", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "How was it won?" }),
-      "Something else",
+      "Other",
     );
-    await user.type(screen.getByLabelText("What was it?"), "a barter deal");
+    await user.type(screen.getByLabelText("Details"), "a barter deal");
 
     // Change your mind: the detail field disappears, and so must its text.
     await pickOption(
@@ -1419,7 +1424,7 @@ describe("DealsScreen", () => {
       screen.getByRole("combobox", { name: "How was it won?" }),
       "On a purchase order",
     );
-    expect(screen.queryByLabelText("What was it?")).toBeNull();
+    expect(screen.queryByLabelText("Details")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(advances).toHaveLength(2));
@@ -1454,9 +1459,9 @@ describe("DealsScreen", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "How was it won?" }),
-      "Something else",
+      "Other",
     );
-    await user.type(screen.getByLabelText("What was it?"), "​​");
+    await user.type(screen.getByLabelText("Details"), "​​");
 
     expect(
       screen.getByRole("button", { name: "Confirm" }).hasAttribute("disabled"),
@@ -1497,9 +1502,9 @@ describe("DealsScreen", () => {
 
     await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
     // progress_deal is catalogued "auto_execute" — a hardcoded
-    // "confirm" dot would render "confirm-first" here instead.
+    // "confirm" dot would render "approval first" here instead.
     await waitFor(() =>
-      expect(screen.getByLabelText("auto-execute")).toBeTruthy(),
+      expect(screen.getByLabelText("automatic")).toBeTruthy(),
     );
   });
 
@@ -2155,7 +2160,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     render(<DealScreen id="x" />);
 
     const sentence =
-      "You cannot change this deal. Ask its owner to share it with you, or your administrator for the right to edit it.";
+      "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights.";
     expect(await screen.findByText(sentence)).toBeTruthy();
 
     // The offer is hung off the deal through the deal's own write gate, so it
@@ -2288,7 +2293,7 @@ describe("DealScreen pending approvals", () => {
     render(<DealScreen id="d1" />);
 
     // approval.kind.advance_deal — the key the inbox reads for the same kind.
-    expect(await screen.findByText("Move a deal forward")).toBeTruthy();
+    expect(await screen.findByText("Advance deal")).toBeTruthy();
     // trust.agentTag: an agent, named, rather than the doubled wire string.
     expect(screen.getByText("Automated by capture")).toBeTruthy();
     expect(screen.queryByText("advance_deal")).toBeNull();

@@ -99,7 +99,7 @@ describe("CaptureExclusionsCard", () => {
     );
     // The answer beside each rule is what it binds and what kind it is — the
     // two facts that decide whether this reader may take it back.
-    expect(screen.getByText("Only me · Address")).toBeTruthy();
+    expect(screen.getByText("Your mailboxes · Address")).toBeTruthy();
     expect(screen.getByText("Whole company · Domain")).toBeTruthy();
   });
 

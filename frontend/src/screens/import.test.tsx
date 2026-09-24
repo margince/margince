@@ -141,12 +141,12 @@ function stubRoutes(overrides: Record<string, () => Response> = {}) {
 // looked up.
 async function openWizard() {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Start an import" }),
+    await screen.findByRole("button", { name: "Start import" }),
   );
 }
 
 async function upload(file = new File(["Email\na@x.test\n"], "estate.csv")) {
-  const input = await screen.findByLabelText("The CSV to import");
+  const input = await screen.findByLabelText("CSV file");
   await userEvent.upload(input, file);
 }
 
@@ -174,7 +174,7 @@ describe("the import card", () => {
     expect(within(notes).getByText("25%")).toBeInTheDocument();
     const email = screen.getByRole("row", { name: /Email/ });
     expect(within(email).getByText(/ada@x.test/)).toBeInTheDocument();
-    expect(within(notes).getByText("empty")).toBeInTheDocument();
+    expect(within(notes).getByText("Empty")).toBeInTheDocument();
   });
 
   it("sends only the columns with a destination, and reports what it will do", async () => {
@@ -185,7 +185,7 @@ describe("the import card", () => {
     await screen.findByRole("row", { name: /Notes/ });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Check what this will do" }),
+      screen.getByRole("button", { name: "Preview import" }),
     );
 
     const created = await waitFor(() => {
@@ -212,9 +212,7 @@ describe("the import card", () => {
     });
 
     // The prediction, and the row it cannot take, named by its line.
-    expect(
-      await screen.findByText("What this import will do"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Import preview")).toBeInTheDocument();
     // The disclosure names the line to open in the file AND why, in one
     // sentence a human can act on.
     const issue = screen.getByRole("listitem");
@@ -229,9 +227,9 @@ describe("the import card", () => {
     await upload();
     await screen.findByRole("row", { name: /Notes/ });
     await userEvent.click(
-      screen.getByRole("button", { name: "Check what this will do" }),
+      screen.getByRole("button", { name: "Preview import" }),
     );
-    await screen.findByText("What this import will do");
+    await screen.findByText("Import preview");
 
     // The whole promise of the screen: validating has not approved anything.
     expect(sent.some((s) => s.path.includes("/approve"))).toBe(false);
@@ -243,7 +241,7 @@ describe("the import card", () => {
     await waitFor(() =>
       expect(sent.some((s) => s.path.includes("/approve"))).toBe(true),
     );
-    expect(await screen.findByText("The import finished.")).toBeInTheDocument();
+    expect(await screen.findByText("Import complete")).toBeInTheDocument();
   });
 
   it("counts the rows it will write in words that read as English", async () => {
@@ -259,7 +257,7 @@ describe("the import card", () => {
     await upload();
     await screen.findByRole("row", { name: /Notes/ });
     await userEvent.click(
-      screen.getByRole("button", { name: "Check what this will do" }),
+      screen.getByRole("button", { name: "Preview import" }),
     );
 
     // "1 rows" is how a machine counts. This button is the last thing a human
@@ -285,11 +283,11 @@ describe("the import card", () => {
 
     expect(
       await screen.findByText(
-        /Map a column to email\. Without it no row can be recognized/,
+        /Map a column to email\. Without it, rows cannot be matched/,
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Check what this will do" }),
+      screen.getByRole("button", { name: "Preview import" }),
     ).toBeDisabled();
   });
 
@@ -319,16 +317,16 @@ describe("the import card", () => {
     await upload();
     await screen.findByRole("row", { name: /Notes/ });
     await userEvent.click(
-      screen.getByRole("button", { name: "Check what this will do" }),
+      screen.getByRole("button", { name: "Preview import" }),
     );
-    await screen.findByText("What this import will do");
+    await screen.findByText("Import preview");
     await userEvent.click(
       screen.getByRole("button", { name: "Import 2 rows" }),
     );
 
     expect(await screen.findByText(/stopped after 2 rows/)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Resume the import" }),
+      screen.getByRole("button", { name: "Resume import" }),
     ).toBeInTheDocument();
   });
 
@@ -342,13 +340,13 @@ describe("the import card", () => {
     await screen.findByRole("row", { name: /Notes/ });
 
     await userEvent.click(
-      screen.getByRole("combobox", { name: "Where Full Name goes" }),
+      screen.getByRole("combobox", { name: "Field for Full Name" }),
     );
     await userEvent.click(
-      await screen.findByRole("option", { name: "Don't import" }),
+      await screen.findByRole("option", { name: "Do not import" }),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Check what this will do" }),
+      screen.getByRole("button", { name: "Preview import" }),
     );
 
     const created = await waitFor(() => {
@@ -382,7 +380,7 @@ describe("the import card", () => {
     await upload();
 
     expect(
-      await screen.findByRole("combobox", { name: "Where Amount ($&) goes" }),
+      await screen.findByRole("combobox", { name: "Field for Amount ($&)" }),
     ).toBeInTheDocument();
   });
 
@@ -411,16 +409,16 @@ describe("the import card", () => {
     await upload();
     await screen.findByRole("row", { name: /Notes/ });
     await userEvent.click(
-      screen.getByRole("button", { name: "Check what this will do" }),
+      screen.getByRole("button", { name: "Preview import" }),
     );
-    await screen.findByText("What this import will do");
+    await screen.findByText("Import preview");
 
     await upload(new File([""], "broken.csv"));
 
     expect(
       await screen.findByText("The uploaded file has no content."),
     ).toBeInTheDocument();
-    expect(screen.queryByText("What this import will do")).toBeNull();
+    expect(screen.queryByText("Import preview")).toBeNull();
     expect(screen.queryByRole("button", { name: /^Import / })).toBeNull();
   });
 
@@ -461,7 +459,7 @@ describe("the import card", () => {
 
     // The grant is what decides, not the admin role — an ops seat holds
     // import_run and would be accepted by the store.
-    expect(await screen.findByText("Import a file")).toBeInTheDocument();
+    expect(await screen.findByText("Import file")).toBeInTheDocument();
   });
 
   // The flow creates a run, parks it, and approves it — three actions, not one.
@@ -513,28 +511,26 @@ describe("the import card", () => {
       await upload();
       await screen.findByRole("row", { name: /Notes/ });
       await userEvent.click(
-        screen.getByRole("button", { name: "Check what this will do" }),
+        screen.getByRole("button", { name: "Preview import" }),
       );
-      await screen.findByText("What this import will do");
+      await screen.findByText("Import preview");
       await userEvent.click(
         screen.getByRole("button", { name: "Import 3 rows" }),
       );
-      await screen.findByText("The import finished.");
+      await screen.findByText("Import complete");
 
       const undoButton = screen.getByRole("button", {
-        name: "Undo this import (3 rows)",
+        name: "Undo import (3 rows)",
       });
       await userEvent.click(undoButton);
 
       await waitFor(() =>
         expect(sent.some((s) => s.path.includes("/undo"))).toBe(true),
       );
-      expect(
-        await screen.findByText("The import was undone."),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("Import undone")).toBeInTheDocument();
       expect(screen.getByText("3 rows reversed.")).toBeInTheDocument();
       expect(
-        screen.queryByText("Kept — you edited these since the import:"),
+        screen.queryByText("Kept because they were edited after the import:"),
       ).toBeNull();
     });
 
@@ -560,20 +556,20 @@ describe("the import card", () => {
       await upload();
       await screen.findByRole("row", { name: /Notes/ });
       await userEvent.click(
-        screen.getByRole("button", { name: "Check what this will do" }),
+        screen.getByRole("button", { name: "Preview import" }),
       );
-      await screen.findByText("What this import will do");
+      await screen.findByText("Import preview");
       await userEvent.click(
         screen.getByRole("button", { name: "Import 3 rows" }),
       );
-      await screen.findByText("The import finished.");
+      await screen.findByText("Import complete");
       await userEvent.click(
-        screen.getByRole("button", { name: "Undo this import (3 rows)" }),
+        screen.getByRole("button", { name: "Undo import (3 rows)" }),
       );
 
       expect(await screen.findByText("2 rows reversed.")).toBeInTheDocument();
       expect(
-        screen.getByText("Kept — you edited these since the import:"),
+        screen.getByText("Kept because they were edited after the import:"),
       ).toBeInTheDocument();
       expect(screen.getByText(/019ff-kept-lead/)).toBeInTheDocument();
     });
@@ -590,22 +586,22 @@ describe("the import card", () => {
       await upload();
       await screen.findByRole("row", { name: /Notes/ });
       await userEvent.click(
-        screen.getByRole("button", { name: "Check what this will do" }),
+        screen.getByRole("button", { name: "Preview import" }),
       );
-      await screen.findByText("What this import will do");
+      await screen.findByText("Import preview");
       await userEvent.click(
         screen.getByRole("button", { name: "Import 3 rows" }),
       );
-      await screen.findByText("The import finished.");
+      await screen.findByText("Import complete");
       await userEvent.click(
-        screen.getByRole("button", { name: "Undo this import (3 rows)" }),
+        screen.getByRole("button", { name: "Undo import (3 rows)" }),
       );
 
       expect(
-        await screen.findByText(/undo was interrupted partway through/),
+        await screen.findByText(/undo was interrupted\. Continue resumes/),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "Continue the undo" }),
+        screen.getByRole("button", { name: "Continue undo" }),
       ).toBeInTheDocument();
     });
 
@@ -637,20 +633,18 @@ describe("the import card", () => {
       await upload();
       await screen.findByRole("row", { name: /Notes/ });
       await userEvent.click(
-        screen.getByRole("button", { name: "Check what this will do" }),
+        screen.getByRole("button", { name: "Preview import" }),
       );
-      await screen.findByText("What this import will do");
+      await screen.findByText("Import preview");
       await userEvent.click(
         screen.getByRole("button", { name: "Import 3 rows" }),
       );
-      await screen.findByText("The import finished.");
+      await screen.findByText("Import complete");
       await userEvent.click(
-        screen.getByRole("button", { name: "Undo this import (3 rows)" }),
+        screen.getByRole("button", { name: "Undo import (3 rows)" }),
       );
 
-      expect(
-        await screen.findByText("The import was undone."),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("Import undone")).toBeInTheDocument();
       expect(screen.getByText("2 rows reversed.")).toBeInTheDocument();
       expect(screen.getByText(/Could not be reversed/)).toBeInTheDocument();
       expect(screen.getByText(/019ff-stuck-lead/)).toBeInTheDocument();
@@ -697,18 +691,16 @@ describe("the import card", () => {
       const sent = stubRoutes(completedRunRoutes());
       render(<ImportCard />);
 
+      expect(await screen.findByText("Import result")).toBeInTheDocument();
       expect(
-        await screen.findByText("What this import did"),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Undo this import (3 rows)" }),
+        screen.getByRole("button", { name: "Undo import (3 rows)" }),
       ).toBeInTheDocument();
       // Read back, not re-uploaded: nothing about the file is on this machine
       // any more, and the reader chose no file this time.
       expect(sent.some((s) => s.path === "POST /imports/sources")).toBe(false);
       // And it says where it came from. An outcome with no press behind it,
       // presented as a fresh one, reads as an import that ran by itself.
-      expect(screen.getByText(/Picked up from earlier/)).toBeInTheDocument();
+      expect(screen.getByText(/This import ran on/)).toBeInTheDocument();
     });
 
     // Behind a verb, a recovered run is only as visible as the reader's guess
@@ -725,7 +717,7 @@ describe("the import card", () => {
         within(dialog).getByText(/stopped after 2 rows/),
       ).toBeInTheDocument();
       expect(
-        within(dialog).getByRole("button", { name: "Resume the import" }),
+        within(dialog).getByRole("button", { name: "Resume import" }),
       ).toBeInTheDocument();
     });
 
@@ -743,7 +735,7 @@ describe("the import card", () => {
 
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
       expect(
-        screen.getByRole("button", { name: "Start an import" }),
+        screen.getByRole("button", { name: "Start import" }),
       ).toBeInTheDocument();
     });
 
@@ -754,7 +746,7 @@ describe("the import card", () => {
       render(<ImportCard />);
 
       expect(
-        await screen.findByRole("button", { name: "Start an import" }),
+        await screen.findByRole("button", { name: "Start import" }),
       ).toBeInTheDocument();
       expect(screen.queryByRole("dialog")).toBeNull();
     });
@@ -766,13 +758,13 @@ describe("the import card", () => {
       await upload();
       await screen.findByRole("row", { name: /Notes/ });
       await userEvent.click(
-        screen.getByRole("button", { name: "Check what this will do" }),
+        screen.getByRole("button", { name: "Preview import" }),
       );
-      await screen.findByText("What this import will do");
+      await screen.findByText("Import preview");
       await userEvent.click(
         screen.getByRole("button", { name: "Import 3 rows" }),
       );
-      await screen.findByText("The import finished.");
+      await screen.findByText("Import complete");
 
       expect(localStorage.getItem(REMEMBERED_RUN_KEY)).toBe(run.id);
     });
@@ -797,9 +789,9 @@ describe("the import card", () => {
       // a spent affordance.
       expect(screen.queryByRole("dialog")).toBeNull();
       await openWizard();
-      expect(screen.queryByText("What this import did")).toBeNull();
+      expect(screen.queryByText("Import result")).toBeNull();
       expect(
-        screen.getByRole("button", { name: "Choose a file" }),
+        screen.getByRole("button", { name: "Choose file" }),
       ).toBeInTheDocument();
     });
 
@@ -822,9 +814,9 @@ describe("the import card", () => {
       );
       expect(screen.queryByRole("dialog")).toBeNull();
       await openWizard();
-      expect(screen.queryByText("What this import did")).toBeNull();
+      expect(screen.queryByText("Import result")).toBeNull();
       expect(
-        screen.getByRole("button", { name: "Choose a file" }),
+        screen.getByRole("button", { name: "Choose file" }),
       ).toBeInTheDocument();
     });
 
@@ -853,7 +845,7 @@ describe("the import card", () => {
       // to read — the reference is kept for the next visit, not rendered as one.
       expect(screen.queryByRole("dialog")).toBeNull();
       await openWizard();
-      expect(screen.queryByText("What this import did")).toBeNull();
+      expect(screen.queryByText("Import result")).toBeNull();
     });
   });
 });

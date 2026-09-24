@@ -73,7 +73,7 @@ describe("the sentence says whose move it is", () => {
         timeline={[]}
       />,
     );
-    expect(screen.getByText(/It's your move/)).toBeInTheDocument();
+    expect(screen.getByText(/Your reply is due/)).toBeInTheDocument();
     expect(screen.getByText(/20 May/)).toBeInTheDocument();
   });
 
@@ -107,8 +107,8 @@ describe("the sentence says whose move it is", () => {
     // row behind reply_to can be missing. Whose move it is, is still known —
     // inventing the date to complete the sentence would not be.
     show(<DealPulse card={card({ reply_to: MAIL_ID })} timeline={[]} />);
-    expect(screen.getByText(/It's your move/)).toBeInTheDocument();
-    expect(screen.getByText(/nobody has answered/)).toBeInTheDocument();
+    expect(screen.getByText(/Your reply is due/)).toBeInTheDocument();
+    expect(screen.getByText(/no one has replied/)).toBeInTheDocument();
   });
 
   it("says nothing is flagged, and never that the buyer owes us", () => {
@@ -117,7 +117,7 @@ describe("the sentence says whose move it is", () => {
     // must not say so — that claim told a rep to sit and wait on a deal where
     // nobody was going to write.
     show(<DealPulse card={card({ reply_to: null })} timeline={[]} />);
-    expect(screen.getByText(/No reply is waiting on you/)).toBeInTheDocument();
+    expect(screen.getByText(/No reply due/)).toBeInTheDocument();
     expect(screen.queryByText(/Their move/)).not.toBeInTheDocument();
   });
 

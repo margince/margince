@@ -63,7 +63,7 @@ function purposes(allow: GrantSpec, purposeList: unknown = PURPOSES) {
 }
 
 const meta: Meta<typeof ConsentPurposesCard> = {
-  title: "Settings/Governance/Privacy & retention/Consent purposes",
+  title: "Settings/Governance/Privacy and retention/Consent purposes",
   component: ConsentPurposesCard,
 };
 export default meta;

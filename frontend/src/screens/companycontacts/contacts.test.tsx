@@ -51,7 +51,7 @@ test("names each engagement state in its own words", async () => {
   expect(await screen.findByText("Needs reply")).not.toBeNull();
   expect(screen.getByText("Answered")).not.toBeNull();
   expect(screen.getByText("No reply")).not.toBeNull();
-  expect(screen.getByText("Not approached")).not.toBeNull();
+  expect(screen.getByText("Not contacted")).not.toBeNull();
   expect(screen.getByText("Went quiet")).not.toBeNull();
 });
 
@@ -61,12 +61,12 @@ test("a contact who went quiet is never called never approached", async () => {
 
   // The two columns are folded from different windows: the state from 90-day
   // counts, the last-touch date from the whole history. A contact whose only
-  // mail arrived in June was reported "Not approached" on the same row that
+  // mail arrived in June was reported "Not contacted" on the same row that
   // said "They wrote", and a rep cannot act on a row that contradicts itself.
   const row = (await screen.findByText("Annabelle Malherbe")).closest("tr");
   expect(row).not.toBeNull();
   expect(within(row as HTMLElement).getByText("Went quiet")).not.toBeNull();
-  expect(within(row as HTMLElement).queryByText("Not approached")).toBeNull();
+  expect(within(row as HTMLElement).queryByText("Not contacted")).toBeNull();
   expect(within(row as HTMLElement).getByText(/They wrote/)).not.toBeNull();
 });
 
@@ -76,7 +76,7 @@ test("says which side the conversation is owed, not just when it moved", async (
 
   // A date alone reads the same whoever sent it. The direction is the fact.
   expect((await screen.findAllByText(/They wrote/)).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/We wrote/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Your team wrote/).length).toBeGreaterThan(0);
   expect(screen.getByText("No exchange yet")).not.toBeNull();
 });
 

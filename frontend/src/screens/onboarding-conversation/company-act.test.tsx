@@ -429,12 +429,12 @@ describe("arriving at the review scene", () => {
     // reading is not editing, so the wall is two doors away, and this test
     // walks the same two a reader would.
     fireEvent.click(
-      await screen.findByRole("button", { name: "Read the whole profile" }),
+      await screen.findByRole("button", { name: "Read full profile" }),
     );
     fireEvent.click(
-      await screen.findByRole("button", { name: "Choose the facts to keep" }),
+      await screen.findByRole("button", { name: "Choose facts to keep" }),
     );
-    await screen.findByRole("heading", { level: 2, name: /Correct me/ });
+    await screen.findByRole("heading", { level: 2, name: /Correct anything/ });
 
     // A background poll narrates again, live, while the review is already
     // on screen with the row now actually mounted — a fresh thread array
@@ -559,7 +559,7 @@ describe("recovering from a rejected confirm", () => {
     );
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     expect(continueButton).toBeEnabled();
 
@@ -634,7 +634,7 @@ describe("recovering from a rejected confirm", () => {
     );
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     await vi.waitFor(() => expect(continueButton).toBeEnabled());
 
@@ -709,7 +709,7 @@ describe("recovering from a rejected confirm", () => {
     );
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
 
@@ -766,7 +766,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
 
@@ -807,7 +807,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -860,7 +860,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -914,7 +914,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -961,7 +961,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -1005,7 +1005,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -1045,7 +1045,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview(dispatch);
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Confirm the profile" }),
+      await screen.findByRole("button", { name: "Confirm profile" }),
     );
 
     await vi.waitFor(() =>
@@ -1102,7 +1102,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview(dispatch);
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await vi.waitFor(() => expect(gate.release).not.toBeNull());
@@ -1163,7 +1163,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview(dispatch);
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Confirm the profile" }),
+      await screen.findByRole("button", { name: "Confirm profile" }),
     );
 
     await screen.findByText(CHECK_FAILED_NOTICE);

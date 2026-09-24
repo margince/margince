@@ -123,7 +123,7 @@ export const FoundAndOwedDark: Story = {
 // qualifies the authorship claim — read against WHAT — so it sits beside
 // "Margince suggests" rather than over the ask, which is the move itself.
 export const FoundMoveWithKicker: Story = {
-  render: () => <Pane kicker="Promise overdue" />,
+  render: () => <Pane kicker="Commitment overdue" />,
 };
 
 // The pane at phone measure, and the only story where the move's verbs sit

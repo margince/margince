@@ -54,17 +54,13 @@ function renderBox(replyTo?: string) {
 describe("the record's email box", () => {
   it("offers the reply when the caller passes a reply target", () => {
     renderBox(MAIL);
-    expect(
-      screen.getByRole("button", { name: "Draft the reply" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Draft reply" })).toBeTruthy();
   });
 
   it("offers a fresh mail when there is no reply target", () => {
     renderBox();
     expect(screen.getByRole("button", { name: "Write email" })).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: "Draft the reply" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Draft reply" })).toBeNull();
   });
 
   it("carries the caller's own wording when overrides are supplied", () => {
@@ -87,7 +83,7 @@ describe("the record's email box", () => {
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByRole("button", { name: "Send an email" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send email" })).toBeTruthy();
   });
 });
 
@@ -179,7 +175,7 @@ describe("the record's own waiting-reply read", () => {
     const user = userEvent.setup();
     renderDetecting();
     const replyButton = await screen.findByRole("button", {
-      name: "Draft the reply",
+      name: "Draft reply",
     });
     await user.click(replyButton);
     // The composer only asks who a reply goes to for the activity it was

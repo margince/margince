@@ -27,9 +27,9 @@ const LABELS: WorkbenchRuntimeLabels = {
   latency: "Latency",
   estimatedCost: "Estimated cost",
   partial: "Partial",
-  awaiting: "Shown after my first model call",
+  awaiting: "Shown after the first model call",
   unavailable: "Not available yet",
-  chip: "What is answering, and what it costs",
+  chip: "Active model and cost",
   answering: "Answering right now",
   scope: "This run only",
 };
@@ -41,7 +41,7 @@ function renderWorkbench() {
     <MarginceWorkbench
       state="working"
       eyebrow="Margince"
-      title="Your company research AI"
+      title="Company research AI"
       status="Reading"
       configured="ollama/gemma3"
       locale="en"
@@ -198,7 +198,7 @@ describe("the rail's contact row", () => {
       <MarginceWorkbench
         state="working"
         eyebrow="Margince"
-        title="Your company research AI"
+        title="Company research AI"
         status="Reading"
         configured="ollama/gemma3"
         locale="en"
