@@ -1,6 +1,8 @@
 # UI copy: German
 
-German is translated from the English catalog, `frontend/src/i18n/en.ts`, and
+German is translated from the English catalog beside it: `frontend/src/i18n/en.ts`
+for `frontend/src/i18n/de.ts`, and the sibling `en.json` for each extension's
+`de.json` (for example `extensions/openchannel/frontend/i18n/en.json`).
 [ui-copy-style.md](ui-copy-style.md) binds it too. This page states only what
 German adds or changes: address, grammar, mechanics, inclusive language and one
 German word per concept. It is the page the next German author reads, and the
