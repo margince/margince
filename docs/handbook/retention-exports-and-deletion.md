@@ -162,8 +162,10 @@ is anonymise or erase, and a fulfilled erasure request.
 ## The privacy inbox
 
 **Settings → Privacy inbox** holds data-subject requests with their statutory
-deadlines. Only an admin can see it, because the queue names whoever
-asked.
+deadlines. Reaching it takes the **privacy request** grant, because the queue
+names whoever asked. That grant is seeded to admins and can be delegated on its
+own — running the privacy inbox does not have to come with member
+administration.
 
 A request has a kind, a subject, an assignee, a due date, and a resolution. It
 moves through **In progress** and is closed by **Fulfil** or **Reject**.
