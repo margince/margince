@@ -290,11 +290,14 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// The day's surface reads the SAME approvals engine the inbox decides
 	// through, so a card here and a row there are one queue rather than two
 	// readings of it.
-	srv.attentionHandlers = newAttentionHandlers(pool, approvalsServiceWithEffects(pool))
+	staged := approvalsServiceWithEffects(pool)
+	srv.attentionHandlers = newAttentionHandlers(pool, staged)
 	// The machinery's receipt: what ran without being asked, in the window since
 	// the reader last looked. It reads the same clock the rest of the surface
-	// does, so "since your brief" means the same instant everywhere.
-	srv.magicService = newMagicService(pool, time.Now)
+	// does, so "since your brief" means the same instant everywhere, and the
+	// same staged queue the day's surface reads, so a decision counted here and
+	// a card there are one thing.
+	srv.magicService = newMagicService(pool, staged, time.Now)
 	srv.magicHandlers = magic.NewHandlers(srv.magicService)
 	srv.wireAnalyticsSurface(pool)
 	srv.wireCaptureSettingsSurface(pool)
