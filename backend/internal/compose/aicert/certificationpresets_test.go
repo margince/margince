@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // aiCertPresetDir is config/presets/ as this package reaches it, and
@@ -299,7 +300,6 @@ func aiCertBandCell(row aiCertPresetTask) string {
 func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc aiCertDoc) {
 	t.Helper()
 	tasks := aiCertTasksOf(doc)
-	recorded := aiCertRecordedModels(doc)
 	for _, p := range presets {
 		if len(p.Tasks) != len(tasks) {
 			t.Errorf("preset %s reports %d tasks and the page ships %d", p.File, len(p.Tasks), len(tasks))
@@ -310,17 +310,41 @@ func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc 
 		if p.Unrecognised > 0 {
 			t.Errorf("preset %s carries %d row(s) whose band this rollup has no column for", p.File, p.Unrecognised)
 		}
-		// PER PRESET, not summed across them. A total hides the failure this
-		// asks about: attribution keys a preset's profile against a record's
-		// env, so one typo'd `profile:` turns that preset entirely `untested`
-		// while every other preset keeps the sum comfortably positive. A preset
-		// none of whose models any record names is honestly untested instead.
-		measured := p.Bands.Certified + p.Bands.SupportedDegraded + p.Bands.NotSupported
-		if measured == 0 && bindsAMeasuredModel(p, recorded) {
-			t.Errorf("preset %s reaches no measured band at all — every task reads untested or unbound, "+
-				"which is a claim about the product if true and a broken join if not", p.File)
+	}
+	for _, problem := range unmeasuredPresetProblems(t, presets, aiCertRecordedModels(doc), aiCertUnmeasuredWaivers) {
+		t.Error(problem)
+	}
+	aiCertUnmeasuredWaivers.AssertAllMatched(t)
+}
+
+// aiCertUnmeasuredWaivers names the presets allowed to reach no measured band,
+// each with why. An entry is stale once its preset is measured or gone
+// (AssertAllMatched), or once any record measures one of its models.
+var aiCertUnmeasuredWaivers = gatekit.Waive(map[string]string{
+	"gemini_vertex_eu.yaml": "no gemini_vertex certification run has been paid for yet",
+})
+
+// unmeasuredPresetProblems asks, PER PRESET and not summed across them,
+// whether each reaches a measured band. A total hides the failure this asks
+// about: attribution keys a preset's profile against a record's env, so one
+// typo'd `profile:` turns that preset entirely `untested` while every other
+// preset keeps the sum comfortably positive.
+func unmeasuredPresetProblems(t testing.TB, presets []aiCertPreset, recorded map[string]bool, waivers *gatekit.Waivers[string]) []string {
+	var problems []string
+	for _, p := range presets {
+		if p.Bands.Certified+p.Bands.SupportedDegraded+p.Bands.NotSupported > 0 {
+			continue
+		}
+		switch {
+		case !waivers.Waived(t, p.File):
+			problems = append(problems, fmt.Sprintf("preset %s reaches no measured band at all — every task reads untested or unbound, "+
+				"which is a claim about the product if true and a broken join if not", p.File))
+		case bindsAMeasuredModel(p, recorded):
+			problems = append(problems, fmt.Sprintf("preset %s is waived as unmeasured, but a record measures one of its models, "+
+				"so its zero is a broken join — fix the attribution, then delete its entry from aiCertUnmeasuredWaivers", p.File))
 		}
 	}
+	return problems
 }
 
 // aiCertRecordedModels answers whether some record measured a provider and
@@ -342,4 +366,26 @@ func bindsAMeasuredModel(p aiCertPreset, recorded map[string]bool) bool {
 		}
 	}
 	return false
+}
+
+func TestAnUnmeasuredPresetFailsUnlessWaivedAndItsWaiverFailsOnceARecordExists(t *testing.T) {
+	t.Parallel()
+	unmeasured := aiCertPreset{File: "fresh.yaml", Tiers: []aiCertPresetTier{{Tier: "premium", Provider: "p", Model: "m"}}}
+	for name, tc := range map[string]struct {
+		recorded map[string]bool
+		waivers  map[string]string
+		want     string
+	}{
+		"unwaived": {map[string]bool{}, map[string]string{}, "reaches no measured band"},
+		"stale":    {map[string]bool{"p\x00m": true}, map[string]string{"fresh.yaml": "no certification run has been paid for its models yet"}, "broken join"},
+		"current":  {map[string]bool{"other\x00m": true}, map[string]string{"fresh.yaml": "no certification run has been paid for its models yet"}, ""},
+	} {
+		problems := unmeasuredPresetProblems(t, []aiCertPreset{unmeasured}, tc.recorded, gatekit.Waive(tc.waivers))
+		switch {
+		case tc.want == "" && len(problems) != 0:
+			t.Errorf("%s: a current waiver still failed: %q", name, problems)
+		case tc.want != "" && (len(problems) != 1 || !strings.Contains(problems[0], tc.want)):
+			t.Errorf("%s: problems = %q, want exactly one saying %q", name, problems, tc.want)
+		}
+	}
 }

@@ -7,13 +7,14 @@
 
 package gates
 
-// The routing form offers exactly the adapters SelectBrain serves.
+// The routing form offers exactly the adapters and profiles the server accepts.
 //
 // `PROVIDERS` in `frontend/src/screens/ai-routing-fields.tsx` is a declared
-// mirror of `ai.KnownProviders()`, compared in both directions: a name the
-// form offers that the server refuses is a save rejected over an adapter the
-// reader picked from our own list, and an adapter the server serves that the
-// form omits cannot be bound from Settings at all.
+// mirror of `ai.KnownProviders()`, and `PROFILES` in
+// `frontend/src/screens/ai-routing.tsx` one of `ai.DeclaredProfiles()`, each
+// compared in both directions: a name the form offers that the server refuses
+// is a save rejected over a choice the reader picked from our own list, and
+// one the server accepts that the form omits cannot be chosen from Settings.
 
 import (
 	"os"
@@ -24,36 +25,57 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-const routingFieldsFile = "../frontend/src/screens/ai-routing-fields.tsx"
-
-var (
-	providersLiteral = regexp.MustCompile(`(?s)const PROVIDERS = \[(.*?)\] as const`)
-	quotedName       = regexp.MustCompile(`"([^"]+)"`)
+const (
+	routingFieldsFile = "../frontend/src/screens/ai-routing-fields.tsx"
+	routingFormFile   = "../frontend/src/screens/ai-routing.tsx"
 )
 
-func readFormProviders(t *testing.T) []string {
+var quotedName = regexp.MustCompile(`"([^"]+)"`)
+
+// readFormConstant reads the quoted names of one `const NAME = [...] as const`.
+func readFormConstant(t *testing.T, file, name string) []string {
 	t.Helper()
-	raw, err := os.ReadFile(routingFieldsFile)
+	raw, err := os.ReadFile(file)
 	if err != nil {
-		t.Fatalf("read %s: %v", routingFieldsFile, err)
+		t.Fatalf("read %s: %v", file, err)
 	}
-	literal := providersLiteral.FindSubmatch(raw)
+	literal := regexp.MustCompile(`(?s)const ` + name + ` = \[(.*?)\] as const`).FindSubmatch(raw)
 	if literal == nil {
-		t.Fatalf("no `const PROVIDERS = [...] as const` in %s — the mirror has gone blind", routingFieldsFile)
+		t.Fatalf("no `const %s = [...] as const` in %s — the mirror has gone blind", name, file)
 	}
 	var names []string
 	for _, m := range quotedName.FindAllSubmatch(literal[1], -1) {
 		names = append(names, string(m[1]))
 	}
 	if len(names) == 0 {
-		t.Fatalf("PROVIDERS in %s parsed as empty — the mirror has gone blind", routingFieldsFile)
+		t.Fatalf("%s in %s parsed as empty — the mirror has gone blind", name, file)
 	}
 	return names
 }
 
+func TestTheRoutingFormOffersExactlyTheProfilesTheServerAdmits(t *testing.T) {
+	t.Parallel()
+	offered := readFormConstant(t, routingFormFile, "PROFILES")
+	var admitted []string
+	for _, p := range ai.DeclaredProfiles() {
+		admitted = append(admitted, string(p))
+	}
+	for _, name := range offered {
+		if !slices.Contains(admitted, name) {
+			t.Errorf("the routing form offers profile %q, which the server refuses on save", name)
+		}
+	}
+	for _, name := range admitted {
+		if !slices.Contains(offered, name) {
+			t.Errorf("the server admits profile %q and the routing form's PROFILES omits it — "+
+				"it cannot be chosen from Settings", name)
+		}
+	}
+}
+
 func TestTheRoutingFormOffersExactlyTheAdaptersTheServerServes(t *testing.T) {
 	t.Parallel()
-	offered := readFormProviders(t)
+	offered := readFormConstant(t, routingFieldsFile, "PROVIDERS")
 	served := ai.KnownProviders()
 	for _, name := range offered {
 		if !slices.Contains(served, name) {

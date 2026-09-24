@@ -281,6 +281,10 @@ func ProviderIsLocal(provider string) bool {
 // gate compares it with the config schema's enum.
 var declaredProfiles = []Profile{ProfileCloudHosted, ProfileEUResident, ProfileSovereign, ProfileCloudFrontier}
 
+// DeclaredProfiles is declaredProfiles as a copy, for the gate that holds the
+// routing form's own list against it.
+func DeclaredProfiles() []Profile { return slices.Clone(declaredProfiles) }
+
 // Valid reports whether p is one of the declared environment classes.
 //
 // Exported because the certification lane files a record under the profile it
