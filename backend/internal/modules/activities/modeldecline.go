@@ -17,8 +17,11 @@ package activities
 // prompt moves, which is the same price a stale verdict pays in OwedRestale.
 // The digest names the prompt alone: a loosened validator or response schema
 // does not re-offer what the old one refused (see capturelabel.Ruleset).
-// While two builds with different prompts run side by side in a rolling deploy,
-// each re-offers what the other declined; that lasts as long as the rollout.
+// While two builds with different prompts serve side by side in a rolling
+// deploy, each reads the other's stamp as stale: the row costs one call per tick
+// of each build, never more within one, and settles the first tick after one
+// prompt is left. Held by: TestTwoPromptsServedSideBySideOfferADeclinedRowOncePerTickEach
+// (backend/internal/modules/activities/declineruleset_integration_test.go).
 //
 // The stamp is bookkeeping about the sweep, not a judgement of the message: it
 // states no verdict, so it mints no audit entry and no event, the posture
@@ -45,7 +48,7 @@ type declineStamp struct {
 
 var (
 	captureLabelDecline = declineStamp{"capture_label_declined_at", "capture_label_declined_ruleset", "capture_label"}
-	owedVerdictDecline  = declineStamp{"owed_verdict_declined_at", "owed_verdict_declined_ruleset", "owed_verdict"}
+	owedVerdictDecline  = declineStamp{"owed_verdict_declined_at", "owed_verdict_declined_ruleset", owedVerdictField}
 )
 
 // errRulesetUnnamed refuses a read or write that names no prompt digest. Every

@@ -69,6 +69,10 @@ const (
 	OwedVerdictInformsUs = "informs_us"
 )
 
+// owedVerdictField is the column a verdict is written to, and the name the
+// audit trail and a decline stamp give the question it answers.
+const owedVerdictField = "owed_verdict"
+
 // PriorOutbound is OUR own last message in a candidate's thread, as context.
 //
 // It is what makes a reply readable AS a reply. "Dienstag 14 Uhr würde bei uns
@@ -477,8 +481,8 @@ func (s *Store) SetOwedVerdict(ctx context.Context, id ids.UUID, verdict, rulese
 		// write with no event — in transcriptread.go and in capture's settings
 		// writers.
 		if _, err := storekit.Audit(ctx, tx, "update", "activity", id,
-			map[string]any{"owed_verdict": priorVerdict, "owed_verdict_ruleset": priorRuleset},
-			map[string]any{"owed_verdict": verdict, "owed_verdict_ruleset": ruleset}); err != nil {
+			map[string]any{owedVerdictField: priorVerdict, "owed_verdict_ruleset": priorRuleset},
+			map[string]any{owedVerdictField: verdict, "owed_verdict_ruleset": ruleset}); err != nil {
 			return err
 		}
 		return nil

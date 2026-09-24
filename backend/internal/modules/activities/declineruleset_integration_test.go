@@ -108,6 +108,53 @@ func TestALegacyDeclineIsOfferedOnceAndRestamped(t *testing.T) {
 	}
 }
 
+// Two builds serving two prompts side by side — a rolling deploy — each see
+// the other's decline as stale, so the row changes hands on every tick. The
+// cost is bounded and this pins the bound: each build offers the row once per
+// tick of its own and not again within it, and the moment one prompt is left
+// the row settles, stamped under it and offered to nobody.
+func TestTwoPromptsServedSideBySideOfferADeclinedRowOncePerTickEach(t *testing.T) {
+	e := setupFacts(t)
+	ctx := e.as()
+	id := e.seed(t, capturedRow{kind: "email"})
+	offered := func(ruleset string) bool {
+		t.Helper()
+		backlog, err := e.store.UnlabeledCaptureEmails(ctx, ruleset, 50, 200)
+		if err != nil {
+			t.Fatalf("reading the backlog under %s: %v", ruleset, err)
+		}
+		return backlogHolds(backlog, id)
+	}
+	// One tick of one build: read the backlog, and decline what it was offered.
+	tick := func(ruleset string) {
+		t.Helper()
+		if !offered(ruleset) {
+			return
+		}
+		if recorded, err := e.store.MarkCaptureLabelDeclined(ctx, id, ruleset); err != nil || !recorded {
+			t.Fatalf("declining under %s: recorded=%v err=%v", ruleset, recorded, err)
+		}
+	}
+
+	for round := 1; round <= 3; round++ {
+		for _, ruleset := range []string{rulesetOld, rulesetNew} {
+			if !offered(ruleset) {
+				t.Fatalf("round %d: %s was not offered a row the other prompt declined", round, ruleset)
+			}
+			tick(ruleset)
+			if offered(ruleset) {
+				t.Fatalf("round %d: %s offers the row again after declining it — more than once per tick", round, ruleset)
+			}
+		}
+	}
+	// The rollout ends: only the new prompt is served, and it last declined the row.
+	for range 3 {
+		if offered(rulesetNew) {
+			t.Fatal("with one prompt left the row is still offered, so the ping-pong outlived the rollout")
+		}
+	}
+}
+
 func backlogHolds(backlog []UnlabeledEmail, id ids.UUID) bool {
 	for _, m := range backlog {
 		if m.ID == id {

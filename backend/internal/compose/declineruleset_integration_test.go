@@ -136,3 +136,34 @@ func TestTheOwedPassOffersAMessageDeclinedUnderAnotherPrompt(t *testing.T) {
 		t.Errorf("a message declined under the current prompt was sent %d times; it stays declined", brain.withheld)
 	}
 }
+
+// The owed pass's half of the same guarantee: a message declined under a
+// retired prompt that the current prompt declines too is offered on the first
+// pass, re-stamped under the current prompt, and not offered on the second.
+func TestTheOwedPassRestampsAStaleDeclineOnce(t *testing.T) {
+	e := integration.Setup(t)
+	hostile := seedWaitingMail(t, e, "Invoice "+hostileMarker)
+	store := activities.NewStore(InstallationDB(e.Pool))
+	if recorded, err := store.MarkOwedVerdictDeclined(owedSweepContext(e), hostile, retiredPrompt); err != nil || !recorded {
+		t.Fatalf("recording the prior decline: recorded=%v err=%v", recorded, err)
+	}
+
+	brain := &withholdingWhere{inner: &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: 0.95}}
+	runOwedWorker(t, e, brain)
+	offeredOnce := brain.withheld
+	if offeredOnce == 0 {
+		t.Fatal("the first pass never sent the message declined under a retired prompt; it is owed one offering")
+	}
+	if got := declinedUnder(t, e, hostile, "owed_verdict_declined_ruleset"); got != owedverdict.Ruleset {
+		t.Fatalf("the decline names %q, want the prompt that declined it now, %q", got, owedverdict.Ruleset)
+	}
+
+	runOwedWorker(t, e, brain)
+	if brain.withheld != offeredOnce {
+		t.Errorf("the second pass sent the message again (%d calls, want %d); a decline under the current prompt stands",
+			brain.withheld, offeredOnce)
+	}
+	if got := verdictOf(t, e, hostile); got != nil {
+		t.Errorf("the declined message was judged %q; it stays unjudged", *got)
+	}
+}
