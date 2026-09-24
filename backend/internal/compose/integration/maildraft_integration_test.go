@@ -11,8 +11,10 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -162,4 +164,80 @@ func TestAScheduledReplyTakesItsDraftWithIt(t *testing.T) {
 	if n := p.draftRows(t); n != 0 {
 		t.Fatalf("%d draft(s) survived the scheduling they were composed for, want 0", n)
 	}
+}
+
+// Art. 15 owes the subject the message a rep started to them and never sent,
+// with the blind-copy rule the scheduled messages follow: the subject sees
+// their own blind copy and not who else was blind-copied. A draft opened on
+// their record is theirs too; one to somebody else on another record is not.
+func TestASubjectAccessExportCarriesTheDraftsWrittenToThem(t *testing.T) {
+	p := setupPreflight(t)
+	put := func(to, bcc []string, body string) {
+		t.Helper()
+		if status := p.Call(t, "PUT", "/v1/mail-drafts", AnyMap{
+			"anchor_type": "activity", "anchor_id": p.activityID,
+			"to": to, "bcc": bcc, "subject": "Re: pricing", "body": body,
+		}, nil, nil); status != http.StatusOK {
+			t.Fatalf("saving a draft → %d, want 200", status)
+		}
+	}
+	put([]string{"colleague@preflight.test"}, []string{"Buyer@preflight.test", "other-blind@preflight.test"}, "Written and never sent.")
+	if status := p.Call(t, "PUT", "/v1/mail-drafts", AnyMap{
+		"anchor_type": "contact", "anchor_id": p.seedStranger(t),
+		"to": []string{"stranger@preflight.test"}, "body": "Not about the subject.",
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("saving the unrelated draft → %d, want 200", status)
+	}
+
+	// Opened on the subject's own record, to somebody else: still about them.
+	if status := p.Call(t, "PUT", "/v1/mail-drafts", AnyMap{
+		"anchor_type": "contact", "anchor_id": p.contactID,
+		"to": []string{"assistant@preflight.test"}, "body": "About the subject.",
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("saving the draft on the subject's record → %d, want 200", status)
+	}
+
+	contactID, err := ids.Parse(p.contactID)
+	if err != nil {
+		t.Fatalf("contact id %q: %v", p.contactID, err)
+	}
+	pkg, err := privacy.AssembleSAR(
+		p.privacyAdmin(t), compose.InstallationDB(p.Pool), ids.From[ids.ContactKind](contactID))
+	if err != nil {
+		t.Fatalf("AssembleSAR: %v", err)
+	}
+
+	if len(pkg.DraftMessages) != 2 {
+		t.Fatalf("the export carried %d drafts, want the one written to this contact and the one on their record: %#v",
+			len(pkg.DraftMessages), pkg.DraftMessages)
+	}
+	rendered := fmt.Sprintf("%#v", pkg.DraftMessages)
+	if !strings.Contains(rendered, "About the subject.") {
+		t.Errorf("the draft opened on the subject's record is missing from their export: %s", rendered)
+	}
+	if !strings.Contains(rendered, "Written and never sent.") {
+		t.Errorf("the export withheld the body of the draft written to this contact: %s", rendered)
+	}
+	if !strings.Contains(rendered, "Buyer@preflight.test") {
+		t.Errorf("the subject's own blind copy is missing from their export: %s", rendered)
+	}
+	if strings.Contains(rendered, "other-blind@preflight.test") {
+		t.Errorf("the export disclosed another blind recipient's address: %s", rendered)
+	}
+}
+
+// seedStranger writes a contact the subject has nothing to do with, as the
+// table owner, so a draft can be opened on a record that is not theirs.
+func (p *preflightEnv) seedStranger(t *testing.T) string {
+	t.Helper()
+	id := ids.NewV7()
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO contact (id, full_name, source, captured_by)
+			VALUES ($1, 'Stranger', 'manual', 'human:x')`, id)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the stranger: %v", err)
+	}
+	return id.String()
 }
