@@ -229,7 +229,7 @@ func (s *RoutingStore) probeAvailability(ctx context.Context, bound ProviderConf
 		out.Models = []AvailableModel{{Info: model.Info{ID: q.Model, Lane: lane}}}
 	case errors.Is(err, errModelNotFound):
 		out.Unavailable = AvailabilityNoEndpoint
-	case errors.Is(err, errNoProviderKey):
+	case errors.Is(err, errNoProviderKey), errors.Is(err, errInvalidServiceAccount):
 		out.Unavailable = AvailabilityNoKey
 	default:
 		out.Unavailable = AvailabilityUnreachable
@@ -307,8 +307,8 @@ func vertexProbesOf(cfg RoutingConfig) []labelledProbe {
 
 // probeVertexBindings asks Google, before the binding is stored, about each
 // gemini_vertex binding the save introduces: a model its location does not
-// serve would otherwise be found by the first real call. A binding stored
-// already was asked when it was saved, so an unrelated edit asks nothing.
+// serve would otherwise be found by the first real call. Only what the save
+// introduces is asked, so an unrelated edit asks nothing.
 //
 // Only a definite answer refuses the save. Google failing to answer is
 // logged and the save admitted without asking further, because an outage

@@ -222,10 +222,15 @@ func TestAnUnusableServiceAccountKeyReadsAsNoKey(t *testing.T) {
 	if err != nil || got.Unavailable != AvailabilityNoKey {
 		t.Errorf("locations: %+v, %v; want no_key", got, err)
 	}
+	bound := ProviderConfig{Provider: providerGeminiVertex, Location: "eu"}
+	q := AvailableModelsQuery{Provider: providerGeminiVertex, Location: "eu", Model: "gemini-3.5-flash"}
+	if probed := store.probeAvailability(context.Background(), bound, q); probed.Unavailable != AvailabilityNoKey {
+		t.Errorf("probe: %+v; want no_key", probed)
+	}
 }
 
 // Only Vertex naming the publisher model is "not served here"; any other
-// NOT_FOUND is a fault, and AI Studio's own wording classifies as before.
+// NOT_FOUND, AI Studio's included, is a fault.
 func TestOnlyAMissingPublisherModelReadsAsNotServed(t *testing.T) {
 	t.Parallel()
 	for name, tc := range map[string]struct {
