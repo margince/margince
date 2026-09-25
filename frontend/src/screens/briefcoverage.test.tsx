@@ -3,7 +3,7 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { readingsDay } from "./brief.fixtures";
+import { ranked, readingsDay } from "./brief.fixtures";
 import { render } from "./brief.testkit";
 import { BriefCoverage } from "./briefcoverage";
 
@@ -34,4 +34,50 @@ it("offers refresh for a failed source and names it", async () => {
   );
   expect(retry).toHaveBeenCalledOnce();
   expect(document.body.textContent).toContain("Tasks");
+});
+it("says the order does not account for a factor the run could not read", () => {
+  render(
+    <BriefCoverage
+      day={readingsDay({}, [])}
+      run={{ ...ranked, factors_omitted: ["warmth"] }}
+    />,
+  );
+  expect(document.body.textContent).toContain(en["brief.factor.warmth"]);
+  expect(document.body.textContent).toContain("does not account for");
+});
+it("stays silent for a run that weighed every factor", () => {
+  const { container } = render(
+    <BriefCoverage day={readingsDay({}, [])} run={ranked} />,
+  );
+  expect(container.innerHTML).toBe("");
+});
+it("offers no retry for a factor a grant withheld", () => {
+  render(
+    <BriefCoverage
+      day={readingsDay({}, [])}
+      run={{ ...ranked, factors_omitted: ["warmth"] }}
+      onRetry={vi.fn()}
+    />,
+  );
+  expect(
+    screen.queryByRole("button", { name: en["brief.coverage.retry"] }),
+  ).toBeNull();
+});
+it("draws a failed source and a withheld factor together", () => {
+  const day = readingsDay({}, []);
+  day.sources_unavailable = [
+    { source: "task", reason: "failed", category: "tasks" },
+  ];
+  render(
+    <BriefCoverage
+      day={day}
+      run={{ ...ranked, factors_omitted: ["warmth"] }}
+      onRetry={vi.fn()}
+    />,
+  );
+  expect(document.body.textContent).toContain("Tasks");
+  expect(document.body.textContent).toContain(en["brief.factor.warmth"]);
+  expect(
+    screen.getByRole("button", { name: en["brief.coverage.retry"] }),
+  ).toBeTruthy();
 });
