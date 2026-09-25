@@ -26664,6 +26664,21 @@ components:
             request got.
         has_payload: { type: boolean, description: 'A captured payload row exists for this call.' }
         decision_attempted: { type: boolean, description: 'Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which.' }
+    AiCallConfig:
+      type: object
+      description: |
+        The configuration an AI call ran under, resolved from its `config_hash`.
+
+        Written on every call since the table existed and joined by nothing: a
+        reader could see that two calls shared a configuration and never what
+        changed between two that did not.
+      required: [task_contract_hash, routing_config_hash, prompt_version]
+      properties:
+        task_contract_hash: { type: string }
+        routing_config_hash: { type: string }
+        prompt_version: { type: string }
+        provider_params: { type: object, additionalProperties: true, description: 'The provider parameters this configuration pinned.' }
+
     AiCallAttempt:
       type: object
       description: One attempt (terminal or not) within a logical call.
@@ -26691,6 +26706,17 @@ components:
             agent_run_id: { type: [string, 'null'], format: uuid }
             served_identity_source: { type: string, description: 'response | echo | configured.' }
             config_hash: { type: [string, 'null'], description: 'Routing/prompt config identity of this call.' }
+            config:
+              allOf: [{ $ref: '#/components/schemas/AiCallConfig' }]
+              description: |
+                What that identity resolves to. OMITTED — not null — on a call
+                that names no configuration, which is the only case it is absent
+                for: `ai_call_config_fk` binds a hash that IS set to a row, so a
+                call carrying one always resolves.
+
+                The hash alone tells a reader that two calls shared a
+                configuration, and nothing about what it was — which is the
+                question a diagnostics reader is actually asking.
             context_scopes: { type: array, items: { type: string }, description: 'Company-context scopes injected into the request.' }
             context_fingerprint: { type: string }
             attempts:
