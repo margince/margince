@@ -382,26 +382,43 @@ func validateStageEvidenceQuote(claim stageEvidenceClaim, span stageEvidenceSpan
 	if msg := refuseSplicedCitation(claim); msg != "" {
 		return msg
 	}
-	var cited, spoken strings.Builder
+	var cited strings.Builder
 	for _, line := range claim.SourceLines {
 		cited.WriteString(span.Lines[line-1])
 		cited.WriteString(" ")
-		_, words := ai.SplitSpeakerLine(span.Lines[line-1])
-		spoken.WriteString(words)
-		spoken.WriteString(" ")
 	}
 	// claims.Quoted is the grounding check the document extract and the corpus
 	// ask are already held to, and it refuses an empty quote itself. Comparing
 	// under its whitespace normalisation is what lets a model reflow a wrapped
 	// line without failing — reflow is not the failure this guards against;
-	// composing a sentence nobody wrote is. A quote running across two turns
-	// may drop the second "Name:" label: it is attribution, which the write
-	// computes from the participants, not a word anybody said.
-	if !claims.Quoted(cited.String(), claim.Quote) && !claims.Quoted(spoken.String(), claim.Quote) {
+	// composing a sentence nobody wrote is.
+	spoken, oneSpeaker := oneSpeakersWords(claim.SourceLines, span)
+	if !claims.Quoted(cited.String(), claim.Quote) &&
+		(!oneSpeaker || !claims.Quoted(spoken, claim.Quote)) {
 		return fmt.Sprintf("the quote on %q is not in the lines it cites",
 			clampToken(claim.CriterionKey))
 	}
 	return ""
+}
+
+// oneSpeakersWords joins the cited lines without their "Name:" labels when one
+// named speaker said every line. A quote running over two of her own turns may
+// drop the second label, which is attribution rather than words; across two
+// speakers the label is the seam between them, and erasing it would let a
+// reply pass the rep's sentence off as the buyer's.
+func oneSpeakersWords(lines []int, span stageEvidenceSpan) (string, bool) {
+	var words strings.Builder
+	first := ""
+	for i, line := range lines {
+		speaker, said := ai.SplitSpeakerLine(span.Lines[line-1])
+		if speaker == "" || (i > 0 && speaker != first) {
+			return "", false
+		}
+		first = speaker
+		words.WriteString(said)
+		words.WriteString(" ")
+	}
+	return words.String(), true
 }
 
 // refuseSplicedCitation stops a quote assembled out of lines that do not read

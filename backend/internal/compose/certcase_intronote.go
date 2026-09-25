@@ -36,7 +36,7 @@ import (
 const introNoteSite = "draft_reply/intro_note"
 
 // introNoteCases serves the note a colleague forwards to a customer.
-type introNoteCases struct{}
+type introNoteCases struct{ checkerSpecAnswer }
 
 func (introNoteCases) Site() aitasks.Site {
 	return aitasks.Site{

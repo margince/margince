@@ -474,3 +474,33 @@ func TestNoScheduledAgentIsSentToAToolItIsNotOffered(t *testing.T) {
 		t.Fatal("no shipped agent carries an Instead naming a tool outside its offer, so nothing here saw a cut")
 	}
 }
+
+// insteadPointer is the shape every Instead sentence takes to send a goal to a
+// neighbour: "use" followed by the neighbour's name.
+var insteadPointer = regexp.MustCompile("\\b[Uu]se\\s+`?([a-z][a-z0-9_]{3,})")
+
+// A pointer at a neighbour lives in Instead or nowhere. Only Instead is cut
+// when the neighbour is not offered, so the same sentence left in Purpose or
+// Limits — or a copy whose Spec forgets to wire its Instead — survives into a
+// listing that cannot follow it. A tool offered alone has every Instead cut.
+func TestEveryPointerAtANeighbourIsItsInstead(t *testing.T) {
+	specs := servedSurface(t).Specs()
+	registered := make(map[string]bool, len(specs))
+	for _, spec := range specs {
+		registered[spec.Name] = true
+	}
+	pointers := 0
+	for _, spec := range specs {
+		pointers += len(insteadPointer.FindAllString(spec.Instead, -1))
+		alone := runner.AsOffered([]mcp.ToolSpec{spec})[0]
+		for _, match := range insteadPointer.FindAllStringSubmatch(alone.Description, -1) {
+			if registered[match[1]] && match[1] != spec.Name {
+				t.Errorf("%s: %q points at %s outside its Instead, so a run not offered %s is still sent there",
+					spec.Name, match[0], match[1], match[1])
+			}
+		}
+	}
+	if pointers == 0 {
+		t.Fatal("no Instead in the catalog reads as a pointer, so this scan recognises nothing")
+	}
+}

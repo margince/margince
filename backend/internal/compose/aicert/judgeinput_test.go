@@ -208,6 +208,70 @@ func TestTheJudgeIsShownTheProductRulesAndTheExpectedAnswer(t *testing.T) {
 	}
 }
 
+// checkerSpecCases is the widget case declaring its expected answer a checker's
+// specification, the shape the draft and weekly-review sites have.
+type checkerSpecCases struct{ widgetCases }
+
+func (checkerSpecCases) ExpectsCheckerSpec() bool { return true }
+
+// A draft site's expected answer lists the phrases a reply must NOT use. Shown
+// as the reference reading, it tells the grader to reward exactly those, so a
+// site that declares its answer a checker's specification keeps it out of the
+// grader's turn — while the product rules still reach it.
+func TestACheckerSpecNeverReachesTheGrader(t *testing.T) {
+	const banned = "a close personal friend of yours"
+	candidateFake := ai.NewFakeClient().Script("the widget is " + banned)
+	judgeFake := ai.NewFakeClient().Script(scoreJSON(90))
+	census := aitasks.NewRegistry()
+	census.Register(widgetSite())
+	census.BindCase(widgetSite(), checkerSpecCases{widgetCases{site: widgetSite()}})
+
+	sc := testScenario("banned_phrases", wideBands)
+	sc.Expect.Answer = JSONValue(`"` + banned + `"`)
+	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, census,
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
+		}); err != nil {
+		t.Fatalf("certifyTask: %v", err)
+	}
+
+	judgeCalls := judgeFake.Calls()
+	if len(judgeCalls) != 1 {
+		t.Fatalf("the judge was called %d times, want the one call this single run scores", len(judgeCalls))
+	}
+	payload := string(judgeCalls[0].Payload)
+	if strings.Contains(payload, "Expected answer") {
+		t.Errorf("the grader was shown a checker's specification as the expected answer:\n%s", payload)
+	}
+	if !strings.Contains(payload, "Describe the subject in one sentence.") {
+		t.Errorf("the grader lost the product rules along with the checker spec:\n%s", payload)
+	}
+}
+
+// The stamp digests the grading call a run makes, so it too leaves a checker's
+// specification out, and editing one does not move the grader's half.
+func TestTheGraderDigestIgnoresACheckerSpec(t *testing.T) {
+	census := aitasks.NewRegistry()
+	census.Register(widgetSite())
+	census.BindCase(widgetSite(), checkerSpecCases{widgetCases{site: widgetSite()}})
+	sc := testScenario("banned_phrases", wideBands)
+	candidate := model.Request{
+		System:   "Describe the subject in one sentence.",
+		Messages: []model.Message{{Role: roleUser, Content: "a widget"}},
+	}
+	base, err := graderRequestDigest(asGraded(sc, census), candidate)
+	if err != nil {
+		t.Fatalf("graderRequestDigest: %v", err)
+	}
+	respecified := sc
+	respecified.Expect.Answer = JSONValue(`"another banned phrase"`)
+	if got, err := graderRequestDigest(asGraded(respecified, census), candidate); err != nil || got != base {
+		t.Errorf("a changed checker spec moved the grader digest (err %v) — the grader reads a spec it is never sent", err)
+	}
+}
+
 // The rules and the reference answer are fenced like the rest of the scenario:
 // the rules carry the fixture inside the candidate site's own markers.
 func TestGraderInputFencesTheRulesAndTheExpectedAnswer(t *testing.T) {

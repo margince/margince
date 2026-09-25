@@ -22,6 +22,7 @@ func TestSelfJudgedFlagsTheCandidatesOwnFamily(t *testing.T) {
 		{"same line, different model", "gemini-3.1-pro-preview", "gemini-3.5-flash", true},
 		{"same line across a broker and a direct provider", "google/gemini-3.5-flash", "gemini-3.1-flash-lite", true},
 		{"same publisher, different line", "mistralai/ministral-14b-2512", "mistralai/mistral-large-2512", true},
+		{"a direct line under its broker's publisher", "mistral-large-2512", "mistralai/ministral-8b-2512", true},
 		{"same line under a local tag", "openai/gpt-oss-120b", "gpt-oss:20b", true},
 		{"different vendors", "gemini-3.1-flash-lite", "mistralai/mistral-large-2512", false},
 		{"different vendors, both brokered", "openai/gpt-oss-120b", "z-ai/glm-5.2", false},

@@ -46,7 +46,7 @@ type weeklyNarrativeExpectation struct {
 }
 
 // weeklyNarrativeCases serves the one site that writes a week's sentence.
-type weeklyNarrativeCases struct{}
+type weeklyNarrativeCases struct{ checkerSpecAnswer }
 
 func (weeklyNarrativeCases) Site() aitasks.Site {
 	return aitasks.Site{

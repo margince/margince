@@ -285,7 +285,7 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	}
 
 	judgeMark := judgeRec.mark()
-	judged, err := judgeScore(ctx, judge, judgeRec, sc, caseTrace, validated.output, log)
+	judged, err := judgeScore(ctx, judge, judgeRec, asGraded(sc, census), caseTrace, validated.output, log)
 	if err != nil {
 		// The same debt the candidate side settles: a judge call that failed
 		// still spent, and driveRun may discard this whole attempt, so the

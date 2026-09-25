@@ -7,9 +7,13 @@ fixture:
   rubric: |
     Score whether the summary point is actually supported by the cited
     activity and introduces no fact the activity does not state.
+  product_rules: |
+    Summarise the deal's recent activity as short points. Cite the id of every
+    activity a point rests on, and state nothing the activity does not say.
   scenario_input: |
     Deal: {"id":"deal_9"}. Activity [act_1]: "Customer confirmed the Q3 budget
     is approved for this project."
+  expected_answer: '{"summary_points":[{"text":"The customer confirmed the Q3 budget is approved.","source_ids":["act_1"]}]}'
   candidate_output: '{"summary_points":[{"text":"Customer confirmed Q3 budget is approved.","source_ids":["act_1"],"confidence":0.9}],"overall_confidence":0.9}'
 expect:
   outcome: accepted

@@ -114,8 +114,7 @@ type Record struct {
 	MeanCacheWriteTokens int    `json:"mean_cache_write_tokens"`
 	EstCostMicroUSD      int64  `json:"est_cost_microusd"`
 	JudgeServedModel     string `json:"judge_served_model"`
-	// SelfJudged is selfJudged's family rule on every graded run; a record
-	// written before that rule flagged only an exact model match.
+	// SelfJudged is true when selfJudged's family rule matched a graded run.
 	SelfJudged           bool   `json:"self_judged"`
 	ServedIdentitySource string `json:"served_identity_source"`
 	// CandidateUpstream and JudgeUpstream are the broker upstream preferences

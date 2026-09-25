@@ -51,7 +51,7 @@ region was found in that call at all.
 | `capture_classify` | `classify` | one fenced item | 1 | 1 |
 | `capture_confidentiality_verdict` | `thread` | ONE per call (declared in code) | 1 | 1 |
 | `capture_counterparty_verdict` | `verdict` | ONE per call (declared in code) | 1 | 1 |
-| `cert_judge` | `judge` | several fenced items | 2 | 1 |
+| `cert_judge` | `judge` | several fenced items | 4 | 1 |
 | `cold_start` | `acts` | one fenced item | 1 | 1 |
 | `cold_start` | `company_message` | one fenced item | 1 | 1 |
 | `cold_start` | `field_extract` | several fenced items | 2 | 1 |

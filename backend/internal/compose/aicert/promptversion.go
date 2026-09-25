@@ -122,7 +122,7 @@ func ScenarioStamps(ctx context.Context, scenarios []Scenario, census *aitasks.R
 		if err != nil {
 			return nil, err
 		}
-		graderRequest, err := graderRequestDigest(sc, request)
+		graderRequest, err := graderRequestDigest(asGraded(sc, census), request)
 		if err != nil {
 			return nil, err
 		}

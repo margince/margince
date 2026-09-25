@@ -21,3 +21,10 @@ func uncitedExpectations(expected []string, label map[string]string, cited map[s
 	}
 	return missing
 }
+
+// checkerSpecAnswer marks a case whose scenarios expect a checker's
+// specification, so the grader is never handed that specification as the
+// reading to aim for (aitasks.CheckerSpecCase).
+type checkerSpecAnswer struct{}
+
+func (checkerSpecAnswer) ExpectsCheckerSpec() bool { return true }

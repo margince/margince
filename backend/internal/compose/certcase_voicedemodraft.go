@@ -47,7 +47,7 @@ type voiceDemoDraftFixture struct {
 }
 
 // voiceDemoDraftCases serves the draft the profile card shows.
-type voiceDemoDraftCases struct{}
+type voiceDemoDraftCases struct{ checkerSpecAnswer }
 
 func (voiceDemoDraftCases) Site() aitasks.Site {
 	return aitasks.Site{

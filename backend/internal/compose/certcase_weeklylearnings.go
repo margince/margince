@@ -53,7 +53,7 @@ type weeklyLearningsExpectation struct {
 }
 
 // weeklyLearningsCases serves the one site that says what a week taught.
-type weeklyLearningsCases struct{}
+type weeklyLearningsCases struct{ checkerSpecAnswer }
 
 func (weeklyLearningsCases) Site() aitasks.Site {
 	return aitasks.Site{

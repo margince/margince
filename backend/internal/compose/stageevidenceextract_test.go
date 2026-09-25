@@ -420,6 +420,11 @@ func TestAQuoteAcrossTwoTurnsMayDropTheSecondSpeakerLabel(t *testing.T) {
 	if valid(oneClaim(t, claim)) == nil {
 		t.Fatal("a quote that drops a word the buyer said was accepted once labels were ignored")
 	}
+	spans[0].Lines[0] = "Lars: our warehouse team re-keys every delivery note by hand."
+	claim.Quote = "our warehouse team re-keys every delivery note by hand. it costs us about two days a week."
+	if valid(oneClaim(t, claim)) == nil {
+		t.Fatal("a quote splicing the rep's turn into the buyer's with the seam erased was accepted")
+	}
 }
 
 // The prompt promises 300 CHARACTERS, so the bound counts them. A byte count

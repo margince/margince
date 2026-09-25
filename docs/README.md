@@ -167,6 +167,7 @@ budget rather than keeping its own list of which pages are generated.
 - [composition-layer.md](explanation/composition-layer.md) — how `internal/compose/` boots and where every cross-module edge is wired.
 - [job-fleet.md](explanation/job-fleet.md) — the job contract: declaration before code, dispatchers vs workspace workers, why args name rows, and the failure vocabulary.
 - [prompt-shape.md](explanation/prompt-shape.md) — how a prompt is built: the per-call data fence, why prompt caching cannot help us, what the repeated instructions cost, and the test for whether a task asks about one item per call or several.
+- [prompt-principles.md](explanation/prompt-principles.md) — the rules a production prompt keeps: what we optimise and in which order (the `gemini_cloud` baseline first, then OpenRouter, then local hosting), fourteen principles each with the check that holds it, the fix order for a failing certification case, what is worth cutting for context, and the pre-merge checklist.
 - [raw-capture-part-slimming.md](explanation/raw-capture-part-slimming.md) — why the stored original keeps its attachments by reference: proof before removal, why the strip is by byte offset rather than by parsing, and the guarantee it narrows.
 - [custom-fields.md](explanation/custom-fields.md) — the one runtime `ALTER TABLE` chokepoint: the closed type/object sets, the privilege boundary, and the `fieldcatalog` seam.
 

@@ -46,9 +46,9 @@ expect:
     certified_min: 70
     degraded_min: 50
     floor: 40
-  # The two findings are not offered as equally correct: that wording
-  # contradicted the expected answer and deleted the prioritisation this case
-  # tests, and a judge reading it scored the less urgent finding 100.
+  # The two findings are not offered as equally correct: the nudge is the
+  # urgent one, and a rubric accepting either would contradict the expected
+  # answer and stop testing the prioritisation.
   rubric: >
     The finding that most needs a contact is the one resting on THEIR NUDGE:
     they are waiting, their team meets Thursday, and nothing has answered them.

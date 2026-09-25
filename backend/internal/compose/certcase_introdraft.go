@@ -30,7 +30,7 @@ import (
 const introDraftSite = "draft_reply/intro"
 
 // introDraftCases serves the ask to a colleague.
-type introDraftCases struct{}
+type introDraftCases struct{ checkerSpecAnswer }
 
 func (introDraftCases) Site() aitasks.Site {
 	return aitasks.Site{

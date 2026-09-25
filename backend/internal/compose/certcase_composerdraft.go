@@ -45,7 +45,7 @@ const (
 const composerAnswerWritten = "written"
 
 // contactDraftCases serves the contact page's composer.
-type contactDraftCases struct{}
+type contactDraftCases struct{ checkerSpecAnswer }
 
 func (contactDraftCases) Site() aitasks.Site {
 	return aitasks.Site{
@@ -73,7 +73,7 @@ func (contactDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pre
 }
 
 // accountDraftCases serves the company page's first-touch composer.
-type accountDraftCases struct{}
+type accountDraftCases struct{ checkerSpecAnswer }
 
 func (accountDraftCases) Site() aitasks.Site {
 	return aitasks.Site{

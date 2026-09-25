@@ -75,12 +75,25 @@ func candidateAsk(trace aitasks.Trace) (string, error) {
 	return strings.Join(turns, "\n\n"), nil
 }
 
+// asGraded is sc as its grader reads it: without the expected answer when the
+// site's case declares that answer a checker's specification. A grader shown
+// "plain", or the phrases a draft must not use, as "the reference reading"
+// grades toward its opposite.
+func asGraded(sc Scenario, census *aitasks.Registry) Scenario {
+	if factory, bound := census.CaseFor(ai.Task(sc.Task), sc.Site); bound && !aitasks.ExpectsReferenceAnswer(factory) {
+		sc.Expect.Answer = nil
+	}
+	return sc
+}
+
 // graderInput is everything the grader is shown for one run of sc: the rubric,
 // the candidate's first request split into the product rules it was given and
 // the ask it answered, the scenario's reference answer, and the output.
 //
 // The rules come from that same first request, for candidateAsk's reason: they
 // are what the site's own code told the model, which the fixture does not hold.
+// On an agent loop that System is the whole tool listing, which every opinion
+// pays for: the tools' own "use X instead" rules are what the reply is held to.
 // The mechanical verdict is not an input: a grader told the answer already
 // failed scores that instead of the rubric.
 func graderInput(sc Scenario, caseTrace aitasks.Trace, candidateOutput string) (compose.JudgeInput, error) {
@@ -243,7 +256,8 @@ func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sce
 // one, so the record names it rather than hiding it inside an unqualified score.
 // An exact match is not required: gemini-3.5-flash grading gemini-3.1-pro-preview
 // is a vendor marking its own homework. An empty identity on either side never
-// counts — that is a missing trace, not a match.
+// counts — that is a missing trace, not a match. The pre-run refusal (sameModel)
+// stays exact on purpose: a same-family judge is allowed, and flagged here.
 func selfJudged(candidateServedModel, judgeServedModel string) bool {
 	if candidateServedModel == "" || judgeServedModel == "" {
 		return false
@@ -254,7 +268,14 @@ func selfJudged(candidateServedModel, judgeServedModel string) bool {
 	candidatePublisher, candidateLine := modelLineage(candidateServedModel)
 	judgePublisher, judgeLine := modelLineage(judgeServedModel)
 	return (candidatePublisher != "" && candidatePublisher == judgePublisher) ||
-		(candidateLine != "" && candidateLine == judgeLine)
+		(candidateLine != "" && candidateLine == judgeLine) ||
+		publishesLine(candidatePublisher, judgeLine) || publishesLine(judgePublisher, candidateLine)
+}
+
+// publishesLine reports whether a broker's publisher is the vendor behind a
+// bare model line: "mistralai" publishes the "mistral" a direct provider serves.
+func publishesLine(publisher, line string) bool {
+	return publisher != "" && line != "" && strings.HasPrefix(publisher, line)
 }
 
 // modelLineage splits a served identity into the publisher a broker prefixes it

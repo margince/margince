@@ -4293,8 +4293,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
           "stale_cause": {
+            "case_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
             "prompt_changed": [
               "grades_a_fabricated_answer_poorly",
               "grades_a_well_grounded_answer_highly"
@@ -4326,8 +4330,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
           "stale_cause": {
+            "case_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
             "prompt_changed": [
               "grades_a_fabricated_answer_poorly",
               "grades_a_well_grounded_answer_highly"
@@ -4359,8 +4367,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
           "stale_cause": {
+            "case_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
             "prompt_changed": [
               "grades_a_fabricated_answer_poorly",
               "grades_a_well_grounded_answer_highly"
@@ -4392,8 +4404,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
           "stale_cause": {
+            "case_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
             "prompt_changed": [
               "grades_a_fabricated_answer_poorly",
               "grades_a_well_grounded_answer_highly"
@@ -4425,8 +4441,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
           "stale_cause": {
+            "case_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
             "prompt_changed": [
               "grades_a_fabricated_answer_poorly",
               "grades_a_well_grounded_answer_highly"
@@ -4458,8 +4478,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
           "stale_cause": {
+            "case_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
             "prompt_changed": [
               "grades_a_fabricated_answer_poorly",
               "grades_a_well_grounded_answer_highly"
