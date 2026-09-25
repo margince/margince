@@ -294,7 +294,7 @@ func seedDecisionAttempt(t *testing.T, e *apptest.AppEnv, sentinel string,
 		INSERT INTO ai_call (id, task, kind, tier, provider, model_id, request_fingerprint,
 		                     tokens_in, tokens_out, latency_ms, error_sentinel,
 		                     logical_call_id, attempt, is_terminal, occurred_at)
-		VALUES ($1, 'site_triage', 'decision', 'decide', 'openrouter_decision',
+		VALUES ($1, 'site_triage', 'decision', 'decide', 'jev_compatible',
 		        'typesafe/jev-1.13', 'fp', 10, 0, 200, $2, $3, 1, $4, $5)`,
 		ids.NewV7(), errSentinel, logical, terminal, at); err != nil {
 		t.Fatalf("seeding a decision ai_call: %v", err)

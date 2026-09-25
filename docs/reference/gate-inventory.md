@@ -51,6 +51,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `dealmoveargument_test.go` | H2 | One rule, read on both sides of a compose seam. |
 | `dealmovemirror_test.go` | H2 | One rule, spelled on both sides of a module boundary, held equal in both directions. |
 | `dealroominvitelink_test.go` | H3 | The address a buyer invitation MAILS is an address this app serves. |
+| `decisionpreset_test.go` | H3 | The routing form's one-click OpenRouter decision binding and the commented `decisions:` blocks the presets carry are two spellings of one binding: an operator who presses the button and one who uncomments the block must end up with the same endpoint and model. |
 | `dedupeevidencefields_test.go` | H1 | The dedupe evidence snapshot is stored as free JSON, so nothing about a field name is checked when it is written. |
 | `deexceptionmirror_test.go` | H3 | The engine's test fixture for the German exception is the pack's declaration, or the tests prove nothing about what ships. |
 | `disclosureseam_test.go` | H1 | The two halves of the disclosure seam describe the same thing. |

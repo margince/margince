@@ -379,19 +379,22 @@ silently fall out of the candidate set.
 
 ## 11. The decisions endpoint
 
-OpenRouter also brokers TypeSafe Jev at `POST {base_url}/alpha/decisions`,
-billed on input tokens only. It binds the routing config's `decisions:` lane
-under the provider word `openrouter_decision`, beside `embeddings:` in
-`seeds.ai_routing` or through `PUT /v1/ai/routing`:
+OpenRouter also brokers TypeSafe Jev at
+`POST https://openrouter.ai/api/alpha/decisions`, billed on input tokens only.
+It is one server on the Jev wire, so it binds the routing config's `decisions:`
+lane under `jev_compatible`, with the FULL endpoint as `base_url` (nothing is
+appended), beside `embeddings:` in `seeds.ai_routing` or through
+`PUT /v1/ai/routing`. The routing card's **Use OpenRouter** button fills the
+same two values, and `openrouter_cloud.yaml` carries them as a commented block:
 
 ```yaml
     decisions:
-      provider: openrouter_decision
+      provider: jev_compatible
       model: typesafe/jev-1.13
-      base_url: https://openrouter.ai/api
+      base_url: https://openrouter.ai/api/alpha/decisions
 ```
 
-It sends the `openai_compatible` key, so `base_url` must be an OpenRouter host;
-and it takes no `routing:` preferences, so `eu_hosted` refuses it. A bound lane
+`JEV_COMPATIBLE_API_KEY` carries the OpenRouter key (the `OPENAI_COMPATIBLE_API_KEY`
+value). It takes no `routing:` preferences, so `eu_hosted` refuses it. A bound lane
 answers only the sites certified for it; the rest go to the ladder
 ([ai-runtime.md](../explanation/ai-runtime.md#the-decision-lane)).
