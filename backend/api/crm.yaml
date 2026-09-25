@@ -11741,6 +11741,53 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /connectors/{provider}/containers:
+    parameters:
+      - $ref: '#/components/parameters/CaptureProvider'
+    get:
+      tags: [Connectors]
+      operationId: listConnectorContainers
+      summary: The folders or labels this mailbox has, to pick one to keep out of capture.
+      description: |
+        What a container exclusion names, in a form somebody can choose from. A container rule
+        stores the PROVIDER's own token — a Gmail label id, a Graph folder id — and asking a
+        colleague to type one would be asking them to look it up, so the picker reads the list from
+        here and stores the id behind the name.
+
+        The caller's OWN mailbox and no other: the read matches on the authenticated user, and a
+        container rule is `scope: user` by database constraint because a label lives in one mailbox
+        and means nothing in anybody else's.
+
+        LIVE rather than stored. A folder somebody made this morning is one they may want excluded
+        this morning, so this costs one provider round trip and is asked when the picker opens
+        rather than on every keystroke — which is also why a provider outage surfaces honestly as
+        502 instead of offering a stale list.
+
+        `501` where the provider has no folders to offer: a channel transport, or a mail connector
+        that has not grown the verb. That is a fact about the provider rather than a fault, and a
+        client renders the address and domain kinds without the container one.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The mailbox's folders or labels, in the order the provider gives them.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConnectorContainers' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501':
+          description: 'This provider does not list folders (`code: containers_unsupported`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502':
+          description: 'Provider unreachable — the listing needs the provider (`code: provider_unreachable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /connectors/{provider}/mail-posture:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
@@ -26095,6 +26142,30 @@ components:
       properties:
         authorize_url: { type: [string, 'null'], format: uri, description: 'Provider consent URL to redirect the user to (OAuth providers).' }
         connection: { allOf: [ { $ref: '#/components/schemas/CaptureConnection' } ], description: 'The established/updated connection (appears after the callback completes for OAuth).' }
+    ConnectorContainers:
+      type: object
+      description: 'The folders or labels one mailbox has, as a picker offers them.'
+      required: [containers]
+      properties:
+        containers:
+          type: array
+          items: { $ref: '#/components/schemas/ConnectorContainer' }
+    ConnectorContainer:
+      type: object
+      description: 'One folder or label: the provider''s own token, and the name its owner reads.'
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          description: >-
+            The provider's token, and what a container exclusion stores. Opaque by nature — a Gmail
+            label id, a Graph folder id — except on IMAP, where a mailbox is named by its path and
+            the two are the same string.
+        name:
+          type: string
+          description: >-
+            What the owner sees in their mail client. For display only: two folders may share it,
+            and a rename must not silently re-point a rule, which is why the rule stores the id.
     BackfillPreviewRequest:
       type: object
       required: [window]

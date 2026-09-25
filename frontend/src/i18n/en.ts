@@ -8403,6 +8403,9 @@ export const en = {
   "captureExclusions.kind.domain": "Domain",
   "captureExclusions.kind.container": "Label, folder or mailbox",
   "captureExclusions.scopeLabel": "Applies to",
+  "captureExclusions.containerLabel": "Folder or label",
+  "captureExclusions.noContainers":
+    "This mailbox reported no folders. Connect a mailbox that has them, or keep senders out by address or domain instead.",
   "captureExclusions.kindLabel": "Kind",
   "captureExclusions.addLabel": "Exclude address or domain",
   "captureExclusions.placeholder.address": "name@example.com",

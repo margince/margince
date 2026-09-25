@@ -25445,6 +25445,20 @@ type ConnectorAppRedirectUri struct {
 // None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
 type ConnectorAppRedirectUriPurpose string
 
+// ConnectorContainer One folder or label: the provider's own token, and the name its owner reads.
+type ConnectorContainer struct {
+	// Id The provider's token, and what a container exclusion stores. Opaque by nature — a Gmail label id, a Graph folder id — except on IMAP, where a mailbox is named by its path and the two are the same string.
+	Id string `json:"id"`
+
+	// Name What the owner sees in their mail client. For display only: two folders may share it, and a rename must not silently re-point a rule, which is why the rule stores the id.
+	Name string `json:"name"`
+}
+
+// ConnectorContainers The folders or labels one mailbox has, as a picker offers them.
+type ConnectorContainers struct {
+	Containers []ConnectorContainer `json:"containers"`
+}
+
 // ConnectorContextTag The one existing word every record this connector creates is filed under, so
 // "which records came in from this source" has an answer. Absent when the operator
 // chose none, which is the honest default rather than a guess.
@@ -57836,6 +57850,9 @@ type ServerInterface interface {
 	// Connect (or re-authorize) the calling user's mail/calendar for capture.
 	// (POST /connectors/{provider}/connect)
 	ConnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	// The folders or labels this mailbox has, to pick one to keep out of capture.
+	// (GET /connectors/{provider}/containers)
+	ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// Set the word this connector files what it captures under.
 	// (PUT /connectors/{provider}/context-tag)
 	SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
@@ -60533,6 +60550,12 @@ func (_ Unimplemented) ConnectorOAuthCallback(w http.ResponseWriter, r *http.Req
 // Connect (or re-authorize) the calling user's mail/calendar for capture.
 // (POST /connectors/{provider}/connect)
 func (_ Unimplemented) ConnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The folders or labels this mailbox has, to pick one to keep out of capture.
+// (GET /connectors/{provider}/containers)
+func (_ Unimplemented) ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72310,6 +72333,38 @@ func (siw *ServerInterfaceWrapper) ConnectConnector(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConnectConnector(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListConnectorContainers operation middleware
+func (siw *ServerInterfaceWrapper) ListConnectorContainers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider CaptureProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListConnectorContainers(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -92107,6 +92162,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/connectors/{provider}/connect", wrapper.ConnectConnector)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/connectors/{provider}/containers", wrapper.ListConnectorContainers)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/connectors/{provider}/context-tag", wrapper.SetConnectorContextTag)

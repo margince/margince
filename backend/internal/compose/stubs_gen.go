@@ -947,6 +947,10 @@ func (stubs) ConnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, prov
 	httperr.NotImplemented(w, r, "ConnectConnector")
 }
 
+func (stubs) ListConnectorContainers(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+	httperr.NotImplemented(w, r, "ListConnectorContainers")
+}
+
 func (stubs) SetConnectorContextTag(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
 	httperr.NotImplemented(w, r, "SetConnectorContextTag")
 }

@@ -7871,6 +7871,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/connectors/{provider}/containers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The folders or labels this mailbox has, to pick one to keep out of capture.
+         * @description What a container exclusion names, in a form somebody can choose from. A container rule
+         *     stores the PROVIDER's own token — a Gmail label id, a Graph folder id — and asking a
+         *     colleague to type one would be asking them to look it up, so the picker reads the list from
+         *     here and stores the id behind the name.
+         *
+         *     The caller's OWN mailbox and no other: the read matches on the authenticated user, and a
+         *     container rule is `scope: user` by database constraint because a label lives in one mailbox
+         *     and means nothing in anybody else's.
+         *
+         *     LIVE rather than stored. A folder somebody made this morning is one they may want excluded
+         *     this morning, so this costs one provider round trip and is asked when the picker opens
+         *     rather than on every keystroke — which is also why a provider outage surfaces honestly as
+         *     502 instead of offering a stale list.
+         *
+         *     `501` where the provider has no folders to offer: a channel transport, or a mail connector
+         *     that has not grown the verb. That is a fact about the provider rather than a fault, and a
+         *     client renders the address and domain kinds without the container one.
+         */
+        get: operations["listConnectorContainers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/connectors/{provider}/mail-posture": {
         parameters: {
             query?: never;
@@ -18049,6 +18099,17 @@ export interface components {
             authorize_url?: string | null;
             /** @description The established/updated connection (appears after the callback completes for OAuth). */
             connection?: components["schemas"]["CaptureConnection"];
+        };
+        /** @description The folders or labels one mailbox has, as a picker offers them. */
+        ConnectorContainers: {
+            containers: components["schemas"]["ConnectorContainer"][];
+        };
+        /** @description One folder or label: the provider's own token, and the name its owner reads. */
+        ConnectorContainer: {
+            /** @description The provider's token, and what a container exclusion stores. Opaque by nature — a Gmail label id, a Graph folder id — except on IMAP, where a mailbox is named by its path and the two are the same string. */
+            id: string;
+            /** @description What the owner sees in their mail client. For display only: two folders may share it, and a rename must not silently re-point a rule, which is why the rule stores the id. */
+            name: string;
         };
         BackfillPreviewRequest: {
             /**
@@ -49769,6 +49830,61 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listConnectorContainers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mailbox's folders or labels, in the order the provider gives them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorContainers"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description This provider does not list folders (`code: containers_unsupported`). */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Provider unreachable — the listing needs the provider (`code: provider_unreachable`). */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     setConnectorMailPosture: {

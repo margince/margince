@@ -148,6 +148,9 @@ type API interface {
 	// expiration (Gmail caps a watch at 7 days).
 	Watch(ctx context.Context, accessToken, topic string) (historyID string, expiration time.Time, err error)
 
+	// ListLabels returns the mailbox's labels, system and user alike — what an
+	// owner may pick from to keep a folder out of capture.
+	ListLabels(ctx context.Context, accessToken string) ([]connector.NamedContainer, error)
 	// Send transmits one base64url-encoded RFC822 message. Threading is carried
 	// by the message's own In-Reply-To/References headers, which is the identity
 	// this system threads on; Gmail's threadId is not passed and not read.

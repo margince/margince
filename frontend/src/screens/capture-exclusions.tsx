@@ -7,6 +7,7 @@ import { useCanWrite } from "../app/capability";
 import {
   Button,
   EmptyState,
+  Field,
   Modal,
   SegmentedControl,
   TextInput,
@@ -14,6 +15,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
@@ -29,13 +31,17 @@ type Scope = components["schemas"]["CaptureExclusionScope"];
 type Kind = components["schemas"]["CaptureExclusionKind"];
 
 const SCOPES: readonly Scope[] = ["user", "workspace"];
-// The kinds this card OFFERS, which is not every kind a rule can have.
-// `container` is missing on purpose: a container rule names a provider's own
-// token — a Gmail label id, a Graph folder id — and asking somebody to type one
-// would be asking them to look it up. It arrives here as a picker once a
-// connector can hand over the list of names to choose from. A container rule
-// that already exists still renders, labelled like any other.
-const KINDS: readonly Kind[] = ["address", "domain"];
+// The kinds this card offers. `container` is a PICKER rather than a text box:
+// a container rule stores a provider's own token — a Gmail label id, a Graph
+// folder id — so the list comes from the mailbox and the reader chooses a name.
+//
+// It is offered only where a mailbox can answer. A provider with no folders
+// answers 501, and the kind drops out rather than presenting a choice with
+// nothing behind it.
+const KINDS: readonly Kind[] = ["address", "domain", "container"];
+
+/** Which mail provider's folders the picker offers. */
+const CONTAINER_PROVIDER = "gmail" as const;
 
 /** The company-wide rules, which are the ones a plain seat may not touch. */
 function bindsEveryone(rule: CaptureExclusion): boolean {
@@ -49,6 +55,38 @@ function useExclusions() {
       const { data, error, response } = await api.GET("/capture/exclusions");
       if (error || !response.ok) {
         throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
+/**
+ * The folders this seat's mailbox has.
+ *
+ * Asked only while the container kind is chosen, because it costs a provider
+ * round trip: the list is live by design — a folder made this morning is one
+ * somebody may want excluded this morning — so it is read when the picker
+ * opens rather than kept warm.
+ *
+ * A provider that does not list folders (501) or a mailbox that is not
+ * connected (404) both resolve to NO containers rather than an error. Neither
+ * is a fault the reader can act on, and the kind simply has nothing to offer.
+ */
+function useContainers(enabled: boolean) {
+  return useQuery({
+    queryKey: ["connector-containers", CONTAINER_PROVIDER],
+    enabled,
+    // One round trip per opening of the dialog, not per keystroke.
+    staleTime: 60_000,
+    retry: false,
+    queryFn: async () => {
+      const { data, response } = await api.GET(
+        "/connectors/{provider}/containers",
+        { params: { path: { provider: CONTAINER_PROVIDER } } },
+      );
+      if (!response.ok || !data) {
+        return { containers: [] };
       }
       return data;
     },
@@ -281,6 +319,13 @@ function ExcludeDialog({
   const [scope, setScope] = useState<Scope>("user");
   const [kind, setKind] = useState<Kind>("address");
   const [draft, setDraft] = useState("");
+  const containers = useContainers(kind === "container");
+  const offered = containers.data?.containers ?? [];
+  // A container rule lives in ONE mailbox, which the database says too
+  // (capture_exclusion_container_is_personal). So choosing it narrows the scope
+  // rather than leaving a workspace rule that names a label meaning nothing in
+  // anybody else's mail.
+  const effectiveScope: Scope = kind === "container" ? "user" : scope;
   // Anyone may keep their own correspondent out of a shared CRM; a rule that
   // binds everybody is admin/ops work. So the refusal follows the SCOPE the
   // reader has picked, and the sentence sits with the controls it refuses.
@@ -298,16 +343,21 @@ function ExcludeDialog({
           if (refused || value === "") {
             return;
           }
-          add.mutate({ scope, kind, value }, { onSuccess: onClose });
+          add.mutate(
+            { scope: effectiveScope, kind, value },
+            { onSuccess: onClose },
+          );
         }}
       >
-        <SegmentedControl
-          options={SCOPES}
-          value={scope}
-          onChange={setScope}
-          labels={words.scope}
-          label={t("captureExclusions.scopeLabel")}
-        />
+        {kind !== "container" && (
+          <SegmentedControl
+            options={SCOPES}
+            value={scope}
+            onChange={setScope}
+            labels={words.scope}
+            label={t("captureExclusions.scopeLabel")}
+          />
+        )}
         <SegmentedControl
           options={KINDS}
           value={kind}
@@ -315,18 +365,38 @@ function ExcludeDialog({
           labels={words.kind}
           label={t("captureExclusions.kindLabel")}
         />
-        <TextInput
-          value={draft}
-          aria-label={t("captureExclusions.addLabel")}
-          placeholder={
-            kind === "address"
-              ? t("captureExclusions.placeholder.address")
-              : t("captureExclusions.placeholder.domain")
-          }
-          disabled={refused}
-          aria-describedby={refused ? denialId : undefined}
-          onChange={(event) => setDraft(event.target.value)}
-        />
+        {kind === "container" ? (
+          <Field label={t("captureExclusions.containerLabel")}>
+            {(control) => (
+              <Select
+                {...control}
+                value={draft}
+                disabled={refused || offered.length === 0}
+                options={offered.map((container) => ({
+                  value: `${CONTAINER_PROVIDER}:${container.id}`,
+                  label: container.name,
+                }))}
+                onChange={setDraft}
+              />
+            )}
+          </Field>
+        ) : (
+          <TextInput
+            value={draft}
+            aria-label={t("captureExclusions.addLabel")}
+            placeholder={
+              kind === "address"
+                ? t("captureExclusions.placeholder.address")
+                : t("captureExclusions.placeholder.domain")
+            }
+            disabled={refused}
+            aria-describedby={refused ? denialId : undefined}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+        )}
+        {kind === "container" &&
+          !containers.isPending &&
+          offered.length === 0 && <p>{t("captureExclusions.noContainers")}</p>}
         {refused && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
         {add.isError && (
           <Callout

@@ -175,6 +175,9 @@ type API interface {
 	// folder, against which a message's ParentFolderID identifies mail the
 	// authenticated owner sent.
 	SentFolderID(ctx context.Context, accessToken string) (string, error)
+	// ListFolders returns the mailbox's folders — what an owner may pick from
+	// to keep one out of capture.
+	ListFolders(ctx context.Context, accessToken string) ([]connector.NamedContainer, error)
 
 	// SendMIME transmits one complete RFC822 message as the signed-in user.
 	// Microsoft acknowledges the submission without naming a message id, so
@@ -417,4 +420,62 @@ func (a *httpAPI) SentFolderID(ctx context.Context, accessToken string) (string,
 		return "", fmt.Errorf("graph: the mailbox reported no sent-items folder id: %w", ErrUnreachable)
 	}
 	return out.ID, nil
+}
+
+// folderListMaxPages bounds the folder walk. Generous against any real mailbox
+// — a hundred folders a page — so reaching it means the provider is not ending
+// the list rather than that somebody has that many folders.
+const folderListMaxPages = 20
+
+// foldersPage is one /me/mailFolders response.
+type foldersPage struct {
+	Value []struct {
+		ID          string `json:"id"`
+		DisplayName string `json:"displayName"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
+	} `json:"value"`
+	NextLink string `json:"@odata.nextLink"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
+}
+
+// ListFolders returns the mailbox's folders, following paging to the end.
+//
+// Paged, unlike Gmail's labels: a mailbox with many folders answers in pages,
+// and stopping at the first would silently offer a picker part of somebody's
+// mailbox — which reads as "that folder cannot be excluded" rather than as a
+// truncated list.
+//
+// Bounded by folderListMaxPages so a provider that keeps handing back a
+// nextLink cannot spin this forever. The bound is generous against any real
+// mailbox; hitting it returns what was read rather than an error, because a
+// long list that stops is more useful to a picker than no list at all.
+func (a *httpAPI) ListFolders(ctx context.Context, accessToken string) ([]connector.NamedContainer, error) {
+	var out []connector.NamedContainer
+	q := url.Values{paramSelect: {"id,displayName"}, "$top": {"100"}}
+	next := a.base + "/me/mailFolders?" + q.Encode()
+	for range folderListMaxPages {
+		var page foldersPage
+		if _, err := a.get(ctx, accessToken, next, nil, &page); err != nil {
+			return nil, err
+		}
+		for _, f := range page.Value {
+			if f.ID == "" {
+				continue
+			}
+			name := f.DisplayName
+			if name == "" {
+				name = f.ID
+			}
+			out = append(out, connector.NamedContainer{ID: f.ID, Name: name})
+		}
+		if page.NextLink == "" {
+			return out, nil
+		}
+		// The same origin check every stored Graph link gets: a nextLink is a
+		// URL the provider chose, and following one off-origin would send this
+		// mailbox's token somewhere Microsoft did not.
+		if err := a.sameAPIOrigin(page.NextLink); err != nil {
+			return nil, err
+		}
+		next = page.NextLink
+	}
+	return out, nil
 }

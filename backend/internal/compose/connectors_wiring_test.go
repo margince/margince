@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // fakeVault is a non-nil keyvault.Vault for wiring tests; WithGmailCapture only
@@ -64,6 +65,10 @@ func (stubGmailAPI) Profile(context.Context, string) (string, string, error) {
 	return "owner@example.com", "1", nil
 }
 func (stubGmailAPI) ListRecent(context.Context, string, int) ([]string, error) { return nil, nil }
+func (stubGmailAPI) ListLabels(context.Context, string) ([]connector.NamedContainer, error) {
+	return nil, nil
+}
+
 func (stubGmailAPI) History(context.Context, string, string) ([]string, []string, string, error) {
 	return nil, nil, "1", nil
 }
