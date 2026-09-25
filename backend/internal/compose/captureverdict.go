@@ -302,6 +302,19 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 		return e.askAHumanInstead(ctx, row)
 	}
 	answers, servedModel, err := e.ask(ctx, row)
+	if errors.Is(err, ai.ErrLocalOnlyUnservable) {
+		// A model is composed, and the router will not send this task to it:
+		// the verdict is local-only and no rung of its ladder binds a local
+		// provider. From this pass's point of view that is the same situation
+		// as no model at all — there is none it may ask — so it takes the same
+		// answer rather than failing the row.
+		//
+		// Failing would be worse than useless. It is a standing property of the
+		// binding rather than a fault, true on every row until somebody rebinds
+		// a rung, so every sender would error, retry, and error again while the
+		// backlog stayed invisible.
+		return e.askAHumanInstead(ctx, row)
+	}
 	if err != nil {
 		return 0, err
 	}
