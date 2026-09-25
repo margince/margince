@@ -16,6 +16,8 @@ import (
 	"log/slog"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -46,6 +48,13 @@ type Waiting interface {
 	// so a second seam would let an installation bind a queue and a guardrail
 	// that disagree about who is waiting.
 	Hidden(ctx context.Context, asOf time.Time) (HiddenWork, error)
+	// HiddenRows names the threads ONE of those rules is holding back — the
+	// question a reader has the moment a figure surprises them.
+	//
+	// On the same seam as Hidden for the same reason Hidden is on this one: the
+	// rows are the difference the figure reports, so a list assembled anywhere
+	// else could name rows the count never counted.
+	HiddenRows(ctx context.Context, asOf time.Time, rule string) ([]WaitingCustomer, error)
 	// Answered says how fast the workspace replied over a window, and how much
 	// of the queue it put down instead.
 	//
@@ -243,6 +252,59 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 		// non-zero counts is the one lie this endpoint must not tell.
 		Clear: work.Clear(),
 	}, nil
+}
+
+// HiddenBacklogRows names the threads one hiding rule is holding back.
+//
+// Gated exactly as HiddenBacklog is, and refused BEFORE the unbound-seam
+// answer for the same reason: a reader without the tier must be told they may
+// not ask, rather than handed an empty list they would read as a clear queue.
+//
+// An unknown rule reaches the module, which refuses it. Validating the word
+// here too would be a second list of the rules to keep in step with the one
+// that measures them.
+func (s *Service) HiddenBacklogRows(
+	ctx context.Context, rule string,
+) (crmcontracts.HiddenBacklogRows, error) {
+	if err := requireLeadTier(ctx); err != nil {
+		return crmcontracts.HiddenBacklogRows{}, err
+	}
+	asOf := s.now()
+	if s.waiting == nil {
+		// The same answer an unbound seam gives the counts: an installation
+		// that does not read the mail stream has no queue to hide work from,
+		// so an empty list is true rather than degraded.
+		return crmcontracts.HiddenBacklogRows{
+			AsOf: asOf, Rule: crmcontracts.HiddenBacklogRowsRule(rule), Rows: []crmcontracts.HiddenBacklogRow{},
+		}, nil
+	}
+	found, err := s.waiting.HiddenRows(ctx, asOf, rule)
+	if err != nil {
+		return crmcontracts.HiddenBacklogRows{}, err
+	}
+	rows := make([]crmcontracts.HiddenBacklogRow, 0, len(found))
+	for _, row := range found {
+		rows = append(rows, crmcontracts.HiddenBacklogRow{
+			ActivityId:   openapi_types.UUID(row.ActivityID),
+			Subject:      row.Subject,
+			Since:        row.Since,
+			EmailSummary: row.EmailSummary,
+			ContactId:    optionalID(row.ContactID),
+			CompanyId:    optionalID(row.CompanyID),
+			DealId:       optionalID(row.DealID),
+		})
+	}
+	return crmcontracts.HiddenBacklogRows{AsOf: asOf, Rule: crmcontracts.HiddenBacklogRowsRule(rule), Rows: rows}, nil
+}
+
+// optionalID drops the zero uuid the query uses for "no record of this kind on
+// the thread". A zero on the wire would be an id a client could try to open.
+func optionalID(id ids.UUID) *openapi_types.UUID {
+	if id == (ids.UUID{}) {
+		return nil
+	}
+	out := openapi_types.UUID(id)
+	return &out
 }
 
 // responseWindowDays is how far back the reading looks when a caller names no

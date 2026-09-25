@@ -2675,6 +2675,10 @@ func (stubs) GetHiddenBacklog(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetHiddenBacklog")
 }
 
+func (stubs) GetHiddenBacklogRows(w nethttp.ResponseWriter, r *nethttp.Request, rule crmcontracts.GetHiddenBacklogRowsParamsRule) {
+	httperr.NotImplemented(w, r, "GetHiddenBacklogRows")
+}
+
 func (stubs) UnpinWorklistRow(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.UnpinWorklistRowParams) {
 	httperr.NotImplemented(w, r, "UnpinWorklistRow")
 }

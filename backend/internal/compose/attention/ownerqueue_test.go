@@ -60,6 +60,13 @@ func (w waitingOwnedBy) Hidden(context.Context, time.Time) (HiddenWork, error) {
 	return HiddenWork{Shown: len(w)}, nil
 }
 
+// HiddenRows answers nothing: these fixtures drive the counts and the queue,
+// and a double that returned rows would be asserting about a read the test
+// never makes.
+func (w waitingOwnedBy) HiddenRows(context.Context, time.Time, string) ([]WaitingCustomer, error) {
+	return nil, nil
+}
+
 // Opening a named contact's queue keeps THEIR waiting customers and drops the
 // reader's own.
 //

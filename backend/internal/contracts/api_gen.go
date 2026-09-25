@@ -8992,6 +8992,33 @@ func (e HeldEntityType) Valid() bool {
 	}
 }
 
+// Defines values for HiddenBacklogRowsRule.
+const (
+	HiddenBacklogRowsRuleColleagues  HiddenBacklogRowsRule = "colleagues"
+	HiddenBacklogRowsRuleNotSales    HiddenBacklogRowsRule = "not_sales"
+	HiddenBacklogRowsRulePastHorizon HiddenBacklogRowsRule = "past_horizon"
+	HiddenBacklogRowsRuleSetAside    HiddenBacklogRowsRule = "set_aside"
+	HiddenBacklogRowsRuleUnlinked    HiddenBacklogRowsRule = "unlinked"
+)
+
+// Valid indicates whether the value is a known member of the HiddenBacklogRowsRule enum.
+func (e HiddenBacklogRowsRule) Valid() bool {
+	switch e {
+	case HiddenBacklogRowsRuleColleagues:
+		return true
+	case HiddenBacklogRowsRuleNotSales:
+		return true
+	case HiddenBacklogRowsRulePastHorizon:
+		return true
+	case HiddenBacklogRowsRuleSetAside:
+		return true
+	case HiddenBacklogRowsRuleUnlinked:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HistoryEdgeOtherEntityType.
 const (
 	HistoryEdgeOtherEntityTypeCompany HistoryEdgeOtherEntityType = "company"
@@ -18442,6 +18469,33 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case GetWorklistParamsFilterTasks:
 		return true
 	case GetWorklistParamsFilterUrgent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetHiddenBacklogRowsParamsRule.
+const (
+	GetHiddenBacklogRowsParamsRuleColleagues  GetHiddenBacklogRowsParamsRule = "colleagues"
+	GetHiddenBacklogRowsParamsRuleNotSales    GetHiddenBacklogRowsParamsRule = "not_sales"
+	GetHiddenBacklogRowsParamsRulePastHorizon GetHiddenBacklogRowsParamsRule = "past_horizon"
+	GetHiddenBacklogRowsParamsRuleSetAside    GetHiddenBacklogRowsParamsRule = "set_aside"
+	GetHiddenBacklogRowsParamsRuleUnlinked    GetHiddenBacklogRowsParamsRule = "unlinked"
+)
+
+// Valid indicates whether the value is a known member of the GetHiddenBacklogRowsParamsRule enum.
+func (e GetHiddenBacklogRowsParamsRule) Valid() bool {
+	switch e {
+	case GetHiddenBacklogRowsParamsRuleColleagues:
+		return true
+	case GetHiddenBacklogRowsParamsRuleNotSales:
+		return true
+	case GetHiddenBacklogRowsParamsRulePastHorizon:
+		return true
+	case GetHiddenBacklogRowsParamsRuleSetAside:
+		return true
+	case GetHiddenBacklogRowsParamsRuleUnlinked:
 		return true
 	default:
 		return false
@@ -30050,6 +30104,40 @@ type HiddenBacklog struct {
 	// that reason rather than folded into a total.
 	Unlinked int `json:"unlinked"`
 }
+
+// HiddenBacklogRow One thread a hiding rule is keeping off the queue — enough to say what it is and
+// to open it, which is what the figure it sits behind could not do.
+type HiddenBacklogRow struct {
+	// ActivityId The message itself — what a reply would be drafted to.
+	ActivityId openapi_types.UUID  `json:"activity_id"`
+	CompanyId  *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// ContactId The record the thread is filed under, when it names one. Absent rather than a
+	// zero uuid: a zero on the wire is an id a client could try to open.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+	DealId    *openapi_types.UUID `json:"deal_id,omitempty"`
+
+	// EmailSummary Present exactly when this wait is an EMAIL the reader may read. The lane spans
+	// email and channel messages, and only an email has an email's shape.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
+
+	// Since When they wrote. The wait is measured from it.
+	Since   time.Time `json:"since"`
+	Subject string    `json:"subject"`
+}
+
+// HiddenBacklogRows The threads one hiding rule is holding back, at one instant.
+type HiddenBacklogRows struct {
+	// AsOf The instant the difference was read at.
+	AsOf time.Time          `json:"as_of"`
+	Rows []HiddenBacklogRow `json:"rows"`
+
+	// Rule Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
+	Rule HiddenBacklogRowsRule `json:"rule"`
+}
+
+// HiddenBacklogRowsRule Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
+type HiddenBacklogRowsRule string
 
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
 // of this one, and null on every ordinary row.
@@ -46354,6 +46442,9 @@ type GetWorklistParamsScope string
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
 
+// GetHiddenBacklogRowsParamsRule defines parameters for GetHiddenBacklogRows.
+type GetHiddenBacklogRowsParamsRule string
+
 // UnpinWorklistRowParams defines parameters for UnpinWorklistRow.
 type UnpinWorklistRowParams struct {
 	// Source The lane the row came from, paired with `row_id` to name it.
@@ -59090,6 +59181,9 @@ type ServerInterface interface {
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
+	// Which threads one hiding rule is keeping off the queue.
+	// (GET /worklist/hidden/{rule})
+	GetHiddenBacklogRows(w http.ResponseWriter, r *http.Request, rule GetHiddenBacklogRowsParamsRule)
 	// Let the ranking have the row back — the undo behind the pin.
 	// (DELETE /worklist/pins)
 	UnpinWorklistRow(w http.ResponseWriter, r *http.Request, params UnpinWorklistRowParams)
@@ -63083,6 +63177,12 @@ func (_ Unimplemented) GetHandledForYou(w http.ResponseWriter, r *http.Request) 
 // What the queue is not showing, and which rule is holding it back.
 // (GET /worklist/hidden)
 func (_ Unimplemented) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which threads one hiding rule is keeping off the queue.
+// (GET /worklist/hidden/{rule})
+func (_ Unimplemented) GetHiddenBacklogRows(w http.ResponseWriter, r *http.Request, rule GetHiddenBacklogRowsParamsRule) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -91110,6 +91210,38 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetHiddenBacklogRows operation middleware
+func (siw *ServerInterfaceWrapper) GetHiddenBacklogRows(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "rule" -------------
+	var rule GetHiddenBacklogRowsParamsRule
+
+	err = runtime.BindStyledParameterWithOptions("simple", "rule", chi.URLParam(r, "rule"), &rule, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rule", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHiddenBacklogRows(w, r, rule)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UnpinWorklistRow operation middleware
 func (siw *ServerInterfaceWrapper) UnpinWorklistRow(w http.ResponseWriter, r *http.Request) {
 
@@ -93361,6 +93493,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/hidden/{rule}", wrapper.GetHiddenBacklogRows)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/worklist/pins", wrapper.UnpinWorklistRow)
