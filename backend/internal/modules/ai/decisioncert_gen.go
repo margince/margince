@@ -4,4 +4,7 @@
 
 package ai
 
-var decisionCertified = map[DecisionCertKey]DecisionCert{}
+var decisionCertified = map[DecisionCertKey]DecisionCert{
+	// records/site_triage/decision_triage_openrouter_decision_typesafe_jev-1.13_cloud_frontier.json
+	{Task: "site_triage", Site: "triage", Provider: "openrouter_decision", Model: "typesafe/jev-1.13"}: {PromptVersion: "pcb8f06d8051b9da26e24b30ce2407cc7", CorpusVersion: "v1"},
+}
