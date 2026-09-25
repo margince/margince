@@ -425,10 +425,8 @@ describe("ListTable: query vocabulary", () => {
   });
 
   it("does not revert a concurrent archived toggle when the debounced search commits", async () => {
-    // Regression: the debounce timer used to close over the `query` prop at
-    // the time it was scheduled. Typing into search, then toggling
-    // include-archived before the 250ms debounce fires, used to overwrite
-    // the toggle with the stale query captured before it happened.
+    // The debounce commits the query as it stands when the timer fires, so an
+    // archived toggle made while the search is still settling survives it.
     const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
       emptyPage(),
     );

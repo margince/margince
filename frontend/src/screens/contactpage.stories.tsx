@@ -1217,13 +1217,15 @@ const emptyBand: View = {
   claims: [],
 };
 
+// Card stories route the session themselves: the stub's list-shaped fallback
+// reads as a malformed session and draws a branch the story is not named for.
+function cardViewer(): void {
+  installFetchStub({ "GET /me": meRoute({}) });
+}
+
 export const BriefStates: Story = {
   render: () => {
-    // These render the cards directly rather than the page, so nothing else
-    // routes the session for them. A component that reads it gets the stub's
-    // list-shaped fallback otherwise, which reads as a malformed session and
-    // draws a branch the story is not named for.
-    installFetchStub({ "GET /me": meRoute({}) });
+    cardViewer();
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>
@@ -1262,11 +1264,7 @@ export const BriefStates: Story = {
 
 export const OverviewPanels: Story = {
   render: () => {
-    // These render the cards directly rather than the page, so nothing else
-    // routes the session for them. A component that reads it gets the stub's
-    // list-shaped fallback otherwise, which reads as a malformed session and
-    // draws a branch the story is not named for.
-    installFetchStub({ "GET /me": meRoute({}) });
+    cardViewer();
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>
@@ -1549,11 +1547,7 @@ const foldedActivities: View = {
 // and the memory panel's full channel set plus its empty state.
 export const OverviewGaps: Story = {
   render: () => {
-    // These render the cards directly rather than the page, so nothing else
-    // routes the session for them. A component that reads it gets the stub's
-    // list-shaped fallback otherwise, which reads as a malformed session and
-    // draws a branch the story is not named for.
-    installFetchStub({ "GET /me": meRoute({}) });
+    cardViewer();
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>
