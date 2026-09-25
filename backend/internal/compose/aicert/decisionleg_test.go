@@ -165,7 +165,16 @@ func TestTheLLMRecordIsUnchangedWhenThePresetBindsNoDecisions(t *testing.T) {
 	if len(without.decisions) != 0 {
 		t.Errorf("no lane is bound and %d decision records were written", len(without.decisions))
 	}
+	// What is compared is the record's MEANING, not how long the two runs took.
+	// RanAt and the latency percentiles are measured rather than derived: they
+	// differ between any two runs of the same work, and on a loaded runner they
+	// differ by enough to fail this. Left in, the assertion read "binding a
+	// decisions lane moved the LLM record" — a serious claim about verdicts —
+	// when all that had moved was a p95 from 6ms to 7ms, buried in a
+	// hundred-field dump. Token counts stay: the fake provider makes them exact.
 	without.llm.RanAt, with.llm.RanAt = "", ""
+	without.llm.LatencyP50, with.llm.LatencyP50 = 0, 0
+	without.llm.LatencyP95, with.llm.LatencyP95 = 0, 0
 	if !reflect.DeepEqual(without.llm, with.llm) {
 		t.Errorf("binding a decisions lane moved the LLM record:\nwithout %+v\nwith    %+v", without.llm, with.llm)
 	}
