@@ -299,6 +299,11 @@ func TestTheDecisionStateIsStrippedBeforeItLeaves(t *testing.T) {
 	if sent := string(decider.calls[0].State); strings.Contains(sent, "AKIAIOSFODNN7EXAMPLE") || !json.Valid(decider.calls[0].State) {
 		t.Fatalf("the decider received %s", sent)
 	}
+	// What was removed is the audit trail's to answer, on the decision row as
+	// on a completion row.
+	if row := f.store.recorded[0]; row.SecretsRemoved != 1 || !reflect.DeepEqual(row.SecretKinds, []string{"aws_access_key"}) {
+		t.Errorf("decision row records %d removed of kinds %v, want 1 aws_access_key", row.SecretsRemoved, row.SecretKinds)
+	}
 }
 
 func TestADecisionRowCarriesItsPayloadInTheDecisionForm(t *testing.T) {
