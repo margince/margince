@@ -110,7 +110,10 @@ func TestPromptVersionCoversTheRequestTheGraderIsSent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("graderRequestDigest: %v", err)
 	}
-	shipped := compose.JudgeRequest(sc.Expect.Rubric, "a widget", stampCandidateOutput)
+	shipped := compose.JudgeRequest(compose.JudgeInput{
+		Rubric: sc.Expect.Rubric, ProductRules: candidate.System, ScenarioInput: "a widget",
+		ExpectedAnswer: string(sc.Expect.Answer), CandidateOutput: stampCandidateOutput,
+	})
 	want, err := canonicalRequestDigest(shipped)
 	if err != nil {
 		t.Fatalf("digesting the shipped grader request: %v", err)
@@ -119,7 +122,7 @@ func TestPromptVersionCoversTheRequestTheGraderIsSent(t *testing.T) {
 		t.Fatalf("the stamp's grader half is %s and the request compose.JudgeRequest builds digests to %s — the stamp covers a grading call this build does not make", got, want)
 	}
 
-	edited := compose.JudgeRequest(sc.Expect.Rubric, "a widget", stampCandidateOutput)
+	edited := compose.JudgeRequest(compose.JudgeInput{Rubric: sc.Expect.Rubric, ScenarioInput: "a widget", CandidateOutput: stampCandidateOutput})
 	edited.System = "Grade generously.\n" + edited.System
 	generous, err := canonicalRequestDigest(edited)
 	if err != nil {
@@ -127,6 +130,33 @@ func TestPromptVersionCoversTheRequestTheGraderIsSent(t *testing.T) {
 	}
 	if generous == want {
 		t.Fatal("a grader instructed differently digests the same — editing the grader's system prompt would leave every record claiming to certify scores it can no longer produce")
+	}
+}
+
+// The grader reads the candidate's system prompt as the product rules and the
+// scenario's answer as the reference, so editing either changes how a run is
+// graded — and must move the grader half even when the ask stays put.
+func TestTheGraderDigestCoversTheProductRulesAndTheExpectedAnswer(t *testing.T) {
+	sc := testScenarioOnSite("one", promptVariant, wideBands)
+	candidate := model.Request{
+		System:   "Describe the subject in one sentence.",
+		Messages: []model.Message{{Role: roleUser, Content: "a widget"}},
+	}
+	base, err := graderRequestDigest(sc, candidate)
+	if err != nil {
+		t.Fatalf("graderRequestDigest: %v", err)
+	}
+
+	reruled := candidate
+	reruled.System = "Describe the subject in two sentences."
+	if got, err := graderRequestDigest(sc, reruled); err != nil || got == base {
+		t.Errorf("a changed product prompt kept the grader digest (err %v) — the grader is shown rules the record was not scored under", err)
+	}
+
+	reanswered := sc
+	reanswered.Expect.Answer = JSONValue(`"a different reference"`)
+	if got, err := graderRequestDigest(reanswered, candidate); err != nil || got == base {
+		t.Errorf("a changed expected answer kept the grader digest (err %v) — the grader reads a reference the record was not scored against", err)
 	}
 }
 

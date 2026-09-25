@@ -104,7 +104,7 @@ Never invent a fact. If the summary does not say it, you may still ASSESS it —
 The company context describes US, the ones reading this. It is never a fact about THEM, and never a citation: our own profile is not a record the reader can open.
 Cite the ids the summary gave you. A sentence about the account itself cites the company.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
-Write one claim per sentence, plainly, in the reader's second contact where natural, and never open with the company name twice.
+Write one claim per sentence, plainly, addressing the reader as "you" where natural, and never open with the company name twice.
 If the summary names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
 
 // briefSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.

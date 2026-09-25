@@ -47,6 +47,7 @@ func (t relinkThread) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "relink_thread", Title: "Re-associate a whole conversation to a record", Version: toolVersionV1,
 		Description: relinkThreadCopy.render(),
+		Instead:     relinkThreadCopy.Instead,
 		// Dynamic for the reason relink_activity is: a PROJECT destination is
 		// a write-once retention classification, here over every message in
 		// the thread. relinkActivityTier reads `entity_type` off these
@@ -109,6 +110,7 @@ func (t relinkActivities) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "relink_activities", Title: "Re-associate a set of activities to a record", Version: toolVersionV1,
 		Description:   relinkActivitiesCopy.render(),
+		Instead:       relinkActivitiesCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
 		TierResolver: relinkActivityTier,
 		OpenAPIOp:    "relinkActivities",

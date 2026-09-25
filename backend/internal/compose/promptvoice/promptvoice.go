@@ -18,7 +18,7 @@
 // block of prompt text and nothing else. No settings read, no transaction, no
 // context.
 //
-// It does NOT govern every prompt. Three kinds of output are exempt and say so
+// It does NOT govern every prompt. Four kinds of output are exempt and say so
 // where they are built:
 //
 //   - Output that is DATA rather than prose — an extraction, a triage verdict,
@@ -28,6 +28,8 @@
 //     the user's own Voice DNA. Margince's personality inside a customer-facing
 //     draft would be Margince signing the user's name.
 //   - The agent runner's tool-calling loop, whose output is a tool call.
+//   - A report to the reader about their OWN week (the weekly review and its
+//     learnings). "Say I for what you did" had the model claim the rep's work.
 package promptvoice
 
 // Heading opens the rule, and it is what the fitness gate in

@@ -53,7 +53,7 @@ type aiCertTotals struct {
 	Scenarios        int `json:"scenarios"`
 	Records          int `json:"records"`
 	Bindings         int `json:"bindings"`
-	// SelfJudged counts records graded by the very model they measured.
+	// SelfJudged counts records graded by the model they measured or its family.
 	SelfJudged int `json:"self_judged_records"`
 }
 

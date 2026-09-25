@@ -34,6 +34,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -228,6 +229,17 @@ func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]stri
 			ActivityID: id, Subject: message.Subject,
 			Direction: message.Direction, At: at, Text: message.Body,
 		})
+		in.Recent = append(in.Recent, meetingbrief.ActIn{
+			ID: id, Kind: "email", Subject: message.Subject, Direction: message.Direction, At: at,
+		})
+	}
+	// Production folds Recent and the attendee's last touch from the contact's
+	// own page, newest first; the sections prompt reads them and never History.
+	slices.SortStableFunc(in.Recent, func(a, b meetingbrief.ActIn) int { return b.At.Compare(a.At) })
+	if len(in.Recent) > 0 {
+		newest := in.Recent[0].At
+		in.Attendees[0].LastTouch = &newest
+		in.LastTouchAt = &newest
 	}
 	for _, claim := range f.Claims {
 		in.Commitments = append(in.Commitments, meetingbrief.ClaimIn{

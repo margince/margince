@@ -90,8 +90,8 @@ prints the verdict:
 cold_start: certified (reliability=1.00 judge_score_p50=100 self_judged=false)
 ```
 
-`self_judged` is `true` when the candidate and the judge resolved to the **same
-served model** on every run — the model graded its own answers. It is not a
+`self_judged` is `true` when candidate and judge are the **same model family**
+(publisher or model line; older records flagged only an exact match). It is not a
 failure and does not change the verdict, but it weakens the *score*: read such a
 band as the deterministic pass (what the production validator accepted) plus an
 opinion the candidate has an interest in. A passing run writes/refreshes a record

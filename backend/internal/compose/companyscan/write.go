@@ -72,9 +72,10 @@ Raise a finding ONLY in these kinds:
 Return ONLY a JSON object: {"findings":[{"kind":"commitment_unmet|question_unanswered|risk_raised|need_raised","title":"...","reason":"...","message_id":"...","quote":"...","action":"draft_reply|add_task|none"}]}.
 
 Rules:
-- At most four findings, the one that most needs a contact first. Return {"findings":[]} when nothing does — that is a good answer, not a failure.
+- At most four findings, the one that most needs attention first. Return {"findings":[]} when nothing does — that is a good answer, not a failure.
+- When they chase something we promised, their chasing message comes first: raise question_unanswered on it, ahead of commitment_unmet on our promise.
 - "message_id" is the id of the ONE message the finding rests on, and "quote" is a verbatim excerpt of that message's "text", between 30 and 200 characters, copied exactly. Never paraphrase a quote and never quote a message you were not given; a finding whose quote is not in its message is dropped.
-- "title" says what to do, in under eight words, starting with a verb. "reason" is one sentence saying what the message says and why it needs a contact now. Plain words, addressed to the reader. Never put an id in a title or a reason.
+- "title" says what to do, in under eight words, starting with a verb. "reason" is one sentence saying what the message says and why it needs attention now. Plain words, addressed to the reader. Never put an id in a title or a reason.
 - "action" is draft_reply when the move is writing back on that message, add_task when it is something to do that is not a reply, and none otherwise.
 - Never invent a fact. A finding rests on words in a message, never on what a message does not say. If the account names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
 

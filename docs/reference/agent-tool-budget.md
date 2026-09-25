@@ -53,16 +53,16 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 76 | 1847 | 1219 | 3515 | 10% | 19695 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 76 | 2721 | 1737 | 4907 | 14% | 18303 | 15 | 6 |
-| _whole served catalog's listing, for scale — no run is offered it_ | 76 | — | 24512 | — | — | 74% | — | — | — |
+| `morning_brief` | 5 | 5 of 76 | 1677 | 1219 | 3344 | 10% | 19866 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 76 | 2515 | 1737 | 4701 | 14% | 18509 | 7 | 6 |
+| _whole served catalog's listing, for scale — no run is offered it_ | 76 | — | 24502 | — | — | 74% | — | — | — |
 
 ### `morning_brief`
 
-> Prepare the acting contact's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this contact; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
+> Prepare the existing Morning Brief of the user this run acts for. First call read_brief. Its items are the queue already ranked for them; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
 
-Attaches 5 tools and pays 3515 tokens on every step (1847 listing, 1219 step schema), leaving
-19695 of its budget and 29253 tokens of the
+Attaches 5 tools and pays 3344 tokens on every step (1677 listing, 1219 step schema), leaving
+19866 of its budget and 29424 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -71,22 +71,12 @@ window for the goal, the grounding and everything it reads.
 - `read_brief`
 - `read_record`
 
-**6 dangling cross-references** — this agent's own tool copy points at tools it
-cannot call, so a run may spend a step discovering the refusal:
-
-- annotate_brief → log_activity
-- catch_me_up_on → prep_for_meeting
-- catch_me_up_on → search_records
-- list_records → run_report
-- list_records → search_records
-- read_brief → whats_slipping_this_week
-
 ### `overnight_at_risk_sweep`
 
 > Sweep this workspace's open deals for risk: deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. First call whats_slipping_this_week: it returns the at-risk deals across the whole workspace. A deal the retrieved context mentions is one example, not the sweep, so do not read or log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools and pays 4907 tokens on every step (2721 listing, 1737 step schema), leaving
-18303 of its budget and 27861 tokens of the
+Attaches 7 tools and pays 4701 tokens on every step (2515 listing, 1737 step schema), leaving
+18509 of its budget and 28067 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -97,24 +87,16 @@ window for the goal, the grounding and everything it reads.
 - `review_commitments`
 - `whats_slipping_this_week`
 
-**15 dangling cross-references** — this agent's own tool copy points at tools it
+**7 dangling cross-references** — this agent's own tool copy points at tools it
 cannot call, so a run may spend a step discovering the refusal:
 
-- at_risk_relationships → company_coverage
 - at_risk_relationships → intro_path_to
 - at_risk_relationships → who_knows
-- catch_me_up_on → prep_for_meeting
-- catch_me_up_on → search_records
-- list_records → run_report
-- list_records → search_records
-- log_activity → create_task
 - log_activity → draft_email
-- log_activity → progress_deal
 - log_activity → relink_activity
 - log_activity → send_email
 - log_activity → send_message
 - whats_slipping_this_week → draft_follow_ups_for
-- whats_slipping_this_week → run_report
 
 ## How to read the two derived columns
 
@@ -122,7 +104,9 @@ Both are prose heuristics over text that was written for humans. They are useful
 ordering decisions and wrong to optimise against.
 
 **Dangling references** is any registered tool name appearing in an attached tool's
-description while not itself attached. The rule is deliberately *any mention*, not a
+description, as that agent's run reads it, while not itself attached. The run's listing
+already drops an Instead that names a tool outside the offer, so what is left is in
+Limits and Retain. The rule is deliberately *any mention*, not a
 `Use X when …` clause — several disambiguation sentences carry no "Use" at all.
 
 **It is a diagnostic, never a target.** Closing a menu under this relation is
@@ -145,7 +129,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 273 tokens, mean 322, across 76 served tools.
+Median 272 tokens, mean 322, across 76 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -157,8 +141,8 @@ a term in an addition.
 | `run_report` | 1010 | — |
 | `send_company_email` | 823 | — |
 | `send_email` | 754 | — |
-| `preview_import` | 726 | — |
-| `list_records` | 722 | 2 scenarios |
+| `preview_import` | 725 | — |
+| `list_records` | 721 | 2 scenarios |
 | `log_activity` | 677 | 3 scenarios |
 | `send_message` | 603 | — |
 | `update_record` | 581 | — |
@@ -172,9 +156,9 @@ a term in an addition.
 | `advance_deal` | 446 | — |
 | `compose_analytics_report` | 440 | — |
 | `book_meeting` | 423 | — |
-| `annotate_brief` | 418 | 2 scenarios |
+| `annotate_brief` | 417 | 2 scenarios |
 | `review_commitments` | 401 | — |
-| `enrich` | 391 | — |
+| `enrich` | 390 | — |
 | `search_records` | 383 | — |
 | `check_availability` | 366 | — |
 | `describe_report_vocabulary` | 349 | — |
@@ -191,14 +175,14 @@ a term in an addition.
 | `catch_me_up_on` | 279 | 2 scenarios |
 | `draft_email` | 278 | — |
 | `relink_activity` | 276 | — |
-| `draft_follow_ups_for` | 274 | — |
-| `decide_approval` | 273 | — |
+| `draft_follow_ups_for` | 273 | — |
+| `decide_approval` | 272 | — |
 | `list_approvals` | 268 | — |
 | `prepare_handoff` | 267 | — |
 | `describe_query_vocabulary` | 266 | — |
 | `company_coverage` | 246 | — |
 | `describe_report_blocks` | 245 | — |
-| `decide_approval_bundle` | 236 | — |
+| `decide_approval_bundle` | 235 | — |
 | `qualify_lead` | 229 | — |
 | `apply_tag` | 226 | — |
 | `create_task` | 221 | — |
@@ -207,15 +191,15 @@ a term in an addition.
 | `at_risk_relationships` | 209 | — |
 | `disqualify_lead` | 209 | — |
 | `list_input_checks` | 209 | — |
-| `read_brief` | 206 | — |
+| `read_brief` | 205 | — |
 | `relink_activities` | 205 | — |
 | `update_tag` | 205 | — |
-| `commit_import` | 204 | — |
+| `commit_import` | 203 | — |
 | `merge_tags` | 198 | — |
-| `list_colleagues` | 196 | — |
+| `who_knows` | 197 | — |
 | `relink_thread` | 196 | — |
-| `who_knows` | 196 | — |
 | `data_coverage` | 195 | — |
+| `list_colleagues` | 193 | — |
 | `list_pipelines` | 191 | — |
 | `intro_path_to` | 187 | — |
 | `create_tag` | 183 | — |

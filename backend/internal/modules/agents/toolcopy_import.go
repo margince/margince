@@ -25,7 +25,7 @@ var previewImportCopy = toolCopy{
 		"out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add.",
 	Instead: "create_record for one record you already know.",
 	Retain: "Keep the run_id. The counts it answers — created, duplicates, skipped — and the " +
-		"mapping it settled on are what the contact weighs, so report both: a column this placed by " +
+		"mapping it settled on are what the user weighs, so report both: a column this placed by " +
 		"a name they did not write is a decision they did not make.",
 }
 
@@ -36,7 +36,7 @@ var readImportRunCopy = toolCopy{
 
 var readImportReportCopy = toolCopy{
 	Purpose: "What an import will do, or did: rows created, updated, failed, unusable, duplicates.",
-	Limits:  "These counts are what a contact weighs before committing. Same shape before and after.",
+	Limits:  "These counts are what the user weighs before committing. Same shape before and after.",
 }
 
 // The approval `awaiting_approval` names is the CONTACT's, and this tool is not
@@ -53,7 +53,7 @@ var readImportReportCopy = toolCopy{
 var commitImportCopy = toolCopy{
 	Purpose: "Write a checked import into the workspace. The dry run is the check; this commits " +
 		"when it answers.",
-	Limits: "Only from awaiting_approval, which is the CONTACT's approval and not this call's to " +
+	Limits: "Only from awaiting_approval, which is the HUMAN's approval and not this call's to " +
 		"give: nothing stages it, and an import cannot be undone from here — undoing one needs the " +
 		"web app. Put the dry run's counts in front of them and let them say go — unless they have " +
 		"already been through the file and asked for it to be loaded, which is an approval and not " +

@@ -238,6 +238,7 @@ func (t whoKnowsTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "who_knows", Title: "Who knows this contact", Version: toolVersionV1,
 		Description:   whoKnowsCopy.render(),
+		Instead:       whoKnowsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getContactNetwork",
 		InputSchema: schema(`{"type":"object","properties":{
@@ -301,6 +302,7 @@ func (t companyCoverageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "company_coverage", Title: "Relationship coverage on a deal", Version: toolVersionV1,
 		Description:   companyCoverageCopy.render(),
+		Instead:       companyCoverageCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getDealCoverage",
 		InputSchema: schema(`{"type":"object","properties":{
@@ -361,6 +363,7 @@ func (t introPathTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "intro_path_to", Title: "Find a warm introduction path", Version: toolVersionV1,
 		Description:   introPathToCopy.render(),
+		Instead:       introPathToCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getCompanyGraph",
 		InputSchema: schema(`{"type":"object","properties":{
@@ -421,6 +424,7 @@ func (t atRiskTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "at_risk_relationships", Title: "Relationships going cold", Version: toolVersionV1,
 		Description:   atRiskRelationshipsCopy.render(),
+		Instead:       atRiskRelationshipsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listDeals + getDealCoverage",
 		// No arguments. The question is about the caller's own book, and the

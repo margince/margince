@@ -160,7 +160,6 @@ func TestTheBudgetPageCountsTheStepSchemaInEveryAgentsRow(t *testing.T) {
 func renderAgentToolBudget(t *testing.T) agentToolBudget {
 	t.Helper()
 	specs := servedSurface(t).Specs()
-	graph := crossReferences(specs)
 	census, err := readWrongReachCensus(agentLoopCorpusDir, specs, scheduledAllowlists())
 	if err != nil {
 		t.Fatalf("reading the certification corpus at %s: %v", agentLoopCorpusDir, err)
@@ -192,7 +191,8 @@ func renderAgentToolBudget(t *testing.T) agentToolBudget {
 		// registered tool behind it, so a menu that measures small because a
 		// tool went missing fails here instead of publishing the same number
 		// for the opposite reason.
-		cost := runner.FixedStepCost(specsNamed(t, spec.Tools))
+		offered := specsNamed(t, spec.Tools)
+		cost := runner.FixedStepCost(offered)
 		rows = append(rows, agentBudgetRow{
 			Name:       spec.Name,
 			Goal:       spec.Goal,
@@ -203,7 +203,7 @@ func renderAgentToolBudget(t *testing.T) agentToolBudget {
 			StepSchema: cost.Schema,
 			PercentOf:  cost.Tokens * 100 / runner.MinimumPromptWindow,
 			Headroom:   budget - cost.Tokens,
-			Dangling:   danglingReferences(spec.Tools, graph),
+			Dangling:   danglingReferences(spec.Tools, crossReferences(runner.AsOffered(offered), specs)),
 			Temptation: temptationWeight(spec.Name, spec.Tools, census),
 		})
 	}
@@ -297,7 +297,7 @@ func TestTheCrossReferenceScanReadsTheCopyAndNotItsShape(t *testing.T) {
 		{Name: "prep_for_meeting", Description: "Assemble what a contact needs before they walk in."},
 		{Name: "read_record", Description: "Read one record's own stored fields; mentions no other tool."},
 	}
-	graph := crossReferences(specs)
+	graph := crossReferences(specs, specs)
 	if got := graph["catch_me_up_on"]; len(got) != 2 || got[0] != "prep_for_meeting" || got[1] != "read_record" {
 		t.Errorf("the scan read %v from a description naming two tools with no \"Use\" clause", got)
 	}
@@ -424,5 +424,53 @@ func TestTheWrongReachCensusReadsWhatTheScenariosDeclare(t *testing.T) {
 	if len(census.Counts) == 0 {
 		t.Error("no near miss was counted at all, so the census is measuring nothing — which is " +
 			"what a renamed key looks like from here")
+	}
+}
+
+// No scheduled agent's listing sends it to a tool its run is not offered.
+//
+// The registry's reading of which tools an Instead names is checked against
+// this file's own scan of the same text over the whole catalog: a reading that
+// recognised fewer names would cut nothing and still leave every listing clean.
+func TestNoScheduledAgentIsSentToAToolItIsNotOffered(t *testing.T) {
+	specs := servedSurface(t).Specs()
+	insteadOnly := make([]mcp.ToolSpec, 0, len(specs))
+	for _, spec := range specs {
+		insteadOnly = append(insteadOnly, mcp.ToolSpec{Name: spec.Name, Description: spec.Instead})
+	}
+	named := crossReferences(insteadOnly, specs)
+	for _, spec := range specs {
+		registry := append([]string(nil), spec.InsteadTools...)
+		sort.Strings(registry)
+		if strings.Join(registry, ",") != strings.Join(named[spec.Name], ",") {
+			t.Errorf("%s: the registry reads its Instead as naming %v; the text names %v",
+				spec.Name, registry, named[spec.Name])
+		}
+	}
+
+	cut := 0
+	for _, agent := range mustScheduledAgents() {
+		offered := specsNamed(t, agent.Tools)
+		listing := runner.ToolListing(runner.AsOffered(offered))
+		held := map[string]bool{}
+		for _, name := range agent.Tools {
+			held[name] = true
+		}
+		for _, spec := range offered {
+			for _, neighbour := range named[spec.Name] {
+				if held[neighbour] {
+					continue
+				}
+				cut++
+				if strings.Contains(listing, spec.Instead) {
+					t.Errorf("%s: %s still tells the run to use %s, which it is not offered",
+						agent.Name, spec.Name, neighbour)
+				}
+				break
+			}
+		}
+	}
+	if cut == 0 {
+		t.Fatal("no shipped agent carries an Instead naming a tool outside its offer, so nothing here saw a cut")
 	}
 }

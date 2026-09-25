@@ -86,9 +86,11 @@ settles. Report a criterion only when the text SAYS it: quote the passage that s
 Report nothing for a topic merely discussed, for something you are inferring rather than
 reading, and for anything about what should happen to the DEAL — you report what was said
 about each criterion, never what the deal should do next or which stage it belongs in.
-Say met=false only where the text states the thing has NOT happened; silence about a
-criterion is not evidence either way, and the correct answer is to omit it.
-Reporting nothing is the correct answer for many conversations.`
+A speaker reporting what somebody else said or agreed ("she confirmed the budget")
+is not their own statement, and settles nothing.
+Say met=false where the text states the thing has NOT happened: it is still awaited,
+only forecast, floated and deferred, or denied. Silence about a criterion is not
+evidence either way; omit it. Reporting nothing is the correct answer for many conversations.`
 
 // stageEvidenceSystemFor names THIS call's data boundary; see
 // promptfence.Fence.Rule. The language rule governs "quote" — which is a
@@ -192,8 +194,7 @@ func stageEvidenceRequest(
 		`ascending and with no line skipped between the first and the last — `+
 		`quote the interruption rather than reading around it. `+
 		`"quote" is the passage itself, copied from the span, at most %d characters. `+
-		`"met" is "true" where the text says the thing happened and "false" where it `+
-		`says it has NOT; omit the criterion entirely where the text says neither. `+
+		`"met" is "true" where the text says the thing happened and "false" as above. `+
 		`"commitment" is "agreed" where a party settled it, "proposed" where one `+
 		`floated it without agreement, and "none" where the text describes it without `+
 		`either. Do not name a stage, a next step, or what the deal should do.`,
@@ -381,17 +382,22 @@ func validateStageEvidenceQuote(claim stageEvidenceClaim, span stageEvidenceSpan
 	if msg := refuseSplicedCitation(claim); msg != "" {
 		return msg
 	}
-	var cited strings.Builder
+	var cited, spoken strings.Builder
 	for _, line := range claim.SourceLines {
 		cited.WriteString(span.Lines[line-1])
 		cited.WriteString(" ")
+		_, words := ai.SplitSpeakerLine(span.Lines[line-1])
+		spoken.WriteString(words)
+		spoken.WriteString(" ")
 	}
 	// claims.Quoted is the grounding check the document extract and the corpus
 	// ask are already held to, and it refuses an empty quote itself. Comparing
 	// under its whitespace normalisation is what lets a model reflow a wrapped
 	// line without failing — reflow is not the failure this guards against;
-	// composing a sentence nobody wrote is.
-	if !claims.Quoted(cited.String(), claim.Quote) {
+	// composing a sentence nobody wrote is. A quote running across two turns
+	// may drop the second "Name:" label: it is attribution, which the write
+	// computes from the participants, not a word anybody said.
+	if !claims.Quoted(cited.String(), claim.Quote) && !claims.Quoted(spoken.String(), claim.Quote) {
 		return fmt.Sprintf("the quote on %q is not in the lines it cites",
 			clampToken(claim.CriterionKey))
 	}

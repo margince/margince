@@ -75,9 +75,9 @@ func noteFromModel(
 	return parseIntroNote(res.Text, facts)
 }
 
-const noteSystem = `You write one short note that a contact will FORWARD to somebody they know, introducing a colleague of theirs.
+const noteSystem = `You write one short note that its sender will FORWARD to the recipient, introducing a colleague of theirs.
 
-The reader is the recipient — a customer or a prospect, not a teammate. You are writing in the voice of the contact who will send it: they know the recipient, and they are passing along an introduction.
+The reader is the recipient — a customer or a prospect, not a teammate. You are writing in the voice of that sender, passing along an introduction.
 
 Rules you must not break:
 - Write TO the recipient, and address them by name: open with their first name. Never mention that anybody was asked to make this introduction, and never refer to an internal request.
@@ -85,7 +85,7 @@ Rules you must not break:
 - Say why the recipient might care ONLY when "why_it_matters" carries a reason, in one sentence, and say nothing beyond what it states. When it is empty, ask for the conversation without giving a reason: an introduction is a complete request on its own, and a reason nobody wrote is one you invented.
 - When "through_contact" names somebody, you may say they suggested the introduction. Say nothing else about them, and never say they asked for it.
 - Write a short subject line in the "subject" field, naming the colleague you are introducing.
-- Do not invent anything about the relationship or about the recipient's company. You are told how warm the relationship is and when they last spoke; say no more than that.
+- Do not invent anything about the relationship or about the recipient's company. "relationship" and "last_spoke" describe the sender's link to "through_contact" when one is named — not to the recipient — and otherwise the link to the recipient; say no more than that.
 - Ask for nothing more than a conversation. No pitch, no pricing, no meeting times.
 - No subject line inside the body.`
 
@@ -155,8 +155,9 @@ func parseIntroNote(raw string, facts noteFacts) (introNote, error) {
 	return introNote{subject: subject, body: body}, nil
 }
 
-// noteLastSpoke says when the sender and the recipient last spoke, in words
-// rather than a date the model would have to do arithmetic on.
+// noteLastSpoke says when the route's edge last carried an exchange — sender
+// to recipient, or sender to the intermediary on an indirect route — as a date
+// rather than an interval the model would have to work out.
 func noteLastSpoke(facts noteFacts) string {
 	if facts.lastAt == nil {
 		return "not recorded"
@@ -209,7 +210,7 @@ var noteTable = map[textlang.Lang]noteWording{
 		intro:     "ich wollte Sie mit %s bekannt machen.",
 		viaKnown:  "Wir stehen in Kontakt (%s, zuletzt etwa %s), deshalb hielt ich die Vorstellung für sinnvoll.",
 		viaUntold: "Ich hielt die Vorstellung für sinnvoll.",
-		through:   "%s meinte, Sie wären die richtige Ansprechcontact.",
+		through:   "%s meinte, Sie wären dafür genau richtig.",
 		why:       "%s",
 		ask:       "Ich halte mich gerne raus und überlasse das Weitere Ihnen beiden.",
 		sign:      "Viele Grüße",
@@ -270,13 +271,14 @@ func noteFloor(facts noteFacts) introNote {
 }
 
 // noteRelationship states the sender's own relationship with the recipient,
-// and states nothing when there is nothing recorded.
+// and states nothing when there is nothing recorded — or when the route runs
+// through an intermediary, whose edge the band and date then describe.
 //
 // The untold form is not a lesser sentence: claiming a history the records do
 // not hold, in a message a customer reads, is the one failure this whole
 // surface must not have.
 func noteRelationship(wording noteWording, facts noteFacts) string {
-	if facts.band == "" || facts.lastAt == nil {
+	if facts.band == "" || facts.lastAt == nil || facts.through != "" {
 		return wording.viaUntold
 	}
 	// FillPositional, not two sequential Fills: a band or a date carrying its
@@ -352,10 +354,13 @@ func noteReasons(facts noteFacts) []crmcontracts.AccountDraftReason {
 	return out
 }
 
-// noteRelationshipLabel says who knows whom, and how well only where the graph
-// recorded it.
+// noteRelationshipLabel says who knows whom — the edge the band was scored on —
+// and how well only where the graph recorded it.
 func noteRelationshipLabel(facts noteFacts) string {
 	who := facts.colleague + " → " + facts.contact
+	if facts.through != "" {
+		who = facts.colleague + " → " + facts.through
+	}
 	if facts.band == "" {
 		return who
 	}

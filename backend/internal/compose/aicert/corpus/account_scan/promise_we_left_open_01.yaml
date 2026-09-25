@@ -46,6 +46,9 @@ expect:
     certified_min: 70
     degraded_min: 50
     floor: 40
+  # The two findings are not offered as equally correct: that wording
+  # contradicted the expected answer and deleted the prioritisation this case
+  # tests, and a judge reading it scored the less urgent finding 100.
   rubric: >
     The finding that most needs a contact is the one resting on THEIR NUDGE:
     they are waiting, their team meets Thursday, and nothing has answered them.
@@ -61,9 +64,3 @@ expect:
     A scan that invents a delivery date for the reports, or a reason they were
     held up, states something no message says and scores below one that only
     says the promise is open.
-
-    An earlier wording of this rubric offered the two findings as equally
-    correct, which contradicted the expected answer beside it and deleted the
-    prioritisation this case exists to test: two model families raised the
-    promise, were reported "never cited: his_nudge", and were scored 100 by a
-    judge reading this rubric.

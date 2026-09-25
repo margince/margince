@@ -70,12 +70,12 @@ it states — a specific thing a named party said they would do. Report one only
 transcript SAYS it: "I'll send the pricing by Friday", "we'll get you the security review".
 Report nothing for topics discussed without a commitment, for things you are inferring
 rather than reading, and for anything about what the DEAL should do — a transcript records
-what contacts said, not what should happen to the account. Cite the line numbers the
+what was said, not what should happen to the account. Cite the line numbers the
 commitment is stated on. Reporting nothing is the correct answer for many transcripts.`
 
 // transcriptSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 // The language rule governs the "summary" field. "owner" is excluded by
-// promptlang.Rule's own carve-out for contacts's names — it is the party as the
+// promptlang.Rule's own carve-out for personal names — it is the party as the
 // transcript names them, and a translated name is a different contact.
 func transcriptSystemFor(fence promptfence.Fence, lang string) string {
 	return transcriptSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("line")

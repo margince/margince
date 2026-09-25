@@ -76,8 +76,8 @@ This is a favour asked of a teammate, not a message to a customer. Write the way
 
 Rules you must not break:
 - Address the colleague by name: open with their first name, then the ask.
-- Say who you want to meet and why, in one sentence each, and name the contact you want to meet in full.
-- Do not invent anything about the relationship. You are told how warm it is and when they last spoke; say no more than that.
+- In one sentence, name the contact you want to meet in full. Give a reason only when "deal" names one, in one sentence; with no deal, the ask is complete without a reason.
+- Do not invent anything about the relationship. You are told how warm it is and when the colleague and the contact were last in touch; say no more than that.
 - Do not write the introduction itself, and do not write to the contact. The message is TO the colleague.
 - Write a short subject line in the "subject" field, naming the contact you want to meet.
 - No subject line inside the body.`

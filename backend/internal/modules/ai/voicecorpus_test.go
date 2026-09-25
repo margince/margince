@@ -329,7 +329,7 @@ func TestSpeakerPrefixAcceptsDiarizerNumberedLabels(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			speaker, _ := splitSpeakerLine(tc.line)
+			speaker, _ := SplitSpeakerLine(tc.line)
 			if speaker != tc.speaker {
 				t.Fatalf("speaker = %q, want %q", speaker, tc.speaker)
 			}
@@ -392,7 +392,7 @@ func TestPreviewReportsSpeakersWithoutStoringAnything(t *testing.T) {
 
 // Prose pasted into the onboarding step as a TRANSCRIPT, which is what a reader
 // who clicked "paste sent mail" does. Asked of the preview rather than of
-// splitSpeakerLine because the damage is downstream: only the chosen speaker's
+// SplitSpeakerLine because the damage is downstream: only the chosen speaker's
 // turns reach the corpus, so the rest of the paste is dropped under the floor
 // and the failure arrives as poor voice rather than as an error.
 func TestProseWithAMidSentenceColonIsNotATranscript(t *testing.T) {

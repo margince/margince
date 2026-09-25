@@ -16,9 +16,11 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -170,4 +172,64 @@ func TestCandidateAskRefusesATraceThatAskedNothing(t *testing.T) {
 			t.Fatal("want an error for a first request that asks nothing")
 		}
 	})
+}
+
+// A grader shown neither the product rules nor the reference answer floored
+// behaviour the site's prompt explicitly permits and invented fields the schema
+// never asked for. Both reach the judge call a run actually makes.
+func TestTheJudgeIsShownTheProductRulesAndTheExpectedAnswer(t *testing.T) {
+	const expected = "a durable blue widget"
+	candidateFake := ai.NewFakeClient().Script("the widget is " + expected)
+	judgeFake := ai.NewFakeClient().Script(scoreJSON(90))
+
+	sc := testScenario("basic", wideBands)
+	sc.Expect.Answer = JSONValue(`"` + expected + `"`)
+	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
+		}); err != nil {
+		t.Fatalf("certifyTask: %v", err)
+	}
+
+	judgeCalls := judgeFake.Calls()
+	if len(judgeCalls) != 1 {
+		t.Fatalf("the judge was called %d times, want the one call this single run scores", len(judgeCalls))
+	}
+	payload := string(judgeCalls[0].Payload)
+	for what, want := range map[string]string{
+		"the widget site's system prompt": "Describe the subject in one sentence.",
+		"the scenario's expected answer":  expected,
+	} {
+		if !strings.Contains(payload, want) {
+			t.Errorf("the grader was never shown %s (%q):\n%s", what, want, payload)
+		}
+	}
+}
+
+// The rules and the reference answer are fenced like the rest of the scenario:
+// the rules carry the fixture inside the candidate site's own markers.
+func TestGraderInputFencesTheRulesAndTheExpectedAnswer(t *testing.T) {
+	sc := testScenario("basic", wideBands)
+	trace := aitasks.Trace{Requests: []model.Request{{
+		System:   "You may say they suggested the introduction.",
+		Messages: []model.Message{{Role: roleUser, Content: widgetAsk}},
+	}}}
+	in, err := graderInput(sc, trace, gradedOutput)
+	if err != nil {
+		t.Fatalf("graderInput: %v", err)
+	}
+	req := compose.JudgeRequest(in)
+	marker, declared := promptfence.MarkerIn(req.System)
+	if !declared {
+		t.Fatalf("the grader's system prompt declares no data boundary: %q", req.System)
+	}
+	turn := req.Messages[0].Content
+	for _, untrusted := range []string{trace.Requests[0].System, string(sc.Expect.Answer)} {
+		fenced := "<" + marker + ">" + untrusted + "</" + marker + ">"
+		if !strings.Contains(turn, fenced) {
+			t.Errorf("%q is not inside this call's boundary:\n%s", untrusted, turn)
+		}
+	}
 }

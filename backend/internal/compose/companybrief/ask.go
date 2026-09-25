@@ -71,7 +71,7 @@ func ParseQuestion(raw crmcontracts.CompanyQuestion) (crmcontracts.CompanyQuesti
 // so the grounding rules are stated once and cannot drift between questions.
 const askSystem = `You answer one question about one account in a salesperson's CRM, from a JSON summary of that account.
 Return ONLY a JSON object: {"sentences":[{"text":"...","evidence":[{"entity_type":"deal|activity|contact|company","entity_id":"..."}]}]}.
-Answer in one to four sentences, plainly, in the reader's second contact where natural.
+Answer in one to four sentences, plainly, addressing the reader as "you" where natural.
 State only what the summary states. Never infer a cause, a mood, an intent or a next step it does not contain.
 Cite the ids the summary gave you; a sentence about the account itself cites the company.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.

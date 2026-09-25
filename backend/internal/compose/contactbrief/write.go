@@ -84,7 +84,7 @@ Never invent a fact. If the summary does not say it, you may still ASSESS it —
 If the summary is thin, say what is MISSING and stop. Four honest sentences beat six padded ones, and a brief that pads is one a reader learns to skip.
 Cite the ids the summary gave you. A sentence about the contact themselves cites the contact.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
-Write one claim per sentence, plainly, in the reader's second contact where natural. Name the contact once; after that they are "they".
+Write one claim per sentence, plainly, addressing the reader as "you" where natural. Name the contact once; after that they are "they".
 If the summary names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
 
 // briefSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.

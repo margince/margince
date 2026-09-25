@@ -19,18 +19,18 @@ expect:
   answer:
     - criterion_key: pilot_scheduled
       met: false
-      settled_by: check with the warehouse leads
   rubric: >
     A date was raised and explicitly not settled — "possibly", "I would need to
     check", "let me come back to you". The correct reading is pilot_scheduled
     met=false: the text states the thing has NOT happened, which is a real
-    observation and not the same as silence. Claiming met=true scores at the
-    floor. A reply claiming met=false with commitment "proposed" reads the
-    conversation most precisely and should score highest, because it records
-    that a date was floated without being agreed — which is exactly what a
-    reader needs to know. Omitting the criterion scores in the middle: it is
-    not wrong, since a criterion nobody settled stays open either way, but it
-    loses the fact that the pilot was actively discussed and deferred.
+    observation and not the same as silence. Any of the three lines is a fair
+    quote, since together they are the passage that floats the date and defers
+    it. Claiming met=true scores at the floor. A reply claiming met=false with
+    commitment "proposed" reads the conversation most precisely and should
+    score highest, because it records that a date was floated without being
+    agreed. Omitting the criterion scores low: the conversation states the
+    pilot is not yet agreed, and a reply that reports nothing loses exactly the
+    fact that it was actively discussed and deferred.
   bands:
     certified_min: 70
     degraded_min: 50

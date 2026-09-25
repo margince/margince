@@ -32,6 +32,7 @@ func (t checkAvailability) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "check_availability", Title: "Check calendar availability", Version: toolVersionV1,
 		Description:   checkAvailabilityCopy.render(),
+		Instead:       checkAvailabilityCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getAvailability",
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
@@ -135,6 +136,7 @@ func (t bookMeetingTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "book_meeting", Title: "Book a meeting", Version: toolVersionV1,
 		Description:   bookMeetingCopy.render(),
+		Instead:       bookMeetingCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "bookMeeting",
 		// `links` is REQUIRED by crm.yaml's bookMeeting body and was advertised

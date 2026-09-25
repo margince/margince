@@ -132,6 +132,7 @@ func (t queryWorkspace) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "query_workspace", Title: "Query the workspace", Version: toolVersionV1,
 		Description:   queryWorkspaceCopy.render(),
+		Instead:       queryWorkspaceCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		// The plan document is NOT re-declared here. Its grammar is published
 		// at margince://schema/query, derived per caller from the field catalog

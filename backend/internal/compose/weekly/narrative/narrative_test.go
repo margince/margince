@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
@@ -57,15 +58,17 @@ func TestADealNameCannotEscapeTheFenceAndBecomeInstruction(t *testing.T) {
 	}
 }
 
-// The prompt says what language to answer in and whose voice to use. Both are
-// gate-enforced across the tree; asserted here too because this lane's output
-// is prose a reader reads on their own screen.
-func TestTheRequestCarriesTheLanguageAndTheVoice(t *testing.T) {
+// The prompt says what language to answer in, and leaves out the house voice:
+// its own-voice lines had the model narrate a week that was the rep's.
+func TestTheRequestCarriesTheLanguageButNotTheHouseVoice(t *testing.T) {
 	req := Request(Input{WeekStart: "2026-06-29"}, "de")
-	for _, want := range []string{"LANGUAGE", "VOICE", "German"} {
+	for _, want := range []string{"LANGUAGE", "German"} {
 		if !strings.Contains(req.System, want) {
 			t.Errorf("the system frame does not carry %q: %q", want, req.System)
 		}
+	}
+	if strings.Contains(req.System, promptvoice.Heading) {
+		t.Error("the house voice is back in a narrative told to the rep as \"you\"")
 	}
 }
 

@@ -22,7 +22,7 @@ var searchRecordsCopy = toolCopy{
 
 var listRecordsCopy = toolCopy{
 	Purpose: "Enumerate the contacts, companies, deals, leads or projects that meet exact " +
-		"conditions — every deal in one pipeline, the leads one contact owns, the projects still " +
+		"conditions — every deal in one pipeline, the leads one rep owns, the projects still " +
 		"being delivered.",
 	Limits: "It narrows only by the filters this workspace publishes for that record_type, which " +
 		"the schema lists per type, and it answers ONE page: the set continues past it.",

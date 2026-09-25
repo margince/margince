@@ -121,6 +121,22 @@ func TestGroundOfferLinesGroundsConversationPriceOnlyWhenTheAmountIsInTheCitedSn
 	}
 }
 
+func TestGroundOfferLinesGroundsAQuoteThatSpansALineBreakInTheSource(t *testing.T) {
+	d := offerDrafter{}
+	dealContext := []dealContextItem{{SourceID: "activity:1", Snippet: "they also want priority support at 250\nEUR/month, starting now."}}
+
+	spanning := candidate("Priority support", "priority support at 250 EUR/month")
+	invented := candidate("Premium support", "premium support at 250 EUR/month")
+
+	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{spanning, invented}, dealContext, "EUR")
+	if err != nil {
+		t.Fatalf("groundOfferLines: %v", err)
+	}
+	if len(lines) != 1 || lines[0].Description != "Priority support" {
+		t.Fatalf("staged %+v, want only the line whose words the source says, whatever whitespace separates them", lines)
+	}
+}
+
 func TestGroundOfferLinesRecognizesTheMajorUnitFormOfAnEvidencedPrice(t *testing.T) {
 	d := offerDrafter{}
 	dealContext := []dealContextItem{{SourceID: "activity:1", Snippet: "The client agreed to pay 200.00 for the workshop."}}

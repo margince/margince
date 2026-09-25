@@ -120,8 +120,12 @@ func TestOpinionsNoneOfWhichParsedLeaveTheRunUngraded(t *testing.T) {
 // band, so only the last re-judge is demoted and no call is deferred.
 func TestADemotedRejudgeMarksTheRunJudgeDegraded(t *testing.T) {
 	sc := testScenario("basic", wideBands)
+	probeIn, err := graderInput(sc, widgetAskTrace(), gradedOutput)
+	if err != nil {
+		t.Fatalf("assembling the grader's input: %v", err)
+	}
 	probe, err := ai.NewFakeClient().Script(scoreJSON(10)).
-		Complete(context.Background(), compose.JudgeRequest(sc.Expect.Rubric, widgetAsk, gradedOutput))
+		Complete(context.Background(), compose.JudgeRequest(probeIn))
 	if err != nil {
 		t.Fatalf("probing the judge's first-call token cost: %v", err)
 	}

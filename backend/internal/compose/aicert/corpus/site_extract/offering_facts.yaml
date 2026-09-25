@@ -17,14 +17,16 @@ expect:
     display_name: Kestrel Fold
   rubric: >
     A non-home page still carries several groundable profile fields: the
-    company's own name, industry ("retail-tech"), value_proposition ("cut
-    overstock write-offs within 90 days without any new point-of-sale
-    hardware"), and buying_center ("the COO and the head of supply chain") —
-    the profile lane reads across whichever crawled pages carry identity signal,
-    not home alone. Score how many were proposed with the right citing passage
-    id and a value drawn from that passage's own words, and penalize any field
-    this page does not state (history, the legal trio, or any fabricated
-    ICP/USP/buying-intent this page never mentions).
+    company's own name, offer_summary ("inventory-forecasting software for
+    grocery retailers"), icp ("mid-market chains" of grocery retailers),
+    industry ("retail-tech"), value_proposition ("cut overstock write-offs
+    within 90 days without any new point-of-sale hardware"), and buying_center
+    ("the COO and the head of supply chain") — the profile lane reads across
+    whichever crawled pages carry identity signal, not home alone. Score how
+    many were proposed with the right citing passage id and a value drawn from
+    that passage's own words, and penalize any field this page does not state
+    (history, the legal trio, or a USP, pain or buying intent this page never
+    mentions).
   bands:
     certified_min: 70
     degraded_min: 50

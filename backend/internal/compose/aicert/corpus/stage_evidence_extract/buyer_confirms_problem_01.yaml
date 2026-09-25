@@ -21,7 +21,7 @@ expect:
   answer:
     - criterion_key: problem_confirmed
       met: true
-      settled_by: re-key every delivery note by hand
+      settled_by: every delivery note by hand
   rubric: >
     The buyer describes the problem in her own words, with a cost attached,
     across the first two lines. That settles problem_confirmed as met, and the

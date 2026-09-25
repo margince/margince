@@ -164,8 +164,13 @@ func refuseUnreachableCriteria(want []stageEvidenceExpectation, f stageEvidenceF
 	for _, c := range f.Criteria {
 		offered[c.Key] = true
 	}
+	said := claims.CollapseSpace(strings.Join(allLines(f.Spans), " "))
 	seen := map[string]bool{}
 	for i, e := range want {
+		if e.SettledBy != "" && !strings.Contains(said, claims.CollapseSpace(e.SettledBy)) {
+			return fmt.Errorf("stage_evidence_extract/criteria: expectation %d pins settled_by %q, "+
+				"which no line of the conversation says — no quote could ever contain it", i+1, e.SettledBy)
+		}
 		if !offered[e.CriterionKey] {
 			return fmt.Errorf("stage_evidence_extract/criteria: expectation %d names criterion %q, "+
 				"which this fixture does not offer — the validator would refuse the reply that satisfied it",
@@ -178,6 +183,14 @@ func refuseUnreachableCriteria(want []stageEvidenceExpectation, f stageEvidenceF
 		seen[e.CriterionKey] = true
 	}
 	return nil
+}
+
+func allLines(spans []stageEvidenceSpan) []string {
+	var lines []string
+	for _, span := range spans {
+		lines = append(lines, span.Lines...)
+	}
+	return lines
 }
 
 // stageEvidenceCase is one conversation ready to be read, closed over the

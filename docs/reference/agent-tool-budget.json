@@ -31,14 +31,14 @@
   "catalog": {
     "tools": 76,
     "system_frame_tokens": 448,
-    "tokens": 24512,
-    "median_tool_tokens": 273,
+    "tokens": 24502,
+    "median_tool_tokens": 272,
     "mean_tool_tokens": 322
   },
   "agents": [
     {
       "name": "morning_brief",
-      "goal": "Prepare the acting contact's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this contact; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.",
+      "goal": "Prepare the existing Morning Brief of the user this run acts for. First call read_brief. Its items are the queue already ranked for them; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.",
       "tools": [
         "annotate_brief",
         "catch_me_up_on",
@@ -47,19 +47,12 @@
         "read_record"
       ],
       "of_served_tools": 76,
-      "tokens": 3515,
-      "listing_tokens": 1847,
+      "tokens": 3344,
+      "listing_tokens": 1677,
       "step_schema_tokens": 1219,
       "percent_of_ceiling": 10,
-      "headroom_tokens": 19695,
-      "dangling_cross_references": [
-        "annotate_brief → log_activity",
-        "catch_me_up_on → prep_for_meeting",
-        "catch_me_up_on → search_records",
-        "list_records → run_report",
-        "list_records → search_records",
-        "read_brief → whats_slipping_this_week"
-      ],
+      "headroom_tokens": 19866,
+      "dangling_cross_references": [],
       "temptation_weight": 5
     },
     {
@@ -75,27 +68,19 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 76,
-      "tokens": 4907,
-      "listing_tokens": 2721,
+      "tokens": 4701,
+      "listing_tokens": 2515,
       "step_schema_tokens": 1737,
       "percent_of_ceiling": 14,
-      "headroom_tokens": 18303,
+      "headroom_tokens": 18509,
       "dangling_cross_references": [
-        "at_risk_relationships → company_coverage",
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
-        "catch_me_up_on → prep_for_meeting",
-        "catch_me_up_on → search_records",
-        "list_records → run_report",
-        "list_records → search_records",
-        "log_activity → create_task",
         "log_activity → draft_email",
-        "log_activity → progress_deal",
         "log_activity → relink_activity",
         "log_activity → send_email",
         "log_activity → send_message",
-        "whats_slipping_this_week → draft_follow_ups_for",
-        "whats_slipping_this_week → run_report"
+        "whats_slipping_this_week → draft_follow_ups_for"
       ],
       "temptation_weight": 6
     }
@@ -115,11 +100,11 @@
     },
     {
       "name": "preview_import",
-      "tokens": 726
+      "tokens": 725
     },
     {
       "name": "list_records",
-      "tokens": 722
+      "tokens": 721
     },
     {
       "name": "log_activity",
@@ -175,7 +160,7 @@
     },
     {
       "name": "annotate_brief",
-      "tokens": 418
+      "tokens": 417
     },
     {
       "name": "review_commitments",
@@ -183,7 +168,7 @@
     },
     {
       "name": "enrich",
-      "tokens": 391
+      "tokens": 390
     },
     {
       "name": "search_records",
@@ -251,11 +236,11 @@
     },
     {
       "name": "draft_follow_ups_for",
-      "tokens": 274
+      "tokens": 273
     },
     {
       "name": "decide_approval",
-      "tokens": 273
+      "tokens": 272
     },
     {
       "name": "list_approvals",
@@ -279,7 +264,7 @@
     },
     {
       "name": "decide_approval_bundle",
-      "tokens": 236
+      "tokens": 235
     },
     {
       "name": "qualify_lead",
@@ -315,7 +300,7 @@
     },
     {
       "name": "read_brief",
-      "tokens": 206
+      "tokens": 205
     },
     {
       "name": "relink_activities",
@@ -327,27 +312,27 @@
     },
     {
       "name": "commit_import",
-      "tokens": 204
+      "tokens": 203
     },
     {
       "name": "merge_tags",
       "tokens": 198
     },
     {
-      "name": "list_colleagues",
-      "tokens": 196
+      "name": "who_knows",
+      "tokens": 197
     },
     {
       "name": "relink_thread",
       "tokens": 196
     },
     {
-      "name": "who_knows",
-      "tokens": 196
-    },
-    {
       "name": "data_coverage",
       "tokens": 195
+    },
+    {
+      "name": "list_colleagues",
+      "tokens": 193
     },
     {
       "name": "list_pipelines",

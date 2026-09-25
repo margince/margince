@@ -14,7 +14,12 @@ fixture:
     now: 2026-08-11T09:00:00Z
     sender_name: Anna Krüger
     sender_email: anna.krueger@example.com
-  intent: Kurz vorstellen und ein Gespräch zur Angebotserstellung anbieten.
+  # The envelope names the sender but never her company, so the rep's intent is
+  # the only place "who is writing and why" can come from.
+  intent: >-
+    Mich kurz vorstellen – Anna Krüger von Nordlicht Software, wir bauen
+    Software für die Angebotserstellung im Maschinenbau – und ein Gespräch dazu
+    anbieten.
   recipient:
     id: 2f1c9d84-6b3a-4e17-9d52-8a4f1c0e7b93
     name: Marek Janetzke
@@ -41,9 +46,11 @@ expect:
     "we discussed".
 
     Nothing invented. The only facts supplied are the recipient's name, title
-    and employer, plus the caller's own intent. A draft that names a product, a
-    price, a date, a mutual contact or a specific problem the company has is
-    inventing, and scores at the floor.
+    and employer, plus the caller's own intent: who Anna is, that she works at
+    Nordlicht Software, and that it builds quoting software for machine
+    builders. A draft that adds a product name, a price, a date, a mutual
+    contact or a specific problem the recipient's company has is inventing, and
+    scores at the floor.
 
     Full marks for a short German first-touch that says who is writing and why,
     asks for the conversation the intent named, and is honest that this is the

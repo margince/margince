@@ -29,7 +29,7 @@ commitment and meeting, choose commitment.
 
 A message marked "inbound: yes" was sent TO us by someone outside. For those, ALSO judge how
 they answered: "positive" (interest, a question worth answering, a request to meet or to hear
-more), "negative" (not interested, the wrong contact with no referral, a request to stop
+more), "negative" (not interested, the wrong recipient with no referral, a request to stop
 writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a redirect with no
 view of its own). Set "reply" to null for a message marked "inbound: no": we wrote it, so it
 answers nobody. Set it to null too when the message does not read as an answer at all. A guess

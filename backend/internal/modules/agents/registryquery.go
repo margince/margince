@@ -14,7 +14,10 @@ import (
 	"context"
 	"encoding/json"
 	"maps"
+	"slices"
 	"sort"
+	"strings"
+	"unicode"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -112,10 +115,31 @@ func (r *Registry) Specs() []mcp.ToolSpec {
 	defer r.mu.RUnlock()
 	out := make([]mcp.ToolSpec, 0, len(r.specs))
 	for _, spec := range r.specs {
-		out = append(out, copySchemas(spec))
+		served := copySchemas(spec)
+		served.InsteadTools = r.insteadTools(spec)
+		out = append(out, served)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
+}
+
+// insteadTools lists the other registered tools a spec's Instead names, read
+// at listing time rather than at registration, because the neighbour a
+// sentence names may register after the tool naming it. The caller holds r.mu.
+func (r *Registry) insteadTools(spec mcp.ToolSpec) []string {
+	var named []string
+	for _, word := range strings.FieldsFunc(spec.Instead, outsideToolName) {
+		if _, registered := r.specs[word]; registered && word != spec.Name && !slices.Contains(named, word) {
+			named = append(named, word)
+		}
+	}
+	return named
+}
+
+// outsideToolName reports a rune no tool name carries: names are lower-case
+// snake_case, so anything else ends one.
+func outsideToolName(c rune) bool {
+	return c != '_' && !unicode.IsLower(c) && !unicode.IsDigit(c)
 }
 
 // Offered is the surface THIS caller may invoke: the catalog both the external

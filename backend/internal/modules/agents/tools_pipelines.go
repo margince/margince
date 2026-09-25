@@ -82,6 +82,7 @@ func (t listPipelinesTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "list_pipelines", Title: "List pipelines and their stages", Version: toolVersionV1,
 		Description:   listPipelinesCopy.render(),
+		Instead:       listPipelinesCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listPipelines/listStages",
 		// No arguments. The whole config is small, bounded by how many pipelines

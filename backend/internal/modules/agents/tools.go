@@ -116,6 +116,7 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "search_records", Title: "Search records", Version: toolVersionV1,
 		Description:   searchRecordsCopy.render(),
+		Instead:       searchRecordsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		// The cross-object search operation, not the per-type list ones: those
 		// declare list_records now, and naming them here would leave the two
@@ -207,6 +208,7 @@ func (t readRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_record", Title: "Read a record", Version: toolVersionV1,
 		Description:   readRecordCopy.render(),
+		Instead:       readRecordCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getContact/getCompany/getDeal/getLead/getActivity/getProject/getPartner",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
@@ -249,6 +251,7 @@ func (t createRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "create_record", Title: "Create a record", Version: toolVersionV1,
 		Description:   createRecordCopy.render(),
+		Instead:       createRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
@@ -350,6 +353,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "log_activity", Title: "Log an activity", Version: toolVersionV1,
 		Description:   logActivityCopy.render(),
+		Instead:       logActivityCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "logActivity",
 		// The two vocabularies are SPLICED from the contract, never spelled

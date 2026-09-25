@@ -313,7 +313,7 @@ Rules:
 	b.WriteString(`
 Available tools:
 `)
-	b.WriteString(ToolListing(specs))
+	b.WriteString(ToolListing(AsOffered(specs)))
 	// The data boundary goes LAST, after the tool catalog, and the order is the
 	// only thing here chosen for cost. Everything above is identical for every
 	// run of a given tool surface; the marker is not, because it is minted per
@@ -383,7 +383,8 @@ func SystemFrameTokens() int {
 	return len(systemPrompt(nil, promptfence.New(), "")) / 4
 }
 
-// ToolListing renders the tool surface exactly as the system prompt carries it.
+// ToolListing renders these specs exactly as the system prompt carries them; a
+// run's own listing is ToolListing(AsOffered(offered)).
 //
 // It is exported because it is never elided — the transcript gives way to the
 // ceiling, the system prompt does not — so how large it is for the REAL catalog
@@ -404,6 +405,30 @@ func ToolListing(specs []mcp.ToolSpec) string {
 		fmt.Fprintf(&b, "- %s — %s\n  input schema: %s\n", spec.Name, spec.Description, CompactSchema(spec))
 	}
 	return b.String()
+}
+
+// AsOffered is the specs as a run offered exactly these tools reads them: a
+// description whose Instead names a tool outside the offer loses its Instead,
+// since the neighbour it recommends would only be refused.
+//
+// All of it goes rather than one clause: a sentence naming two neighbours is
+// written as one thought, and half of it reads as a different rule.
+func AsOffered(specs []mcp.ToolSpec) []mcp.ToolSpec {
+	offered := make(map[string]bool, len(specs))
+	for _, spec := range specs {
+		offered[spec.Name] = true
+	}
+	out := make([]mcp.ToolSpec, 0, len(specs))
+	for _, spec := range specs {
+		for _, neighbour := range spec.InsteadTools {
+			if !offered[neighbour] {
+				spec.Description = strings.Replace(spec.Description, " "+spec.Instead, "", 1)
+				break
+			}
+		}
+		out = append(out, spec)
+	}
+	return out
 }
 
 // triggerProvenance is the ONE sentence this build has about where a record id

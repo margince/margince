@@ -32,6 +32,7 @@ import (
 	"go/token"
 	"io/fs"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -95,6 +96,29 @@ func TestEveryDraftingSurfaceCarriesTheSharedRules(t *testing.T) {
 			if !strings.Contains(system, draftrules.Shared) {
 				t.Errorf("the drafting surface in %s does not carry the shared rules block verbatim in its "+
 					"prompt %d of %d", where, at+1, len(systems))
+			}
+		}
+	}
+}
+
+// A rule the shared block states and a surface restates is two rules the
+// moment one is edited: the sign-off rule read "never sign" on the surfaces and
+// "sign when a sender_name is given" in the block. So each rule the block owns
+// appears in every assembled prompt a single time.
+func TestEachSharedRuleIsStatedOncePerDraftingPrompt(t *testing.T) {
+	stated := map[string]*regexp.Regexp{
+		"sign-off":      regexp.MustCompile(`(?i)(no|write a) sign-off`),
+		"greeting name": regexp.MustCompile(`(?i)shorten`),
+		"quoted text":   regexp.MustCompile(`(?i)(quoted material|as content)`),
+	}
+	for where, systems := range draftingSurfaces(promptfence.New()) {
+		for at, system := range systems {
+			for rule, pattern := range stated {
+				if n := len(pattern.FindAllString(system, -1)); n != 1 {
+					t.Errorf("%s prompt %d states the %s rule %d times (looked for %s); the shared block "+
+						"states it once and a surface restating it is a second rule to drift",
+						where, at+1, rule, n, pattern)
+				}
 			}
 		}
 	}
@@ -282,6 +306,7 @@ func TestTheSharedRulesStillSayTheThingsTheyExistToSay(t *testing.T) {
 		"a formal greeting takes the surname":       "A formal greeting takes the recipient's SURNAME",
 		"never invent a title or a gender":          "Never invent a title, an honorific or a gender",
 		"the body is plain text":                    "Write the body as plain text",
+		"no sign-off: sending adds the signature":   "Write no sign-off and no sender name",
 	}
 	for promise, phrase := range promises {
 		if !strings.Contains(draftrules.Shared, phrase) {

@@ -50,13 +50,17 @@ var toolNameInProse = regexp.MustCompile(`\b[a-z][a-z0-9_]{3,}\b`)
 // carry no "Use" at all (catch_me_up_on writes "prep_for_meeting when a meeting
 // is about to happen, read_record for the record's own stored fields"), so a
 // use-clause pattern would report a sparser graph than the copy actually has.
-func crossReferences(specs []mcp.ToolSpec) map[string][]string {
-	registered := make(map[string]bool, len(specs))
-	for _, spec := range specs {
+//
+// The scanned descriptions and the catalog are separate arguments so an
+// agent's listing — scanned as its run reads it — is still matched against
+// every registered name, not only the ones it was offered.
+func crossReferences(scanned, catalog []mcp.ToolSpec) map[string][]string {
+	registered := make(map[string]bool, len(catalog))
+	for _, spec := range catalog {
 		registered[spec.Name] = true
 	}
-	graph := make(map[string][]string, len(specs))
-	for _, spec := range specs {
+	graph := make(map[string][]string, len(scanned))
+	for _, spec := range scanned {
 		seen := map[string]bool{}
 		for _, match := range toolNameInProse.FindAllString(spec.Description, -1) {
 			if match == spec.Name || !registered[match] || seen[match] {
@@ -84,7 +88,7 @@ func danglingReferences(attached []string, graph map[string][]string) []string {
 	for _, name := range attached {
 		held[name] = true
 	}
-	var dangling []string
+	dangling := []string{}
 	for _, name := range attached {
 		for _, neighbour := range graph[name] {
 			if !held[neighbour] {

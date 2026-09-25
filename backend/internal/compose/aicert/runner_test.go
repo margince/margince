@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func quietLogger() *slog.Logger {
@@ -172,7 +173,15 @@ func TestCertifyTaskDegradedJudgeAttemptYieldsNoRecord(t *testing.T) {
 	const candidateOutput = "the widget is blue and durable"
 	sc := testScenario("basic", wideBands)
 
-	probeReq := compose.JudgeRequest(sc.Expect.Rubric, string(sc.Fixture), candidateOutput)
+	candidateReq, err := firstBuiltRequest(context.Background(), sc, testCensus(t))
+	if err != nil {
+		t.Fatalf("building the candidate's request: %v", err)
+	}
+	probeIn, err := graderInput(sc, aitasks.Trace{Requests: []model.Request{candidateReq}}, candidateOutput)
+	if err != nil {
+		t.Fatalf("assembling the grader's input: %v", err)
+	}
+	probeReq := compose.JudgeRequest(probeIn)
 	probeResp, err := ai.NewFakeClient().Script("not valid json at all").Complete(context.Background(), probeReq)
 	if err != nil {
 		t.Fatalf("probing the judge's first-call token cost: %v", err)

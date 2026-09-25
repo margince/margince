@@ -108,6 +108,7 @@ func (t archiveRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "archive_record", Title: "Archive a record", Version: toolVersionV1,
 		Description:   archiveRecordCopy.render(),
+		Instead:       archiveRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "archiveContact/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
@@ -226,6 +227,7 @@ func (t promoteLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "promote_lead", Title: "Promote a lead to a contact", Version: toolVersionV1,
 		Description:   promoteLeadCopy.render(),
+		Instead:       promoteLeadCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "promoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","trigger"],"properties":{
@@ -319,6 +321,7 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "merge_records", Title: "Merge two records", Version: toolVersionV1,
 		Description:   mergeRecordsCopy.render(),
+		Instead:       mergeRecordsCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "mergeContact/mergeCompany",
 		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{

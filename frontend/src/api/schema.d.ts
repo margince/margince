@@ -7413,7 +7413,7 @@ export interface paths {
         /**
          * Share a thread with the team, or keep it private.
          * @description Your own view of the thread, and only yours. A message that reached two mailboxes is two
-         *     contacts's correspondence: each of you contributes what you ask for, and the message ends at
+         *     colleagues' correspondence: each of you contributes what you ask for, and the message ends at
          *     the strictest of those. So sharing releases YOUR hold — it cannot publish what a colleague
          *     is still holding, and the response says how many other seats are.
          *
@@ -30310,7 +30310,7 @@ export interface components {
         /**
          * @description A service a company demonstrably operates, proved by a subdomain in its certificate
          *     history. The set is an ALLOWLIST: a certificate log publishes every hostname a company
-         *     ever held a certificate for, including contacts's names, and only labels naming a service
+         *     ever held a certificate for, including personal names, and only labels naming a service
          *     survive the classifier.
          * @enum {string}
          */

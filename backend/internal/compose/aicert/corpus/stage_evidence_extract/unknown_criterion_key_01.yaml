@@ -11,28 +11,22 @@ fixture:
     - source_id: 01a07100-0000-7000-8000-000000000009
       lines:
         - 'Ines: our security team have signed off, and legal cleared the DPA this morning.'
-        - 'Ines: the re-keying itself we can live with for now, it is annoying rather than urgent.'
+        - 'Ines: so the paperwork on our side is out of the way whenever you are ready to talk dates.'
 expect:
-  outcome: accepted
-  answer:
-    - criterion_key: problem_confirmed
-      met: false
-      settled_by: annoying rather than urgent
+  outcome: abstained
+  answer: []
   rubric: >
     The conversation settles two things this stage does not ask about — a
-    security sign-off and a cleared DPA — and speaks to the one criterion it
-    does carry in the other direction: the buyer downgrades the problem to
-    annoying rather than urgent. The correct reading is problem_confirmed
-    met=false, quoted from the second line.
+    security sign-off and a cleared DPA — and says nothing about the one
+    criterion it does carry: nobody describes a problem. The empty list is the
+    correct answer and scores highest.
     The trap is the first line. It is real, settled, and quotable, and a reader
     that wants to be useful will reach for a key like security_review_cleared
-    or dpa_signed. There is no such key here, and inventing one makes the whole
-    reply unusable — the validator refuses a claim naming a criterion this
-    stage does not carry, and it refuses the reply entire, so the correct
-    met=false reading is lost with it. Any reply naming a key outside the list
-    scores at the floor. Reporting only the security sign-off, under any key,
-    is the same failure. Omitting everything scores in the middle: nothing is
-    invented, but the buyer's own statement about the problem is missed.
+    or dpa_signed. There is no such key here, and the validator refuses a claim
+    naming a criterion this stage does not carry — it refuses the reply entire.
+    Any reply naming a key outside the list scores at the floor. Filing the
+    sign-off under problem_confirmed, in either direction, is the same failure
+    wearing an offered key, and scores at the floor too.
   bands:
     certified_min: 70
     degraded_min: 50

@@ -167,7 +167,7 @@ func (c *stampCompleter) Complete(_ context.Context, req model.Request) (model.R
 
 // firstBuiltRequest is the first request sc's site builds from it — the one both
 // halves of the stamp are taken from, the candidate's directly and the grader's
-// through the ask it carries. A site whose case cannot be prepared, or which
+// through the ask and rules it carries. A site whose case cannot be prepared, or which
 // reaches a reply without ever building a request, has nothing to stamp and is
 // refused: a silently empty half would let the product's own code drift under a
 // stamp that still matched.
@@ -211,17 +211,17 @@ const stampCandidateOutput = "(the candidate output, which no stamp can know bef
 // of the grader's prompt kept in sync by hand. The grader mints its own data
 // boundary per call, canonicalised away exactly as the candidate's is.
 //
-// Two of the three things that request is made of are knowable before a run. The
-// rubric is the scenario's own text. The ask is read off the request the case
-// just built, by the same candidateAsk a run reads it with, so a site that
-// changes what it asks changes what its grader is shown. The third — the
-// candidate's OUTPUT — is what the run produces, and stampCandidateOutput stands
-// in its position.
+// Everything that request is made of but one is knowable before a run. The
+// rubric and the expected answer are the scenario's own text. The ask and the
+// product rules are read off the request the case just built, by the same
+// graderInput a run reads them with, so a site that changes what it asks or
+// instructs changes what its grader is shown. The candidate's OUTPUT is what the
+// run produces, and stampCandidateOutput stands in its position.
 //
 // So the digest reaches every part of the grading call this build decides
 // independently of the candidate's words: the system prompt and the boundary it
 // declares, the labels and order of the user turn, which spans are fenced and
-// which are read in the clear, the answer ceiling, and both texts that arrive
+// which are read in the clear, the answer ceiling, and every text that arrives
 // verbatim. Editing any of them moves the stamp.
 //
 // It does not reach a change whose effect depends on the candidate's actual
@@ -230,16 +230,16 @@ const stampCandidateOutput = "(the candidate output, which no stamp can know bef
 // stamp that read them would differ for every run of the same corpus, which is
 // the opposite of what a staleness signal is for.
 func graderRequestDigest(sc Scenario, candidateRequest model.Request) (string, error) {
-	ask, err := candidateAsk(aitasks.Trace{Requests: []model.Request{candidateRequest}})
+	in, err := graderInput(sc, aitasks.Trace{Requests: []model.Request{candidateRequest}}, stampCandidateOutput)
 	if err != nil {
 		return "", fmt.Errorf("aicert: stamp: scenario %q: %w", sc.Name, err)
 	}
-	return canonicalRequestDigest(compose.JudgeRequest(sc.Expect.Rubric, ask, stampCandidateOutput))
+	return canonicalRequestDigest(compose.JudgeRequest(in))
 }
 
 // gradingRule versions the scoring rule and the judge-opinion policy, so every
 // record graded the old way reads stale; gradingrule_test.go fails an unbumped edit.
-const gradingRule = "grading-rule-4"
+const gradingRule = "grading-rule-5"
 
 // gradedBy is the stamp's grader third: the grader's request digest under the
 // rule that turns its opinions into a verdict, which no request carries.

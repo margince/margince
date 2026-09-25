@@ -261,7 +261,7 @@ The rules that decide whether a scenario is worth having:
 Aim a scenario at one thing that can go wrong. The scenarios that have earned
 their place are the ones with an adversarial edge — an injected instruction
 inside evidence, a page that grounds nothing, two sources that disagree on a
-price, a tight token cap — because a fixture the model handles trivially reports
+price, a cap production enforces and the prompt states — because a fixture the model handles trivially reports
 a band nobody learns from.
 
 ## Scope: what a run may claim

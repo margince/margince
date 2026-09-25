@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -195,5 +196,13 @@ func TestTheRequestFencesTheWeeksOwnLabels(t *testing.T) {
 	if err := json.Unmarshal([]byte(strings.TrimSpace(
 		req.Messages[0].Content[strings.Index(req.Messages[0].Content, "{"):strings.LastIndex(req.Messages[0].Content, "}")+1])), &body); err != nil {
 		t.Fatalf("the fenced payload must still be the JSON the prompt describes: %v", err)
+	}
+}
+
+// Every learning is about what the rep did, so the house voice stays out: its
+// own-voice lines had the model claim the rep's work as its own.
+func TestTheRequestLeavesOutTheHouseVoice(t *testing.T) {
+	if strings.Contains(Request(weekWithThree(), "en").System, promptvoice.Heading) {
+		t.Error("the house voice is back in learnings told to the rep as \"you\"")
 	}
 }

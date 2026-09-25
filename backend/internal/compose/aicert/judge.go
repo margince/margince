@@ -26,6 +26,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
@@ -55,9 +56,9 @@ const roleUser = "user"
 //
 // Every user turn of that request, joined, because a site may split one ask
 // across several messages (a delimited context block, then the question), and a
-// grader shown only the first would be missing what was actually asked. The
-// system prompt and any assistant turn stay out: JudgeRequest's contract is the
-// candidate's input and output, never its instructions or its own prior words.
+// grader shown only the first would be missing what was actually asked. Any
+// assistant turn stays out — it is the candidate's own prior words — and the
+// system prompt travels separately, as graderInput's product rules.
 func candidateAsk(trace aitasks.Trace) (string, error) {
 	if len(trace.Requests) == 0 {
 		return "", errors.New("the case recorded no request, so there is no input to grade its answer against")
@@ -72,6 +73,28 @@ func candidateAsk(trace aitasks.Trace) (string, error) {
 		return "", errors.New("the case's first request carries no user turn, so there is no input to grade its answer against")
 	}
 	return strings.Join(turns, "\n\n"), nil
+}
+
+// graderInput is everything the grader is shown for one run of sc: the rubric,
+// the candidate's first request split into the product rules it was given and
+// the ask it answered, the scenario's reference answer, and the output.
+//
+// The rules come from that same first request, for candidateAsk's reason: they
+// are what the site's own code told the model, which the fixture does not hold.
+// The mechanical verdict is not an input: a grader told the answer already
+// failed scores that instead of the rubric.
+func graderInput(sc Scenario, caseTrace aitasks.Trace, candidateOutput string) (compose.JudgeInput, error) {
+	ask, err := candidateAsk(caseTrace)
+	if err != nil {
+		return compose.JudgeInput{}, err
+	}
+	return compose.JudgeInput{
+		Rubric:          sc.Expect.Rubric,
+		ProductRules:    caseTrace.Requests[0].System,
+		ScenarioInput:   ask,
+		ExpectedAnswer:  string(sc.Expect.Answer),
+		CandidateOutput: candidateOutput,
+	}, nil
 }
 
 // opinion is one judgeVerdict call's reading of a run. graded is false when the
@@ -112,23 +135,23 @@ type judgement struct {
 // included: a demotion any of them recovered from still means this run was
 // graded on a budget that had run out, which must never be certified silently.
 //
-// The grader is shown the answer under grading and the case's own trace, from
-// which candidateAsk reads the input that answer was given: the site's built
-// prompt, never the fixture it was built from.
+// The grader is shown the answer under grading and what graderInput reads off
+// the case's own trace: the site's built prompt, never the fixture it was built
+// from.
 func judgeScore(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc Scenario, caseTrace aitasks.Trace, candidateOutput string, log *slog.Logger) (judgement, error) {
-	ask, err := candidateAsk(caseTrace)
+	in, err := graderInput(sc, caseTrace, candidateOutput)
 	if err != nil {
 		return judgement{}, err
 	}
 	mark := rec.mark()
-	first, err := judgeVerdict(ctx, judge, rec, sc, ask, candidateOutput, log)
+	first, err := judgeVerdict(ctx, judge, rec, sc.Name, in, log)
 	if err != nil {
 		return judgement{}, err
 	}
 	opinions := []opinion{first}
 	if first.graded && first.score < sc.Expect.Bands.CertifiedMin {
 		for range rejudgeOpinions {
-			next, err := judgeVerdict(ctx, judge, rec, sc, ask, candidateOutput, log)
+			next, err := judgeVerdict(ctx, judge, rec, sc.Name, in, log)
 			if err != nil {
 				return judgement{}, err
 			}
@@ -171,11 +194,11 @@ func foldOpinions(opinions []opinion) judgement {
 // judgeVerdict drives one graded call, returning its opinion and the served
 // identity of the attempt that opinion came from — the last one the policy
 // walked, since that is the reply that was parsed.
-func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc Scenario, ask, candidateOutput string, log *slog.Logger) (opinion, error) {
-	// ask is the turn the candidate was given (candidateAsk), and it reaches the
-	// grader as UNTRUSTED data behind the boundary JudgeRequest mints: it is if
-	// anything more hostile than the fixture it was built from, because it
-	// carries that fixture already wrapped in the candidate site's own markers.
+func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, scenario string, in compose.JudgeInput, log *slog.Logger) (opinion, error) {
+	// Everything in in but the rubric reaches the grader as UNTRUSTED data behind
+	// the boundary JudgeRequest mints: the ask is if anything more hostile than
+	// the fixture it was built from, because it carries that fixture already
+	// wrapped in the candidate site's own markers.
 	// The retry is the §5.2 policy rather than a second bare call: a judge that
 	// wrapped its JSON in a stray token is TOLD so and can fix it, where the
 	// hand-rolled re-ask this replaces showed the second attempt exactly what
@@ -183,7 +206,7 @@ func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc 
 	// CompleteStructured, never re-sent, so JudgeRequest keeps minting the
 	// call's data boundary per attempt.
 	resp, _, callErr := judge.CompleteStructured(ctx, ai.TaskCertJudge,
-		compose.JudgeRequest(sc.Expect.Rubric, ask, candidateOutput),
+		compose.JudgeRequest(in),
 		func(text string) error {
 			_, err := compose.ParseJudgeVerdict(text)
 			return err
@@ -200,7 +223,7 @@ func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc 
 	}
 	if errors.Is(callErr, model.ErrOutputWithheld) {
 		log.WarnContext(ctx, "aicert: the judge's provider withheld its answer — this opinion is left ungraded",
-			"scenario", sc.Name, "err", callErr)
+			"scenario", scenario, "err", callErr)
 		return opinion{servedModel: term.ServedModel}, nil
 	}
 
@@ -209,20 +232,45 @@ func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc 
 		// A judge that answered the task instead of grading it has no opinion of
 		// the candidate, so the candidate is not scored 0 for the judge's failure.
 		log.ErrorContext(ctx, "aicert: judge output failed to parse after the validated retry — this opinion is left ungraded",
-			"scenario", sc.Name, "err", parseErr)
+			"scenario", scenario, "err", parseErr)
 		return opinion{servedModel: term.ServedModel}, nil
 	}
 	return opinion{score: verdict.Score, graded: true, servedModel: term.ServedModel}, nil
 }
 
-// selfJudged reports whether the judge and the candidate were served by
-// the same resolved model identity — a judge grading its own family's
-// output is a weaker signal than an independent one, so the record
-// names it rather than hiding it inside an unqualified score. An empty
-// candidate identity never counts as self-judged — that is a missing
-// trace, not a match.
+// selfJudged reports whether the judge shares the candidate's model family — a
+// judge grading its own family's output is a weaker signal than an independent
+// one, so the record names it rather than hiding it inside an unqualified score.
+// An exact match is not required: gemini-3.5-flash grading gemini-3.1-pro-preview
+// is a vendor marking its own homework. An empty identity on either side never
+// counts — that is a missing trace, not a match.
 func selfJudged(candidateServedModel, judgeServedModel string) bool {
-	return candidateServedModel != "" && candidateServedModel == judgeServedModel
+	if candidateServedModel == "" || judgeServedModel == "" {
+		return false
+	}
+	if candidateServedModel == judgeServedModel {
+		return true
+	}
+	candidatePublisher, candidateLine := modelLineage(candidateServedModel)
+	judgePublisher, judgeLine := modelLineage(judgeServedModel)
+	return (candidatePublisher != "" && candidatePublisher == judgePublisher) ||
+		(candidateLine != "" && candidateLine == judgeLine)
+}
+
+// modelLineage splits a served identity into the publisher a broker prefixes it
+// with ("mistralai" in mistralai/ministral-8b-2512, empty for a bare name) and
+// the model line, the leading letters of the name ("gemini", "gpt" in
+// gpt-oss:20b). Two identities agreeing on either are one family.
+func modelLineage(servedModel string) (publisher, line string) {
+	name := servedModel
+	if slash := strings.LastIndex(servedModel, "/"); slash >= 0 {
+		publisher, name = strings.ToLower(servedModel[:slash]), servedModel[slash+1:]
+	}
+	end := strings.IndexFunc(name, func(r rune) bool { return !unicode.IsLetter(r) })
+	if end < 0 {
+		end = len(name)
+	}
+	return publisher, strings.ToLower(name[:end])
 }
 
 // cloudServed reports whether provider names a network-hosted vendor, so

@@ -365,8 +365,8 @@ func writeAICertGrading(page *strings.Builder, rule string, selfJudged int, bars
 	page.WriteString("   - *Is it good?* A second AI model, chosen so that it is not the one being tested,\n")
 	page.WriteString("     scores the answer from 0 to 100 against a written description of a good answer.\n")
 	if selfJudged > 0 {
-		fmt.Fprintf(page, "     %d older results were scored by the same model they tested; the next re-check\n"+
-			"     replaces them.\n", selfJudged)
+		fmt.Fprintf(page, "     %d older results were scored by the model they tested or one of its family; the\n"+
+			"     next re-check replaces them.\n", selfJudged)
 	}
 	page.WriteString("4. **A low score is double-checked.** When the quality score is below the bar, the\n")
 	fmt.Fprintf(page, "   scoring model is asked %d more times and the middle of the %d scores counts, so\n"+
@@ -392,7 +392,7 @@ func writeAICertGrading(page *strings.Builder, rule string, selfJudged int, bars
 		aiCertReady, aicert.VerdictCertified, aiCertCare, aicert.VerdictSupportedDegraded,
 		aiCertNotYet, aicert.VerdictNotSupported, aiCertUnproven)
 	if selfJudged > 0 {
-		fmt.Fprintf(page, "\n%d of the committed records were nonetheless graded by the model they measured\n"+
+		fmt.Fprintf(page, "\n%d of the committed records were nonetheless graded by the model they measured or its family\n"+
 			"(`self_judged` in the record file).\n", selfJudged)
 	}
 	page.WriteString("\n</details>\n\n")
