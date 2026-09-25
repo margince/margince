@@ -374,7 +374,7 @@ function RosterPicker({
               : t("share.rosterErrorTeams")}
         </ErrorLine>
         <Button
-          style={{ marginTop: "var(--space-2)" }}
+          className="share-roster-retry"
           onClick={() => {
             if (usersQuery.isError) usersQuery.refetch();
             if (teamsQuery.isError) teamsQuery.refetch();
