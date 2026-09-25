@@ -78,6 +78,8 @@ const TEMPLATE_FIELDS: CreateField[] = [
       { value: "true", label: "true" },
     ],
   },
+  // The offer PDF prints these two layout keys by exactly these names;
+  // backend/gates/offertemplatelayout_test.go holds the spellings together.
   { key: "header", label: "template.header" },
   { key: "footer", label: "template.footer" },
 ];

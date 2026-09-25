@@ -231,6 +231,21 @@ read. Newsletters, personal mail and Gmail's Promotions and Social categories
 all arrive, and are dealt with after capture rather than before it — see *What
 happens to one message*.
 
+**Deleting a message in your own mailbox reaches the CRM — sometimes.** If you
+delete a captured message in Gmail or Outlook, the connector notices and acts on
+it. What happens then depends on who else has it:
+
+| Situation | What happens |
+|---|---|
+| Nobody else imported it | Destroyed here too — text, provider original, attachments, everything derived |
+| A colleague also imported it | Kept. Their copy is theirs, and your tidying does not reach their timeline |
+| It is commercial correspondence inside its retention window, or an erasure request is still open about it | Kept, and the reason is recorded |
+
+The last row is the one to know about: a Handelsbrief cannot be deleted this way
+while the law requires keeping it, however it is deleted at the provider. The
+statutory floor outranks inbox housekeeping, and the record says so rather than
+quietly ignoring you.
+
 **Colleagues talking to each other is never stored.** If every address on a
 message belongs to your own domains, capture writes a one-line log row and drops
 it. The app is blunt: "Messages between colleagues are not stored for anyone,

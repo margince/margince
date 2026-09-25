@@ -161,7 +161,7 @@ func assertOfferTemplateUpdate(t *testing.T, e *apptest.AppEnv, id string) {
 	var updated AnyMap
 	status := e.Call(t, "PUT", "/v1/offer-templates/"+id, AnyMap{
 		"name": "HTTP Standard DE v2", "locale": "de-DE", "is_default": false,
-		"layout": AnyMap{"footer_text": "v2"},
+		"layout": AnyMap{"footer": "v2"},
 	}, map[string]string{"If-Match": "1"}, &updated)
 	if status != http.StatusOK || updated["name"] != "HTTP Standard DE v2" || updated["version"].(float64) != 2 {
 		t.Fatalf("update = %d %+v, want 200 name=... version=2", status, updated)

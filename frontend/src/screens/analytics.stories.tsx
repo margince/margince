@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import { StatStrip } from "../design-system/statstrip";
 import { AnalyticsScreen, ForecastTile } from "./analytics";
 import {
@@ -70,14 +70,25 @@ function run(report: string, rows: Record<string, unknown>[]) {
 }
 
 // The converted report returns one row per stage and no currency column: each
-// deal was priced into the base currency before anything was summed.
+// deal was priced into the base currency before anything was summed. Each row
+// carries its own handle, so each stage draws its own explain trigger.
+const stageHandle = (stageId: string) =>
+  `/v1/reports/pipeline-current/derivation?by=stage_id&agg=sum:amount_base_minor:raw_minor&stage_id=${stageId}`;
+
 const stageRows = [
-  { stage_id: "pl-s1", raw_minor: 24686, weighted_minor: 4938, deal_count: 2 },
+  {
+    stage_id: "pl-s1",
+    raw_minor: 24686,
+    weighted_minor: 4938,
+    deal_count: 2,
+    derivation_url: stageHandle("pl-s1"),
+  },
   {
     stage_id: "pl-s2",
     raw_minor: 1850000,
     weighted_minor: 1110000,
     deal_count: 5,
+    derivation_url: stageHandle("pl-s2"),
   },
 ];
 
@@ -382,6 +393,15 @@ export const Explain: Story = {
   // Pipeline first: the explain verb belongs to a report card's action row, and
   // the Forecast section the screen opens on draws no report cards at all.
   play: clickButton("Deals", "Explain this number"),
+};
+
+// One stage's figure explained in a drawer, over the table it came from.
+export const ExplainRow: Story = {
+  render: screenStory,
+  play: async (context) => {
+    await clickButton("Deals", "Explain Qualify")(context);
+    await screen.findByRole("dialog");
+  },
 };
 
 // The derivation card while its read is still in flight: the definition line,

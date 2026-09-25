@@ -302,6 +302,13 @@
             "boolean",
             "null"
           ]
+        },
+        "max_backfill_months": {
+          "description": "MaxBackfillMonths caps how far back a mailbox import may reach, for the whole installation. Absent means no cap, which is what every deployment has today — the offered ceiling was widened deliberately, and a default here would take that back from operators who chose it.",
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       }
     },

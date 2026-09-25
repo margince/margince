@@ -277,7 +277,7 @@ func TestRenderOfferPDF_NeverPrintsTheInternalCompanyID(t *testing.T) {
 
 // TestRenderOfferPDF_TwoTemplatesWithDistinctLayoutsProduceDifferentBytes
 // is the layout-actually-renders proof: two templates whose layout bags
-// differ only in their header/footer/terms text must produce genuinely
+// differ only in their header/footer text must produce genuinely
 // different PDF bytes — the regression this guards is a renderer that
 // resolves a template (for its locale) but silently ignores the layout it
 // carries, so every template would look identical regardless of its
@@ -286,8 +286,8 @@ func TestRenderOfferPDF_TwoTemplatesWithDistinctLayoutsProduceDifferentBytes(t *
 	o := testRenderOffer(100000, 19000, 119000)
 	lines := testRenderLines()
 
-	layoutA := map[string]any{"header_text": "Alpha Consulting GmbH", "footer_text": "Alpha footer", "terms_text": "Alpha terms apply"}
-	layoutB := map[string]any{"header_text": "Beta Solutions GmbH", "footer_text": "Beta footer", "terms_text": "Beta terms apply"}
+	layoutA := map[string]any{"header": "Alpha Consulting GmbH", "footer": "Alpha footer"}
+	layoutB := map[string]any{"header": "Beta Solutions GmbH", "footer": "Beta footer"}
 
 	pdfA, err := RenderOfferPDF(o, lines, nil, "Margince GmbH", "de-DE", layoutA)
 	if err != nil {
@@ -308,17 +308,17 @@ func TestRenderOfferPDF_TwoTemplatesWithDistinctLayoutsProduceDifferentBytes(t *
 		t.Fatal("two templates with distinct layouts must draw different text — the layout is being ignored")
 	}
 
-	for _, want := range []string{"Alpha Consulting GmbH", "Alpha footer", "Alpha terms apply"} {
+	for _, want := range []string{"Alpha Consulting GmbH", "Alpha footer"} {
 		if !bytes.Contains(drawnA, []byte(want)) {
 			t.Fatalf("layoutA's PDF must contain %q:\n%s", want, drawnA)
 		}
 	}
-	for _, unwanted := range []string{"Beta Solutions GmbH", "Beta footer", "Beta terms apply"} {
+	for _, unwanted := range []string{"Beta Solutions GmbH", "Beta footer"} {
 		if bytes.Contains(drawnA, []byte(unwanted)) {
 			t.Fatalf("layoutA's PDF must not contain layoutB's text %q", unwanted)
 		}
 	}
-	for _, want := range []string{"Beta Solutions GmbH", "Beta footer", "Beta terms apply"} {
+	for _, want := range []string{"Beta Solutions GmbH", "Beta footer"} {
 		if !bytes.Contains(drawnB, []byte(want)) {
 			t.Fatalf("layoutB's PDF must contain %q:\n%s", want, drawnB)
 		}
@@ -350,8 +350,8 @@ func TestRenderOfferPDF_EmptyLayoutOmitsHeaderFooterTermsSections(t *testing.T) 
 func TestRenderOfferPDF_LayoutIgnoresNonStringAndUnknownKeys(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
 	layout := map[string]any{
-		"logo_url":    "https://example.test/logo.png",
-		"header_text": 12345, // wrong type — must be ignored, not stringified
+		"logo_url": "https://example.test/logo.png",
+		"header":   12345, // wrong type — must be ignored, not stringified
 	}
 
 	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "de-DE", layout)
@@ -402,16 +402,15 @@ func TestPDFDrawnTextExcludesTheWallClockStamp(t *testing.T) {
 }
 
 // TestPDFDrawnTextSurvivesDrawnTextThatSaysEndstream is the case a
-// keyword scan cannot handle: a template's terms text is arbitrary, so it
+// keyword scan cannot handle: an offer's terms text is arbitrary, so it
 // may contain "endstream" itself. Reading each stream by its declared
 // /Length keeps the whole document in view; scanning for the keyword would
 // cut it at the drawn word and lose everything the renderer wrote after.
 func TestPDFDrawnTextSurvivesDrawnTextThatSaysEndstream(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
-	layout := map[string]any{
-		"terms_text":  "endstream is a word a customer may write",
-		"footer_text": "Footer after the terms",
-	}
+	terms := "endstream is a word a customer may write"
+	o.TermsText = &terms
+	layout := map[string]any{"footer": "Footer after the terms"}
 
 	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "de-DE", layout)
 	if err != nil {
@@ -424,5 +423,52 @@ func TestPDFDrawnTextSurvivesDrawnTextThatSaysEndstream(t *testing.T) {
 	}
 	if !bytes.Contains(drawn, []byte("Footer after the terms")) {
 		t.Fatalf("text drawn AFTER the word \"endstream\" must survive too — the stream was cut at the drawn word:\n%s", drawn)
+	}
+}
+
+// TestRenderOfferPDF_PrintsTheOffersOwnIntroAndTerms holds what Edit header
+// promises: the intro and terms typed on the offer are on the page the buyer
+// reads, the intro ahead of the lines it introduces and the terms after the
+// totals they qualify, between the template's header and footer.
+func TestRenderOfferPDF_PrintsTheOffersOwnIntroAndTerms(t *testing.T) {
+	o := testRenderOffer(100000, 19000, 119000)
+	intro, terms := "Thank you for your enquiry", "Payable within 30 days"
+	o.IntroText, o.TermsText = &intro, &terms
+	layout := map[string]any{"header": "Letterhead line", "footer": "Registered in Berlin"}
+
+	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "en-US", layout)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	drawn := pdfDrawnText(t, pdf)
+	order := []string{"Letterhead line", intro, "Consulting Day", "Totals", "Terms", terms, "Registered in Berlin"}
+	at := -1
+	for _, want := range order {
+		next := bytes.Index(drawn, []byte(want))
+		if next < 0 {
+			t.Fatalf("the PDF must draw %q:\n%s", want, drawn)
+		}
+		if next < at {
+			t.Fatalf("%q is drawn out of order; want %q:\n%s", want, order, drawn)
+		}
+		at = next
+	}
+}
+
+// TestRenderOfferPDF_BlankIntroAndTermsDrawNoSection keeps an offer whose
+// intro and terms were cleared — stored as empty text, not null — from
+// printing a Terms heading over nothing.
+func TestRenderOfferPDF_BlankIntroAndTermsDrawNoSection(t *testing.T) {
+	o := testRenderOffer(100000, 19000, 119000)
+	blank := ""
+	o.IntroText, o.TermsText = &blank, &blank
+
+	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "de-DE", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(pdfDrawnText(t, pdf), []byte("Bedingungen")) {
+		t.Fatalf("blank terms must omit the terms heading:\n%s", pdfDrawnText(t, pdf))
 	}
 }

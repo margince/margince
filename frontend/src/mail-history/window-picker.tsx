@@ -26,14 +26,33 @@ export function isImportWindow(value: unknown): value is ImportWindow {
   );
 }
 
+/**
+ * The windows to offer: what this installation admits, or the whole supported
+ * set when it says nothing.
+ *
+ * An empty or absent list is a fallback rather than an empty picker. The server
+ * refuses a window above the cap at both the preview and the start, so the only
+ * cost of offering too many is a refusal that names the real set — where
+ * offering none would leave somebody unable to import at all because a field
+ * was missing.
+ */
+function offeredOrAll(offered?: readonly ImportWindow[]): ImportWindow[] {
+  const all = Object.keys(IMPORT_WINDOW_LABELS) as ImportWindow[];
+  if (!offered || offered.length === 0) return all;
+  return all.filter((window) => offered.includes(window));
+}
+
 export function ImportWindowPicker({
   value,
   onChange,
   preview,
+  offered,
 }: Readonly<{
   value: ImportWindow;
   onChange: (value: ImportWindow) => void;
   preview?: Preview;
+  /** The windows this installation admits; absent means the whole set. */
+  offered?: readonly ImportWindow[];
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -56,9 +75,10 @@ export function ImportWindowPicker({
         <Select
           {...control}
           value={value}
-          options={Object.entries(IMPORT_WINDOW_LABELS).map(
-            ([value, label]) => ({ value, label: t(label) }),
-          )}
+          options={offeredOrAll(offered).map((window) => ({
+            value: window,
+            label: t(IMPORT_WINDOW_LABELS[window]),
+          }))}
           onChange={(next) => {
             // Select emits strings; narrow to the contract-backed option set.
             if (isImportWindow(next)) onChange(next);

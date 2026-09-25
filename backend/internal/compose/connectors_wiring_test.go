@@ -64,8 +64,8 @@ func (stubGmailAPI) Profile(context.Context, string) (string, string, error) {
 	return "owner@example.com", "1", nil
 }
 func (stubGmailAPI) ListRecent(context.Context, string, int) ([]string, error) { return nil, nil }
-func (stubGmailAPI) History(context.Context, string, string) ([]string, string, error) {
-	return nil, "1", nil
+func (stubGmailAPI) History(context.Context, string, string) ([]string, []string, string, error) {
+	return nil, nil, "1", nil
 }
 
 func (stubGmailAPI) GetRaw(context.Context, string, string) (gmail.Message, error) {

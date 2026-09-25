@@ -64,6 +64,7 @@ how do I change the rate card
 how do I create a contract
 how do I renew a contract
 how do I create an invoice
+how do I connect my accounting system
 # deal rooms
 what is a deal room
 how do I share a deal room with a buyer
@@ -189,3 +190,20 @@ how do I upload the signed contract for a customer
 # after the final held-out round
 where do I see my team's pipeline
 how do I ask margince a question about a company
+
+# partners, projects and replies
+how do I make a company a partner
+how do I pay a partner their commission
+how do I see all our partners
+how do I start delivery after we won the deal
+what is on a project page
+how do I tag an email with a project
+how do I reply to an older email in the thread
+can I merge two duplicate deals
+
+# entry points that had no way in from the app
+how do I start a project from a company page
+how do I rename a saved view
+how do I delete a saved view
+how do I claim a company nobody owns
+how do I revoke a forecast share link

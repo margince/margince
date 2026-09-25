@@ -567,6 +567,11 @@ export const en = {
     "This link does not record when the number was calculated, so these figures were recalculated now. If an exchange rate changed since, they may not match the number you clicked.",
   "explain.title": "How this number is built",
   "explain.rate": "rate {rate} on {date}",
+  "explain.cell": "Explain {figure}",
+  "explain.excluded_one":
+    "1 record is left out of this number and the rows below. A field on it is hidden for your role.",
+  "explain.excluded_other":
+    "{count} records are left out of this number and the rows below. A field on them is hidden for your role.",
 
   "board.count": "{count} deals",
   "board.weighted": "weighted {value}",
@@ -975,6 +980,15 @@ export const en = {
   // lands beside the list's own tools, and "this section did not load" under a
   // toolbar says nothing about WHICH section.
   "views.rail": "Saved views",
+  "views.manage": "Manage views",
+  "views.none": "No saved views",
+  "views.rename": "Rename",
+  "views.renameNamed": "Rename {name}",
+  "views.delete": "Delete",
+  "views.deleteNamed": "Delete {name}",
+  "views.deleteAsk":
+    "Deleting {name} removes its tab. The records it lists are not changed.",
+  "views.deleteConfirm": "Delete view",
   "list.viewMine": "Mine",
   "list.viewCustomers": "Customers",
   "list.viewProspects": "Prospects",
@@ -1260,6 +1274,7 @@ export const en = {
     "This deal has no Deal Room yet. Open one from the deal page.",
   "roompage.backToDeal": "← Back to deal",
   "roompage.accessMenu": "Room access",
+  "roompage.manage": "Manage room",
   "roompage.pause": "Pause",
   "roompage.pauseHint":
     "Buyers keep their links but see a paused page until you resume.",
@@ -1402,7 +1417,7 @@ export const en = {
   "finance.syncing":
     "Syncing with the accounting system. Figures appear after the first sync.",
   "finance.noConnection":
-    "No accounting system connected. Connect one to see invoices and payment behavior for this customer.",
+    "No accounting system connected. Invoices and payment behavior for this customer appear once one is.",
   "finance.unmapped":
     "Connected, but this company is not yet matched to a customer in the accounting system.",
   "finance.netInvoiced": "Net invoiced · 12 months",
@@ -1430,7 +1445,6 @@ export const en = {
   "finance.col.status": "Status",
   "finance.unnumbered": "No number",
   "finance.moreInvoices": "More invoices in the accounting system",
-  "finance.connect": "Connect finance",
   "finance.syncedFrom": "From {provider} · synced {when}",
   "finance.fromNeverSynced": "From {provider} · not yet synced",
   "finance.status.draft": "Draft",
@@ -1561,17 +1575,6 @@ export const en = {
   "co.next.overdue": "Overdue",
   "co.next.due": "Due {when}",
   "co.next.undated": "No due date",
-  "co.facts.pipeline": "Open deals",
-  "co.facts.inFlight": "In flight",
-  "co.facts.reading": "Loading…",
-  "co.facts.noDeals": "No open deals",
-  "co.facts.unpriced": "Not priced yet",
-  "co.facts.nothing": "Nothing",
-  "co.facts.deals_one": "1 deal",
-  "co.facts.deals_other": "{count} deals",
-  "co.facts.projects_one": "1 project",
-  "co.facts.projects_other": "{count} projects",
-  "co.facts.atLeast": "or more",
   "co.work.noDeals": "No open deals.",
   "co.work.closes": "closes {date}",
   "co.brief.by.model": "Written by Margince",
@@ -3472,6 +3475,9 @@ export const en = {
   "create.postalCode": "Postal code",
   "create.country": "Country code (ISO 3166)",
   "create.companyName": "Company",
+  "create.companyPicked": "Adds the contact to this existing company.",
+  "create.companyNew":
+    "Creates a new company unless one is picked from the list.",
   "create.dealName": "Deal name",
   "create.amount": "Value",
   "create.currency": "Currency",
@@ -4144,6 +4150,10 @@ export const en = {
   "analytics.share.copied": "Copied",
   "analytics.share.copyFailed": "Select the link above and copy it manually.",
   "analytics.share.done": "Done",
+  "analytics.share.revoke": "Close link",
+  "analytics.share.closedTitle": "Link closed",
+  "analytics.share.closedBody":
+    "The link no longer opens. Anyone who follows it is refused.",
   "analytics.frame": "As of {asOf} · {zone}",
   "review.title": "Checks before the call",
   "review.ready": "Ready",
@@ -6966,17 +6976,7 @@ export const en = {
   "strength.inout": "{in} in · {out} out (90 days)",
   "strength.computedFrom": "Computed from {count} activities",
 
-  // The relationship-graph cards (ADR-0078). The colleague bands are PO-F-3b's
-  // own vocabulary and deliberately differ from the workspace-wide card's:
-  // the two measure different things and must not read as comparable.
-  "network.title": "Colleague connections",
-  "network.empty": "No colleague has been in touch with this contact yet.",
-  "network.interactions": "{count} interactions (90 days)",
-  "network.neverSpoken": "No recorded contact",
-  "network.bucket.none": "No contact",
-  "network.bucket.weak": "Weak",
-  "network.bucket.moderate": "Moderate",
-  "network.bucket.strong": "Strong",
+  // The relationship-graph coverage card (ADR-0078).
   "coverage.engaged": "Engaged",
   "coverage.quiet": "No two-way contact",
   "coverage.seatWithheld": "A contact you cannot read",
@@ -8824,18 +8824,6 @@ export const en = {
   "contact.bandBadge.weak": "Weak",
   "contact.bandBadge.moderate": "Moderate",
   "contact.bandBadge.strong": "Strong",
-  "contact.pulse.title": "Relationship",
-  "contact.pulse.warmestIs":
-    "{name} has the strongest relationship with this contact.",
-  "contact.pulse.nobodyYet":
-    "No one in the company has a recorded exchange with this contact yet.",
-  "contact.pulse.lastInbound": "They last wrote",
-  "contact.pulse.lastOutbound": "Your team last wrote",
-  "contact.pulse.neverInbound": "never",
-  "contact.pulse.neverOutbound": "never",
-  "contact.pulse.why": "How this is computed",
-  "contact.pulse.arithmetic":
-    "Score {score}/100 = 100 × recency {recency} × frequency {frequency} × reciprocity {reciprocity}. Computed on load from captured activity and not stored.",
   "contact.identity.title": "Identity",
   "contact.identity.emailDead":
     "Bouncing. Mail to this address is not delivered.",
@@ -8850,9 +8838,6 @@ export const en = {
     "No purpose granted, so outbound messages are blocked.",
   "contact.consent.blocked": "Blocked: {purposes}",
   "contact.network.title": "Colleagues who know this contact",
-  "contact.network.twoWay": "{count} two-way exchanges in 90 days",
-  "contact.network.oneSided": "{count} interactions in 90 days, one-sided",
-  "contact.network.replied": "replied {when}",
 
   // The contact record page V2 (ADR-0096). The strip, rail and card words are
   // split by SLOT rather than by sentence, because the same word means
@@ -9327,6 +9312,20 @@ export const en = {
   "filters.emptyGroup":
     "No clauses yet. An empty group matches nothing; add a clause.",
   "filters.field": "Field",
+  "filters.field.classification": "Classification",
+  "filters.field.company_industry": "Company industry",
+  "filters.field.company_lifecycle": "Company lifecycle",
+  "filters.field.company_size_band": "Company size",
+  "filters.field.hosting_provider": "Hosting",
+  "filters.field.mail_provider": "Mail system",
+  "filters.field.operated_service": "Operated service",
+  "filters.field.owner_team_id": "Owner team",
+  "filters.field.phase": "Phase",
+  "filters.field.pipeline_id": "Pipeline",
+  "filters.field.relationship_type": "Relationship type",
+  "filters.field.stage_id": "Stage",
+  "filters.field.tag": "Tag",
+  "filters.field.technology": "Technology",
   "filters.choosePlaceholder": "Select field",
   "filters.customBadge": "Custom field",
   "filters.operator": "Operator",
@@ -9472,6 +9471,7 @@ export const en = {
     "No companies yet. A project can include the client and any partner or subcontractor delivering it.",
   "projectCompanies.attach": "Attach company",
   "projectCompanies.detachTitle": "Remove company from project?",
+  "projectCompanies.detachConfirm": "Remove company",
   "projectCompanies.searchLabel": "Search companies by name",
   "contactProjects.title": "Projects",
   "contactProjects.empty":
@@ -9484,7 +9484,6 @@ export const en = {
   "contactRole.deliveryLead": "Delivery lead",
   "contactRole.expert": "Subject-matter expert",
   "contactRole.user": "User",
-  "projectLinks.new": "New project",
   "projectLinks.attach": "Attach project",
   "projectLinks.move": "Move to another project",
   "projectLinks.detach": "Detach",

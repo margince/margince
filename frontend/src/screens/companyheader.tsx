@@ -216,8 +216,8 @@ export function CompanyOwnerControl({
   // the server holds it — this is the grant plus the seat, which is what the
   // claim endpoint itself requires.
   const canClaim = useCanWrite("company", "update");
-  const canUpdate =
-    useCanWriteRecord("company", company) || (!company.owner_id && canClaim);
+  const canWriteRow = useCanWriteRecord("company", company);
+  const canUpdate = canWriteRow || (!company.owner_id && canClaim);
   const readOnlyReason = useCompanyReadOnlyReason(company);
   const patch = useCompanyFieldPatch(company);
   const claim = useClaimRecord("company", company.id, company.version);
@@ -248,9 +248,14 @@ export function CompanyOwnerControl({
   // carry "unassign" on the wire — a null is indistinguishable from an omitted
   // field — so offering it on an owned account would take the answer and drop
   // it. Present as the truthful current state, absent as an edit we cannot make.
+  // A reader here only through the claim door may name nobody but themselves:
+  // the server refuses a bounded seat's patch on a row nobody owns.
+  const nameable = canWriteRow
+    ? owners
+    : owners.filter((user) => user.value === viewerId);
   const options = company.owner_id
     ? owners
-    : [{ value: "", label: t("co.pulse.unowned") }, ...owners];
+    : [{ value: "", label: t("co.pulse.unowned") }, ...nameable];
   return (
     <InlineChoice
       label={t("co.pulse.owner")}
@@ -277,10 +282,9 @@ export function CompanyOwnerControl({
           unresolvedOwnerLabel(roster, rosterPartial, t)
         );
       }}
-      // An unowned account is nobody's to change until somebody claims it, so
-      // a reader taking it on goes through the claim — the door the write arm
-      // leaves open to every seat — while naming a colleague stays a patch,
-      // which an unbounded seat may make and a bounded one may not.
+      // Taking an unowned account goes through the claim, the door open to
+      // every seat; naming a colleague is a patch, offered only to a reader
+      // who can write the row (`nameable`).
       onSave={(next) =>
         !company.owner_id && next === viewerId
           ? claim()

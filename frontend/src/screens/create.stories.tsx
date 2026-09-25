@@ -137,10 +137,57 @@ export const FormBodyFilled: Story = {
           error={null}
           onSubmit={() => undefined}
           onClose={() => undefined}
-          submitLabelKey="create.save"
+          intent="create"
         />
       );
     }
     return <Filled />;
+  },
+};
+
+// Quick capture's company box: a text field that offers existing companies as
+// the reader types. Filled with a picked company, so the hint says the save
+// attaches it rather than creating another.
+const offeredFields: CreateField[] = [
+  { key: "full_name", label: "create.fullName", required: true },
+  {
+    key: "company_name",
+    label: "create.companyName",
+    offers: {
+      search: async () => [
+        { value: "co-acme", label: "Acme GmbH" },
+        { value: "co-acme-labs", label: "Acme Labs" },
+      ],
+      pickedKey: "company_id",
+      pickedHint: "create.companyPicked",
+      newHint: "create.companyNew",
+    },
+  },
+];
+
+export const OfferedCompanyPicked: Story = {
+  render: () => {
+    function Picked() {
+      const [values, setValues] = useState<Record<string, string>>({
+        full_name: "Dana Buyer",
+        company_name: "Acme GmbH",
+        company_id: "co-acme",
+      });
+      return (
+        <RecordFormBody
+          fields={offeredFields}
+          values={values}
+          setValues={setValues}
+          rows={{}}
+          setRows={() => undefined}
+          pending={false}
+          error={null}
+          onSubmit={() => undefined}
+          onClose={() => undefined}
+          intent="create"
+        />
+      );
+    }
+    return <Picked />;
   },
 };

@@ -217,7 +217,7 @@ func TestHistoryFollowsPagination(t *testing.T) {
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	ids, hist, err := NewAPI(srv.Client(), srv.URL).History(context.Background(), "at", "1")
+	ids, _, hist, err := NewAPI(srv.Client(), srv.URL).History(context.Background(), "at", "1")
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}

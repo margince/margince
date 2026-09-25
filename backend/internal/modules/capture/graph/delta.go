@@ -86,16 +86,25 @@ type deltaPage struct {
 type deltaEntry struct {
 	id         string
 	receivedAt time.Time
+	// removed reports a TOMBSTONE: Graph says this message is no longer in the
+	// folder. It carries no message fields, so there is nothing to fetch — but
+	// it is the owner telling us they deleted their own copy, which is a fact
+	// about mail this workspace may be holding.
+	removed bool
 }
 
-// ids drops the timestamps: every entry a walk named is a message to fetch,
-// whatever window it belongs to.
+// entryIDs drops the timestamps and the tombstones: what survives is what
+// there is something to FETCH for, whatever window it belongs to. A removal
+// carries no message, so it travels its own way (removedIDs).
 func entryIDs(entries []deltaEntry) []string {
 	if len(entries) == 0 {
 		return nil
 	}
 	out := make([]string, 0, len(entries))
 	for _, e := range entries {
+		if e.removed {
+			continue
+		}
 		out = append(out, e.id)
 	}
 	return out
@@ -117,6 +126,12 @@ func countWithin(entries []deltaEntry, after, before time.Time) int {
 	from := filterInstant(after)
 	seen := make(map[string]bool, len(entries))
 	for _, e := range entries {
+		// A tombstone is not a message in the window — it is the absence of
+		// one, and counting it would inflate a tally an operator reads as "this
+		// much mail will arrive".
+		if e.removed {
+			continue
+		}
 		// One comparison covers the undated entry too: an absent instant decodes
 		// to the zero time, which precedes every window an anchor can ask for.
 		if e.receivedAt.Before(from) || !e.receivedAt.Before(before) {
@@ -208,15 +223,26 @@ func (a *httpAPI) countInFolder(ctx context.Context, accessToken, folder, filter
 	return *out.Count, nil
 }
 
-func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]string, string, error) {
+func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]string, []string, string, error) {
 	if err := a.sameAPIOrigin(deltaLink); err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 	entries, next, err := a.deltaWalk(ctx, accessToken, deltaLink)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	return entryIDs(entries), next, nil
+	return entryIDs(entries), removedIDs(entries), next, nil
+}
+
+// removedIDs is entryIDs' other half: the ids Graph tombstoned in this round.
+func removedIDs(entries []deltaEntry) []string {
+	var out []string
+	for _, e := range entries {
+		if e.removed {
+			out = append(out, e.id)
+		}
+	}
+	return out
 }
 
 // deltaWalk follows a delta round from startURL through every nextLink until
@@ -236,9 +262,14 @@ func (a *httpAPI) deltaWalk(ctx context.Context, accessToken, startURL string) (
 			return nil, "", err
 		}
 		for _, m := range page.Value {
-			if m.ID != "" && m.Removed == nil {
-				entries = append(entries, deltaEntry{id: m.ID, receivedAt: m.ReceivedAt.UTC()})
+			if m.ID == "" {
+				continue
 			}
+			entries = append(entries, deltaEntry{
+				id:         m.ID,
+				receivedAt: m.ReceivedAt.UTC(),
+				removed:    m.Removed != nil,
+			})
 		}
 		if page.NextLink == "" {
 			if page.DeltaLink == "" {

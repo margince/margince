@@ -55,7 +55,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 76 | 1847 | 1219 | 3515 | 10% | 19695 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 76 | 2721 | 1737 | 4907 | 14% | 18303 | 15 | 6 |
-| _whole served catalog's listing, for scale — no run is offered it_ | 76 | — | 24512 | — | — | 74% | — | — | — |
+| _whole served catalog's listing, for scale — no run is offered it_ | 76 | — | 24495 | — | — | 74% | — | — | — |
 
 ### `morning_brief`
 
@@ -145,7 +145,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 273 tokens, mean 322, across 76 served tools.
+Median 273 tokens, mean 321, across 76 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -210,13 +210,13 @@ a term in an addition.
 | `read_brief` | 206 | — |
 | `relink_activities` | 205 | — |
 | `update_tag` | 205 | — |
-| `commit_import` | 204 | — |
 | `merge_tags` | 198 | — |
 | `list_colleagues` | 196 | — |
 | `relink_thread` | 196 | — |
 | `who_knows` | 196 | — |
 | `data_coverage` | 195 | — |
 | `list_pipelines` | 191 | — |
+| `commit_import` | 187 | — |
 | `intro_path_to` | 187 | — |
 | `create_tag` | 183 | — |
 | `list_channel_providers` | 174 | — |

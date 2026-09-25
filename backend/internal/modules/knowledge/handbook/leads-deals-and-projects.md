@@ -238,9 +238,14 @@ Read-only seats cannot create projects.
 Also called: start a new project for a client, new engagement.
 
 ### Can I create a project from a company page or a deal?
-A company page in Margince has no New project button: the **Add** under its **Projects** panel only switches to the **Deals and projects** tab, which offers **New deal**. To start a project for that company, use **Projects** → **New project** and pick the company.
+To create a project from a company page in Margince, open its **Deals and projects** tab, choose **New project** in the **Projects** panel, enter a **Project name** and choose **Create**. The project is created on that company. An archived company has no **New project**.
 You can also start one while creating a deal: on **Deals** → **New deal**, choose the **Company**, then under **Project** pick **New project…** and enter a **Project name**. The project is created on the deal's company.
 Also called: add a project to a client.
+
+### What is on a project page?
+A project page in Margince gathers everything filed under the work. Its phase and key sit beside the name, the **Phase** bar runs under the header, and **More actions** holds **Edit project**, **Share**, **Assign to a colleague** and **Archive project**. The main column opens with the figures **Open deals**, **Won deals**, **Open commitments** and **Activity**, then **Delivery health**, the **Deals** card with **New deal**, and **Open commitments**: open tasks filed under the project, soonest due first, late ones marked **Overdue**. The timeline follows.
+
+The side column of a project page in Margince holds **Companies**, **Responsible**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**, which records every phase move with who made it and the reason. Files attached to the project's deals stay on the deals.
 
 ### How do I edit or rename a project?
 To edit or rename a project in Margince, open it from **Projects**, choose **More actions** → **Edit project**, change the fields and choose **Save**.
@@ -255,7 +260,7 @@ Also called: hand over a project, change project lead, transfer a project.
 
 ### How do I add or remove a company on a project?
 To add a company to a project in Margince, open the project and choose **Attach company** in its **Companies** panel, search under **Search companies by name**, pick a role under **As** (**Customer**, **Partner** or **Subcontractor**) and confirm with **Attach company**.
-To take one off, choose **Detach** on its row and confirm "Remove company from project?". The last company cannot be removed, nor a company that still has deals on the project.
+To take one off, choose **Detach** on its row, then **Remove company** in "Remove company from project?". The last company cannot be removed, nor a company that still has deals on the project.
 Also called: add a partner to a project, link a client to a project.
 
 ### How do I move a project to another phase or close it?
@@ -263,6 +268,10 @@ To move a project in Margince, open it and click the phase you want on its **Pha
 In **Move to {phase}**, add a **Reason** and choose **Move**. For **Closed** the button is **Close project**, and the reason is required: "A closed project needs a reason."
 Click another phase on a closed project to reopen it.
 Also called: close a project, finish delivery, reopen a project.
+
+### How do I start delivery when a deal is won?
+To start delivery on a won deal in Margince, open the deal and press **Start delivery** in the callout on its page.
+The callout appears when the deal is won, names no project, and its company has exactly one live project: "This deal is won and names no project. Attach it to {project} and move the project into delivery?" Pressing it attaches the deal and moves the project to **Delivering**, then opens the project. A deal already on a project needs nothing: winning it moves an Initiative or Pursuing project to Delivering by itself. Also called: hand over to delivery, kick off the project.
 
 ### Phases
 
@@ -294,6 +303,14 @@ The key is what files email automatically. Any subject carrying it **in square
 brackets** goes under that project. See [Capture](capture.md).
 
 Keys are unique among live projects only. Archiving a project frees its key.
+
+### How do I choose a good project key?
+To get a readable project key in Margince, choose the project's name well: the key is minted from the name once, when the project is created, and never changes.
+Lead with the customer, then the work: "Nordwind ERP rollout" gives `NER-1`, while "ERP rollout" gives `ER-1`, which names nobody. Three or four words beat one: "Datenmigration" gives `DATENMIG-1`. A name opening with digits drops them, and a name with too few letters falls back to `PRJ`. Renaming a project keeps its key; to get a different one, archive the project and create it again. Also called: project code, project number, ticket prefix.
+
+### How do I get a customer's emails filed under a project?
+To have a customer's emails filed under a project in Margince, get the project's key in square brackets into the subject, such as `[NER-1]`.
+Send from the deal or project, or pick the project under **Project** in the composer, and Margince puts the tag at the front of your subject; a reply that keeps the subject brings the answer in. Ask the customer in your kickoff mail to keep `[NER-1]` in the subject. See [Capture](capture.md) for every filing rule. Also called: email not on the project, project reference in email.
 
 ### Companies and stakeholders
 

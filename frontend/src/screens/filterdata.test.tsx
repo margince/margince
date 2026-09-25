@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en, type MessageKey } from "../i18n/en";
 import {
   fieldLabel,
   groupFields,
@@ -160,6 +161,7 @@ describe("the preview read", () => {
 });
 
 describe("presenting a vocabulary", () => {
+  const t = (key: MessageKey) => en[key];
   const FIELDS: VocabularyField[] = [
     { name: "owner_id", type: "id", operators: ["eq"], custom: false },
     { name: "cf_tier", type: "text", operators: ["eq"], custom: true },
@@ -176,22 +178,49 @@ describe("presenting a vocabulary", () => {
     // cf_ is a Go-side convention a human never typed, and an underscore is a
     // column separator rather than something anybody wrote in a label.
     expect(
-      fieldLabel({
-        name: "cf_loyalty_tier",
-        type: "text",
-        operators: [],
-        custom: true,
-      }),
+      fieldLabel(
+        {
+          name: "cf_loyalty_tier",
+          type: "text",
+          operators: [],
+          custom: true,
+        },
+        t,
+      ),
     ).toBe("loyalty tier");
     // A core field keeps its own name: it has no prefix to strip, and stripping
     // one that only LOOKS like a prefix would rename the field.
     expect(
-      fieldLabel({
-        name: "cf_score",
-        type: "number",
-        operators: [],
-        custom: false,
-      }),
+      fieldLabel(
+        {
+          name: "cf_score",
+          type: "number",
+          operators: [],
+          custom: false,
+        },
+        t,
+      ),
     ).toBe("cf score");
+  });
+
+  it("names a core field in the reader's words, not its wire name", () => {
+    // The vocabulary sends `owner_id`; a picker printing "owner id" spoke the
+    // column's language to somebody who never sees a column.
+    expect(fieldLabel(FIELDS[0], t)).toBe("Owner");
+    expect(
+      fieldLabel(
+        { name: "owner_team_id", type: "id", operators: [], custom: false },
+        t,
+      ),
+    ).toBe("Owner team");
+  });
+
+  it("never lends a core word to a custom column of the same shape", () => {
+    expect(
+      fieldLabel(
+        { name: "owner_id", type: "text", operators: [], custom: true },
+        t,
+      ),
+    ).toBe("owner id");
   });
 });

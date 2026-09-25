@@ -61,7 +61,10 @@ im Zweifel gegen die Sichtbarkeit.
 - **Absender ausschließen:** Post von einer Adresse oder Domain gar nicht erst
   erfassen — Einstellungen → Erfassungsaktivität, Karte „Nicht erfassen".
 - **Bereits erfasste Post löschen:** unwiderruflich, einschließlich Anhängen und
-  abgeleiteter Daten. Post, die auch eine Kollegin empfangen hat, bleibt ihr
+  abgeleiteter Daten. Löschen Sie eine erfasste Nachricht in Ihrem Postfach,
+  wird die Kopie hier mitgelöscht — es sei denn, eine Kollegin hat dieselbe
+  Nachricht ebenfalls erfasst oder es handelt sich um einen Handelsbrief
+  innerhalb seiner Aufbewahrungsfrist. Post, die auch eine Kollegin empfangen hat, bleibt ihr
   erhalten; Ihr Zugriff darauf endet.
 - **Absenderentscheidungen einsehen und korrigieren:** Die Seite „Absender“ zeigt
   jede automatische Entscheidung über Ihre Korrespondenten. Ihre Korrektur ist

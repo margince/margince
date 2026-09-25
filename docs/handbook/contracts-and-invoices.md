@@ -149,8 +149,13 @@ opportunity: an account nobody has ever invoiced has no money to report.
 
 ### How do I create an invoice?
 You cannot create an invoice in Margince. Margince has no invoice form, no "New invoice" button and no invoicing API; invoices exist only in your accounting system, and the company's **Finance** tab shows a read-only mirror of them.
-To bill a customer, raise the invoice in your accounting system. This build cannot connect a real accounting system yet: the only finance source it ships is an offline demo provider, so **Recent invoices** on the **Finance** tab shows only its generated demo invoices, never yours, and **Connect finance** does nothing.
+To bill a customer, raise the invoice in your accounting system. This build cannot connect a real accounting system yet: the only finance source it ships is an offline demo provider, so **Recent invoices** on the **Finance** tab shows only its generated demo invoices, never yours.
 Also called: bill a customer, raise an invoice, send an invoice, credit note.
+
+### How do I connect my accounting system?
+You cannot connect an accounting system from Margince yet. The **Finance** tab has no connect button, and **Settings** has no finance connector; the only finance source this build ships is an offline demo provider, which is set up outside the app.
+Until one is connected, the **Finance** card reads "No accounting system connected."
+Also called: connect finance, link accounting, sync invoices, connect a ledger, bookkeeping integration.
 
 ### What the Finance tab shows
 - **Net invoiced · 12 months** — issued minus credited. It is called net
@@ -202,5 +207,5 @@ accounting system, so it is current even when the last sweep is not.
 plausible generated invoices, not a real accounting system. The card names the
 provider, so you can always see which you are looking at.
 
-There is a **Connect finance** button on the card, and it does nothing. Do not
-plan around connecting a real ledger from here yet.
+Nothing in the product connects a real ledger yet, so do not plan around
+connecting one from the card.

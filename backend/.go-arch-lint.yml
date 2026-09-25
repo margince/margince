@@ -342,8 +342,12 @@ deps:
     # whole module and its banned set is one module's vocabulary, so only gates
     # can see both — and deriving the set from the engine that alters them is
     # what stops the gate becoming a second copy of the list.
+    # offertemplatelayout_test.go reads deals.OfferTemplateLayoutTextKeys and
+    # holds it to the layout keys the offer-template form writes: the PDF reads
+    # a free jsonb bag, so a spelling on one side only is typed and never
+    # printed, and deals must not depend on a TypeScript file to notice.
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, forecasting, comms]
+    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms]
     canUse: [yaml, jsonschema]
   cmd:
     mayDependOn: [compose, identity, contacts, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]

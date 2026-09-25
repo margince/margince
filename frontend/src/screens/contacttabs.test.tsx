@@ -410,6 +410,79 @@ describe("the deals tab", () => {
     await screen.findByText("Fleet renewal 2026");
     expect(screen.queryByRole("button", { name: "Add to a deal" })).toBeNull();
   });
+
+  // The contact's own door into the rooms they sit in: an admin removing
+  // somebody who left the buyer knows the name, not the deals.
+  const withAddress: Contact360 = {
+    ...view,
+    contact: {
+      ...view.contact,
+      emails: [
+        {
+          id: "e-1",
+          email: "dana@buyer.example",
+          email_type: "work",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+      ],
+    },
+  };
+  const ROOM = {
+    id: "room-1",
+    deal_id: "d-1",
+    title: "Fleet renewal room",
+    state: "live",
+    ...CAPTURED,
+  } satisfies components["schemas"]["DealRoom"];
+
+  it("lists the Deal Rooms the contact can still enter, and opens one", async () => {
+    stubWithSession(
+      {
+        "GET /deals/d-1": () => jsonResponse(DEAL_D1),
+        "GET /deal-rooms": () =>
+          jsonResponse({
+            data: [ROOM],
+            page: { has_more: false, next_cursor: null },
+          }),
+      },
+      { deal_room: ["read"] },
+    );
+    const user = userEvent.setup();
+    withProviders(<ContactDealsTab view={withAddress} />);
+
+    const panel = (await screen.findByText("Fleet renewal room")).closest(
+      ".panel",
+    );
+    expect(panel).not.toBeNull();
+    await user.click(
+      within(panel as HTMLElement).getByRole("button", { name: "Open" }),
+    );
+    await waitFor(() => expect(window.location.hash).toBe("#/deals/d-1/room"));
+  });
+
+  it("asks for no rooms from a reader without the room grant", async () => {
+    let asked = false;
+    stubWithSession(
+      {
+        "GET /deals/d-1": () => jsonResponse(DEAL_D1),
+        "GET /deal-rooms": () => {
+          asked = true;
+          return jsonResponse({ data: [ROOM], page: { has_more: false } });
+        },
+      },
+      { relationship: ["create"] },
+    );
+    withProviders(<ContactDealsTab view={withAddress} />);
+
+    // Awaited through a control the grant probe draws, so the absence below
+    // is read after the probe has answered rather than before it ran.
+    await screen.findByRole("button", { name: "Add to a deal" });
+    expect(screen.queryByText("Fleet renewal room")).toBeNull();
+    expect(asked).toBe(false);
+  });
 });
 
 describe("the meetings tab", () => {

@@ -109,6 +109,7 @@ export function ProjectCompanies({
         attach: t("projectCompanies.attach"),
         move: t("projectCompanies.attach"),
         detachTitle: t("projectCompanies.detachTitle"),
+        detachConfirm: t("projectCompanies.detachConfirm"),
         search: t("projectCompanies.searchLabel"),
       }}
     />

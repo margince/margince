@@ -82,7 +82,7 @@ Also called: create a contact, add someone to the CRM, new customer contact.
 ### How do I add a contact quickly, or import contacts from vCards?
 To add a contact quickly in Margince, open **Contacts** and choose **Quick capture**; to add many from a card file, choose **Import vCards**.
 - **Quick capture** asks for **Full name** (required), **Title**, **Company**, **LinkedIn**, **Email** and **Phone**, and confirms with "{name} saved"; the form stays open.
-- The **Company** box in Quick capture creates a new company from the name you type. If that company already existed, merge the two afterwards.
+- The **Company** box in Quick capture lists existing companies matching what you type: pick one to attach it. A name you do not pick creates a new company.
 - **Import vCards** asks for a **vCard file**: choose **Select .vcf file**. Each card is reported as Added, Missing fields added, Possible duplicate or Skipped.
 Also called: import contacts, upload a .vcf.
 
@@ -108,22 +108,17 @@ To link a contact to a company in Margince, open the contact's page and choose *
 To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**.
 Also called: set a contact's company, assign to an account, employer.
 
-Emails are typed **work, personal or other**; phones **work, mobile, home or
-other**. One number may appear twice under two types — a switchboard that is
-both work and mobile — and editing the list keeps the two rows apart.
+### How do I match a purchased job history entry to a company?
+When purchased employment history in Margince names an employer it cannot match, the contact's **Companies** section shows **Company match needed.**; choose **Match company**.
+Pick an existing company, or enter its **Confirmed company website** to create it, then choose **Save company link**. The choice applies to every unmatched role at that employer. **Dismiss evidence** drops an entry that should not become a link. A company name alone never creates a company. Also called: unresolved employer, imported job history.
 
-The contact header says **who can see this contact**: private to its owner, or
-everyone in the company; a company header says the same. See
-[Seats, roles and who can see what](seats-roles-and-access.md).
+Emails are typed **work, personal or other**; phones **work, mobile, home or other**. One number may appear twice under two types — a switchboard that is both work and mobile — and editing the list keeps the two rows apart.
 
-A contact's job title appears in two places and they are not the same thing. The
-title on the contact record is a convenience copy; the authoritative one lives on
-the employment relationship with the company. A contact can have exactly one
-current primary employer, or none.
+The contact header says **who can see this contact**: private to its owner, or everyone in the company; a company header says the same. See [Seats, roles and who can see what](seats-roles-and-access.md).
 
-Other things a contact carries: an owner, a consent record per purpose, a
-relationship strength, when they were last active, and — if they came from a
-lead — a pointer back to that lead.
+A contact's job title appears in two places and they are not the same thing. The title on the contact record is a convenience copy; the authoritative one lives on the employment relationship with the company. A contact can have exactly one current primary employer, or none.
+
+Other things a contact carries: an owner, a consent record per purpose, a relationship strength, when they were last active, and — if they came from a lead — a pointer back to that lead.
 
 ### How do I merge duplicate contacts?
 To merge two duplicate contacts in Margince, open the contact you want to remove, choose **More actions**, then **Merge contact**.
@@ -167,6 +162,11 @@ To change who owns a contact or company in Margince, open the record and pick a 
 You need edit rights on the record: your own, your team's, one shared with you for writing, or a role that edits every record. A private contact must keep an owner ("This field is required.").
 There is no bulk reassign for contacts or companies. For many deals or leads, see [Lists, filters and views](lists-filters-and-views.md).
 Also called: reassign a contact, hand over an account, transfer ownership, account owner.
+
+### How do I claim a company nobody owns?
+To claim an unowned company in Margince, open it and pick yourself in **Owner** among the facts under its name. The company is yours as soon as you pick.
+A company nobody owns can be read by everyone and edited by nobody, so its **Details** panel takes no changes until somebody claims it. Any role allowed to edit companies can claim one; an archived company cannot be claimed.
+Also called: take an unowned account, assign a company to me, claim an account.
 
 Two separate fields describe a company, and mixing them up is a common mistake.
 

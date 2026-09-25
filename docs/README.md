@@ -1,11 +1,11 @@
 # Margince documentation
 
-**Using the product rather than changing it?** The end-to-end walkthroughs for a
-rep or a delivery lead live in [`user-guide/`](../user-guide/README.md). This tree
-is mostly for the contact changing the code — with one deliberate exception:
-`how-to/` carries product how-tos (working your deals, setting up projects,
-partner programs) beside the engineering ones, because a how-to is a thing you
-return to for one answer whichever audience you are in.
+**Using the product rather than changing it?** The [handbook](handbook/README.md)
+is the one answer to "how do I…" in the app — it is also the corpus behind the
+in-app ask — and the end-to-end walkthroughs for a rep or a delivery lead live in
+[`user-guide/`](../user-guide/README.md). The rest of this tree is for the
+contact changing or operating the code, so a product task belongs in the
+handbook, not in `how-to/`.
 
 Documentation for building and operating **Margince** — a governed, single-tenant CRM (a Go `/v1` API
 backend; the Vite/React web UI ships separately). One installation serves one company, and boot
@@ -39,8 +39,8 @@ maps the codebase and links everything below.
 The only tree here written for the contact using Margince rather than building it:
 no code, no API, just the app.
 
-- [handbook/README.md](handbook/README.md) — twenty-three pages covering records,
-  the pipeline, capture, mail, what the AI does and does not do, approvals,
+- [handbook/README.md](handbook/README.md) — twenty-five pages covering records,
+  the pipeline, partners, capture, mail, what the AI does and does not do, approvals,
   offers, documents, retention, seats and settings. It is also the default
   document set behind **Ask your documents** on a new installation, so
   [how-to/update-the-handbook.md](how-to/update-the-handbook.md) says how to
@@ -81,7 +81,6 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [getting-started.md](tutorials/getting-started.md) — clone → running instance with a bootstrapped workspace.
 
 ### How-to — accomplish a task
-- [write-an-email.md](how-to/write-an-email.md) — start a contextual email, select an exact reply target, and read the conversation while writing.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md) — add or change an API operation (contract → gen → handler).
 - [add-a-module.md](how-to/add-a-module.md) — add a new capability (module) or a cross-module edge, wired into compose.
 - [add-a-job.md](how-to/add-a-job.md) — declare a background job kind in the job contract, then write and register its worker.
@@ -108,10 +107,6 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [write-a-certification-case.md](how-to/write-a-certification-case.md) — bind a site to the production request builder and validator that certify it: the test-first loop, the case interface, the three site kinds, scenario and rubric authoring, scope.
 - [register-a-webhook.md](how-to/register-a-webhook.md) — register an HTTPS endpoint for Standard-Webhooks-signed, retried outbound delivery of contract-generated event payloads (curl or Settings → Integrations), and verify/inspect/replay a delivery.
 - [add-an-extension.md](how-to/add-an-extension.md) — ship a stable-tier extension unit (a jurisdiction pack) under `extensions/`, composed and verified.
-- [work-your-pipeline.md](how-to/work-your-pipeline.md) — sell with Margince: move a deal, close it (and what winning one requires), stalled deals, saved views, bulk actions, and how to read the deal numbers; no code.
-- [set-up-a-partner-program.md](how-to/set-up-a-partner-program.md) — the partner reference: what every field and every value means, and how to work the deals.
-- [set-up-projects.md](how-to/set-up-projects.md) — who can create, edit, archive and share a project; key conventions; when to create one (deal creation vs close-won); the fixed phase and stakeholder vocabularies; no code.
-- [run-a-project.md](how-to/run-a-project.md) — the project page section by section, phase moves, and every rule by which an email finds its project — including what filing does to retention; no code.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md) — run ONE production AI invocation site against input you supply (`make ai-probe`), and read every boundary between that input and the verdict as numbers.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md) — build the self-contained folder that runs the whole stack with no Docker, on macOS (`make desktop`) or Windows (`make desktop-win`), then run, configure and update an installation.
 - [update-the-handbook.md](how-to/update-the-handbook.md) — change the operator handbook so the in-app ask can answer from it: how a page is cut and read, the task-section rules, the probe (`scripts/handbook-ask/probe.sh`) to run before and after, and the checklist.
