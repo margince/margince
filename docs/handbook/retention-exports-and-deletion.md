@@ -25,7 +25,7 @@ The export holds only rows you can see, and every export is written to the audit
 Also called: download, get my data out, backup, extract to Excel or spreadsheet.
 
 ### How do I get all of my company's data out of Margince?
-Margince has a whole-company export bundle (a ZIP of one CSV per record type, relational JSON and manifests), but the app has no button for it. An Admin or Ops user downloads it from the API (`GET /exports/bundle`) while signed in; it is row-scoped to them and audited. For everyday exports use **Filters and views → Export CSV**.
+Margince has a whole-company export bundle (a ZIP of one CSV per record type, relational JSON and manifests), but the app has no button for it. A signed-in human with the installation-settings update permission, which the Admin and Ops roles hold by default, downloads it from the API (`GET /exports/bundle`); agents cannot. It is row-scoped to that user and audited. For everyday exports use **Filters and views → Export CSV**.
 Also called: full export, data handover, migrate away, leave Margince.
 
 ### How do I import contacts from a spreadsheet?
@@ -131,7 +131,8 @@ left empty:
   cannot be captured again.
 
 If you delete every rule, the screen tells you what that means: "No retention
-policy yet. Nothing in this installation ages out."
+policy yet. Nothing in this installation ages out." One fixed window still
+runs with no policy: AI embedding call traces age out after 90 days (below).
 
 ### What each retention window counts from
 The start of a retention window matters more than readers expect. **Leads** and
@@ -194,7 +195,7 @@ drains over several nights rather than in one.
 ### One window nobody can change
 
 AI embedding call traces are kept for **90 days**, fixed. It is an operational
-cap, not a per-company setting, and no administrator can edit it.
+cap that runs with or without a policy, and no administrator can edit it.
 
 ### Turning a retention policy off, versus deleting it
 

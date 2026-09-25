@@ -12,7 +12,7 @@ To send an email to a contact in Margince, open the contact's page and choose **
 2. Check **To** (at least one recipient), add **Cc** or **Bcc** if you need them.
 3. Fill **Subject** and the message **Body**.
 4. Pick a **Reason for contact**.
-5. Press **Send**, review the **Send email** dialog and press **Send** again.
+5. Review the draft in the **Send email** dialog, then press **Send** once.
 "No address and no thread to reply to." means the contact has no address to write to.
 Also called: write an email, email a customer, message a client.
 

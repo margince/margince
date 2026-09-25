@@ -15,7 +15,7 @@ To approve a proposed change in Margince, open **Home**, show the **Worklist**, 
 2. Set **Work type** to **Approvals** to see only approvals.
 3. On the row, choose **Decide**. The **Your decision** panel opens.
 4. Read the proposal and its evidence, then choose **Accept**.
-The toast says **Applied**, with **Undo on record** to reverse it from the record's history.
+If it edited a record, the toast **Applied** offers **Undo on record** to reverse it from the record's history; a sent email or a new record has no undo.
 Also called: confirm, accept, sign off, OK an agent action.
 
 ### Where are my approvals?
@@ -132,8 +132,10 @@ this page applies.
 An approval has three answers.
 
 **Accept.** The proposed change commits, in one transaction that also writes
-the audit record. The card comes back showing what it produced, with **Undo on
-record**.
+the audit record. When it changed a record, the toast offers **Undo on
+record**, which opens that record's history to reverse it. A kind that sends
+mail, creates a record or names no record has nothing to put back, so it offers
+no undo.
 
 **Approve edited.** You change the payload first (retype the subject line,
 correct a value) and *the edited version is what executes*. Not the original.

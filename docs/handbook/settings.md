@@ -114,8 +114,9 @@ and Microsoft apps have their own **Sign-in and apps** page in the same group.
 currency. **Currency rates** — "Exchange rates that convert foreign-currency amounts to
 the base currency. New rates take effect today or later; past rates never
 change." That last clause is the point: setting a rate today cannot rewrite what
-last quarter reported. Only an administrator or an operations user can see the
-rates.
+last quarter reported. Seeing the rates takes the exchange-rate read permission
+(`fx_rate`), which the Admin and Ops roles hold by default; a custom role can be
+given it too.
 
 **Company context** — what Margince knows about your own company, where it read
 it from, and a place to tell it directly.

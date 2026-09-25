@@ -1,8 +1,8 @@
 # Update the handbook
 
 The handbook in `docs/handbook/` is not only reading matter. Every build embeds
-it, every boot files it as the **Margince handbook** document set, and that set
-is the default behind **Ask your documents** (⌘K). A page you write is therefore
+it, every boot files it as the **Margince handbook** document set, and on a new
+installation that set is the default behind **Ask your documents** (⌘K). A page you write is therefore
 the answer a user gets to a question — or the reason they get **Not covered by
 this set**. Write it for the machine that reads it, and measure it before and
 after.
@@ -75,9 +75,14 @@ authority; these are where it lives.
      scripts/handbook-ask/questions.txt .tmp/handbook-before.tsv
    ```
 
-   It prints how many questions came back `answered` and lists the rest with
-   their outcome. `unreviewed` is the writer model failing (a provider 503),
-   not the page; the probe retries it.
+   It asks the set named **Margince handbook**, not whichever set is the
+   default, because an administrator may have moved the default; set
+   `HANDBOOK_CORPUS_ID` to ask another set. It prints how many questions came
+   back `answered` and lists the rest with their outcome. `not_covered` is a
+   scored miss. `unreviewed` is the writer model failing (a provider 503), not
+   the page; the probe retries it. A run that still ends with an `error`,
+   `unreviewed`, `not_ready` or `retrieval_unavailable` row exits non-zero,
+   because it measured less than it reports.
 2. **Write a held-out set you do not show yourself while writing** — ten or
    twenty questions in new words about the area you are changing. It is the
    only honest measure of whether you wrote for users or for the bank.

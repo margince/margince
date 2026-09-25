@@ -279,9 +279,10 @@ open it. Copy the address to ask someone who has access."
 
 ## Teams
 
-A team in Margince is a named group of colleagues. Only an administrator
-creates one, archives it, or changes who is in it. Anyone can see the list of
-teams.
+A team in Margince is a named group of colleagues. Creating one, archiving
+it or changing who is in it takes the team-administration permission
+(`team_admin`), which only the Admin role holds by default. Anyone can see the
+list of teams.
 
 **A team carries no permissions of its own.** It is not a role. It does two
 things:
@@ -332,11 +333,13 @@ right to share. Flat, explicit grants only. Every share and un-share is audited.
 
 ## Inviting and removing colleagues: the rules
 
-Only an administrator can invite or remove colleagues, and only a human: an
-agent may never create a human account.
+Inviting and removing colleagues takes the user-administration permission
+(`user_admin`), which only the Admin role holds by default, and only a human may
+use it: an agent may never create a human account.
 
-Inviting and deactivating answer to the `user_admin` permission, so a custom role
-holding it manages colleagues without being called Admin.
+Inviting, deactivating and the **Members** settings list all answer to that
+permission, so a custom role holding it manages colleagues without being called
+Admin.
 
 **One ceiling stands above that permission.** Acting on an **Admin's** account
 (inviting one, changing their role, deactivating them) takes the literal Admin
@@ -389,6 +392,7 @@ Seats, roles and row scope decide what a seat *can* do. The audit trail records
 what it *did*: every action, attributed to a human, an agent or a connector,
 with the authorization rule that allowed it.
 
-Only an administrator reads it, because it names every actor and every record
-they touched. See
+Reading it takes the audit-log read permission (`audit_log`), which only the
+Admin role holds by default, because it names every actor and every record they
+touched. See
 [What is kept, what is destroyed](retention-exports-and-deletion.md#the-audit-trail).

@@ -299,7 +299,7 @@ export const vi = {
   "history.undo.notRestorableByThisPath":
     "Các trường này không được ghi qua đường mà thao tác hoàn tác đi.",
   "history.undo.recordArchived":
-    "Bản ghi đang được lưu trữ và không nhận thay đổi, nên không thể hoàn tác thay đổi này.",
+    "Bản ghi này đã lưu trữ và không nhận thay đổi, nên không thể hoàn tác thay đổi này.",
   "history.undo.nullUnwritable":
     "Không thể hoàn tác vì thao tác này sẽ phải xoá trống một trường mà bản ghi này không thể xoá trống.",
   "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
@@ -2360,7 +2360,7 @@ export const vi = {
   "lead.demote": "Hoàn tác chuyển đổi",
   "lead.demoteDialog": "Hoàn tác việc chuyển đổi này?",
   "lead.demoteExplain":
-    "Lead quay lại trạng thái “Đang trao đổi”. Liên hệ do việc chuyển tạo ra sẽ được lưu trữ; liên hệ đã được gộp vào giữ nguyên. Không thể hoàn tác với liên hệ đang gắn với một deal.",
+    "Lead quay lại trạng thái “Đang trao đổi”. Liên hệ do việc chuyển tạo ra sẽ được lưu trữ; liên hệ đã được gộp vào giữ nguyên. Không thể hoàn tác khi liên hệ đang gắn với một deal chưa lưu trữ.",
   "lead.demoteReason": "Lý do (được ghi vào nhật ký)",
   "lead.demoteReasonRequired": "H\u00e3y n\u00eau l\u00fd do tr\u01b0\u1edbc.",
   "lead.demoteConfirm": "Hoàn tác",

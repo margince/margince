@@ -42,7 +42,7 @@ no code, no API, just the app.
 - [handbook/README.md](handbook/README.md) — twenty-three pages covering records,
   the pipeline, capture, mail, what the AI does and does not do, approvals,
   offers, documents, retention, seats and settings. It is also the default
-  document set behind **Ask your documents**, so
+  document set behind **Ask your documents** on a new installation, so
   [how-to/update-the-handbook.md](how-to/update-the-handbook.md) says how to
   write a page that can answer a question, and how to measure it.
 

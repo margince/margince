@@ -9,7 +9,8 @@ its own, so you can also come straight to the one you need.
 
 To ask this handbook a question inside Margince, press ⌘K (Ctrl+K) to open the
 command palette and choose **Ask your documents**. The **Margince handbook** is
-the document set it answers from.
+the document set it answers from, unless an administrator chose another; then
+pick **Margince handbook** in **Document set**.
 
 ## Common questions
 

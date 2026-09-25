@@ -149,7 +149,7 @@ opportunity: an account nobody has ever invoiced has no money to report.
 
 ### How do I create an invoice?
 You cannot create an invoice in Margince. Margince has no invoice form, no "New invoice" button and no invoicing API; invoices exist only in your accounting system, and the company's **Finance** tab shows a read-only mirror of them.
-To bill a customer, raise the invoice in your accounting system. Once that system is connected and the company is matched, the invoice appears under **Recent invoices** on the **Finance** tab after the next sync.
+To bill a customer, raise the invoice in your accounting system. This build cannot connect a real accounting system yet: the only finance source it ships is an offline demo provider, so **Recent invoices** on the **Finance** tab shows only its generated demo invoices, never yours, and **Connect finance** does nothing.
 Also called: bill a customer, raise an invoice, send an invoice, credit note.
 
 ### What the Finance tab shows
