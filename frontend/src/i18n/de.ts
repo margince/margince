@@ -5646,6 +5646,8 @@ export const de = {
   "connectors.telegramConnectCta": "Telegram-Bot verbinden",
   "connectors.telegramRosterLabel": "Verbundener Bot",
   "connectors.telegramEmpty": "Kein Bot verbunden.",
+  "connectors.telegramReadOnly":
+    "Nur Admins und Operations können den Bot verbinden oder ändern.",
   "connectors.telegramEditToken": "Token ersetzen",
   "connectors.telegramDisconnectTitle": "Diesen Bot trennen?",
   "connectors.telegramDisconnectBody":

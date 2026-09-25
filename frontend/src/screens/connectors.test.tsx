@@ -13,10 +13,12 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { locationDouble } from "../testing/locationdouble";
+import { useMe } from "./common";
 import { ConnectorsCard } from "./connectors";
-import { installFetchStub } from "./story-utils";
+import { type RouteMap, stubWithSession } from "./story-utils";
 
 // The connected-inboxes card makes the onboarding promise ("disconnect in one
 // click", "manage in Settings") real. It renders server facts only, and a
@@ -87,6 +89,10 @@ type StubOpts = {
   connect?: { authorize_url?: string } | { status: number };
   /** The messaging-channel roster the Telegram panel reads. */
   channels?: ChannelConnection[];
+  /** Answer GET /channel-connections with the 503 of a deployment without channels. */
+  channelsNotConfigured?: boolean;
+  /** The session GET /me answers; unset, an admin holding no object grants. */
+  me?: components["schemas"]["MeResponse"];
   /** The installation's outward address, as GET /connectors reports it. */
   publicOrigin?: {
     origin: string;
@@ -117,7 +123,16 @@ function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
       // only, so an empty roster is the honest default rather than a
       // fixture every one of them would otherwise have to repeat.
       if (path.endsWith("/channel-connections") && request.method === "GET") {
+        if (opts.channelsNotConfigured) {
+          return jsonResponse(
+            { code: "channel_connections_not_configured" },
+            503,
+          );
+        }
         return jsonResponse({ data: opts.channels ?? [] });
+      }
+      if (path.endsWith("/me") && request.method === "GET") {
+        return jsonResponse(opts.me ?? meFixture({}));
       }
       if (path.endsWith("/connect") && request.method === "POST") {
         const c = opts.connect ?? {
@@ -151,6 +166,17 @@ function render(ui: ReactNode) {
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
+}
+
+// The mail-half cases are about no grant: the session is an admin holding none.
+function stubMailRoutes(routes: RouteMap) {
+  stubWithSession(routes, {});
+}
+
+// Shares the card's cache entry, so it appears only once the grants it reads
+// have arrived.
+function SessionSettled() {
+  return useMe().isSuccess ? <span>session settled</span> : null;
 }
 
 function requestsTo(calls: Request[], suffix: string, method: string) {
@@ -451,10 +477,10 @@ describe("the connected-inboxes card", () => {
 
 // The richer per-row health line (account_label, next_sync_due_at,
 // watch_expires_at, the error-class sentence) and the 501 calm state, all
-// exercised through the real installFetchStub route-map shape.
+// exercised through the real story-utils route-map shape.
 describe("the connected-inboxes card's richer health line", () => {
   it("shows the account label beside the provider name", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () =>
         jsonResponse({
           data: [{ ...gmailConnected, account_label: "lars@example.de" }],
@@ -465,7 +491,7 @@ describe("the connected-inboxes card's richer health line", () => {
   });
 
   it("reads a null watch_expires_at as polled, never as expired", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () =>
         jsonResponse({
           data: [
@@ -479,7 +505,7 @@ describe("the connected-inboxes card's richer health line", () => {
   });
 
   it("renders a push renewal deadline when watch_expires_at is set", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () =>
         jsonResponse({
           data: [
@@ -492,7 +518,7 @@ describe("the connected-inboxes card's richer health line", () => {
   });
 
   it("renders the error-class sentence for a reauth_required connection", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () =>
         jsonResponse({
           data: [{ ...gmailStale, last_sync_error_class: "auth" }],
@@ -505,7 +531,7 @@ describe("the connected-inboxes card's richer health line", () => {
   });
 
   it("renders the 501 not-configured response as a calm state, not an error", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ code: "not_implemented" }, 501),
     });
     render(<ConnectorsCard />);
@@ -517,7 +543,7 @@ describe("the connected-inboxes card's richer health line", () => {
   });
 
   it("shows the updated disconnect copy naming credential deletion and Google's own access list", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [gmailConnected] }),
     });
     render(<ConnectorsCard />);
@@ -531,7 +557,7 @@ describe("the connected-inboxes card's richer health line", () => {
   });
 
   it("omits the vendor-access note for an IMAP disconnect (no upstream grant)", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () =>
         jsonResponse({ data: [{ ...gmailConnected, provider: "imap" }] }),
     });
@@ -554,7 +580,7 @@ describe("the connected-inboxes card's richer health line", () => {
 describe("the OAuth return outcome", () => {
   it("renders an honest denial note when the user declined access", async () => {
     globalThis.location.hash = "#/settings/connections/denied";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
@@ -566,7 +592,7 @@ describe("the OAuth return outcome", () => {
 
   it("renders an honest failure note when the connection could not complete", async () => {
     globalThis.location.hash = "#/settings/connections/error";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
@@ -581,7 +607,7 @@ describe("the OAuth return outcome", () => {
   // change that.
   it("names the remedy when the provider's API is not enabled here", async () => {
     globalThis.location.hash = "#/settings/connections/misconfigured";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
@@ -593,7 +619,7 @@ describe("the OAuth return outcome", () => {
 
   it("tells the reader to accept every permission when the provider declined", async () => {
     globalThis.location.hash = "#/settings/connections/rejected";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
@@ -606,7 +632,7 @@ describe("the OAuth return outcome", () => {
 
   it("renders a brief success note on ok — never an error", async () => {
     globalThis.location.hash = "#/settings/connections/ok";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [gmailConnected] }),
     });
     render(<ConnectorsCard />);
@@ -617,7 +643,7 @@ describe("the OAuth return outcome", () => {
 
   it("renders no outcome note when the route carries none", async () => {
     globalThis.location.hash = "#/settings/connections";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
@@ -627,7 +653,7 @@ describe("the OAuth return outcome", () => {
 
   it("dismisses the note and clears it", async () => {
     globalThis.location.hash = "#/settings/connections/denied";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
@@ -762,9 +788,12 @@ describe("the Telegram connector panel", () => {
     channelLabel: "acme_support_bot",
     status: "pending",
   };
+  const botManager = meFixture({
+    allow: { channel_connection: ["read", "create", "update", "delete"] },
+  });
 
   it("lists every connected bot, each with its own Disconnect", async () => {
-    stubApi([], { channels: [salesBot, supportBot] });
+    stubApi([], { channels: [salesBot, supportBot], me: botManager });
     render(<ConnectorsCard />);
 
     // One SettingRow per bot: the roster is a list of decisions now, so a bot
@@ -784,7 +813,7 @@ describe("the Telegram connector panel", () => {
   });
 
   it("opens the replace-token form on the bot whose row was clicked", async () => {
-    stubApi([], { channels: [salesBot, supportBot] });
+    stubApi([], { channels: [salesBot, supportBot], me: botManager });
     render(<ConnectorsCard />);
 
     const rows = await screen.findAllByTestId("telegram-connection");
@@ -795,6 +824,92 @@ describe("the Telegram connector panel", () => {
     // observable proof it bound to that row and not to the first.
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText(/^Pending/)).toBeTruthy();
+  });
+
+  const readOnlyNote =
+    "Only an administrator or operations user can connect or change the bot.";
+
+  it("offers the connect verb to a reader who holds channel_connection:create", async () => {
+    stubApi([], { me: botManager });
+    render(<ConnectorsCard />);
+    expect(await screen.findByTestId("telegram-connect")).toBeTruthy();
+    expect(screen.queryByText(readOnlyNote)).toBeNull();
+  });
+
+  // The seeded rep reads the bot and may change none of it: three buttons the
+  // server would refuse are withheld, and the line says who can act instead.
+  it("gives a reader without write grants the roster and the reason, no verbs", async () => {
+    stubApi([], {
+      channels: [salesBot],
+      me: meFixture({
+        roles: ["rep"],
+        allow: { channel_connection: ["read"] },
+      }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByText(readOnlyNote)).toBeTruthy();
+    const row = screen.getByTestId("telegram-connection");
+    expect(within(row).getByText("@acme_sales_bot")).toBeTruthy();
+    expect(within(row).queryByRole("button")).toBeNull();
+    expect(row.querySelector(".connector-actions")).toBeNull();
+    expect(screen.queryByTestId("telegram-connect")).toBeNull();
+  });
+
+  it("withholds every verb from a read seat even when the role grants them", async () => {
+    stubApi([], {
+      channels: [salesBot],
+      me: meFixture({
+        seat: "read",
+        allow: { channel_connection: ["read", "create", "update", "delete"] },
+      }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByText(readOnlyNote)).toBeTruthy();
+    expect(
+      within(screen.getByTestId("telegram-connection")).queryByRole("button"),
+    ).toBeNull();
+  });
+
+  it("gates each row verb on its own grant", async () => {
+    stubApi([], {
+      channels: [salesBot],
+      me: meFixture({ allow: { channel_connection: ["read", "update"] } }),
+    });
+    render(<ConnectorsCard />);
+    const row = await screen.findByTestId("telegram-connection");
+    expect(
+      await within(row).findByRole("button", { name: "Replace token" }),
+    ).toBeTruthy();
+    expect(
+      within(row).queryByRole("button", { name: "Disconnect" }),
+    ).toBeNull();
+    expect(screen.queryByText(readOnlyNote)).toBeNull();
+  });
+
+  // No channels on this deployment withholds the verbs from an admin too, so
+  // the seat is not the reason and the read-only line would misdirect a rep.
+  it("lets the not-configured notice speak alone when neither applies", async () => {
+    stubApi([], {
+      channelsNotConfigured: true,
+      me: meFixture({
+        roles: ["rep"],
+        allow: { channel_connection: ["read"] },
+      }),
+    });
+    render(
+      <>
+        <ConnectorsCard />
+        <SessionSettled />
+      </>,
+    );
+    expect(
+      await screen.findByText(
+        "Messaging channels are not configured on this installation.",
+      ),
+    ).toBeTruthy();
+    // Absence proves nothing while /me is in flight, when every grant is false.
+    await screen.findByText("session settled");
+    expect(screen.queryByText(readOnlyNote)).toBeNull();
   });
   // The address this installation puts in emailed links, on the card that
   // already asks whether it can reach the outside world.

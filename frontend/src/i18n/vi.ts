@@ -5606,6 +5606,8 @@ export const vi = {
   "connectors.telegramConnectCta": "Kết nối một bot Telegram",
   "connectors.telegramRosterLabel": "Bot đang chuyển tin nhắn",
   "connectors.telegramEmpty": "Chưa có bot nào được kết nối.",
+  "connectors.telegramReadOnly":
+    "Chỉ quản trị viên hoặc vận hành mới kết nối hoặc thay đổi được bot.",
   "connectors.telegramEditToken": "Thay token",
   "connectors.telegramDisconnectTitle": "Ngắt kết nối bot này?",
   "connectors.telegramDisconnectBody":

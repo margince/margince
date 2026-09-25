@@ -3,6 +3,7 @@ import { CalendarDays, Mail, RefreshCw, Send } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import { connectorsPollInterval } from "../app/capture-progress";
 import {
   Badge,
@@ -25,7 +26,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { BackfillPanel } from "./backfill";
 import { useCaptureSettings } from "./capture-settings";
-import { problemCode, problemMessageOf, throwProblem } from "./common";
+import { problemCode, problemMessageOf, throwProblem, useMe } from "./common";
 import {
   errorClassKey,
   missingSendGrant,
@@ -304,15 +305,15 @@ function useChannelConnections() {
 }
 
 // One live bot as a row: which bot it is on the left, whether it is live on the
-// right, and the two verbs that change it beside that.
+// right, and whichever of the two verbs that change it this reader holds.
 function TelegramConnectionRow({
   connection,
   onEdit,
   onDisconnect,
 }: Readonly<{
   connection: ChannelConnection;
-  onEdit: () => void;
-  onDisconnect: () => void;
+  onEdit?: () => void;
+  onDisconnect?: () => void;
 }>) {
   const t = useT();
   return (
@@ -331,14 +332,20 @@ function TelegramConnectionRow({
         </Badge>
       }
       control={
-        <div className="connector-actions">
-          <Button onClick={onEdit}>
-            <RefreshCw aria-hidden /> {t("connectors.telegramEditToken")}
-          </Button>
-          <Button variant="ghost" onClick={onDisconnect}>
-            {t("connectors.disconnect")}
-          </Button>
-        </div>
+        (onEdit || onDisconnect) && (
+          <div className="connector-actions">
+            {onEdit && (
+              <Button onClick={onEdit}>
+                <RefreshCw aria-hidden /> {t("connectors.telegramEditToken")}
+              </Button>
+            )}
+            {onDisconnect && (
+              <Button variant="ghost" onClick={onDisconnect}>
+                {t("connectors.disconnect")}
+              </Button>
+            )}
+          </div>
+        )
       }
     />
   );
@@ -408,8 +415,20 @@ function TelegramConnectorsPanel() {
     },
   });
 
-  const connections =
-    query.isSuccess && !query.data.notConfigured ? query.data.data : [];
+  // Three grants, three verbs: the seeded matrix moves them together for
+  // admin and ops, but an operator may narrow one alone.
+  const canCreate = useCanWrite("channel_connection", "create");
+  const canEdit = useCanWrite("channel_connection", "update");
+  const canDisconnect = useCanWrite("channel_connection", "delete");
+  // The probe, not just its answer: every grant reads false while /me is in
+  // flight, and the read-only line must not flash at an admin on each load.
+  const me = useMe();
+  const live = query.isSuccess && !query.data.notConfigured;
+  const connections = live ? query.data.data : [];
+  // A deployment with no messaging channels withholds the verbs from every
+  // seat, so the not-configured notice is the reason and this line stays quiet.
+  const readOnly =
+    me.isSuccess && live && !canCreate && !canEdit && !canDisconnect;
   const closeForms = () => {
     setConnectOpen(false);
     setEditingConnection(null);
@@ -423,8 +442,8 @@ function TelegramConnectorsPanel() {
       // titled "Telegram bot" — the card's own subject, said twice, with the
       // act beside it.
       titleAction={
-        query.isSuccess &&
-        !query.data.notConfigured &&
+        canCreate &&
+        live &&
         connections.length === 0 && (
           <Button
             data-testid="telegram-connect"
@@ -442,8 +461,11 @@ function TelegramConnectorsPanel() {
             sentence. Read here it is also the first thing under the title
             rather than a second line competing with it. */}
         <PanelIntro>{t("connectors.telegramSub")}</PanelIntro>
+        {readOnly && (
+          <PanelIntro>{t("connectors.telegramReadOnly")}</PanelIntro>
+        )}
         <TelegramNotice query={query} />
-        {query.isSuccess && !query.data.notConfigured && (
+        {live && (
           <SettingList>
             {connections.length === 0 ? (
               // What the card is FOR, in the roster's own place: which bot is
@@ -460,8 +482,14 @@ function TelegramConnectorsPanel() {
                 <TelegramConnectionRow
                   key={connection.id}
                   connection={connection}
-                  onEdit={() => setEditingConnection(connection)}
-                  onDisconnect={() => setDisconnecting(connection)}
+                  onEdit={
+                    canEdit ? () => setEditingConnection(connection) : undefined
+                  }
+                  onDisconnect={
+                    canDisconnect
+                      ? () => setDisconnecting(connection)
+                      : undefined
+                  }
                 />
               ))
             )}
