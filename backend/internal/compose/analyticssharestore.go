@@ -3,10 +3,10 @@
 
 package compose
 
-// Issuing, resolving and revoking a share link.
+// Issuing, listing, resolving and revoking a share link.
 //
 // A share is the one object in this tree that outlives the request that made
-// it and answers to somebody who is not signed in as its author. Three rules
+// it and answers to somebody who is not signed in as its author. Four rules
 // follow from that and none of them is optional:
 //
 //   - The raw token is returned ONCE and never stored. What the table holds is
@@ -15,6 +15,8 @@ package compose
 //     expiry is a caller-chosen "forever".
 //   - Opening re-checks the ISSUER's standing. A link is not a grant that
 //     survives its author's seat.
+//   - Listing and closing answer only for the issuing seat. A colleague's
+//     link is not there to be seen or closed.
 
 import (
 	"context"
@@ -272,6 +274,47 @@ func sameScopeSubject(a, b *ids.UUID) bool {
 	return *a == *b
 }
 
+// shareColumns is what every read of a share selects, bound POSITIONALLY to
+// scanShare's targets — neither changes without the other.
+const shareColumns = `id, kind, target, scope_kind, scope_id, snapshot_id,
+	created_by, expires_at, revoked_at, created_at`
+
+func scanShare(row pgx.Row) (Share, error) {
+	var out Share
+	err := row.Scan(&out.ID, &out.Kind, &out.Target, &out.Scope.Kind, &out.Scope.ID,
+		&out.SnapshotID, &out.CreatedBy, &out.ExpiresAt, &out.RevokedAt, &out.CreatedAt)
+	return out, err
+}
+
+// ListIssued answers the caller's own open shares, newest first — the links
+// they may still close. Never the token: the table holds only its digest.
+func (s *AnalyticsShareStore) ListIssued(ctx context.Context, tx pgx.Tx) ([]Share, error) {
+	// Create, as Issue and Revoke take it: the list is what this seat issued,
+	// and whoever may issue a link may see the links they issued.
+	if err := auth.Require(ctx, objectForecast, principal.ActionCreate); err != nil {
+		return nil, err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return nil, fmt.Errorf("compose: listing shares without an actor")
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT `+shareColumns+`
+		FROM analytics_share
+		WHERE created_by = $1 AND revoked_at IS NULL AND expires_at > $2
+		ORDER BY created_at DESC, id DESC`, actor.UserID, s.now())
+	if err != nil {
+		return nil, fmt.Errorf("compose: listing issued shares: %w", err)
+	}
+	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (Share, error) {
+		return scanShare(row)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading issued shares: %w", err)
+	}
+	return out, nil
+}
+
 // Resolve turns a raw token into the share it opens, or answers not-found.
 //
 // Every refusal is the SAME answer — expired, revoked, unknown digest, an
@@ -280,22 +323,16 @@ func sameScopeSubject(a, b *ids.UUID) bool {
 func (s *AnalyticsShareStore) Resolve(
 	ctx context.Context, tx pgx.Tx, rawToken string,
 ) (Share, error) {
-	var out Share
-	var scopeKind string
-	err := tx.QueryRow(ctx, `
-		SELECT id, kind, target, scope_kind, scope_id, snapshot_id,
-		       created_by, expires_at, revoked_at, created_at
+	out, err := scanShare(tx.QueryRow(ctx, `
+		SELECT `+shareColumns+`
 		FROM analytics_share
-		WHERE token_hash = $1`, bearer.Digest(rawToken),
-	).Scan(&out.ID, &out.Kind, &out.Target, &scopeKind, &out.Scope.ID,
-		&out.SnapshotID, &out.CreatedBy, &out.ExpiresAt, &out.RevokedAt, &out.CreatedAt)
+		WHERE token_hash = $1`, bearer.Digest(rawToken)))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Share{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return Share{}, fmt.Errorf("compose: resolving a share: %w", err)
 	}
-	out.Scope.Kind = scopeKind
 
 	if out.RevokedAt != nil || !out.ExpiresAt.After(s.now()) {
 		return Share{}, apperrors.ErrNotFound
@@ -314,18 +351,19 @@ func (s *AnalyticsShareStore) Resolve(
 
 // Revoke closes a share before its expiry. Idempotent: revoking a revoked
 // share is the outcome the caller asked for.
+//
+// Close answers only for the seat that issued the link — the same rows
+// ListIssued reads. Anybody else's share is ErrNotFound, so its existence stays
+// hidden.
 func (s *AnalyticsShareStore) Revoke(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	// CREATE, not delete. No role holds forecast:delete — a forecast reading is
-	// derived and a call supersedes rather than being rewritten, so the object
-	// is seeded create+read and nothing grants the verb (policy/defaults.go).
-	// Gating revocation on it made every share permanent: the issuer could mint
-	// a link and no seat in the installation could close it.
-	//
-	// Create is the right verb rather than a workaround. Revoking is not
-	// deleting a forecast; it is withdrawing a link the same seat was allowed
-	// to issue, and whoever may issue one may close one.
+	// CREATE, not delete: no role holds forecast:delete (policy/defaults.go),
+	// and withdrawing a link is the issuing seat's act rather than a deletion.
 	if err := auth.Require(ctx, objectForecast, principal.ActionCreate); err != nil {
 		return err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return fmt.Errorf("compose: revoking a share without an actor")
 	}
 	// The row is locked before it is read-modified-written. Idempotence here
 	// is COALESCE over a value the statement itself reads, so two concurrent
@@ -340,8 +378,8 @@ func (s *AnalyticsShareStore) Revoke(ctx context.Context, tx pgx.Tx, id ids.UUID
 	err := tx.QueryRow(ctx, `
 		UPDATE analytics_share
 		SET revoked_at = COALESCE(revoked_at, $2), version = version + 1, updated_at = now()
-		WHERE id = $1
-		RETURNING revoked_at`, id, s.now()).Scan(&revoked)
+		WHERE id = $1 AND created_by = $3
+		RETURNING revoked_at`, id, s.now(), actor.UserID).Scan(&revoked)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperrors.ErrNotFound
 	}
