@@ -452,6 +452,42 @@ export const automationCatalog = [
 // say" on screen for a reason the test is not about — and an assertion looking
 // for those words then passes whatever stage-age does.
 export const reportFixtures: Record<string, unknown> = {
+  // The Analytics stage table's own request: one CONVERTED row per stage, under
+  // the aliases REPORT_AGGREGATES asks for, and a handle naming those same
+  // aggregates. The measured stage carries it; the second does not.
+  "pipeline-current": {
+    report: "pipeline-current",
+    plan: { group_by: ["stage_id"] },
+    columns: [
+      "stage_id",
+      "raw_minor",
+      "weighted_minor",
+      "deal_count",
+      "priced_deals",
+    ],
+    rows: [
+      {
+        stage_id: "s1",
+        raw_minor: 1_250_000,
+        weighted_minor: 250_000,
+        deal_count: 1,
+        priced_deals: 1,
+        derivation_url:
+          "/v1/reports/pipeline-current/derivation?by=stage_id&agg=sum:amount_base_minor:raw_minor&agg=sum:weighted_base_minor:weighted_minor&agg=count::deal_count&agg=count:amount_base_minor:priced_deals&stage_id=s1",
+      },
+      {
+        stage_id: "s2",
+        raw_minor: 4_800_000,
+        weighted_minor: 1_920_000,
+        deal_count: 2,
+        priced_deals: 2,
+      },
+    ],
+    total_rows: 2,
+    as_of: "2026-03-04T09:00:00Z",
+    timezone: "Europe/Berlin",
+    base_currency: "EUR",
+  },
   // Stage ids are the SHARED pipeline's, not invented ones: StageAgeTable joins
   // them to `stages` for the name, and an id matching nothing renders every row
   // as "unknown stage" — a table that looks populated and names no stage.
@@ -460,11 +496,15 @@ export const reportFixtures: Record<string, unknown> = {
     plan: { group_by: ["stage_id"] },
     columns: ["stage_id", "deal_count", "median_days", "p75_days"],
     rows: [
+      // The measured stage carries its own drill-through handle, the unmeasured
+      // one none: a row the server sent without one draws no trigger.
       {
         stage_id: "s1",
         deal_count: 6,
         median_days: 12,
         p75_days: 21,
+        derivation_url:
+          "/v1/reports/stage-age/derivation?by=stage_id&agg=count::deal_count&stage_id=s1",
       },
       // Under the sample floor: the server answers null and the card must say
       // so in words rather than drawing a zero.
@@ -567,6 +607,27 @@ export const reportFixtures: Record<string, unknown> = {
     timezone: "Europe/Berlin",
     base_currency: "EUR",
   },
+};
+
+// What any drill-through handle resolves to: a definition, the source rows and
+// the frame they were cut in. One record is masked out, so the notice that says
+// so is on screen wherever the drawer is swept.
+export const derivationFixture = {
+  report: "stage-age",
+  definition: "Anzahl offener Deals in der Phase Qualify",
+  plan: { group_by: ["stage_id"] },
+  columns: ["label", "amount_base_minor"],
+  rows: [
+    {
+      label: "Brandt Automotive, Flottenumrüstung",
+      amount_base_minor: 1_250_000,
+    },
+    { label: "BÄR Pharma, Verpackungsprüfung", amount_base_minor: 480_000 },
+  ],
+  total_rows: 2,
+  excluded_by_permission: 1,
+  as_of: "2026-03-04T09:00:00Z",
+  as_of_pinned: true,
 };
 
 export const seededAutomation = {
@@ -2426,6 +2487,17 @@ export async function mockApi(
     // read: a stage-age card looking for `median_days` on a row carrying
     // `raw_minor` renders its empty state, and a sweep over those tabs proves
     // the fixture rather than the screen.
+    // Refused the way the server refuses it: a grouping dimension the request
+    // names without binding, as a value or as `isnull`, explains no one cell.
+    if (path.startsWith("/reports/") && path.endsWith("/derivation")) {
+      const unset = url.searchParams.getAll("isnull");
+      const unbound = url.searchParams
+        .getAll("by")
+        .filter((dim) => !url.searchParams.has(dim) && !unset.includes(dim));
+      return unbound.length > 0
+        ? json({ code: "report_field_not_allowed", status: 422 }, 422)
+        : json(derivationFixture);
+    }
     if (path.startsWith("/reports/") && !path.includes("/derivation")) {
       const key = path.slice("/reports/".length);
       const shaped = reportFixtures[key];

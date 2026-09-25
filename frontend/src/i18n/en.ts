@@ -560,6 +560,11 @@ export const en = {
     "This link does not record when the number was calculated, so these figures were recalculated now. If an exchange rate changed since, they may not match the number you clicked.",
   "explain.title": "How this number is built",
   "explain.rate": "rate {rate} on {date}",
+  "explain.cell": "Explain {figure}",
+  "explain.excluded_one":
+    "1 record is left out of this number and the rows below. A field on it is hidden for your role.",
+  "explain.excluded_other":
+    "{count} records are left out of this number and the rows below. A field on them is hidden for your role.",
 
   "board.count": "{count} deals",
   "board.weighted": "weighted {value}",

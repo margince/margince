@@ -2007,6 +2007,25 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expectNoAaViolations(page, "brief — the command palette open");
   });
 
+  // A report row's explain drawer, with the permission notice in it: the
+  // closed page sweeps only the icon-only trigger, never what it opens.
+  test("no AA violations with a report row's explain drawer open", async ({
+    page,
+  }) => {
+    await page.goto("/#/analytics/performance");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page
+      .getByRole("button", {
+        name: de["explain.cell"].replace("{figure}", "Qualify"),
+      })
+      .click();
+    const drawer = page.getByRole("dialog");
+    await expect(drawer.getByText(de["explain.excluded_one"])).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "analytics — a row's explain drawer open");
+  });
+
   // A list header FOLDS its verbs into one overflow menu below 1100px
   // (design-system/listsurface.tsx), which is a different arrangement rather
   // than the same one narrower: the buttons are inside a disclosure, so the
