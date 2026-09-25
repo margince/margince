@@ -9418,16 +9418,20 @@ export const de = {
   "worklist.loading": "Worklist wird geladen…",
   "worklist.queue": "Heute",
   "worklist.review": "Zu prüfen",
-  "worklist.more": "Mehr anzeigen",
+  "worklist.more": "Mehr vom Tag laden",
+  "worklist.more.where":
+    "Neue Einträge können unter „{today}“ oder „{review}“ erscheinen.",
   "worklist.more.failed":
     "Weitere Einträge wurden nicht geladen. Versuche es erneut.",
   "worklist.summary":
     "{urgent} dringend · {due} fällig · {inPlay} in Arbeit · {lower} Routine · {total} gesamt",
   "worklist.summary.noMiddle":
     "{urgent} dringend · {due} fällig · {lower} Routine · {total} gesamt",
+  "worklist.summary.split":
+    "{urgent} dringend · {due} fällig · {planned} geplant · {review} zu prüfen",
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.review.partial":
-    "{loaded} von {total} angezeigt. Lade weitere, um den Rest zu sehen.",
+    "{loaded} von {total} angezeigt. Lade unten mehr vom Tag, um den Rest zu sehen.",
   "worklist.completeness.bounded_one":
     "{shown} angezeigt · {sources} Quelle hat mehr",
   "worklist.completeness.bounded_other":

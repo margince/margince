@@ -501,26 +501,6 @@ function WorklistBody({
                   {unbandedRows(today).length > 0 && (
                     <QueueRows items={unbandedRows(today)} {...rowProps} />
                   )}
-                  {/* The way to the rest of the backlog.
-                  Acceptance asks that the queue's counts be reachable, and
-                  before this the page stopped at its first read with no route
-                  to the rows behind it — the figures said work existed and
-                  offered no way to it. */}
-                  {hasMore && (
-                    <div className="worklist-more">
-                      <Button onClick={onMore} pending={loadingMore}>
-                        {t("worklist.more")}
-                      </Button>
-                      {/* A refused page leaves the button looking exactly as an
-                      unpressed one does. Saying so is what tells the reader
-                      the backlog is still there and worth asking for again. */}
-                      {moreFailed && (
-                        <ErrorLine inline>
-                          {t("worklist.more.failed")}
-                        </ErrorLine>
-                      )}
-                    </div>
-                  )}
                 </Panel>
               }
             />
@@ -538,6 +518,27 @@ function WorklistBody({
             shortfall={reviewMissing}
             rows={rowProps}
           />
+          {/* The way to the rest of the day, below BOTH panels: a next page's
+          rows land in whichever one their destination names, so a control
+          inside either would look dead whenever they all went to the other. */}
+          {queue.length > 0 && hasMore && (
+            <div className="worklist-more">
+              <Button onClick={onMore} pending={loadingMore}>
+                {t("worklist.more")}
+              </Button>
+              <p className="t-caption">
+                {t("worklist.more.where", {
+                  today: t("worklist.queue"),
+                  review: t("worklist.review"),
+                })}
+              </p>
+              {/* A refused page leaves the button looking exactly as an
+              unpressed one does, so the failure says the rest is still there. */}
+              {moreFailed && (
+                <ErrorLine inline>{t("worklist.more.failed")}</ErrorLine>
+              )}
+            </div>
+          )}
           {/* Team oversight belongs to the explicitly selected wider scope. */}
           {owner === "" &&
             scope !== "mine" &&
@@ -603,8 +604,8 @@ function ReviewPanel({
       // own inset, so the sentence started a full `--padPanel` to the left of
       // every row above it and read as a line that had escaped the card.
       //
-      // The panel has no cursor of its own — review rows arrive as a side
-      // effect of paging the day — so a reader with an approval past the page
+      // The panel has no cursor of its own — review rows arrive through the
+      // day's one control below it — so a reader with an approval past the page
       // cut sees a panel that looks complete and nothing that says otherwise.
       // The day's own total is the denominator, never drawn bare: it counts
       // every candidate the read weighed, so alone it would claim rows this

@@ -9342,15 +9342,18 @@ export const vi = {
   "worklist.loading": "Đang đọc ngày của bạn…",
   "worklist.queue": "Hôm nay",
   "worklist.review": "Cần xem xét",
-  "worklist.more": "Xem thêm",
+  "worklist.more": "Tải thêm trong ngày",
+  "worklist.more.where": "Mục mới có thể nằm ở “{today}” hoặc “{review}”.",
   "worklist.more.failed": "Không tải thêm được. Hãy thử lại.",
   "worklist.summary":
     "{urgent} khẩn · {due} đến hạn · {inPlay} đang xử lý · {lower} thường lệ — tổng {total}",
   "worklist.summary.noMiddle":
     "{urgent} khẩn · {due} đến hạn · {lower} thường lệ — tổng {total}",
+  "worklist.summary.split":
+    "{urgent} khẩn · {due} đến hạn · {planned} theo kế hoạch · {review} cần xem xét",
   "worklist.completeness": "Hiển thị {shown} trong {considered}",
   "worklist.review.partial":
-    "Hiển thị {loaded} trong {total} — xem tiếp trong ngày để thấy phần còn lại",
+    "Hiển thị {loaded} trong {total} — tải thêm trong ngày ở bên dưới để thấy phần còn lại",
   "worklist.completeness.bounded_one":
     "Hiển thị {shown} · {sources} nguồn còn nữa",
   "worklist.completeness.bounded_other":

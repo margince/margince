@@ -14,7 +14,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
+import { day, panelNamed, renderWorklist, row, stub } from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();
@@ -111,19 +111,6 @@ describe("the day is drawn apart from what it is not", () => {
     });
   });
 });
-
-// panelNamed is the panel a heading belongs to.
-//
-// Panel draws a bare <section> with no accessible name, so `getByRole("region")`
-// finds nothing — the heading is the only handle, and its panel is what the
-// assertion needs to look inside.
-function panelNamed(heading: HTMLElement): HTMLElement {
-  const panel = heading.closest("section");
-  if (!panel) {
-    throw new Error(`no panel around the heading "${heading.textContent}"`);
-  }
-  return panel as HTMLElement;
-}
 
 describe("the day's headings describe the day", () => {
   it("draws no empty heading for work that moved to review", async () => {
