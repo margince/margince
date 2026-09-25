@@ -138,14 +138,24 @@ function derivationHeader(col: string, t: (key: MessageKey) => string): string {
 // not read, and the column appears as soon as one row was named. Dropping the
 // id on that alone would blank the withheld rows' only identifier, so the rows
 // a reader can least account for become the ones they cannot identify at all.
+//
+// Which record a row IS leads, whatever order the plan selected: in a narrow
+// drawer the columns past the edge are the ones scrolled to, and a row showing
+// its owner and currency but not its name is a row nobody can place.
 export function derivationColumns(derivation: Derivation): string[] {
   const rows = derivation.rows ?? [];
   const everyRowNamed =
     derivation.columns.includes("label") &&
     rows.length > 0 &&
     rows.every((row) => typeof row.label === "string" && row.label !== "");
-  return derivation.columns.filter((col) => !everyRowNamed || col !== "id");
+  const shown = derivation.columns.filter(
+    (col) => !everyRowNamed || col !== "id",
+  );
+  const identity = IDENTITY_COLUMNS.filter((col) => shown.includes(col));
+  return [...identity, ...shown.filter((col) => !identity.includes(col))];
 }
+
+const IDENTITY_COLUMNS = ["label", "id"];
 
 // Which money a row's minor-unit figure is written in.
 //
@@ -381,6 +391,7 @@ export function CellExplain({
   const trigger = (
     <>
       <IconAction
+        inline
         label={t("explain.cell", { figure })}
         icon={<Info aria-hidden />}
         onClick={() => setOpen(true)}

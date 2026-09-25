@@ -312,7 +312,20 @@ describe("drill-through columns", () => {
           [{ id: "a", label: "Acme" }, { id: "b" }],
         ),
       ),
-    ).toEqual(["id", "label", "amount_minor"]);
+    ).toEqual(["label", "id", "amount_minor"]);
+  });
+
+  // A plan may select the name after every measure; the reader still needs to
+  // know which record a row is before what it is worth.
+  it("leads with the record's name whatever order the plan selected", () => {
+    expect(
+      derivationColumns(
+        shaped(
+          ["currency", "owner_id", "amount_base_minor", "label"],
+          [{ label: "Acme" }],
+        ),
+      ),
+    ).toEqual(["label", "currency", "owner_id", "amount_base_minor"]);
   });
 
   it("keeps the id when no row could be named", () => {
