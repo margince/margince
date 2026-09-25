@@ -37,6 +37,9 @@ The Analytics screen in Margince has six sections, switched with the **Analytics
 To share a forecast view in Margince, open **Analytics** → **Forecast**, press **Share view**, choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**.
 The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows. Only the Forecast section has **Share view**; other sections have no share or export button. Opening a link does not yet show the shared view (see "Sharing a view" below). Also called: send a report, share dashboard, report link.
 
+### How do I close a shared forecast link?
+To close a forecast link in Margince before its 30 days run out, press **Close link** in the **Your link** dialog that showed it, right after **Create link**. The dialog then says **Link closed**, and anyone who opens the link is refused. Once that dialog is closed the link cannot be closed from the app: no screen lists the links you have issued, so it runs until it expires. Also called: revoke a share, cancel a report link, stop sharing.
+
 ### How do I see a win rate or export a report?
 Margince does not compute a win rate and has no export button on the Analytics screen. **Won and lost** under **Performance** gives won and lost counts and value, so you can compare them yourself. To get deal rows out, open **Filters and views** in the sidebar, choose **Deals** as the **Record type**, build a filter, then press **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
 
@@ -358,7 +361,7 @@ An agent can neither mint one nor open one.
 **Honest state of this feature today.** The link mints, but the rest is not
 wired up: opening one lands on the ordinary Analytics screen under your own
 population rather than the shared view, the **Snapshot** option cannot yet
-succeed, and there is no control in the app to close a link before its 30 days
-run out — and the CSV export behind it is
+succeed, a link can be closed early only with **Close link** in the dialog that
+issued it — and the CSV export behind it is
 unreachable. Treat Share view as unfinished rather than as a way to get
 figures to somebody outside your own seat.

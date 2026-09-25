@@ -20,8 +20,8 @@ type ShareKind = "live" | "snapshot";
 
 // The link, held in state and never re-derivable. The server returns the token
 // once; there is nothing to read it back from, which is why the dialog says
-// what leaving costs before it lets the reader leave.
-type IssuedShare = Readonly<{ token: string; expiresAt: string }>;
+// what leaving costs before it lets the reader leave. The id is what closes it.
+type IssuedShare = Readonly<{ id: string; token: string; expiresAt: string }>;
 
 export function ShareViewButton({
   target,
@@ -98,7 +98,11 @@ function ShareDialog({
       return data;
     },
     onSuccess: (data) =>
-      setIssued({ token: data.token, expiresAt: data.expires_at }),
+      setIssued({
+        id: data.id,
+        token: data.token,
+        expiresAt: data.expires_at,
+      }),
   });
 
   if (issued) {
@@ -145,6 +149,11 @@ function ShareDialog({
 // read returns it. So Copy is the primary act and Done is the quiet one, and
 // the caution says in words what leaving costs — the same shape the webhook
 // signing secret settled on, for the same reason.
+//
+// Close link ends it before its expiry, for a link sent to the wrong address.
+// It is offered here because this is the one place the share is still known:
+// no read lists the shares a reader has issued, so once this dialog is gone
+// the link runs until it expires.
 function ShareLinkReveal({
   share,
   onClose,
@@ -157,6 +166,30 @@ function ShareLinkReveal({
     copied: t("analytics.share.copied"),
     remedy: t("analytics.share.copyFailed"),
   });
+  const revoke = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await api.DELETE("/forecast/shares/{id}", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+  });
+
+  if (revoke.isSuccess) {
+    return (
+      <ConfirmModal
+        open
+        onClose={onClose}
+        title={t("analytics.share.closedTitle")}
+        confirmLabel={t("analytics.share.done")}
+        onConfirm={onClose}
+      >
+        <p>{t("analytics.share.closedBody")}</p>
+      </ConfirmModal>
+    );
+  }
 
   return (
     <ConfirmModal
@@ -165,8 +198,20 @@ function ShareLinkReveal({
       title={t("analytics.share.linkTitle")}
       confirmLabel={copy.label}
       onConfirm={copy.copy}
+      error={revoke.error ? problemMessageOf(revoke.error, t) : undefined}
       actionsLead={
-        <Button onClick={onClose}>{t("analytics.share.done")}</Button>
+        <>
+          <Button onClick={onClose} disabled={revoke.isPending}>
+            {t("analytics.share.done")}
+          </Button>
+          <Button
+            variant="danger"
+            pending={revoke.isPending}
+            onClick={() => revoke.mutate(share.id)}
+          >
+            {t("analytics.share.revoke")}
+          </Button>
+        </>
       }
     >
       <p id={headingId}>{t("analytics.share.linkWarning")}</p>

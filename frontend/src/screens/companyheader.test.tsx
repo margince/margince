@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -9,11 +9,11 @@ import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { CompanyDetails } from "./companydetails";
-import { CompanyFacts } from "./companyfacts";
 import {
   CompanyActionBadges,
   CompanyRelationshipBadges,
 } from "./companyheader";
+import { CompanyIdentityFacts } from "./companyheaderfacts";
 
 // Who wrote the record and the record's own verbs are pinned in
 // companyheaderfacts.test.tsx and companyheaderactions.test.tsx: the two
@@ -144,7 +144,7 @@ function renderInApp(ui: ReactNode) {
 // one mount, so the three roster states below are asserted where a reader
 // actually meets them.
 function renderFacts() {
-  renderInApp(<CompanyFacts company={COMPANY} />);
+  renderInApp(<CompanyIdentityFacts company={COMPANY} />);
 }
 
 // Who OWNS the record, in its facts box and off the same roster read. The owner
@@ -212,6 +212,76 @@ describe("who owns this record", () => {
     // An owner the roster cannot name is still not shown as a uuid: waiting
     // will not resolve them, and their id answers no question a reader has.
     expect(document.body.textContent).not.toContain("u-owner");
+  });
+});
+
+// An UNOWNED account is writable by nobody, so the header's owner cell is the
+// only door out of that state: picking yourself there is the claim, not a patch
+// the server would refuse on a row nobody owns.
+describe("claiming an unowned account", () => {
+  const UNOWNED: Company = { ...COMPANY, owner_id: undefined, writable: false };
+
+  function stubClaim(reader: typeof READER = READER) {
+    const calls: Array<{
+      method: string;
+      path: string;
+      ifMatch: string | null;
+    }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const { pathname } = new URL(request.url);
+        calls.push({
+          method: request.method,
+          path: pathname,
+          ifMatch: request.headers.get("If-Match"),
+        });
+        const body = pathname.endsWith("/me")
+          ? { user: { id: "u-reader", display_name: "The Reader" }, ...reader }
+          : pathname.endsWith("/claim")
+            ? { ...UNOWNED, owner_id: "u-reader", writable: true, version: 2 }
+            : {
+                data: [{ id: "u-reader", display_name: "The Reader" }],
+                page: { has_more: false, next_cursor: null },
+              };
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }),
+    );
+    return calls;
+  }
+
+  it("claims the account when the reader picks themselves", async () => {
+    const calls = stubClaim();
+    const user = userEvent.setup();
+    renderInApp(<CompanyIdentityFacts company={UNOWNED} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Change Owner" }),
+    );
+    await user.click(await screen.findByRole("option", { name: "The Reader" }));
+
+    await waitFor(() =>
+      expect(calls.find((call) => call.path.endsWith("/claim"))).toMatchObject({
+        method: "POST",
+        path: "/v1/records/company/o-1/claim",
+        ifMatch: "1",
+      }),
+    );
+    // The claim door, never a PATCH: an ownerless row is nobody's to patch.
+    expect(calls.some((call) => call.method === "PATCH")).toBe(false);
+  });
+
+  it("offers no claim to a reader without the grant to take accounts", async () => {
+    stubClaim({
+      authorization: meFixture({ allow: { company: ["read"] } }).authorization,
+    });
+    renderInApp(<CompanyIdentityFacts company={UNOWNED} />);
+
+    expect(await screen.findByText(en["field.unset"])).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Change Owner" })).toBeNull();
   });
 });
 

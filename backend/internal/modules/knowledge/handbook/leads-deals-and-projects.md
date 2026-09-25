@@ -238,7 +238,7 @@ Read-only seats cannot create projects.
 Also called: start a new project for a client, new engagement.
 
 ### Can I create a project from a company page or a deal?
-A company page in Margince has no New project button: the **Add** under its **Projects** panel only switches to the **Deals and projects** tab, which offers **New deal**. To start a project for that company, use **Projects** → **New project** and pick the company.
+To create a project from a company page in Margince, open its **Deals and projects** tab, choose **New project** in the **Projects** panel, enter a **Project name** and choose **Create**. The project is created on that company. An archived company has no **New project**.
 You can also start one while creating a deal: on **Deals** → **New deal**, choose the **Company**, then under **Project** pick **New project…** and enter a **Project name**. The project is created on the deal's company.
 Also called: add a project to a client.
 

@@ -189,3 +189,10 @@ how do I upload the signed contract for a customer
 # after the final held-out round
 where do I see my team's pipeline
 how do I ask margince a question about a company
+
+# entry points that had no way in from the app
+how do I start a project from a company page
+how do I rename a saved view
+how do I delete a saved view
+how do I claim a company nobody owns
+how do I revoke a forecast share link

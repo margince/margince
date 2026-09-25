@@ -130,4 +130,80 @@ describe("sharing a forecast view", () => {
     expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
     expect(screen.getByText(/copy it manually/i)).toBeTruthy();
   });
+
+  it("closes the link it just issued, before its expiry", async () => {
+    const issue = shareStub();
+    const calls: Array<{ method: string; path: string }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        calls.push({
+          method: request.method,
+          path: new URL(request.url).pathname,
+        });
+        return request.method === "DELETE"
+          ? new Response(null, { status: 204 })
+          : issue();
+      }),
+    );
+    const user = userEvent.setup();
+    render(
+      <ShareViewButton
+        target="forecast"
+        scope={{ kind: "workspace", label: "Whole company" }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Share view" }));
+    await user.click(screen.getByRole("button", { name: "Create link" }));
+    await user.click(await screen.findByRole("button", { name: "Close link" }));
+
+    // The dialog stops offering a link that no longer opens.
+    expect(await screen.findByText("Link closed")).toBeTruthy();
+    expect(screen.queryByTestId("forecast-share-link")).toBeNull();
+    expect(calls).toContainEqual({
+      method: "DELETE",
+      path: "/v1/forecast/shares/share-1",
+    });
+  });
+
+  it("keeps the link on screen with the reason when closing is refused", async () => {
+    const issue = shareStub("tok-kept");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) =>
+        request.method === "DELETE"
+          ? new Response(
+              JSON.stringify({
+                title: "Forbidden",
+                status: 403,
+                detail: "Only the colleague who issued a share can close it.",
+              }),
+              {
+                status: 403,
+                headers: { "Content-Type": "application/problem+json" },
+              },
+            )
+          : issue(),
+      ),
+    );
+    const user = userEvent.setup();
+    render(
+      <ShareViewButton
+        target="forecast"
+        scope={{ kind: "workspace", label: "Whole company" }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Share view" }));
+    await user.click(screen.getByRole("button", { name: "Create link" }));
+    await user.click(await screen.findByRole("button", { name: "Close link" }));
+
+    expect(
+      await screen.findByText(/Only the colleague who issued a share/),
+    ).toBeTruthy();
+    expect(screen.getByTestId("forecast-share-link").textContent).toContain(
+      "tok-kept",
+    );
+  });
 });

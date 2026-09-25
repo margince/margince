@@ -178,8 +178,10 @@ A view saved on **Filters and views** is opened there instead, with **Load saved
 Also called: use my saved list, go back to my filter.
 
 ### How do I rename or delete a saved view?
-You cannot rename or delete a saved view from the Margince app today: saved views have no rename or delete button. To replace one, set the list up again and save it under a new name.
-Because saved views are private, a view you no longer want is visible to nobody but you.
+To rename or delete a saved view in Margince, open the list it was saved on and press **Manage views** at the right of the toolbar. **Saved views** lists each view.
+1. To rename one, choose **Rename** on its row, change the **Name** and press **Save**.
+2. To delete one, choose **Delete** on its row, then **Delete view**. Its tab goes; the records it listed do not change.
+**Manage views** appears once you have saved a view for that list.
 Also called: remove a saved view, edit a view, change a view's name.
 
 ### Can I share a saved view with my team?

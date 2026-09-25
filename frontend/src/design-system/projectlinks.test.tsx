@@ -161,7 +161,7 @@ describe("ProjectLinks", () => {
       readOnly: true,
       linked: [{ project_id: "p1", name: "ERP rollout" }],
       detach: async () => undefined,
-      onCreate: () => undefined,
+      create: <button type="button">New project</button>,
     });
     for (const verb of [
       "New project",

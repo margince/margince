@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import { toMinorUnits } from "../format/minorunits";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
@@ -155,6 +156,12 @@ export function NewProjectAction({
   companyName,
 }: Readonly<{ companyId: string; companyName: string }>) {
   const t = useT();
+  // The project grant and the seat, not the company's own writability: the
+  // write lands on a new project, and the company is only named on it.
+  const canCreate = useCanWrite("project", "create");
+  if (!canCreate) {
+    return null;
+  }
   const fields: CreateField[] = [
     { key: "name", label: "project.name", required: true },
     { key: "description", label: "project.description", type: "textarea" },
