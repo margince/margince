@@ -119,12 +119,14 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 		// the model was reached and decided. Counting any of the three would
 		// report a responding lane as down (answeredSentinels).
 		//
-		// Latest is ordered by occurred_at, then attempt: every attempt of one
-		// logical call is written in one transaction and shares occurred_at,
-		// so within a call the higher attempt is the later one.
+		// Latest is ordered by occurred_at, then attempt, then id: every
+		// attempt of one logical call is written in one transaction and shares
+		// occurred_at, so within a call the higher attempt is the later one;
+		// two calls committed together can tie on both, and the id — a UUIDv7
+		// minted at insert — names the row written last.
 		rows, err := tx.Query(ctx, `
 			WITH attempts AS (
-			  SELECT tier, occurred_at, attempt, latency_ms,
+			  SELECT tier, occurred_at, attempt, id, latency_ms,
 			         (error_sentinel IS NOT NULL
 			          AND error_sentinel <> ''
 			          AND NOT error_sentinel = ANY($2)) AS failed,
@@ -137,14 +139,14 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 			SELECT tier,
 			       count(*)                                   AS calls,
 			       count(*) FILTER (WHERE failed)             AS failures,
-			       coalesce((array_agg(sentinel ORDER BY occurred_at DESC, attempt DESC)
+			       coalesce((array_agg(sentinel ORDER BY occurred_at DESC, attempt DESC, id DESC)
 			                 FILTER (WHERE failed))[1], '')   AS last_sentinel,
 			       max(occurred_at)                           AS last_call_at,
 			       coalesce(percentile_disc(0.5) WITHIN GROUP (ORDER BY latency_ms), 0) AS median_latency,
 			       -- The LATEST attempt's own outcome, which is what decides
 			       -- health. array_agg over the same ordering the sentinel
 			       -- uses, so both describe the same most-recent row.
-			       coalesce((array_agg(failed ORDER BY occurred_at DESC, attempt DESC))[1], false) AS last_failed
+			       coalesce((array_agg(failed ORDER BY occurred_at DESC, attempt DESC, id DESC))[1], false) AS last_failed
 			  FROM attempts
 			 GROUP BY tier
 			 ORDER BY tier`, since, answeredSentinels)

@@ -124,3 +124,31 @@ func TestRungHealthDoesNotCountAnOutcomeAsAFailure(t *testing.T) {
 		t.Errorf("%s = %+v, want 2 calls, 0 failed, healthy", TierCheapCloud, cheap)
 	}
 }
+
+// Two calls committed together share occurred_at, and each is its own attempt
+// 1, so only the row id — minted in insert order — tells which came last. The
+// read must name the same row as latest whichever order the two arrive in.
+func TestRungHealthBreaksAnOccurredAtAndAttemptTieByTheLaterRow(t *testing.T) {
+	cases := []struct {
+		name        string
+		failedFirst bool
+		wantHealthy bool
+	}{
+		{"the answered call landed last", true, true},
+		{"the failed call landed last", false, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			failed := ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", "provider_unavailable")
+			answered := ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", "")
+			together := []Call{answered, failed}
+			if tc.failedFirst {
+				together = []Call{failed, answered}
+			}
+			rung := rungHealthAfter(t, together)[string(TierCheapCloud)]
+			if rung.Calls != 2 || rung.Failures != 1 || rung.Healthy() != tc.wantHealthy {
+				t.Errorf("%s = %+v, want 2 calls, 1 failed, healthy=%v", TierCheapCloud, rung, tc.wantHealthy)
+			}
+		})
+	}
+}
