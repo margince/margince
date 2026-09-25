@@ -349,12 +349,9 @@ func (s *AnalyticsShareStore) Resolve(
 	return out, nil
 }
 
-// Revoke closes a share before its expiry. Idempotent: revoking a revoked
-// share is the outcome the caller asked for.
-//
-// Close answers only for the seat that issued the link — the same rows
-// ListIssued reads. Anybody else's share is ErrNotFound, so its existence stays
-// hidden.
+// Revoke closes a share before its expiry. It answers for any share the
+// calling seat issued, open or not — an expired or closed one is a no-op — and
+// anybody else's is ErrNotFound, so its existence stays hidden.
 func (s *AnalyticsShareStore) Revoke(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// CREATE, not delete: no role holds forecast:delete (policy/defaults.go),
 	// and withdrawing a link is the issuing seat's act rather than a deletion.

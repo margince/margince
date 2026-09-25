@@ -13967,8 +13967,8 @@ export interface paths {
         /**
          * List the share links you issued that still serve.
          * @description The caller's own open shares — not revoked and not yet expired — newest first.
-         *     Another seat's links are never listed; these are the rows `DELETE
-         *     /forecast/shares/{id}` answers for.
+         *     Another seat's links are never listed, and `DELETE /forecast/shares/{id}` answers
+         *     404 for them.
          *
          *     The token is never returned again. It was shown once, when the link was issued,
          *     and the table holds only its digest.
@@ -14015,12 +14015,9 @@ export interface paths {
         post?: never;
         /**
          * Close a share link before it expires.
-         * @description Close answers only for the seat that issued the link — the same rows
-         *     `GET /forecast/shares` lists. A 404 means there is no share of yours by that id,
-         *     whether or not somebody else issued one.
-         *
-         *     Idempotent: revoking your own revoked share is the outcome you asked for, and
-         *     answers 204 either way.
+         * @description Close answers for any share the calling seat issued, open or not: closing one that
+         *     has expired or is already closed changes nothing and answers 204. Any other id is a
+         *     404 — there is no share of yours by that id, whether or not somebody else issued one.
          *
          *     Revocation and expiry are both real and neither replaces the other. An expiry alone
          *     means a link sent to the wrong address stays open until it lapses; a revocation
