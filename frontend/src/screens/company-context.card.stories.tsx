@@ -165,3 +165,11 @@ export const Sparse: Story = {
     fields: [],
   }),
 };
+
+// One confirmed statement: the footer's count in the singular.
+export const OneConfirmed: Story = {
+  render: story(CAPABILITIES, EDITOR, {
+    ...PROFILE,
+    fields: PROFILE.fields.slice(0, 1),
+  }),
+};

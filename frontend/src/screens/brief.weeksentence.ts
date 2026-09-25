@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { formatNumber } from "../format/format";
+import { type Locale, type PluralBase, pluralKey } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { WeeklyReview } from "./brief.queries";
 import type { BriefSentence } from "./brief.sentence";
@@ -20,6 +22,15 @@ import type { BriefSentence } from "./brief.sentence";
 // wants the outcome before the debt; the carry follows because it is the part
 // that is still theirs on Monday.
 
+type Said = { key: MessageKey; values: Record<string, string> };
+
+function counted(locale: Locale, base: PluralBase, count: number): Said {
+  return {
+    key: pluralKey(locale, base, count),
+    values: { count: formatNumber(count, locale) },
+  };
+}
+
 /**
  * The week's largest movement, as the key naming it and the figure to fill.
  *
@@ -28,9 +39,7 @@ import type { BriefSentence } from "./brief.sentence";
  * are not comparable and picking the bigger integer would let twelve routed
  * leads outrank the deal that paid for the quarter.
  */
-function resultOf(
-  review: WeeklyReview,
-): { key: MessageKey; values: Record<string, string> } | null {
+function resultOf(review: WeeklyReview, locale: Locale): Said | null {
   const c = review.counts;
   if (c.deals_won > 0) {
     // THE COUNT, NOT THE MONEY. What the wins were worth is already the Won
@@ -38,34 +47,22 @@ function resultOf(
     // (#3898) — and a figure printed twice on one page is two places a reader
     // has to reconcile. The sentence says what the week did; the strip says
     // what it was worth.
-    return { key: "brief.week.won", values: { count: String(c.deals_won) } };
+    return counted(locale, "brief.week.won", c.deals_won);
   }
   if (c.deals_lost > 0) {
-    return { key: "brief.week.lost", values: { count: String(c.deals_lost) } };
+    return counted(locale, "brief.week.lost", c.deals_lost);
   }
   if (c.deals_moved > 0) {
-    return {
-      key: "brief.week.moved",
-      values: { count: String(c.deals_moved) },
-    };
+    return counted(locale, "brief.week.moved", c.deals_moved);
   }
   if (c.meetings_held > 0) {
-    return {
-      key: "brief.week.met",
-      values: { count: String(c.meetings_held) },
-    };
+    return counted(locale, "brief.week.met", c.meetings_held);
   }
   if (c.leads_answered_in_target > 0) {
-    return {
-      key: "brief.week.responses",
-      values: { count: String(c.leads_answered_in_target) },
-    };
+    return counted(locale, "brief.week.responses", c.leads_answered_in_target);
   }
   if (c.leads_routed > 0) {
-    return {
-      key: "brief.week.leads",
-      values: { count: String(c.leads_routed) },
-    };
+    return counted(locale, "brief.week.leads", c.leads_routed);
   }
   if (
     (c.tasks_completed ?? 0) > 0 ||
@@ -86,22 +83,14 @@ function resultOf(
  * said they would do it. Postponed tasks come second: they are older than the
  * week and were already postponed at least once.
  */
-function carryOf(
-  review: WeeklyReview,
-): { key: MessageKey; values: Record<string, string> } | null {
+function carryOf(review: WeeklyReview, locale: Locale): Said | null {
   const c = review.counts;
   const missed = c.commitments_due - c.commitments_kept;
   if (missed > 0) {
-    return {
-      key: "brief.week.carryPromises",
-      values: { count: String(missed) },
-    };
+    return counted(locale, "brief.week.carryPromises", missed);
   }
   if (c.tasks_carried_over > 0) {
-    return {
-      key: "brief.week.carryTasks",
-      values: { count: String(c.tasks_carried_over) },
-    };
+    return counted(locale, "brief.week.carryTasks", c.tasks_carried_over);
   }
   return null;
 }
@@ -117,12 +106,13 @@ function carryOf(
 export function weekSentence(
   review: WeeklyReview | null | undefined,
   t: (key: MessageKey, values?: Record<string, string>) => string,
+  locale: Locale,
 ): BriefSentence | null {
   if (!review) {
     return null;
   }
-  const result = resultOf(review);
-  const carry = carryOf(review);
+  const result = resultOf(review, locale);
+  const carry = carryOf(review, locale);
   // A week with no result of its own still has a true thing to say. It says the
   // week was quiet — never a manufactured outcome, and never silence, which a
   // reader would take for a page that failed to load.

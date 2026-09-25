@@ -96,6 +96,14 @@ describe("what a lead should do about the board", () => {
     expect(container.innerHTML).toBe("");
   });
 
+  it.each([
+    [1, "Ben has 1 customer commitment due"],
+    [2, "Ben has 2 customer commitments due"],
+  ])("words %i promise(s) due in the reader's plural", (count, line) => {
+    draw([member("Ben", { promises_due: count })]);
+    expect(screen.getByRole("button", { name: line })).toBeTruthy();
+  });
+
   it("routes a move to that contact's own queue", async () => {
     const user = userEvent.setup();
     const onOwner = draw([member("Ana", { promises_due: 2 })]);

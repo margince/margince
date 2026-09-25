@@ -677,12 +677,24 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     // they can act on and cannot be told from a bug. A group whose lane minted
     // no name falls back to the generic phrase rather than to the identity.
     if (item.batch.key === "system_incident") {
-      return t("worklist.batch.system_incident", {
-        count,
-        cause: item.batch.label ?? t("worklist.batch.unnamedCause"),
-      });
+      return translatePlural(
+        locale,
+        "worklist.batch.system_incident",
+        item.batch.count,
+        {
+          count,
+          cause: item.batch.label ?? t("worklist.batch.unnamedCause"),
+        },
+      );
     }
-    return t(`worklist.batch.${item.batch.key}` as const, { count });
+    // Typed as a plural base, so a batch kind the catalog carries no pair for
+    // fails the build rather than rendering its key.
+    return translatePlural(
+      locale,
+      `worklist.batch.${item.batch.key}` as const,
+      item.batch.count,
+      { count },
+    );
   }
   if (item.title) {
     // A title that names no record, on a row that HAS one, gets the record's

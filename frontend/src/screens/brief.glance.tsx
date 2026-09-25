@@ -219,7 +219,7 @@ function glanceSentence(
   locale: ReturnType<typeof useLocale>["locale"],
 ) {
   if (facts.view === "morning") return briefSentence(facts.day, t, locale);
-  return facts.scope === "team" ? null : weekSentence(facts.week, t);
+  return facts.scope === "team" ? null : weekSentence(facts.week, t, locale);
 }
 
 function introKey(view: BriefView, scope: "mine" | "team"): MessageKey {

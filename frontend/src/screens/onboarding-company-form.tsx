@@ -16,7 +16,7 @@ import {
   ProvenanceTag,
 } from "../design-system/trust";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { coldFieldLabel } from "./common";
 import {
   type CompanyDraft,
@@ -67,7 +67,9 @@ export function CompanyStep({
   embedded?: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
+  const pagesRead = read ? (read.pages_read ?? read.pages.length) : 0;
   // The contract ceiling on `selected_fact_keys` is the selection model's to
   // enforce, wherever a fact is picked: this form's cards and the fact table's
   // checkboxes write the same key list, so they refuse on the same terms.
@@ -93,11 +95,8 @@ export function CompanyStep({
         <ShieldCheck aria-hidden />
         <span>
           {read
-            ? t("ob.confirmWebsite", {
-                count: formatNumber(
-                  read.pages_read ?? read.pages.length,
-                  locale,
-                ),
+            ? plural("ob.confirmWebsite", pagesRead, {
+                count: formatNumber(pagesRead, locale),
               })
             : t("ob.confirmManual")}
         </span>

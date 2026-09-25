@@ -64,3 +64,15 @@ export const OneMove: Story = {
     </StoryProviders>
   ),
 };
+
+/** One promise due: the move's sentence in the singular. */
+export const OnePromiseDue: Story = {
+  render: () => (
+    <StoryProviders>
+      <CoachingMoves
+        members={[member("Mara Voss", { promises_due: 1 })]}
+        onOwner={() => undefined}
+      />
+    </StoryProviders>
+  ),
+};

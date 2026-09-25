@@ -6,7 +6,7 @@ import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
   problemCodeOf,
@@ -155,6 +155,7 @@ export function CompanyAct({
   adoptedRead = null,
 }: CompanyActProps) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   // The gate greets by name, and uses the whole display_name rather than a
@@ -1021,7 +1022,7 @@ export function CompanyAct({
               }
               note={
                 <p className="ob-stage-hint">
-                  {t("ob.digest.changed", {
+                  {plural("ob.digest.changed", draft.edited.size, {
                     count: formatNumber(draft.edited.size, locale),
                   })}
                 </p>

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Badge, Button, Field } from "../../design-system/atoms";
 import { formatNumber } from "../../format/format";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
 import { fieldGuidance } from "./field-guidance";
@@ -139,6 +139,7 @@ export function ReviewDeck({
   goTo?: CompanyFieldName;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const [at, setAt] = useState(0);
   // The order the deck asks in: a field's place is fixed the first time it
@@ -205,7 +206,7 @@ export function ReviewDeck({
       note={
         openQuestions > 0 ? (
           <p className="ob-stage-hint">
-            {t("ob.deck.openLeft", {
+            {plural("ob.deck.openLeft", openQuestions, {
               count: formatNumber(openQuestions, locale),
             })}
           </p>
@@ -220,7 +221,9 @@ export function ReviewDeck({
       <div className="rdeck">
         <div className="rdeck-split">
           <p className="rdeck-clear">
-            {t("ob.deck.clear", { count: formatNumber(settled, locale) })}
+            {plural("ob.deck.clear", settled, {
+              count: formatNumber(settled, locale),
+            })}
           </p>
           {digest(undefined)}
         </div>
@@ -382,6 +385,7 @@ function DeckFoot({
   locale: Locale;
 }>) {
   const t = useT();
+  const plural = usePlural();
   return (
     <div className="rdeck-tray">
       <p className="rdeck-left" role="status">
@@ -393,7 +397,9 @@ function DeckFoot({
             and saying so is what makes the short list of cards credible rather
             than suspicious. */}
         <span className="t-caption">
-          {t("ob.deck.settled", { count: formatNumber(settled, locale) })}
+          {plural("ob.deck.settled", settled, {
+            count: formatNumber(settled, locale),
+          })}
         </span>
       </p>
     </div>

@@ -222,9 +222,7 @@ describe("what the ranked queue tells a reader", () => {
 
     // The read stopped at its own bound with members left over. "200" would be
     // a wrong number; "200+" is a bounded one.
-    expect(
-      await screen.findByText("Drafts waiting to send: 200+"),
-    ).toBeTruthy();
+    expect(await screen.findByText("200+ drafts waiting to send")).toBeTruthy();
   });
 
   it("opens a group into the work it stands for", async () => {

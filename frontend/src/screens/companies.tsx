@@ -41,7 +41,7 @@ import {
   formatNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys } from "./activitykeys";
 import { AssistantPanel } from "./assistant";
@@ -470,6 +470,7 @@ async function fetchHierarchyRollup(
 // optional on the wire) — never a hand-formatted or zero-filled figure.
 function HierarchyRollupPanel({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const rollupQuery = useQuery({
@@ -522,7 +523,7 @@ function HierarchyRollupPanel({ companyId }: Readonly<{ companyId: string }>) {
         </dl>
         {rollup.restricted_excluded.length > 0 && (
           <p className="t-caption co-rollup-note">
-            {t("rollup.excluded", {
+            {plural("rollup.excluded", rollup.restricted_excluded.length, {
               count: formatNumber(rollup.restricted_excluded.length, locale),
             })}
           </p>

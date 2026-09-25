@@ -173,8 +173,28 @@ describe("held threads", () => {
     expect(
       await screen.findByText(/awaiting classification/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/attempts: 3/i)).toBeInTheDocument();
+    expect(screen.getByText("Asked 3 times")).toBeInTheDocument();
   });
+
+  it("counts a single attempt in the singular", async () => {
+    renderCard([{ ...PENDING, attempts: 1 }]);
+    expect(await screen.findByText("Asked 1 time")).toBeInTheDocument();
+  });
+
+  it.each([
+    [1, /1 thread was asked about repeatedly/],
+    [2, /2 threads were asked about repeatedly/],
+  ])(
+    "counts %i stalled thread(s) in the backlog notice",
+    async (count, line) => {
+      const rows = Array.from({ length: count }, (_unused, index) => ({
+        ...PENDING,
+        thread_key: `t-stalled-${index}`,
+      }));
+      renderCard(rows);
+      expect(await screen.findByText(line)).toBeInTheDocument();
+    },
+  );
 
   it("names why a judged thread is held", async () => {
     renderCard([JUDGED]);
@@ -235,17 +255,23 @@ describe("held threads", () => {
     expect(screen.getByText(/no message left to share/i)).toBeInTheDocument();
   });
 
-  it("reports a release that opened nothing", async () => {
-    // A message two mailboxes imported opens only when both owners release it.
-    // Reporting the other holder is the difference between a control that looks
-    // broken and one that says what happened.
-    const user = userEvent.setup();
-    renderCard([JUDGED], { shared: false, held_by_others: 1 });
-    await user.click(
-      await screen.findByRole("button", { name: /share with the team/i }),
-    );
-    expect(await screen.findByText(/have not shared it/i)).toBeInTheDocument();
-  });
+  // A message two mailboxes imported opens only when both owners release it.
+  // Reporting the other holder is the difference between a control that looks
+  // broken and one that says what happened.
+  it.each([
+    [1, /1 other mailbox imported this message and has not shared it/],
+    [2, /2 other mailboxes imported this message and have not shared it/],
+  ])(
+    "reports a release that %i other holder(s) kept closed",
+    async (owners, line) => {
+      const user = userEvent.setup();
+      renderCard([JUDGED], { shared: false, held_by_others: owners });
+      await user.click(
+        await screen.findByRole("button", { name: /share with the team/i }),
+      );
+      expect(await screen.findByText(line)).toBeInTheDocument();
+    },
+  );
 
   it("reports an empty list as nothing held rather than as a failure", async () => {
     renderCard([]);

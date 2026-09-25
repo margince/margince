@@ -7,10 +7,13 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { LocaleProvider, translate } from "../i18n";
 import type { CompanyDraft } from "./onboarding";
 import { EMPTY_DRAFT } from "./onboarding";
 import { CompanyStep } from "./onboarding-company-form";
+
+type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 
 // Evidence-or-omit on the classic form: a grounded field shows the page's own
 // words when the read captured them, and NOTHING when it did not. A chip drawn
@@ -37,13 +40,39 @@ function groundedDraft(snippet: string | undefined): CompanyDraft {
   };
 }
 
-function renderForm(snippet: string | undefined) {
+function siteRead(pagesRead: number): CompanySiteRead {
+  return {
+    id: "11111111-1111-4111-8111-111111111111",
+    target_kind: "onboarding",
+    root_url: "https://gradion.test",
+    status: "ready",
+    status_code: null,
+    status_detail: null,
+    next_attempt_at: null,
+    pages_read: pagesRead,
+    pages: [],
+    profile_fields: [],
+    facts: [],
+    comparisons: [],
+    contacts: [],
+    warnings: [],
+    draft_version: 1,
+    proposal_hash: "hash",
+    created_at: "2026-07-01T09:00:00Z",
+    updated_at: "2026-07-01T09:05:00Z",
+  };
+}
+
+function renderForm(
+  snippet: string | undefined,
+  read: CompanySiteRead | null = null,
+) {
   render(
     <CompanyStep
       draft={groundedDraft(snippet)}
       setField={vi.fn()}
       onPickEntity={vi.fn()}
-      read={null}
+      read={read}
       saved={false}
       saveError={null}
       missingRequired={[]}
@@ -85,5 +114,15 @@ describe("a grounded field's evidence chip", () => {
 
     expect(document.querySelectorAll(".evidence-chip")).toHaveLength(0);
     expect(screen.getByText(groundingLabel)).toBeInTheDocument();
+  });
+});
+
+describe("the origin line", () => {
+  it.each([
+    [1, "Based on 1 public page."],
+    [14, "Based on 14 public pages."],
+  ])("counts %i page(s) the read was grounded in", (pages, sentence) => {
+    renderForm("Gradion Co., Ltd.", siteRead(pages));
+    expect(screen.getByText(new RegExp(sentence))).toBeInTheDocument();
   });
 });

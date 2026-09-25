@@ -27,6 +27,7 @@ import {
   type PluralBase,
   type PluralTranslator,
   type Translator,
+  translatePlural,
   useLocale,
   usePlural,
   useT,
@@ -809,14 +810,18 @@ function coreReadPresentation(
   }
   if (successfulStatuses.has(read.status)) {
     return {
-      title: t("ob.coreReady", { count: formatNumber(findings, locale) }),
+      title: translatePlural(locale, "ob.coreReady", findings, {
+        count: formatNumber(findings, locale),
+      }),
       body: t("ob.coreReadyBody"),
       journeyStage: 3,
     };
   }
   if (read.status === "partial") {
     return {
-      title: t("ob.corePartial", { count: formatNumber(findings, locale) }),
+      title: translatePlural(locale, "ob.corePartial", findings, {
+        count: formatNumber(findings, locale),
+      }),
       body: t("ob.coreReadyBody"),
       journeyStage: 3,
     };

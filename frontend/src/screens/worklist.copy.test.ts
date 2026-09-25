@@ -383,6 +383,32 @@ describe("itemTitle — an incident names what broke, never an internal id", () 
   });
 });
 
+describe("itemTitle — a group counts in the reader's plural", () => {
+  const group = (
+    key: NonNullable<WorklistItem["batch"]>["key"],
+    count: number,
+  ): WorklistItem => ({
+    id: "g-1",
+    source: "automation_run",
+    level: 3,
+    category: "system",
+    title: "",
+    because: [],
+    consequence: "none",
+    actions: [],
+    batch: { key, count, label: "Recap draft" },
+  });
+
+  it.each([
+    ["duplicates", 1, "1 possible duplicate"],
+    ["duplicates", 3, "3 possible duplicates"],
+    ["system_incident", 1, "Recap draft failed 1 time"],
+    ["system_incident", 3, "Recap draft failed 3 times"],
+  ] as const)("titles a %s group of %i", (key, count, title) => {
+    expect(itemTitle(group(key, count), t, "en")).toBe(title);
+  });
+});
+
 describe("an unavailable source", () => {
   // All three shipped locales, because the frame is a per-language decision and
   // a check that reads only English proves the rule for the one translator who

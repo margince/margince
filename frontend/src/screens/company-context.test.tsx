@@ -661,3 +661,44 @@ describe("CompanyContextCard for a seat that is not an administrator", () => {
     expect(container.textContent ?? "").toBe("");
   });
 });
+
+describe("CompanyContextCard confirmed count", () => {
+  const CONFIRMED = [
+    { field: "display_name", value: "Acme", source: "human" },
+    { field: "icp", value: "Installers", source: "human" },
+  ] as const;
+
+  it.each([
+    [1, "1 confirmed statement"],
+    [2, "2 confirmed statements"],
+  ])("counts %i confirmed statement(s) in the footer", async (count, line) => {
+    const company = {
+      ...COMPANY,
+      fields: CONFIRMED.slice(0, count).map((row) => ({
+        ...row,
+        captured_by: "human:u-1",
+      })),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(
+          String(input instanceof Request ? input.url : input),
+        );
+        const body =
+          url.pathname === "/v1/company" ? company : routeBody(url.pathname);
+        return new Response(JSON.stringify(body), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    render(
+      <Providers>
+        <CompanyContextCard />
+      </Providers>,
+    );
+    expect(
+      await screen.findByText(line, undefined, { timeout: SETTLE_MS }),
+    ).toBeTruthy();
+  });
+});

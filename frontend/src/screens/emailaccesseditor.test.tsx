@@ -332,6 +332,33 @@ describe("what the drawer says about who reads a message", () => {
     expect(screen.queryByRole("button", { name: /Share/ })).toBeNull();
   });
 
+  it.each([
+    [1, "1 other seat has not shared this thread"],
+    [3, "3 other seats have not shared this thread"],
+  ])("counts %i seat(s) still holding a shared thread", async (held, said) => {
+    draw(
+      <EmailAccessEditor
+        presentation={presentation({
+          display_status: "participants",
+          audience: "participants",
+          can_change: true,
+          change_mode: "thread_contribution",
+        })}
+      />,
+    );
+    const outcome = { messages: 1, shared: false, held_by_others: held };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ ...outcome, activity_ids: [] })),
+    );
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Share with the company" }));
+
+    expect(await screen.findByText(said)).toBeTruthy();
+  });
+
   it("says the thread verb reaches the whole thread, from the server's word", () => {
     draw(
       <EmailAccessEditor

@@ -18,7 +18,7 @@
 
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { TeamBoardMember } from "./worklist.queries";
 
 // How many moves a morning gets.
@@ -108,6 +108,7 @@ export function CoachingMoves({
   onOwner: (userId: string) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const moves = movesFor(members);
   if (moves.length === 0) {
@@ -127,10 +128,14 @@ export function CoachingMoves({
                 className="link-button"
                 onClick={() => onOwner(move.ownerId)}
               >
-                {t(`worklist.coaching.${move.kind}` as const, {
-                  name: move.name,
-                  count: formatNumber(move.evidence, locale),
-                })}
+                {plural(
+                  `worklist.coaching.${move.kind}` as const,
+                  move.evidence,
+                  {
+                    name: move.name,
+                    count: formatNumber(move.evidence, locale),
+                  },
+                )}
               </button>
             </li>
           ))}

@@ -478,4 +478,62 @@ describe("one count, one key", () => {
     expect(Object.hasOwn(en, "ob.conv.activity.steps_one")).toBe(true);
     expect(PLURAL_SINGLE_KEY_DEBT.has("ob.conv.activity.steps")).toBe(false);
   });
+
+  // The counts the "Label: {count}" form dodged, each now a pair with no bare
+  // base key left behind and no register line.
+  it("carries the label-form counts as plural pairs", () => {
+    const converted = [
+      "access.downloads",
+      "brief.week.carryPromises",
+      "brief.week.carryTasks",
+      "brief.week.leads",
+      "brief.week.lost",
+      "brief.week.met",
+      "brief.week.moved",
+      "brief.week.responses",
+      "brief.week.won",
+      "co.contacts.board.suggestRefused",
+      "co.contacts.board.suggestWrote",
+      "compose.carriageCarries",
+      "compose.threadStillHeld",
+      "contact.intro.factReceipts",
+      "deal.seats.ours",
+      "heldThreads.attempts",
+      "heldThreads.backlogStalled",
+      "heldThreads.heldByOthers",
+      "history.undo.confirmBody",
+      "jobs.deadBody",
+      "jobs.deadTitle",
+      "leadReasons.inUse",
+      "leadSources.inUse",
+      "ob.confirmWebsite",
+      "ob.corePartial",
+      "ob.coreReady",
+      "ob.deck.clear",
+      "ob.deck.openLeft",
+      "ob.deck.settled",
+      "ob.digest.changed",
+      "rollup.excluded",
+      "search.tag.carriedBy",
+      "settings.companyConfirmed",
+      "teamweekly.agenda.summary",
+      "worklist.batch.company_match",
+      "worklist.batch.duplicates",
+      "worklist.batch.held_draft",
+      "worklist.batch.likely_automated",
+      "worklist.batch.system_incident",
+      "worklist.batch.uncertain_contact",
+      "worklist.coaching.overdue",
+      "worklist.coaching.promises",
+      "worklist.coaching.waiting",
+    ];
+    const unpaired = converted.filter(
+      (base) =>
+        !Object.hasOwn(en, `${base}_one`) ||
+        !Object.hasOwn(en, `${base}_other`) ||
+        Object.hasOwn(en, base) ||
+        PLURAL_SINGLE_KEY_DEBT.has(base),
+    );
+    expect(unpaired).toEqual([]);
+  });
 });

@@ -12,7 +12,7 @@
 // rewrite of a hundred and fifty strings or a gate that goes on reporting PASS
 // over the whole class it was written for.
 //
-// THREE LISTS, and they are not interchangeable. Each says something about the
+// TWO LISTS, and they are not interchangeable. Each says something about the
 // STRING that a reader can check against the catalogue at a glance, which is
 // what makes an entry auditable rather than decorative — a register whose
 // reason cannot be checked is the claim the rulebook calls worse than silence.
@@ -34,7 +34,6 @@ const STANDALONE: readonly string[] = [
   "co.contacts.band.seatsHeld",
   "co.contacts.band.someHidden",
   "co.contacts.band.untried",
-  "co.contacts.board.suggestWrote",
   "co.contacts.map.more",
   "co.contacts.map.scope",
   "co.contacts.map.scopePartial",
@@ -77,7 +76,6 @@ const STANDALONE: readonly string[] = [
   "ob.conv.triage.sectionMore",
   "ob.conv.triage.sourceCount",
   "ob.conv.voice.dimensionsCount",
-  "ob.deck.openLeft",
   "ob.scan.pagesSkipped",
   "project.rollups.activityFiled",
   "sched.recipientsMore",
@@ -87,7 +85,6 @@ const STANDALONE: readonly string[] = [
   "table.rangeLoaded",
   "tagResult.viewAll",
   "tags.more",
-  "teamweekly.agenda.summary",
   "voice.insights.statSources",
   "voice.insights.statWords",
   "webhooks.deliveries.deadLetterGroup",
@@ -96,19 +93,6 @@ const STANDALONE: readonly string[] = [
   "worklist.hidden.count",
   "worklist.hidden.shown",
   "worklist.pair.related",
-];
-
-// The string writes `(s)` and sidesteps the choice: `{count} account(s) not
-// visible to you`. Not wrong on screen and not right either — it prints the
-// plural marker whatever the number is. These are the cheapest conversions
-// left and should go first.
-const PARENTHESISED: readonly string[] = [
-  "access.downloads",
-  "co.contacts.board.suggestRefused",
-  "compose.threadStillHeld",
-  "heldThreads.attempts",
-  "heldThreads.backlogStalled",
-  "rollup.excluded",
 ];
 
 // The noun really does inflect, and the key prints "1 steps" — or will, the
@@ -124,51 +108,27 @@ const PENDING: readonly string[] = [
   "brief.deck.bundleSummary",
   "brief.digestCommitmentCount",
   "brief.focus.remaining",
-  "brief.week.carryPromises",
-  "brief.week.carryTasks",
-  "brief.week.leads",
-  "brief.week.lost",
-  "brief.week.met",
-  "brief.week.moved",
-  "brief.week.responses",
-  "brief.week.won",
   "co.spine.andOthers",
   "co.spine.exchangeCount",
   "compose.carriageAggregate",
-  "compose.carriageCarries",
-  "contact.intro.factReceipts",
   "contact.loops.dueInDays",
   "contact.network.oneSided",
   "contact.network.twoWay",
   "contact.rail.exchanges",
   "contact.strip.days",
-  "deal.seats.ours",
   "embedreindex.entitiesPending",
   "filters.matchCompanies",
   "filters.matchContacts",
   "filters.matchDeals",
-  "heldThreads.heldByOthers",
-  "history.undo.confirmBody",
-  "jobs.deadBody",
-  "jobs.deadTitle",
   "jobs.deadTotal",
   "lead.boardCount",
   "lead.openTaskCount",
   "lead.scoreSources",
-  "leadReasons.inUse",
   "leadReasons.leadCount",
-  "leadSources.inUse",
   "leadSources.leadCount",
   "network.interactions",
-  "ob.confirmWebsite",
   "ob.conv.recap.readTerminal",
   "ob.conv.voice.dimSentenceEvidence",
-  "ob.corePartial",
-  "ob.coreReady",
-  "ob.deck.clear",
-  "ob.deck.settled",
-  "ob.digest.changed",
-  "search.tag.carriedBy",
   "settings.voice.meter",
   "strength.computedFrom",
   "tagAdmin.usage",
@@ -178,15 +138,6 @@ const PENDING: readonly string[] = [
   "tools.inventory",
   "voice.insights.next.addWords",
   "voice.insights.statSentence",
-  "worklist.batch.company_match",
-  "worklist.batch.duplicates",
-  "worklist.batch.held_draft",
-  "worklist.batch.likely_automated",
-  "worklist.batch.system_incident",
-  "worklist.batch.uncertain_contact",
-  "worklist.coaching.overdue",
-  "worklist.coaching.promises",
-  "worklist.coaching.waiting",
 ];
 
 /** Why one pre-existing single-key count is not yet a finding. */
@@ -194,9 +145,6 @@ export const PLURAL_SINGLE_KEY_DEBT: ReadonlyMap<string, string> = new Map([
   ...STANDALONE.map(
     (key) =>
       [key, "the count is attached to no noun; nothing here inflects"] as const,
-  ),
-  ...PARENTHESISED.map(
-    (key) => [key, "written with the (s) convention"] as const,
   ),
   ...PENDING.map(
     (key) =>

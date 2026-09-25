@@ -198,9 +198,14 @@ export const de = {
     "Keine Einträge geladen. Ein Teil der Arbeit konnte nicht geprüft werden.",
   "brief.feed.fullWorklist": "Vollständige Worklist öffnen",
   "brief.week.workRecorded": "Diese Woche wurde Arbeit erledigt.",
-  "brief.week.leads": "Zugewiesene Leads: {count}.",
-  "brief.week.responses": "Innerhalb der Zielzeit beantwortete Leads: {count}.",
-  "brief.week.lost": "Verlorene Deals: {count}.",
+  "brief.week.leads_one": "{count} Lead zugewiesen.",
+  "brief.week.leads_other": "{count} Leads zugewiesen.",
+  "brief.week.responses_one":
+    "{count} Lead innerhalb der Zielzeit beantwortet.",
+  "brief.week.responses_other":
+    "{count} Leads innerhalb der Zielzeit beantwortet.",
+  "brief.week.lost_one": "{count} Deal verloren.",
+  "brief.week.lost_other": "{count} Deals verloren.",
   "brief.row.details": "Details",
   "brief.glance.introTeam": "Der Tag deines Teams im Überblick.",
   "teamweekly.focus.deals_at_risk": "Rettung gefährdeter Deals",
@@ -275,8 +280,10 @@ export const de = {
   "history.undo.confirmTitle": "Diese Änderung rückgängig machen?",
   "history.undo.confirmEdgeBody":
     "Damit ändert sich die Verknüpfung mit {other}. Beide Datensätze bleiben bestehen, nur die Verknüpfung zwischen ihnen ändert sich.",
-  "history.undo.confirmBody":
-    "Felder, die auf ihren Wert vor dieser Änderung zurückgesetzt werden: {count}",
+  "history.undo.confirmBody_one":
+    "{count} Feld wird auf seinen Wert vor dieser Änderung zurückgesetzt:",
+  "history.undo.confirmBody_other":
+    "{count} Felder werden auf ihren Wert vor dieser Änderung zurückgesetzt:",
   "history.undo.versionSkew":
     "Der Datensatz wurde geändert, während er geöffnet war. Der Verlauf wurde neu geladen. Prüfe die Änderung erneut, bevor du sie rückgängig machst.",
   "history.undo.noBeforeImage":
@@ -504,7 +511,8 @@ export const de = {
   "search.filter.label": "Nur anzeigen",
   "search.filter.all": "Alle",
   "search.pending": "Wird gesucht…",
-  "search.tag.carriedBy": "Datensätze mit diesem Tag: {count}",
+  "search.tag.carriedBy_one": "{count} Datensatz mit diesem Tag",
+  "search.tag.carriedBy_other": "{count} Datensätze mit diesem Tag",
   "search.tier.mirrored": "Aus einem verbundenen System",
   "search.tier.unverified": "Nicht verifiziert",
 
@@ -685,7 +693,8 @@ export const de = {
   "rollup.closedWon": "In diesem Quartal gewonnen",
   "rollup.activity30d": "Aktivität, 30 Tage",
   "rollup.accounts": "Einbezogene Unternehmen",
-  "rollup.excluded": "Ausgeschlossene verborgene Unternehmen: {count}",
+  "rollup.excluded_one": "{count} verborgenes Unternehmen ausgeschlossen",
+  "rollup.excluded_other": "{count} verborgene Unternehmen ausgeschlossen",
   "rollup.fxUnavailable":
     "Ein Wechselkurs fehlt, daher lässt sich die Summe nicht berechnen.",
   "rollup.computedAt": "Berechnet am {when}",
@@ -1221,7 +1230,8 @@ export const de = {
   "access.state.revoked": "entzogen",
   "access.state.revokedBadge": "Entzogen",
   "access.lastSeen": "zuletzt gesehen {when}",
-  "access.downloads": "Heruntergeladene Dokumente: {count}",
+  "access.downloads_one": "{count} Dokument heruntergeladen",
+  "access.downloads_other": "{count} Dokumente heruntergeladen",
   "access.linkRequested":
     "Hat am {when} einen neuen Link angefordert. Stelle einen aus und sende ihn selbst.",
   "access.rowActions": "Aktionen für {name}",
@@ -1793,8 +1803,10 @@ export const de = {
   "compose.threadShare": "Mit dem Unternehmen teilen",
   "compose.threadMakePrivate": "Auf privat setzen",
   "compose.threadScope": "Gilt für den gesamten Thread.",
-  "compose.threadStillHeld":
-    "Weitere Nutzerkonten, die diesen Thread nicht geteilt haben: {count}",
+  "compose.threadStillHeld_one":
+    "{count} weiteres Nutzerkonto hat diesen Thread nicht geteilt",
+  "compose.threadStillHeld_other":
+    "{count} weitere Nutzerkonten haben diesen Thread nicht geteilt",
   "compose.reason.posture": "Durch deine Einstellung zurückgehalten",
   "compose.reason.workspaceFloor": "Durch das Unternehmen zurückgehalten",
   "compose.reason.noRecord": "Zurückgehalten: kein Datensatz",
@@ -1971,14 +1983,18 @@ export const de = {
   "co.contacts.board.suggesting": "Nachrichten werden gelesen…",
   "co.contacts.board.suggestNoDeal":
     "Rollen werden pro Deal vergeben, und dieses Unternehmen hat keinen offenen Deal.",
-  "co.contacts.board.suggestWrote":
-    "Aus Nachrichten zugewiesene Rollen: {count}",
+  "co.contacts.board.suggestWrote_one":
+    "{count} Rolle aus Nachrichten zugewiesen",
+  "co.contacts.board.suggestWrote_other":
+    "{count} Rollen aus Nachrichten zugewiesen",
   "co.contacts.board.suggestUnavailable":
     "Rollenvorschläge brauchen ein Modell, und in dieser Installation ist keines eingerichtet.",
   "co.contacts.board.suggestNothing":
     "Aus den Nachrichten geht nicht hervor, wer kauft.",
-  "co.contacts.board.suggestRefused":
-    "Nichts war eindeutig genug zum Erfassen. Wegen schwacher Belege verworfene Vorschläge: {count}.",
+  "co.contacts.board.suggestRefused_one":
+    "Nichts war eindeutig genug zum Erfassen. {count} Vorschlag wurde wegen schwacher Belege verworfen.",
+  "co.contacts.board.suggestRefused_other":
+    "Nichts war eindeutig genug zum Erfassen. {count} Vorschläge wurden wegen schwacher Belege verworfen.",
   "co.contacts.board.confirm": "Bestätigen",
   "co.contacts.board.confirming": "Wird bestätigt…",
   "co.contacts.board.change": "Rolle ändern",
@@ -2253,8 +2269,10 @@ export const de = {
   "leadSources.builtIn": "Vorgegeben",
   "leadSources.builtInKept":
     "Vorgegebene Quellen lassen sich umbenennen oder deaktivieren, aber nicht entfernen.",
-  "leadSources.inUse":
-    "Leads mit dieser Quelle: {count}. Deaktiviere sie stattdessen.",
+  "leadSources.inUse_one":
+    "{count} Lead nutzt diese Quelle. Deaktiviere sie stattdessen.",
+  "leadSources.inUse_other":
+    "{count} Leads nutzen diese Quelle. Deaktiviere sie stattdessen.",
   "leadSources.deactivateInstead": "stattdessen deaktivieren",
   "leadSources.activeFor": "{label} ist aktiv",
   "leadSources.remove": "Entfernen",
@@ -2276,8 +2294,10 @@ export const de = {
     "Was Vertriebsmitarbeitende beim Disqualifizieren eines Leads wählen. Der Grund steht am Lead und lässt sich filtern.",
   "leadReasons.labelFor": "Bezeichnung des Grunds {label}",
   "leadReasons.leadCount": "Leads: {count}",
-  "leadReasons.inUse":
-    "Leads mit diesem Grund: {count}. Deaktiviere ihn stattdessen.",
+  "leadReasons.inUse_one":
+    "{count} Lead hat diesen Grund. Deaktiviere ihn stattdessen.",
+  "leadReasons.inUse_other":
+    "{count} Leads haben diesen Grund. Deaktiviere ihn stattdessen.",
   "leadReasons.newLabel": "Neuer Grund",
   "leadReasons.listLabel": "Gründe in der Liste",
   "leadReasons.add": "Grund hinzufügen",
@@ -2582,7 +2602,8 @@ export const de = {
   "deal.partnerWithheld": "Partner ausgeblendet",
   "deal.forecastCategory": "Forecast-Kategorie",
   "deal.strip.title": "Deal-Status",
-  "deal.seats.ours": "Teammitglieder an diesem Deal: {count}",
+  "deal.seats.ours_one": "{count} Teammitglied an diesem Deal",
+  "deal.seats.ours_other": "{count} Teammitglieder an diesem Deal",
   "deal.committee.title": "Buying Center",
   "deal.committee.legendEngaged": "Im Austausch",
   "deal.committee.legendQuiet": "Nicht im Austausch",
@@ -2937,11 +2958,16 @@ export const de = {
   "brief.sentence.rest": "{count} weitere",
 
   // Der Einstiegssatz des Wochen-Briefs, aus den eingefrorenen Zahlen gebaut.
-  "brief.week.won": "Gewonnene Deals: {count}.",
-  "brief.week.moved": "Vorangebrachte Deals: {count}.",
-  "brief.week.met": "Abgehaltene Termine: {count}.",
-  "brief.week.carryPromises": "Übertragene Zusagen: {count}.",
-  "brief.week.carryTasks": "Übertragene Aufgaben: {count}.",
+  "brief.week.won_one": "Du hast {count} Deal gewonnen.",
+  "brief.week.won_other": "Du hast {count} Deals gewonnen.",
+  "brief.week.moved_one": "Du hast {count} Deal vorangebracht.",
+  "brief.week.moved_other": "Du hast {count} Deals vorangebracht.",
+  "brief.week.met_one": "Du hast {count} Termin abgehalten.",
+  "brief.week.met_other": "Du hast {count} Termine abgehalten.",
+  "brief.week.carryPromises_one": "{count} Zusage übertragen.",
+  "brief.week.carryPromises_other": "{count} Zusagen übertragen.",
+  "brief.week.carryTasks_one": "{count} Aufgabe übertragen.",
+  "brief.week.carryTasks_other": "{count} Aufgaben übertragen.",
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "Keine erledigte Arbeit und keine Deal-Bewegung erfasst.",
 
@@ -2990,8 +3016,10 @@ export const de = {
   "teamweekly.agenda.title": "Agenda für Montag",
   "teamweekly.agenda.empty":
     "Für dieses Team konnte keine Woche eines Mitglieds geladen werden, daher gibt es keine Agenda.",
-  "teamweekly.agenda.summary":
-    "Punkte für Montag: {count}, beginnend mit {first}.",
+  "teamweekly.agenda.summary_one":
+    "{count} Punkt für Montag, beginnend mit {first}.",
+  "teamweekly.agenda.summary_other":
+    "{count} Punkte für Montag, beginnend mit {first}.",
   "teamweekly.agenda.copy": "Agenda kopieren",
   "teamweekly.agenda.copied": "Kopiert",
   "teamweekly.agenda.copyFailed":
@@ -3700,8 +3728,10 @@ export const de = {
   "compose.fileStoredUnnamed":
     "Die Datei ist am Datensatz gespeichert, konnte aber nicht erkannt werden. Hänge sie über die Liste oben an.",
   "compose.carriageTitle": "Senden über {channel} nicht möglich",
-  "compose.carriageCarries":
-    "{channel} unterstützt keine Dateien, daher können diese Nachricht und ihre Anhänge ({count}) dort nicht gesendet werden. Sende den Text über {channel} und die Dateien auf anderem Weg.",
+  "compose.carriageCarries_one":
+    "{channel} unterstützt keine Dateien, daher kann diese Nachricht mit {count} Anhang dort nicht gesendet werden. Sende den Text über {channel} und die Datei auf anderem Weg.",
+  "compose.carriageCarries_other":
+    "{channel} unterstützt keine Dateien, daher kann diese Nachricht mit {count} Anhängen dort nicht gesendet werden. Sende den Text über {channel} und die Dateien auf anderem Weg.",
   "compose.carriageCount":
     "{channel} erlaubt höchstens {limit} Dateien pro Nachricht, diese hat {named}. Sende den Rest in einer zweiten Nachricht.",
   "compose.carriagePerFile":
@@ -4520,11 +4550,15 @@ export const de = {
   "jobs.waitedHours_other": "der älteste wartet seit {count} Stunden",
   "jobs.waitedDays_one": "der älteste wartet seit {count} Tag",
   "jobs.waitedDays_other": "der älteste wartet seit {count} Tagen",
-  "jobs.deadTitle": "Gestoppte Jobs in den letzten {hours} Stunden: {count}",
+  "jobs.deadTitle_one": "{count} gestoppter Job in den letzten {hours} Stunden",
+  "jobs.deadTitle_other":
+    "{count} gestoppte Jobs in den letzten {hours} Stunden",
   "jobs.deadTotal":
     "In den letzten 7 Tagen verworfen oder abgebrochen: {count}. So lange werden diese Einträge aufbewahrt.",
-  "jobs.deadBody":
-    "Verworfene oder abgebrochene Jobs, die ohne Eingriff nicht mehr laufen: {count}. Verworfene Jobs haben alle Versuche verbraucht, abgebrochene wurden absichtlich gestoppt.",
+  "jobs.deadBody_one":
+    "{count} Job wurde verworfen oder abgebrochen und läuft ohne Eingriff nicht mehr. Verworfene Jobs haben alle Versuche verbraucht, abgebrochene wurden absichtlich gestoppt.",
+  "jobs.deadBody_other":
+    "{count} Jobs wurden verworfen oder abgebrochen und laufen ohne Eingriff nicht mehr. Verworfene Jobs haben alle Versuche verbraucht, abgebrochene wurden absichtlich gestoppt.",
   "jobs.failures": "Letzte Fehler",
   "jobs.failuresSub": "Neueste zuerst, höchstens 50.",
   "jobs.failuresEmpty": "Keine Fehler erfasst.",
@@ -4895,9 +4929,12 @@ export const de = {
   "ob.coreBusinessReading": "Geschäftsmodell wird erfasst",
   "ob.coreBusinessReadingBody":
     "Produkte, Kunden und Positionierung werden mit dem öffentlichen Text verknüpft, der sie belegt.",
-  "ob.coreReady": "Belegte Unternehmensangaben gefunden: {count}",
-  "ob.corePartial":
-    "Verwertbare Angaben gefunden: {count}. Einige Lücken bleiben offen.",
+  "ob.coreReady_one": "{count} belegte Unternehmensangabe gefunden",
+  "ob.coreReady_other": "{count} belegte Unternehmensangaben gefunden",
+  "ob.corePartial_one":
+    "{count} verwertbare Angabe gefunden. Einige Lücken bleiben offen.",
+  "ob.corePartial_other":
+    "{count} verwertbare Angaben gefunden. Einige Lücken bleiben offen.",
   "ob.coreReadyBody":
     "Noch ist nichts gespeichert. Prüfe zuerst die rechtliche Identität, dann Angebot und Kunden.",
   "ob.coreDeferredBody": "Das Lesen wird automatisch fortgesetzt.",
@@ -4987,8 +5024,10 @@ export const de = {
   "ob.legalFoundBody":
     "Jeder Block zeigt eingetragenen Namen, Anschrift und Registernummer oder USt-ID. Wähle in der Prüfung den richtigen Rechtsträger aus.",
   "ob.legalEntity": "Rechtsträger",
-  "ob.confirmWebsite":
-    "Öffentliche Seiten als Grundlage: {count}. Du kannst jeden Wert bearbeiten; unveränderte Werte behalten ihre Belege.",
+  "ob.confirmWebsite_one":
+    "Basiert auf {count} öffentlichen Seite. Du kannst jeden Wert bearbeiten; unveränderte Werte behalten ihre Belege.",
+  "ob.confirmWebsite_other":
+    "Basiert auf {count} öffentlichen Seiten. Du kannst jeden Wert bearbeiten; unveränderte Werte behalten ihre Belege.",
   "ob.confirmManual":
     "Diese Antworten stammen von dir und werden als menschliche Aussagen gespeichert.",
   "ob.legalTitle": "Rechtsträger auswählen",
@@ -5319,11 +5358,16 @@ export const de = {
   "heldThreads.nothingToShare":
     "Keine Nachricht mehr zum Teilen. Die erste Nachricht wurde gelöscht, und der Thread bleibt zurückgehalten, damit eine spätere Antwort nicht geteilt eintrifft.",
   "heldThreads.pending": "Wartet auf Einstufung",
-  "heldThreads.attempts": "Versuche: {count}",
-  "heldThreads.backlogStalled":
-    "Threads, zu denen wiederholt ohne Antwort angefragt wurde: {count}. E-Mails bleiben zurückgehalten, bis der Klassifikator wieder antwortet; nichts geht verloren.",
-  "heldThreads.heldByOthers":
-    "Weitere Postfächer, die diese Nachricht importiert und nicht geteilt haben: {count}. Ein Thread wird erst geöffnet, wenn alle Empfangenden zustimmen.",
+  "heldThreads.attempts_one": "{count}-mal angefragt",
+  "heldThreads.attempts_other": "{count}-mal angefragt",
+  "heldThreads.backlogStalled_one":
+    "Zu {count} Thread wurde wiederholt ohne Antwort angefragt. E-Mails bleiben zurückgehalten, bis der Klassifikator wieder antwortet; nichts geht verloren.",
+  "heldThreads.backlogStalled_other":
+    "Zu {count} Threads wurde wiederholt ohne Antwort angefragt. E-Mails bleiben zurückgehalten, bis der Klassifikator wieder antwortet; nichts geht verloren.",
+  "heldThreads.heldByOthers_one":
+    "{count} weiteres Postfach hat diese Nachricht importiert und nicht geteilt. Ein Thread wird erst geöffnet, wenn alle Empfangenden zustimmen.",
+  "heldThreads.heldByOthers_other":
+    "{count} weitere Postfächer haben diese Nachricht importiert und nicht geteilt. Ein Thread wird erst geöffnet, wenn alle Empfangenden zustimmen.",
   "heldThreads.releaseFailed": "Der Thread wurde nicht geteilt",
   "heldThreads.stillHeldTitle": "Wartet auf andere Postfächer",
   "heldThreads.backlogStalledTitle": "Klassifikator antwortet nicht",
@@ -7603,7 +7647,8 @@ export const de = {
     "Gemeinsamer Geschäftskontext für Entwürfe, Angebote, Suche und Agenten. Zu jeder Aussage wird festgehalten, wer sie geliefert hat und woher sie stammt.",
   "settings.companyTrust":
     "Nur bestätigte Aussagen. Website-Text wird nie zu Anweisungen.",
-  "settings.companyConfirmed": "bestätigte Aussagen",
+  "settings.companyConfirmed_one": "{count} bestätigte Aussage",
+  "settings.companyConfirmed_other": "{count} bestätigte Aussagen",
   "settings.companyMark": "Unternehmenslogo",
   "settings.companyMarkIntro":
     "Die Seitenleiste zeigt das Unternehmen in 2 Breiten. Die eingeklappte Seitenleiste verwendet das breite Logo, bis ein quadratisches Symbol hinzugefügt wird.",
@@ -8410,7 +8455,8 @@ export const de = {
   "contact.intro.factOneSided": "Einseitig",
   "contact.intro.factDirect": "Direkte Beziehung",
   "contact.intro.factIndirect": "Über ein Teammitglied",
-  "contact.intro.factReceipts": "Sichtbare Belege: {count}",
+  "contact.intro.factReceipts_one": "{count} sichtbarer Beleg",
+  "contact.intro.factReceipts_other": "{count} sichtbare Belege",
   "contact.intro.verdictDirect":
     "Frage {name}. Das Teammitglied steht bereits im Austausch mit diesem Kontakt.",
   "contact.intro.verdictOneSided":
@@ -9521,9 +9567,13 @@ export const de = {
   "worklist.board.overdue": "Überfällig",
   "worklist.board.nobody": "Nicht zugewiesene Arbeit",
   "worklist.coaching.title": "Coaching-Vorschläge",
-  "worklist.coaching.promises": "{name}: fällige Kundenzusagen {count}",
-  "worklist.coaching.waiting": "{name}: wartende Kontakte {count}",
-  "worklist.coaching.overdue": "{name}: überfällige Aufgaben {count}",
+  "worklist.coaching.promises_one": "{name} hat {count} fällige Kundenzusage",
+  "worklist.coaching.promises_other":
+    "{name} hat {count} fällige Kundenzusagen",
+  "worklist.coaching.waiting_one": "{count} Kontakt wartet auf {name}",
+  "worklist.coaching.waiting_other": "{count} Kontakte warten auf {name}",
+  "worklist.coaching.overdue_one": "{name} hat {count} überfällige Aufgabe",
+  "worklist.coaching.overdue_other": "{name} hat {count} überfällige Aufgaben",
   "worklist.board.promises": "Fällige Zusagen",
   "worklist.board.truncated":
     "Die Zählung ist unvollständig. Jede Zahl ist ein Mindestwert.",
@@ -9780,12 +9830,20 @@ export const de = {
   "worklist.source.failed": "Quelle nicht geladen: {source}",
   "worklist.source.withheld": "Quelle für dich nicht verfügbar: {source}",
   "worklist.untitled.generic": "Eintrag braucht Aufmerksamkeit",
-  "worklist.batch.likely_automated":
-    "Vermutlich automatische Absender: {count}",
-  "worklist.batch.company_match": "Adressen bei bekannten Unternehmen: {count}",
-  "worklist.batch.uncertain_contact": "Zu prüfende Adressen: {count}",
-  "worklist.batch.duplicates": "Mögliche Duplikate: {count}",
-  "worklist.batch.held_draft": "Entwürfe, die auf den Versand warten: {count}",
+  "worklist.batch.likely_automated_one":
+    "{count} vermutlich automatischer Absender",
+  "worklist.batch.likely_automated_other":
+    "{count} vermutlich automatische Absender",
+  "worklist.batch.company_match_one":
+    "{count} Adresse bei einem bekannten Unternehmen",
+  "worklist.batch.company_match_other":
+    "{count} Adressen bei bekannten Unternehmen",
+  "worklist.batch.uncertain_contact_one": "{count} zu prüfende Adresse",
+  "worklist.batch.uncertain_contact_other": "{count} zu prüfende Adressen",
+  "worklist.batch.duplicates_one": "{count} mögliches Duplikat",
+  "worklist.batch.duplicates_other": "{count} mögliche Duplikate",
+  "worklist.batch.held_draft_one": "{count} Entwurf wartet auf den Versand",
+  "worklist.batch.held_draft_other": "{count} Entwürfe warten auf den Versand",
   "worklist.untitled.batch": "Zu prüfende Routineeinträge",
   "worklist.verb.review_batch": "Prüfen",
   "worklist.verb.draft_reply": "Lesen und antworten",
@@ -9801,7 +9859,10 @@ export const de = {
   "worklist.deal.closes": "Abschluss {date}",
   "worklist.when.starts": "Beginn: {when}",
   "worklist.when.due": "Fällig: {when}",
-  "worklist.batch.system_incident": "{cause} ist {count}-mal fehlgeschlagen",
+  "worklist.batch.system_incident_one":
+    "{cause} ist {count}-mal fehlgeschlagen",
+  "worklist.batch.system_incident_other":
+    "{cause} ist {count}-mal fehlgeschlagen",
   "worklist.batch.unnamedCause": "Ein Prozess",
 
   "ob.conv.scene.settleEyebrow": "Deine Entscheidung ist gefragt",
@@ -9838,7 +9899,8 @@ export const de = {
   "ob.digest.yours": "von dir eingetragen",
   "ob.digest.editLine": "{label} bearbeiten",
   "ob.digest.saveChanges": "Änderungen speichern",
-  "ob.digest.changed": "Ungespeicherte Zeilenänderungen: {count}",
+  "ob.digest.changed_one": "{count} ungespeicherte Zeilenänderung",
+  "ob.digest.changed_other": "{count} ungespeicherte Zeilenänderungen",
   "ob.digest.pickFacts": "Zu behaltende Fakten auswählen",
   "ob.digest.referenceNote":
     "Ein späteres erneutes Lesen kann Änderungen an diesem Datensatz vorschlagen. Eine Zeile, die jemand bearbeitet hat, wird dabei nie überschrieben.",
@@ -9859,7 +9921,8 @@ export const de = {
   "ob.digest.pageKind.other": "Seite",
   "ob.deck.counter": "{n} von {m}",
   "ob.deck.left": "Noch {n} von {m}",
-  "ob.deck.settled": "Aus Belegen hinzugefügte Fakten: {count}",
+  "ob.deck.settled_one": "{count} Fakt aus Belegen hinzugefügt",
+  "ob.deck.settled_other": "{count} Fakten aus Belegen hinzugefügt",
   "ob.deck.needed": "Zum Fortfahren nötig",
   "ob.deck.optional": "Optional",
   "ob.deck.next": "Weiter",
@@ -9869,12 +9932,15 @@ export const de = {
   "ob.deck.backToRecord": "Zurück zum Datensatz",
   "ob.deck.confirm": "Profil bestätigen",
   "ob.deck.stillNeeded": "Noch erforderlich: {fields}",
-  "ob.deck.openLeft":
-    "Unbeantwortete Fragen: {count}. Der Datensatz wird ohne sie gespeichert.",
+  "ob.deck.openLeft_one":
+    "{count} unbeantwortete Frage. Der Datensatz wird ohne sie gespeichert.",
+  "ob.deck.openLeft_other":
+    "{count} unbeantwortete Fragen. Der Datensatz wird ohne sie gespeichert.",
   "ob.conv.invite.pickOne":
     "Wähle eine der beiden Optionen aus, um fortzufahren.",
   "ob.conv.voice.speakerPick": "Wähle aus, wer spricht, um fortzufahren.",
-  "ob.deck.clear": "Nichts mehr zu entscheiden. Erfasste Fakten: {count}.",
+  "ob.deck.clear_one": "Nichts mehr zu entscheiden. {count} Fakt erfasst.",
+  "ob.deck.clear_other": "Nichts mehr zu entscheiden. {count} Fakten erfasst.",
   "ob.deck.eyebrow": "Weitere belegte Fakten",
   "ob.deck.title": "Fragen an dich",
   "ob.stage.flow": "Einrichtung",

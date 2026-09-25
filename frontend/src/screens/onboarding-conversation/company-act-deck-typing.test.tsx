@@ -202,3 +202,20 @@ it("keeps the deck on the card being typed into, past the first character that d
   expect(within(card()).getByText(counter as string)).toBeInTheDocument();
   expect(control).toHaveValue("Gradion");
 });
+
+it("counts the lines corrected in the whole record, singular then plural", async () => {
+  const user = userEvent.setup();
+  renderReview();
+  await screen.findByText("2 of 2 left");
+  await user.click(screen.getByRole("button", { name: "Read full profile" }));
+
+  const correct = async (index: number) => {
+    await user.click(screen.getAllByRole("button", { name: /^Edit / })[index]);
+    await user.keyboard(" corrected");
+    await user.tab();
+  };
+  await correct(0);
+  expect(await screen.findByText("1 unsaved line change")).toBeInTheDocument();
+  await correct(1);
+  expect(await screen.findByText("2 unsaved line changes")).toBeInTheDocument();
+});

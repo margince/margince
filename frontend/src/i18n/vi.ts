@@ -206,10 +206,14 @@ export const vi = {
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
   "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
   "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
-  "brief.week.leads": "Đã phân công {count} khách hàng tiềm năng.",
-  "brief.week.responses":
+  "brief.week.leads_one": "Đã phân công {count} khách hàng tiềm năng.",
+  "brief.week.leads_other": "Đã phân công {count} khách hàng tiềm năng.",
+  "brief.week.responses_one":
     "Đã phản hồi {count} khách hàng tiềm năng trong thời hạn.",
-  "brief.week.lost": "Mất {count} giao dịch.",
+  "brief.week.responses_other":
+    "Đã phản hồi {count} khách hàng tiềm năng trong thời hạn.",
+  "brief.week.lost_one": "Mất {count} giao dịch.",
+  "brief.week.lost_other": "Mất {count} giao dịch.",
   "brief.row.details": "Chi tiết",
   "brief.glance.introTeam": "Đây là công việc hôm nay của nhóm.",
   "teamweekly.focus.deals_at_risk": "Khôi phục tiến độ cơ hội",
@@ -282,7 +286,9 @@ export const vi = {
   "history.undo.confirmTitle": "Hoàn tác thay đổi này?",
   "history.undo.confirmEdgeBody":
     "Thao tác này thay đổi liên kết với {other}. Các bản ghi vẫn còn; chỉ mối liên kết giữa chúng thay đổi.",
-  "history.undo.confirmBody":
+  "history.undo.confirmBody_one":
+    "{count} trường sẽ trở lại giá trị trước thay đổi này:",
+  "history.undo.confirmBody_other":
     "{count} trường sẽ trở lại giá trị trước thay đổi này:",
   "history.undo.versionSkew":
     "Bản ghi đã thay đổi trong lúc bạn đang xem. Lịch sử vừa được tải lại — hãy kiểm tra lại thay đổi trước khi hoàn tác.",
@@ -508,7 +514,8 @@ export const vi = {
   "search.filter.label": "Chỉ hiển thị",
   "search.filter.all": "Tất cả",
   "search.pending": "Đang tìm…",
-  "search.tag.carriedBy": "Trên {count} bản ghi",
+  "search.tag.carriedBy_one": "Trên {count} bản ghi",
+  "search.tag.carriedBy_other": "Trên {count} bản ghi",
   "search.tier.mirrored": "Từ hệ thống đã kết nối",
   "search.tier.unverified": "Chưa xác minh",
 
@@ -690,7 +697,8 @@ export const vi = {
   "rollup.closedWon": "Đã thắng (quý hiện tại)",
   "rollup.activity30d": "Hoạt động (30 ngày)",
   "rollup.accounts": "Tài khoản đã gộp",
-  "rollup.excluded": "Đã loại trừ {count} tài khoản bạn không xem được",
+  "rollup.excluded_one": "Đã loại trừ {count} công ty bị ẩn",
+  "rollup.excluded_other": "Đã loại trừ {count} công ty bị ẩn",
   "rollup.fxUnavailable":
     "Thiếu một tỷ giá quy đổi — không tính được số tổng hợp.",
   "rollup.computedAt": "Tính lúc {when}",
@@ -1213,7 +1221,8 @@ export const vi = {
   "access.state.revoked": "đã thu hồi",
   "access.state.revokedBadge": "Đã thu hồi",
   "access.lastSeen": "xem lần cuối {when}",
-  "access.downloads": "Đã tải xuống {count} tài liệu",
+  "access.downloads_one": "Đã tải xuống {count} tài liệu",
+  "access.downloads_other": "Đã tải xuống {count} tài liệu",
   "access.linkRequested":
     "Đã xin liên kết mới {when}. Hãy cấp một liên kết và tự gửi.",
   "access.rowActions": "Thao tác cho {name}",
@@ -1791,7 +1800,9 @@ export const vi = {
   "compose.threadShare": "Chia sẻ với tổ chức",
   "compose.threadMakePrivate": "Đặt riêng tư",
   "compose.threadScope": "Áp dụng cho toàn bộ chuỗi thư.",
-  "compose.threadStillHeld":
+  "compose.threadStillHeld_one":
+    "Vẫn được giữ lại: {count} người khác trong chuỗi thư này chưa chia sẻ.",
+  "compose.threadStillHeld_other":
     "Vẫn được giữ lại: {count} người khác trong chuỗi thư này chưa chia sẻ.",
   "compose.reason.posture": "Giữ lại theo thiết lập của bạn",
   "compose.reason.workspaceFloor": "Giữ lại theo tổ chức",
@@ -1965,13 +1976,17 @@ export const vi = {
   "co.contacts.board.suggesting": "Đang đọc tin nhắn của họ",
   "co.contacts.board.suggestNoDeal":
     "Vai trò được ghi trên một deal, và khách hàng này không có deal nào đang mở.",
-  "co.contacts.board.suggestWrote":
+  "co.contacts.board.suggestWrote_one":
+    "Đã ghi {count} liên hệ từ chính lời họ viết.",
+  "co.contacts.board.suggestWrote_other":
     "Đã ghi {count} liên hệ từ chính lời họ viết.",
   "co.contacts.board.suggestUnavailable":
     "Đọc vai trò cần một mô hình, và bản cài đặt này chưa cấu hình mô hình nào.",
   "co.contacts.board.suggestNothing":
     "Tin nhắn của họ không cho biết ai là người quyết định.",
-  "co.contacts.board.suggestRefused":
+  "co.contacts.board.suggestRefused_one":
+    "Không có gì đủ rõ để ghi lại. {count} kết quả đã bị loại vì bằng chứng yếu.",
+  "co.contacts.board.suggestRefused_other":
     "Không có gì đủ rõ để ghi lại. {count} kết quả đã bị loại vì bằng chứng yếu.",
   "co.contacts.board.confirm": "Xác nhận",
   "co.contacts.board.confirming": "Đang xác nhận",
@@ -2243,7 +2258,9 @@ export const vi = {
   "leadSources.builtIn": "Có sẵn",
   "leadSources.builtInKept":
     "Nguồn có sẵn có thể đổi tên và tắt, không xóa được.",
-  "leadSources.inUse":
+  "leadSources.inUse_one":
+    "{count} khách hàng tiềm năng dùng nguồn này — hãy tắt thay vì xóa.",
+  "leadSources.inUse_other":
     "{count} khách hàng tiềm năng dùng nguồn này — hãy tắt thay vì xóa.",
   "leadSources.deactivateInstead": "hãy tắt thay vì xóa",
   "leadSources.activeFor": "{label} đang bật",
@@ -2266,7 +2283,9 @@ export const vi = {
     "Điều nhân viên chọn khi bỏ một khách hàng tiềm năng. Lý do hiển thị trên hồ sơ và lọc được.",
   "leadReasons.labelFor": "Nhãn của lý do {label}",
   "leadReasons.leadCount": "{count} khách hàng tiềm năng",
-  "leadReasons.inUse":
+  "leadReasons.inUse_one":
+    "{count} khách hàng tiềm năng mang lý do này — hãy tắt thay vì xóa.",
+  "leadReasons.inUse_other":
     "{count} khách hàng tiềm năng mang lý do này — hãy tắt thay vì xóa.",
   "leadReasons.newLabel": "Lý do mới",
   "leadReasons.listLabel": "Các lý do trong danh sách",
@@ -2573,7 +2592,8 @@ export const vi = {
   "deal.partnerWithheld": "Đối tác bị ẩn",
   "deal.forecastCategory": "Nhóm dự báo",
   "deal.strip.title": "Deal đang ở đâu",
-  "deal.seats.ours": "{count} người bên mình phụ trách",
+  "deal.seats.ours_one": "{count} người bên mình phụ trách",
+  "deal.seats.ours_other": "{count} người bên mình phụ trách",
   "deal.committee.title": "Nhóm ra quyết định mua",
   "deal.committee.legendEngaged": "Đang trao đổi với chúng ta",
   "deal.committee.legendQuiet": "Có tham gia nhưng không trao đổi",
@@ -2923,11 +2943,16 @@ export const vi = {
   "brief.sentence.rest": "{count} mục nữa",
 
   // Câu mở đầu của Bản tin tuần, dựng từ các con số đã đóng băng.
-  "brief.week.won": "Bạn đã chốt {count} deal.",
-  "brief.week.moved": "Bạn đã đẩy {count} deal tiến lên.",
-  "brief.week.met": "Bạn đã có {count} cuộc họp.",
-  "brief.week.carryPromises": "{count} cam kết còn dang dở.",
-  "brief.week.carryTasks": "{count} công việc còn dang dở.",
+  "brief.week.won_one": "Bạn đã chốt {count} deal.",
+  "brief.week.won_other": "Bạn đã chốt {count} deal.",
+  "brief.week.moved_one": "Bạn đã đẩy {count} deal tiến lên.",
+  "brief.week.moved_other": "Bạn đã đẩy {count} deal tiến lên.",
+  "brief.week.met_one": "Bạn đã có {count} cuộc họp.",
+  "brief.week.met_other": "Bạn đã có {count} cuộc họp.",
+  "brief.week.carryPromises_one": "{count} cam kết còn dang dở.",
+  "brief.week.carryPromises_other": "{count} cam kết còn dang dở.",
+  "brief.week.carryTasks_one": "{count} công việc còn dang dở.",
+  "brief.week.carryTasks_other": "{count} công việc còn dang dở.",
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet":
     "Chưa ghi nhận công việc hoàn thành hoặc thay đổi giao dịch.",
@@ -2978,7 +3003,10 @@ export const vi = {
   "teamweekly.agenda.title": "Chương trình họp thứ Hai",
   "teamweekly.agenda.empty":
     "Không đọc được tuần của bất kỳ ai trong nhóm này, nên không có gì để mang tới buổi họp.",
-  "teamweekly.agenda.summary": "{count} mục cho thứ Hai, bắt đầu với {first}.",
+  "teamweekly.agenda.summary_one":
+    "{count} mục cho thứ Hai, bắt đầu với {first}.",
+  "teamweekly.agenda.summary_other":
+    "{count} mục cho thứ Hai, bắt đầu với {first}.",
   "teamweekly.agenda.copy": "Sao chép chương trình",
   "teamweekly.agenda.copied": "Đã sao chép",
   "teamweekly.agenda.copyFailed": "Hãy chọn danh sách và tự sao chép.",
@@ -3676,7 +3704,9 @@ export const vi = {
   "compose.fileStoredUnnamed":
     "Tệp đã ở trên hồ sơ, nhưng chúng tôi không đọc lại được đó là tệp nào. Hãy đính kèm nó từ danh sách phía trên.",
   "compose.carriageTitle": "Tin nhắn này không thể gửi trên {channel}",
-  "compose.carriageCarries":
+  "compose.carriageCarries_one":
+    "{channel} không mang được tệp, nên tin nhắn này cùng {count} tệp đính kèm không thể gửi trên đó. Hãy gửi phần chữ qua {channel}, hoặc gửi tệp bằng cách khác.",
+  "compose.carriageCarries_other":
     "{channel} không mang được tệp, nên tin nhắn này cùng {count} tệp đính kèm không thể gửi trên đó. Hãy gửi phần chữ qua {channel}, hoặc gửi tệp bằng cách khác.",
   "compose.carriageCount":
     "{channel} mang tối đa {limit} tệp trong một tin nhắn, mà tin này có {named}. Hãy gửi phần còn lại thành một tin nhắn thứ hai.",
@@ -4484,10 +4514,13 @@ export const vi = {
   "jobs.waitedHours_other": "cũ nhất đã chờ {count} giờ",
   "jobs.waitedDays_one": "cũ nhất đã chờ {count} ngày",
   "jobs.waitedDays_other": "cũ nhất đã chờ {count} ngày",
-  "jobs.deadTitle": "{count} tác vụ đã chết trong {hours} giờ qua",
+  "jobs.deadTitle_one": "{count} tác vụ đã chết trong {hours} giờ qua",
+  "jobs.deadTitle_other": "{count} tác vụ đã chết trong {hours} giờ qua",
   "jobs.deadTotal":
     "{count} bị loại bỏ hoặc bị huỷ trong 7 ngày qua — đó cũng là thời gian bản ghi được giữ lại.",
-  "jobs.deadBody":
+  "jobs.deadBody_one":
+    "{count} tác vụ đã bị loại bỏ hoặc bị huỷ: công việc đó sẽ không tự diễn ra nữa. Một tác vụ bị loại bỏ đã dùng hết mọi lần thử; một tác vụ bị huỷ là do có người chủ động dừng. Hãy đọc các lỗi bên dưới trước khi xếp lại vào hàng đợi.",
+  "jobs.deadBody_other":
     "{count} tác vụ đã bị loại bỏ hoặc bị huỷ: công việc đó sẽ không tự diễn ra nữa. Một tác vụ bị loại bỏ đã dùng hết mọi lần thử; một tác vụ bị huỷ là do có người chủ động dừng. Hãy đọc các lỗi bên dưới trước khi xếp lại vào hàng đợi.",
   "jobs.failures": "Lỗi gần đây",
   "jobs.failuresSub":
@@ -4862,8 +4895,12 @@ export const vi = {
   "ob.coreBusinessReading": "Tôi đang tìm hiểu cách công ty vận hành",
   "ob.coreBusinessReadingBody":
     "Tôi đang nối sản phẩm, khách hàng và định vị với đúng đoạn văn bản công khai chứng minh cho chúng.",
-  "ob.coreReady": "Tôi tìm được {count} chi tiết công ty có dẫn nguồn",
-  "ob.corePartial": "Tôi tìm được {count} chi tiết hữu ích, còn vài chỗ trống",
+  "ob.coreReady_one": "Đã tìm được {count} chi tiết công ty có dẫn nguồn",
+  "ob.coreReady_other": "Đã tìm được {count} chi tiết công ty có dẫn nguồn",
+  "ob.corePartial_one":
+    "Đã tìm được {count} chi tiết hữu ích, còn vài chỗ trống",
+  "ob.corePartial_other":
+    "Đã tìm được {count} chi tiết hữu ích, còn vài chỗ trống",
   "ob.coreReadyBody":
     "Tôi chưa lưu gì. Hãy rà soát danh tính pháp lý trước, rồi đến sản phẩm dịch vụ.",
   "ob.coreDeferredBody": "Tôi sẽ tự động đọc tiếp.",
@@ -4952,8 +4989,10 @@ export const vi = {
   "ob.legalFoundBody":
     "Mỗi khối giữ tên đăng ký, địa chỉ và mã số thuế. Bạn chọn pháp nhân của mình khi rà soát.",
   "ob.legalEntity": "Pháp nhân",
-  "ob.confirmWebsite":
-    "Tôi dẫn nguồn phần này từ {count} trang công khai. Bạn sửa được mọi thứ; giá trị nào không đụng tới thì vẫn giữ bằng chứng.",
+  "ob.confirmWebsite_one":
+    "Phần này dựa trên {count} trang công khai. Bạn sửa được mọi thứ; giá trị nào không đụng tới thì vẫn giữ bằng chứng.",
+  "ob.confirmWebsite_other":
+    "Phần này dựa trên {count} trang công khai. Bạn sửa được mọi thứ; giá trị nào không đụng tới thì vẫn giữ bằng chứng.",
   "ob.confirmManual":
     "Bạn nói trực tiếp với tôi, nên tôi sẽ lưu câu trả lời của bạn dưới dạng khẳng định của con người.",
   "ob.legalTitle": "Tôi nên dùng pháp nhân nào?",
@@ -5285,10 +5324,15 @@ export const vi = {
   "heldThreads.nothingToShare":
     "Không còn thư nào để chia sẻ — thư đầu tiên của chuỗi này đã bị xóa. Việc giữ lại vẫn tiếp tục để một thư trả lời sau không đến ở trạng thái mở.",
   "heldThreads.pending": "Đang chờ phán quyết",
-  "heldThreads.attempts": "đã hỏi {count} lần",
-  "heldThreads.backlogStalled":
+  "heldThreads.attempts_one": "Đã hỏi {count} lần",
+  "heldThreads.attempts_other": "Đã hỏi {count} lần",
+  "heldThreads.backlogStalled_one":
     "{count} chuỗi thư đã được hỏi nhiều lần mà chưa có trả lời. Trong lúc này thư vẫn được giữ lại — không mất gì cả, và sẽ tự hết khi bộ phân loại trả lời trở lại.",
-  "heldThreads.heldByOthers":
+  "heldThreads.backlogStalled_other":
+    "{count} chuỗi thư đã được hỏi nhiều lần mà chưa có trả lời. Trong lúc này thư vẫn được giữ lại — không mất gì cả, và sẽ tự hết khi bộ phân loại trả lời trở lại.",
+  "heldThreads.heldByOthers_one":
+    "Vẫn bị giữ lại: {count} hộp thư khác cũng đã nhập thư này và chưa chia sẻ. Một chuỗi chỉ mở khi mọi người nhận đều đồng ý.",
+  "heldThreads.heldByOthers_other":
     "Vẫn bị giữ lại: {count} hộp thư khác cũng đã nhập thư này và chưa chia sẻ. Một chuỗi chỉ mở khi mọi người nhận đều đồng ý.",
   "heldThreads.releaseFailed": "Chưa chia sẻ chuỗi thư",
   "heldThreads.stillHeldTitle": "Đang chờ các hộp thư khác",
@@ -7561,7 +7605,8 @@ export const vi = {
     "Giữ cho bối cảnh kinh doanh chung — nền cho soạn nháp, báo giá, tìm kiếm và Agent có kiểm soát — luôn chính xác. Mỗi nhận định đều gắn với ai đã cung cấp và nguồn từ đâu.",
   "settings.companyTrust":
     "Chỉ tri thức đã xác nhận — văn bản website không bao giờ trở thành chỉ dẫn.",
-  "settings.companyConfirmed": "nhận định đã xác nhận",
+  "settings.companyConfirmed_one": "{count} nhận định đã xác nhận",
+  "settings.companyConfirmed_other": "{count} nhận định đã xác nhận",
   "settings.companyMark": "Logo công ty",
   "settings.companyMarkIntro":
     "Hai dấu hiệu, vì thanh bên hiển thị công ty của bạn ở hai độ rộng. Điền dấu hiệu rộng thì thanh bên thu gọn cũng dùng nó, cho đến khi bạn thêm biểu tượng vuông.",
@@ -8351,7 +8396,8 @@ export const vi = {
   "contact.intro.factOneSided": "Một chiều",
   "contact.intro.factDirect": "Quan hệ trực tiếp",
   "contact.intro.factIndirect": "Qua một đồng nghiệp",
-  "contact.intro.factReceipts": "{count} bằng chứng xem được",
+  "contact.intro.factReceipts_one": "{count} bằng chứng xem được",
+  "contact.intro.factReceipts_other": "{count} bằng chứng xem được",
   "contact.intro.verdictDirect":
     "Hỏi {name} — hai bên đã trao đổi thư từ với nhau.",
   "contact.intro.verdictOneSided":
@@ -9448,10 +9494,14 @@ export const vi = {
   "worklist.board.overdue": "Quá hạn",
   "worklist.board.nobody": "Công việc chưa phân công",
   "worklist.coaching.title": "Đáng trao đổi sáng nay",
-  "worklist.coaching.promises":
+  "worklist.coaching.promises_one":
     "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",
-  "worklist.coaching.waiting": "{count} khách hàng đang chờ {name}.",
-  "worklist.coaching.overdue": "{name} có {count} công việc đã quá hạn.",
+  "worklist.coaching.promises_other":
+    "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",
+  "worklist.coaching.waiting_one": "{count} khách hàng đang chờ {name}.",
+  "worklist.coaching.waiting_other": "{count} khách hàng đang chờ {name}.",
+  "worklist.coaching.overdue_one": "{name} có {count} công việc đã quá hạn.",
+  "worklist.coaching.overdue_other": "{name} có {count} công việc đã quá hạn.",
   "worklist.board.promises": "Cam kết đến hạn",
   "worklist.board.truncated":
     "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
@@ -9685,11 +9735,16 @@ export const vi = {
   "worklist.source.failed": "Không đọc được một nguồn: {source}",
   "worklist.source.withheld": "Một nguồn bị ẩn với tài khoản của bạn: {source}",
   "worklist.untitled.generic": "Có việc cần bạn",
-  "worklist.batch.likely_automated": "{count} người gửi có thể tự động",
-  "worklist.batch.company_match": "{count} địa chỉ ở công ty đã biết",
-  "worklist.batch.uncertain_contact": "{count} địa chỉ cần quyết định",
-  "worklist.batch.duplicates": "{count} bản ghi có thể trùng",
-  "worklist.batch.held_draft": "{count} bản nháp đang chờ gửi",
+  "worklist.batch.likely_automated_one": "{count} người gửi có thể tự động",
+  "worklist.batch.likely_automated_other": "{count} người gửi có thể tự động",
+  "worklist.batch.company_match_one": "{count} địa chỉ ở công ty đã biết",
+  "worklist.batch.company_match_other": "{count} địa chỉ ở công ty đã biết",
+  "worklist.batch.uncertain_contact_one": "{count} địa chỉ cần quyết định",
+  "worklist.batch.uncertain_contact_other": "{count} địa chỉ cần quyết định",
+  "worklist.batch.duplicates_one": "{count} bản ghi có thể trùng",
+  "worklist.batch.duplicates_other": "{count} bản ghi có thể trùng",
+  "worklist.batch.held_draft_one": "{count} bản nháp đang chờ gửi",
+  "worklist.batch.held_draft_other": "{count} bản nháp đang chờ gửi",
   "worklist.untitled.batch": "Một nhóm quyết định thường lệ",
   "worklist.verb.review_batch": "Xem lại",
   "worklist.verb.draft_reply": "Đọc và trả lời",
@@ -9704,7 +9759,8 @@ export const vi = {
   "worklist.deal.closes": "chốt {date}",
   "worklist.when.starts": "bắt đầu {when}",
   "worklist.when.due": "đến hạn {when}",
-  "worklist.batch.system_incident": "{cause} đã lỗi {count} lần",
+  "worklist.batch.system_incident_one": "{cause} đã lỗi {count} lần",
+  "worklist.batch.system_incident_other": "{cause} đã lỗi {count} lần",
   "worklist.batch.unnamedCause": "Một tác vụ",
 
   "ob.conv.scene.settleEyebrow": "Có một điểm chỉ bạn mới quyết được",
@@ -9740,7 +9796,8 @@ export const vi = {
   "ob.digest.yours": "của bạn",
   "ob.digest.editLine": "Sửa {label}",
   "ob.digest.saveChanges": "Lưu thay đổi",
-  "ob.digest.changed": "{count} dòng đã đổi, chưa lưu",
+  "ob.digest.changed_one": "{count} dòng đã đổi, chưa lưu",
+  "ob.digest.changed_other": "{count} dòng đã đổi, chưa lưu",
   "ob.digest.pickFacts": "Chọn các sự thật cần giữ",
   "ob.digest.referenceNote":
     "Một lần đọc lại sau này có thể đề xuất thay đổi cho hồ sơ này. Nó sẽ không bao giờ ghi đè lên dòng mà một người đã từng sửa.",
@@ -9761,7 +9818,10 @@ export const vi = {
   "ob.digest.pageKind.other": "Trang",
   "ob.deck.counter": "{n} / {m}",
   "ob.deck.left": "Còn {n} / {m}",
-  "ob.deck.settled": "{count} dữ kiện đã vào hồ sơ kèm nguồn, không cần bạn",
+  "ob.deck.settled_one":
+    "{count} dữ kiện đã vào hồ sơ kèm nguồn, không cần bạn",
+  "ob.deck.settled_other":
+    "{count} dữ kiện đã vào hồ sơ kèm nguồn, không cần bạn",
   "ob.deck.needed": "Cần để đi tiếp",
   "ob.deck.optional": "Đáng xem qua",
   "ob.deck.next": "Tiếp tục",
@@ -9771,11 +9831,16 @@ export const vi = {
   "ob.deck.backToRecord": "Quay lại hồ sơ",
   "ob.deck.confirm": "Xác nhận hồ sơ",
   "ob.deck.stillNeeded": "Còn thiếu: {fields}",
-  "ob.deck.openLeft":
-    "Câu hỏi chưa trả lời: {count}. Hồ sơ được lưu mà không có chúng.",
+  "ob.deck.openLeft_one":
+    "{count} câu hỏi chưa trả lời. Hồ sơ được lưu mà không có chúng.",
+  "ob.deck.openLeft_other":
+    "{count} câu hỏi chưa trả lời. Hồ sơ được lưu mà không có chúng.",
   "ob.conv.invite.pickOne": "Chọn một trong hai để tiếp tục.",
   "ob.conv.voice.speakerPick": "Chọn một người nói để tiếp tục.",
-  "ob.deck.clear": "Không còn gì để giải quyết. {count} dữ kiện đã vào hồ sơ.",
+  "ob.deck.clear_one":
+    "Không còn gì để giải quyết. {count} dữ kiện đã vào hồ sơ.",
+  "ob.deck.clear_other":
+    "Không còn gì để giải quyết. {count} dữ kiện đã vào hồ sơ.",
   "ob.deck.eyebrow": "Mọi thứ còn lại đã vào kèm nguồn",
   "ob.deck.title": "Nó không đoán những điều này.",
   "ob.stage.flow": "Thiết lập",
