@@ -184,7 +184,7 @@ func TestAStepWithNoRecordStillTravels(t *testing.T) {
 		moves: map[ids.UUID]crmcontracts.DealStatusCardMove{
 			dealID: cardMove("create_task", map[string]any{
 				"subject": "Agree the next step on Acme",
-				"source":  "ui",
+				"source":  "manual",
 			}),
 		},
 	})

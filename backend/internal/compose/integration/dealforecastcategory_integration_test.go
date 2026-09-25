@@ -60,7 +60,7 @@ func TestTheForecastBucketsPartitionTheCategorisedPipeline(t *testing.T) {
 		"Omitted":     "omitted",
 	} {
 		created, err := store.CreateDeal(ctx, deals.CreateDealInput{
-			Name: name, PipelineID: pipeline, StageID: open, Source: "ui",
+			Name: name, PipelineID: pipeline, StageID: open, Source: "manual",
 		})
 		if err != nil {
 			t.Fatalf("seeding %q: %v", name, err)
@@ -74,7 +74,7 @@ func TestTheForecastBucketsPartitionTheCategorisedPipeline(t *testing.T) {
 	// The one that belongs to no bucket, which is the case the predicate is
 	// really about: it must be absent from every one of the four.
 	if _, err := store.CreateDeal(ctx, deals.CreateDealInput{
-		Name: "Uncategorised", PipelineID: pipeline, StageID: open, Source: "ui",
+		Name: "Uncategorised", PipelineID: pipeline, StageID: open, Source: "manual",
 	}); err != nil {
 		t.Fatalf("seeding the uncategorised deal: %v", err)
 	}

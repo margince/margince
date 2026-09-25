@@ -118,7 +118,7 @@ func seedCachedMeetingMove(t *testing.T, e *SearchEnv, userID, deal, contact ids
 				map[string]any{"entity_type": "deal", "entity_id": deal.String()},
 				map[string]any{"entity_type": "contact", "entity_id": contact.String()},
 			},
-			"source": "ui",
+			"source": "manual",
 		},
 	})
 }

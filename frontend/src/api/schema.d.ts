@@ -18899,7 +18899,7 @@ export interface components {
         };
         /** @description Provenance carried on every captured/user-entered domain row (data-model §1.6). */
         Provenance: {
-            /** @description What produced the row: email:<id> | calendar:<id> | connector:<n>:<id> | api | import:<batch> | ui | coldstart. */
+            /** @description What produced the row: email:<id> | calendar:<id> | connector:<n>:<id> | api | import:<batch> | manual | coldstart. */
             source: string;
             /** @description Who produced it: human:<uuid> | agent:<id> | connector:<name>. Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -32995,7 +32995,7 @@ export interface components {
             body: string;
             /** @description Only with a document. Marks the thread as one the seller still owes an answer on. */
             required_change?: boolean;
-            /** @description Provenance. Defaults to `ui` on the public edge. */
+            /** @description Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for someone writing through this product. */
             source?: string;
         };
         PostDealRoomCommentRequest: {

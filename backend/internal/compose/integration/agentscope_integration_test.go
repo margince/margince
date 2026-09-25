@@ -52,7 +52,7 @@ func TestEnrichRefusesAPassportWithoutTheEnrichCap(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
-		"display_name": "Acme GmbH", "source": "ui",
+		"display_name": "Acme GmbH", "source": "manual",
 		"domains": []AnyMap{{"domain": "acme.example", "is_primary": true}},
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
@@ -125,7 +125,7 @@ func TestOfferSendRefusesAnyAgentAsHumanOnly(t *testing.T) {
 	// not a blanket tightening of the offer surface.
 	var offer offerBody
 	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
-		"currency": "EUR", "source": "mcp",
+		"currency": "EUR", "source": "manual",
 		"line_items": []AnyMap{{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0}},
 	}, bearer, &offer); status != http.StatusCreated {
 		t.Fatalf("agent 🟢 offer draft → %d", status)

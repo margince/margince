@@ -31,7 +31,7 @@ func TestAccountScanHTTPSurface(t *testing.T) {
 	// the option must still stand the surface up, on the rules' floor.
 	e := apptest.SetupAppWithOptions(t, compose.WithAccountScan(nil, nil, nil))
 	e.BootstrapWorkspace(t)
-	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Nordlicht Logistik AG", "source": "ui"})
+	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Nordlicht Logistik AG", "source": "manual"})
 	path := "/v1/companies/" + companyID + "/scan"
 
 	var before scanResponse

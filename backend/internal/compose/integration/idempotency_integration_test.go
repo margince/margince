@@ -239,7 +239,7 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Idem Contact", "source": "ui",
+		"full_name": "Idem Contact", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}
@@ -248,7 +248,7 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 	logReq := AnyMap{
 		"kind":    "note",
 		"subject": "Keyed note",
-		"source":  "ui",
+		"source":  "manual",
 		"links":   []AnyMap{{"entity_type": "contact", "entity_id": contact["id"]}},
 	}
 

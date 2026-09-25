@@ -403,7 +403,7 @@ const recommending: View = {
         deal_id: "d-1",
         task: {
           subject: 'Agree the next step on "Fleet retrofit 2026"',
-          source: "ui",
+          source: "manual",
           links: [{ entity_type: "deal", entity_id: "d-1" }],
         },
       },

@@ -80,7 +80,7 @@ export function DealRoomConversation({
           document_id: input.documentId,
           body: input.body,
           required_change: input.requiredChange,
-          source: "ui",
+          source: "manual",
         },
       });
       if (error) {
@@ -97,7 +97,7 @@ export function DealRoomConversation({
         "/deal-rooms/{id}/threads/{threadId}/comments",
         {
           params: { path: { id: room.id, threadId: input.threadId } },
-          body: { body: input.body, source: "ui" },
+          body: { body: input.body, source: "manual" },
         },
       );
       if (error) {

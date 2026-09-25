@@ -332,7 +332,7 @@ function InviteDialog({
           full_name: input.name,
           email: input.email,
           capability: input.capability,
-          source: "ui",
+          source: "manual",
         },
       });
       if (error) {

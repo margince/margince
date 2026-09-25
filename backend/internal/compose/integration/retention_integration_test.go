@@ -164,7 +164,7 @@ func TestRetentionErasesOverAgeVoiceSignalPlaintext(t *testing.T) {
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO voice_profile (id, owner_id, scope, source, captured_by)
-			VALUES ($1, $2, 'user', 'ui', 'human:x')`, profileID, e.Rep1); err != nil {
+			VALUES ($1, $2, 'user', 'manual', 'human:x')`, profileID, e.Rep1); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(context.Background(), `

@@ -43,7 +43,7 @@ func TestAnotherReaderSeesCoverageWithoutReadingAPrivateReminder(t *testing.T) {
 	if summary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
 		t.Fatal("assignment was mistaken for completion")
 	}
-	if _, _, err := store.LogActivity(reader, LogActivityInput{Kind: "task", RequestActivityID: &id, Source: "ui"}); !errors.Is(err, apperrors.ErrConflict) {
+	if _, _, err := store.LogActivity(reader, LogActivityInput{Kind: "task", RequestActivityID: &id, Source: "manual"}); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("private replay = %v, want conflict without task disclosure", err)
 	}
 	kind := "task"
@@ -134,7 +134,7 @@ func TestAcceptanceKeepsTheClassifierVerdictAndHonorsTheTaskText(t *testing.T) {
 		t.Fatal(err)
 	}
 	title, body := "Send three slots", "Check the calendar first"
-	task, _, err := store.LogActivity(reader, LogActivityInput{Kind: "task", RequestActivityID: &id, Subject: &title, Body: &body, Source: "ui"})
+	task, _, err := store.LogActivity(reader, LogActivityInput{Kind: "task", RequestActivityID: &id, Subject: &title, Body: &body, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +193,7 @@ func TestDifferentRequestsInOneConversationNeedSeparateResolution(t *testing.T) 
 	if !found[requests[0]] || !found[requests[1]] {
 		t.Fatal("matching thread/subject discarded a distinct obligation")
 	}
-	task, _, err := store.LogActivity(reader, LogActivityInput{Kind: "task", RequestActivityID: &requests[0], Source: "ui"})
+	task, _, err := store.LogActivity(reader, LogActivityInput{Kind: "task", RequestActivityID: &requests[0], Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}

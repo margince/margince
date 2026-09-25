@@ -59,13 +59,13 @@ func TestActiveColumns_ActiveOnly_ExcludesRetired(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
 	stayer, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "contact", Label: "Preferred greeting", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: "Preferred greeting", Type: customfieldsmod.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	toRetire, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "contact", Label: "Legacy note", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: "Legacy note", Type: customfieldsmod.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestActiveColumns_PerObject_DoesNotLeakAcrossObjects(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
 	contactField, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "contact", Label: "Contact only", Type: customfieldsmod.TypeBoolean, Source: "ui",
+		Object: "contact", Label: "Contact only", Type: customfieldsmod.TypeBoolean, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -155,13 +155,13 @@ func TestFilterableColumnsSeesRetiredFieldsAndActiveColumnsDoesNot(t *testing.T)
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
 	live, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "contact", Label: "Still live", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: "Still live", Type: customfieldsmod.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	gone, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "contact", Label: "Long gone", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: "Long gone", Type: customfieldsmod.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)

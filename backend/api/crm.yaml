@@ -1026,7 +1026,7 @@ paths:
                   full_name: Dana Buyer
                   emails:
                     - { email: dana@acme.com, email_type: work, is_primary: true }
-                  source: ui
+                  source: manual
       responses:
         '201':
           description: Created. Body round-trips identically on GET.
@@ -2555,7 +2555,7 @@ paths:
                 value:
                   display_name: Acme Inc
                   domains: [{ domain: acme.com, is_primary: true }]
-                  source: ui
+                  source: manual
       responses:
         '201':
           description: Created company.
@@ -4476,7 +4476,7 @@ paths:
                   pipeline_id: 018f3a1b-0000-7000-8000-0000000000c0
                   stage_id: 018f3a1b-0000-7000-8000-0000000000c1
                   company_id: 018f3a1b-0000-7000-8000-000000000020
-                  source: ui
+                  source: manual
       responses:
         '201':
           description: Created deal.
@@ -5940,7 +5940,7 @@ paths:
                   links:
                     - { entity_type: contact, entity_id: 018f3a1b-0000-7000-8000-000000000010 }
                     - { entity_type: deal, entity_id: 018f3a1b-0000-7000-8000-000000000030 }
-                  source: ui
+                  source: manual
               capturedEmail:
                 summary: Idempotent logged activity keyed by a caller's own system (re-run → no dupe)
                 description: >-
@@ -5975,7 +5975,7 @@ paths:
                   source_system: transcript
                   links:
                     - { entity_type: deal, entity_id: 018f3a1b-0000-7000-8000-000000000030 }
-                  source: ui
+                  source: manual
       responses:
         '201':
           description: Created activity.
@@ -9146,14 +9146,14 @@ paths:
                   company_id: 018f3a1b-0000-7000-8000-000000000020
                   role: vp_engineering
                   is_current_primary: true
-                  source: ui
+                  source: manual
               stakeholder:
                 value:
                   kind: deal_stakeholder
                   deal_id: 018f3a1b-0000-7000-8000-000000000030
                   contact_id: 018f3a1b-0000-7000-8000-000000000010
                   role: champion
-                  source: ui
+                  source: manual
       responses:
         '201':
           description: Created relationship.
@@ -15332,21 +15332,21 @@ paths:
                   object: deal
                   label: Renewal date
                   type: date
-                  source: ui
+                  source: manual
               currency:
                 value:
                   object: deal
                   label: Budget ceiling
                   type: currency
                   currency: USD
-                  source: ui
+                  source: manual
               picklist:
                 value:
                   object: deal
                   label: Procurement route
                   type: picklist
                   options: [direct, reseller, marketplace]
-                  source: ui
+                  source: manual
       responses:
         '201':
           description: The newly created custom field.
@@ -27004,7 +27004,7 @@ components:
       properties:
         source:
           type: string
-          description: 'What produced the row: email:<id> | calendar:<id> | connector:<n>:<id> | api | import:<batch> | ui | coldstart.'
+          description: 'What produced the row: email:<id> | calendar:<id> | connector:<n>:<id> | api | import:<batch> | manual | coldstart.'
         captured_by:
           type: string
           readOnly: true
@@ -44275,7 +44275,7 @@ components:
         required_change:
           type: boolean
           description: Only with a document. Marks the thread as one the seller still owes an answer on.
-        source: { type: string, description: Provenance. Defaults to `ui` on the public edge. }
+        source: { type: string, description: 'Provenance. Required on the seller edge; a buyer''s comment always carries the credential''s own value. `manual` for someone writing through this product.' }
       additionalProperties: false
 
     PostDealRoomCommentRequest:

@@ -42,7 +42,7 @@ func seedStrengthContactWithActivities(t *testing.T, e *apptest.AppEnv) string {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Strength Target", "source": "ui",
+		"full_name": "Strength Target", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
@@ -53,7 +53,7 @@ func seedStrengthContactWithActivities(t *testing.T, e *apptest.AppEnv) string {
 	// zero-interaction "none" bucket.
 	for _, direction := range []string{"inbound", "outbound"} {
 		if status := e.Call(t, "POST", "/v1/activities", AnyMap{
-			"kind": "email", "subject": "Touch", "source": "ui", "direction": direction,
+			"kind": "email", "subject": "Touch", "source": "manual", "direction": direction,
 			"links": []AnyMap{{"entity_id": contact.ID, "entity_type": "contact"}},
 		}, nil, nil); status != http.StatusCreated {
 			t.Fatalf("log %s activity → %d", direction, status)
@@ -125,7 +125,7 @@ func TestCompanyStrengthHTTPReconciles(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
-		"display_name": "Strength Co", "source": "ui",
+		"display_name": "Strength Co", "source": "manual",
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}

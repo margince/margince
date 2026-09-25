@@ -26,6 +26,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // noNextStepSuggestion fires on an account that is live — it has an open
@@ -115,12 +116,12 @@ func recommendedNextStep(companyID ids.CompanyID, in suggestionInputs) nextStep 
 	return nextStep{body: TaskBody(subject, "company", companyID.UUID)}
 }
 
-// TaskBody is a step as POST /tasks takes it. `source` is the UI because that
-// is where the click happens: a rep pressing the button on this card is the
-// author of the task, and recording anything else would put an actor in the
-// audit trail who did not decide it. Exported because the account scan's
-// findings ask for a step the same way, and the page writes both from the
-// body they carry.
+// TaskBody is a step as POST /tasks takes it. `source` is manual because a
+// rep pressing the button on this card is the origin of the task, whichever
+// screen the button sits on, and recording anything else would put an actor
+// in the audit trail who did not decide it. Exported because the account
+// scan's findings ask for a step the same way, and the page writes both from
+// the body they carry.
 //
 //nolint:staticcheck // ST1003: the field names mirror the oapi-codegen type this must assign to
 func TaskBody(
@@ -130,7 +131,7 @@ func TaskBody(
 		EntityId   openapi_types.UUID                            `json:"entity_id"`
 		EntityType crmcontracts.CreateTaskRequestLinksEntityType `json:"entity_type"`
 	}{{EntityId: openapi_types.UUID(entityID), EntityType: entityType}}
-	return crmcontracts.CreateTaskRequest{Subject: subject, Source: "ui", Links: &links}
+	return crmcontracts.CreateTaskRequest{Subject: subject, Source: provenance.RecordSourceManual, Links: &links}
 }
 
 // How many deals the advice names before it stops naming them. Past three the

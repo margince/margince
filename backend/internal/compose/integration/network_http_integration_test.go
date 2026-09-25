@@ -98,7 +98,7 @@ func TestDealCoverageFlagsAThreadlessDealAndExplainsWhy(t *testing.T) {
 
 	var deal AnyMap
 	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
-		"name": "Threadless", "pipeline_id": pipeline, "stage_id": stage, "source": "ui",
+		"name": "Threadless", "pipeline_id": pipeline, "stage_id": stage, "source": "manual",
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("creating the deal: %d", status)
 	}
@@ -305,7 +305,7 @@ func dealAtAnAccount(t *testing.T, e *apptest.AppEnv, companyName, dealName stri
 	t.Helper()
 	var created AnyMap
 	if status := e.Call(t, "POST", "/v1/companies",
-		AnyMap{"display_name": companyName, "source": "ui"}, nil, &created); status != http.StatusCreated {
+		AnyMap{"display_name": companyName, "source": "manual"}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("creating the account: %d", status)
 	}
 	company, _ = created["id"].(string)
@@ -319,7 +319,7 @@ func dealAtAnAccount(t *testing.T, e *apptest.AppEnv, companyName, dealName stri
 	var made AnyMap
 	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": dealName, "pipeline_id": pipeline, "stage_id": stage,
-		"company_id": company, "source": "ui",
+		"company_id": company, "source": "manual",
 	}, nil, &made); status != http.StatusCreated {
 		t.Fatalf("creating the deal: %d", status)
 	}
@@ -350,7 +350,7 @@ func employ(t *testing.T, e *apptest.AppEnv, contact, company, startedAt, endedA
 	t.Helper()
 	body := AnyMap{
 		"kind": "employment", "contact_id": contact, "company_id": company,
-		"started_at": startedAt, "source": "ui",
+		"started_at": startedAt, "source": "manual",
 	}
 	if endedAt != "" {
 		body["ended_at"] = endedAt
@@ -366,7 +366,7 @@ func stakeholder(t *testing.T, e *apptest.AppEnv, deal, contact, role string) {
 	var out AnyMap
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "deal_stakeholder", "deal_id": deal, "contact_id": contact,
-		"role": role, "source": "ui",
+		"role": role, "source": "manual",
 	}, nil, &out); status != http.StatusCreated {
 		t.Fatalf("seating the %s stakeholder: %d (%v)", role, status, out)
 	}

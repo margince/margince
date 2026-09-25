@@ -60,7 +60,7 @@ func TestProductListSortsByEveryOfferedColumn(t *testing.T) {
 	// Seeded so that creation order disagrees with every sort below: a list
 	// still ordering by created_at would return the same page each time.
 	const seedProduct = `INSERT INTO product (id, name, sku, unit, unit_price_minor, currency, default_tax_rate, active, source, captured_by, created_at, updated_at)
-	                     VALUES ($1, $2, $3, 'day', $4, 'EUR', 0, $5, 'ui', 'human:x', $6, $7)`
+	                     VALUES ($1, $2, $3, 'day', $4, 'EUR', 0, $5, 'manual', 'human:x', $6, $7)`
 	e.SeedID(t, seedProduct, "Middle", "SKU-M", 5000, true, seedMiddle, seedEarliest)
 	e.SeedID(t, seedProduct, "Apex", "SKU-A", 9000, false, seedLatest, seedMiddle)
 	e.SeedID(t, seedProduct, "Zenith", "SKU-Z", 1000, true, seedEarliest, seedLatest)

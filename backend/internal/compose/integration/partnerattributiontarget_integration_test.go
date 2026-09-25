@@ -43,7 +43,7 @@ func TestADealMayOnlyNameARealPartner(t *testing.T) {
 
 	t.Run("create refuses a company that is not a partner", func(t *testing.T) {
 		_, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-			Name: "Misattributed", PipelineID: pipeline, StageID: open, Source: "ui",
+			Name: "Misattributed", PipelineID: pipeline, StageID: open, Source: "manual",
 			PartnerCompanyID: &plainCompany,
 		})
 		var notPartner *contacts.NotAPartnerError
@@ -75,7 +75,7 @@ func TestADealMayOnlyNameARealPartner(t *testing.T) {
 	// authority that refuses everyone.
 	t.Run("both paths still accept a real partner", func(t *testing.T) {
 		created, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-			Name: "Sourced properly", PipelineID: pipeline, StageID: open, Source: "ui",
+			Name: "Sourced properly", PipelineID: pipeline, StageID: open, Source: "manual",
 			PartnerCompanyID: &partnerCompany,
 		})
 		if err != nil {

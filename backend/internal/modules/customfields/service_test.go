@@ -35,7 +35,7 @@ func fullGrant() principal.ObjectGrant {
 // validSpec is a spec that passes Validate, so a test can prove the ONE
 // refusal it stacks on top.
 func validSpec() FieldSpec {
-	return FieldSpec{Object: "deal", Label: "Renewal date", Type: TypeDate, Source: "ui"}
+	return FieldSpec{Object: "deal", Label: "Renewal date", Type: TypeDate, Source: "manual"}
 }
 
 func TestCreate_RequiresCreateGrant(t *testing.T) {

@@ -118,7 +118,7 @@ func TestDealStakeholdersView(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "deal_stakeholder", "deal_id": deal.ID, "contact_id": e.contactID,
-		"role": "champion", "source": "ui",
+		"role": "champion", "source": "manual",
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("create stakeholder → %d", status)
 	}

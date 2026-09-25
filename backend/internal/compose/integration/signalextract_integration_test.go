@@ -861,7 +861,7 @@ func seedProjectFor(t *testing.T, owner *pgx.Conn, company ids.UUID, name, key s
 	id := ids.NewV7()
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO project (id, company_id, name, key, source, captured_by)
-		 VALUES ($1, $2, $3, $4, 'ui', 'human:probe')`, id, company, name, key); err != nil {
+		 VALUES ($1, $2, $3, $4, 'manual', 'human:probe')`, id, company, name, key); err != nil {
 		t.Fatalf("seeding project %s: %v", name, err)
 	}
 	return id

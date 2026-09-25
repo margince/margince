@@ -116,7 +116,7 @@ func seedProjectForCapture(t *testing.T, owner *pgx.Conn, key string) ids.UUID {
 	id := ids.NewV7()
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO project (id, name, key, source, captured_by)
-		 VALUES ($1, 'Retry Rollout', $2, 'ui', 'connector:gmail')`, id, key); err != nil {
+		 VALUES ($1, 'Retry Rollout', $2, 'manual', 'connector:gmail')`, id, key); err != nil {
 		t.Fatalf("seeding the project %q: %v", key, err)
 	}
 	return id
