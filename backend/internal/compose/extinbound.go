@@ -18,6 +18,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -150,10 +151,6 @@ type inboundHandler struct {
 }
 
 func (h *inboundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
 	unit, slug, ref, ok := splitInboundPath(r.URL.Path)
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
@@ -172,10 +169,18 @@ func (h *inboundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	// GET exists only where a unit declared a handshake; everything else that
+	// is not a POST is refused before it costs a limiter token.
+	handshake := r.Method == http.MethodGet && endpoint.Challenge != nil
+	if r.Method != http.MethodPost && !handshake {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 	key := unit + "/" + slug
 
 	// Both budgets, both spent, before any work: everything below costs the
-	// installation a body read, a secret decrypt and an HMAC.
+	// installation a body read, a secret decrypt and an HMAC. A handshake
+	// spends them too — it is a request a stranger can send as often as a POST.
 	admitted := true
 	if limiter := h.perIP[key]; limiter != nil && !limiter.Allow(httpserver.ClientIP(r)) {
 		admitted = false
@@ -189,17 +194,18 @@ func (h *inboundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if handshake {
+		h.serveChallenge(w, r, u, endpoint, slug, ref)
+		return
+	}
+
 	body, ok := readInboundBody(w, r, endpoint.MaxBody)
 	if !ok {
 		return
 	}
 
-	stamp, nonce, signature, ok := inboundHeaders(r)
+	req, ok := h.admitSignature(r, endpoint, slug, ref, body)
 	if !ok {
-		inboundRefuse(w)
-		return
-	}
-	if !withinSkew(h.now(), stamp, endpoint.Skew) {
 		inboundRefuse(w)
 		return
 	}
@@ -224,14 +230,7 @@ func (h *inboundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	outcome, handleErr := h.invoke(r.Context(), ws, u, endpoint, extension.InboundRequest{
-		Slug:      slug,
-		Ref:       ref,
-		Timestamp: stamp,
-		Nonce:     nonce,
-		Signature: signature,
-		Body:      body,
-	})
+	outcome, handleErr := h.invoke(r.Context(), ws, u, endpoint, req)
 	h.answer(w, r, unit, slug, outcome, handleErr)
 }
 
@@ -244,17 +243,116 @@ func (h *inboundHandler) invoke(
 	endpoint extension.InboundEndpoint,
 	req extension.InboundRequest,
 ) (extension.InboundOutcome, error) {
+	ctx = inboundPrincipal(ctx, ws, u.name)
+	rt := inboundRuntimeFor(ctx, string(u.name), u.version, inboundPrefix+string(u.name)+"/"+req.Slug, h.deps)
+	defer rt.release()
+	return endpoint.Handle(ctx, rt, req)
+}
+
+// admitSignature reads what the endpoint's scheme signs with, and builds the
+// request the unit will see. It answers false for everything the opaque 401
+// covers; which reason is deliberately not returned.
+func (h *inboundHandler) admitSignature(r *http.Request, endpoint extension.InboundEndpoint, slug, ref string, body []byte) (extension.InboundRequest, bool) {
+	if endpoint.Scheme == extension.SchemeProviderSigned {
+		// ONE value, bounded. Two copies of the header is a request whose
+		// meaning depends on which one a verifier reads.
+		values := r.Header.Values(endpoint.SignatureHeader)
+		if len(values) != 1 || values[0] == "" || len(values[0]) > extension.MaxInboundSignatureHeader {
+			return extension.InboundRequest{}, false
+		}
+		// No timestamp and no nonce: the provider sends neither, and the
+		// scheme's contract hands replay to the unit.
+		return extension.InboundRequest{Slug: slug, Ref: ref, Signature: values[0], Body: body}, true
+	}
+	stamp, nonce, signature, ok := inboundHeaders(r)
+	if !ok || !withinSkew(h.now(), stamp, endpoint.Skew) {
+		return extension.InboundRequest{}, false
+	}
+	return extension.InboundRequest{
+		Slug:      slug,
+		Ref:       ref,
+		Timestamp: stamp,
+		Nonce:     nonce,
+		Signature: signature,
+		Body:      body,
+	}, true
+}
+
+// serveChallenge answers a provider's subscription handshake.
+//
+// The answer is usually a value the caller chose (hub.challenge), so it is
+// bounded, served as text/plain and marked nosniff: an echo endpoint that a
+// browser would render as markup is a reflected-script vector on the
+// installation's own origin.
+func (h *inboundHandler) serveChallenge(w http.ResponseWriter, r *http.Request, u inboundUnit, endpoint extension.InboundEndpoint, slug, ref string) {
+	query, ok := challengeQuery(r)
+	if !ok {
+		inboundRefuse(w)
+		return
+	}
+	ws, err := h.resolve(r.Context())
+	if err != nil {
+		h.log.ErrorContext(r.Context(), "inbound: resolving the installation's workspace",
+			"unit", string(u.name), "slug", slug, "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	ctx := inboundPrincipal(r.Context(), ws, u.name)
+	rt := inboundRuntimeFor(ctx, string(u.name), u.version, inboundPrefix+string(u.name)+"/"+slug, h.deps)
+	defer rt.release()
+	answer, outcome, err := endpoint.Challenge(ctx, rt, extension.InboundChallengeRequest{Slug: slug, Ref: ref, Query: query})
+	if outcome != extension.InboundAccepted {
+		h.answer(w, r, string(u.name), slug, outcome, err)
+		return
+	}
+	if len(answer) > extension.MaxInboundChallengeAnswer {
+		h.log.ErrorContext(r.Context(), "inbound: a handshake answer is over the cap",
+			"unit", string(u.name), "slug", slug, "bytes", len(answer))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.WriteString(w, answer)
+}
+
+// challengeQuery keeps the hub.* parameters, first and only value each, and
+// refuses a query over any of its bounds rather than truncating it — a
+// truncated handshake is one the unit would answer about something the caller
+// did not send.
+func challengeQuery(r *http.Request) (map[string]string, bool) {
+	if len(r.URL.RawQuery) > extension.MaxInboundChallengeQuery {
+		return nil, false
+	}
+	values, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		return nil, false
+	}
+	out := make(map[string]string)
+	for name, vals := range values {
+		if !strings.HasPrefix(name, extension.InboundChallengePrefix) {
+			continue
+		}
+		if len(out) == extension.MaxInboundChallengeParams ||
+			len(vals) != 1 || len(vals[0]) > extension.MaxInboundChallengeValue {
+			return nil, false
+		}
+		out[name] = vals[0]
+	}
+	return out, true
+}
+
+// inboundPrincipal is the anonymous connector every inbound call runs as.
+func inboundPrincipal(ctx context.Context, ws ids.WorkspaceID, unit extension.Name) context.Context {
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-	ctx = principal.WithActor(ctx, principal.Principal{
+	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector,
-		ID:   "connector:ext:" + string(u.name),
+		ID:   "connector:ext:" + string(unit),
 		// OnBehalfOf zero and Permissions empty: an anonymous edge carries no
 		// authority. auth.Require has no connector branch, so a bare connector
 		// passes exactly what its permissions allow, which is nothing.
 	})
-	rt := inboundRuntimeFor(ctx, string(u.name), u.version, inboundPrefix+string(u.name)+"/"+req.Slug, h.deps)
-	defer rt.release()
-	return endpoint.Handle(ctx, rt, req)
 }
 
 // answer maps the unit's outcome onto the status a remote sender sees.
