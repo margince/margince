@@ -724,3 +724,77 @@ func TestAMessageInBothFoldersIsAttestedByTheSentPass(t *testing.T) {
 		t.Error("the first write of a message present in both folders carried no attestation; the Sent Items pass ran second and was swallowed by the natural key")
 	}
 }
+
+// The removal reporter's branches, which the Sync-level tests reach only on
+// their happy path.
+//
+// This is gmail's reportRemovals in all but the source-system argument, and the
+// two are deliberately NOT shared: a connector package here owns its whole
+// conversation with one provider and imports no sibling connector, so the only
+// home a shared helper could take is the connector port — which is the seam
+// every provider implements, not a place for one caller's loop. Both copies are
+// eight lines over an optional interface, and the port growing a helper for
+// them would be the larger coupling. The duty they share is asserted on both
+// sides instead, here and in gmail's TestAFailedRemovalDoesNotStopTheOnesBehindIt.
+type graphRemovalSink struct {
+	recordingSink
+	removed []connector.NaturalKey
+	err     error
+}
+
+func (s *graphRemovalSink) RemoveMessage(_ context.Context, key connector.NaturalKey) error {
+	s.removed = append(s.removed, key)
+	return s.err
+}
+
+// A failure on one removal does not stop the ones behind it. Losing a round of
+// mail because a single deletion could not be acted on trades a small wrong for
+// a larger one.
+func TestAFailedRemovalDoesNotStopTheGraphRemovalsBehindIt(t *testing.T) {
+	sink := &graphRemovalSink{err: errors.New("the copy is held by a legal duty")}
+
+	reportRemovals(context.Background(), sink, []string{"a", "b", "c"}, connectorName)
+
+	if len(sink.removed) != 3 {
+		t.Fatalf("reached %d removals, want all 3 — one failure stopped the rest", len(sink.removed))
+	}
+}
+
+// A Sink that takes no removals is not a fault: connector.MessageRemover is
+// optional, so a fixture implementing only Upsert behaves as this connector did
+// before it learned about tombstones.
+func TestAGraphSinkThatTakesNoRemovalsIsNotAFailure(t *testing.T) {
+	plain := &recordingSink{}
+
+	reportRemovals(context.Background(), plain, []string{"gone"}, connectorName)
+
+	if len(plain.recs) != 0 {
+		t.Errorf("a removal reached Upsert: %+v", plain.recs)
+	}
+}
+
+// Nothing removed asks the seam nothing, even of a sink that could take it.
+func TestAnEmptyGraphRemovalListAsksTheSinkNothing(t *testing.T) {
+	sink := &graphRemovalSink{}
+
+	reportRemovals(context.Background(), sink, nil, connectorName)
+
+	if len(sink.removed) != 0 {
+		t.Errorf("an empty list reached the sink: %+v", sink.removed)
+	}
+}
+
+// Each removal names this connector's own source system, not the caller's — a
+// key naming the wrong provider would select another connector's message.
+func TestEachGraphRemovalNamesThisConnectorsSourceSystem(t *testing.T) {
+	sink := &graphRemovalSink{}
+
+	reportRemovals(context.Background(), sink, []string{"AAMkAGI2"}, connectorName)
+
+	if len(sink.removed) != 1 {
+		t.Fatalf("want one removal, got %+v", sink.removed)
+	}
+	if got := sink.removed[0]; got.SourceSystem != connectorName || got.SourceID != "AAMkAGI2" {
+		t.Errorf("removal named %+v, want this connector's system and Graph's id", got)
+	}
+}
