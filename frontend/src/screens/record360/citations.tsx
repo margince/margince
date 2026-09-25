@@ -244,13 +244,6 @@ function emailOf(cited: Cited): Cited["email_summary"] | undefined {
     : undefined;
 }
 
-// Whether the HOST can open a message at all. The other half of the question —
-// whether this reader may read THIS one — is EmailReference's own: it takes the
-// withheld state and drops the opener whatever the caller passed, because a
-// privacy rule living in a prop contract is a rule the next caller has to
-// remember. Repeating it here would be a second copy of that decision, and the
-// two would be free to disagree.
-
 /** One steppable citation, in the receipt's own shape. */
 export type CitedSibling = {
   entityType: "fact" | "profile_field";
@@ -405,6 +398,8 @@ export function Citations({
         if (!summary) {
           return null;
         }
+        // EmailReference drops the opener from a withheld message itself, and a
+        // second copy of that privacy rule here would be free to disagree.
         const withheld = summary.display_status === "withheld";
         return (
           <EmailReference
