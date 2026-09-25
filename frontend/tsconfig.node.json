@@ -40,18 +40,23 @@
   // per-test time ceiling, derived from measurements it carries. vite.config.ts
   // reads it and so does scripts/test-budget.test.ts, so it has to be in the
   // same program as both.
+  //
+  // The tool side lives here too — the suite's setup, the Playwright and
+  // Storybook configs — because vitest and Storybook transpile without
+  // typechecking, so a file no project lists is checked by nothing.
+  // scripts/tsconfig-roots.test.ts fails on one.
   "include": [
     "vite.config.ts",
     "vite.mcp-apps.config.ts",
+    "vite-proxy.test.ts",
     "vitest.budget.ts",
+    "vitest.ext.config.ts",
+    "vitest.setup.ts",
+    "playwright.config.ts",
+    ".storybook/*.ts",
+    ".storybook/*.tsx",
     "scripts/**/*.ts",
     "src",
-    // The browser suite's record corpus, and only that file: it is the list of
-    // record pages the Playwright specs sweep, and `src/app/recordcensus.test.ts`
-    // holds it against the set the shell caps — a src test cannot import a file
-    // no project lists. The specs themselves stay out; they are typed by no
-    // project today, and pulling them in is its own change.
-    "e2e/records.ts",
     "e2e/**/*.ts"
   ],
   // src/screens/ext/ is the COMPOSED lane's program — its screens call routes
