@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   Building2,
   Check,
@@ -34,6 +34,7 @@ import {
 } from "../i18n";
 import { coldFieldLabel, throwProblem } from "./common";
 import { onboardingLocale } from "./onboarding-conversation/onboarding-locale";
+import { useConfiguredModel } from "./onboarding-conversation/workbench";
 
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 type AiProfile = components["schemas"]["AiProfile"];
@@ -258,15 +259,7 @@ function WebsiteWorkbench(
     props.companyDraft,
   );
   const [applied, setApplied] = useState<Set<string>>(new Set());
-  const profile = useQuery({
-    queryKey: ["ai-profile"],
-    queryFn: async (): Promise<AiProfile> => {
-      const { data, error } = await api.GET("/ai/profile");
-      if (error) throwProblem(error);
-      return data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const configuredModels = useConfiguredModel();
   const latestReply = [...conversation.entries]
     .reverse()
     .find(
@@ -282,11 +275,6 @@ function WebsiteWorkbench(
     (!readRuntime || replyRuntime.call_attempts >= readRuntime.call_attempts)
       ? replyRuntime
       : readRuntime;
-  const configuredModels = configuredModelLabel(
-    profile.data,
-    t("ob.ai.runtimeUnavailable"),
-    t,
-  );
   const state = presenceState(props, props.running);
   const presentation = props.read
     ? coreReadPresentation(

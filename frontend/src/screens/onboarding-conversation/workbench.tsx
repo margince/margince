@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useCan } from "../../app/capability";
 import type { MarginceCoreState } from "../../design-system/margince-core";
 import { AiRuntimeChip } from "../../design-system/margince-workbench";
 import {
@@ -38,8 +39,12 @@ type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 // cache entry, so naming it in three places still costs one request.
 export function useConfiguredModel(): string {
   const t = useT();
+  // GET /ai/profile is gated on automation:update server-side, so a rep's
+  // journey skips the read and names no model rather than drawing a 403.
+  const canReadProfile = useCan("automation", "update");
   const profile = useQuery({
     queryKey: ["ai-profile"],
+    enabled: canReadProfile,
     queryFn: async (): Promise<AiProfile> => {
       const { data, error } = await api.GET("/ai/profile");
       if (error) {

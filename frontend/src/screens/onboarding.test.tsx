@@ -15,7 +15,7 @@ import {
   SLOWEST_MEASURED_TEST_MS,
 } from "../../vitest.budget";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import {
   CUSTOMER_FIELDS,
@@ -183,6 +183,8 @@ type StubOptions = {
   proposal?: Proposal;
   messageReply?: MessageReply;
   saveError?: { detail: string; status: number };
+  /** GET /me grants; none unless the case says otherwise. */
+  allow?: GrantSpec;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -276,7 +278,7 @@ function stubApi(options: StubOptions = {}) {
       }
       // GET /company answers only an admin, so the journey's session is one.
       if (path.endsWith("/me") && request.method === "GET") {
-        return jsonResponse(meFixture());
+        return jsonResponse(meFixture({ allow: options.allow }));
       }
       if (path.endsWith("/company") && request.method === "GET") {
         return jsonResponse({ detail: "no company yet" }, 404);
@@ -412,7 +414,7 @@ async function openTheEditingBoard(): Promise<void> {
 
 describe("the conversational company act", () => {
   it("loads the detailed AI profile after the public login profile was cached", async () => {
-    const calls = stubApi();
+    const calls = stubApi({ allow: { automation: ["update"] } });
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -428,6 +430,20 @@ describe("the conversational company act", () => {
 
     expect(await screen.findByText(/gemini\/gemini-3\.5-flash/)).toBeTruthy();
     expect(requestTo(calls, "/ai/profile", "GET")).toBeTruthy();
+  });
+
+  // GET /ai/profile is gated on automation:update, so a seat without it names
+  // no model rather than drawing a 403 on every journey screen.
+  it("does not read the AI profile for a seat without automation update", async () => {
+    const calls = stubApi();
+    render(<OnboardingScreen />);
+
+    expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
+    await waitFor(() => expect(requestTo(calls, "/me", "GET")).toBeTruthy());
+    expect(requestTo(calls, "/ai/profile", "GET")).toBeUndefined();
+    expect(
+      screen.getAllByText(/Runtime details unavailable/).length,
+    ).toBeGreaterThan(0);
   });
 
   it("offers an honest choice between website reading and telling directly", async () => {
