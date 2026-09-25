@@ -32,7 +32,7 @@ import { useDedupeDisposition } from "./dedupe.queries";
 // The review's own sheet: the two columns, the recessed cards and the trailing
 // line of verbs. It travels with the component because two hosts draw it.
 import "./worklist.pair.css";
-import { type WorklistItem, worklistKey } from "./worklist.queries";
+import type { WorklistItem } from "./worklist.queries";
 
 /**
  * The pair, and the verbs that answer it.
@@ -78,7 +78,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const { locale } = useLocale();
   const toast = useToast();
-  const decide = useDedupeDisposition([worklistKey]);
+  const decide = useDedupeDisposition();
   const pair = item.pair;
   if (!pair) {
     return null;

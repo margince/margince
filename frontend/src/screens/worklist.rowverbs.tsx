@@ -185,9 +185,9 @@ export function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
 //
 // Every verb is a LINK to the surface that owns it rather than a mutation from
 // here: this queue adds no authority of its own, so deciding an approval goes
-// to the decision surface and merging a pair to the dedupe queue, exactly as
-// they do from any other door. Rendering a button that acted here would be a
-// second place for those rules to live.
+// to the decision surface, exactly as it does from any other door, and a
+// duplicate pair is decided by its review under the row (worklist.pair.tsx).
+// Rendering a button that acted here would be a second place for those rules.
 //
 // A verb whose destination this page cannot name draws nothing. A control that
 // looks pressable and goes nowhere is worse than no control.
