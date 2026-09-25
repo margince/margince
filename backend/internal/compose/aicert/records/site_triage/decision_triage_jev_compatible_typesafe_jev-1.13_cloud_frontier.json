@@ -21,8 +21,8 @@
   "context_scopes": [],
   "judge_score_p50": 0,
   "judge_score_min": 0,
-  "latency_p50": 349,
-  "latency_p95": 428,
+  "latency_p50": 361,
+  "latency_p95": 976,
   "mean_tokens": 548,
   "mean_tokens_in": 548,
   "mean_tokens_out": 0,
@@ -31,15 +31,15 @@
   "est_cost_microusd": 23,
   "judge_served_model": "",
   "self_judged": false,
-  "served_identity_source": "echo",
-  "ran_at": "2026-09-25T13:33:40Z",
+  "served_identity_source": "response",
+  "ran_at": "2026-09-25T14:09:26Z",
   "decision": {
     "kept": 15,
     "kept_correct": 15,
     "kept_wrong": 0,
     "fallbacks": 0,
     "fallback_rate": 0,
-    "min_kept_confidence": 0.95,
+    "min_kept_confidence": 0.94,
     "served_pass_rate": 1
   },
   "scenarios": [
@@ -102,7 +102,7 @@
         "kept_wrong": 0,
         "fallbacks": 0,
         "fallback_rate": 0,
-        "min_kept_confidence": 0.95,
+        "min_kept_confidence": 0.94,
         "served_pass_rate": 1
       }
     },
@@ -123,7 +123,7 @@
         "kept_wrong": 0,
         "fallbacks": 0,
         "fallback_rate": 0,
-        "min_kept_confidence": 0.98,
+        "min_kept_confidence": 0.99,
         "served_pass_rate": 1
       }
     },

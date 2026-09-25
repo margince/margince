@@ -10758,8 +10758,8 @@
           "runs": 15,
           "passed": 14,
           "reliability": 0.9333333333333333,
-          "latency_p50_ms": 608,
-          "latency_p95_ms": 1865,
+          "latency_p50_ms": 833,
+          "latency_p95_ms": 12796,
           "reported": {
             "accepted": 14,
             "wrong_answer": 1,
