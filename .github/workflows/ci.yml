@@ -213,6 +213,31 @@ jobs:
               # shard — the cut this split exists to make.
               - 'frontend/**'
               - 'desktop/**'
+              # And everything else a gate opens. This list is DERIVED, not
+              # remembered: gatelanetrigger_test.go resolves every path literal
+              # in the suite against the tree and fails on one no pattern here
+              # covers, so the next file a gate reaches for fails on the branch
+              # that added it. The first version of that census enumerated seven
+              # directory prefixes and missed `.github/labels.yml` and this
+              # `package.json`, which is why it derives now.
+              - '.github/**'
+              - '.coderabbit.yaml'
+              - '.env.example'
+              - '.tool-versions'
+              - 'config/**'
+              - 'e2e/**'
+              - 'tools/**'
+              - 'user-guide/**'
+              - 'Dockerfile*'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'renovate.json'
+              - 'README.md'
+              - 'CHANGELOG.md'
+              - 'CODE_OF_CONDUCT.md'
+              - 'CONTRIBUTING.md'
+              - 'SECURITY.md'
+              - 'SUPPORT.md'
             frontend:
               - 'frontend/**'
               - 'backend/api/**'

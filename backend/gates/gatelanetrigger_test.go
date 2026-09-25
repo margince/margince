@@ -31,11 +31,16 @@ import (
 	"testing"
 )
 
-// readsOutsideBackend finds repo-relative paths a gate names in a string
-// literal. Anchored and space-free so a sentence mentioning `docs/` in a failure
-// message is not mistaken for a file the gate opens.
-var readsOutsideBackend = regexp.MustCompile(
-	`"((?:frontend|desktop|docs|scripts|extensions|fixtures|composition)/[A-Za-z0-9_./*-]*)"`)
+// candidatePath finds string literals that could name a file: no whitespace,
+// and either a separator or an extension. Prose is excluded by the space rule —
+// a failure message mentioning `docs/` reads as a sentence, not a path.
+//
+// Which of these ARE paths is decided by the tree rather than by a list of
+// prefixes: the first version enumerated seven directories and silently missed
+// `.github/labels.yml` and the root `package.json`, both read by gates and
+// neither covered. A census that names its own subject can only ever find what
+// its author already thought of.
+var candidatePath = regexp.MustCompile(`"([A-Za-z0-9_.][A-Za-z0-9_./*-]*(?:/[A-Za-z0-9_./*-]*|\.[A-Za-z]{2,4}))"`)
 
 // coveredBy reports whether a paths-filter pattern matches this path. The two
 // shapes the filter uses: a `**` tree and an exact file.
@@ -49,6 +54,9 @@ func coveredBy(pattern, path string) bool {
 func TestEveryGateRunsInALaneItsSubjectTriggers(t *testing.T) {
 	t.Parallel()
 
+	// The gates suite runs with backend/ as its working directory, so the tree
+	// this judges is one level up.
+	const repoRoot = ".."
 	scope := backendFilterPatterns(t)
 	// The suite runs with backend/ as its working directory, which is why the
 	// workflow above is reached as ../.github — the gates are a directory down
@@ -67,8 +75,12 @@ func TestEveryGateRunsInALaneItsSubjectTriggers(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading %s: %v", entry.Name(), err)
 		}
-		for _, match := range readsOutsideBackend.FindAllStringSubmatch(string(body), -1) {
+		for _, match := range candidatePath.FindAllStringSubmatch(string(body), -1) {
 			path := match[1]
+			path, reads := readsFromTheTree(repoRoot, path)
+			if !reads {
+				continue
+			}
 			read++
 			if covered(scope, path) {
 				continue
@@ -89,6 +101,38 @@ func TestEveryGateRunsInALaneItsSubjectTriggers(t *testing.T) {
 			"least 20 — it has stopped recognising the reads rather than the tree having lost them",
 			read)
 	}
+}
+
+// readsFromTheTree resolves a literal to something that EXISTS outside
+// backend/, which is what separates a path a gate opens from an import path, a
+// format string or a word that happens to carry a dot.
+//
+// `./` is relative to the suite's own directory and therefore already inside
+// backend/**. `../` reaches the repository root, which is where this census
+// judges from anyway. A glob is resolved by matching it: a gate naming a
+// pattern reads whatever the pattern matches today.
+func readsFromTheTree(root, path string) (string, bool) {
+	switch {
+	case strings.HasPrefix(path, "./"):
+		return "", false
+	case strings.HasPrefix(path, "../"):
+		path = strings.TrimPrefix(path, "../")
+	case strings.HasPrefix(path, "backend/"), path == "backend":
+		return "", false
+	}
+	// After normalisation, not before: the literal that reaches here is
+	// "../.git", and a check ahead of the prefix strip never sees it. The
+	// repository's own metadata is named by gates locating the root — not a
+	// source path, and no pull request edits it.
+	if path == "" || path == "." || path == ".git" || strings.HasPrefix(path, ".git/") {
+		return "", false
+	}
+	if strings.ContainsAny(path, "*?") {
+		matches, err := filepath.Glob(filepath.Join(root, path))
+		return path, err == nil && len(matches) > 0
+	}
+	_, err := os.Stat(filepath.Join(root, path))
+	return path, err == nil
 }
 
 func covered(scope []string, path string) bool {
