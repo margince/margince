@@ -56,7 +56,7 @@
 1645 frontend/src/design-system/listtable.tsx
 1728 frontend/src/screens/onboarding-facts.test.tsx
 1917 frontend/src/screens/contactpage.stories.tsx
-1708 frontend/src/screens/analytics.tsx
+1685 frontend/src/screens/analytics.tsx
 1631 frontend/src/design-system/atoms.tsx
 2062 frontend/src/screens/company360.tsx
 1931 frontend/src/design-system/composed.tsx

@@ -246,7 +246,12 @@ test.describe("Explain a cell", () => {
       await page.setViewportSize({ width, height: 900 });
       await openAnalytics(page, "performance");
       const opener = page.getByRole("button", { name: trigger("Qualify") });
+      const asked = page.waitForRequest(/\/reports\/stage-age\/derivation/);
       await opener.click();
+      // The ROW's handle reached the server, with its own group key bound.
+      const request = new URL((await asked).url());
+      expect(request.searchParams.get("stage_id")).toBe("s1");
+      expect(request.searchParams.getAll("by")).toEqual(["stage_id"]);
 
       // The drawer answers for THIS row: its source rows and the notice the
       // fixture's mask puts there, not the card's result-level panel.

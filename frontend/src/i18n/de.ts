@@ -551,9 +551,9 @@ export const de = {
   "explain.rate": "Kurs {rate} am {date}",
   "explain.cell": "{figure} erklären",
   "explain.excluded_one":
-    "1 Datensatz fehlt in dieser Zahl und in den Zeilen darunter. Ein Feld darin ist für deine Rolle ausgeblendet.",
+    "Bei 1 Datensatz ist ein Feld für deine Rolle ausgeblendet, deshalb fehlt er in dieser Zahl und in den Zeilen darunter.",
   "explain.excluded_other":
-    "{count} Datensätze fehlen in dieser Zahl und in den Zeilen darunter. Ein Feld darin ist für deine Rolle ausgeblendet.",
+    "Bei {count} Datensätzen ist ein Feld für deine Rolle ausgeblendet, deshalb fehlen sie in dieser Zahl und in den Zeilen darunter.",
 
   "board.count": "Deals: {count}",
   "board.weighted": "gewichtet {value}",

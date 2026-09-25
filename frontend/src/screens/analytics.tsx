@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
@@ -34,9 +34,11 @@ import {
 } from "./analytics.context";
 import {
   CellExplain,
+  CompanyCellExplain,
   ExplainFrame,
   ExplainPanel,
   rowDerivationUrl,
+  useExplainedHandle,
 } from "./analytics.explain";
 import { ForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
@@ -44,7 +46,6 @@ import { AnalyticsScopePicker } from "./analytics.scope";
 import { ShareViewButton } from "./analytics.share";
 import { QueryGate, throwProblem } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
-import { EntityRef, useEntityName } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 import "./analytics.css";
 
@@ -331,7 +332,10 @@ export function ForecastTile({
 }>) {
   const t = useT();
   const plural = usePlural();
-  const source = <CellExplain url={explainUrl ?? null} figure={label} />;
+  // No handle, no slot: StatCard draws a source box for any node, even empty.
+  const source = explainUrl ? (
+    <CellExplain url={explainUrl} figure={label} />
+  ) : undefined;
   // "1 deals" is a sentence no call site should be able to spell.
   const deals = (n: number) =>
     plural("analytics.forecastDeals", n, { count: formatNumber(n, locale) });
@@ -489,38 +493,16 @@ function singleCurrencyKeys(keys: readonly string[]): ReadonlySet<string> {
   );
 }
 
-// The company's name is a read of its own, shared with the reference beside it,
-// so the trigger names the company the cell shows. A company trading in two
-// currencies is two rows, and the code is what tells their triggers apart.
-function CompanyCellExplain({
-  row,
-  companyId,
-  split,
-}: Readonly<{ row: ReportRow; companyId: string; split: boolean }>) {
-  const t = useT();
-  const company =
-    useEntityName("company", companyId).name ?? t("analytics.company");
-  const currency = rowCurrency(row);
-  return (
-    <CellExplain
-      url={rowDerivationUrl(row)}
-      figure={split && currency ? `${company} ${currency}` : company}
-    >
-      <EntityRef kind="company" id={companyId} />
-    </CellExplain>
-  );
-}
+// The key a row groups under: its company, or "" for the deals that have none.
+const companyKey = (row: ReportRow) =>
+  typeof row.company_id === "string" ? row.company_id : "";
 
 function CompanyTable({
   rows,
   locale,
 }: Readonly<{ rows: ReportRow[]; locale: Locale }>) {
   const t = useT();
-  const addressable = singleCurrencyKeys(
-    rows
-      .map((row) => row.company_id)
-      .filter((id): id is string => typeof id === "string"),
-  );
+  const addressable = singleCurrencyKeys(rows.map(companyKey));
   return (
     <DataTable
       label={t("analytics.reportOpenByCompany")}
@@ -534,25 +516,14 @@ function CompanyTable({
           // minute and shared with every other reference on screen. The cost is
           // per row and this table is one report page long; the alternative is a
           // table of uuids, which is not a cheaper report but an unusable one.
-          render: (row: ReportRow) =>
-            typeof row.company_id === "string" ? (
-              <CompanyCellExplain
-                row={row}
-                companyId={row.company_id}
-                split={!addressable.has(row.company_id)}
-              />
-            ) : (
-              // Deals with no company at all, grouped into one row. An empty
-              // cell read as a rendering fault; this says what the row is, and
-              // it is a fact about the data rather than a permission — so it
-              // says "none", which no other state is allowed to claim.
-              <CellExplain
-                url={rowDerivationUrl(row)}
-                figure={t("analytics.noCompany")}
-              >
-                <span>{t("analytics.noCompany")}</span>
-              </CellExplain>
-            ),
+          render: (row: ReportRow) => (
+            <CompanyCellExplain
+              url={rowDerivationUrl(row)}
+              currency={rowCurrency(row)}
+              companyId={companyKey(row) || null}
+              split={!addressable.has(companyKey(row))}
+            />
+          ),
         },
         {
           key: FIELD_CURRENCY,
@@ -1320,7 +1291,10 @@ function ProjectCommitmentsTable({
           key: "project",
           header: t("analytics.project"),
           render: (row: ProjectListRow) => (
-            <CellExplain url={row.derivationUrl} figure={row.name}>
+            <CellExplain
+              url={row.derivationUrl}
+              figure={row.name || t("analytics.project")}
+            >
               <a className="link-button" href={projectHref(row.projectId)}>
                 {row.name}
               </a>
@@ -1379,7 +1353,10 @@ function ProjectsGoneQuietTable({
           key: "project",
           header: t("analytics.project"),
           render: (row: (typeof listed)[number]) => (
-            <CellExplain url={row.derivationUrl} figure={row.name}>
+            <CellExplain
+              url={row.derivationUrl}
+              figure={row.name || t("analytics.project")}
+            >
               <a className="link-button" href={projectHref(row.projectId)}>
                 {row.name}
               </a>
@@ -1483,7 +1460,7 @@ function ReportCard({
   locale: Locale;
 }>) {
   const t = useT();
-  const [explain, setExplain] = useState(false);
+  const explained = useExplainedHandle();
   const explainId = useId();
 
   const reportQuery = useQuery({
@@ -1522,9 +1499,9 @@ function ReportCard({
             // reader who cannot see the panel appear is still told it did.
             actions={
               <Button
-                aria-expanded={explain}
+                aria-expanded={explained.open}
                 aria-controls={explainId}
-                onClick={() => setExplain((value) => !value)}
+                onClick={() => explained.toggle(run.derivation_url ?? null)}
               >
                 {t("explain.open")}
               </Button>
@@ -1561,8 +1538,8 @@ function ReportCard({
               )}
             </PanelBody>
           </Panel>
-          {explain && (
-            <ExplainPanel id={explainId} url={run.derivation_url ?? null} />
+          {explained.open && (
+            <ExplainPanel id={explainId} url={explained.url} />
           )}
         </ExplainFrame>
       )}

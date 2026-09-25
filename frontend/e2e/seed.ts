@@ -2451,8 +2451,16 @@ export async function mockApi(
     // read: a stage-age card looking for `median_days` on a row carrying
     // `raw_minor` renders its empty state, and a sweep over those tabs proves
     // the fixture rather than the screen.
+    // Refused the way the server refuses it: a grouping dimension the request
+    // names without binding, as a value or as `isnull`, explains no one cell.
     if (path.startsWith("/reports/") && path.endsWith("/derivation")) {
-      return json(derivationFixture);
+      const unset = url.searchParams.getAll("isnull");
+      const unbound = url.searchParams
+        .getAll("by")
+        .filter((dim) => !url.searchParams.has(dim) && !unset.includes(dim));
+      return unbound.length > 0
+        ? json({ code: "report_field_not_allowed", status: 422 }, 422)
+        : json(derivationFixture);
     }
     if (path.startsWith("/reports/") && !path.includes("/derivation")) {
       const key = path.slice("/reports/".length);

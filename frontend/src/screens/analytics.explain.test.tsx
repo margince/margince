@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { focusManager } from "@tanstack/react-query";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
@@ -175,6 +176,151 @@ describe("a row's explain drawer", () => {
     expect(
       screen.queryByRole("button", { name: "Explain Best case" }),
     ).toBeNull();
+    // A tile with no handle draws no source slot at all, not an empty one.
+    expect(document.querySelectorAll(".stat-card-source")).toHaveLength(1);
+  });
+
+  // A row whose group key is NULL binds it as `isnull`, once per unset key; a
+  // client keeping only the last would explain a broader slice than the row.
+  it("forwards every unset group key of a no-company, unpriced row", async () => {
+    const user = userEvent.setup();
+    const derivationUrls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        companyRows: [
+          {
+            company_id: null,
+            currency: null,
+            deal_count: 1,
+            derivation_url:
+              "/v1/reports/open-deals-per-company/derivation?by=company_id&by=currency&agg=count::deal_count&isnull=company_id&isnull=currency",
+          },
+        ],
+        onDerivation: (u) => derivationUrls.push(u),
+        derivation: derivation(),
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPipeline(user);
+    await user.click(
+      await screen.findByRole("button", { name: "Explain No company" }),
+    );
+    await screen.findByText("Fleet retrofit");
+    expect(derivationUrls[0]).toContain("isnull=company_id");
+    expect(derivationUrls[0]).toContain("isnull=currency");
+  });
+
+  it("binds a forecast tile's missing category as isnull", async () => {
+    const user = userEvent.setup();
+    const derivationUrls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        forecastRows: [
+          {
+            forecast_category: null,
+            raw_minor: 100000,
+            deal_count: 1,
+            derivation_url:
+              "/v1/reports/forecast/derivation?by=forecast_category&agg=count::deal_count&isnull=forecast_category",
+          },
+        ],
+        onDerivation: (u) => derivationUrls.push(u),
+        derivation: derivation(),
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPipeline(user);
+    await user.click(
+      await screen.findByRole("button", { name: "Explain No category" }),
+    );
+    await screen.findByText("Fleet retrofit");
+    expect(derivationUrls[0]).toContain("isnull=forecast_category");
+  });
+
+  // Two no-company rows, one per currency, are two triggers a reader must be
+  // able to tell apart; a project with no name still gets a noun.
+  it("names each trigger apart, with a noun where the row has no name", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        companyRows: [
+          {
+            company_id: null,
+            currency: "EUR",
+            deal_count: 1,
+            derivation_url: ROW_HANDLE,
+          },
+          {
+            company_id: null,
+            currency: "USD",
+            deal_count: 1,
+            derivation_url: ROW_HANDLE,
+          },
+        ],
+        commitmentRows: [
+          {
+            project_id: "p1",
+            name: "",
+            phase: "delivering",
+            derivation_url: ROW_HANDLE,
+          },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    const user = userEvent.setup();
+    await openPipeline(user);
+    expect(
+      await screen.findByRole("button", { name: "Explain No company EUR" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Explain No company USD" }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Delivery" }));
+    expect(
+      await screen.findByRole("button", { name: "Explain Project" }),
+    ).toBeTruthy();
+  });
+
+  // The report refetches on focus and mints a new handle with a new instant;
+  // an open drawer keeps explaining the figure the reader opened it on.
+  it("keeps the handle it opened with across a refetch", async () => {
+    const user = userEvent.setup();
+    const derivationUrls: string[] = [];
+    const rows = [stageRow({ derivation_url: ROW_HANDLE })];
+    let runs = 0;
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        stageRows: rows,
+        onRun: (key) => {
+          if (key === "pipeline-current") runs += 1;
+        },
+        onDerivation: (u) => derivationUrls.push(u),
+        derivation: derivation(),
+      }),
+    );
+    render(<AnalyticsScreen />);
+    const drawer = await openRowDrawer(user);
+    await within(drawer).findByText("Fleet retrofit");
+    rows[0] = stageRow({ derivation_url: `${ROW_HANDLE}&as_of=later` });
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    await waitFor(() => expect(runs).toBe(2));
+    expect(derivationUrls.some((u) => u.includes("as_of=later"))).toBe(false);
+    expect(within(drawer).getByText("Fleet retrofit")).toBeTruthy();
+
+    // Opened afresh, it takes the handle the row carries now.
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Explain Qualify" }));
+    await waitFor(() =>
+      expect(derivationUrls.some((u) => u.includes("as_of=later"))).toBe(true),
+    );
+    act(() => focusManager.setFocused(undefined));
   });
 
   it("closes on Escape and hands focus back to its trigger", async () => {
@@ -199,7 +345,10 @@ describe("a row's explain drawer", () => {
 
 // The body both hosts share: what a mask took out, and what a cap left off.
 describe("what the explanation owns up to", () => {
-  async function drawerWith(extra: Record<string, unknown>) {
+  async function drawerWith(
+    extra: Record<string, unknown>,
+    settled = "Fleet retrofit",
+  ) {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
@@ -210,7 +359,7 @@ describe("what the explanation owns up to", () => {
     );
     render(<AnalyticsScreen />);
     const drawer = await openRowDrawer(user);
-    await within(drawer).findByText("Fleet retrofit");
+    await within(drawer).findByText(settled);
     return drawer;
   }
 
@@ -227,6 +376,43 @@ describe("what the explanation owns up to", () => {
   it("says nothing when the mask excluded no record", async () => {
     const drawer = await drawerWith({ excluded_by_permission: 0 });
     expect(within(drawer).queryByText(/left out of this number/)).toBeNull();
+  });
+
+  // Null is "no mask applied", which is further still from anything excluded.
+  it("says nothing when no mask applied", async () => {
+    const drawer = await drawerWith({ excluded_by_permission: null });
+    expect(within(drawer).queryByText(/left out of this number/)).toBeNull();
+  });
+
+  // A capped answer that returned no rows still matched some: "none" is false.
+  it("counts what the cap left off even when no row came back", async () => {
+    const drawer = await drawerWith(
+      { rows: [], total_rows: 5 },
+      en["state.partialCount"].replace("{count}", "5"),
+    );
+    expect(within(drawer).queryByText(en["common.empty"])).toBeNull();
+  });
+
+  // The label names the record a row stands for, and that is the report's kind.
+  it("heads the record column Deal for a deal report", async () => {
+    const drawer = await drawerWith({
+      columns: ["label"],
+      rows: [{ label: "Fleet retrofit" }],
+    });
+    expect(
+      within(drawer).getByRole("columnheader", { name: "Deal" }),
+    ).toBeTruthy();
+  });
+
+  it("heads the record column Project for a delivery report", async () => {
+    const drawer = await drawerWith({
+      report: "project-commitments",
+      columns: ["label"],
+      rows: [{ label: "Fleet retrofit" }],
+    });
+    expect(
+      within(drawer).getByRole("columnheader", { name: "Project" }),
+    ).toBeTruthy();
   });
 
   // The server caps the rows and still counts them all; a capped list that
@@ -248,6 +434,14 @@ describe("parseDerivationQuery", () => {
     );
     expect(q.by).toEqual(["stage_id"]);
     expect(q.agg).toEqual(["sum:amount_minor:raw"]);
+    expect(q.stage_id).toBe("s1");
+  });
+
+  it("keeps every value of a repeated predicate", () => {
+    const q = parseDerivationQuery(
+      "/v1/reports/x/derivation?by=a&by=b&isnull=a&isnull=b&stage_id=s1",
+    );
+    expect(q.isnull).toEqual(["a", "b"]);
     expect(q.stage_id).toBe("s1");
   });
 });

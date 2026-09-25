@@ -26,7 +26,7 @@ import {
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
-import { EntityRef } from "./entityref";
+import { EntityRef, useEntityName } from "./entityref";
 
 // "Explain this number": where a figure on the Analytics screen came from. ONE
 // body, two hosts: the panel under a report card explains the whole result, and
@@ -36,9 +36,8 @@ import { EntityRef } from "./entityref";
 type Derivation = components["schemas"]["ReportDerivation"];
 type ReportRow = components["schemas"]["ReportResult"]["rows"][number];
 
-// The frame a report was cut in, set once by the card that ran it. The source
-// rows are written in the same money as the figure they explain and dated in
-// the same zone, so every host reads the frame rather than being handed it.
+// The frame a report was cut in, set once by the card that ran it, so source
+// rows are written in the figure's money and dated in its zone.
 type ExplainFrameValue = Readonly<{
   baseCurrency: string | null;
   timezone: string | null;
@@ -65,18 +64,16 @@ export function rowDerivationUrl(row: ReportRow): string | null {
   return typeof url === "string" && url !== "" ? url : null;
 }
 
-// Parse a server-minted `derivation_url` into the typed derivation query.
-// The generated client's derivation query is ONLY `{ by?, agg? }` (no
-// predicate params, no index signature), so callers forward just those two;
-// the extra predicate keys ride along on the return value for inspection
-// only (spec constraint 6: never raw-fetch the URL itself).
+// A handle's query string as the typed client's query: every key is forwarded,
+// and a repeated one (`isnull` per unset group key) stays a list of all its values.
 export function parseDerivationQuery(
   url: string,
-): { by: string[]; agg: string[] } & Record<string, unknown> {
+): { by: string[]; agg: string[] } & Record<string, string | string[]> {
   const qs = new URLSearchParams(url.split("?")[1] ?? "");
-  const extra: Record<string, unknown> = {};
-  for (const [k, v] of qs.entries()) {
-    if (k !== "by" && k !== "agg") extra[k] = v;
+  const extra: Record<string, string | string[]> = {};
+  for (const key of new Set(qs.keys())) {
+    const values = qs.getAll(key);
+    extra[key] = values.length > 1 ? values : values[0];
   }
   return { ...extra, by: qs.getAll("by"), agg: qs.getAll("agg") };
 }
@@ -92,10 +89,8 @@ function useDerivation(url: string | null) {
     queryKey: ["derivation", url],
     enabled: url != null,
     queryFn: async () => {
-      // parsed carries by/agg PLUS every equality predicate from the handle
-      // (group-key values + plan filters). The endpoint treats each extra key
-      // as a predicate, so forward the whole object — dropping the predicates
-      // would explain the wrong slice (or 422 on a bound grouping dimension).
+      // Every predicate is forwarded: dropping one explains a broader slice
+      // than the figure, or 422s on a bound grouping dimension.
       const { data, error } = await api.GET("/reports/{report}/derivation", {
         params: {
           path: { report: derivationReportKey(url ?? "") },
@@ -110,11 +105,9 @@ function useDerivation(url: string | null) {
   });
 }
 
-// The vocabulary's own words for the columns a drill-through can carry.
-// A column outside it keeps its wire name, which is honest: the reader sees
-// what the plan selected rather than a guess at what it meant.
+// The vocabulary's words for a drill-through's columns. A column outside it
+// keeps its wire name: what the plan selected, not a guess at what it meant.
 const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
-  label: "explain.col.record",
   amount_base_minor: "analytics.unweighted",
   weighted_base_minor: "analytics.weighted",
   amount_minor: "analytics.unweighted",
@@ -126,22 +119,30 @@ const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
   partner_company_id: "analytics.company",
 };
 
-function derivationHeader(col: string, t: (key: MessageKey) => string): string {
-  const key = DERIVATION_HEADERS[col];
+// What a source row IS, per report: the label names the record the row stands
+// for, and the three delivery reports count projects rather than deals.
+const RECORD_NOUN: Readonly<Record<string, MessageKey>> = {
+  "projects-by-phase": "analytics.project",
+  "project-commitments": "analytics.project",
+  "projects-gone-quiet": "analytics.project",
+};
+
+function derivationHeader(
+  col: string,
+  report: string,
+  t: (key: MessageKey) => string,
+): string {
+  const key =
+    col === "label"
+      ? (RECORD_NOUN[report] ?? "explain.col.record")
+      : DERIVATION_HEADERS[col];
   return key ? t(key) : col;
 }
 
-// The server names the row and the reader reads the name, so the raw id
-// becomes noise beside it — but only once EVERY row has a name.
-//
-// Labelling is per row: the seam withholds a name for a record this reader may
-// not read, and the column appears as soon as one row was named. Dropping the
-// id on that alone would blank the withheld rows' only identifier, so the rows
-// a reader can least account for become the ones they cannot identify at all.
-//
-// Which record a row IS leads, whatever order the plan selected: in a narrow
-// drawer the columns past the edge are the ones scrolled to, and a row showing
-// its owner and currency but not its name is a row nobody can place.
+// The id is noise beside a name, but only once EVERY row has one: a name is
+// withheld per row, and dropping the id then blanks that row's only identifier.
+// Which record a row IS leads, whatever order the plan selected, because the
+// columns past a narrow drawer's edge are the ones a reader never sees.
 export function derivationColumns(derivation: Derivation): string[] {
   const rows = derivation.rows ?? [];
   const everyRowNamed =
@@ -157,12 +158,8 @@ export function derivationColumns(derivation: Derivation): string[] {
 
 const IDENTITY_COLUMNS = ["label", "id"];
 
-// Which money a row's minor-unit figure is written in.
-//
-// The two are not the same column. A `_base_minor` measure was converted by the
-// server, so it is in the installation's base currency; a plain `_minor` is the
-// deal's OWN amount, and the forecast's rows carry that currency beside it —
-// reading the base currency there would put a euro sign on a dollar deal.
+// A `_base_minor` measure was converted into the base currency; a plain `_minor`
+// is the deal's OWN amount, in the currency its row carries beside it.
 export function derivationCellCurrency(
   col: string,
   row: Record<string, unknown>,
@@ -175,9 +172,8 @@ export function derivationCellCurrency(
   return typeof own === "string" && own !== "" ? own : null;
 }
 
-// Money on these rows is stored in minor units, and a minor-unit integer
-// printed raw is the single most misread thing on this screen: 500000 next
-// to €5,000.00 are the same number wearing different clothes.
+// Money is stored in minor units, and 500000 printed raw beside €5,000.00 is the
+// most misread thing on this screen.
 function renderDerivationCell(
   col: string,
   row: Record<string, unknown>,
@@ -238,9 +234,8 @@ function DerivationPipelineName({
   );
 }
 
-// The source rows the explained figure reconciles to. The server caps them at
-// its row limit and says how many matched, so a capped list states the rest
-// under it instead of reading as the whole set.
+// The source rows the figure reconciles to. The server caps them and says how
+// many matched, so a capped list states the rest instead of reading as whole.
 function DerivationRows({
   derivation,
   baseCurrency,
@@ -248,59 +243,83 @@ function DerivationRows({
   const t = useT();
   const { locale } = useLocale();
   const columns = derivationColumns(derivation);
-  const remaining = (derivation.total_rows ?? 0) - derivation.rows.length;
+  const { rows } = derivation;
+  const remaining = (derivation.total_rows ?? 0) - rows.length;
+  const position = new Map(rows.map((row, index) => [row, index]));
   return (
     <>
       <SectionHeader title={t("explain.sources")} level={3} />
       <SurfaceState
-        state={derivation.rows.length === 0 ? "empty" : partialOr(remaining)}
+        state={rowsState(rows.length, remaining)}
         emptyLabel={t("common.empty")}
         loadingLabel={t("explain.sources")}
         detail={{ remaining }}
       >
-        <DataTable
-          label={t("explain.sources")}
-          columns={columns.map((col) => ({
-            key: col,
-            header: derivationHeader(col, t),
-            render: (row: Record<string, unknown>) =>
-              renderDerivationCell(col, row, baseCurrency, locale),
-          }))}
-          rows={derivation.rows}
-          rowKey={(row) => derivation.rows.indexOf(row).toString()}
-        />
+        {rows.length > 0 && (
+          <DataTable
+            label={t("explain.sources")}
+            columns={columns.map((col) => ({
+              key: col,
+              header: derivationHeader(col, derivation.report, t),
+              render: (row: Record<string, unknown>) =>
+                renderDerivationCell(col, row, baseCurrency, locale),
+            }))}
+            rows={rows}
+            rowKey={(row) =>
+              typeof row.id === "string"
+                ? `id:${row.id}`
+                : `at:${position.get(row)}`
+            }
+          />
+        )}
       </SurfaceState>
     </>
   );
 }
 
-function partialOr(remaining: number): "partial" | "ready" {
-  return remaining > 0 ? "partial" : "ready";
+// "None" only when the server matched none: a capped answer that returned no
+// rows still matched some, and says how many are not shown.
+function rowsState(
+  shown: number,
+  remaining: number,
+): "empty" | "partial" | "ready" {
+  if (remaining > 0) return "partial";
+  return shown === 0 ? "empty" : "ready";
 }
 
-// A field mask took these records out of the figure AND out of the rows, so the
-// two still reconcile. Said, because an unexplained smaller number reads as
-// missing data rather than as a permission boundary.
+// A field mask took these records out of the figure AND the rows, so the two
+// reconcile; said, so a smaller number reads as governed rather than missing.
 function ExcludedNote({
   count,
 }: Readonly<{ count: number | null | undefined }>) {
+  const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   if (count == null || count <= 0) {
     return null;
   }
   return (
-    <p className="surfacestate-withheld">
-      {plural("explain.excluded", count, {
-        count: formatNumber(count, locale),
-      })}
-    </p>
+    <SurfaceState
+      state="withheld"
+      emptyLabel={t("common.empty")}
+      loadingLabel={t("explain.sources")}
+      detail={{
+        withheldReason: plural("explain.excluded", count, {
+          count: formatNumber(count, locale),
+        }),
+      }}
+    >
+      {null}
+    </SurfaceState>
   );
 }
 
 // Everything a host shows about one handle, in the order a doubting reader
 // needs it: what the figure means, the caveats, then the rows and their frame.
-function ExplainBody({ url }: Readonly<{ url: string | null }>) {
+function ExplainBody({
+  url,
+  framed,
+}: Readonly<{ url: string | null; framed: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const { baseCurrency, timezone } = useContext(FrameContext);
@@ -340,7 +359,7 @@ function ExplainBody({ url }: Readonly<{ url: string | null }>) {
           <DerivationRows derivation={query.data} baseCurrency={baseCurrency} />
         </>
       )}
-      {asOf && timezone && (
+      {framed && asOf && timezone && (
         <p className="t-caption">
           {t("analytics.frame", {
             asOf: formatDateTime(asOf, locale, timezone),
@@ -352,7 +371,19 @@ function ExplainBody({ url }: Readonly<{ url: string | null }>) {
   );
 }
 
-// The host under a report card: the whole result's handle.
+// The handle the panel was opened with, held while it stays open: a refetch
+// mints a new one, and the reader keeps the explanation they are reading.
+export function useExplainedHandle() {
+  const [held, setHeld] = useState<{ url: string | null } | null>(null);
+  return {
+    open: held != null,
+    url: held?.url ?? null,
+    toggle: (url: string | null) => setHeld((open) => (open ? null : { url })),
+  };
+}
+
+// The host under a report card: the whole result's handle. It draws no frame of
+// its own, because the card above it already states the one it was cut in.
 export function ExplainPanel({
   id,
   url,
@@ -364,7 +395,7 @@ export function ExplainPanel({
     <div id={id}>
       <Panel title={t("explain.title")}>
         <PanelBody>
-          <ExplainBody url={url} />
+          <ExplainBody url={url} framed={false} />
         </PanelBody>
       </Panel>
     </div>
@@ -372,10 +403,8 @@ export function ExplainPanel({
 }
 
 // The host beside one row or tile: that cell's handle, in a drawer so the table
-// it explains stays legible behind it. `figure` names the row, and it is both
-// the trigger's name and the drawer's second line, so a reader told "Explain
-// Qualify" lands on a drawer that says Qualify. `children` is the cell the
-// trigger sits beside, drawn alone where the row carries no handle.
+// stays legible behind it. `figure` names the trigger and the drawer alike;
+// `children` is the cell the trigger sits beside, alone where there is no handle.
 export function CellExplain({
   url,
   figure,
@@ -383,6 +412,9 @@ export function CellExplain({
 }: Readonly<{ url: string | null; figure: string; children?: ReactNode }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  // Taken when the drawer opens and kept until it opens again, so a refetch
+  // that mints a new handle does not reset what the reader is reading.
+  const [held, setHeld] = useState(url);
   const titleId = useId();
   const figureId = useId();
   if (url == null) {
@@ -394,7 +426,10 @@ export function CellExplain({
         inline
         label={t("explain.cell", { figure })}
         icon={<Info aria-hidden />}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setHeld(url);
+          setOpen(true);
+        }}
       />
       <Modal
         open={open}
@@ -408,7 +443,7 @@ export function CellExplain({
         <p className="t-label" id={figureId}>
           {figure}
         </p>
-        <ExplainBody url={url} />
+        <ExplainBody url={held} framed />
       </Modal>
     </>
   );
@@ -420,5 +455,41 @@ export function CellExplain({
       {children}
       {trigger}
     </Row>
+  );
+}
+
+// A company row's trigger. The name is a read of its own, shared with the
+// reference beside it; a company, or the no-company group, split across two
+// currencies is two rows, and the code is what tells their triggers apart.
+export function CompanyCellExplain({
+  url,
+  currency,
+  companyId,
+  split,
+}: Readonly<{
+  url: string | null;
+  currency: string | null;
+  companyId: string | null;
+  split: boolean;
+}>) {
+  const t = useT();
+  const named = useEntityName("company", companyId).name;
+  const company =
+    companyId == null
+      ? t("analytics.noCompany")
+      : (named ?? t("analytics.company"));
+  return (
+    <CellExplain
+      url={url}
+      figure={split && currency ? `${company} ${currency}` : company}
+    >
+      {companyId == null ? (
+        // Deals with no company at all, grouped into one row: a fact about the
+        // data rather than a permission, so it says "none".
+        <span>{company}</span>
+      ) : (
+        <EntityRef kind="company" id={companyId} />
+      )}
+    </CellExplain>
   );
 }
