@@ -46,6 +46,9 @@ type CallSummary struct {
 	Degraded        bool
 	ErrorSentinel   *string
 	HasPayload      bool
+	// DecisionAttempted is read across the whole logical call because a
+	// fallback's terminal row is the completion, not the decision it replaced.
+	DecisionAttempted bool
 }
 
 // CallAttempt is one rung in a logical call's oldest-first attempt ladder.
@@ -94,11 +97,15 @@ type CallPage struct {
 }
 
 // The payload existence check keeps list reads independent of captured
-// content size. Its alias stays distinct from the detail join alias.
+// content size. Its alias stays distinct from the detail join alias. The
+// decision probe is a correlated aggregate over ai_call_logical_idx, so a page
+// costs one statement however many rows it carries.
 const callSummaryColumns = `c.id, c.occurred_at, c.task, c.kind, c.tier, c.provider, c.model_id,
 	c.served_model, c.attempt, c.tokens_in, c.tokens_out, c.reasoning_tokens,
 	c.cached_tokens, c.latency_ms, c.cache_hit, c.degraded, c.error_sentinel,
-	EXISTS (SELECT 1 FROM ai_call_payload pp WHERE pp.ai_call_id = c.id)`
+	EXISTS (SELECT 1 FROM ai_call_payload pp WHERE pp.ai_call_id = c.id),
+	(SELECT COALESCE(bool_or(la.kind = 'decision'), false) FROM ai_call la
+	 WHERE la.logical_call_id = c.logical_call_id)`
 
 type rowScanner interface {
 	Scan(dest ...any) error
@@ -110,7 +117,7 @@ func scanCallSummary(row rowScanner) (CallSummary, error) {
 		&summary.Provider, &summary.ModelID, &summary.ServedModel, &summary.Attempt,
 		&summary.TokensIn, &summary.TokensOut, &summary.ReasoningTokens,
 		&summary.CachedTokens, &summary.LatencyMS, &summary.CacheHit, &summary.Degraded,
-		&summary.ErrorSentinel, &summary.HasPayload)
+		&summary.ErrorSentinel, &summary.HasPayload, &summary.DecisionAttempted)
 	return summary, err
 }
 
@@ -212,7 +219,7 @@ func scanCallDetail(row rowScanner) (CallDetail, ids.UUID, error) {
 		&detail.Provider, &detail.ModelID, &detail.ServedModel, &detail.Attempt,
 		&detail.TokensIn, &detail.TokensOut, &detail.ReasoningTokens,
 		&detail.CachedTokens, &detail.LatencyMS, &detail.CacheHit, &detail.Degraded,
-		&detail.ErrorSentinel, &detail.HasPayload, &detail.CorrelationID,
+		&detail.ErrorSentinel, &detail.HasPayload, &detail.DecisionAttempted, &detail.CorrelationID,
 		&detail.AgentRunID, &detail.ServedIdentitySource, &detail.ConfigHash,
 		&detail.ContextScopes, &detail.ContextFingerprint, &logicalID,
 		&requestPayload, &responsePayload)

@@ -26577,7 +26577,7 @@ components:
     AiCallSummary:
       type: object
       description: One terminal model call from the ai_call trace (AIRT-SCHEMA-2).
-      required: [id, occurred_at, kind, task, tier, provider, model_id, served_model, calls_attempted, tokens_in, tokens_out, reasoning_tokens, cached_tokens, latency_ms, cache_hit, degraded, has_payload]
+      required: [id, occurred_at, kind, task, tier, provider, model_id, served_model, calls_attempted, tokens_in, tokens_out, reasoning_tokens, cached_tokens, latency_ms, cache_hit, degraded, has_payload, decision_attempted]
       properties:
         id: { type: string, format: uuid }
         occurred_at: { type: string, format: date-time }
@@ -26618,6 +26618,7 @@ components:
             model answered badly, so it says the provider failed and nothing about how far the
             request got.
         has_payload: { type: boolean, description: 'A captured payload row exists for this call.' }
+        decision_attempted: { type: boolean, description: 'Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which.' }
     AiCallAttempt:
       type: object
       description: One attempt (terminal or not) within a logical call.

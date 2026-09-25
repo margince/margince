@@ -67,6 +67,7 @@ func wireAiCallSummary(summary CallSummary) crmcontracts.AiCallSummary {
 		CachedTokens: int(summary.CachedTokens), LatencyMs: int(summary.LatencyMS),
 		CacheHit: summary.CacheHit, Degraded: summary.Degraded,
 		ErrorSentinel: summary.ErrorSentinel, HasPayload: summary.HasPayload,
+		DecisionAttempted: summary.DecisionAttempted,
 	}
 }
 
@@ -85,6 +86,7 @@ func wireAiCall(detail CallDetail) crmcontracts.AiCall {
 		ContextFingerprint: detail.ContextFingerprint,
 		Attempts:           make([]crmcontracts.AiCallAttempt, 0, len(detail.Attempts)),
 		PayloadCaptured:    detail.Payload != nil,
+		DecisionAttempted:  summary.DecisionAttempted,
 	}
 	if detail.CorrelationID != nil {
 		value := openapi_types.UUID(*detail.CorrelationID)

@@ -114,6 +114,7 @@ const AI_CALL: AiCallSummary = {
   cache_hit: false,
   degraded: false,
   has_payload: false,
+  decision_attempted: false,
 };
 
 const OPERATOR: GrantSpec = { ai_diagnostics: ["read"], license: ["read"] };

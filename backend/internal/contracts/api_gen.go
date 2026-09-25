@@ -19180,7 +19180,10 @@ type AiCall struct {
 	// ContextScopes Company-context scopes injected into the request.
 	ContextScopes []string            `json:"context_scopes"`
 	CorrelationId *openapi_types.UUID `json:"correlation_id,omitempty"`
-	Degraded      bool                `json:"degraded"`
+
+	// DecisionAttempted Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which.
+	DecisionAttempted bool `json:"decision_attempted"`
+	Degraded          bool `json:"degraded"`
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
@@ -19267,8 +19270,11 @@ type AiCallSummary struct {
 	CachedTokens int  `json:"cached_tokens"`
 
 	// CallsAttempted The attempt number of this terminal attempt: 1 = first try succeeded/failed terminally, >1 = retries happened.
-	CallsAttempted int  `json:"calls_attempted"`
-	Degraded       bool `json:"degraded"`
+	CallsAttempted int `json:"calls_attempted"`
+
+	// DecisionAttempted Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which.
+	DecisionAttempted bool `json:"decision_attempted"`
+	Degraded          bool `json:"degraded"`
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.

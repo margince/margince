@@ -76,6 +76,7 @@ const AI_CALL = {
   cached_tokens: 0,
   latency_ms: 400,
   has_payload: false,
+  decision_attempted: false,
 };
 
 /** The administrator's seat: the only one the month's figure is served to. */

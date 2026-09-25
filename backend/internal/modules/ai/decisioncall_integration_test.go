@@ -117,3 +117,35 @@ func TestTheRateLaneAcceptsDecisions(t *testing.T) {
 		t.Errorf("filed as %q, want %q", row.Lane, LaneDecisions)
 	}
 }
+
+// The list row is all a reader sees before opening a call, so a fallback whose
+// terminal attempt is a completion must still say a decision model was asked.
+func TestTheTraceListSaysWhichCallsAskedADecisionModel(t *testing.T) {
+	env := setupRateStore(t)
+	ws, ctx := env.seedWorkspace(context.Background(), t)
+	meter := NewCallMeter(env.dbFor(ws))
+	recordDecisionThenLadder(ctx, t, meter)
+	if err := meter.Record(ctx, []Call{{
+		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: TaskEnrich,
+		Tier: TierCheapCloud, Provider: providerGemini, ModelID: "gemini-3.1-flash-lite", RequestFingerprint: "fp-enrich",
+		TokensIn: 300, TokensOut: 20, ServedModel: "gemini-3.1-flash-lite", ServedIdentitySource: servedIdentitySourceResponse,
+	}}); err != nil {
+		t.Fatalf("recording the ordinary call: %v", err)
+	}
+
+	reader := NewCallReadStore(env.dbFor(ws))
+	page, err := reader.ListCalls(diagnosticsReader(ws), nil, nil, nil)
+	if err != nil || len(page.Items) != 2 {
+		t.Fatalf("ListCalls: %d items, %v", len(page.Items), err)
+	}
+	attempted := map[string]bool{}
+	for _, item := range page.Items {
+		attempted[item.Task] = item.DecisionAttempted
+	}
+	if !attempted[string(TaskSiteTriage)] {
+		t.Errorf("the fallback call reads decision_attempted = false, want true")
+	}
+	if attempted[string(TaskEnrich)] {
+		t.Errorf("the ordinary call reads decision_attempted = true, want false")
+	}
+}

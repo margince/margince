@@ -138,6 +138,7 @@ function story(
               cache_hit: false,
               degraded: false,
               has_payload: false,
+              decision_attempted: false,
             },
           ],
           page: { next_cursor: null, has_more: false },

@@ -33,6 +33,7 @@ const summary = {
   degraded: true,
   error_sentinel: "provider_unavailable",
   has_payload: true,
+  decision_attempted: false,
 };
 const detail = {
   ...summary,

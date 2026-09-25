@@ -111,6 +111,7 @@ function callRow(task: string, minutesAgo: number, index: number) {
     cached_tokens: 0,
     latency_ms: 840,
     has_payload: false,
+    decision_attempted: false,
   };
 }
 

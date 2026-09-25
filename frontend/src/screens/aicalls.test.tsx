@@ -26,6 +26,7 @@ const summary = {
   degraded: true,
   error_sentinel: "provider_unavailable",
   has_payload: true,
+  decision_attempted: false,
 };
 
 // The trace is gated on `ai_diagnostics:read`, which is what `GET /ai/calls`
@@ -67,7 +68,12 @@ const RETRIED = {
 // answered instead. The terminal call is the completion; the decision is an
 // attempt before it, and the reason on the rung says why the walk went on.
 const DECIDED_THEN_FELL_BACK = {
-  call: { ...summary, degraded: false, error_sentinel: null },
+  call: {
+    ...summary,
+    degraded: false,
+    error_sentinel: null,
+    decision_attempted: true,
+  },
   attempts: [
     {
       attempt: 1,
@@ -104,6 +110,7 @@ const DECIDED = {
     tier: "decide",
     provider: "openrouter_decision",
     calls_attempted: 1,
+    decision_attempted: true,
   },
   attempts: [DECIDED_THEN_FELL_BACK.attempts[0]],
 };
@@ -364,6 +371,27 @@ it("marks a decision call, and names the tier it ran on", async () => {
   // same fact spelled as the lane, and both say it rather than "decide".
   expect(screen.getAllByText("Decision model").length).toBeGreaterThan(0);
   expect(screen.queryByText(/\bdecide\b/)).toBeNull();
+});
+
+// The terminal row of a fallback is the completion, so the row reads the
+// logical call's flag rather than its own kind — otherwise a decision model
+// that was asked and overruled is visible only after expanding the call.
+it("marks a call the decision model fell back from on its row, before it is opened", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).toContain("Decision model");
+});
+
+it("leaves the decision mark off a call that never asked a decision model", async () => {
+  mount();
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).not.toContain("Decision model");
 });
 
 it("says why the ladder answered after the decision model, and where it went", async () => {

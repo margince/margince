@@ -59,6 +59,18 @@ func TestWireAiCallSummaryCarriesPayloadPresenceOnly(t *testing.T) {
 	}
 }
 
+// The list row and the detail header both read decision_attempted, so each
+// wire carries it.
+func TestBothCallWiresSayADecisionModelWasAsked(t *testing.T) {
+	summary := CallSummary{ID: ids.NewV7(), Task: "site_triage", Kind: callKindCompletion, DecisionAttempted: true}
+	if !wireAiCallSummary(summary).DecisionAttempted {
+		t.Error("the summary wire lost decision_attempted")
+	}
+	if !wireAiCall(CallDetail{CallSummary: summary}).DecisionAttempted {
+		t.Error("the detail wire lost decision_attempted")
+	}
+}
+
 // A logical call that asked a decision model and then a chat tier shows both
 // rungs for what they were; a rung that reached no tier omits it rather than
 // sending an empty string.

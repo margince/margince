@@ -18581,6 +18581,8 @@ export interface components {
             error_sentinel?: string | null;
             /** @description A captured payload row exists for this call. */
             has_payload: boolean;
+            /** @description Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which. */
+            decision_attempted: boolean;
         };
         /** @description One attempt (terminal or not) within a logical call. */
         AiCallAttempt: {

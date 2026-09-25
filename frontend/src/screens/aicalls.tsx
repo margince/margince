@@ -436,7 +436,10 @@ function FragmentRow({
         <td>
           {call.task}
           <div className="aicalls-badges">
-            {call.kind === "decision" && (
+            {/* The logical call's flag, not this row's kind: a fallback's
+                terminal row is the completion that answered after the
+                decision model was asked. */}
+            {call.decision_attempted && (
               <Badge>{t("aicalls.badge.decision")}</Badge>
             )}
             {call.cache_hit && <Badge>{t("aicalls.badge.cacheHit")}</Badge>}
