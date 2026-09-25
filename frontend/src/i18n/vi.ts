@@ -4008,8 +4008,9 @@ export const vi = {
   "analytics.share.listTitle": "Liên kết bạn đã chia sẻ",
   "analytics.share.listIntro":
     "Các liên kết bạn đã tạo và vẫn mở được. Đóng một liên kết sẽ dừng nó ngay lập tức.",
-  "analytics.share.listEmpty": "Bạn không có liên kết nào đang mở.",
-  "analytics.share.listIssued": "Tạo ngày {date}",
+  "analytics.share.listEmpty":
+    "Bạn không có liên kết nào đang mở. Chia sẻ chế độ xem để tạo một liên kết.",
+  "analytics.share.listCreated": "Tạo ngày {date}",
   "analytics.share.listExpires": "Hết hạn ngày {date}",
   "analytics.share.populationCompany": "Toàn tổ chức",
   "analytics.share.populationTeam": "Nhóm",

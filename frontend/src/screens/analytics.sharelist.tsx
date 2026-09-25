@@ -50,7 +50,11 @@ export async function closeShare(id: string): Promise<void> {
   }
 }
 
-export function SharedLinksButton() {
+// `canClose` is the write half: a read seat may list its links and is refused
+// any close, so it is shown the rows without the verb.
+export function SharedLinksButton({
+  canClose,
+}: Readonly<{ canClose: boolean }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const headingId = useId();
@@ -68,7 +72,7 @@ export function SharedLinksButton() {
         <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t("analytics.share.listTitle")}
         </Heading>
-        <OpenShareList headingId={headingId} />
+        <OpenShareList headingId={headingId} canClose={canClose} />
       </Modal>
     </>
   );
@@ -77,7 +81,10 @@ export function SharedLinksButton() {
 // The links this reader issued that still open, each with Close link behind
 // one shared confirmation. The drawer stays open across a close, so a reader
 // ending three links does not reopen it three times.
-function OpenShareList({ headingId }: Readonly<{ headingId: string }>) {
+function OpenShareList({
+  headingId,
+  canClose,
+}: Readonly<{ headingId: string; canClose: boolean }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const shares = useQuery({
@@ -94,7 +101,7 @@ function OpenShareList({ headingId }: Readonly<{ headingId: string }>) {
   // population in the words the picker used for it.
   const scopes = useAnalyticsContext().data?.allowed_scopes ?? [];
   const [closing, setClosing] = useState<OpenShare | null>(null);
-  const opener = useRef<HTMLElement | null>(null);
+  const opener = useRef<{ button: HTMLElement; index: number } | null>(null);
   const close = useMutation({
     mutationFn: closeShare,
     // The confirmation stays pending until the list has re-read, so it never
@@ -103,21 +110,25 @@ function OpenShareList({ headingId }: Readonly<{ headingId: string }>) {
       await queryClient.invalidateQueries({ queryKey: OPEN_SHARES_KEY });
       setClosing(null);
     },
+    // A refusal can mean the link is already gone (expired, or closed from
+    // another tab), so the list re-reads rather than keep a dead row.
+    onError: () => queryClient.invalidateQueries({ queryKey: OPEN_SHARES_KEY }),
   });
-  // After a close the opener's row is gone: the next link's verb takes focus,
-  // or the drawer when none is left, rather than the page under it.
+  // After a close the opener's row is gone: the link now in its place takes
+  // focus, else the one above it, else the drawer, never the page under it.
   const returnFocus = () => {
-    if (opener.current?.isConnected) {
-      return opener.current;
+    if (!opener.current || opener.current.button.isConnected) {
+      return opener.current?.button ?? null;
     }
     const drawer = document
       .getElementById(headingId)
       ?.closest<HTMLElement>('[role="dialog"]');
-    return (
-      drawer?.querySelector<HTMLElement>(".meta-row-action button") ??
-      drawer ??
-      null
-    );
+    const verbs = [
+      ...(drawer?.querySelectorAll<HTMLElement>(".meta-row-action button") ??
+        []),
+    ];
+    const { index } = opener.current;
+    return verbs[index] ?? verbs[index - 1] ?? drawer ?? null;
   };
   const rows = shares.data ?? [];
 
@@ -134,7 +145,7 @@ function OpenShareList({ headingId }: Readonly<{ headingId: string }>) {
         {rows.length === 0 ? (
           <EmptyState>{t("analytics.share.listEmpty")}</EmptyState>
         ) : (
-          rows.map((share) => (
+          rows.map((share, index) => (
             <OpenShareRow
               key={share.id}
               share={share}
@@ -145,10 +156,14 @@ function OpenShareList({ headingId }: Readonly<{ headingId: string }>) {
                     scope.id === share.scope_id,
                 )?.label ?? t(POPULATION_FALLBACK[share.scope_kind])
               }
-              onClose={(button) => {
-                opener.current = button;
-                setClosing(share);
-              }}
+              onClose={
+                canClose
+                  ? (button) => {
+                      opener.current = { button, index };
+                      setClosing(share);
+                    }
+                  : undefined
+              }
             />
           ))
         )}
@@ -184,7 +199,8 @@ function OpenShareRow({
 }: Readonly<{
   share: OpenShare;
   population: string;
-  onClose: (button: HTMLElement) => void;
+  // Absent for a seat that may not close: the row stays, the verb does not.
+  onClose?: (button: HTMLElement) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -195,7 +211,7 @@ function OpenShareRow({
       <span className="meta-row-line t-caption">
         <span>{t(KIND_LABELS[share.kind])}</span>
         <span>
-          {t("analytics.share.listIssued", {
+          {t("analytics.share.listCreated", {
             date: formatDate(share.created_at, locale, zone),
           })}
         </span>
@@ -208,17 +224,19 @@ function OpenShareRow({
       <span className="meta-row-entry t-body" id={populationId}>
         {population}
       </span>
-      <span className="meta-row-action">
-        {/* Every row's verb reads "Close link"; the population it describes
-            is what tells a screen-reader user which link it ends. */}
-        <Button
-          variant="danger"
-          aria-describedby={populationId}
-          onClick={(event) => onClose(event.currentTarget)}
-        >
-          {t("analytics.share.revoke")}
-        </Button>
-      </span>
+      {onClose && (
+        <span className="meta-row-action">
+          {/* Every row's verb reads "Close link"; the population it describes
+              is what tells a screen-reader user which link it ends. */}
+          <Button
+            variant="danger"
+            aria-describedby={populationId}
+            onClick={(event) => onClose(event.currentTarget)}
+          >
+            {t("analytics.share.revoke")}
+          </Button>
+        </span>
+      )}
     </PanelRow>
   );
 }

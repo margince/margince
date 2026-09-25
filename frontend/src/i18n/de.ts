@@ -4044,8 +4044,9 @@ export const de = {
   "analytics.share.listTitle": "Deine geteilten Links",
   "analytics.share.listIntro":
     "Von dir erstellte Links, die noch funktionieren. Ein geschlossener Link funktioniert sofort nicht mehr.",
-  "analytics.share.listEmpty": "Du hast keine offenen Links.",
-  "analytics.share.listIssued": "Erstellt am {date}",
+  "analytics.share.listEmpty":
+    "Du hast keine offenen Links. Mit „Ansicht teilen“ erstellst du einen.",
+  "analytics.share.listCreated": "Erstellt am {date}",
   "analytics.share.listExpires": "Läuft ab am {date}",
   "analytics.share.populationCompany": "Gesamtes Unternehmen",
   "analytics.share.populationTeam": "Team",

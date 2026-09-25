@@ -97,7 +97,7 @@ const meta: Meta<typeof SharedLinksButton> = {
   component: SharedLinksButton,
   render: () => (
     <StoryProviders>
-      <SharedLinksButton />
+      <SharedLinksButton canClose />
     </StoryProviders>
   ),
 };
@@ -120,7 +120,7 @@ export const NoOpenLinks: Story = {
   beforeEach: () => installFetchStub(routes(() => jsonResponse({ data: [] }))),
   play: async ({ canvasElement }) => {
     await openDrawer(canvasElement);
-    await screen.findByText("You have no open links.");
+    await screen.findByText(/You have no open links/);
   },
 };
 

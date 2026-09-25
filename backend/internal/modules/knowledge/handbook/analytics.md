@@ -39,8 +39,9 @@ The link is shown only once and stops working after 30 days. Whoever opens it mu
 
 ### How do I close a shared forecast link?
 To close a forecast link in Margince before its 30 days run out, open **Analytics** → **Forecast** and press **Shared links** beside **Share view**.
-1. **Your shared links** lists every link you issued that still opens: **Live view** or **Snapshot**, the population it shows, and when it was issued and expires.
+1. **Your shared links** lists every link you issued that still opens: **Live view** or **Snapshot**, the population it shows, and when it was created and when it expires.
 2. Press **Close link** on the link's row, then **Close link** again in **Close this link?**.
+
 The row leaves the list and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
 
 ### How do I see a win rate or export a report?
@@ -358,7 +359,7 @@ retrieved later." — and stops working after 30 days.
 
 **Shared links**, beside **Share view**, opens **Your shared links**: every link
 you issued that still opens, with its kind, the population it shows, and when it
-was issued and expires. **Close link** on a row ends that link at any time,
+was created and when it expires. **Close link** on a row ends that link at any time,
 after **Close this link?** asks. Only you can see and close your own links. The
 list never shows a link's address, so a lost link cannot be copied from it. A
 link also stops when it expires or when you lose forecast access, and a seat

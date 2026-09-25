@@ -4159,8 +4159,9 @@ export const en = {
   "analytics.share.listTitle": "Your shared links",
   "analytics.share.listIntro":
     "Links you issued that still open. Closing one stops it at once.",
-  "analytics.share.listEmpty": "You have no open links.",
-  "analytics.share.listIssued": "Issued {date}",
+  "analytics.share.listEmpty":
+    "You have no open links. Share view creates one.",
+  "analytics.share.listCreated": "Created {date}",
   "analytics.share.listExpires": "Expires {date}",
   "analytics.share.populationCompany": "Whole company",
   "analytics.share.populationTeam": "Team",

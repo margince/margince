@@ -10,12 +10,14 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { ForecastShareActions, ShareViewButton } from "./analytics.share";
+import { OPEN_SHARES_KEY } from "./analytics.sharelist";
 
 // The share dialog's two obligations to a reader.
 //
@@ -38,11 +40,12 @@ const render = (ui: ReactNode, staleTime = 0) => {
       mutations: { retry: false },
     },
   });
-  return rtlRender(
+  const result = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
+  return { ...result, client };
 };
 
 function shareStub(token = "tok-abc") {
@@ -238,7 +241,9 @@ function json(body: unknown, status = 200) {
 const TEAM_NORTH = "5f0d7a1e-8c2b-4d3a-9e61-0a4b2c9d7e11";
 const GONE_TEAM = "9c1a3e5f-7b2d-4f60-8a4e-3d2c1b0a9f31";
 
-const northLink = {
+type OpenShare = components["schemas"]["ForecastShare"];
+
+const northLink: OpenShare = {
   id: "share-north",
   kind: "live",
   target: "forecast",
@@ -247,7 +252,7 @@ const northLink = {
   created_at: "2026-09-12T09:00:00Z",
   expires_at: "2026-10-12T09:00:00Z",
 };
-const companyLink = {
+const companyLink: OpenShare = {
   id: "share-company",
   kind: "snapshot",
   target: "forecast",
@@ -255,7 +260,7 @@ const companyLink = {
   created_at: "2026-09-08T09:00:00Z",
   expires_at: "2026-10-08T09:00:00Z",
 };
-const goneLink = {
+const goneLink: OpenShare = {
   id: "share-gone",
   kind: "live",
   target: "forecast",
@@ -265,10 +270,14 @@ const goneLink = {
   expires_at: "2026-10-03T09:00:00Z",
 };
 
-function serve(routes: Record<string, Route>, allow: GrantSpec) {
+function serve(
+  routes: Record<string, Route>,
+  allow: GrantSpec,
+  seat: "full" | "read" = "full",
+) {
   const calls: string[] = [];
   const all: Record<string, Route> = {
-    "GET /me": () => json(meFixture({ roles: ["manager"], allow })),
+    "GET /me": () => json(meFixture({ roles: ["manager"], allow, seat })),
     "GET /analytics/context": () =>
       json({
         default_scope: { kind: "workspace", label: "Whole company" },
@@ -354,7 +363,7 @@ describe("the links a reader has shared", () => {
     const northRow = rowOf("Team North");
     expect(northRow.textContent).toContain("Live view");
     expect(northRow.textContent).toContain(
-      `Issued ${formatDate(northLink.created_at, "en", zone)}`,
+      `Created ${formatDate(northLink.created_at, "en", zone)}`,
     );
     expect(northRow.textContent).toContain(
       `Expires ${formatDate(northLink.expires_at, "en", zone)}`,
@@ -377,7 +386,7 @@ describe("the links a reader has shared", () => {
       await screen.findByRole("button", { name: "Shared links" }),
     );
 
-    expect(await screen.findByText("You have no open links.")).toBeTruthy();
+    expect(await screen.findByText(/You have no open links/)).toBeTruthy();
   });
 
   it("closes the chosen link after asking, and keeps the drawer open", async () => {
@@ -485,7 +494,7 @@ describe("the links a reader has shared", () => {
     await user.click(
       await screen.findByRole("button", { name: "Shared links" }),
     );
-    await screen.findByText("You have no open links.");
+    await screen.findByText(/You have no open links/);
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
@@ -501,38 +510,114 @@ describe("the links a reader has shared", () => {
   });
 
   it("re-reads the list after a link is closed from the dialog that issued it", async () => {
-    let open = [companyLink];
+    let open = [northLink, companyLink];
     const calls = serve(
       {
         "GET /forecast/shares": () => json({ data: open }),
         "POST /forecast/shares": () =>
           json({ ...northLink, token: "tok-north" }, 201),
         "DELETE /forecast/shares/share-north": () => {
-          open = [];
+          open = [companyLink];
           return new Response(null, { status: 204 });
         },
       },
       FORECAST_CREATE,
     );
     const user = userEvent.setup();
-    mountActions(Number.POSITIVE_INFINITY);
+    const { client } = mountActions(Number.POSITIVE_INFINITY);
+
+    await user.click(await screen.findByRole("button", { name: "Share view" }));
+    await user.click(screen.getByRole("button", { name: "Create link" }));
+    await screen.findByTestId("forecast-share-link");
+    // The list as it stood once the link was issued, and fresh: from here only
+    // the close can make it stale.
+    client.setQueryData(OPEN_SHARES_KEY, [northLink, companyLink]);
+    await user.click(screen.getByRole("button", { name: "Close link" }));
+    await user.click(await screen.findByRole("button", { name: "Done" }));
+    await user.click(screen.getByRole("button", { name: "Shared links" }));
+
+    expect(await screen.findByText("Whole company")).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("Team North")).toBeNull());
+    expect(
+      calls.filter((call) => call === "GET /forecast/shares"),
+    ).toHaveLength(1);
+  });
+
+  it("lists the links to a read seat without offering to close them", async () => {
+    const calls = serve(
+      {
+        "GET /forecast/shares": () => json({ data: [northLink, companyLink] }),
+      },
+      FORECAST_CREATE,
+      "read",
+    );
+    const user = userEvent.setup();
+    mountActions();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Shared links" }),
+    );
+
+    expect(await screen.findByText("Team North")).toBeTruthy();
+    expect(screen.getByText("Whole company")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Close link" })).toBeNull();
+    // Issuing is a write too, so the read seat is not offered it either.
+    expect(screen.queryByRole("button", { name: "Share view" })).toBeNull();
+    expect(calls).toContain("GET /forecast/shares");
+  });
+
+  it("hands focus to the link now in the closed one's place, else the one above", async () => {
+    let open = [northLink, companyLink, goneLink];
+    serve(
+      {
+        "GET /forecast/shares": () => json({ data: open }),
+        "DELETE /forecast/shares/share-company": () => {
+          open = [northLink, goneLink];
+          return new Response(null, { status: 204 });
+        },
+        "DELETE /forecast/shares/share-gone": () => {
+          open = [northLink];
+          return new Response(null, { status: 204 });
+        },
+      },
+      FORECAST_CREATE,
+    );
+    const user = userEvent.setup();
+    mountActions();
+    const closeVerb = (population: string) =>
+      screen.getByRole("button", {
+        name: "Close link",
+        description: population,
+      });
+    const confirmClose = async () => {
+      const confirm = await screen.findByRole("dialog", {
+        name: "Close this link?",
+      });
+      await user.click(
+        within(confirm).getByRole("button", { name: "Close link" }),
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "Close this link?" }),
+        ).toBeNull(),
+      );
+    };
 
     await user.click(
       await screen.findByRole("button", { name: "Shared links" }),
     );
     await screen.findByText("Whole company");
-    await user.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
-    await user.click(screen.getByRole("button", { name: "Share view" }));
-    await user.click(screen.getByRole("button", { name: "Create link" }));
-    await user.click(await screen.findByRole("button", { name: "Close link" }));
-    await user.click(await screen.findByRole("button", { name: "Done" }));
-    await user.click(screen.getByRole("button", { name: "Shared links" }));
+    // The middle link: the one below it moves up into its place.
+    await user.click(closeVerb("Whole company"));
+    await confirmClose();
+    await waitFor(() => expect(document.activeElement).toBe(closeVerb("Team")));
 
-    expect(await screen.findByText("You have no open links.")).toBeTruthy();
-    expect(
-      calls.filter((call) => call === "GET /forecast/shares"),
-    ).toHaveLength(2);
+    // The last link: nothing below, so the one above.
+    await user.click(closeVerb("Team"));
+    await confirmClose();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(closeVerb("Team North")),
+    );
   });
 });

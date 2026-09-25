@@ -31,7 +31,8 @@ type IssuedShare = Readonly<{ id: string; token: string; expiresAt: string }>;
 
 // Both verbs need `forecast:create`: the server gates the list on it as well
 // as the issue, so a seat without it is shown neither and asks for nothing.
-// Issuing also needs a seat that may write; listing is a read.
+// Issuing and closing are writes and also need a seat that may write; a read
+// seat still lists its links, without Share view or Close link.
 export function ForecastShareActions({
   target,
   scope,
@@ -44,7 +45,7 @@ export function ForecastShareActions({
   return (
     <div className="analytics-share-actions">
       {canIssue && <ShareViewButton target={target} scope={scope} />}
-      <SharedLinksButton />
+      <SharedLinksButton canClose={canIssue} />
     </div>
   );
 }
