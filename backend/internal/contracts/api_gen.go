@@ -2413,6 +2413,42 @@ func (e BackfillPreviewRequestWindow) Valid() bool {
 	}
 }
 
+// Defines values for BackfillStatusOfferedWindows.
+const (
+	BackfillStatusOfferedWindowsN120m BackfillStatusOfferedWindows = "120m"
+	BackfillStatusOfferedWindowsN12m  BackfillStatusOfferedWindows = "12m"
+	BackfillStatusOfferedWindowsN24m  BackfillStatusOfferedWindows = "24m"
+	BackfillStatusOfferedWindowsN36m  BackfillStatusOfferedWindows = "36m"
+	BackfillStatusOfferedWindowsN3m   BackfillStatusOfferedWindows = "3m"
+	BackfillStatusOfferedWindowsN60m  BackfillStatusOfferedWindows = "60m"
+	BackfillStatusOfferedWindowsN6m   BackfillStatusOfferedWindows = "6m"
+	BackfillStatusOfferedWindowsN84m  BackfillStatusOfferedWindows = "84m"
+)
+
+// Valid indicates whether the value is a known member of the BackfillStatusOfferedWindows enum.
+func (e BackfillStatusOfferedWindows) Valid() bool {
+	switch e {
+	case BackfillStatusOfferedWindowsN120m:
+		return true
+	case BackfillStatusOfferedWindowsN12m:
+		return true
+	case BackfillStatusOfferedWindowsN24m:
+		return true
+	case BackfillStatusOfferedWindowsN36m:
+		return true
+	case BackfillStatusOfferedWindowsN3m:
+		return true
+	case BackfillStatusOfferedWindowsN60m:
+		return true
+	case BackfillStatusOfferedWindowsN6m:
+		return true
+	case BackfillStatusOfferedWindowsN84m:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BackfillStatusState.
 const (
 	BackfillStatusStateCancelled BackfillStatusState = "cancelled"
@@ -21421,14 +21457,20 @@ type BackfillStatus struct {
 	EstimatedMessages *int `json:"estimated_messages,omitempty"`
 
 	// LastErrorClass Error class only; detail lives in system_log (0078 rationale).
-	LastErrorClass *string             `json:"last_error_class,omitempty"`
-	StartedAt      *time.Time          `json:"started_at,omitempty"`
-	State          BackfillStatusState `json:"state"`
+	LastErrorClass *string `json:"last_error_class,omitempty"`
+
+	// OfferedWindows The windows THIS installation admits, in reach order — the product's supported set narrowed by `capture.max_backfill_months` where an operator set one. A picker offers these and no others: the preview and the start both refuse a window above the cap, so offering one is offering a choice that 422s. Absent or empty means the client should fall back to the full supported set rather than render an empty picker.
+	OfferedWindows *[]BackfillStatusOfferedWindows `json:"offered_windows,omitempty"`
+	StartedAt      *time.Time                      `json:"started_at,omitempty"`
+	State          BackfillStatusState             `json:"state"`
 
 	// UpdatedAt Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").
 	UpdatedAt *time.Time            `json:"updated_at,omitempty"`
 	Window    *BackfillStatusWindow `json:"window,omitempty"`
 }
+
+// BackfillStatusOfferedWindows defines model for BackfillStatus.OfferedWindows.
+type BackfillStatusOfferedWindows string
 
 // BackfillStatusState defines model for BackfillStatus.State.
 type BackfillStatusState string

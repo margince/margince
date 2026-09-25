@@ -225,6 +225,21 @@ func (r *Registry) StartBackfill(ctx context.Context, provider string, userID id
 		if err := enqueue(ctx, tx, run.ID); err != nil {
 			return fmt.Errorf("capture: scheduling the backfill: %w", err)
 		}
+		// How far back this import reaches, on the CONNECTION's own trail.
+		//
+		// capture_backfill holds the number, but a run is retained on its own
+		// terms and the question outlives it: "how much history did this
+		// mailbox bring in" is asked long afterwards, by somebody reading the
+		// connection rather than hunting its runs. The connection's audit
+		// image carries provider, status and account label and would answer
+		// everything about the grant except its reach.
+		//
+		// After the enqueue, so a schedule that failed records no import that
+		// never started.
+		if err := auditLifecycle(ctx, tx, "update", captureConnectionObject, connID,
+			nil, map[string]any{"backfill_window_months": windowMonths}); err != nil {
+			return err
+		}
 		run.ConnectionID = connID
 		run.WindowMonths = windowMonths
 		run.AfterDate = after
