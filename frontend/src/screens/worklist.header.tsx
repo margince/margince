@@ -16,7 +16,7 @@ import { hashWithParams } from "../app/urlstate";
 import { SegmentedControl } from "../design-system/atoms";
 import { FilterPills } from "../design-system/filterpills";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { completenessText, pillCount } from "./worklist.copy";
 import { OwnerPicker } from "./worklist.manager";
 import type {
@@ -169,6 +169,42 @@ function useLanesColumn(): [RefObject<HTMLDivElement | null>, boolean] {
 }
 
 /**
+ * What the day holds, as one sentence.
+ *
+ * With the partition it names the two panels by their headings, both figures
+ * drawn even at zero so the line keeps its shape. It does not break Today down:
+ * the bands and pills do, and an "urgent" here would disagree with the Brief's,
+ * which also counts review rows. Without it (an older server) the five-figure
+ * sentence stands, and an unsent `in_play` drops its clause rather than print 0.
+ */
+function summarySentence(
+  summary: Worklist["summary"],
+  t: Translator,
+  locale: Locale,
+): string {
+  const figure = (value: number) => formatNumber(value, locale);
+  const { buckets } = summary;
+  if (buckets) {
+    return t("worklist.summary.split", {
+      today: figure(buckets.urgent + buckets.due_today + buckets.planned),
+      review: figure(buckets.review),
+    });
+  }
+  return t(
+    summary.in_play === undefined
+      ? "worklist.summary.noMiddle"
+      : "worklist.summary",
+    {
+      urgent: figure(summary.urgent),
+      due: figure(summary.due),
+      inPlay: figure(summary.in_play ?? 0),
+      lower: figure(summary.lower_priority),
+      total: figure(summary.total),
+    },
+  );
+}
+
+/**
  * The day's own head: the sentence, the dials over it, the cuts under it.
  *
  * Three tiers, and the order is what each one is ABOUT: what the whole day
@@ -214,28 +250,11 @@ export function WorklistHeader({
           whose day. A dial belongs beside the sentence it changes rather than
           under it, where it read as a control over the pills below. */}
       <div className="worklist-header-line">
-        {/* Five figures, ONE scope: the whole assembled day. All five come off
-          `summary`, which the server counts over every candidate it weighed
-          rather than over the page it cut — so the sentence stays still as the
-          reader pages, and a total the browser derived a second way cannot
-          disagree with the bands beside it. */}
+        {/* ONE scope, the whole assembled day, counted by the server over every
+          candidate it weighed rather than over the page it cut — so the
+          sentence stays still as the reader pages. */}
         <p className="t-h3 worklist-lead">
-          {t(
-            // `in_play` is optional, and a server that does not send it has not
-            // said there is none — it has said nothing. Printing 0 for silence
-            // is the under-reporting this line must never do, so the sentence
-            // without the figure is drawn instead.
-            day.summary.in_play === undefined
-              ? "worklist.summary.noMiddle"
-              : "worklist.summary",
-            {
-              urgent: formatNumber(day.summary.urgent, locale),
-              due: formatNumber(day.summary.due, locale),
-              inPlay: formatNumber(day.summary.in_play ?? 0, locale),
-              lower: formatNumber(day.summary.lower_priority, locale),
-              total: formatNumber(day.summary.total, locale),
-            },
-          )}
+          {summarySentence(day.summary, t, locale)}
         </p>
         {/* BOTH scope controls at the trailing end of the header's own line, in
             one group so they share the sentence's line rather than each

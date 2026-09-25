@@ -254,6 +254,11 @@ const ACCEPTED = new Map<string, string>([
       "reason the chips beside it do",
   ],
   [
+    ".worklist-more .btn",
+    "the worklist's one load-more verb takes the coarse-pointer 44px floor " +
+      "the row verbs beside it get",
+  ],
+  [
     "worklist-rank-select",
     "the rank NUMBER made pressable, held at the column's floor so a row " +
       "offering no press keeps its title at the same x",

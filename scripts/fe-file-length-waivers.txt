@@ -108,7 +108,7 @@
 737 frontend/src/screens/installation-settings.tsx
 762 frontend/src/screens/extension-access.tsx
 781 frontend/src/screens/onboarding-conversation/connect-scene.tsx
-789 frontend/src/screens/worklist.tsx
+777 frontend/src/screens/worklist.tsx
 790 frontend/src/screens/companycontacts/summary.tsx
 818 frontend/src/screens/import.tsx
 827 frontend/src/screens/voice-dna.tsx
