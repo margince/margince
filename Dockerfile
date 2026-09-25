@@ -147,7 +147,7 @@ RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
 # is always the composed one — an installation's image must serve the units
 # that installation enabled — which is what the gobase stage's gen-composition
 # run provides.
-FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:50c8e8ca1d27439048670df5883f32d57cf81cff6233222c893fd0d9884cbd81 AS web-build
+FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS web-build
 
 # The pnpm version is the repository's, not the build day's. `corepack enable`
 # installs the shim and nothing else: with no manifest to read, the shim
