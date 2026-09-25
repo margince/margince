@@ -96,7 +96,29 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 			// the document as though an operator had chosen it.
 			Dimensions: optionalInt(cfg.Embeddings.Dimensions),
 		},
+		Decisions: decisionsToWire(cfg.Decisions),
 	}
+}
+
+// decisionsToWire and decisionsFromWire carry the decision lane. The pointer is
+// the meaning, as with routing: nil is "no decision model", which sends every
+// decision site to its LLM ladder, so neither direction may invent a lane.
+func decisionsToWire(d *ai.DecisionsConfig) *crmcontracts.AiDecisionsBinding {
+	if d == nil {
+		return nil
+	}
+	return &crmcontracts.AiDecisionsBinding{Provider: d.Provider, Model: d.Model, BaseUrl: optionalString(d.BaseURL)}
+}
+
+func decisionsFromWire(d *crmcontracts.AiDecisionsBinding) *ai.DecisionsConfig {
+	if d == nil {
+		return nil
+	}
+	out := &ai.DecisionsConfig{Provider: d.Provider, Model: d.Model}
+	if d.BaseUrl != nil {
+		out.BaseURL = *d.BaseUrl
+	}
+	return out
 }
 
 // fromContractAiRouting maps a submitted document onto a routing config. It
@@ -112,6 +134,7 @@ func fromContractAiRouting(req crmcontracts.AiRouting) ai.RoutingConfig {
 	cfg := ai.RoutingConfig{
 		Profile:    ai.Profile(req.Profile),
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: tierFromWire(embeddings)},
+		Decisions:  decisionsFromWire(req.Decisions),
 	}
 	if req.Embeddings.Dimensions != nil {
 		cfg.Embeddings.Dimensions = *req.Embeddings.Dimensions

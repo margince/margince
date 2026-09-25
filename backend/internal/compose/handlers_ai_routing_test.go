@@ -133,12 +133,26 @@ func TestEveryRoutingFieldSurvivesTheRoundTrip(t *testing.T) {
 		Profile:    ai.ProfileEUHosted,
 		Tiers:      map[ai.Tier]ai.ProviderConfig{ai.TierPremium: openRouter},
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: openRouter, Dimensions: 768},
+		Decisions:  &ai.DecisionsConfig{Provider: "openrouter_decision", Model: "jev", BaseURL: "https://openrouter.ai/api"},
 	}
 	assertEveryFieldSet(t, reflect.ValueOf(full), "RoutingConfig")
 
 	back := fromContractAiRouting(toContractAiRouting(full))
 	if !reflect.DeepEqual(back, full) {
 		t.Errorf("routing came back as %#v, want %#v", back, full)
+	}
+}
+
+// An unbound decision lane stays unbound across a save. A round trip that
+// turned absent into an empty binding would hand every decision site a lane
+// with no provider, where absent sends it straight to its LLM ladder.
+func TestAnAbsentDecisionLaneStaysAbsent(t *testing.T) {
+	wire := toContractAiRouting(ai.RoutingConfig{Profile: ai.ProfileEUHosted})
+	if wire.Decisions != nil {
+		t.Fatalf("decisions = %+v on the wire, want absent", *wire.Decisions)
+	}
+	if back := fromContractAiRouting(wire); back.Decisions != nil {
+		t.Errorf("decisions = %+v after the round trip, want absent", *back.Decisions)
 	}
 }
 
