@@ -30,7 +30,7 @@
 1171 frontend/src/screens/contactprovider.test.tsx
 1004 frontend/src/screens/worklist.row.tsx
 1222 frontend/src/screens/privacy.tsx
-1221 frontend/src/screens/connectors.tsx
+976 frontend/src/screens/connectors.tsx
 1125 frontend/src/screens/analytics.test.tsx
 1323 frontend/src/screens/company-context.tsx
 1328 frontend/src/screens/listquery.test.tsx
