@@ -43,7 +43,6 @@ func TestAnUnboundLaneListsNothingRatherThanRefusing(t *testing.T) {
 	t.Parallel()
 
 	got, err := unboundService().HiddenBacklogRows(aLead(), "set_aside")
-
 	if err != nil {
 		t.Fatalf("an unbound lane should answer, not refuse: %v", err)
 	}
