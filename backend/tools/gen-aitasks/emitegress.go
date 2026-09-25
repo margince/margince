@@ -69,7 +69,7 @@ func decisionCell(def taskDef) string {
 	case !def.Decision:
 		return "—"
 	case def.LocalOnly:
-		return "only a local decision model"
+		return "only a local decision provider"
 	default:
 		return "the bound decision model"
 	}
@@ -137,7 +137,7 @@ const egressReading = `
 The last two decide whether a sender or a thread is private, so sending their
 text away to ask would be the question answering itself the wrong way round,
 and both declare ` + "`" + `local_only` + "`" + `: their prompt reaches no hosted provider under
-any profile, and no hosted decision model either.
+any profile, and no decision provider the registry does not mark local either.
 
 The **Local-only ladder** column on its own does NOT answer the question — it
 names the ladder's tiers, not what a deployment does with them. For a task

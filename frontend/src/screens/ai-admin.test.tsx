@@ -293,7 +293,7 @@ it("features card says decision model first, and why another feature skips it", 
   expect(screen.getByText("gemini · example-model")).toBeInTheDocument();
   expect(
     screen.getByText(
-      "Decision model not used: this activity stays on local models.",
+      "Decision model not used: this activity takes only a local decision provider.",
     ),
   ).toBeInTheDocument();
 });

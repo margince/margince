@@ -68,7 +68,7 @@ export const en = {
   "aiAdmin.decisionSkip.uncertified":
     "Decision model not used: not certified for this activity.",
   "aiAdmin.decisionSkip.local_only":
-    "Decision model not used: this activity stays on local models.",
+    "Decision model not used: this activity takes only a local decision provider.",
   "aiAdmin.effect": "Effect",
   "aiAdmin.advanced": "Advanced: shared model bindings",
   "aiAdmin.unused": "Not used by current shipped activities: {tiers}",

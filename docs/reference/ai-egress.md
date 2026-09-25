@@ -50,8 +50,8 @@ here so it can be answered for.
 | `agent_loop` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
 | `brief_ranking` | `premium` → `cheap_cloud` | no | no | no | — | shipped |
 | `capture_classify` | `local_small` → `cheap_cloud` | no | yes | no | — | shipped |
-| `capture_confidentiality_verdict` | `local_small` | yes | yes | yes | only a local decision model | shipped |
-| `capture_counterparty_verdict` | `local_small` | yes | yes | yes | only a local decision model | shipped |
+| `capture_confidentiality_verdict` | `local_small` | yes | yes | yes | only a local decision provider | shipped |
+| `capture_counterparty_verdict` | `local_small` | yes | yes | yes | only a local decision provider | shipped |
 | `cert_judge` | `premium` → `cheap_cloud` | no | no | no | — | shipped |
 | `cold_start` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
 | `corpus_ask` | `premium` | no | no | no | — | shipped |
@@ -86,7 +86,7 @@ here so it can be answered for.
 The last two decide whether a sender or a thread is private, so sending their
 text away to ask would be the question answering itself the wrong way round,
 and both declare `local_only`: their prompt reaches no hosted provider under
-any profile, and no hosted decision model either.
+any profile, and no decision provider the registry does not mark local either.
 
 The **Local-only ladder** column on its own does NOT answer the question — it
 names the ladder's tiers, not what a deployment does with them. For a task

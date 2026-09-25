@@ -75,7 +75,7 @@ export const de = {
   "aiAdmin.decisionSkip.uncertified":
     "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
   "aiAdmin.decisionSkip.local_only":
-    "Entscheidungsmodell nicht genutzt: diese Aktivität bleibt bei lokalen Modellen.",
+    "Entscheidungsmodell nicht genutzt: diese Aktivität nimmt nur einen lokalen Entscheidungsanbieter.",
   "aiAdmin.effect": "Auswirkung",
   "aiAdmin.advanced": "Erweitert: gemeinsame Modellzuordnungen",
   "aiAdmin.unused":

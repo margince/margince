@@ -685,7 +685,7 @@ func TestTheEgressPageNamesEachTasksDecisionReachAndLocalOnlyDeclaration(t *test
 	}
 	page := string(emitEgressDoc(c))
 	for task, want := range map[string]string{
-		"abe": "| `abe` | `beta` | no | no | yes | only a local decision model | shipped |",
+		"abe": "| `abe` | `beta` | no | no | yes | only a local decision provider | shipped |",
 		"foo": "| `foo` | `alpha` → `beta` | no | no | no | — | shipped |",
 		"zed": "| `zed` | `alpha` | no | no | no | the bound decision model | shipped |",
 	} {

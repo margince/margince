@@ -81,7 +81,7 @@ export const vi = {
   "aiAdmin.decisionSkip.uncertified":
     "Không dùng mô hình quyết định: chưa được chứng nhận cho hoạt động này.",
   "aiAdmin.decisionSkip.local_only":
-    "Không dùng mô hình quyết định: hoạt động này chỉ dùng mô hình cục bộ.",
+    "Không dùng mô hình quyết định: hoạt động này chỉ nhận nhà cung cấp quyết định cục bộ.",
   "aiAdmin.effect": "Tác động",
   "aiAdmin.advanced": "Nâng cao: liên kết mô hình dùng chung",
   "aiAdmin.unused": "Không được hoạt động hiện có sử dụng: {tiers}",
