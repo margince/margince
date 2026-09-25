@@ -98,6 +98,8 @@ func (r *Router) decideFirst(ctx context.Context, lc *logicalCall, b *binding, t
 		return decisionTry{}, nil
 	}
 	wsID := ids.From[ids.WorkspaceKind](rawWS)
+	// The decision attempt reads the band once for itself; each ladder walk
+	// after it reads the band again, as every walk does.
 	ladder, _, budgetErr := r.applyBudget(ctx, task, wsID, taskLadders[task])
 	switch {
 	case errors.Is(budgetErr, ErrBudgetDeferred):
@@ -105,6 +107,8 @@ func (r *Router) decideFirst(ctx context.Context, lc *logicalCall, b *binding, t
 	case budgetErr != nil:
 		return decisionTry{}, nil //nolint:nilerr // the ladder walk reads the budget again and traces this failure
 	case r.cachedAnswerServes(b, task, wsID, req, ladder):
+		// An entry that expires between this peek and the walk's own read
+		// costs one LLM call, never a wrong answer: the walk serves fresh.
 		return decisionTry{}, nil
 	}
 	return r.decisionAttempt(ctx, lc, b, task, site, dreq, gate)

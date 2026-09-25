@@ -48,9 +48,9 @@ type decisionWireAnswer struct {
 }
 
 // decisionWireResponse is the fields read off an answer. Jev names the served
-// snapshot in `model` and the serving vendor in `provider` (observed
-// 2026-09-25); Laya echoes the checkpoint and names no provider, and adds
-// fields of its own that nothing here reads.
+// snapshot in `model` and the serving vendor in `provider`; Laya echoes the
+// checkpoint and names no provider, and adds fields of its own that nothing
+// here reads.
 type decisionWireResponse struct {
 	Model    string                        `json:"model"`
 	Provider string                        `json:"provider"`
