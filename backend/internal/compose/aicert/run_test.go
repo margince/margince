@@ -105,10 +105,14 @@ func TestServedUniformlyRefusesARunTwoModelsAnswered(t *testing.T) {
 // cannot contradict a provider that reported the dated snapshot it served; a
 // change of configured model mid-run still refuses, since that is a fallback.
 func TestServedUniformlyComparesOnlyWhatTheProviderReported(t *testing.T) {
-	reported := ai.Call{Provider: "jev_compatible", ModelID: "typesafe/jev-1.13",
-		ServedModel: "typesafe/jev-1.13-20260917", ServedIdentitySource: "response"}
-	echoed := ai.Call{Provider: "jev_compatible", ModelID: "typesafe/jev-1.13",
-		ServedModel: "typesafe/jev-1.13", ServedIdentitySource: "echo"}
+	reported := ai.Call{
+		Provider: "jev_compatible", ModelID: "typesafe/jev-1.13",
+		ServedModel: "typesafe/jev-1.13-20260917", ServedIdentitySource: "response",
+	}
+	echoed := ai.Call{
+		Provider: "jev_compatible", ModelID: "typesafe/jev-1.13",
+		ServedModel: "typesafe/jev-1.13", ServedIdentitySource: "echo",
+	}
 	pooled, err := poolRunCalls([]ai.Call{echoed, reported, echoed})
 	if err != nil {
 		t.Fatalf("poolRunCalls: %v", err)
