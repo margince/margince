@@ -37,11 +37,21 @@ Also called: compliance check, legal sign-off, is Margince compliant.
    which Art. 5(2) asks of you separately from doing it. Where there is no works
    council — Austria in particular — that same sheet is where the individual
    agreement goes, because step 3 below has nothing to agree with.
-2. **Settle private use**: the *Einwilligung* (§26(2) BDSG, Art. 7 GDPR). If
-   private use of work mail is permitted or tolerated, you are a
-   telecommunications provider to your own staff and the ordinary employment
-   basis does not carry you. Get consent, per colleague, per version, or ban
-   private use in writing and enforce it.
+2. **Settle private use**: the *Einwilligung* (§26(2) BDSG, Art. 7 GDPR). Where
+   private use of the work mailbox is permitted or tolerated, the archive fills
+   with correspondence from outside the company entirely — a friend, a doctor, a
+   landlord. The employment basis reaches the employee. It reaches nobody who
+   merely wrote to them.
+
+   So: **ban private use in writing and enforce it**, or collect the
+   Einwilligung, per colleague, per version. Prefer the ban, and know what the
+   consent does and does not do. It is the employee's, and it settles the
+   employee's half — whether their private mail may be processed at all. It is
+   not their correspondents' consent and cannot be: you will never reach the
+   doctor to ask. Their data rides the same basis and the same privacy notice
+   as every other third party in captured mail, which is why keeping private
+   correspondence out of the mailbox in the first place is the stronger
+   position rather than merely the cheaper one.
 3. **Agree it with the works council**: the *Betriebsvereinbarung* (§87(1) Nr. 6
    BetrVG). Mail capture is a system suitable for monitoring performance and
    conduct, so it is co-determined whether or not you intend to monitor anybody.

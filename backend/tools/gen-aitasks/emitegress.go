@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
 // localTiers are the rungs that run on the installation's own hardware. A
@@ -106,7 +108,56 @@ installation's own database rather than about the provider. What a bound
 provider retains is between the operator and that provider; the egress column
 is what says whether there is a provider involved at all.
 `)
+	emitDisclosures(&b)
 	return b.Bytes()
+}
+
+// emitDisclosures writes the non-AI half: every other server this installation
+// can be configured to call, and what it can send there.
+//
+// From platform/outbound rather than from a list kept here, because an outbound
+// identity exists precisely when a call goes out under it — so the enumeration
+// this page needs is the one the product already maintains to name itself.
+// backend/gates/outbounddisclosures_test.go fails an identity with no entry,
+// which is what stops this half going stale the way the page as a whole did:
+// generated from the routing table alone, it answered for model providers and
+// silently for nothing else, while being cited as the complete answer.
+func emitDisclosures(b *bytes.Buffer) {
+	all := outbound.Disclosures()
+	sort.Slice(all, func(i, j int) bool { return all[i].Endpoint < all[j].Endpoint })
+
+	b.WriteString(`
+## Everything else this installation can call
+
+The table above is the AI routing table and answers for model and embedding
+providers. It is not the whole answer: a deployment can also be configured to
+send a contact's name to a search index, a postal address to a geocoder, and a
+URL to whatever host it names.
+
+Those calls are listed here, one row per identity this product advertises when
+it makes them. **Personal** says whether the request can carry personal data, so
+a processing record can be written from the rows marked yes.
+
+| Receives | Personal data | What it can see | How to prevent it |
+|---|---|---|---|
+`)
+	for _, d := range all {
+		category := d.Category
+		if category == "" {
+			category = "—"
+		}
+		control := d.Control
+		if control == "" {
+			control = "—"
+		}
+		fmt.Fprintf(b, "| %s | %s | %s | %s |\n", d.Endpoint, yesNo(d.Personal), category, control)
+	}
+	b.WriteString(`
+A row here is what the installation CAN do, not what it does: most of these are
+inert until an administrator supplies a credential or turns a setting on, and
+the last column says which. Web search is the one worth naming twice — it sends
+a contact's name to a third party, and it is off until somebody sets a key.
+`)
 }
 
 // staysLocal reports whether every rung of a ladder runs on this machine.

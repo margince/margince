@@ -86,3 +86,35 @@ deployment in question, and `GET /v1/ai/routing` for what it actually bound
 installation's own database rather than about the provider. What a bound
 provider retains is between the operator and that provider; the egress column
 is what says whether there is a provider involved at all.
+
+## Everything else this installation can call
+
+The table above is the AI routing table and answers for model and embedding
+providers. It is not the whole answer: a deployment can also be configured to
+send a contact's name to a search index, a postal address to a geocoder, and a
+URL to whatever host it names.
+
+Those calls are listed here, one row per identity this product advertises when
+it makes them. **Personal** says whether the request can carry personal data, so
+a processing record can be written from the rows marked yes.
+
+| Receives | Personal data | What it can see | How to prevent it |
+|---|---|---|---|
+| Brave Search API | yes | a contact's name and employer, as a search query | MARGINCE_BRAVE_API_KEY unset (the default) leaves web search disabled |
+| Google's OAuth token endpoint | yes | the signing-in user's authorization code | the Google sign-in method |
+| Nominatim / OpenStreetMap | yes | a postal address, which on a contact record is somebody's | the geocoding provider setting |
+| a model vendor's public catalogue | no | — | asked once per installation during setup |
+| an OAuth client's published metadata document | no | — | the OAuth client registration that names it |
+| any site a captured or entered URL names | yes | the URL itself, which can name a contact's own page | the site-read rollout setting |
+| certificate-transparency logs (crt.sh) | no | — | the domain-discovery setting |
+| the configured SMTP relay | yes | the message and its recipients | the outbound mail channel's own configuration |
+| the contact-enrichment provider bound for this installation | yes | a contact's name, employer and public profile identifiers | the enrichment provider's own credential, unset by default |
+| the customer's own webhook endpoint | yes | whatever the subscribed event carries, which is the customer's own record data | the subscription itself; deleting it stops the delivery |
+| the identity provider's published key set | no | — | the identity provider binding |
+| the mailbox provider (IMAP) | yes | the mailbox credential and the folders it reads | the mailbox connection; removing it stops the sync |
+| this installation's own public address | no | — | not optional: it is how the installation learns whether it is reachable |
+
+A row here is what the installation CAN do, not what it does: most of these are
+inert until an administrator supplies a credential or turns a setting on, and
+the last column says which. Web search is the one worth naming twice — it sends
+a contact's name to a third party, and it is off until somebody sets a key.

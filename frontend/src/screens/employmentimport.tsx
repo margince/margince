@@ -15,6 +15,7 @@ import { useT } from "../i18n";
 import { throwProblem } from "./common";
 import { searchCompanyCandidates } from "./contactemployers";
 import { invalidateRecord } from "./recordwritekeys";
+import "./common.css";
 
 type Item = components["schemas"]["EmploymentImportItem"];
 type Request = components["schemas"]["EmploymentImportRequest"];
@@ -235,12 +236,7 @@ function EmploymentMatchModal({
   );
   return (
     <Modal open onClose={onClose} labelledBy={heading}>
-      <Heading
-        size="large"
-        id={heading}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={heading} className="t-h2 dialog-heading">
         {t("employment.resolve")}
       </Heading>
       <div className="form-stack">

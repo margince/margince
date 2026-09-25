@@ -33,6 +33,7 @@ import { problemMessageOf, useMe } from "./common";
 import { rosterReading, useRoster, useRosterPartial } from "./entityref";
 import { withoutStrandedTagMode } from "./tagfilter";
 import { useTagVocabulary } from "./tags.queries";
+import "./listquery.css";
 
 // The shared list foundation (P-14): every list screen sends the rich
 // q/sort/cursor/include_archived/filter vocabulary instead of a flat
@@ -963,10 +964,8 @@ export function ListTable<Row>({
     <>
       <p>{t("common.error")}</p>
       {/* ds:ignore the cause under a headline with its own Retry, a composite */}
-      <p style={{ marginTop: "var(--space-1)" }}>
-        {problemMessageOf(error, t)}
-      </p>
-      <Button onClick={() => refetch()} style={{ marginTop: "var(--space-2)" }}>
+      <p className="listquery-cause">{problemMessageOf(error, t)}</p>
+      <Button className="listquery-retry" onClick={() => refetch()}>
         {t("common.retry")}
       </Button>
     </>
