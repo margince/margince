@@ -348,7 +348,6 @@ internal/modules/capture/mailmap/mailmap.go#type Message.addresses
 internal/modules/capture/oauthflow/oauthflow.go#package oauthflow
 internal/modules/capture/offlinedemo/locale.go#const block at const threadKickoff
 internal/modules/capture/offlinedemo/locale.go#type templateWords
-internal/modules/capture/pending.go#func normalizeEmail
 internal/modules/capture/rawcapture.go#func InsertRawCaptureTx
 internal/modules/capture/registry_connections.go#const sendableConnection
 internal/modules/capture/sink.go#const fieldError

@@ -26,24 +26,33 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 )
 
-// The two copies, by the file that holds each — module-relative, because
+// The two copies, by the PACKAGE that holds each — module-relative, because
 // TestMain chdirs to the backend root. Both declare the same constant name,
 // which is deliberate: a reader who greps the name finds both.
+//
+// The package and not the file. A constant keyed to the file it sits in today
+// reports a horizon of "" the moment somebody splits that file, which reads as
+// a drift between the two modules rather than as a gate that lost its subject —
+// a failure that fires when nothing is wrong, and names the wrong thing while
+// it does.
 const (
-	meetingHorizonCaptureFile = "internal/modules/capture/sinkmailgates.go"
-	meetingHorizonConsentFile = "internal/modules/consent/qualifyingground.go"
-	meetingHorizonConstName   = "meetingHorizonInterval"
+	meetingHorizonCapturePkg = "internal/modules/capture"
+	meetingHorizonConsentPkg = "internal/modules/consent"
+	meetingHorizonConstName  = "meetingHorizonInterval"
 )
 
 func TestOneSpellingOfTheMeetingHorizon(t *testing.T) {
 	t.Parallel()
 
-	capture := meetingHorizonIn(t, meetingHorizonCaptureFile)
-	consent := meetingHorizonIn(t, meetingHorizonConsentFile)
+	capture := meetingHorizonIn(t, meetingHorizonCapturePkg)
+	consent := meetingHorizonIn(t, meetingHorizonConsentPkg)
 
 	if capture != consent {
 		t.Fatalf("the meeting horizon is %q in capture and %q in consent — one decides whether a "+
@@ -61,13 +70,34 @@ func TestOneSpellingOfTheMeetingHorizon(t *testing.T) {
 	}
 }
 
-// meetingHorizonIn reads the constant's value out of one file, or "" when the
-// file declares no such constant.
+// meetingHorizonIn reads the constant's value out of one package, or "" when no
+// file in it declares the constant.
 //
 // Parsed rather than grepped: a comment or a test fixture mentioning the name
 // would satisfy a text search, and a gate that can be satisfied by prose is a
 // gate that stops applying the moment somebody writes about it.
-func meetingHorizonIn(t *testing.T, path string) string {
+func meetingHorizonIn(t *testing.T, dir string) string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %s: %v", dir, err)
+	}
+	var found string
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		if value := meetingHorizonInFile(t, filepath.Join(dir, name)); value != "" {
+			found = value
+		}
+	}
+	return found
+}
+
+// meetingHorizonInFile is the parse of one file, answering "" when it declares
+// no such constant.
+func meetingHorizonInFile(t *testing.T, path string) string {
 	t.Helper()
 	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 	if err != nil {
