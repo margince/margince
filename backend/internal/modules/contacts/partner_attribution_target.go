@@ -43,7 +43,7 @@ func EnsureCompanyIsPartner(ctx context.Context, tx pgx.Tx, companyID ids.Compan
 	var exists bool
 	if err := tx.QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM partner
-		                 WHERE company_id = $1 AND archived_at IS NULL
+		                 WHERE company_id = $1 AND `+livePartnerSQL("")+`
 		                 FOR KEY SHARE)`,
 		companyID).Scan(&exists); err != nil {
 		return fmt.Errorf("check company is a partner: %w", err)

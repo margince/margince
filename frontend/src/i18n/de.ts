@@ -501,6 +501,7 @@ export const de = {
   "search.group.tag": "Tags",
   "search.kind.contact": "Kontakt",
   "search.kind.company": "Unternehmen",
+  "search.kind.partnerCompany": "Partnerunternehmen",
   "search.kind.deal": "Deal",
   "search.kind.project": "Projekt",
   "search.kind.product": "Produkt",
@@ -515,6 +516,8 @@ export const de = {
   "search.tag.carriedBy_other": "{count} Datensätze mit diesem Tag",
   "search.tier.mirrored": "Aus einem verbundenen System",
   "search.tier.unverified": "Nicht verifiziert",
+  "search.partner.badge": "Partner",
+  "search.partner.open": "Partnerdatensatz öffnen",
 
   "context.recentTouches": "Letzte Aktivitäten",
   "context.openTasks": "Offene Aufgaben",

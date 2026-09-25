@@ -168,7 +168,7 @@ func scanPartnerPage(row pgx.Row, sorted *storekit.ListSort) (partnerRow, ids.UU
 // (a partner row is a read of its company, so the company scope bounds
 // the list).
 func partnerListWhere(ctx context.Context, in ListPartnersInput, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-	where := []string{"p.archived_at IS NULL"}
+	where := []string{livePartnerSQL("p")}
 	if in.PartnerRole != nil {
 		where = append(where, storekit.SQLf("p.partner_role = $%d", arg(*in.PartnerRole)))
 	}
