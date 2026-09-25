@@ -43,10 +43,11 @@ func RegisterIntentTools(
 // assembleAnchored settles which record the caller meant and builds the
 // picture around it.
 //
-// Both intent tools open this way, so it is written once: they take the same
-// anchor, and an anchor validated in one and not the other — or resolved
-// through a different reader — would be two answers to "which record is this
-// about" on a surface whose whole job is to be about one record.
+// Both intent tools open this way and share it rather than each carrying a
+// copy: they take the same anchor, and an anchor validated in one and not the
+// other — or resolved through a different reader — would be two answers to
+// "which record is this about" on a surface whose whole job is to be about one
+// record.
 func assembleAnchored(
 	ctx context.Context, p datasource.SystemOfRecordProvider,
 	retriever retrieval.Retriever, args anchorArgs,
