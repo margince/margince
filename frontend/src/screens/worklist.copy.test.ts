@@ -407,6 +407,20 @@ describe("itemTitle — a group counts in the reader's plural", () => {
   ] as const)("titles a %s group of %i", (key, count, title) => {
     expect(itemTitle(group(key, count), t, "en")).toBe(title);
   });
+
+  // A kind a newer server minted arrives through the wire untyped, which is
+  // exactly how the client meets it: named by its label, or generically.
+  it.each([
+    ["Four deals to advance", "Four deals to advance"],
+    [undefined, "Routine items to review"],
+  ])("titles a kind this build has no pair for by %s", (label, title) => {
+    const wire = JSON.stringify({
+      ...group("duplicates", 4),
+      batch: { key: "brief_pile", count: 4, label },
+    });
+    const skewed: WorklistItem = JSON.parse(wire);
+    expect(itemTitle(skewed, t, "en")).toBe(title);
+  });
 });
 
 describe("an unavailable source", () => {

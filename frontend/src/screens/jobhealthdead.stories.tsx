@@ -6,7 +6,7 @@ import { DeadWorkCallout } from "./jobhealthdead";
 import { StoryProviders } from "./story-utils";
 
 const meta: Meta = {
-  title: "Settings/Governance/System health/Job health/Dead work",
+  title: "Settings/Governance/System health/Dead work",
 };
 export default meta;
 

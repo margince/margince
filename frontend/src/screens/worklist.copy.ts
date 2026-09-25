@@ -13,7 +13,7 @@ import {
   formatTimeOfDay,
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
-import { translatePlural } from "../i18n";
+import { isMessageKey, translatePlural } from "../i18n";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
@@ -680,6 +680,11 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     // fails the build; only the incident sentence reads `cause`.
     const base = `worklist.batch.${item.batch.key}` as const;
     const cause = item.batch.label ?? t("worklist.batch.unnamedCause");
+    // A kind from a newer server has no pair here: its own label, else the
+    // generic group name, rather than a lookup that throws.
+    if (!isMessageKey(`${base}_other`)) {
+      return item.batch.label ?? t("worklist.untitled.batch");
+    }
     return translatePlural(locale, base, item.batch.count, { count, cause });
   }
   if (item.title) {
