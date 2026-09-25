@@ -50,6 +50,12 @@ const (
 	// destruction that reached across colleagues' mailboxes, and "owner_rule"
 	// would tell an auditor one seat destroyed mail of their own.
 	PurgeWorkspaceRule PurgeReason = "workspace_rule"
+	// PurgeMailboxDeletion is the owner deleting the message at the provider:
+	// the copy in Gmail or Outlook is gone, and the connector reported it. Its
+	// own reason because the act happened OUTSIDE this product — an auditor
+	// reading "owner_rule" would look for a rule that was never written, and
+	// the trail would name the wrong decision.
+	PurgeMailboxDeletion PurgeReason = "mailbox_deletion"
 )
 
 // PurgeActivities destroys the named messages and everything they left behind.

@@ -133,7 +133,10 @@ type API interface {
 	// Delta resumes a folder's delta from a stored deltaLink and returns the
 	// message ids added/changed since plus the advanced deltaLink;
 	// ErrDeltaGone if Graph no longer honors the link.
-	Delta(ctx context.Context, accessToken, deltaLink string) (ids []string, newDeltaLink string, err error)
+	// Delta returns the ids added or changed since deltaLink, the ids Graph
+	// TOMBSTONED in the same round, and the link to resume from. A tombstone is
+	// the mailbox owner deleting their own copy; it carries no message.
+	Delta(ctx context.Context, accessToken, deltaLink string) (ids, removed []string, newDeltaLink string, err error)
 	// EnsureSubscription registers or renews the Graph change-notification
 	// subscription pointing at notificationURL, carrying clientState, and
 	// reports the subscription that now covers this mailbox.

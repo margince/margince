@@ -458,3 +458,64 @@ func TestAPurgeIsNotShieldedByAFinishedRequest(t *testing.T) {
 			outcome.Destroyed, outcome.Skipped)
 	}
 }
+
+// The owner deleting a message at the provider.
+//
+// Three cases, and the interesting ones are the two that keep the message: a
+// signal about the owner's own copy must not reach a colleague's timeline, and
+// it must not outrank a statutory duty.
+
+func TestAMailboxSideDeletionDestroysAMessageNobodyElseHas(t *testing.T) {
+	e := integration.Setup(t)
+	mine := seedPurgeableMail(t, e, "freundin@example.com", "privat", e.Rep1)
+
+	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", sourceIDOf(t, e, mine)); err != nil {
+		t.Fatalf("PurgeRemoved: %v", err)
+	}
+	if body := activityBody(t, e, mine); body != "" {
+		t.Fatalf("the message kept its body %q — the owner deleted it at the provider and nobody else had it", body)
+	}
+}
+
+func TestAMailboxSideDeletionLeavesAColleaguesCopyAlone(t *testing.T) {
+	e := integration.Setup(t)
+	shared := seedPurgeableMail(t, e, "kunde@example.com", "auch bei der Kollegin", e.Rep1)
+	addImporter(t, e, shared, e.Rep2)
+
+	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", sourceIDOf(t, e, shared)); err != nil {
+		t.Fatalf("PurgeRemoved: %v", err)
+	}
+	if body := activityBody(t, e, shared); body == "" {
+		t.Fatal("tidying one inbox destroyed correspondence a colleague also imported")
+	}
+	if n := importCount(t, e, shared, e.Rep2); n != 1 {
+		t.Fatalf("the colleague holds %d import rows, want 1 — their claim is not the owner's to end", n)
+	}
+}
+
+func TestAMailboxSideDeletionDoesNotOutrankTheStatutoryFloor(t *testing.T) {
+	e := integration.Setup(t)
+	shielded := seedPurgeableMail(t, e, "kunde@example.com", "Handelsbrief", e.Rep1)
+	restrict(t, e, shielded)
+
+	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", sourceIDOf(t, e, shielded)); err != nil {
+		t.Fatalf("PurgeRemoved: %v", err)
+	}
+	if body := activityBody(t, e, shielded); body == "" {
+		t.Fatal("a withheld message was destroyed — inbox housekeeping does not outrank a records duty")
+	}
+}
+
+// sourceIDOf reads back the natural key seedPurgeableMail minted, which is what
+// a connector reports a removal under.
+func sourceIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string {
+	t.Helper()
+	var sourceID string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT source_id FROM activity WHERE id = $1`, activityID).Scan(&sourceID)
+	}); err != nil {
+		t.Fatalf("reading the source id: %v", err)
+	}
+	return sourceID
+}

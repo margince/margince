@@ -39,6 +39,7 @@ type fakeAPI struct {
 	raws               map[string][]byte
 	sent               map[string]bool // ids Gmail filed under the SENT label
 	drafts             map[string]bool // ids Gmail filed under the DRAFT label
+	deletedIDs         []string        // ids the owner deleted at the provider
 	spam               map[string]bool // ids Gmail filed under the SPAM label
 	trash              map[string]bool // ids Gmail filed under the TRASH label
 	gone               map[string]bool
@@ -73,12 +74,12 @@ func (f *fakeAPI) ListRecent(context.Context, string, int) ([]string, error) {
 	return f.recent, nil
 }
 
-func (f *fakeAPI) History(context.Context, string, string) ([]string, string, error) {
+func (f *fakeAPI) History(context.Context, string, string) ([]string, []string, string, error) {
 	f.historyCalls++
 	if f.historyErr != nil {
-		return nil, "", f.historyErr
+		return nil, nil, "", f.historyErr
 	}
-	return f.added, f.addedHistoryID, nil
+	return f.added, f.deletedIDs, f.addedHistoryID, nil
 }
 
 func (f *fakeAPI) Watch(_ context.Context, _, topic string) (string, time.Time, error) {
@@ -537,5 +538,76 @@ func TestSyncRefusesAMessageLabelledSpamOrTrashAfterItWasListed(t *testing.T) {
 	}
 	if len(sink.recs) != 1 || sink.recs[0].Source != "gmail:keep@mail.gmail.com" {
 		t.Fatalf("captured %+v, want only the message that was in neither folder", sink.recs)
+	}
+}
+
+// removalSink records what a connector reported as deleted at the provider,
+// alongside what it captured — the two halves of one round.
+type removalSink struct {
+	recordingSink
+	removed []connector.NaturalKey
+}
+
+func (s *removalSink) RemoveMessage(_ context.Context, key connector.NaturalKey) error {
+	s.removed = append(s.removed, key)
+	return nil
+}
+
+// TestSyncReportsTheMessagesTheOwnerDeletedAtGmail.
+//
+// The history feed carries deletions beside additions, and until the connector
+// asked for `messageDeleted` it could not have acted on one however it tried:
+// Gmail reports only the history types requested.
+func TestSyncReportsTheMessagesTheOwnerDeletedAtGmail(t *testing.T) {
+	api := &fakeAPI{
+		email:          owner,
+		historyID:      "12345",
+		added:          []string{"new@mail.gmail.com"},
+		deletedIDs:     []string{"gone@mail.gmail.com"},
+		addedHistoryID: "12346",
+		raws: map[string][]byte{
+			"new@mail.gmail.com": rawMsg("new@mail.gmail.com", "alice@acme.com"),
+		},
+	}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &removalSink{}
+
+	if _, err := c.Sync(context.Background(), authBytes(t), []byte(`{"history_id":"12345"}`), sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.removed) != 1 || sink.removed[0].SourceID != "gone@mail.gmail.com" {
+		t.Fatalf("reported %+v as removed, want the one id the owner deleted", sink.removed)
+	}
+	if sink.removed[0].SourceSystem != connectorName {
+		t.Errorf("removal names source system %q, want %q", sink.removed[0].SourceSystem, connectorName)
+	}
+	// And the round's new mail still landed: a deletion must not cost a capture.
+	if len(sink.recs) != 1 {
+		t.Fatalf("captured %d messages, want the one that arrived in the same round", len(sink.recs))
+	}
+}
+
+// A sink that cannot take removals is not a fault — the interface is optional,
+// and a connector that failed the pull over it would lose real mail to a verb
+// the deployment never wired.
+func TestSyncKeepsGoingWhenTheSinkCannotTakeRemovals(t *testing.T) {
+	api := &fakeAPI{
+		email:          owner,
+		historyID:      "12345",
+		added:          []string{"new@mail.gmail.com"},
+		deletedIDs:     []string{"gone@mail.gmail.com"},
+		addedHistoryID: "12346",
+		raws: map[string][]byte{
+			"new@mail.gmail.com": rawMsg("new@mail.gmail.com", "alice@acme.com"),
+		},
+	}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &recordingSink{} // Upsert only, no RemoveMessage
+
+	if _, err := c.Sync(context.Background(), authBytes(t), []byte(`{"history_id":"12345"}`), sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 1 {
+		t.Fatalf("captured %d messages, want 1 — a sink without the verb still captures mail", len(sink.recs))
 	}
 }

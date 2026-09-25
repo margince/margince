@@ -61,11 +61,12 @@ type fakeAPI struct {
 	sentInitCalls int
 	sentInitAfter time.Time
 	// Delta's canned round (the incremental resume).
-	deltaIDs   []string
-	deltaLink  string
-	deltaErr   error
-	deltaCalls int
-	seenDelta  string
+	deltaRemoved []string // ids Graph tombstoned in the round
+	deltaIDs     []string
+	deltaLink    string
+	deltaErr     error
+	deltaCalls   int
+	seenDelta    string
 
 	getErr    error
 	getErrIDs map[string]error // a fault scoped to one message, so a test can fault one folder alone
@@ -203,13 +204,13 @@ func (f *fakeAPI) GetSubscription(_ context.Context, _, id string) (Subscription
 	return Subscription{ID: id, NotificationURL: url}, nil
 }
 
-func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]string, string, error) {
+func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]string, []string, string, error) {
 	f.deltaCalls++
 	f.seenDelta = deltaLink
 	if f.deltaErr != nil {
-		return nil, "", f.deltaErr
+		return nil, nil, "", f.deltaErr
 	}
-	return f.deltaIDs, f.deltaLink, nil
+	return f.deltaIDs, f.deltaRemoved, f.deltaLink, nil
 }
 
 func (f *fakeAPI) GetMIME(_ context.Context, _, id string) ([]byte, error) {
