@@ -17,9 +17,10 @@ package compose
 // run in outside the claim, and a copy stays green through the change that
 // breaks the original.
 //
-// It is also why nothing on that path is exported for it. The seam that runs
-// the whole path already exists, so widening the module's surface to reach one
-// piece of it would buy a weaker claim at the price of a wider module.
+// It is also why no piece of the derive path is exported for it: the seam that
+// runs the whole path already exists. What the case does import — the register
+// vocabulary, the word count, the starter floor — only bounds the corpus it is
+// handed, so a fixture the product could never store is refused before it runs.
 //
 // What the expectation MEANS here is which of the author's registers the
 // derived profile grounds its signature moves in. The rest of a profile is

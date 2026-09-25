@@ -1,0 +1,68 @@
+name: growth_fit_calls_a_company_outside_our_market_weak
+task: growth_fit
+site: growth_fit
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  profile_fields:
+    - label: their_offer
+      field: offer_summary
+      value: Fresh bread and pastries baked daily in five neighbourhood shops
+    - label: their_icp
+      field: icp
+      value: Local households and cafés within a short drive of each shop
+    - label: their_industry
+      field: industry
+      value: Retail bakery
+    - label: their_buying_center
+      field: buying_center
+      value: The owner, who runs the shops herself
+  facts:
+    - label: their_size
+      field: employee_range
+      value: "11-50"
+    - label: their_stack
+      field: technology
+      value: A cash-register app and a shared spreadsheet
+  # The same offering as the clear-fit scenario, so the only thing that moved
+  # is the company it is read against.
+  our_offering:
+    offer:
+      - key: offer_summary
+        value: SAP S/4HANA integration and data-pipeline services for industrial software vendors
+    positioning:
+      - key: icp
+        value: B2B software companies of 50-500 employees selling into manufacturing and energy
+      - key: value_proposition
+        value: Their product reads plant and ERP data without a custom integration project
+expect:
+  outcome: accepted
+  answer:
+    # A weak band has to say WHY, and the why is what they sell and to whom:
+    # a bakery selling to households is outside a market of software vendors.
+    cites: [their_offer, their_icp]
+    # Only weak. A bakery with no software product and no ERP is not a
+    # judgment two careful readers differ on against an SAP integration
+    # offering; a moderate band means the model graded effort, not fit.
+    bands: [weak]
+  bands:
+    certified_min: 75
+    degraded_min: 55
+    floor: 45
+  rubric: >
+    The company summary describes THEM: a five-shop retail bakery, 11-50
+    staff, selling to local households, running a cash-register app and a
+    spreadsheet. The confirmed company context describes US: SAP integration
+    services for industrial software vendors. They are not a software vendor,
+    do not sell into manufacturing or energy, and run no ERP, so every
+    defensible reading is a weak fit. In this scenario the confirmed company
+    context carries no record ids, so every id a reply cites is one of THEIR
+    records.
+    Score whether the negative factors rest on what their summary says — what
+    they sell, who they sell to, their stack — and whether a comparison with
+    our offering is labelled an assessment rather than a fact about them.
+    Penalise a reply that invents a software product, an ERP project or a
+    growth plan the summary does not mention to make the fit look better, and
+    penalise citing our own offering as evidence. A recommended angle that
+    honestly says there is little to pursue is correct; one that pitches SAP
+    integration to a bakery has not read the band it gave.

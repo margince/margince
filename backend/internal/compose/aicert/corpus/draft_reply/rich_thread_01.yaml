@@ -74,6 +74,9 @@ fixture:
 expect:
   outcome: accepted
   answer: plain
+  # A loose timeframe ("in den kommenden Tagen") proposes a time, which is the
+  # ask this product writes; a weekday or a date names one while nothing is
+  # booked, which the shared drafting rules forbid.
   rubric: >
     A long, specific message deserves a specific answer, and this fixture exists
     because the short ones did not measure that: a draft can pass every other

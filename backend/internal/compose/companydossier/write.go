@@ -62,6 +62,7 @@ func DossierRequest(in Input, lang string) model.Request {
 		// context is only ever an input to a judgment about fit. A writer given
 		// it would start comparing, which is the other surface's job.
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
+		ResponseSchema: dossierSchema(),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }

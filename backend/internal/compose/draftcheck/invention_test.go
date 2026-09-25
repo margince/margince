@@ -179,10 +179,40 @@ func TestOnlyAnEncounterThatHappenedCounts(t *testing.T) {
 		"Propose a meeting next week":                         false,
 		"Ein Treffen auf der Messe vorschlagen":               false,
 		"Mich kurz vorstellen und ein Gespräch dazu anbieten": false,
+		"Wir haben uns auf der Messe getroffen":               true,
+		"We met at the fair and have not spoken since":        true,
+		"We have not met yet; introduce ourselves":            false,
+		"We haven't met, so introduce ourselves":              false,
+		"Wir haben noch nicht gesprochen":                     false,
+		"Wir haben uns noch nicht kennengelernt":              false,
+		"Wir haben eine Entscheidung getroffen":               false,
 	} {
 		if got := IntentNamesMeeting(intent); got != want {
 			t.Errorf("IntentNamesMeeting(%q) = %v, want %v", intent, got, want)
 		}
+	}
+}
+
+// A named meeting grounds the ENCOUNTER, not every conversation claim: the
+// call the intent never mentioned is as invented as it was without it.
+func TestAMeetingTheIntentNamesGroundsNoCall(t *testing.T) {
+	met := Grounds{Met: IntentNamesMeeting("We met at the trade fair; ask for a demo")}
+	for name, tc := range map[string]struct {
+		body    string
+		lang    textlang.Lang
+		refused bool
+	}{
+		"the meeting":           {"Hello,\n\nIt was a pleasure meeting you at the fair. Would a demo suit you?", textlang.English, false},
+		"a call nobody named":   {"Hello,\n\nAfter our call I put the figures together. Would a demo suit you?", textlang.English, true},
+		"the German meeting":    {"Hallo,\n\nes freute mich, Sie kennenzulernen. Passt Ihnen eine Demo?", textlang.German, false},
+		"a German conversation": {"Hallo,\n\nes freute mich sehr, letzte Woche mit Ihnen zu sprechen.", textlang.German, true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			findings := Body(tc.body, tc.lang, convstate.BandFresh, met)
+			if got := hasRule(findings, RuleInventedConversation); got != tc.refused {
+				t.Fatalf("refused = %v, want %v: %+v", got, tc.refused, findings)
+			}
+		})
 	}
 }
 

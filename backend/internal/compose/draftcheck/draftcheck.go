@@ -192,15 +192,8 @@ func Body(body string, lang textlang.Lang, band convstate.Band, on Grounds) []Fi
 		}
 	}
 
-	// A meeting the caller's own intent names is theirs to claim; nothing else
-	// in an unthreaded draft's input can source one.
-	if !on.Threaded && !on.Met {
-		findings = append(findings, firstMatch(lowered, spokenExchange[lang],
-			RuleInventedConversation,
-			"this message opens a new conversation, so nothing in the input says a "+
-				"call or meeting took place — write from the messages on the record")...)
-	}
 	if !on.Threaded {
+		findings = append(findings, inventedConversation(lowered, lang, on.Met)...)
 		findings = append(findings, firstMatch(lowered, attributedClaim[lang],
 			RuleAttributedClaim,
 			"the input says what a message was about, never who wrote it — "+
@@ -344,20 +337,23 @@ func opening(body string) string {
 // banned "our solution" is inside "your solution", so an honest question about
 // the recipient's own system reads as an invented pitch. A phrase must start at
 // a word boundary and end at one.
-func contains(text, phrase string) bool {
+func contains(text, phrase string) bool { return wordIndex(text, phrase) >= 0 }
+
+// wordIndex is where text first holds phrase as whole words, or -1.
+func wordIndex(text, phrase string) int {
 	for offset := 0; ; {
 		i := strings.Index(text[offset:], phrase)
 		if i < 0 {
-			return false
+			return -1
 		}
 		start := offset + i
 		end := start + len(phrase)
 		if boundary(text, start-1) && boundary(text, end) {
-			return true
+			return start
 		}
 		offset = start + 1
 		if offset >= len(text) {
-			return false
+			return -1
 		}
 	}
 }

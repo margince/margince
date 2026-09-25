@@ -135,7 +135,7 @@ func TestTheSubstanceSentenceIsInTheSameLanguageAsTheSkeleton(t *testing.T) {
 		Envelope:  envelopeFor(textlang.German, convstate.BandFresh),
 		Recipient: contactdraft.RecipientIn{ID: "p1", FirstName: "Marek"},
 		Claims: []contactdraft.ClaimIn{
-			{ID: "c1", Kind: "objection", Body: "den Preis", SourceID: "a1"},
+			{Kind: "objection", Body: "den Preis", SourceID: "a1"},
 		},
 	})
 

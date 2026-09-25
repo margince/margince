@@ -185,7 +185,6 @@ func foldProject(in *Input, view crmcontracts.Contact360, projectID *ids.Project
 			continue
 		}
 		folded := ProjectIn{
-			ID:    project.ProjectId.String(),
 			Name:  project.Name,
 			Phase: string(project.Phase),
 		}
@@ -227,7 +226,6 @@ func foldClaims(in *Input, view crmcontracts.Contact360, now time.Time) {
 			continue
 		}
 		folded := ClaimIn{
-			ID:       claim.Id.String(),
 			Kind:     string(claim.Kind),
 			Body:     claim.Body,
 			SourceID: claim.SourceActivityId.String(),

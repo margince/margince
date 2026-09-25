@@ -60,7 +60,7 @@ Return ONLY a JSON object: {"subject":"...","body":"..."}.
 const firstDraftSystem draftSystem = `Draft the FIRST email of a new conversation, for the sender to send under their own name.
 Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - Nothing has been sent or received yet: conversation_state is "fresh" because this message opens the conversation now, not because an exchange is running. There is no thread and no earlier message, so never refer to one, never open with a follow-up phrase, and never give the subject "Follow-up", "Re:" or any word for a reply.
-- The stated intent is the whole brief. Write the message it describes; if it is thin, keep the message short rather than inventing a reason for it. Where it names an earlier meeting ("after meeting at the trade fair"), you may say you met there, and nothing more about it.
+- The stated intent is the whole brief. Write the message it describes; if it is thin, keep the message short rather than inventing a reason for it.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities — and never a prior meeting, call or email the intent does not name.
 - Say one thing and ask for one thing. Three short paragraphs at most.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.`

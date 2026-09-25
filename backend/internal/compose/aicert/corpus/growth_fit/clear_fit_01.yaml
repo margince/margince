@@ -64,8 +64,8 @@ expect:
     S/4HANA. The confirmed company context describes US: SAP integration
     services for industrial software vendors. A reply that reads their
     offer_summary or icp as ours has judged the wrong company and scores at the
-    floor; citing THEIR offer_summary and icp records is correct evidence. The
-    confirmed company context carries no record ids, so every id in the
+    floor; citing THEIR offer_summary and icp records is correct evidence. In
+    this scenario the confirmed company context carries no record ids, so every id in the
     company summary, and every id a reply cites, is one of THEIR records: a
     citation of an offer_summary or icp profile field points at what they
     sell, never at our offering.

@@ -19,19 +19,16 @@ import (
 // constrained company-to-company — so a directed introduction fact in a draft is
 // necessarily read out of quoted correspondence, which is how the reported
 // defect got the direction backwards. Silence about introductions is the
-// correct behaviour today (DRAFT-AC-E-7), which makes this list a flat refusal
-// rather than a judgement about which direction is right.
-// The NOUN, not the preposition. A first attempt enumerated "introduction by",
-// "introduced by" and the rest; the model wrote "introduction TO" and walked
-// straight through. There is no honest use of these words in a chip while the
-// product holds no referral record, so the word itself is the refusal and the
-// grammar around it does not have to be predicted.
+// correct behaviour, which makes this list a flat refusal rather than a
+// judgement about which direction is right.
+// The NOUN, not the preposition: "introduction by" misses "introduction to".
+// There is no honest use of these words in a chip while the product holds no
+// referral record, so the word itself is the refusal and the grammar around it
+// does not have to be predicted.
 var directedRelationship = map[textlang.Lang][]string{
 	textlang.English: {
 		// Stems, matched as a word PREFIX, because the word form is not
-		// predictable and enumerating it has failed twice on a live stack:
-		// "introduction by" missed "introduction to", and the noun list missed
-		// "introductory". "introduc" covers introduction/introduced/introducing/
+		// predictable: "introduc" covers introduction/introduced/introducing/
 		// introductory; "refer" covers referral/referred/referring.
 		"introduc", "intro", "refer",
 		"put us in touch", "connected us",
@@ -72,8 +69,8 @@ func labelFindings(label string, lang textlang.Lang, band convstate.Band) []Find
 	lowered := strings.ToLower(label)
 	// EVERY language, not just the draft's. A chip is written for the rep
 	// rather than the recipient, and the model reaches for English there even
-	// on a German draft — "shared contact introduction" appeared under German
-	// prose on a live stack, and a German-only list did not see it.
+	// on a German draft ("shared contact introduction" under German prose),
+	// which a German-only list does not see.
 	for _, phrase := range allDirectedRelationshipPhrases() {
 		if startsWord(lowered, phrase) {
 			findings = append(findings, Finding{

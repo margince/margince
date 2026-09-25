@@ -77,6 +77,7 @@ func GrowthFitRequest(in Input, lang string) model.Request {
 		// there is no flag to set: a growth fit written without it is the guess
 		// the band cap exists to flag.
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
+		ResponseSchema: growthFitSchema(),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
