@@ -17,7 +17,7 @@ import { RelationshipMap } from "../../design-system/relationshipmap";
 import { StatStrip } from "../../design-system/statstrip";
 import { ProvenanceTag } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
   isVersionSkewOf,
   problemCodeOf,
@@ -708,9 +708,9 @@ function WriteNote({
   locale: Locale;
   t: ReturnType<typeof useT>;
 }>) {
-  // The PATCH's failure first. A suggestion that failed minutes ago would
-  // otherwise mask the confirm the reader just pressed, and the older message
-  // is the less relevant one exactly when a newer write has gone wrong.
+  const plural = usePlural();
+  // The PATCH's failure first: a suggestion that failed minutes ago would
+  // otherwise mask the newer write the reader just pressed.
   if (patch.isError) {
     return (
       <p className="cp-write-note">
@@ -736,7 +736,7 @@ function WriteNote({
   if (result.written.length > 0) {
     return (
       <p className="cp-write-note">
-        {t("co.contacts.board.suggestWrote", {
+        {plural("co.contacts.board.suggestWrote", result.written.length, {
           count: formatNumber(result.written.length, locale),
         })}
       </p>
@@ -745,7 +745,7 @@ function WriteNote({
   return (
     <p className="cp-write-note">
       {result.skipped > 0
-        ? t("co.contacts.board.suggestRefused", {
+        ? plural("co.contacts.board.suggestRefused", result.skipped, {
             count: formatNumber(result.skipped, locale),
           })
         : t("co.contacts.board.suggestNothing")}

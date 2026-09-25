@@ -22,7 +22,7 @@ function t(key: MessageKey, values?: Record<string, string>): string {
 }
 
 function say(review: WeeklyReview | null | undefined): string | null {
-  const sentence = weekSentence(review, t);
+  const sentence = weekSentence(review, t, "en");
   return sentence === null ? null : t(sentence.key, sentence.values);
 }
 
@@ -76,7 +76,7 @@ describe("weekSentence — what the closed week says about itself", () => {
   });
 
   it("leads with what the week closed", () => {
-    expect(say(week({ deals_won: 2 }))).toContain("Deals won: 2");
+    expect(say(week({ deals_won: 2 }))).toContain("You won 2 deals.");
   });
 
   // What the wins were WORTH belongs to the Won card's detail line, which gave
@@ -103,15 +103,15 @@ describe("weekSentence — what the closed week says about itself", () => {
   // routed leads must not outrank the deal that paid for the quarter.
   it("puts a single win ahead of a busier count of anything else", () => {
     const said = say(week({ deals_won: 1, deals_moved: 9, meetings_held: 12 }));
-    expect(said).toContain("Deals won: 1");
+    expect(said).toContain("You won 1 deal.");
     expect(said).not.toContain("9");
   });
 
   it("falls back to what moved, then to what was held", () => {
     expect(say(week({ deals_moved: 3, meetings_held: 12 }))).toContain(
-      "Deals moved forward: 3",
+      "You moved 3 deals forward.",
     );
-    expect(say(week({ meetings_held: 12 }))).toContain("Meetings held: 12");
+    expect(say(week({ meetings_held: 12 }))).toContain("You held 12 meetings.");
   });
 
   // A promise the rep made and did not keep is the first debt, because they
@@ -120,7 +120,7 @@ describe("weekSentence — what the closed week says about itself", () => {
     const said = say(
       week({ deals_won: 1, commitments_due: 4, commitments_kept: 1 }),
     );
-    expect(said).toContain("Commitments carried over: 3");
+    expect(said).toContain("3 commitments carried over.");
   });
 
   // A commitment DROPPED is in neither figure — the schema says deciding on
@@ -130,13 +130,58 @@ describe("weekSentence — what the closed week says about itself", () => {
     const said = say(
       week({ deals_won: 1, commitments_due: 4, commitments_kept: 4 }),
     );
-    expect(said).not.toContain("Commitments");
+    expect(said).not.toContain("commitment");
   });
 
   it("falls back to postponed tasks when no promise was missed", () => {
     expect(say(week({ deals_won: 1, tasks_carried_over: 2 }))).toContain(
-      "Tasks carried over: 2",
+      "2 tasks carried over.",
     );
+  });
+
+  // Each count reads through the locale's plural rule, so one is never "1 deals".
+  it.each([
+    [{ deals_won: 1 }, "You won 1 deal.", { deals_won: 3 }, "You won 3 deals."],
+    [{ deals_lost: 1 }, "1 deal lost.", { deals_lost: 3 }, "3 deals lost."],
+    [
+      { deals_moved: 1 },
+      "You moved 1 deal forward.",
+      { deals_moved: 3 },
+      "You moved 3 deals forward.",
+    ],
+    [
+      { meetings_held: 1 },
+      "You held 1 meeting.",
+      { meetings_held: 3 },
+      "You held 3 meetings.",
+    ],
+    [
+      { leads_answered_in_target: 1 },
+      "1 lead answered within target.",
+      { leads_answered_in_target: 3 },
+      "3 leads answered within target.",
+    ],
+    [
+      { leads_routed: 1 },
+      "1 lead assigned.",
+      { leads_routed: 3 },
+      "3 leads assigned.",
+    ],
+    [
+      { commitments_due: 1 },
+      "1 commitment carried over.",
+      { commitments_due: 3 },
+      "3 commitments carried over.",
+    ],
+    [
+      { tasks_carried_over: 1 },
+      "1 task carried over.",
+      { tasks_carried_over: 3 },
+      "3 tasks carried over.",
+    ],
+  ])("reads %o as %s", (one, singular, many, plural) => {
+    expect(say(week(one))).toContain(singular);
+    expect(say(week(many))).toContain(plural);
   });
 
   // A week with no result of its own still has a true thing to say, and silence
@@ -145,7 +190,7 @@ describe("weekSentence — what the closed week says about itself", () => {
     expect(say(week({}))).toBe(en["brief.week.quiet"]);
     expect(say(week({ tasks_carried_over: 2 }))).toContain("No completed work");
     expect(say(week({ tasks_carried_over: 2 }))).toContain(
-      "Tasks carried over: 2",
+      "2 tasks carried over.",
     );
   });
 });

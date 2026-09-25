@@ -35,7 +35,11 @@ const WITH_EVIDENCE: DeckCard = {
   value: "",
 };
 
-function Deck({ card }: Readonly<{ card: DeckCard }>) {
+function Deck({
+  card,
+  settled = 6,
+  openQuestions = 0,
+}: Readonly<{ card: DeckCard; settled?: number; openQuestions?: number }>) {
   const [value, setValue] = useState(card.value);
   const live: DeckCard = { ...card, value };
   return (
@@ -45,13 +49,13 @@ function Deck({ card }: Readonly<{ card: DeckCard }>) {
         cardOf={(field: CompanyFieldName) =>
           field === live.field ? live : undefined
         }
-        settled={6}
+        settled={settled}
         onField={(_field, next) => setValue(next)}
         onDone={() => {}}
         pending={false}
         blockers={[]}
         held={false}
-        openQuestions={0}
+        openQuestions={openQuestions}
         digest={() => null}
       />
     </StoryProviders>
@@ -85,4 +89,9 @@ export const HintAndEvidence: Story = {
 // edge — the agent's own colour, on the agent's own ground.
 export const Optional: Story = {
   render: () => <Deck card={{ ...WITH_EVIDENCE, required: false }} />,
+};
+
+// One settled fact and one open question: both tray lines in the singular.
+export const OneOfEach: Story = {
+  render: () => <Deck card={NO_EVIDENCE} settled={1} openQuestions={1} />,
 };

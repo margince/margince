@@ -13,7 +13,7 @@ import {
   formatTimeOfDay,
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
-import { translatePlural } from "../i18n";
+import { isMessageKey, translatePlural } from "../i18n";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
@@ -676,13 +676,16 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     // "automation_run:01a0…-… failed 12 times" at a rep, which names nothing
     // they can act on and cannot be told from a bug. A group whose lane minted
     // no name falls back to the generic phrase rather than to the identity.
-    if (item.batch.key === "system_incident") {
-      return t("worklist.batch.system_incident", {
-        count,
-        cause: item.batch.label ?? t("worklist.batch.unnamedCause"),
-      });
+    // Typed as a plural base, so a batch kind the catalog carries no pair for
+    // fails the build; only the incident sentence reads `cause`.
+    const base = `worklist.batch.${item.batch.key}` as const;
+    const cause = item.batch.label ?? t("worklist.batch.unnamedCause");
+    // A kind from a newer server has no pair here: its own label, else the
+    // generic group name, rather than a lookup that throws.
+    if (!isMessageKey(`${base}_other`)) {
+      return item.batch.label ?? t("worklist.untitled.batch");
     }
-    return t(`worklist.batch.${item.batch.key}` as const, { count });
+    return translatePlural(locale, base, item.batch.count, { count, cause });
   }
   if (item.title) {
     // A title that names no record, on a row that HAS one, gets the record's

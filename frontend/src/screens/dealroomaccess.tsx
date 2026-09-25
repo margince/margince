@@ -16,7 +16,7 @@ import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDateAbbrev, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { IssuedNotice } from "./dealroomaccess.notices";
@@ -175,7 +175,7 @@ export function DealRoomAccess({
 // "0 documents" reads as a judgement about the buyer, and the honest state
 // early in a room's life is simply that there is nothing to report yet.
 function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
-  const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const downloads = participant.download_count ?? 0;
   if (downloads === 0) {
@@ -184,7 +184,9 @@ function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
   const titles = participant.documents_downloaded ?? [];
   return (
     <p className="t-caption">
-      {t("access.downloads", { count: formatNumber(downloads, locale) })}
+      {plural("access.downloads", downloads, {
+        count: formatNumber(downloads, locale),
+      })}
       {titles.length > 0 ? ` · ${titles.join(", ")}` : ""}
     </p>
   );

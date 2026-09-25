@@ -12,7 +12,7 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useThreadAudience } from "./audienceservice";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
@@ -94,6 +94,7 @@ export function HeldThreadsCard() {
 
 function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const zone = viewerZone();
   const toast = useToast();
@@ -214,7 +215,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
           <ul>
             {stillHeld.map(([threadKey, owners]) => (
               <li key={threadKey}>
-                {t("heldThreads.heldByOthers", {
+                {plural("heldThreads.heldByOthers", owners, {
                   count: formatNumber(owners, locale),
                 })}
               </li>
@@ -256,6 +257,7 @@ const backlogStallAttempts = 2;
  */
 function BacklogCallout({ rows }: Readonly<{ rows: HeldThread[] }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const stalled = rows.filter(
     (row) => row.pending && row.attempts >= backlogStallAttempts,
@@ -271,7 +273,7 @@ function BacklogCallout({ rows }: Readonly<{ rows: HeldThread[] }>) {
       kind="event"
       title={t("heldThreads.backlogStalledTitle")}
     >
-      {t("heldThreads.backlogStalled", {
+      {plural("heldThreads.backlogStalled", stalled.length, {
         count: formatNumber(stalled.length, locale),
       })}
     </Callout>
@@ -286,6 +288,7 @@ function BacklogCallout({ rows }: Readonly<{ rows: HeldThread[] }>) {
 // classifier that judged nothing rather than one that has not answered.
 function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   if (row.pending) {
     return (
@@ -295,7 +298,7 @@ function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
             about — so amber told a reader to act on a queue that is moving. */}
         <Badge tone="info">{t("heldThreads.pending")}</Badge>
         <span className="t-caption">
-          {t("heldThreads.attempts", {
+          {plural("heldThreads.attempts", row.attempts, {
             count: formatNumber(row.attempts, locale),
           })}
         </span>

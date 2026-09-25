@@ -160,13 +160,26 @@ const deferred = {
   next_attempt_at: "2026-08-01T00:00:00Z",
 };
 
+// One finding, so the finished heading reads in the singular.
+const readyOne = {
+  ...reading,
+  status: "ready" as const,
+  phase: null,
+  profile_fields: reading.profile_fields.slice(0, 1),
+};
+
 function ReadStory({
   mode = "website",
   read = null,
   error = null,
 }: Readonly<{
   mode?: "website" | "manual" | null;
-  read?: typeof reading | typeof partial | typeof deferred | null;
+  read?:
+    | typeof reading
+    | typeof partial
+    | typeof deferred
+    | typeof readyOne
+    | null;
   error?: string | null;
 }>) {
   installFetchStub({
@@ -214,6 +227,10 @@ export const WaitingForBudget: Story = {
 
 export const PartialCoverage: Story = {
   render: () => <ReadStory read={partial} />,
+};
+
+export const ReadyWithOneDetail: Story = {
+  render: () => <ReadStory read={readyOne} />,
 };
 
 export const RobotsBlocked: Story = {
