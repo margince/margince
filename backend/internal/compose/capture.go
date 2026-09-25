@@ -237,7 +237,23 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		triage: newDomainTriageTrigger(pool, cfg.logger()),
 		log:    cfg.logger(),
 	}
+	// Acting on a message the owner deleted at the provider destroys attachment
+	// BLOBS with the rows that name them, so it is composed from the store for
+	// the reason WithBlobstore builds the purge from it: a role that keeps no
+	// objects has no destruction, which is honest — destroying the rows and
+	// leaving the files would report mail as gone while its attachments sat in
+	// the bucket.
+	//
+	// Nil is therefore a sink that captures mail and acts on no deletions, and
+	// that is what the enumerate-only constructions get (CaptureConfig{} with no
+	// store). Asking which transports a binary compiled in must not hand
+	// anything the power to destroy mail.
+	var purgeRemoved capture.MessagePurger
+	if purger := capturePurgerFor(pool, cfg.Blob, cfg.logger()); purger != nil {
+		purgeRemoved = purger.PurgeRemoved
+	}
 	return capture.NewSink(InstallationDB(pool)).
+		WithMessagePurger(purgeRemoved).
 		// The files a captured message carried, written by the module that owns
 		// the attachment table. Built here, from the store, so every role that
 		// composes a sink gets the same one — the worker runs mail capture and

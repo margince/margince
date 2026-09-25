@@ -283,7 +283,7 @@ func TestGetRawMissingMessageMapsGoneSentinel(t *testing.T) {
 
 func TestHistoryCollectsAddedIDsAndAdvancesCursor(t *testing.T) {
 	_, api := newTestClients(t)
-	ids, hist, err := api.History(context.Background(), "access-2", "12345")
+	ids, _, hist, err := api.History(context.Background(), "access-2", "12345")
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}
@@ -297,7 +297,7 @@ func TestHistoryCollectsAddedIDsAndAdvancesCursor(t *testing.T) {
 
 func TestHistoryTooOldMapsGoneSentinel(t *testing.T) {
 	_, api := newTestClients(t)
-	if _, _, err := api.History(context.Background(), "access-2", "0"); !errors.Is(err, ErrHistoryGone) {
+	if _, _, _, err := api.History(context.Background(), "access-2", "0"); !errors.Is(err, ErrHistoryGone) {
 		t.Fatalf("want ErrHistoryGone for a stale cursor, got %v", err)
 	}
 }

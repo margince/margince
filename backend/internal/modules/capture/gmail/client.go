@@ -129,7 +129,10 @@ type API interface {
 	ListRecent(ctx context.Context, accessToken string, maxResults int) (ids []string, err error)
 	// History returns the message ids added since startHistoryID and the
 	// advanced historyId; ErrHistoryGone if the cursor is too old.
-	History(ctx context.Context, accessToken, startHistoryID string) (addedIDs []string, historyID string, err error)
+	// History returns the ids added since startHistoryID, the ids the owner
+	// DELETED in the same span, and the advanced historyId; ErrHistoryGone if
+	// the cursor is too old.
+	History(ctx context.Context, accessToken, startHistoryID string) (addedIDs, deletedIDs []string, historyID string, err error)
 	// GetRaw fetches one message as its decoded RFC822 bytes (format=RAW)
 	// together with Gmail's own SENT filing of it, read off the same response.
 	GetRaw(ctx context.Context, accessToken, msgID string) (Message, error)
@@ -255,19 +258,31 @@ type historyPage struct {
 				ID string `json:"id"`
 			} `json:"message"`
 		} `json:"messagesAdded"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		// MessagesDeleted is the mailbox owner getting rid of their own copy.
+		// It names the message and nothing else — there is nothing to fetch for
+		// one, which is why it travels beside the added ids rather than among
+		// them.
+		MessagesDeleted []struct {
+			Message struct {
+				ID string `json:"id"`
+			} `json:"message"`
+		} `json:"messagesDeleted"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	} `json:"history"`
 	HistoryID     string `json:"historyId"`     //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 }
 
-func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID string) ([]string, string, error) {
-	var ids []string
+func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID string) ([]string, []string, string, error) {
+	var ids, deleted []string
 	latest := startHistoryID
 	pageToken := ""
 	for {
+		// Both history types in one walk. Asking for messageAdded alone is what
+		// made a deletion invisible: Gmail reports only the types requested, so
+		// the connector could not have acted on one however it tried.
 		q := url.Values{
 			"startHistoryId": {startHistoryID},
-			"historyTypes":   {"messageAdded"},
+			"historyTypes":   {"messageAdded", "messageDeleted"},
 		}
 		if pageToken != "" {
 			q.Set("pageToken", pageToken)
@@ -276,14 +291,19 @@ func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID strin
 		status, err := a.get(ctx, accessToken, "/history", q, &page, maxJSONResponseBytes)
 		if err != nil {
 			if status == http.StatusNotFound {
-				return nil, "", ErrHistoryGone
+				return nil, nil, "", ErrHistoryGone
 			}
-			return nil, "", err
+			return nil, nil, "", err
 		}
 		for _, h := range page.History {
 			for _, ma := range h.MessagesAdded {
 				if ma.Message.ID != "" {
 					ids = append(ids, ma.Message.ID)
+				}
+			}
+			for _, md := range h.MessagesDeleted {
+				if md.Message.ID != "" {
+					deleted = append(deleted, md.Message.ID)
 				}
 			}
 		}
@@ -295,7 +315,7 @@ func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID strin
 		}
 		pageToken = page.NextPageToken
 	}
-	return ids, latest, nil
+	return ids, deleted, latest, nil
 }
 
 func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Message, error) {
