@@ -51,7 +51,11 @@ it("says the order does not account for a factor the run could not read", () => 
     />,
   );
   expect(document.body.textContent).toContain(en["brief.factor.warmth"]);
-  expect(document.body.textContent).toContain("does not account for");
+  // The frame from the catalog rather than a phrase typed here, so a reworded
+  // caveat fails on its own line instead of on a stale copy of itself.
+  expect(document.body.textContent).toContain(
+    en["brief.order.withheld"].split("{factors}")[0].trim(),
+  );
 });
 it("stays silent for a run that weighed every factor", () => {
   const { container } = render(
