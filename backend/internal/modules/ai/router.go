@@ -75,6 +75,12 @@ type Router struct {
 	// the cert lane and scripted repeat-call tests need every call to reach
 	// the model, not collapse onto a cached answer.
 	cacheOff bool
+	// decisionCertified answers whether the decisions lane may serve one site:
+	// the generated certification table, except on the certification lane's
+	// own DB-less router (WithEveryDecisionCertified).
+	decisionCertified func(DecisionCertKey) bool
+	// decisionTimeout bounds one decision call (DecisionCallTimeout).
+	decisionTimeout time.Duration
 }
 
 // installConfigSnapshot computes and stores this Router's config-snapshot
@@ -104,9 +110,13 @@ func NewRouter(cfg RoutingConfig, meter *Meter, budget BudgetPolicy, calls callS
 	if err != nil {
 		return nil, err
 	}
+	decisions, err := cfg.buildDecisionLane()
+	if err != nil {
+		return nil, err
+	}
 	meta := embedInclusiveMeta(cfg)
 	router := assembleRouter(clients, embedder, cfg.Profile, meter, budget, calls, meta, capturePayloads, log)
-	router.install(router.binding().withConfigSnapshot(cfg))
+	router.install(router.binding().withConfig(cfg, decisions))
 	return router, nil
 }
 
@@ -127,8 +137,10 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 		// coldStartOptions and offerDraftOptions each mint their own Router
 		// over the same routing config, and /metrics must report one honest
 		// total across both, rendered exactly once.
-		metrics: sharedCallMetrics,
-		now:     time.Now,
+		metrics:           sharedCallMetrics,
+		now:               time.Now,
+		decisionCertified: decisionIsCertified,
+		decisionTimeout:   DecisionCallTimeout,
 	}
 	r.install(binding{clients: clients, embedder: embedder, profile: profile, routeMeta: meta})
 	return r
@@ -229,17 +241,15 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	}
 
 	trace.Degraded = degraded
-	if degraded {
+	if degraded && !isDecisionFallbackReason(reason) {
 		// The budget guardrail forced a demoted ladder — worth naming even
 		// on what is otherwise attempt 1, since it explains why this
-		// attempt did not run the caller's default route.
+		// attempt did not run the caller's default route. A decision
+		// attempt's reason is kept: it says why the ladder ran at all, and
+		// Degraded still says the band demoted it.
 		trace.AttemptReason = attemptReasonBudgetDegrade
 	}
-	// Profile and clients come from the same binding snapshot as the route.
-	// Mixing two loads could produce a ladder no installed binding chose.
-	_, hasLarge := b.clients[TierLocalLarge]
-	ladder = profileLadder(b.profile, hasLarge, ladder)
-	ladder = localOnlyLadder(task, b.routeMeta, ladder)
+	ladder = servableLadder(b, task, ladder)
 	if len(ladder) == 0 {
 		return model.Response{}, RouteInfo{}, localOnlyRefusal(task, b.routeMeta)
 	}
@@ -286,6 +296,16 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// run actually hits.
 	return model.Response{}, RouteInfo{},
 		fmt.Errorf("%w: no bound tier can serve %s in profile %s", ErrAllTiersFailed, task, b.profile)
+}
+
+// servableLadder is the ladder a call over b may actually walk: remapped for
+// the sovereign profile, then narrowed to same-host rungs for a local-only
+// task. Profile and clients come from the one binding snapshot, so no ladder
+// mixes two loads. serveAttempt walks it and Decide peeks the cache against
+// it, so both read the same ladder when asking which cached answer would serve.
+func servableLadder(b *binding, task Task, ladder []Tier) []Tier {
+	_, hasLarge := b.clients[TierLocalLarge]
+	return localOnlyLadder(task, b.routeMeta, profileLadder(b.profile, hasLarge, ladder))
 }
 
 // Invalidate drops a workspace's cached results — the hook the §6

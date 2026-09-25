@@ -1,30 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
 import { useUnsavedGuard } from "../app/unsaved";
-import { Badge, Button, Disclosure, EmptyState } from "../design-system/atoms";
+import { Button, Disclosure, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { stable } from "../format/collate";
-import { formatUsdPerMTok } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
 import {
   AiFeaturesWithheldPanel,
   AiFeatureTable,
   useAiStatus,
 } from "./ai-admin";
-import {
-  type ModelCatalogue,
-  type ModelLane,
-  unreadablePrice,
-  useAiModelCatalogue,
-} from "./ai-models";
+import { type ModelCatalogue, useAiModelCatalogue } from "./ai-models";
 import { useProviderKeys } from "./ai-provider-keys";
-import { AdapterFields, EmbeddingWidthField } from "./ai-routing-fields";
+import { EmbeddingWidthField } from "./ai-routing-fields";
+import { DecisionLaneRow, LaneRow, withDecisions } from "./ai-routing-lane";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { RefreshFromSources } from "./rate-refresh";
 import { SETUP_PROVIDERS } from "./setup-providers";
@@ -41,7 +36,9 @@ import "./ai-settings.css";
 // comes from the task contract rather than from a contact, so the form offers
 // the tiers the installation already binds. An installation that binds nothing
 // says so and points at where a binding is declared, rather than presenting an
-// empty form that cannot be completed here.
+// empty form that cannot be completed here. The decision model is the one
+// exception: it is no tier, a document may leave it out, and so its row adds and
+// removes it.
 
 type Routing = components["schemas"]["AiRouting"];
 type TierBinding = components["schemas"]["AiTierBinding"];
@@ -52,6 +49,8 @@ const PROFILES = ["eu_hosted", "sovereign", "cloud_frontier"] as const;
 // collide with one: the tier vocabulary is the task contract's and this is the
 // one lane that is not in it.
 const EMBEDDINGS_LANE = "\u0000embeddings";
+// The decision lane's key, for the same reason: it is no tier either.
+const DECISIONS_LANE = "\u0000decisions";
 
 export function useRouting(enabled: boolean) {
   return useQuery({
@@ -432,6 +431,17 @@ function RoutingForm({
               />
             }
           />
+          <DecisionLaneRow
+            binding={draft.decisions}
+            catalogue={catalogue.data}
+            unkeyed={unkeyed}
+            disabled={busy}
+            open={editing === DECISIONS_LANE}
+            onOpen={(open) => setEditing(open ? DECISIONS_LANE : null)}
+            onChange={(decisions) =>
+              setDraft((d) => withDecisions(d, decisions))
+            }
+          />
         </Panel>
       </Disclosure>
       {preview.isError && (
@@ -531,143 +541,6 @@ function RoutingForm({
   );
 }
 
-// One lane, read as a row and edited in place.
-//
-// The row is the READING — which lane, which vendor, which model, and what is
-// wrong with that pairing — and the fields open under it only when a reader asks
-// to change one. The card was six lanes' worth of fields opened at once, which is
-// three screens of controls to answer the question "where does premium go".
-//
-// The two pills are the whole reason a reader can be shown a binding without also
-// being shown the key card and the price sheet. Both are joins, and both stay
-// silent rather than guessing: a key list that has not arrived claims nothing, and
-// an empty price sheet means the reader cannot read it rather than that nothing on
-// this installation is priced.
-function LaneRow<
-  B extends { provider: string; model: string; base_url?: string },
->({
-  name,
-  lane,
-  binding,
-  catalogue,
-  unkeyed,
-  disabled,
-  open,
-  onOpen,
-  onChange,
-  extra,
-  testId,
-}: Readonly<{
-  name: string;
-  lane: ModelLane;
-  binding: B;
-  catalogue: ModelCatalogue;
-  unkeyed: ReadonlySet<string> | null;
-  disabled: boolean;
-  open: boolean;
-  onOpen: () => void;
-  onChange: (next: B) => void;
-  // A control this lane has and the others do not — the embedding width. It
-  // rides in the opened body rather than in `AdapterFields`, which asks the one
-  // question both lanes answer.
-  extra?: ReactNode;
-  testId?: string;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  return (
-    <PanelRow>
-      {/* The lane's addressable region: the summary line AND the fields it
-          opens, so "the premium lane" names one thing whether it is folded or
-          not. Inside the row rather than on it, because `PanelRow` owns the
-          row's own geometry and takes no attributes of its own. */}
-      <div data-testid={testId ?? `ai-routing-tier-${name}`}>
-        <div className="ai-lane">
-          {/* The lane's own id, and under it what the lane is FOR.
-              The id stays because it is the routing document's vocabulary and
-              what an operator greps for; the gloss is there because `premium`
-              and `frontier` do not say which is dearer, and `local_small` says
-              nothing at all to somebody meeting this page for the first time.
-              A lane this build does not know gets no gloss rather than an
-              invented one. */}
-          <span className="ai-lane-name">
-            <span>{name}</span>
-            {laneGloss(name, t) && (
-              <span className="t-sub">{laneGloss(name, t)}</span>
-            )}
-          </span>
-          {/* The binding itself, as ONE flex item. Grouped rather than laid
-              out beside the name as five siblings, because a row that wraps
-              wraps at whatever item runs out of room — which put the Change
-              button alone on a second line while the model beside it still had
-              space. Wrapping now happens INSIDE this group, and the two things
-              that anchor the row keep their edges. */}
-          <span className="ai-lane-binding">
-            {/* Filled, not `quiet`. Quiet draws a status DOT, and the vendor is
-                not a status — the pills that follow it are, and a dot in front
-                of the vendor would put three status marks on a row carrying one
-                fact and two warnings. */}
-            <Badge>{binding.provider}</Badge>
-            <span className="ai-lane-model">{binding.model}</span>
-            {/* WHERE the OpenAI-wire adapter is pointed. It is not a detail of
-                the binding, it IS the vendor: `openai_compatible` names a
-                protocol, and every broker on it — OpenRouter, Together, a
-                self-hosted gateway — reads identically on this row without the
-                host. Only this adapter has one, so nothing else grows it. */}
-            {binding.base_url ? <span>{hostOf(binding.base_url)}</span> : null}
-            {unkeyed?.has(binding.provider) && (
-              <Badge tone="warning">{t("aiRouting.noKey")}</Badge>
-            )}
-            {isUnpriced(catalogue, binding.provider, binding.model, lane) ? (
-              <Badge tone="warning">{t("aiRouting.unpriced")}</Badge>
-            ) : (
-              // What this lane costs to call, where the sheet can say. It is
-              // the reason the ladder is ordered the way it is, and reading it
-              // used to mean leaving for the price table and finding this model
-              // in a list of two hundred.
-              <span className="ai-lane-price t-sub">
-                {priceLabel(
-                  catalogue,
-                  binding.provider,
-                  binding.model,
-                  lane,
-                  locale,
-                  t,
-                )}
-              </span>
-            )}
-          </span>
-          {/* Never refused, even to a reader who may not save. The row is a
-            summary and the body under it is the rest of the binding — the host
-            an OpenAI-wire vendor is reached at, the width the embedder asks for
-            — so refusing to OPEN it would hide facts from somebody whose job is
-            to report them. The fields inside carry the refusal, and so does
-            Save. */}
-          <span className="ai-lane-open">
-            <Button onClick={onOpen} aria-expanded={open}>
-              {open ? t("aiRouting.done") : t("aiRouting.change")}
-            </Button>
-          </span>
-        </div>
-        {open && (
-          <div className="form-row">
-            <AdapterFields
-              label={t("aiRouting.provider.label")}
-              lane={lane}
-              laneName={name}
-              binding={binding}
-              catalogue={catalogue}
-              disabled={disabled}
-              onChange={onChange}
-            />
-            {extra}
-          </div>
-        )}
-      </div>
-    </PanelRow>
-  );
-}
-
 // The vendors this installation names but holds no credential for — or null
 // while nobody knows.
 //
@@ -725,121 +598,6 @@ function unkeyedProviders(
     return null;
   }
   return new Set(providers.filter((p) => !p.configured).map((p) => p.provider));
-}
-
-// Whether the price sheet can cost a call on this binding.
-//
-// An EMPTY sheet answers no. The reader who cannot read `ai_model_rate` gets an
-// empty list from the catalogue hook by design, and marking every lane unpriced
-// on the strength of that would report a fault in the installation where the
-// truth is only that the sheet is not theirs.
-//
-// A row that EXISTS but carries a price nothing can parse counts as unpriced
-// too. It is the same fact to a reader — this call cannot be costed — and
-// treating it as priced left the row showing neither a figure nor the pill,
-// which says nothing at all.
-function isUnpriced(
-  catalogue: ModelCatalogue,
-  provider: string,
-  model: string,
-  lane: ModelLane,
-): boolean {
-  if (!catalogue || catalogue.length === 0) {
-    return false;
-  }
-  const rate = catalogue.find(
-    (r) => r.provider === provider && r.model_id === model && r.lane === lane,
-  );
-  if (!rate) {
-    return true;
-  }
-  if (unreadablePrice(rate.input_per_mtok)) {
-    return true;
-  }
-  // An embedding lane has no output, so a blank there is the sheet being right
-  // rather than unreadable.
-  return lane !== "embeddings" && unreadablePrice(rate.output_per_mtok);
-}
-
-// The host part of a base URL, for a row that has room for the address but not
-// for the whole endpoint. Falls back to the string as given: a value an
-// operator typed that does not parse is still what this lane is pointed at, and
-// hiding it would leave the row claiming a vendor with no address at all.
-function hostOf(baseUrl: string): string {
-  try {
-    return new URL(baseUrl).host;
-  } catch {
-    return baseUrl;
-  }
-}
-
-// What each lane in the ladder is FOR, in words rather than in its id.
-//
-// An explicit switch rather than a key built from the tier name: the message
-// catalog's type is a closed union, and a runtime-composed key would compile as
-// any old string and ship a typo. It also means a tier the task contract grows
-// later renders with no gloss — correct, because nobody has written one, and a
-// missing sentence is better than a guessed one.
-function laneGloss(name: string, t: ReturnType<typeof useT>): string | null {
-  switch (name) {
-    case "local_small":
-      return t("aiRouting.lane.local_small");
-    case "cheap_cloud":
-      return t("aiRouting.lane.cheap_cloud");
-    case "premium":
-      return t("aiRouting.lane.premium");
-    case "frontier":
-      return t("aiRouting.lane.frontier");
-    case "local_large":
-      return t("aiRouting.lane.local_large");
-    case "embeddings":
-      return t("aiRouting.lane.embeddings");
-    default:
-      return null;
-  }
-}
-
-// This binding's price, short enough to sit on the row: what goes in, what comes
-// out, per million tokens. Empty where the sheet cannot say — the `unpriced`
-// pill is what a reader sees instead, and printing a zero here would be the one
-// thing this product is careful never to say by accident.
-function priceLabel(
-  catalogue: ModelCatalogue,
-  provider: string,
-  model: string,
-  lane: ModelLane,
-  locale: Locale,
-  t: ReturnType<typeof useT>,
-): string {
-  const rate = (catalogue ?? []).find(
-    (r) => r.provider === provider && r.model_id === model && r.lane === lane,
-  );
-  if (!rate) {
-    return "";
-  }
-  // A row the sheet cannot state a price for prints NOTHING rather than
-  // reaching the formatter. `formatUsdPerMTok` hands the parsed number to
-  // `Intl.NumberFormat`'s `minimumFractionDigits`, and NaN there throws a
-  // RangeError — during render, on a card the whole settings page is composed
-  // from. The picker's own hint guards the same way for the same reason.
-  //
-  // The output side is only asked about where it MEANS something: an embedding
-  // lane has no output, so its price is a single figure and a blank second
-  // column there is the sheet being right rather than unreadable.
-  if (unreadablePrice(rate.input_per_mtok)) {
-    return "";
-  }
-  const input = formatUsdPerMTok(rate.input_per_mtok, locale);
-  if (lane === "embeddings") {
-    return t("aiAdmin.inputRate", { input });
-  }
-  if (unreadablePrice(rate.output_per_mtok)) {
-    return "";
-  }
-  return t("aiAdmin.rates", {
-    input,
-    output: formatUsdPerMTok(rate.output_per_mtok, locale),
-  });
 }
 
 // The day the price sheet was last written, which is the day its model list was

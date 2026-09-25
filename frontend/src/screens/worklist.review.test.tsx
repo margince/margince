@@ -14,7 +14,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
+import { day, panelNamed, renderWorklist, row, stub } from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();
@@ -112,19 +112,6 @@ describe("the day is drawn apart from what it is not", () => {
   });
 });
 
-// panelNamed is the panel a heading belongs to.
-//
-// Panel draws a bare <section> with no accessible name, so `getByRole("region")`
-// finds nothing — the heading is the only handle, and its panel is what the
-// assertion needs to look inside.
-function panelNamed(heading: HTMLElement): HTMLElement {
-  const panel = heading.closest("section");
-  if (!panel) {
-    throw new Error(`no panel around the heading "${heading.textContent}"`);
-  }
-  return panel as HTMLElement;
-}
-
 describe("the day's headings describe the day", () => {
   it("draws no empty heading for work that moved to review", async () => {
     stub(
@@ -212,8 +199,8 @@ describe("each panel numbers its own rows", () => {
 
 // What the panel says about the work it is NOT holding.
 //
-// The panel has no cursor of its own: review rows arrive as a side effect of
-// paging the day. Before this, an approval past the page cut simply did not
+// The panel has no cursor of its own: review rows arrive through the day's one
+// load-more control. Before this, an approval past the page cut simply did not
 // render and nothing on the screen said it existed — a rep saw a clean panel
 // and had no way to learn otherwise.
 describe("the review panel admits what it is not showing", () => {
@@ -241,6 +228,7 @@ describe("the review panel admits what it is not showing", () => {
           total: 2,
           buckets: { urgent: 0, due_today: 0, planned: 1, review: 4 },
         },
+        next_cursor: "page-2",
       }),
     );
 
@@ -254,6 +242,39 @@ describe("the review panel admits what it is not showing", () => {
           .replace("{total}", "4"),
       ),
     ).toBeTruthy();
+  });
+
+  // The gap is still true once the walk is over, but there is no control left
+  // to load the rest with, so the sentence stops pointing at one.
+  it("states the gap without pointing at a control the day no longer offers", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "a1",
+            source: "dedupe_candidate",
+            destination: "review",
+            title: "Two records for one company",
+          }),
+        ],
+        summary: {
+          urgent: 0,
+          due: 0,
+          lower_priority: 1,
+          total: 1,
+          buckets: { urgent: 0, due_today: 0, planned: 0, review: 4 },
+        },
+      }),
+    );
+
+    renderWorklist();
+    await screen.findByText("Two records for one company");
+
+    expect(screen.getByText("1 of 4 shown.")).toBeTruthy();
+    expect(screen.queryByText(/Load more/)).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["worklist.more"] }),
+    ).toBeNull();
   });
 
   it("says nothing when the panel holds the day's whole review", async () => {

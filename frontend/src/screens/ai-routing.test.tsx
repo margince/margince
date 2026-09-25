@@ -1,226 +1,22 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import type { GrantSpec } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
-import { type Locale, LocaleProvider } from "../i18n";
 import { AiRoutingCard } from "./ai-routing";
-
-// Settings → AI → Model routing: which vendor this installation's text is sent
-// to. The server is the RBAC authority; this screen mirrors it by disabling
-// (never hiding) the save for a reader who may not change it, so an operator
-// can still SEE the binding they are asking somebody else to change.
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json", ETag: '"routing-v1"' },
-  });
-}
-
-// Naming the grant rather than a role keeps the fixture honest about what the
-// screen actually asks for.
-const ROUTING_EDITOR: GrantSpec = {
-  ai_routing: ["read", "update"],
-  ai_budget: ["read"],
-};
-const ROUTING_READER: GrantSpec = { ai_routing: ["read"] };
-
-/** What PUT /ai/routing carries, as these tests read it back. */
-type CapturedRouting = {
-  profile: string;
-  tiers: Record<string, { provider: string; model: string; base_url?: string }>;
-  embeddings: {
-    provider: string;
-    model: string;
-    base_url?: string;
-    dimensions?: number;
-  };
-};
-
-// The price sheet, which is also the catalogue this card offers from: a model
-// outside it serves calls and reports UNPRICED. The full wire row, prices
-// included — the picker renders them, so a fixture without them is not the
-// shape this screen receives.
-function sheetRow(
-  provider: string,
-  model_id: string,
-  lane: "chat" | "embeddings",
-  input_per_mtok: string,
-  output_per_mtok: string,
-) {
-  return {
-    provider,
-    model_id,
-    lane,
-    input_per_mtok,
-    output_per_mtok,
-    cache_read_per_mtok: "0",
-    cache_write_per_mtok: "0",
-    effective_date: "2026-08-01",
-  };
-}
-
-const SHEET = [
-  sheetRow("gemini", "gemini-3.5-flash", "chat", "1.50", "9.00"),
-  sheetRow("gemini", "gemini-3.1-flash-lite", "chat", "0.25", "1.50"),
-  sheetRow("gemini", "gemini-3.1-pro-preview", "chat", "2.00", "12.00"),
-  sheetRow("gemini", "gemini-embedding-001", "embeddings", "0.15", "0"),
-  sheetRow("anthropic", "claude-opus-4-8", "chat", "5.00", "25.00"),
-];
-
-// Which vendors hold a credential. `anthropic` is bound by nothing in BOUND,
-// so its absence never lights a row: the pill follows the ROUTING, and a vendor
-// nobody points at is not this installation's problem.
-const PROVIDER_KEYS = [
-  { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-  { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
-];
-
-const BOUND = {
-  profile: "eu_hosted",
-  tiers: {
-    premium: { provider: "gemini", model: "gemini-3.5-flash" },
-    cheap_cloud: { provider: "gemini", model: "gemini-3.1-flash-lite" },
-  },
-  embeddings: { provider: "gemini", model: "gemini-embedding-001" },
-};
-
-// What an installation that has bound nothing answers: an empty tier map, not
-// null — the contract is explicit that it says so with `{}`.
-const UNBOUND = {
-  profile: "",
-  tiers: {},
-  embeddings: { provider: "", model: "" },
-};
-
-const VENDOR_MODELS: Record<string, unknown> = {
-  gemini: {
-    provider: "gemini",
-    models: [
-      // Newer than anything on the sheet: the model a reader came looking for.
-      {
-        id: "gemini-4.0-flash",
-        display_name: "Gemini 4.0 Flash",
-        lane: "chat",
-      },
-      {
-        id: "gemini-3.5-flash",
-        display_name: "Gemini 3.5 Flash",
-        lane: "chat",
-      },
-      { id: "gemini-embedding-001", lane: "embeddings" },
-    ],
-  },
-  anthropic: { provider: "anthropic", models: [], unavailable: "no_key" },
-};
-
-function backendFor(
-  allow: GrantSpec,
-  routing: unknown = BOUND,
-  {
-    sheetStatus = 200,
-    providerKeys = PROVIDER_KEYS,
-  }: {
-    sheetStatus?: number;
-    providerKeys?: readonly {
-      provider: string;
-      configured: boolean;
-      env_var: string;
-    }[];
-  } = {},
-) {
-  let stored = routing;
-  let revision = "routing-v1";
-  // Typed as the document this endpoint takes, so an assertion can read a field
-  // off it without an unchecked cast at every call site. The stub still stores
-  // whatever arrives — the type is a claim about the ENDPOINT, not a check on
-  // the body, and a test asserting the wrong shape fails on the assertion.
-  let capturedPut: CapturedRouting | null = null;
-  const fetchMock = vi.fn(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      const req =
-        input instanceof Request ? input : new Request(String(input), init);
-      if (req.url.endsWith("/v1/me")) {
-        return jsonResponse(meFixture({ allow }));
-      }
-      if (req.url.includes("/ai/available-models/")) {
-        // The lane rides along as a query parameter, so the provider is the
-        // path segment before it — the vendor is what this stub answers for.
-        const provider = req.url
-          .split("/ai/available-models/")[1]
-          .split("?")[0];
-        return jsonResponse(
-          VENDOR_MODELS[provider] ?? { provider, models: [] },
-        );
-      }
-      if (req.url.includes("/ai/provider-keys")) {
-        return jsonResponse({ providers: providerKeys });
-      }
-      if (req.url.includes("/ai-model-rates")) {
-        return sheetStatus === 200
-          ? jsonResponse({ data: SHEET })
-          : jsonResponse({ title: "forbidden" }, sheetStatus);
-      }
-      if (req.url.includes("/ai/routing/preview"))
-        return jsonResponse({
-          current_version: revision,
-          features: [],
-          unused_tiers: [],
-        });
-      if (req.url.includes("/ai/routing")) {
-        if (req.method === "PUT") {
-          capturedPut = (await req.json()) as CapturedRouting;
-          stored = capturedPut;
-        }
-        const response = jsonResponse(stored);
-        response.headers.set("ETag", `"${revision}"`);
-        return response;
-      }
-      throw new Error(`unexpected request: ${req.method} ${req.url}`);
-    },
-  );
-  return {
-    fetchMock,
-    externalChange: () => {
-      stored = { ...BOUND, profile: "best_effort" };
-      revision = "routing-v2";
-    },
-    getCapturedPut: (): CapturedRouting | null => capturedPut,
-  };
-}
-
-/** Opens one lane's fields, the way a reader does. */
-async function openLane(
-  user: ReturnType<typeof userEvent.setup>,
-  testId: string,
-) {
-  const lane = screen.getByTestId(testId);
-  await user.click(within(lane).getByRole("button", { name: /change/i }));
-  return lane;
-}
-
-const render = (ui: ReactNode, locale: Locale = "en") => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  const result = rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-  return { ...result, client };
-};
+import {
+  BOUND,
+  backendFor,
+  type CapturedRouting,
+  openLane,
+  ROUTING_EDITOR,
+  ROUTING_READER,
+  render,
+  UNBOUND,
+} from "./ai-routing.testkit";
+import { rebind } from "./ai-routing-fields";
 
 afterEach(() => {
   cleanup();
@@ -525,6 +321,46 @@ describe("AiRoutingCard", () => {
     expect(sent?.tiers.premium.provider).toBe("openai_compatible");
     expect(sent?.tiers.premium.base_url).toBe("https://openrouter.ai/api");
   });
+  // Broker preferences belong to the OpenRouter binding they were written for,
+  // and the server refuses them on any other. Carried onto a new vendor, they
+  // would turn a routine switch into a save refused with no field to fix.
+  it("drops a tier's broker preferences when it leaves OpenRouter", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      tiers: {
+        ...BOUND.tiers,
+        premium: {
+          provider: "openai_compatible",
+          model: "openai/gpt-oss-120b",
+          base_url: "https://openrouter.ai/api",
+          routing: { sort: "throughput" },
+        },
+      },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("openai/gpt-oss-120b");
+
+    const tier = await openLane(user, "ai-routing-tier-premium");
+    await pickOption(
+      user,
+      within(tier).getByRole("combobox", { name: "Provider" }),
+      "gemini",
+    );
+    await user.click(screen.getByRole("button", { name: /preview effects/i }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /save routing/i }),
+      ).not.toBeDisabled(),
+    );
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    const sent = backend.getCapturedPut()?.tiers.premium;
+    expect(sent?.provider).toBe("gemini");
+    expect(sent).not.toHaveProperty("routing");
+  });
   // The lane the operator reported as unreachable: it takes a provider of its
   // own, and re-pointing it has to carry the host and the width with it or the
   // server refuses the binding it just accepted.
@@ -776,35 +612,39 @@ describe("AiRoutingCard", () => {
   });
 });
 
-it("keeps the draft revision after a background refresh and refuses a conflicting preview", async () => {
-  const user = userEvent.setup({ delay: null });
-  const backend = backendFor(ROUTING_EDITOR);
-  vi.stubGlobal("fetch", backend.fetchMock);
-  const { client } = render(<AiRoutingCard />);
-  await screen.findByText("gemini-3.5-flash");
-  const lane = await openLane(user, "ai-routing-tier-premium");
-  const model = within(lane).getByRole("combobox", { name: "Model" });
-  await user.clear(model);
-  await user.type(model, "my-draft-model");
-  backend.externalChange();
-  await client.invalidateQueries({ queryKey: ["ai-routing"] });
-  await user.click(screen.getByRole("button", { name: /preview effects/i }));
-  await screen.findByText(/model bindings changed while you were editing/i);
-  expect(model).toHaveValue("my-draft-model");
-  expect(screen.getByRole("button", { name: /save routing/i })).toBeDisabled();
-  expect(backend.getCapturedPut()).toBeNull();
-});
+describe("rebind", () => {
+  const openRouterTier = {
+    provider: "openai_compatible",
+    model: "openai/gpt-oss-120b",
+    base_url: "https://openrouter.ai/api",
+    routing: { sort: "throughput" },
+  };
 
-it("keeps a manually opened advanced section open after closing a tier editor", async () => {
-  const backend = backendFor(ROUTING_EDITOR, BOUND);
-  vi.stubGlobal("fetch", backend.fetchMock);
-  render(<AiRoutingCard />);
-  const user = userEvent.setup({ delay: null });
-  const summary = await screen.findByText("Advanced: shared model bindings");
-  await user.click(summary);
-  const details = summary.closest("details");
-  expect(details).toHaveAttribute("open");
-  const tier = await openLane(user, "ai-routing-tier-premium");
-  await user.click(within(tier).getByRole("button", { name: "Done" }));
-  expect(details).toHaveAttribute("open");
+  it("drops them when the model changes, since a pin names one model's hosts", () => {
+    const next = rebind(openRouterTier, {
+      model: "mistralai/mistral-large-2512",
+    });
+    expect(next.model).toBe("mistralai/mistral-large-2512");
+    expect(next).not.toHaveProperty("routing");
+  });
+
+  it("drops them when the provider changes, so the save is not refused", () => {
+    const next = rebind(openRouterTier, { provider: "gemini" });
+    expect(next.provider).toBe("gemini");
+    expect(next).not.toHaveProperty("routing");
+  });
+
+  it("drops them when base_url moves off OpenRouter", () => {
+    const next = rebind(openRouterTier, { base_url: "https://api.mistral.ai" });
+    expect(next.base_url).toBe("https://api.mistral.ai");
+    expect(next).not.toHaveProperty("routing");
+  });
+
+  it("keeps them when the patch re-states the same provider and base_url", () => {
+    const next = rebind(openRouterTier, {
+      provider: "openai_compatible",
+      base_url: "https://openrouter.ai/api",
+    });
+    expect(next.routing).toEqual({ sort: "throughput" });
+  });
 });

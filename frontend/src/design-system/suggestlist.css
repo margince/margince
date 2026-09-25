@@ -29,7 +29,11 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--space-2);
+  /* A text box in a form row is narrow, and value and hint on one rigid line
+     gave the hint every pixel: a model picker showed a price and no model. The
+     hint drops under the value instead. */
+  flex-wrap: wrap;
+  column-gap: var(--space-2);
   /* The anatomy's row: --controlGap above and below a --fontBody line is the
      32px every option row in the product stands at. */
   padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the option row's own optics, shared with Select's list */
@@ -44,7 +48,7 @@
   white-space: nowrap;
 }
 .suggest-option-hint {
-  flex: none;
+  min-width: 0;
 }
 /* Where the keyboard is, and what a pointer is hovering — one state, because
    the popup tracks one active option through `aria-activedescendant` whichever

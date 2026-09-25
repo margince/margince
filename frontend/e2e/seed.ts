@@ -854,6 +854,7 @@ export const aiCalls = {
     {
       id: "0d9f8c2e-6b41-4d2a-9a77-1f3c5b8e0a11",
       occurred_at: "2026-07-05T06:14:00Z",
+      kind: "completion",
       task: "capture_classify",
       tier: "cheap_cloud",
       provider: "deepseek",
@@ -873,6 +874,7 @@ export const aiCalls = {
     {
       id: "b71c4a55-2f08-4c93-8d61-77aa9e4c2b30",
       occurred_at: "2026-07-05T05:58:00Z",
+      kind: "completion",
       task: "enrich",
       tier: "premium",
       provider: "anthropic",

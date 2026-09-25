@@ -78,6 +78,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the SAME table, or the integer they exchange means two different amounts. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
 | `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails SILENTLY when it falls short. |
+| `frontendproviders_test.go` | H3 | The routing form offers an admin an adapter for every tier, and the frontend cannot read Go, so its PROVIDERS list is a declared mirror of the server's provider registry. |
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat MAY DO, not which role it holds. |
 | `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one LIST ROW carries, or the chip strip's "+N" counts a number nobody has. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve exactly what it offered. |
@@ -224,6 +225,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |
+| `gatelanetrigger_test.go` | H2 | A gate runs in a lane that every path it reads can trigger. |
 | `governedkindseams_test.go` | H2 | The two halves of automatic apply agree about which kinds it covers. |
 | `historyfieldlabels_test.go` | H2 | Every field name the History tab can print has a word for it. |
 | `humanonlytransport_test.go` | H1 | A human-only operation says so at the TRANSPORT, not only in the gate. |

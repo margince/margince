@@ -751,6 +751,7 @@ func (e AiActivityKind) Valid() bool {
 // Defines values for AiModelRateLane.
 const (
 	AiModelRateLaneChat       AiModelRateLane = "chat"
+	AiModelRateLaneDecisions  AiModelRateLane = "decisions"
 	AiModelRateLaneEmbeddings AiModelRateLane = "embeddings"
 )
 
@@ -758,6 +759,8 @@ const (
 func (e AiModelRateLane) Valid() bool {
 	switch e {
 	case AiModelRateLaneChat:
+		return true
+	case AiModelRateLaneDecisions:
 		return true
 	case AiModelRateLaneEmbeddings:
 		return true
@@ -2275,6 +2278,7 @@ func (e AutomationRunTier) Valid() bool {
 // Defines values for AvailableModelLane.
 const (
 	AvailableModelLaneChat       AvailableModelLane = "chat"
+	AvailableModelLaneDecisions  AvailableModelLane = "decisions"
 	AvailableModelLaneEmbeddings AvailableModelLane = "embeddings"
 )
 
@@ -2282,6 +2286,8 @@ const (
 func (e AvailableModelLane) Valid() bool {
 	switch e {
 	case AvailableModelLaneChat:
+		return true
+	case AvailableModelLaneDecisions:
 		return true
 	case AvailableModelLaneEmbeddings:
 		return true
@@ -12676,6 +12682,7 @@ func (e SetActivityDispositionRequestDisposition) Valid() bool {
 // Defines values for SetAiModelRateRequestLane.
 const (
 	SetAiModelRateRequestLaneChat       SetAiModelRateRequestLane = "chat"
+	SetAiModelRateRequestLaneDecisions  SetAiModelRateRequestLane = "decisions"
 	SetAiModelRateRequestLaneEmbeddings SetAiModelRateRequestLane = "embeddings"
 )
 
@@ -12683,6 +12690,8 @@ const (
 func (e SetAiModelRateRequestLane) Valid() bool {
 	switch e {
 	case SetAiModelRateRequestLaneChat:
+		return true
+	case SetAiModelRateRequestLaneDecisions:
 		return true
 	case SetAiModelRateRequestLaneEmbeddings:
 		return true
@@ -13066,6 +13075,24 @@ func (e SignalIntroPathNextMoveKind) Valid() bool {
 	case SignalIntroPathNextMoveKindDraftToContact:
 		return true
 	case SignalIntroPathNextMoveKindIntroRequest:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalResolutionOutcome.
+const (
+	SignalResolutionOutcomeDismissed SignalResolutionOutcome = "dismissed"
+	SignalResolutionOutcomeResolved  SignalResolutionOutcome = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the SignalResolutionOutcome enum.
+func (e SignalResolutionOutcome) Valid() bool {
+	switch e {
+	case SignalResolutionOutcomeDismissed:
+		return true
+	case SignalResolutionOutcomeResolved:
 		return true
 	default:
 		return false
@@ -19225,7 +19252,10 @@ type AiCall struct {
 	// ContextScopes Company-context scopes injected into the request.
 	ContextScopes []string            `json:"context_scopes"`
 	CorrelationId *openapi_types.UUID `json:"correlation_id,omitempty"`
-	Degraded      bool                `json:"degraded"`
+
+	// DecisionAttempted Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which.
+	DecisionAttempted bool `json:"decision_attempted"`
+	Degraded          bool `json:"degraded"`
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
@@ -19236,7 +19266,10 @@ type AiCall struct {
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
 	Id         openapi_types.UUID `json:"id"`
-	LatencyMs  int                `json:"latency_ms"`
+
+	// Kind What the call asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
 
 	// ModelId The configured binding.
 	ModelId    string    `json:"model_id"`
@@ -19244,7 +19277,7 @@ type AiCall struct {
 
 	// Payload Present only when payload_captured. Post-secret-stripper content (AIRT-AC-4); rune-capped with a visible truncation marker.
 	Payload *struct {
-		// Request The captured request: {"system": string, "messages": [{role, content}]}.
+		// Request The captured request: {"system": string, "messages": [{role, content}]}, or, for a decision call, {"state": string, "questions": {…}}.
 		Request interface{} `json:"request"`
 
 		// Response The captured response text (JSON string).
@@ -19271,14 +19304,24 @@ type AiCall struct {
 type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
-	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder.
-	AttemptReason string    `json:"attempt_reason"`
-	ErrorSentinel *string   `json:"error_sentinel,omitempty"`
-	IsTerminal    bool      `json:"is_terminal"`
-	LatencyMs     int       `json:"latency_ms"`
-	OccurredAt    time.Time `json:"occurred_at"`
-	TokensIn      int       `json:"tokens_in"`
-	TokensOut     int       `json:"tokens_out"`
+	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
+	AttemptReason string  `json:"attempt_reason"`
+	ErrorSentinel *string `json:"error_sentinel,omitempty"`
+	IsTerminal    bool    `json:"is_terminal"`
+
+	// Kind What this attempt asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
+
+	// ModelId The configured binding this attempt ran on.
+	ModelId    *string   `json:"model_id,omitempty"`
+	OccurredAt time.Time `json:"occurred_at"`
+	Provider   *string   `json:"provider,omitempty"`
+
+	// Tier The tier this attempt ran on; decide for the decision lane.
+	Tier      *string `json:"tier,omitempty"`
+	TokensIn  int     `json:"tokens_in"`
+	TokensOut int     `json:"tokens_out"`
 }
 
 // AiCallListResponse defines model for AiCallListResponse.
@@ -19299,8 +19342,11 @@ type AiCallSummary struct {
 	CachedTokens int  `json:"cached_tokens"`
 
 	// CallsAttempted The attempt number of this terminal attempt: 1 = first try succeeded/failed terminally, >1 = retries happened.
-	CallsAttempted int  `json:"calls_attempted"`
-	Degraded       bool `json:"degraded"`
+	CallsAttempted int `json:"calls_attempted"`
+
+	// DecisionAttempted Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which.
+	DecisionAttempted bool `json:"decision_attempted"`
+	Degraded          bool `json:"degraded"`
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
@@ -19311,7 +19357,10 @@ type AiCallSummary struct {
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
 	Id         openapi_types.UUID `json:"id"`
-	LatencyMs  int                `json:"latency_ms"`
+
+	// Kind What the call asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
 
 	// ModelId The configured binding.
 	ModelId         string    `json:"model_id"`
@@ -19327,6 +19376,34 @@ type AiCallSummary struct {
 	Tier      string `json:"tier"`
 	TokensIn  int    `json:"tokens_in"`
 	TokensOut int    `json:"tokens_out"`
+}
+
+// AiDecisionSummary One task's decision-model pass and fallback counts over the usage window.
+type AiDecisionSummary struct {
+	// Asked Logical calls that consulted the decision model, including those refused before any call was sent.
+	Asked int `json:"asked"`
+
+	// Decided Logical calls the decision model answered: its answer stood and no LLM ran.
+	Decided int `json:"decided"`
+
+	// Fallbacks Logical calls handed to the LLM ladder, keyed by the attempt reason the ladder's first attempt carries (decision_below_floor, decision_error, …). A reason with no calls is absent. Read an unrecognized key as "some reason" rather than refusing it.
+	Fallbacks map[string]int `json:"fallbacks"`
+	Task      string         `json:"task"`
+}
+
+// AiDecisionsBinding The decision-model lane: a model that answers a typed question with calibrated
+// probabilities, asked before a decision site's ladder. Absent means no task uses
+// one. It serves a task only when certified for that site and when its endpoint
+// reaches no further than the task's own bindings.
+type AiDecisionsBinding struct {
+	// BaseUrl Endpoint root; openrouter_decision requires an OpenRouter host.
+	BaseUrl *string `json:"base_url,omitempty"`
+
+	// Model The decision model id: a Jev slug, or a Laya checkpoint.
+	Model string `json:"model"`
+
+	// Provider openrouter_decision | laya.
+	Provider string `json:"provider"`
 }
 
 // AiDeferredWork defines model for AiDeferredWork.
@@ -19357,18 +19434,35 @@ type AiEmbeddingsBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+
+	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
+	// OpenRouter; refused on any other binding, and on the embeddings lane every
+	// preference but only, ignore and allow_fallbacks is refused. Absent means the
+	// product default (reliability over price); an empty object means no preferences
+	// (the broker's own price-weighted routing). The two are different choices and a
+	// client must not turn one into the other.
+	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 }
 
 // AiFeatureRoute defines model for AiFeatureRoute.
 type AiFeatureRoute struct {
-	BudgetExempt        bool               `json:"budget_exempt"`
+	BudgetExempt      bool              `json:"budget_exempt"`
+	DecisionCandidate *AiRouteCandidate `json:"decision_candidate,omitempty"`
+
+	// DecisionFirst The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.
+	DecisionFirst bool `json:"decision_first"`
+
+	// DecisionSkipReason Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
+	DecisionSkipReason  *string            `json:"decision_skip_reason,omitempty"`
 	DisplayName         string             `json:"display_name"`
 	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
 	ExecutionMode       string             `json:"execution_mode"`
-	Impact              string             `json:"impact"`
-	LeadingTier         string             `json:"leading_tier"`
-	NormalCandidates    []AiRouteCandidate `json:"normal_candidates"`
-	Task                string             `json:"task"`
+
+	// Impact How the proposed routing changes what answers this feature. decision_changed — only the decision model that answers it first moved (added, removed or rebound) while every tier binding stayed put; model_changed wins when the lead tier binding moved as well.
+	Impact           string             `json:"impact"`
+	LeadingTier      string             `json:"leading_tier"`
+	NormalCandidates []AiRouteCandidate `json:"normal_candidates"`
+	Task             string             `json:"task"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -19387,9 +19481,10 @@ type AiModelRate struct {
 	InputPerMtok      string             `json:"input_per_mtok"`
 
 	// Lane What the model is FOR. A property of the model rather than of this dated row: the
-	// routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-	// where the embeddings lane binds, and a zero output price cannot tell them apart —
-	// every local chat row carries one too.
+	// routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+	// where the embeddings lane binds and a `decisions` one where the decision lane
+	// binds, and a zero output price cannot tell them apart — every local chat row
+	// carries one too.
 	Lane          AiModelRateLane `json:"lane"`
 	ModelId       string          `json:"model_id"`
 	OutputPerMtok string          `json:"output_per_mtok"`
@@ -19397,14 +19492,47 @@ type AiModelRate struct {
 }
 
 // AiModelRateLane What the model is FOR. A property of the model rather than of this dated row: the
-// routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-// where the embeddings lane binds, and a zero output price cannot tell them apart —
-// every local chat row carries one too.
+// routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+// where the embeddings lane binds and a `decisions` one where the decision lane
+// binds, and a zero output price cannot tell them apart — every local chat row
+// carries one too.
 type AiModelRateLane string
 
 // AiModelRateListResponse defines model for AiModelRateListResponse.
 type AiModelRateListResponse struct {
 	Data []AiModelRate `json:"data"`
+}
+
+// AiOpenRouterRouting Upstream-selection preferences for an openai_compatible binding pointed at
+// OpenRouter; refused on any other binding, and on the embeddings lane every
+// preference but only, ignore and allow_fallbacks is refused. Absent means the
+// product default (reliability over price); an empty object means no preferences
+// (the broker's own price-weighted routing). The two are different choices and a
+// client must not turn one into the other.
+type AiOpenRouterRouting struct {
+	// AllowFallbacks Override the broker's host fallback. False is a real choice, distinct from absent.
+	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
+
+	// Ignore Upstream slugs excluded; a hard filter.
+	Ignore *[]string `json:"ignore,omitempty"`
+
+	// Only Upstream slugs allowed; a hard filter.
+	Only *[]string `json:"only,omitempty"`
+
+	// PreferredMaxLatencyP90 Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
+	PreferredMaxLatencyP90 *float64 `json:"preferred_max_latency_p90,omitempty"`
+
+	// Quantizations Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.
+	Quantizations *[]string `json:"quantizations,omitempty"`
+
+	// ReasoningEffort none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.
+	ReasoningEffort *string `json:"reasoning_effort,omitempty"`
+
+	// RequireParameters Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent.
+	RequireParameters *bool `json:"require_parameters,omitempty"`
+
+	// Sort price | throughput | latency. Reorders rather than filters, and disables load balancing.
+	Sort *string `json:"sort,omitempty"`
 }
 
 // AiProfile defines model for AiProfile.
@@ -19471,6 +19599,11 @@ type AiRouteCandidate struct {
 // refuses an unknown key with a 422 naming it — restating the set here would be a second
 // copy free to drift from the generated one.
 type AiRouting struct {
+	// Decisions The decision-model lane: a model that answers a typed question with calibrated
+	// probabilities, asked before a decision site's ladder. Absent means no task uses
+	// one. It serves a task only when certified for that site and when its endpoint
+	// reaches no further than the task's own bindings.
+	Decisions  *AiDecisionsBinding `json:"decisions,omitempty"`
 	Embeddings AiEmbeddingsBinding `json:"embeddings"`
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
@@ -19536,7 +19669,7 @@ type AiRunSummaryCurrency string
 
 // AiRungHealth One model tier and what it has been doing.
 type AiRungHealth struct {
-	// Calls Terminal attempts in the window.
+	// Calls Attempts in the window — terminal ones for a chat tier, every one for `decide`.
 	Calls int `json:"calls"`
 
 	// Failures How many of them carried an error.
@@ -19591,6 +19724,14 @@ type AiTierBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+
+	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
+	// OpenRouter; refused on any other binding, and on the embeddings lane every
+	// preference but only, ignore and allow_fallbacks is refused. Absent means the
+	// product default (reliability over price); an empty object means no preferences
+	// (the broker's own price-weighted routing). The two are different choices and a
+	// client must not turn one into the other.
+	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 }
 
 // AiUsage AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total.
@@ -19622,7 +19763,7 @@ type AiUsage struct {
 			Task            string  `json:"task"`
 			TaskDisplayName *string `json:"task_display_name,omitempty"`
 
-			// Tier local_small, cheap_cloud, premium, frontier, local_large.
+			// Tier local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane).
 			Tier      string `json:"tier"`
 			TokensIn  int    `json:"tokens_in"`
 			TokensOut int    `json:"tokens_out"`
@@ -19631,6 +19772,9 @@ type AiUsage struct {
 			UnpricedCalls *int `json:"unpriced_calls,omitempty"`
 		} `json:"tasks"`
 	} `json:"days"`
+
+	// Decisions Per task, how often the decision model was consulted over the same window and how often its answer stood. Read from the ai_call trace, one logical call counted once, because the metered calls above count attempts and cannot give a rate. Empty when no call in the window consulted a decision model.
+	Decisions *[]AiDecisionSummary `json:"decisions,omitempty"`
 }
 
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
@@ -36786,8 +36930,16 @@ type Signal struct {
 	Kind SignalKind `json:"kind"`
 
 	// RawRef Pointer to the raw source payload the resolver works from: an email address/handle, a domain, a URL, or a company mention.
-	RawRef               *string  `json:"raw_ref,omitempty"`
-	ResolutionConfidence *float32 `json:"resolution_confidence,omitempty"`
+	RawRef *string `json:"raw_ref,omitempty"`
+
+	// Resolution How a human resolved this signal, and who. Null while `status` is
+	// `open` or `acknowledged` — only a human outcome appends one.
+	//
+	// The latest, not the history: a signal reopened and resolved again
+	// says how it stands now. Every append is kept, and an audit reader
+	// is where the earlier ones belong.
+	Resolution           *SignalResolution `json:"resolution,omitempty"`
+	ResolutionConfidence *float32          `json:"resolution_confidence,omitempty"`
 
 	// ResolutionState The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.
 	ResolutionState SignalResolutionState `json:"resolution_state"`
@@ -36889,6 +37041,27 @@ type SignalListResponse struct {
 	Data []Signal `json:"data"`
 	Page PageInfo `json:"page"`
 }
+
+// SignalResolution A human's answer on one signal. `outcome` is the status they set,
+// `note` is what they wrote, `resolved_by` is who they are.
+//
+// Written on every human resolution since the table existed and read
+// nowhere until this projection: the note explaining WHY a signal was
+// dismissed was recorded and then invisible to the next reader of it.
+type SignalResolution struct {
+	// Note What they wrote about it, if anything.
+	Note *string `json:"note,omitempty"`
+
+	// Outcome The status the human set.
+	Outcome    SignalResolutionOutcome `json:"outcome"`
+	ResolvedAt time.Time               `json:"resolved_at"`
+
+	// ResolvedBy The colleague who answered; null once their account is deleted.
+	ResolvedBy *openapi_types.UUID `json:"resolved_by,omitempty"`
+}
+
+// SignalResolutionOutcome The status the human set.
+type SignalResolutionOutcome string
 
 // SignalWarmContact One contact edge in our own graph that makes the signal warm — evidence, with its explainable §4 strength.
 type SignalWarmContact struct {

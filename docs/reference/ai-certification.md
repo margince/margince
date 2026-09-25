@@ -32,7 +32,7 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 A [preset](../../config/presets/README.md) picks which AI model runs each feature, so the same
 feature can be ready under one preset and not under another.
 
-109 of the 146 grades below were measured on an older version of the product and
+108 of the 146 grades below were measured on an older version of the product and
 are waiting to be re-checked; each is marked below.
 
 | Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
@@ -40,7 +40,7 @@ are waiting to be re-checked; each is marked below.
 | [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 11 | 2 | 14 | 2 | 11 of 29 features ready (re-check pending) |
 | [`gemini_cloud`](#gemini_cloud) | global cloud | 13 | 4 | 12 | 0 | 13 of 29 features ready (28 re-checks pending) |
 | [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 6 | 1 | 5 | 17 | 6 of 29 features ready (4 re-checks pending) |
-| [`openrouter_cloud`](#openrouter_cloud) | global cloud | 6 | 4 | 13 | 6 | 6 of 29 features ready (re-check pending) |
+| [`openrouter_cloud`](#openrouter_cloud) | global cloud | 7 | 3 | 13 | 6 | 7 of 29 features ready (22 re-checks pending) |
 | [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 10 | 1 | 16 | 2 | 10 of 29 features ready (re-check pending) |
 | [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 6 | 2 | 20 | 1 | 6 of 29 features ready |
 
@@ -308,7 +308,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `openrouter_cloud`
 
-Your data goes to: global cloud. 6 of 29 features ready (re-check pending). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
+Your data goes to: global cloud. 7 of 29 features ready (22 re-checks pending). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -338,7 +338,7 @@ Your data goes to: global cloud. 6 of 29 features ready (re-check pending). Pres
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often · re-check pending |
 | Website deep read <sub>`site_extract`</sub> | ❔ Not measured | Not measured yet |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Website triage <sub>`site_triage`</sub> | ⚠️ Usable with care | Right in 14 of 15 tries · re-check pending |
+| Website triage <sub>`site_triage`</sub> | ✅ Ready | Right every time (15 of 15) |
 | Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often · re-check pending |
 | What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet | Right in 4 of 9 tries; 2 test cases wrong too often · re-check pending |
 
@@ -379,7 +379,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `signal_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
 | `site_extract` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
 | `site_fact_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
-| `site_triage` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
+| `site_triage` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | current |
 | `stage_evidence_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
 | `summarize` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
 | `transcript_propose` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
@@ -641,18 +641,18 @@ Everything the grades above are computed from, folded so the page stays short.
 | … best state `stale` | 1 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 152 |
-| Committed records | 172 |
+| Committed records | 173 |
 | Bindings measured | 17 |
 
 #### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 119 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
+Counted per record — one (task, binding) pair — over the 118 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
 | the case | 5 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
 | **the prompt this build sends** | 48 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| how a run is graded | 115 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
+| how a run is graded | 114 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -741,7 +741,7 @@ Which model to run each site on, and what that choice rests on.
 | [`signal_extract/thread_events`](#signal_extractthread_events) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.50 | `current` | 4 | 6 |
 | [`site_extract/profile`](#site_extractprofile) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.60 | `current` | 5 | 7 |
 | [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.67 | `current` | 3 | 6 |
-| [`site_triage/triage`](#site_triagetriage) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.87 | `current` | 5 | 6 |
+| [`site_triage/triage`](#site_triagetriage) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 6 |
 | [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.33 | `current` | 9 | 5 |
 | [`summarize/company_ask`](#summarizecompany_ask) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 1.00 | `current` | 2 | 5 |
 | [`summarize/company_brief`](#summarizecompany_brief) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.83 | `current` | 2 | 5 |
@@ -796,7 +796,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 6 | 0 | 0 | 6 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
 | `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 1 | 0 | 0 | 1 | 15 | 15 | 1.00 | 10068ms | 1 | 0 | 0 |
 | `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 6 | 0 | 0 | 6 | 48 | 42 | 0.88 | 3826ms | 5 | 0 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 39 | 0 | 0 | 39 | 384 | 310 | 0.81 | 140306ms | 13 | 7 | 19 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 39 | 1 | 0 | 38 | 384 | 311 | 0.81 | 140306ms | 14 | 6 | 19 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 | `vllm` | `mlx-community/Qwen3-14B-4bit` | `sovereign` | 46 | 46 | 0 | 0 | 444 | 329 | 0.74 | 105742ms | 11 | 7 | 28 |
 
@@ -977,7 +977,6 @@ model, real network).
 | `site_triage/triage` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
 | `site_triage/triage` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
 | `site_triage/triage` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
-| `site_triage/triage` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
 | `stage_evidence_extract/criteria` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
 | `stage_evidence_extract/criteria` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
 | `stage_evidence_extract/criteria` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
@@ -1038,6 +1037,26 @@ model, real network).
 | `weekly_review/narrative` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
 | `weekly_review/narrative` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
 | `weekly_review/narrative` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
+
+</details>
+
+<details>
+<summary>Decision models</summary>
+
+### Decision models
+
+A decision model answers a site's closed question first. The site's LLM ladder
+answers instead whenever the lane may not be asked (a local-only task), fails,
+or answers below the site's own floor. A decision record comes from a
+`make e2e-ai ROUTING=` run whose config binds `decisions:`, and is certified
+per site with no judge: `certified` means no answer the site kept was wrong in
+any run, and at least one was kept. The lane serves a site only while its
+record is certified and not stale (*Serves*); `make gen` writes those rows into
+`internal/modules/ai/decisioncert_gen.go`.
+
+| Site | Binding | State | Verdict | Serves | Runs | Kept | Kept wrong | Fallback rate | Fallbacks by reason | Served pass rate |
+|---|---|---|---|---|---:|---:|---:|---:|---|---:|
+| `site_triage/triage` | `openrouter_decision · typesafe/jev-1.13 · cloud_frontier` | `current` | `certified` | yes | 15 | 15 | 0 | 0.00 | - | 1.00 |
 
 </details>
 
@@ -2043,7 +2062,7 @@ Records (6):
 | `ollama · gemma4:12b · sovereign` | `current` | 5/5 | `not_supported` | 15 | 12 | 0.80 | 15277ms | 16379ms | 12 | 3 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1614ms | 4068ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1066ms | 1980ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 15 | 14 | 0.93 | 672ms | 1758ms | 14 | 1 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 533ms | 1227ms | 15 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `not_supported` | 15 | 13 | 0.87 | 6242ms | 10552ms | 13 | 2 | 0 | 0 |
 
 </details>

@@ -13,12 +13,18 @@
 // longer complete, and the remedy is to refresh when the reader is ready. A
 // warning tone would tell them something is wrong with a page that is working
 // exactly as designed.
+//
+// The way ON through the walk lives here too: the one control that asks for
+// the next page of the day.
 
+import { useId } from "react";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { WorklistWalk } from "./worklist.queries";
+import "./worklist.css";
 
 /**
  * The notice, where there is anything to say.
@@ -83,4 +89,35 @@ function noticeText(
     });
   }
   return t("worklist.walk.gone", { gone: formatNumber(gone, locale) });
+}
+
+/**
+ * The way to the rest of the day, drawn below BOTH panels: a next page's rows
+ * land in whichever one their destination names, so a control inside either
+ * would look dead whenever they all went to the other. The caption says so,
+ * naming the panels by their own headings.
+ */
+export function LoadMoreOfTheDay({
+  pending,
+  failed,
+  onMore,
+}: Readonly<{ pending: boolean; failed: boolean; onMore: () => void }>) {
+  const t = useT();
+  const whereId = useId();
+  return (
+    <div className="worklist-more">
+      <Button onClick={onMore} pending={pending} aria-describedby={whereId}>
+        {t("worklist.more")}
+      </Button>
+      <p className="t-caption" id={whereId}>
+        {t("worklist.more.where", {
+          today: t("worklist.queue"),
+          review: t("worklist.review"),
+        })}
+      </p>
+      {/* A refused page leaves the button looking exactly as an unpressed one
+          does, so the failure says the rest is still there. */}
+      {failed && <ErrorLine inline>{t("worklist.more.failed")}</ErrorLine>}
+    </div>
+  );
 }

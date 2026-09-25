@@ -243,7 +243,8 @@ func assertWitnessNamesASubject(t *testing.T, site string, claim subjectClaim) {
 	}
 }
 
-// askSites walks the compose tier for calls to ai.Ask and reports each as
+// askSites walks the compose tier for calls to ai.Ask or ai.Decide (a decision
+// site's call, which asks the ladder when no decision stands) and reports each as
 // "<path>:<enclosing function>".
 //
 // Derived from the tree rather than listed, for the reason every census here
@@ -277,6 +278,9 @@ func askSites(t *testing.T) []string {
 	return sites
 }
 
+// modelCallEntries are the ai package's site-facing model calls.
+var modelCallEntries = map[string]bool{"Ask": true, "Decide": true}
+
 // callsAsk reports whether this declaration makes the model call itself.
 func callsAsk(fn *ast.FuncDecl) bool {
 	found := false
@@ -286,7 +290,7 @@ func callsAsk(fn *ast.FuncDecl) bool {
 			return true
 		}
 		sel, isSel := call.Fun.(*ast.SelectorExpr)
-		if !isSel || sel.Sel.Name != "Ask" {
+		if !isSel || !modelCallEntries[sel.Sel.Name] {
 			return true
 		}
 		if pkg, isIdent := sel.X.(*ast.Ident); isIdent && pkg.Name == "ai" {

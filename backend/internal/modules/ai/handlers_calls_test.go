@@ -58,3 +58,39 @@ func TestWireAiCallSummaryCarriesPayloadPresenceOnly(t *testing.T) {
 		t.Fatal("has_payload lost in mapping")
 	}
 }
+
+// The list row and the detail header both read decision_attempted, so each
+// wire carries it.
+func TestBothCallWiresSayADecisionModelWasAsked(t *testing.T) {
+	summary := CallSummary{ID: ids.NewV7(), Task: "site_triage", Kind: callKindCompletion, DecisionAttempted: true}
+	if !wireAiCallSummary(summary).DecisionAttempted {
+		t.Error("the summary wire lost decision_attempted")
+	}
+	if !wireAiCall(CallDetail{CallSummary: summary}).DecisionAttempted {
+		t.Error("the detail wire lost decision_attempted")
+	}
+}
+
+// A logical call that asked a decision model and then a chat tier shows both
+// rungs for what they were; a rung that reached no tier omits it rather than
+// sending an empty string.
+func TestWireAiCallNamesEachAttemptsKindAndBinding(t *testing.T) {
+	wire := wireAiCall(CallDetail{
+		CallSummary: CallSummary{ID: ids.NewV7(), Task: "site_triage", Kind: callKindCompletion, Tier: "cheap_cloud"},
+		Attempts: []CallAttempt{
+			{Attempt: 1, Kind: callKindDecision, Tier: string(TierDecideLane), Provider: providerOpenRouterDecision, ModelID: "typesafe/jev-1.13"},
+			{Attempt: 2, IsTerminal: true, Kind: callKindCompletion, AttemptReason: attemptReasonDecisionBelowFloor},
+		},
+	})
+	if wire.Kind != callKindCompletion {
+		t.Errorf("kind = %q", wire.Kind)
+	}
+	first, second := wire.Attempts[0], wire.Attempts[1]
+	if first.Kind != callKindDecision || first.Tier == nil || *first.Tier != "decide" ||
+		first.Provider == nil || *first.Provider != providerOpenRouterDecision || first.ModelId == nil || *first.ModelId != "typesafe/jev-1.13" {
+		t.Errorf("decision attempt = %+v", first)
+	}
+	if second.Kind != callKindCompletion || second.Tier != nil || second.Provider != nil || second.ModelId != nil {
+		t.Errorf("an attempt with no binding sent one: %+v", second)
+	}
+}

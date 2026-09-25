@@ -101,6 +101,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md) — bring a CSV of companies in: the column mapping, what the preview counts, and how a row names the company it corrects.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md) — bind the AI lanes to a BYOK cloud key (Anthropic / OpenAI / Gemini / any OpenAI-compatible vendor).
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md) — certify a model against a task's fixture corpus and benchmark a candidate swap (`make e2e-ai`).
+- [certify-a-decision-site.md](how-to/certify-a-decision-site.md) — certify a decision model for a site, so the `decisions:` lane may answer it, and re-certify or drop it when the site changes.
 - [re-certify-the-whole-corpus.md](how-to/re-certify-the-whole-corpus.md) — the sweep loop after a tree-wide change stales every record: run both preset bindings, tell a moved question from a model regression before calling anything a drop, fix or flag, re-run one task, regenerate both generated pages.
 - [add-an-ai-task.md](how-to/add-an-ai-task.md) — add a new AI task or invocation site: declare it in the contract, wire the lane, register the site, certify it.
 - [write-a-certification-case.md](how-to/write-a-certification-case.md) — bind a site to the production request builder and validator that certify it: the test-first loop, the case interface, the three site kinds, scenario and rubric authoring, scope.

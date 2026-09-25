@@ -77,6 +77,8 @@ func writeDeclarationTables(b *strings.Builder, c contract, taskNames []string) 
 
 	writeLocalOnlyTable(b, c, taskNames)
 
+	writeDecisionTable(b, c, taskNames)
+
 	writeCompanyContextTable(b, c, taskNames)
 
 	b.WriteString("// taskCostUnit names each priced task's unit rule. The arithmetic is\n")
@@ -133,6 +135,35 @@ func writeLocalOnlyTable(b *strings.Builder, c contract, taskNames []string) {
 	b.WriteString("}\n\n")
 	b.WriteString("// LocalOnlyTasks returns the local-only tasks in contract order.\n")
 	b.WriteString("func LocalOnlyTasks() []Task { return localOnlyTaskList }\n\n")
+}
+
+// writeDecisionTable emits which tasks have a decision form: a site whose
+// question a decision model may answer, before the task's ladder is asked.
+// A map and a list for the same reason as the local-only table; the list is
+// in sorted name order, the order the whole file is written in.
+func writeDecisionTable(b *strings.Builder, c contract, taskNames []string) {
+	b.WriteString("// taskDecisions are the tasks that declare a decision form. DECLARED,\n")
+	b.WriteString("// because a decision site needs an adapter that builds the typed question\n")
+	b.WriteString("// from the same inputs its prompt reads, and the census holds the two in step.\n")
+	b.WriteString("var taskDecisions = map[Task]bool{\n")
+	for _, name := range taskNames {
+		if c.Tasks[name].Decision {
+			fmt.Fprintf(b, "\t%s: true,\n", taskConst(name))
+		}
+	}
+	b.WriteString("}\n\n")
+	b.WriteString("// TaskDecides reports whether a task declares a decision form.\n")
+	b.WriteString("func TaskDecides(t Task) bool { return taskDecisions[t] }\n\n")
+	b.WriteString("// decisionTaskList is the same set in sorted name order.\n")
+	b.WriteString("var decisionTaskList = []Task{\n")
+	for _, name := range taskNames {
+		if c.Tasks[name].Decision {
+			fmt.Fprintf(b, "\t%s,\n", taskConst(name))
+		}
+	}
+	b.WriteString("}\n\n")
+	b.WriteString("// DecisionTasks returns the decision tasks in sorted name order.\n")
+	b.WriteString("func DecisionTasks() []Task { return decisionTaskList }\n\n")
 }
 
 // writeCompanyContextTable emits the ADR-0065 policy table.

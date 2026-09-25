@@ -255,16 +255,16 @@ func TestServedIdentityStamping(t *testing.T) {
 	}
 }
 
-// servedSource must carry exactly one entry per knownProviders: a provider
-// missing from the map silently stamps ServedIdentitySource="" instead of a
-// real trust label, and a stray key can never be reached from a
-// ParseRouting-validated config.
+// servedSource must carry exactly one entry per provider, the decision
+// adapters included: a provider missing from the map silently stamps
+// ServedIdentitySource="" instead of a real trust label, and a stray key can
+// never be reached from a ParseRouting-validated config.
 func TestServedSourceCoversEveryKnownProvider(t *testing.T) {
 	names := make([]string, 0, len(servedSource))
 	for name := range servedSource {
 		names = append(names, name)
 	}
-	assertSetEqual(t, "servedSource", names, knownProviders)
+	assertSetEqual(t, "servedSource", names, providerNames())
 }
 
 func TestCompleteRecordsFailure(t *testing.T) {

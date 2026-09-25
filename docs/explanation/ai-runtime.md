@@ -325,6 +325,45 @@ can update it, `management` can read it, nobody else sees it) — separate from
 (the provider binding itself), so a custom role can hold any subset of the
 three. Full matrix: [reference/rbac-matrix.md](../reference/rbac-matrix.md).
 
+## The decision lane
+
+A **decision model** answers a typed question about a structured JSON `state`
+with calibrated probabilities instead of generated text. A task whose contract
+says `decision: true` (today `site_triage` and the two capture verdicts) has a
+second form of each site: a question and one criterion per label, built from the
+same inputs as its prompt (see [ai-prompts.md](../reference/ai-prompts.md)).
+
+The routing config may bind **one** `decisions:` lane beside `embeddings:`, with
+the same `provider` / `model` / `base_url` shape. Unbound, every call is exactly
+the ladder's. Bound, `Router.Decide` asks the lane first, inside the same
+logical call and rail entry, and falls back to the task's own ladder and prompt
+unless every check passes, in this order:
+
+1. **Local-only stays local.** A `local_only` task takes only a local decision
+   provider (`laya`); a cloud lane skips it.
+2. **Certified for this site.** The generated table
+   `internal/modules/ai/decisioncert_gen.go` must hold a row for (task, site,
+   provider, model); certification writes it ([how-to](../how-to/certify-a-decision-site.md)).
+3. **The answer stands.** The state is secret-stripped and capped at 48,000
+   bytes, the call has 15 seconds, and the answer must be an offered label at
+   or above the **site's own** floor (the one its LLM path applies).
+
+A fallback leaves its reason on the ladder's first attempt: `decision_local_only`,
+`decision_uncertified`, `decision_state_too_large`, `decision_error`,
+`decision_off_enum` or `decision_below_floor`. A decision attempt is its own
+`ai_call` row (`kind = decision`, tier `decide`), metered on input tokens and
+priced on the `decisions` rate lane. The route preview shows per feature whether
+the lane answers first, or why not: `unbound`, `local_only` or `uncertified`.
+`GET /v1/ai/usage` reports each task's `decisions` (asked, decided, fallbacks by
+reason) from `ai_call` per logical call, since `ai_usage` counts attempts.
+
+Two providers speak the wire. `openrouter_decision` is OpenRouter's decisions
+endpoint (TypeSafe Jev), bound as in [openrouter.md](../reference/openrouter.md#11-the-decisions-endpoint).
+`laya` is any same-host encoder on `POST /v1/systemone` (Laya, or Kev), keyless
+and allowed under `sovereign`. No local checkpoint is certified for any site, so
+a `laya` lane serves nothing until one is. `eu_hosted` refuses an OpenRouter
+lane, because its decisions endpoint cannot be pinned to an EU host.
+
 ## The one gate — `ai.Router`
 
 Every call converges on the Router (`internal/modules/ai`). In one pass it:
@@ -556,7 +595,8 @@ writing the case that certifies one:
 | Runtime binding (tier → provider/model, profile) | the `ai.routing` setting — seeded from `seeds.ai_routing`, changed under Settings → AI. Shape declared under `$defs.aiRouting` in `config/margince.schema.json` |
 | BYOK keys | the key vault, set under Settings → AI → Model provider keys. The conventional environment variables (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`) are read once, to seal a key into the vault on first boot |
 | The gate | `internal/modules/ai` — `ai.Router` / `ai.NewLocalRouter`; `--ai-fake` flag |
-| Providers | `anthropic`, `openai`, `gemini` (native) · `ollama`, `vllm`, `openai_compatible` · `fake` |
+| Decision lane | `decisions:` in the routing setting · `Router.Decide` (`decideroute.go`) · certified rows in `decisioncert_gen.go` |
+| Providers | `anthropic`, `openai`, `gemini` (native) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `openrouter_decision`, `laya` (`providerregistry.go`) |
 | Tracing | `ai_call` / `ai_call_payload` / `ai_call_config` (migrations `0088`, `0089`, `0100`, `0102`) |
 | Cost rates | `ai_model_rate` (per provider/model, effective-dated, micro-USD) · seeded by `SeedModelRates` |
 | Pricer (actuals) | `PriceCall` + `RateStore` (`internal/modules/ai`) → `/ai/usage` `cost_est_minor` |

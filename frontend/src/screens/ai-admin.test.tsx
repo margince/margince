@@ -186,6 +186,12 @@ it("explains each routing impact in operational language", () => {
           },
           {
             ...feature,
+            task: "decision",
+            display_name: "Decision activity",
+            impact: "decision_changed",
+          },
+          {
+            ...feature,
             task: "fallback",
             display_name: "Fallback activity",
             impact: "fallback_changed",
@@ -203,6 +209,7 @@ it("explains each routing impact in operational language", () => {
 
   expect(screen.getByText("Waiting on allowance")).toBeTruthy();
   expect(screen.getByText("Different model selected")).toBeTruthy();
+  expect(screen.getByText("Decision model changed")).toBeTruthy();
   expect(screen.getByText("Fallback chain changed")).toBeTruthy();
   expect(screen.getByText("No model configured")).toBeTruthy();
 });
@@ -257,4 +264,43 @@ it("saves a fixed company override without discarding the per-user value", async
       expected_revision: "budget-v1",
     },
   ]);
+});
+it("features card says decision model first, and why another feature skips it", async () => {
+  mount(undefined, false, {
+    ...status,
+    features: [
+      {
+        ...feature,
+        task: "capture_classify",
+        display_name: "Classify correspondence",
+        decision_first: true,
+        decision_candidate: {
+          tier: "decide",
+          provider: "openrouter_decision",
+          model: "jev-classify",
+          processing: "cloud_provider",
+        },
+      },
+      {
+        ...feature,
+        task: "deep_read_triage",
+        display_name: "Triage a site",
+        decision_skip_reason: "local_only",
+      },
+    ],
+  });
+
+  // The lane leads, where it processes, and the ladder that answers after it.
+  expect(
+    await screen.findByText(
+      "Decision model first (openrouter_decision · jev-classify · Cloud provider) → then gemini · example-model",
+    ),
+  ).toBeInTheDocument();
+  // A feature the lane does not serve keeps its ladder, with the reason beside it.
+  expect(screen.getByText("gemini · example-model")).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "Decision model not used: this activity takes only a local decision provider.",
+    ),
+  ).toBeInTheDocument();
 });

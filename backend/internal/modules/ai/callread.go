@@ -31,6 +31,7 @@ type CallSummary struct {
 	ID              ids.UUID
 	OccurredAt      time.Time
 	Task            string
+	Kind            string
 	Tier            string
 	Provider        string
 	ModelID         string
@@ -45,12 +46,22 @@ type CallSummary struct {
 	Degraded        bool
 	ErrorSentinel   *string
 	HasPayload      bool
+	// DecisionAttempted is read across the whole logical call because a
+	// fallback's terminal row is the completion, not the decision it replaced.
+	DecisionAttempted bool
 }
 
 // CallAttempt is one rung in a logical call's oldest-first attempt ladder.
+// Kind, tier and binding are carried per attempt because one logical call may
+// ask a decision model and then a chat tier, and a reader must see which
+// answered and which fell back.
 type CallAttempt struct {
 	Attempt       int
 	IsTerminal    bool
+	Kind          string
+	Tier          string
+	Provider      string
+	ModelID       string
 	AttemptReason string
 	ErrorSentinel *string
 	TokensIn      int64
@@ -86,11 +97,15 @@ type CallPage struct {
 }
 
 // The payload existence check keeps list reads independent of captured
-// content size. Its alias stays distinct from the detail join alias.
-const callSummaryColumns = `c.id, c.occurred_at, c.task, c.tier, c.provider, c.model_id,
+// content size. Its alias stays distinct from the detail join alias. The
+// decision probe is a correlated aggregate over ai_call_logical_idx, so a page
+// costs one statement however many rows it carries.
+const callSummaryColumns = `c.id, c.occurred_at, c.task, c.kind, c.tier, c.provider, c.model_id,
 	c.served_model, c.attempt, c.tokens_in, c.tokens_out, c.reasoning_tokens,
 	c.cached_tokens, c.latency_ms, c.cache_hit, c.degraded, c.error_sentinel,
-	EXISTS (SELECT 1 FROM ai_call_payload pp WHERE pp.ai_call_id = c.id)`
+	EXISTS (SELECT 1 FROM ai_call_payload pp WHERE pp.ai_call_id = c.id),
+	(SELECT COALESCE(bool_or(la.kind = 'decision'), false) FROM ai_call la
+	 WHERE la.logical_call_id = c.logical_call_id)`
 
 type rowScanner interface {
 	Scan(dest ...any) error
@@ -98,11 +113,11 @@ type rowScanner interface {
 
 func scanCallSummary(row rowScanner) (CallSummary, error) {
 	var summary CallSummary
-	err := row.Scan(&summary.ID, &summary.OccurredAt, &summary.Task, &summary.Tier,
+	err := row.Scan(&summary.ID, &summary.OccurredAt, &summary.Task, &summary.Kind, &summary.Tier,
 		&summary.Provider, &summary.ModelID, &summary.ServedModel, &summary.Attempt,
 		&summary.TokensIn, &summary.TokensOut, &summary.ReasoningTokens,
 		&summary.CachedTokens, &summary.LatencyMS, &summary.CacheHit, &summary.Degraded,
-		&summary.ErrorSentinel, &summary.HasPayload)
+		&summary.ErrorSentinel, &summary.HasPayload, &summary.DecisionAttempted)
 	return summary, err
 }
 
@@ -200,11 +215,11 @@ func scanCallDetail(row rowScanner) (CallDetail, ids.UUID, error) {
 	var detail CallDetail
 	var logicalID ids.UUID
 	var requestPayload, responsePayload []byte
-	err := row.Scan(&detail.ID, &detail.OccurredAt, &detail.Task, &detail.Tier,
+	err := row.Scan(&detail.ID, &detail.OccurredAt, &detail.Task, &detail.Kind, &detail.Tier,
 		&detail.Provider, &detail.ModelID, &detail.ServedModel, &detail.Attempt,
 		&detail.TokensIn, &detail.TokensOut, &detail.ReasoningTokens,
 		&detail.CachedTokens, &detail.LatencyMS, &detail.CacheHit, &detail.Degraded,
-		&detail.ErrorSentinel, &detail.HasPayload, &detail.CorrelationID,
+		&detail.ErrorSentinel, &detail.HasPayload, &detail.DecisionAttempted, &detail.CorrelationID,
 		&detail.AgentRunID, &detail.ServedIdentitySource, &detail.ConfigHash,
 		&detail.ContextScopes, &detail.ContextFingerprint, &logicalID,
 		&requestPayload, &responsePayload)
@@ -243,8 +258,8 @@ func (s *CallReadStore) GetCall(ctx context.Context, id ids.UUID) (CallDetail, e
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			SELECT attempt, is_terminal, attempt_reason, error_sentinel,
-				tokens_in, tokens_out, latency_ms, occurred_at
+			SELECT attempt, is_terminal, kind, tier, provider, model_id, attempt_reason,
+				error_sentinel, tokens_in, tokens_out, latency_ms, occurred_at
 			FROM ai_call WHERE logical_call_id = $1 ORDER BY attempt ASC`, logicalID)
 		if err != nil {
 			return err
@@ -252,7 +267,8 @@ func (s *CallReadStore) GetCall(ctx context.Context, id ids.UUID) (CallDetail, e
 		defer rows.Close()
 		for rows.Next() {
 			var attempt CallAttempt
-			if err := rows.Scan(&attempt.Attempt, &attempt.IsTerminal, &attempt.AttemptReason,
+			if err := rows.Scan(&attempt.Attempt, &attempt.IsTerminal, &attempt.Kind, &attempt.Tier,
+				&attempt.Provider, &attempt.ModelID, &attempt.AttemptReason,
 				&attempt.ErrorSentinel, &attempt.TokensIn, &attempt.TokensOut,
 				&attempt.LatencyMS, &attempt.OccurredAt); err != nil {
 				return err

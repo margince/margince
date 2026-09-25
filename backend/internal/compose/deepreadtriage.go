@@ -322,11 +322,15 @@ func (w *siteDeepReadWorker) classifySeed(ctx context.Context, seed crawlPage) (
 		}, nil
 	}
 	req := triageRequest(seed, identity.BaseLanguageForPrompt(ctx, w.pool))
-	resp, err := ai.Ask(ctx, w.triageBrain, req, triageShapeValid)
+	out, err := ai.Decide(ctx, w.triageBrain, triageDecisionSite, triageDecision(seed), req,
+		triageShapeValid, triageDecisionGate)
 	if err != nil {
 		return siteTriageVerdict{}, err
 	}
-	return gateTriageVerdict(resp.Text), nil
+	if out.Decided {
+		return readTriageDecision(out.Answer), nil
+	}
+	return gateTriageVerdict(out.Response.Text), nil
 }
 
 // statedCompanyName is the name the site itself gave, preferring a legal notice

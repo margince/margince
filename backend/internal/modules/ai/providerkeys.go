@@ -143,6 +143,11 @@ func (cfg RoutingConfig) CloudProvidersBound() []string {
 		named[tier.Provider] = true
 	}
 	named[cfg.Embeddings.Provider] = true
+	// The decisions lane sends its key owner's credential, so a config whose
+	// only OpenRouter binding is the lane still needs the OpenRouter key.
+	if cfg.Decisions != nil {
+		named[keyOwnerOf(cfg.Decisions.Provider)] = true
+	}
 
 	out := make([]string, 0, len(named))
 	for _, provider := range CloudProvidersNeedingKeys() {

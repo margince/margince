@@ -93,19 +93,23 @@ func confidentialitySchema(requested string) json.RawMessage {
 	))
 }
 
-// ask makes one structured call about one thread.
+// ask makes one call about one thread: a decision model first where the lane
+// serves this task, the structured call otherwise.
 func (e *ConfidentialityVerdictEngine) ask(ctx context.Context, row capture.PendingThread) ([]confidentialityResult, error) {
 	req := confidentialityRequest(row)
 	validate := confidentialityShapeValid(row)
 	// The request carries the message's subject and body, so the call is about
 	// that message — the row this verdict will be written onto.
-	resp, err := ai.Ask(ai.WithSubject(ctx, ids.From[ids.ActivityKind](row.ActivityID).Ref(), row.Subject),
-		e.brain, req, validate)
+	out, err := ai.Decide(ai.WithSubject(ctx, ids.From[ids.ActivityKind](row.ActivityID).Ref(), row.Subject),
+		e.brain, confidentialityDecisionSite, confidentialityDecision(row), req, validate, confidentialityDecisionGate)
 	if err != nil {
 		return nil, err
 	}
+	if out.Decided {
+		return []confidentialityResult{readConfidentialityDecision(row, out.Answer)}, nil
+	}
 	var payload confidentialityPayload
-	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
+	if err := json.Unmarshal([]byte(ai.Unfence(out.Response.Text)), &payload); err != nil {
 		return nil, fmt.Errorf("confidentiality: unparseable model output: %w", err)
 	}
 	if msg := validateConfidentialityPayload(payload, row); msg != "" {

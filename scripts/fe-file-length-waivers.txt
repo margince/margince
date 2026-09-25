@@ -36,7 +36,7 @@
 1328 frontend/src/screens/listquery.test.tsx
 1388 frontend/src/screens/listquery.tsx
 1317 frontend/src/screens/offers.tsx
-1363 frontend/src/app/agentrail.test.tsx
+1365 frontend/src/app/agentrail.test.tsx
 1504 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1436 frontend/src/design-system/listtable.test.tsx
 1356 frontend/src/app/agentrail.tsx
@@ -95,7 +95,7 @@
 716 frontend/src/screens/installation-settings.tsx
 760 frontend/src/screens/extension-access.tsx
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx
-783 frontend/src/screens/worklist.tsx
+777 frontend/src/screens/worklist.tsx
 790 frontend/src/screens/companycontacts/summary.tsx
 792 frontend/src/screens/import.tsx
 810 frontend/src/screens/voice-dna.tsx
@@ -114,7 +114,7 @@
 793 frontend/src/screens/automations.tsx
 958 frontend/src/screens/integrations-provider.tsx
 546 frontend/src/design-system/decisiondeck.tsx
-959 frontend/src/screens/ai-routing.tsx
+717 frontend/src/screens/ai-routing.tsx
 855 frontend/src/screens/create.tsx
 815 frontend/src/design-system/decisioncard.tsx
 541 frontend/src/screens/companyheader.tsx

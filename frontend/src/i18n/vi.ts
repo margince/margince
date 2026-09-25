@@ -65,6 +65,7 @@ export const vi = {
   "aiAdmin.unavailable": "Không khả dụng",
   "aiAdmin.impact.blocked": "Chờ hạn mức",
   "aiAdmin.impact.model": "Đã chọn mô hình khác",
+  "aiAdmin.impact.decision": "Đã đổi mô hình quyết định",
   "aiAdmin.impact.fallback": "Chuỗi dự phòng đã đổi",
   "aiAdmin.impact.unconfigured": "Chưa cấu hình mô hình",
   "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",
@@ -74,6 +75,14 @@ export const vi = {
   "aiAdmin.cloud": "Nhà cung cấp đám mây",
   "aiAdmin.endpoint": "Điểm cuối đã cấu hình; vị trí chưa xác minh",
   "aiAdmin.editBinding": "Sửa liên kết dùng chung",
+  "aiAdmin.decisionFirst":
+    "Mô hình quyết định trước ({provider} · {model} · {processing}) → sau đó {ladder}",
+  "aiAdmin.decisionSkip.unbound":
+    "Không dùng mô hình quyết định: chưa liên kết mô hình nào.",
+  "aiAdmin.decisionSkip.uncertified":
+    "Không dùng mô hình quyết định: chưa được chứng nhận cho hoạt động này.",
+  "aiAdmin.decisionSkip.local_only":
+    "Không dùng mô hình quyết định: hoạt động này chỉ nhận nhà cung cấp quyết định cục bộ.",
   "aiAdmin.effect": "Tác động",
   "aiAdmin.advanced": "Nâng cao: liên kết mô hình dùng chung",
   "aiAdmin.unused": "Không được hoạt động hiện có sử dụng: {tiers}",
@@ -7763,6 +7772,7 @@ export const vi = {
     "Mức dùng của tháng đã chọn. Ước tính tách biệt với hạn mức token hiện tại và hóa đơn nhà cung cấp.",
   "aiusage.col.task": "Tác vụ",
   "aiusage.col.tier": "Bậc",
+  "aiTier.decide": "Mô hình quyết định",
   "aiusage.col.calls": "Lượt gọi",
   "aiusage.col.cached": "Đã cache",
   "aiusage.col.tokensIn": "Token vào",
@@ -7777,6 +7787,14 @@ export const vi = {
   "aiusage.empty": "Không có lượt gọi AI nào trong khoảng này.",
   "aiusage.prevMonth": "Tháng trước",
   "aiusage.nextMonth": "Tháng sau",
+  "aiusage.decisions.note":
+    "Mỗi con số đếm một yêu cầu, dù yêu cầu đó đã qua bao nhiêu mô hình. Đạt nghĩa là câu trả lời của mô hình quyết định được giữ; chuyển tiếp nghĩa là một mô hình ngôn ngữ đã tiếp nhận.",
+  "aiusage.decisions.empty":
+    "Tháng này chưa có tác vụ nào hỏi mô hình quyết định.",
+  "aiusage.decisions.col.asked": "Đã hỏi",
+  "aiusage.decisions.col.passRate": "Tỷ lệ đạt",
+  "aiusage.decisions.col.fallbackRate": "Tỷ lệ chuyển tiếp",
+  "aiusage.decisions.col.reasons": "Chuyển tiếp theo lý do",
 
   "aibanner.degraded": "Đã đạt ngưỡng 80% hạn mức AI — xem tác động",
   "aibanner.queued": "Đã hết hạn mức AI — xem công việc bị hoãn",
@@ -7806,6 +7824,18 @@ export const vi = {
   "aicalls.badge.cacheHit": "Trúng cache",
   "aicalls.badge.degraded": "Giảm cấp",
   "aicalls.badge.retries": "Thử lại ×{count}",
+  "aicalls.badge.decision": "Mô hình quyết định",
+  "aicalls.reason.decision_below_floor":
+    "Mô hình quyết định dưới ngưỡng tin cậy",
+  "aicalls.reason.decision_error": "Mô hình quyết định bị lỗi",
+  "aicalls.reason.decision_off_enum":
+    "Mô hình quyết định trả lời ngoài các lựa chọn",
+  "aicalls.reason.decision_state_too_large":
+    "Dữ liệu vào quá lớn cho mô hình quyết định",
+  "aicalls.reason.decision_uncertified":
+    "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
+  "aicalls.reason.decision_local_only":
+    "Tác vụ chỉ chạy cục bộ, mô hình quyết định thì không",
   "aicalls.callsLabel": "Các lệnh gọi gần đây",
   "aicalls.filter.all": "Mọi tác vụ",
   "aicalls.loadMore": "Tải thêm",
@@ -8010,6 +8040,12 @@ export const vi = {
   "aiRouting.lane.local_large":
     "Tầng định tuyến cục bộ cao hơn; kiểm tra điểm cuối",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy hồi trên dữ liệu của bạn",
+  "aiRouting.lane.decisions":
+    "Câu hỏi có kiểu, hỏi trước các tầng khi đã chứng nhận",
+  "aiRouting.decisions.add": "Thêm mô hình quyết định",
+  "aiRouting.decisions.remove": "Gỡ mô hình quyết định",
+  "aiRouting.decisions.absent":
+    "Chưa có mô hình quyết định. Mọi tác vụ dùng các tầng.",
   "aiRouting.lanes.title": "Các làn định tuyến",
   "aiRouting.priceSheet": "Bảng giá",
   "aiRouting.provider.label": "Nhà cung cấp",
@@ -8069,6 +8105,11 @@ export const vi = {
   "aiRouting.baseUrl.label": "Máy chủ",
   "aiRouting.baseUrl.help":
     "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
+  "aiRouting.baseUrl.help.openrouterDecision":
+    "Gốc host của OpenRouter, ví dụ https://openrouter.ai/api. Bộ chuyển thêm /alpha/decisions. Bắt buộc vì bộ chuyển này không có host mặc định.",
+  "aiRouting.baseUrl.help.laya":
+    "Gốc máy chủ Laya, không kèm đường dẫn. Bộ chuyển thêm /v1/systemone. Để trống để dùng mặc định http://127.0.0.1:8765.",
+  "aiRouting.baseUrl.placeholder.laya": "http://127.0.0.1:8765",
   "aiRouting.models.noKey":
     "Chỉ hiện bảng giá — nhà cung cấp này chưa có khoá nên không thể hỏi nó phục vụ những gì. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
   "aiRouting.models.noEndpoint":
@@ -9343,15 +9384,19 @@ export const vi = {
   "worklist.loading": "Đang đọc ngày của bạn…",
   "worklist.queue": "Hôm nay",
   "worklist.review": "Cần xem xét",
-  "worklist.more": "Xem thêm",
+  "worklist.more": "Tải thêm",
+  "worklist.more.where":
+    "Thêm trong ngày: mục mới có thể nằm ở “{today}” hoặc “{review}”.",
   "worklist.more.failed": "Không tải thêm được. Hãy thử lại.",
   "worklist.summary":
     "{urgent} khẩn · {due} đến hạn · {inPlay} đang xử lý · {lower} thường lệ — tổng {total}",
   "worklist.summary.noMiddle":
     "{urgent} khẩn · {due} đến hạn · {lower} thường lệ — tổng {total}",
+  "worklist.summary.split": "{today} hôm nay · {review} cần xem xét",
   "worklist.completeness": "Hiển thị {shown} trong {considered}",
   "worklist.review.partial":
-    "Hiển thị {loaded} trong {total} — xem tiếp trong ngày để thấy phần còn lại",
+    "Hiển thị {loaded} trong {total} — tải thêm ở bên dưới để thấy phần còn lại",
+  "worklist.review.partialDone": "Hiển thị {loaded} trong {total}",
   "worklist.completeness.bounded_one":
     "Hiển thị {shown} · {sources} nguồn còn nữa",
   "worklist.completeness.bounded_other":
