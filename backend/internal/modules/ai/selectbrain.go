@@ -100,10 +100,11 @@ const (
 	providerGemini           = "gemini"
 )
 
-// knownProviders is the single source of truth for the provider names
-// SelectBrain accepts — read by the default error below and by the config
-// JSON-schema drift test. Add a provider here when you add its case.
-var knownProviders = []string{ProviderFake, providerAnthropic, providerOllama, providerVLLM, providerOpenAICompatible, providerOpenAI, providerGemini}
+// knownProviders is the provider names SelectBrain accepts: the registry's
+// chat-speaking names, in its order — read by the default error below and by
+// the config JSON-schema drift test. A decision-only adapter is absent: it
+// answers no chat call, so no tier may name it.
+var knownProviders = providerNamesWhere(speaksChat)
 
 // KnownProviders lists the adapter names knownProviders holds, which is the
 // same slice SelectBrain's switch and the config enum read.
@@ -123,15 +124,16 @@ func KnownProviders() []string {
 // "offline fake ↔ API key ↔ local, one line" — swapping providers is a
 // config change, never a code change.
 //
-// Held by: TestSelectBrainIsTheOnlyBuilderOfAnOutboundClient (backend/internal/modules/ai/outboundegress_test.go)
+// Held by: TestOnlyTheSelectorsBuildAnOutboundClient (backend/internal/modules/ai/outboundegress_test.go)
 //
 //nolint:ireturn // one call returns whichever of seven adapters the binding names; the port interface IS the return type
 func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 	// The client is built once, from the binding, and handed to whichever
 	// adapter the switch names: the egress guard it carries is chosen by the
 	// same value the switch dispatches on, so a lane cannot end up guarded as
-	// another. It is the only call to newOutboundClient in the package, which
-	// is what makes the guard cover every adapter rather than most of them.
+	// another. It and selectDecider are the only calls to newOutboundClient in
+	// the package, which is what makes the guard cover every adapter rather
+	// than most of them.
 	return selectBrainOn(cfg, keys, newOutboundClient(cfg.Provider))
 }
 
@@ -240,13 +242,10 @@ func defaulted(val, fallback string) string {
 // read from. Secrets live in the environment; the routing file names only the
 // provider (12-factor). The names match the vendor SDK conventions so an
 // operator who already exports OPENAI_API_KEY / GEMINI_API_KEY needs no extra
-// wiring. openai_compatible has no vendor convention, so it gets a namespaced one.
-var cloudKeyEnv = map[string]string{
-	providerAnthropic:        "ANTHROPIC_API_KEY",
-	providerOpenAI:           "OPENAI_API_KEY",
-	providerGemini:           "GEMINI_API_KEY",
-	providerOpenAICompatible: "OPENAI_COMPATIBLE_API_KEY",
-}
+// wiring.
+var cloudKeyEnv = projectProviders(
+	func(d providerDescriptor) string { return d.keyEnv },
+	func(d providerDescriptor) bool { return d.keyEnv != "" })
 
 // cloudKey returns the BYOK key for a cloud provider from its conventional
 // environment variable, or "" when unset (the caller fails closed).

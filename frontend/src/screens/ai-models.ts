@@ -176,19 +176,26 @@ export function unreadablePrice(price: string): boolean {
   return price.trim() === "" || !Number.isFinite(Number(price));
 }
 
+// Whether a lane is billed on its input alone. An embedder has no output and a
+// decision model's wire bills input only, so a blank output price there is the
+// sheet being right rather than unreadable.
+export function inputOnlyLane(lane: ModelLane): boolean {
+  return lane === "embeddings" || lane === "decisions";
+}
+
 function priceHint(rate: ModelRate, locale: Locale): string | undefined {
   // The hint is decoration, so an unreadable sheet offers the model without a
   // price — never a NaN in the list, and never a throw inside a render, which
   // takes the whole settings page down with it.
-  if (
-    unreadablePrice(rate.input_per_mtok) ||
-    unreadablePrice(rate.output_per_mtok)
-  ) {
+  if (unreadablePrice(rate.input_per_mtok)) {
     return undefined;
   }
   const shown = formatUsdPerMTok(rate.input_per_mtok, locale);
-  if (rate.lane === "embeddings") {
+  if (inputOnlyLane(rate.lane)) {
     return translate(locale, "aiAdmin.inputRate", { input: shown });
+  }
+  if (unreadablePrice(rate.output_per_mtok)) {
+    return undefined;
   }
   return translate(locale, "aiAdmin.rates", {
     input: shown,

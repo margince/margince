@@ -22,8 +22,19 @@ import (
 // produces the same Record byte-for-byte except for whatever the caller
 // puts in RanAt.
 type Record struct {
-	Task          string `json:"task"`
-	Provider      string `json:"provider"`
+	Task string `json:"task"`
+	// Kind is empty on a completion record and KindDecision on a decision
+	// record. Kind, Site, Model and Decision are all omitted when empty, so a
+	// completion record is written exactly as it was before they existed.
+	Kind string `json:"kind,omitempty"`
+	// Site is the one site a decision record certifies. A completion record
+	// covers every site its scenarios ran on and names them per scenario.
+	Site     string `json:"site,omitempty"`
+	Provider string `json:"provider"`
+	// Model is the CONFIGURED model of a decision record's lane: the runtime
+	// looks a certification row up by what it is configured with, never by
+	// what a vendor reports having served. ServedModel stays a diagnostic.
+	Model         string `json:"model,omitempty"`
 	ServedModel   string `json:"served_model"`
 	EnvClass      string `json:"env_class"`
 	PromptVersion string `json:"prompt_version"`
@@ -124,6 +135,8 @@ type Record struct {
 	CandidateUpstream *ai.OpenRouterRouting `json:"candidate_upstream,omitempty"`
 	JudgeUpstream     *ai.OpenRouterRouting `json:"judge_upstream,omitempty"`
 	RanAt             string                `json:"ran_at"`
+	// Decision is what the decision lane did across a decision record's runs.
+	Decision *DecisionStats `json:"decision,omitempty"`
 	// Scenarios is every scenario this record pooled, with its own verdict and
 	// its own counts. A record is written per TASK and a task is not one
 	// scenario or even one site — cold_start ships four sites — so the pooled
@@ -171,6 +184,36 @@ type ScenarioRecord struct {
 	// safety stop from a model that answered badly.
 	Withheld        int      `json:"withheld,omitempty"`
 	WithheldReasons []string `json:"withheld_reasons,omitempty"`
+	// Decision is this scenario's own share of a decision record.
+	Decision *DecisionStats `json:"decision,omitempty"`
+}
+
+// KindDecision marks a record of the decision lane: one site, one configured
+// lane model, graded by the site's own gate and nothing else.
+const KindDecision = "decision"
+
+// DecisionStats is what the decision lane did across a set of runs. A run is
+// KEPT when the site's own gate accepted the answer, and it FELL BACK
+// otherwise; only a kept answer can be wrong, because a fallback hands the
+// question to the LLM ladder, which its own record measures.
+type DecisionStats struct {
+	Kept        int `json:"kept"`
+	KeptCorrect int `json:"kept_correct"`
+	// KeptWrong is the number the verdict turns on: an answer the site would
+	// have acted on, and was wrong.
+	KeptWrong    int     `json:"kept_wrong"`
+	Fallbacks    int     `json:"fallbacks"`
+	FallbackRate float64 `json:"fallback_rate"`
+	// FallbackByReason counts the fallbacks by the attempt reason the ladder
+	// walk would carry, without its "decision_" prefix: below_floor, error,
+	// off_enum, state_too_large, local_only.
+	FallbackByReason map[string]int `json:"fallback_by_reason,omitempty"`
+	// MinKeptConfidence is the least confident answer the gate kept. A
+	// diagnostic of how close the floor is, never a floor itself.
+	MinKeptConfidence float64 `json:"min_kept_confidence"`
+	// ServedPassRate is what a caller of the site gets: kept-correct answers,
+	// plus the LLM record's pass rate on the runs that fell back to it.
+	ServedPassRate float64 `json:"served_pass_rate"`
 }
 
 // SiteTally is one SITE's share of a task's record, folded from the scenario
@@ -245,10 +288,16 @@ func sanitizeForPath(s string) string {
 }
 
 // recordPath returns the file WriteRecord/LoadRecords use for r under dir:
-// records/<task>/<provider>_<model>_<env>.json.
+// records/<task>/<provider>_<model>_<env>.json, and for a decision record
+// records/<task>/decision_<site>_<provider>_<model>_<env>.json under the
+// configured model, which is the one its certification row is keyed by.
 func recordPath(dir string, r Record) string {
 	filename := fmt.Sprintf("%s_%s_%s.json",
 		sanitizeForPath(r.Provider), sanitizeForPath(r.ServedModel), sanitizeForPath(r.EnvClass))
+	if r.Kind == KindDecision {
+		filename = fmt.Sprintf("decision_%s_%s_%s_%s.json", sanitizeForPath(r.Site),
+			sanitizeForPath(r.Provider), sanitizeForPath(r.Model), sanitizeForPath(r.EnvClass))
+	}
 	return filepath.Join(dir, sanitizeForPath(r.Task), filename)
 }
 
@@ -328,7 +377,13 @@ func LoadRecords(dir string) ([]Record, error) {
 		if a.ServedModel != b.ServedModel {
 			return a.ServedModel < b.ServedModel
 		}
-		return a.EnvClass < b.EnvClass
+		if a.EnvClass != b.EnvClass {
+			return a.EnvClass < b.EnvClass
+		}
+		if a.Kind != b.Kind {
+			return a.Kind < b.Kind
+		}
+		return a.Site < b.Site
 	})
 	return records, nil
 }

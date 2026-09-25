@@ -1,0 +1,12 @@
+# A sovereign installation whose decisions lane is a same-host Laya encoder.
+# Not a shipped preset: no local checkpoint certifies today, and a preset that
+# serves nothing would mislead an operator. It proves the shape parses.
+profile: sovereign
+tiers:
+  local_small: {provider: ollama, model: gemma3, base_url: "http://127.0.0.1:11434"}
+  cheap_cloud: {provider: ollama, model: gemma3, base_url: "http://127.0.0.1:11434"}
+embeddings: {provider: ollama, model: bge-m3, base_url: "http://127.0.0.1:11434", dimensions: 1024}
+decisions:
+  provider: laya
+  model: typed-decisions
+  base_url: "http://127.0.0.1:8765"

@@ -18,6 +18,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { attemptReasonLabel, tierLabel } from "./ai-decision-labels";
 import { ExportScenarioDialog } from "./aiexport";
 import { QueryGate, QueryStates, throwProblem, useMe } from "./common";
 import "./aicalls.css";
@@ -26,6 +27,16 @@ import "./aicalls.css";
 // pretty-printed. Either way the .code-block surface wraps and scrolls it.
 function payloadText(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+
+// One attempt's binding as `provider/model`, the spelling the call row uses. A
+// row with no provider still names its model rather than a stray slash.
+function attemptBinding(
+  attempt: components["schemas"]["AiCallAttempt"],
+): string {
+  return attempt.provider
+    ? `${attempt.provider}/${attempt.model_id}`
+    : (attempt.model_id ?? "");
 }
 
 export function CallDetailPanel({
@@ -77,7 +88,19 @@ export function CallDetailPanel({
             {query.data.attempts.map((attempt) => (
               <li key={attempt.attempt}>
                 <span className="t-num">#{ordinalNumber(attempt.attempt)}</span>{" "}
-                {attempt.attempt_reason || "—"} ·{" "}
+                {attempt.kind === "decision" && (
+                  <Badge>{t("aicalls.badge.decision")}</Badge>
+                )}{" "}
+                {/* Which rung this attempt ran on, then why it ran. A reason
+                    names what went wrong BEFORE it, so read beside the tier it
+                    says where the walk went next. */}
+                {attempt.tier ? `${tierLabel(attempt.tier, t)} · ` : ""}
+                {/* The binding THIS attempt asked, spelled as the row above
+                    spells the call's. The call's own binding is the terminal
+                    rung, so a decision attempt that fell through names a model
+                    nothing else on the page does. */}
+                {attempt.model_id ? `${attemptBinding(attempt)} · ` : ""}
+                {attemptReasonLabel(attempt.attempt_reason, t)} ·{" "}
                 {t("aicalls.ms", {
                   value: formatNumber(attempt.latency_ms, locale),
                 })}
@@ -413,6 +436,12 @@ function FragmentRow({
         <td>
           {call.task}
           <div className="aicalls-badges">
+            {/* The logical call's flag, not this row's kind: a fallback's
+                terminal row is the completion that answered after the
+                decision model was asked. */}
+            {call.decision_attempted && (
+              <Badge>{t("aicalls.badge.decision")}</Badge>
+            )}
             {call.cache_hit && <Badge>{t("aicalls.badge.cacheHit")}</Badge>}
             {call.degraded && (
               <Badge tone="warning">{t("aicalls.badge.degraded")}</Badge>
@@ -430,7 +459,7 @@ function FragmentRow({
           </div>
         </td>
         <td>
-          {call.tier} · {call.provider}/{call.served_model}
+          {tierLabel(call.tier, t)} · {call.provider}/{call.served_model}
         </td>
         <td>{tokens}</td>
         <td>

@@ -30,10 +30,9 @@ import (
 //
 // `fake` is absent on purpose: it is sovereign-eligible and reaches no endpoint
 // at all, so there is nothing about it to check.
-var localBaseURLDefaults = map[string]string{
-	providerOllama: defaultOllamaBaseURL,
-	providerVLLM:   defaultVLLMBaseURL,
-}
+var localBaseURLDefaults = projectProviders(
+	func(d providerDescriptor) string { return d.defaultBaseURL },
+	func(d providerDescriptor) bool { return d.defaultBaseURL != "" })
 
 // requireSovereignEndpoint refuses a binding whose resolved endpoint is not on
 // infrastructure the customer controls.

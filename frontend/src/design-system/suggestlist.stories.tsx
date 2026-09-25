@@ -59,10 +59,12 @@ function Host({
   label,
   suggestions,
   selected,
+  maxWidth = "26rem",
 }: Readonly<{
   label: string;
   suggestions: readonly Suggestion[];
   selected?: string;
+  maxWidth?: string;
 }>) {
   const [typed, setTyped] = useState("");
   const anchorRef = useRef<HTMLInputElement>(null);
@@ -75,7 +77,7 @@ function Host({
     onPick: setTyped,
   });
   return (
-    <div style={{ maxWidth: "26rem" }}>
+    <div style={{ maxWidth }}>
       <Field label={label}>
         {(control) => (
           <TextInput
@@ -129,6 +131,24 @@ export const ModelIds: Story = {
       label="Model"
       suggestions={MODELS}
       selected="mistralai/mistral-small-3.2-24b-instruct"
+    />
+  ),
+  play: async ({ canvasElement }) => openAndWalk(canvasElement, "Model"),
+};
+
+/**
+ * A text box as narrow as one field of a three-field form row. The hint drops
+ * under the id rather than squeezing it out: a model picker that showed only a
+ * price named nothing a reader could pick.
+ */
+export const NarrowField: Story = {
+  render: () => (
+    <Host
+      label="Model"
+      maxWidth="13rem"
+      suggestions={[
+        { value: "typesafe/jev-1.13", hint: "Input US$0.04 per 1M tokens" },
+      ]}
     />
   ),
   play: async ({ canvasElement }) => openAndWalk(canvasElement, "Model"),

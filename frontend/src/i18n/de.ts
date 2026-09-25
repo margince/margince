@@ -59,6 +59,7 @@ export const de = {
   "aiAdmin.unavailable": "Nicht verfügbar",
   "aiAdmin.impact.blocked": "Wartet auf Kontingent",
   "aiAdmin.impact.model": "Anderes Modell gewählt",
+  "aiAdmin.impact.decision": "Entscheidungsmodell geändert",
   "aiAdmin.impact.fallback": "Ausweichkette geändert",
   "aiAdmin.impact.unconfigured": "Kein Modell konfiguriert",
   "aiAdmin.impact.exempt": "Läuft über das Kontingent hinaus weiter",
@@ -68,6 +69,14 @@ export const de = {
   "aiAdmin.cloud": "Cloud-Anbieter",
   "aiAdmin.endpoint": "Konfigurierter Endpunkt; Standort nicht geprüft",
   "aiAdmin.editBinding": "Gemeinsame Zuordnung bearbeiten",
+  "aiAdmin.decisionFirst":
+    "Zuerst Entscheidungsmodell ({provider} · {model} · {processing}) → dann {ladder}",
+  "aiAdmin.decisionSkip.unbound":
+    "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
+  "aiAdmin.decisionSkip.uncertified":
+    "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
+  "aiAdmin.decisionSkip.local_only":
+    "Entscheidungsmodell nicht genutzt: diese Aktivität nimmt nur einen lokalen Entscheidungsanbieter.",
   "aiAdmin.effect": "Auswirkung",
   "aiAdmin.advanced": "Erweitert: gemeinsame Modellzuordnungen",
   "aiAdmin.unused":
@@ -7811,6 +7820,7 @@ export const de = {
     "Bisherige Nutzung im gewählten Monat. Die Schätzungen sind unabhängig vom aktuellen Token-Kontingent und von der Rechnung deines Anbieters.",
   "aiusage.col.task": "Aufgabe",
   "aiusage.col.tier": "Modellstufe",
+  "aiTier.decide": "Entscheidungsmodell",
   "aiusage.col.calls": "Aufrufe",
   "aiusage.col.cached": "Aus dem Cache",
   "aiusage.col.tokensIn": "Tokens (Eingabe)",
@@ -7826,6 +7836,14 @@ export const de = {
   "aiusage.empty": "Keine KI-Aufrufe in diesem Monat.",
   "aiusage.prevMonth": "Vorheriger Monat",
   "aiusage.nextMonth": "Nächster Monat",
+  "aiusage.decisions.note":
+    "Jede Zahl zählt eine Anfrage, gleich wie viele Modelle sie erreicht hat. Bestanden heißt, die Antwort des Entscheidungsmodells galt; bei einem Rückfall hat ein Sprachmodell übernommen.",
+  "aiusage.decisions.empty":
+    "Diesen Monat hat keine Aufgabe das Entscheidungsmodell gefragt.",
+  "aiusage.decisions.col.asked": "Gefragt",
+  "aiusage.decisions.col.passRate": "Bestanden",
+  "aiusage.decisions.col.fallbackRate": "Rückfälle",
+  "aiusage.decisions.col.reasons": "Rückfälle nach Grund",
 
   "aibanner.degraded":
     "80 % des KI-Kontingents erreicht. Prüfe die betroffenen Funktionen.",
@@ -7857,6 +7875,18 @@ export const de = {
   "aicalls.badge.cacheHit": "Cache-Treffer",
   "aicalls.badge.degraded": "Herabgestuft",
   "aicalls.badge.retries": "Wiederholung ×{count}",
+  "aicalls.badge.decision": "Entscheidungsmodell",
+  "aicalls.reason.decision_below_floor":
+    "Entscheidungsmodell unter seiner Konfidenzschwelle",
+  "aicalls.reason.decision_error": "Entscheidungsmodell fehlgeschlagen",
+  "aicalls.reason.decision_off_enum":
+    "Entscheidungsmodell hat außerhalb der Optionen geantwortet",
+  "aicalls.reason.decision_state_too_large":
+    "Eingabe zu groß für das Entscheidungsmodell",
+  "aicalls.reason.decision_uncertified":
+    "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
+  "aicalls.reason.decision_local_only":
+    "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
   "aicalls.callsLabel": "Letzte Aufrufe",
   "aicalls.filter.all": "Alle Aufgaben",
   "aicalls.loadMore": "Mehr laden",
@@ -8064,6 +8094,12 @@ export const de = {
   "aiRouting.lane.local_large":
     "Höhere lokale Modellstufe; konfigurierten Endpunkt prüfen",
   "aiRouting.lane.embeddings": "Suche und Abruf über Datensätze hinweg",
+  "aiRouting.lane.decisions":
+    "Typisierte Fragen, vor den Modellstufen gestellt, wo zertifiziert",
+  "aiRouting.decisions.add": "Entscheidungsmodell hinzufügen",
+  "aiRouting.decisions.remove": "Entscheidungsmodell entfernen",
+  "aiRouting.decisions.absent":
+    "Kein Entscheidungsmodell. Jede Aufgabe nutzt die Modellstufen.",
   "aiRouting.lanes.title": "Modellstufen",
   "aiRouting.priceSheet": "Preisliste",
   "aiRouting.provider.label": "Anbieter",
@@ -8123,6 +8159,11 @@ export const de = {
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
     "Host-Wurzel des Anbieters ohne Versionssegment; /v1 wird angehängt. Erforderlich für openai_compatible, das keinen Standardwert hat.",
+  "aiRouting.baseUrl.help.openrouterDecision":
+    "Host-Wurzel von OpenRouter, etwa https://openrouter.ai/api; /alpha/decisions wird angehängt. Erforderlich: Dieser Adapter hat keinen Standard-Host.",
+  "aiRouting.baseUrl.help.laya":
+    "Wurzel des Laya-Servers ohne Pfad; /v1/systemone wird angehängt. Leer lassen für den Standardwert http://127.0.0.1:8765.",
+  "aiRouting.baseUrl.placeholder.laya": "http://127.0.0.1:8765",
   "aiRouting.models.noKey":
     "Nur Preisliste: Dieser Anbieter hat keinen Schlüssel, daher kann seine Modellliste nicht abgerufen werden. Jede Modell-ID, die er bereitstellt, funktioniert trotzdem, wenn du sie direkt eingibst.",
   "aiRouting.models.noEndpoint":
