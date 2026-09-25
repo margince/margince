@@ -80,8 +80,8 @@ func TestACompanySaveRecordsWhatTheFormReplaced(t *testing.T) {
 	if evidence["anchor"] != true {
 		t.Errorf("evidence = %v, want it to record that this is the installation's own company", evidence)
 	}
-	if evidence[auditKeySource] != companySourceHuman {
-		t.Errorf("evidence[%s] = %v, want %q", auditKeySource, evidence[auditKeySource], companySourceHuman)
+	if evidence[auditKeySource] != CompanySourceHuman {
+		t.Errorf("evidence[%s] = %v, want %q", auditKeySource, evidence[auditKeySource], CompanySourceHuman)
 	}
 	if evidence[auditKeyFields] == nil {
 		t.Errorf("evidence = %v, want the fields the submission touched", evidence)

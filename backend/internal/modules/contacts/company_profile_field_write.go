@@ -58,7 +58,7 @@ func canonicalCompanyColumn(field string) (string, bool) {
 
 // Audit-image keys the two evidence sidecars share. A correction's before image
 // is the machine's whole claim, so both sidecars write the same shape and each
-// key is spelled once. auditKeySource, auditKeySourceURL and companySourceHuman
+// key is spelled once. auditKeySource, auditKeySourceURL and CompanySourceHuman
 // already exist in company.go and are reused rather than respelled here.
 const (
 	auditKeyValue           = "value"

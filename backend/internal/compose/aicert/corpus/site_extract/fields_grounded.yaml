@@ -18,6 +18,8 @@ expect:
   outcome: accepted
   answer:
     display_name: Kestrel Fold
+  # buying_center is neutral: "operations teams" is a fair inference from
+  # whom the page serves, but the page never names a buyer, so it earns nothing.
   rubric: >
     This one-page corpus carries two passages: the company's identity
     ("Kestrel Fold", the 20-200-store grocery ICP, the 2016 founding year) and

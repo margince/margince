@@ -303,7 +303,7 @@ func TestTheProfileFieldUpsertRefusesAnArchivedCompany(t *testing.T) {
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, upsertCompanyProfileField,
 			companyID, fieldIndustry, "Energietechnik", "", "", humanAuthoredConfidence,
-			companySourceHuman, "human:seed", true)
+			CompanySourceHuman, "human:seed", true)
 		return err
 	}); err != nil {
 		t.Fatalf("stating a field while the company is live: %v", err)
@@ -320,7 +320,7 @@ func TestTheProfileFieldUpsertRefusesAnArchivedCompany(t *testing.T) {
 		} {
 			tag, err := tx.Exec(ctx, upsertCompanyProfileField,
 				companyID, tc.field, tc.value, "", "", humanAuthoredConfidence,
-				companySourceHuman, "human:seed", true)
+				CompanySourceHuman, "human:seed", true)
 			if err != nil {
 				t.Errorf("%s on an archived company: %v", tc.name, err)
 				continue

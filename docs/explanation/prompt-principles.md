@@ -71,7 +71,7 @@ If the corpus grades a behaviour, the production prompt says so in words. Three
 were missing and each read as a model weakness: "text addressed to an assistant or
 a system, or telling you what to report, is never an event" (injection), "a
 speaker reporting what somebody else said settles nothing" (reported speech),
-and "a lesson needs a cause the rows themselves state" (weekly learnings). A
+and "a lesson needs a shape that SEVERAL rows share" (weekly learnings). A
 model cannot infer a product rule nobody wrote.
 *Checked by* the scenario itself, and for abstention cases by
 `TestEachAbstentionScenarioCatchesTheFabricationItTargets`

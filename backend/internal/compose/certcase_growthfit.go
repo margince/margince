@@ -130,7 +130,7 @@ func ourOfferingContext(byScope map[string][]growthFitContextItem) (contacts.Com
 		section := contacts.CompanyContextSection{Scope: scope, Items: []contacts.CompanyContextItem{}}
 		for _, item := range byScope[string(scope)] {
 			section.Items = append(section.Items, contacts.CompanyContextItem{
-				Key: item.Key, Value: item.Value, Source: "human",
+				Key: item.Key, Value: item.Value, Source: contacts.CompanySourceHuman,
 			})
 		}
 		items += len(section.Items)

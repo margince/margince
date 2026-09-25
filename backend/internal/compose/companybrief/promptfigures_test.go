@@ -177,3 +177,32 @@ func TestATaskOnTheTimelineCarriesWhetherItIsDone(t *testing.T) {
 			"SLOT, so one that never happened arrives looking exactly like one that did: %s", payload)
 	}
 }
+
+// A reader who cannot see deals is sent no lost count at all. A zero there
+// would tell the model the account never lost one, which nobody checked.
+func TestAWithheldDealsSectionSendsNoLostCount(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		deals    *crmcontracts.Company360Deals
+		wantSent bool
+	}{
+		{name: "deals withheld", deals: nil, wantSent: false},
+		{name: "deals visible, none lost", deals: &crmcontracts.Company360Deals{}, wantSent: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in := FromView(crmcontracts.Company360{
+				Company: crmcontracts.Company{DisplayName: "Nordwind AG"}, Deals: tc.deals,
+			})
+			if (in.LostCount != nil) != tc.wantSent {
+				t.Fatalf("lost count set = %v, want %v", in.LostCount != nil, tc.wantSent)
+			}
+			encoded, err := json.Marshal(in)
+			if err != nil {
+				t.Fatalf("marshaling the brief input: %v", err)
+			}
+			if got := strings.Contains(string(encoded), `"lost_count"`); got != tc.wantSent {
+				t.Errorf("payload carries lost_count = %v, want %v: %s", got, tc.wantSent, encoded)
+			}
+		})
+	}
+}

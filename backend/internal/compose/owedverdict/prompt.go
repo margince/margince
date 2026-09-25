@@ -38,8 +38,8 @@ Judge what the message ASKS, never how important it is. A report about a large a
 informs_us. A one-line question about a small one is still asks_us.
 
 The recipient line decides WHO is asked: a request is made of the To recipients. A message whose
-To line is somebody else — another organisation's address, or a desk such as accounts@ — with the
-reader only in Cc is informs_us even when its text asks for something, because it asks them; it
+To line is somebody else — a partner firm's project lead, or a shared inbox such as orders@ — with
+the reader among the Cc recipients only is informs_us even when its text asks for something, because it asks them; it
 is asks_us only when the text names the copied reader as the one to act. A message that
 carries a calendar invitation is asks_us only when it also asks something a calendar reply cannot
 answer.

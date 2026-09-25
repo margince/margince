@@ -56,8 +56,10 @@ const (
 	fieldHistory           = "history"
 )
 
+// CompanySourceHuman marks a company fact a user entered or confirmed by hand. It is
+// exported because a company-context fixture served in its place claims the same.
 const (
-	companySourceHuman    = "human"
+	CompanySourceHuman    = "human"
 	companySourceSiteRead = "site_read"
 )
 
@@ -297,7 +299,7 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		// projected by field history as a change to a field of that name
 		// (storekit.AuditWithEvidence).
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "company", companyID.UUID, before, after, map[string]any{
-			auditKeySource: companySourceHuman, "anchor": true, auditKeyFields: applied,
+			auditKeySource: CompanySourceHuman, "anchor": true, auditKeyFields: applied,
 		})
 		if err != nil {
 			return fmt.Errorf("audit company save: %w", err)
@@ -326,7 +328,7 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 //nolint:ireturn // dispatches to PublicEventCompanyCreated vs Updated by the created condition; tested directly via the interface in contact_company_payload_test.go
 func companySaveEventPayload(created bool, applied map[string]any, by string) events.Payload {
 	if created {
-		source := companySourceHuman
+		source := CompanySourceHuman
 		anchor := true
 		return crmcontracts.PublicEventCompanyCreated{
 			Delta:      &applied,
@@ -337,7 +339,7 @@ func companySaveEventPayload(created bool, applied map[string]any, by string) ev
 	}
 	return crmcontracts.PublicEventCompanyUpdated{
 		ChangedFields: map[string]any{
-			eventKeyDelta: applied, auditKeySource: companySourceHuman, "anchor": true, "captured_by": by,
+			eventKeyDelta: applied, auditKeySource: CompanySourceHuman, "anchor": true, "captured_by": by,
 		},
 	}
 }
