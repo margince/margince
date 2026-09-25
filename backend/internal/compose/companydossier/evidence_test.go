@@ -41,7 +41,7 @@ func siteReadField() crmcontracts.CompanyProfileField {
 func receiptFor(t *testing.T, field crmcontracts.CompanyProfileField) crmcontracts.ClaimEvidence {
 	t.Helper()
 	in := Input{CompanyID: "o-1", ProfileFields: []crmcontracts.CompanyProfileField{field}}
-	got, err := profileFieldEvidence(in, *field.Id)
+	got, err := profileFieldEvidence(in, *field.Id, "en")
 	if err != nil {
 		t.Fatalf("evidence: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestARecordTheReaderCannotSeeIsIndistinguishableFromOneThatDoesNotExist(t *
 
 	// Specifically NOT-FOUND rather than a permission denial: a 403 would
 	// confirm the record exists to a reader who may not see it.
-	if _, err := profileFieldEvidence(in, stranger); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := profileFieldEvidence(in, stranger, "en"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("err = %v, want ErrNotFound — existence is what row scoping protects", err)
 	}
 }
@@ -237,7 +237,7 @@ func TestAKindWithNoReceiptAnswersNotFound(t *testing.T) {
 	for _, kind := range []string{citeCompany, "activity", "deal", ""} {
 		t.Run(kind, func(t *testing.T) {
 			_, err := EvidenceFor(context.Background(), facts,
-				ids.From[ids.CompanyKind](ids.NewV7()), kind, openapi_types.UUID(ids.NewV7()))
+				ids.From[ids.CompanyKind](ids.NewV7()), kind, openapi_types.UUID(ids.NewV7()), "en")
 			if !errors.Is(err, apperrors.ErrNotFound) {
 				t.Errorf("err = %v, want ErrNotFound for %q", err, kind)
 			}
