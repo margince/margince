@@ -98,7 +98,13 @@ const noiseVerdictReach = 14 * 24 * time.Hour
 // withinVerdictReach is the scope clause that bounds a disposition to the mail
 // it is actually evidence about. Composed per query rather than folded into
 // noiseMailScope because it carries a duration the const cannot interpolate.
+// A HUMAN decision is not bounded by it. The window exists because a model
+// verdict is evidence about the mail that was in front of it, and a forged From
+// could otherwise make one message authority over every later one. A standing
+// keep_out is a seat saying so about an address it typed, which is not evidence
+// that can go stale — and the mail it must reach is precisely the mail that
+// arrived BEFORE it, which any window keyed to a verdict has no opinion about.
 func withinVerdictReach() string {
 	return `
-	  AND a.created_at <= p.resolved_at + ` + quoteInterval(noiseVerdictReach)
+	  AND (NOT p.machine OR a.created_at <= p.resolved_at + ` + quoteInterval(noiseVerdictReach) + `)`
 }
