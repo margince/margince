@@ -39,6 +39,8 @@ Records, deals and mail in Margince, by page:
 - How do I save a view, select several records, or reassign them in bulk? → [Lists, filters and views](lists-filters-and-views.md)
 - How do I move a deal, or close it won or lost? → [The pipeline](the-pipeline.md)
 - How do I create and send an offer (a quote)? → [Offers and the rate card](offers-and-products.md)
+- How do I set up a partner, or credit and pay a partner's commission? → [Partners and commission](partners.md)
+- What is on a project page, and how do I start delivery? → [Leads, deals and projects](leads-deals-and-projects.md)
 - How do I send or schedule an email? → [Writing and sending mail](sending-mail.md)
 - Where is my Worklist, and how do I snooze or pin? → [Your day and your week](your-day-and-your-week.md)
 - How do I see all my tasks? → [Your day and your week](your-day-and-your-week.md)
@@ -61,7 +63,8 @@ Records, deals and mail in Margince, by page:
   editing a lead and changing its owner, the lead ladder, what qualifying a lead
   actually does, reversing and disqualifying, creating and editing a deal (value,
   currency, close date, company, project, owner), and creating, editing,
-  reassigning and closing a project.
+  reassigning and closing a project, what a project page shows, starting
+  delivery, and choosing a name that gives a readable key.
 - **[Lists, filters and views](lists-filters-and-views.md)** — working the
   list screens: searching, filtering by owner, company, stage or tag, sorting,
   table and board, showing archived records, saving and opening views, bulk
@@ -71,6 +74,9 @@ Records, deals and mail in Margince, by page:
   what closing does and what winning requires, the outcome review, where a deal
   came from, reopening, the 60-day stalled rule, stage automation, and how to
   read the weighted numbers.
+- **[Partners and commission](partners.md)** — making a company a partner,
+  what each partner field means, the partner list, crediting a partner on a
+  deal, and approving, paying and reversing commission.
 - **[Connecting your mailbox and calendar](connecting-mail-and-calendars.md)** —
   connecting Gmail, Outlook, an IMAP mailbox or a calendar, what to do when a
   mailbox stops syncing, reconnecting and disconnecting, and importing your
@@ -86,7 +92,8 @@ Records, deals and mail in Margince, by page:
   each number covers and how to open the rows behind it, forecast calls, the
   projected landing, and the pipeline-needed figure that is deliberately not a
   target.
-- **[Writing and sending mail](sending-mail.md)** — the composer, drafting in
+- **[Writing and sending mail](sending-mail.md)** — the composer, replying to
+  one message in a thread, filing a send under a project, drafting in
   your voice, the purpose picker and the consent check, what a send refuses and
   what it only warns about, scheduling one for later, and what the recipient
   controls from their own preference page.
@@ -140,8 +147,7 @@ Records, deals and mail in Margince, by page:
 Two end-to-end walkthroughs sit in the repository's `user-guide/` directory —
 one ERP rollout followed from first conversation to close, and one partner deal
 followed from introduction to the money it earns. Read those once; come back
-here for one answer. Field-by-field references for projects and partner programs
-sit under `docs/how-to/`, beside the engineering ones.
+here for one answer.
 
 This handbook links nowhere outside its own folder, on purpose: each page is a
 self-contained document, so the whole folder can be uploaded to a knowledge base

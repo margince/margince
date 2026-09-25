@@ -29,6 +29,14 @@ To send a follow-up email in Margince, open the contact's **History** tab and pr
 3. Pick a **Reason for contact** (a reply to their own message needs none) and press **Send**, or schedule it.
 Also called: chase a customer, nudge, follow up, reply to a thread.
 
+### How do I reply to one particular message in a thread?
+To reply to one particular message in Margince, open the composer from the record, pick the conversation under **Continue thread?**, then click the exact message in the **This thread** column.
+The chosen message is highlighted and the line above the recipients reads "Replying to “{subject}” · {when}", or "Following up on your email" for one you sent. **Preview** shows a message's text on hover and **Read full email** opens it whole. **New email** leaves the thread for a fresh message. Each message you pick keeps its own draft while the composer is open. Also called: answer an older email, reply to a specific message.
+
+### How do I file an email I send under a project?
+To file an email you send under a project in Margince, choose the project under **Project** in the composer; Margince puts its key, such as `[NER-1]`, at the front of the **Subject**.
+Choosing **No project** takes the tag out; deleting it from the text does not. The picker starts on the thread's own project, else the deal's, else the company's only live project. Writing from a project page files under that project. With no live project to offer, the picker is not shown. Also called: tag an email with a project, project key in the subject.
+
 ### What do the composer's error messages mean?
 The composer in Margince refuses to send until four things are filled in, and names each one under its field.
 - "Add at least one recipient." — **To** is empty.
