@@ -566,58 +566,59 @@ describe("the links a reader has shared", () => {
     expect(calls).toContain("GET /forecast/shares");
   });
 
-  it("hands focus to the link now in the closed one's place, else the one above", async () => {
-    let open = [northLink, companyLink, goneLink];
-    serve(
-      {
-        "GET /forecast/shares": () => json({ data: open }),
-        "DELETE /forecast/shares/share-company": () => {
-          open = [northLink, goneLink];
-          return new Response(null, { status: 204 });
-        },
-        "DELETE /forecast/shares/share-gone": () => {
-          open = [northLink];
-          return new Response(null, { status: 204 });
-        },
-      },
-      FORECAST_CREATE,
-    );
-    const user = userEvent.setup();
-    mountActions();
-    const closeVerb = (population: string) =>
-      screen.getByRole("button", {
-        name: "Close link",
-        description: population,
-      });
-    const confirmClose = async () => {
-      const confirm = await screen.findByRole("dialog", {
-        name: "Close this link?",
-      });
-      await user.click(
-        within(confirm).getByRole("button", { name: "Close link" }),
-      );
-      await waitFor(() =>
-        expect(
-          screen.queryByRole("dialog", { name: "Close this link?" }),
-        ).toBeNull(),
-      );
-    };
+  it("hands focus to the link now in a closed middle link's place", async () => {
+    const { user, closeVerb, confirmClose } =
+      await closeOneOfThree(companyLink);
 
-    await user.click(
-      await screen.findByRole("button", { name: "Shared links" }),
-    );
-    await screen.findByText("Whole company");
-
-    // The middle link: the one below it moves up into its place.
     await user.click(closeVerb("Whole company"));
     await confirmClose();
-    await waitFor(() => expect(document.activeElement).toBe(closeVerb("Team")));
 
-    // The last link: nothing below, so the one above.
+    // The link below moves up into the closed one's place.
+    await waitFor(() => expect(document.activeElement).toBe(closeVerb("Team")));
+  });
+
+  it("hands focus to the link above when the last link is closed", async () => {
+    const { user, closeVerb, confirmClose } = await closeOneOfThree(goneLink);
+
     await user.click(closeVerb("Team"));
     await confirmClose();
+
     await waitFor(() =>
-      expect(document.activeElement).toBe(closeVerb("Team North")),
+      expect(document.activeElement).toBe(closeVerb("Whole company")),
     );
   });
 });
+
+// Three open links, the drawer open on them, and one of them closable: the
+// server drops `closed` from the list once its DELETE arrives.
+async function closeOneOfThree(closed: OpenShare) {
+  let open = [northLink, companyLink, goneLink];
+  serve(
+    {
+      "GET /forecast/shares": () => json({ data: open }),
+      [`DELETE /forecast/shares/${closed.id}`]: () => {
+        open = open.filter((share) => share.id !== closed.id);
+        return new Response(null, { status: 204 });
+      },
+    },
+    FORECAST_CREATE,
+  );
+  const user = userEvent.setup();
+  mountActions();
+  await user.click(await screen.findByRole("button", { name: "Shared links" }));
+  await screen.findByText("Whole company");
+  const closeVerb = (population: string) =>
+    screen.getByRole("button", { name: "Close link", description: population });
+  const confirmClose = async () => {
+    const confirm = screen.getByRole("dialog", { name: "Close this link?" });
+    await user.click(
+      within(confirm).getByRole("button", { name: "Close link" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Close this link?" }),
+      ).toBeNull(),
+    );
+  };
+  return { user, closeVerb, confirmClose };
+}
