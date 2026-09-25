@@ -29,9 +29,17 @@ can verify.
    (§26(2) BDSG, Art. 7 GDPR). Where private use of the work mailbox is
    permitted or tolerated, the archive fills with correspondence from outside
    the company entirely — a friend, a doctor, a landlord. The employment basis
-   reaches the employee. It reaches nobody who merely wrote to them, and those
-   third parties were never asked. Get consent, per colleague, per version — or
-   ban private use in writing and enforce it.
+   reaches the employee. It reaches nobody who merely wrote to them.
+
+   So: **ban private use in writing and enforce it**, or collect the
+   Einwilligung, per colleague, per version. Prefer the ban, and know what the
+   consent does and does not do. It is the employee's, and it settles the
+   employee's half — whether their private mail may be processed at all. It is
+   not their correspondents' consent and cannot be: you will never reach the
+   doctor to ask. Their data rides the same basis and the same privacy notice
+   as every other third party in captured mail, which is why keeping private
+   correspondence out of the mailbox in the first place is the stronger
+   position rather than merely the cheaper one.
 3. **Agree it with the works council** —
    [Betriebsvereinbarung](../compliance/de/betriebsvereinbarung-vorlage.md)
    (§87(1) Nr. 6 BetrVG). Mail capture is a system suitable for monitoring
