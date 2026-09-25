@@ -285,7 +285,7 @@ describe("the way to the rest of the day speaks for both panels", () => {
       review.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
     expect(more).toHaveAccessibleDescription(
-      "New items can land in “Today” or “To review”.",
+      "More of the day: new items can land in “Today” or “To review”.",
     );
   });
 

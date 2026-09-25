@@ -9417,9 +9417,9 @@ export const de = {
   "worklist.loading": "Worklist wird geladen…",
   "worklist.queue": "Heute",
   "worklist.review": "Zu prüfen",
-  "worklist.more": "Mehr vom Tag laden",
+  "worklist.more": "Mehr laden",
   "worklist.more.where":
-    "Neue Einträge können unter „{today}“ oder „{review}“ erscheinen.",
+    "Mehr vom Tag: Neue Einträge können unter „{today}“ oder „{review}“ erscheinen.",
   "worklist.more.failed":
     "Weitere Einträge wurden nicht geladen. Versuche es erneut.",
   "worklist.summary":
@@ -9429,7 +9429,7 @@ export const de = {
   "worklist.summary.split": "{today} heute · {review} zu prüfen",
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.review.partial":
-    "{loaded} von {total} angezeigt. Lade unten mehr vom Tag, um den Rest zu sehen.",
+    "{loaded} von {total} angezeigt. Lade unten mehr, um den Rest zu sehen.",
   "worklist.review.partialDone": "{loaded} von {total} angezeigt.",
   "worklist.completeness.bounded_one":
     "{shown} angezeigt · {sources} Quelle hat mehr",
