@@ -375,6 +375,7 @@ The eight shapes, what each is for, and how each one silently passes:
 |---|---|---|
 | `agentgateinstalled_test.go` | H1 | `x-agent-access: human-only` is enforced by ONE line, and this is what holds it there. |
 | `aiprovenancenotice_test.go` | H1 | The AI provenance notice has ONE spelling, and it is draftfloor.AIProvenanceNotice. |
+| `approvalsameagent_test.go` | H2 | "Is this the agent that staged the proposal" has ONE spelling, and it is not passport equality. |
 | `arch_test.go` | H2 | Structural fitness functions (architecture/03 §1): these tests make the boundary rules mechanical, and they derive the package list from the tree instead of maintaining it by hand — a new package is enrolled the moment it exists (fitness function over point fix). |
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |
 | `automationtarget_test.go` | H2 | An automation action targets the record its trigger fired on. |
