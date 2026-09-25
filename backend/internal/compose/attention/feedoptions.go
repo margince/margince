@@ -129,9 +129,11 @@ func (s *Service) WithLeadResponses(l LeadResponses) *Service {
 // WithOverdueLoad binds the team board's counting reader for tasks — an option
 // for the reason WithWaiting is one.
 //
-// Unbound, the board draws no overdue column rather than one of zeros. A column
-// of zeros would tell a lead their team is up to date, which is the answer this
-// surface exists to stop getting wrong.
+// The board REFUSES without it. `overdue` is a required count and there is no
+// way to draw absence, so an unbound reader's column would arrive as zero and
+// tell a lead their team is up to date — the answer this surface exists to stop
+// getting wrong. The lane feed reads tasks through its own bounded reader and
+// is unaffected.
 func (s *Service) WithOverdueLoad(o OverdueLoad) *Service {
 	s.overdueLoad = o
 	return s
@@ -139,9 +141,10 @@ func (s *Service) WithOverdueLoad(o OverdueLoad) *Service {
 
 // WithPromiseLoad binds the board's counting reader for commitments due.
 //
-// Unbound, the board draws no promises column — and here the zero would be
-// worse than elsewhere: an installation that extracts no claims would report a
-// team that promised nothing, when the truth is that nobody was listening.
+// The board REFUSES without it, as it does for the other three counts. Here the
+// zero would be worse than elsewhere: an installation that extracts no claims
+// would report a team that promised nothing, when the truth is that nobody was
+// listening.
 func (s *Service) WithPromiseLoad(p PromiseLoad) *Service {
 	s.promiseLoad = p
 	return s
