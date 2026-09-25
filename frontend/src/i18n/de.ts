@@ -2957,9 +2957,9 @@ export const de = {
   "brief.sentence.many": "Zuerst: {lead}. Danach {rest}.",
   "brief.sentence.rest": "{count} weitere",
   "brief.order.withheld":
-    "Diese Reihenfolge berücksichtigt {factors} nicht, weil deine Rolle das nicht lesen darf.",
-  "brief.factor.warmth": "die Beziehungsnähe",
-  "brief.factor.unknown": "einen Faktor, den diese Version nicht benennen kann",
+    "In dieser Reihenfolge nicht berücksichtigt: {factors}",
+  "brief.factor.warmth": "Beziehungsnähe",
+  "brief.factor.unknown": "ein Faktor, den diese Version nicht benennen kann",
 
   // Der Einstiegssatz des Wochen-Briefs, aus den eingefrorenen Zahlen gebaut.
   "brief.week.won_one": "Du hast {count} Deal gewonnen.",
