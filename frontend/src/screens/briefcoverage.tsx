@@ -11,10 +11,12 @@ import type { Worklist } from "./worklist.queries";
 // The strip's footnotes: what the page could not read, under the figures they
 // qualify.
 //
-// Two absences share the line because they answer one question, and they part
-// over the retry. A FAILED source can be asked for again; a factor a grant
-// withheld cannot, and a button beside it would promise a reader something
-// pressing it will never give them.
+// Three absences share the list because they answer one question, and they
+// part over the RETRY. A failed source can be asked for again. A source a
+// grant withheld and a ranking factor a grant withheld cannot, and a button
+// beside either would promise a reader something pressing it will never give
+// them — which is why the retry is bound to the failed rows rather than to the
+// panel being drawn at all.
 export function BriefCoverage({
   day,
   run,
@@ -25,15 +27,14 @@ export function BriefCoverage({
   onRetry?: () => void;
 }>) {
   const t = useT();
-  const failed = day.sources_unavailable.filter(
-    (entry) => entry.reason === "failed",
-  );
+  const missing = day.sources_unavailable;
+  const failed = missing.filter((entry) => entry.reason === "failed");
   const withheldFactors = omittedFactorsText(run?.factors_omitted ?? [], t);
-  if (failed.length === 0 && withheldFactors === null) return null;
+  if (missing.length === 0 && withheldFactors === null) return null;
   return (
     <div className="brief-coverage" role="status">
       <ul>
-        {failed.map((entry) => (
+        {missing.map((entry) => (
           <li key={entry.source}>{sourceUnavailableText(entry, t)}</li>
         ))}
         {withheldFactors !== null && <li>{withheldFactors}</li>}
