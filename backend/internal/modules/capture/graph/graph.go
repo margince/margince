@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
@@ -258,10 +259,16 @@ func (c *Connector) pullFolder(
 	ctx context.Context, access, folder, from string,
 	sink connector.Sink, owner string, sentByOwner bool,
 ) (string, error) {
-	ids, next, err := c.selectMessages(ctx, access, folder, from)
+	ids, removed, next, err := c.selectMessages(ctx, access, folder, from)
 	if err != nil {
 		return "", err
 	}
+	// The owner's own deletions, reported before the round's new mail is
+	// captured. Order matters only in the degenerate case — a message deleted
+	// and re-delivered in one round — and reporting first is the safe half: the
+	// re-delivery re-captures it, where the other order would destroy the copy
+	// that just arrived.
+	reportRemovals(ctx, sink, removed)
 	for _, id := range ids {
 		raw, err := c.api.GetMIME(ctx, access, id)
 		if errors.Is(err, connector.ErrSkip) {
@@ -286,21 +293,27 @@ func (c *Connector) pullFolder(
 	return next, nil
 }
 
-// selectMessages resolves which message ids to pull and the deltaLink to
-// advance to, choosing the initial-anchor or the incremental path and folding
-// the stale-cursor fallback into one place.
-func (c *Connector) selectMessages(ctx context.Context, access, folder, start string) ([]string, string, error) {
+// selectMessages resolves which message ids to pull, which the provider
+// tombstoned, and the deltaLink to advance to — choosing the initial-anchor or
+// the incremental path and folding the stale-cursor fallback into one place.
+//
+// An ANCHOR round reports no removals, and that is right rather than a gap: it
+// establishes a cursor rather than replaying history, so it has no prior state
+// to say anything was deleted from.
+func (c *Connector) selectMessages(ctx context.Context, access, folder, start string) (ids, removed []string, next string, err error) {
 	if start == "" {
-		return c.api.DeltaInit(ctx, access, folder, c.now().Add(-anchorWindow))
+		anchored, link, anchorErr := c.api.DeltaInit(ctx, access, folder, c.now().Add(-anchorWindow))
+		return anchored, nil, link, anchorErr
 	}
-	ids, next, err := c.api.Delta(ctx, access, start)
+	ids, removed, next, err = c.api.Delta(ctx, access, start)
 	if errors.Is(err, ErrDeltaGone) {
-		return c.api.DeltaInit(ctx, access, folder, c.now().Add(-anchorWindow))
+		anchored, link, anchorErr := c.api.DeltaInit(ctx, access, folder, c.now().Add(-anchorWindow))
+		return anchored, nil, link, anchorErr
 	}
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	return ids, next, nil
+	return ids, removed, next, nil
 }
 
 // captureOne parses, drops, or upserts one raw message — the same discipline
@@ -391,4 +404,31 @@ func marshalCursor(deltaLink, sentDeltaLink, email string) connector.Cursor {
 		DeltaLink: deltaLink, SentDeltaLink: sentDeltaLink, Email: email,
 	})
 	return b
+}
+
+// reportRemovals tells the sink which messages the provider tombstoned.
+//
+// A Sink that cannot take removals is not a fault, for cancelCaptured's reason:
+// connector.MessageRemover is optional by design, so a fixture implementing
+// only Upsert behaves exactly as this connector did before — the tombstones are
+// dropped. Silently, because there is nothing for an operator to fix.
+//
+// A failure on one removal does not stop the pull. The alternative is losing a
+// round of new mail over a message that was already deleted, which trades a
+// real capture for a cleanup that the next round's delta will report again
+// anyway: Graph replays tombstones until the cursor moves past them.
+func reportRemovals(ctx context.Context, sink connector.Sink, removed []string) {
+	if len(removed) == 0 {
+		return
+	}
+	remover, ok := sink.(connector.MessageRemover)
+	if !ok {
+		return
+	}
+	for _, id := range removed {
+		if err := remover.RemoveMessage(ctx, connector.NaturalKey{SourceSystem: connectorName, SourceID: id}); err != nil {
+			slog.WarnContext(ctx, "graph: a provider-side deletion was not acted on",
+				"source_system", connectorName, "error", err)
+		}
+	}
 }

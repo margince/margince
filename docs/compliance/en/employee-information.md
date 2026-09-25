@@ -39,7 +39,9 @@ against visibility when it cannot decide at all.
 - **Exclude a sender** so their mail is never captured — Settings → Capture
   activity, the "Capture exclusions" card.
 - **Destroy what was already captured** — irreversibly, including attachments
-  and everything derived from it. Mail a colleague also received stays theirs;
+  and everything derived from it. Deleting a captured message in your own
+  mailbox destroys the copy here too, unless a colleague also imported it or it
+  is commercial correspondence inside its retention window. Mail a colleague also received stays theirs;
   your access to it ends.
 - **See and correct every automatic decision** about your correspondents, on the
   Senders page. Your correction is final; the machine does not overwrite it.
