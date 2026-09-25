@@ -10,7 +10,7 @@ import {
   derivationColumns,
   parseDerivationQuery,
 } from "./analytics.explain";
-import { render, reportsStub } from "./analytics.testkit";
+import { type ReportsStubOpts, render, reportsStub } from "./analytics.testkit";
 
 // "Explain this number" in both of its hosts: the panel under a report card,
 // which resolves the RESULT's handle, and the drawer beside a row, which
@@ -282,6 +282,36 @@ describe("a row's explain drawer", () => {
     expect(
       await screen.findByRole("button", { name: "Explain Project" }),
     ).toBeTruthy();
+  });
+
+  // The frame travels with the handle: rows opened under EUR stay written in
+  // EUR when a refetch reports the installation in another base currency.
+  it("keeps the frame it opened with across a refetch", async () => {
+    const user = userEvent.setup();
+    const opts: ReportsStubOpts = {
+      stageRows: [stageRow({ derivation_url: ROW_HANDLE })],
+      derivation: derivation({
+        columns: ["label", "amount_base_minor"],
+        rows: [{ label: "Fleet retrofit", amount_base_minor: 500000 }],
+      }),
+    };
+    let runs = 0;
+    opts.onRun = (key) => {
+      if (key === "pipeline-current") runs += 1;
+    };
+    vi.stubGlobal("fetch", reportsStub(opts));
+    render(<AnalyticsScreen />);
+    const drawer = await openRowDrawer(user);
+    expect(await within(drawer).findByText("€5,000.00")).toBeTruthy();
+    opts.baseCurrency = "USD";
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    await waitFor(() => expect(runs).toBe(2));
+    expect(within(drawer).getByText("€5,000.00")).toBeTruthy();
+    expect(within(drawer).queryByText("$5,000.00")).toBeNull();
+    act(() => focusManager.setFocused(undefined));
   });
 
   // The report refetches on focus and mints a new handle with a new instant;

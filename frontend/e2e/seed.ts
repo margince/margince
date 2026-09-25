@@ -452,6 +452,42 @@ export const automationCatalog = [
 // say" on screen for a reason the test is not about — and an assertion looking
 // for those words then passes whatever stage-age does.
 export const reportFixtures: Record<string, unknown> = {
+  // The Analytics stage table's own request: one CONVERTED row per stage, under
+  // the aliases REPORT_AGGREGATES asks for, and a handle naming those same
+  // aggregates. The measured stage carries it; the second does not.
+  "pipeline-current": {
+    report: "pipeline-current",
+    plan: { group_by: ["stage_id"] },
+    columns: [
+      "stage_id",
+      "raw_minor",
+      "weighted_minor",
+      "deal_count",
+      "priced_deals",
+    ],
+    rows: [
+      {
+        stage_id: "s1",
+        raw_minor: 1_250_000,
+        weighted_minor: 250_000,
+        deal_count: 1,
+        priced_deals: 1,
+        derivation_url:
+          "/v1/reports/pipeline-current/derivation?by=stage_id&agg=sum:amount_base_minor:raw_minor&agg=sum:weighted_base_minor:weighted_minor&agg=count::deal_count&agg=count:amount_base_minor:priced_deals&stage_id=s1",
+      },
+      {
+        stage_id: "s2",
+        raw_minor: 4_800_000,
+        weighted_minor: 1_920_000,
+        deal_count: 2,
+        priced_deals: 2,
+      },
+    ],
+    total_rows: 2,
+    as_of: "2026-03-04T09:00:00Z",
+    timezone: "Europe/Berlin",
+    base_currency: "EUR",
+  },
   // Stage ids are the SHARED pipeline's, not invented ones: StageAgeTable joins
   // them to `stages` for the name, and an id matching nothing renders every row
   // as "unknown stage" — a table that looks populated and names no stage.
@@ -2495,8 +2531,6 @@ export async function mockApi(
             weighted_minor: 250_000,
             deals: 1,
             currency: "EUR",
-            derivation_url:
-              "/v1/reports/pipeline-current/derivation?by=stage_id&agg=count::deals&stage_id=s1",
           },
           {
             stage_id: "s2",

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useId } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
@@ -38,7 +38,6 @@ import {
   ExplainFrame,
   ExplainPanel,
   rowDerivationUrl,
-  useExplainedHandle,
 } from "./analytics.explain";
 import { ForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
@@ -1460,7 +1459,7 @@ function ReportCard({
   locale: Locale;
 }>) {
   const t = useT();
-  const explained = useExplainedHandle();
+  const [explain, setExplain] = useState(false);
   const explainId = useId();
 
   const reportQuery = useQuery({
@@ -1499,9 +1498,9 @@ function ReportCard({
             // reader who cannot see the panel appear is still told it did.
             actions={
               <Button
-                aria-expanded={explained.open}
+                aria-expanded={explain}
                 aria-controls={explainId}
-                onClick={() => explained.toggle(run.derivation_url ?? null)}
+                onClick={() => setExplain((value) => !value)}
               >
                 {t("explain.open")}
               </Button>
@@ -1538,8 +1537,8 @@ function ReportCard({
               )}
             </PanelBody>
           </Panel>
-          {explained.open && (
-            <ExplainPanel id={explainId} url={explained.url} />
+          {explain && (
+            <ExplainPanel id={explainId} url={run.derivation_url ?? null} />
           )}
         </ExplainFrame>
       )}

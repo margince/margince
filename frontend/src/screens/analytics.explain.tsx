@@ -317,12 +317,16 @@ function ExcludedNote({
 // Everything a host shows about one handle, in the order a doubting reader
 // needs it: what the figure means, the caveats, then the rows and their frame.
 function ExplainBody({
-  url,
+  url: opened,
   framed,
 }: Readonly<{ url: string | null; framed: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const { baseCurrency, timezone } = useContext(FrameContext);
+  const live = useContext(FrameContext);
+  // The handle AND its frame as they were when this opened: a refetch mints a
+  // new handle, and old rows must not be written in a new frame's money or zone.
+  const [{ url, frame }] = useState(() => ({ url: opened, frame: live }));
+  const { baseCurrency, timezone } = frame;
   const query = useDerivation(url);
   const asOf = query.data?.as_of;
   return (
@@ -371,17 +375,6 @@ function ExplainBody({
   );
 }
 
-// The handle the panel was opened with, held while it stays open: a refetch
-// mints a new one, and the reader keeps the explanation they are reading.
-export function useExplainedHandle() {
-  const [held, setHeld] = useState<{ url: string | null } | null>(null);
-  return {
-    open: held != null,
-    url: held?.url ?? null,
-    toggle: (url: string | null) => setHeld((open) => (open ? null : { url })),
-  };
-}
-
 // The host under a report card: the whole result's handle. It draws no frame of
 // its own, because the card above it already states the one it was cut in.
 export function ExplainPanel({
@@ -412,9 +405,9 @@ export function CellExplain({
 }: Readonly<{ url: string | null; figure: string; children?: ReactNode }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  // Taken when the drawer opens and kept until it opens again, so a refetch
-  // that mints a new handle does not reset what the reader is reading.
-  const [held, setHeld] = useState(url);
+  // Counts the opens, so each one mounts a fresh body that takes the handle
+  // and frame of that moment, even while the last close is still animating.
+  const [opens, setOpens] = useState(0);
   const titleId = useId();
   const figureId = useId();
   if (url == null) {
@@ -427,7 +420,7 @@ export function CellExplain({
         label={t("explain.cell", { figure })}
         icon={<Info aria-hidden />}
         onClick={() => {
-          setHeld(url);
+          setOpens((count) => count + 1);
           setOpen(true);
         }}
       />
@@ -443,7 +436,7 @@ export function CellExplain({
         <p className="t-label" id={figureId}>
           {figure}
         </p>
-        <ExplainBody url={held} framed />
+        <ExplainBody key={opens} url={url} framed />
       </Modal>
     </>
   );
