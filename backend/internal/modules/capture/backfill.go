@@ -236,8 +236,14 @@ func (r *Registry) StartBackfill(ctx context.Context, provider string, userID id
 		//
 		// After the enqueue, so a schedule that failed records no import that
 		// never started.
+		// The before-image is the connection's PREVIOUS reach, which the
+		// widen-only check above has already read: a trail saying only how far
+		// this run goes cannot show that a mailbox's history was extended, and
+		// extending it is the act somebody asks about later. Null where no run
+		// has ever imported this account.
 		if err := auditLifecycle(ctx, tx, "update", captureConnectionObject, connID,
-			nil, map[string]any{"backfill_window_months": windowMonths}); err != nil {
+			map[string]any{"backfill_window_months": widest},
+			map[string]any{"backfill_window_months": windowMonths}); err != nil {
 			return err
 		}
 		run.ConnectionID = connID
