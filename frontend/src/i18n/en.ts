@@ -504,6 +504,7 @@ export const en = {
   "search.group.tag": "Tags",
   "search.kind.contact": "Contact",
   "search.kind.company": "Company",
+  "search.kind.partnerCompany": "Partner company",
   "search.kind.deal": "Deal",
   "search.kind.project": "Project",
   "search.kind.product": "Product",
@@ -517,6 +518,8 @@ export const en = {
   "search.tag.carriedBy": "Tagged records: {count}",
   "search.tier.mirrored": "From a connected system",
   "search.tier.unverified": "Unverified",
+  "search.partner.badge": "Partner",
+  "search.partner.open": "Open partner record",
 
   "context.recentTouches": "Recent activity",
   "context.openTasks": "Open tasks",

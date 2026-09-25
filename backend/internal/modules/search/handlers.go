@@ -26,8 +26,13 @@ type Handlers struct {
 // counter, and a nil one leaves every hit's count absent rather than zero.
 // `emailRows` answers the canonical email row behind an activity hit; compose
 // supplies the activities store's own reader, and a nil one leaves every email
-// hit rendering the generic way.
-func NewHandlers(db *database.DB, tagReach TagReachCounter, emailRows EmailSummaryReader) Handlers {
+// hit rendering the generic way. `partnerMarks` answers which companies carry a
+// live partner programme; compose supplies the contacts store's own reader, and
+// a nil one leaves every company hit unmarked rather than marked "no".
+func NewHandlers(
+	db *database.DB, tagReach TagReachCounter,
+	emailRows EmailSummaryReader, partnerMarks PartnerMarker,
+) Handlers {
 	// THE CEILING RIDES THE HANDLE THE CALLER PASSES, and compose passes a
 	// bounded one (server.go). It is not armed here, and that is deliberate:
 	// the ceiling is a statement about who is WAITING, and the same constructor
@@ -39,7 +44,7 @@ func NewHandlers(db *database.DB, tagReach TagReachCounter, emailRows EmailSumma
 	// this surface opens — the lexical ranking, and the vector one through the
 	// retriever. A ceiling armed at a single Query would leave the other lane as
 	// unbounded as it was before anybody thought about it.
-	store := NewStore(db).WithTagReach(tagReach).WithEmailSummaries(emailRows)
+	store := NewStore(db).WithTagReach(tagReach).WithEmailSummaries(emailRows).WithPartnerMarks(partnerMarks)
 	// Embedder is nil, and stays nil: the only thing this retriever serves is
 	// AssembleContext, which walks the context graph and never embeds. The
 	// request-path embed lane compose binds is for the RANKED half, and
@@ -108,6 +113,9 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 		}
 		if hit.EmailSummary != nil {
 			result.EmailSummary = ptr(*hit.EmailSummary)
+		}
+		if hit.IsPartner != nil {
+			result.IsPartner = ptr(*hit.IsPartner)
 		}
 		data = append(data, result)
 	}

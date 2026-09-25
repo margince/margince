@@ -352,6 +352,57 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(row.querySelector(".sub")?.textContent).toBe("Company");
   });
 
+  // A partner is a property of a company, so the second line says so where it
+  // would otherwise say the kind: the name finds the account, and the line
+  // says the account is a partner.
+  it("names a partner company as one on its second line", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "company",
+              id: "o1",
+              title: "Brandt GmbH",
+              is_partner: true,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "brandt");
+    const row = await screen.findByRole("button", { name: /Brandt GmbH/ });
+    expect(row.querySelector(".sub")?.textContent).toBe("Partner company");
+  });
+
+  // The marker means nothing off a company, so a hit of another kind keeps
+  // its own kind line whatever the server sent beside it.
+  it("keeps a non-company hit's kind line despite a partner marker", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "contact",
+              id: "p1",
+              title: "Dana Buyer",
+              is_partner: true,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "dana");
+    const row = await screen.findByRole("button", { name: /Dana Buyer/ });
+    expect(row.querySelector(".sub")?.textContent).toBe("Contact");
+  });
+
   // A catalog row has no page of its own — it lives on the data-model settings
   // page — so that is where the hit goes. Being findable at all is the change;
   // an address of its own is worth having and is not this one.

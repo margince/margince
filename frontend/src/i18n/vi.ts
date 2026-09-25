@@ -498,6 +498,7 @@ export const vi = {
   "search.group.tag": "Tag",
   "search.kind.contact": "Liên hệ",
   "search.kind.company": "Tổ chức",
+  "search.kind.partnerCompany": "Tổ chức đối tác",
   "search.kind.deal": "Deal",
   "search.kind.project": "Dự án",
   "search.kind.product": "Sản phẩm",
@@ -511,6 +512,8 @@ export const vi = {
   "search.tag.carriedBy": "Trên {count} bản ghi",
   "search.tier.mirrored": "Từ hệ thống đã kết nối",
   "search.tier.unverified": "Chưa xác minh",
+  "search.partner.badge": "Đối tác",
+  "search.partner.open": "Mở hồ sơ đối tác",
 
   "context.recentTouches": "Trao đổi gần đây",
   "context.openTasks": "Công việc đang mở",

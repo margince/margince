@@ -91,6 +91,7 @@ export const WithRecordHits: Story = {
         data: [
           { type: "contact", id: "p1", title: "Dana Buyer" },
           { type: "company", id: "o1", title: "Acme GmbH" },
+          { type: "company", id: "o2", title: "Brandt GmbH", is_partner: true },
           { type: "product", id: "pr1", title: "Kärcher floor scrubber" },
           { type: "tag", id: "t1", title: "Key account" },
         ],

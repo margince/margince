@@ -80,23 +80,30 @@ export function useSearchCommands(query: string): SearchArm {
     hits.filter(({ hit }) => hit.type === "project").map(({ hit }) => hit.id),
   );
   return {
-    commands: hits.map(({ hit, route }) => ({
-      id: `record:${hit.type}:${hit.id}`,
-      label: hit.title ?? hit.id,
-      // A project's secondary line is its key or its company, not the word
-      // "project": a search hit for one carries no snippet, and two projects
-      // called "Rollout" are told apart by the key a rep already types into
-      // subject lines. Every other kind names the kind — TRANSLATED, because
-      // this line used to print the wire word and showed a German reader
-      // "company" where the rest of the product says Firma.
-      subtitle:
-        hit.type === "project"
-          ? (projectLines.get(hit.id) ??
-            t(SEARCH_HIT_KIND_KEY[hit.type as SearchHitType]))
-          : t(SEARCH_HIT_KIND_KEY[hit.type as SearchHitType]),
-      type: "record" as const,
-      route,
-    })),
+    commands: hits.map(({ hit, route }) => {
+      // A partner is a property of a company rather than a kind of its own,
+      // so the line that would say "Company" says the account is a partner:
+      // the name finds the record, and the second line says what it is.
+      // Every kind is named TRANSLATED, because this line used to print the
+      // wire word and showed a German reader "company" where the rest of the
+      // product says Unternehmen.
+      const kind =
+        hit.type === "company" && hit.is_partner === true
+          ? t("search.kind.partnerCompany")
+          : t(SEARCH_HIT_KIND_KEY[hit.type as SearchHitType]);
+      return {
+        id: `record:${hit.type}:${hit.id}`,
+        label: hit.title ?? hit.id,
+        // A project's secondary line is its key or its company, not the word
+        // "project": a search hit for one carries no snippet, and two projects
+        // called "Rollout" are told apart by the key a rep already types into
+        // subject lines.
+        subtitle:
+          hit.type === "project" ? (projectLines.get(hit.id) ?? kind) : kind,
+        type: "record" as const,
+        route,
+      };
+    }),
     // `isFetching` rather than `isPending`: a disabled query reports pending
     // forever, and the palette opens with an empty box every time.
     pending: enabled && result.isFetching,
