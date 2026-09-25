@@ -172,3 +172,42 @@ func TestEveryRecordTheBriefNamesIsChargedToTheReadBound(t *testing.T) {
 		}
 	}
 }
+
+// A meeting named in WORDS is briefed under the id that was resolved, not the
+// one the caller left empty.
+//
+// The written brief is looked up by anchor id, and a caller using record_name
+// leaves record_id zero. Reading it off the argument finds no brief, and the
+// ErrNotFound arm cannot tell "this meeting has no brief" from "we asked about
+// the wrong record" — so the answer silently loses the half a reader came for.
+func TestAMeetingNamedInWordsIsBriefedUnderTheResolvedAnchor(t *testing.T) {
+	meeting := ids.NewV7()
+	stub := &briefStub{answer: aBrief(meeting)}
+	provider := &searchingProvider{hits: []datasource.Record{
+		{Ref: datasource.EntityRef{Type: datasource.EntityActivity, ID: meeting}},
+	}}
+	tool := prepForMeeting{retriever: inertRetriever{}, brief: stub.read, p: provider}
+
+	in, err := json.Marshal(map[string]any{
+		"record_type": string(datasource.EntityActivity),
+		"record_name": "the quarterly review",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := tool.Handle(context.Background(), in)
+	if err != nil {
+		t.Fatalf("prep_for_meeting: %v", err)
+	}
+	var got PrepForMeetingResult
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("decoding the answer: %v", err)
+	}
+
+	if stub.askedFor != meeting {
+		t.Errorf("the tool briefed %s, want the anchor the name resolved to (%s)", stub.askedFor, meeting)
+	}
+	if got.Brief == nil {
+		t.Error("a meeting named in words got no brief")
+	}
+}

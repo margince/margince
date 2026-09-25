@@ -48,20 +48,26 @@ func RegisterIntentTools(
 // other — or resolved through a different reader — would be two answers to
 // "which record is this about" on a surface whose whole job is to be about one
 // record.
+// It answers the resolved id alongside the picture. A caller that needs the
+// anchor again — prep_for_meeting looks its written brief up by it — must not
+// read it back off the argument, which still holds the zero uuid when the
+// record was named in words, nor off the assembled context, which echoes what
+// a retriever chose to put there.
 func assembleAnchored(
 	ctx context.Context, p datasource.SystemOfRecordProvider,
 	retriever retrieval.Retriever, args anchorArgs,
-) (retrieval.Context, error) {
+) (retrieval.Context, ids.UUID, error) {
 	if err := args.validate(); err != nil {
-		return retrieval.Context{}, err
+		return retrieval.Context{}, ids.UUID{}, err
 	}
 	anchored, err := resolveAnchor(ctx, p, args)
 	if err != nil {
-		return retrieval.Context{}, err
+		return retrieval.Context{}, ids.UUID{}, err
 	}
-	return retriever.AssembleContext(ctx,
+	assembled, err := retriever.AssembleContext(ctx,
 		datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: anchored},
 		args.assembleOptions())
+	return assembled, anchored, err
 }
 
 // anchorArgs is the shared input shape: one record to build around.
@@ -193,7 +199,7 @@ func (t catchMeUpOn) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	assembled, err := assembleAnchored(ctx, t.p, t.retriever, args)
+	assembled, _, err := assembleAnchored(ctx, t.p, t.retriever, args)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +235,7 @@ func (t prepForMeeting) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	assembled, err := assembleAnchored(ctx, t.p, t.retriever, args)
+	assembled, anchored, err := assembleAnchored(ctx, t.p, t.retriever, args)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +260,10 @@ func (t prepForMeeting) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	// promise itself, so re-sourcing the list from them would publish a
 	// message id under a field whose contract says "what to act on" — and two
 	// promises made in one email would collide on it.
-	written, hasBrief, err := t.writtenBrief(ctx, args)
+	// The RESOLVED anchor, not the argument: a caller who named the record in
+	// words left RecordID zero, and a zero id finds no brief — which this
+	// reads as "there is none" and drops the brief silently.
+	written, hasBrief, err := t.writtenBrief(ctx, args.RecordType, anchored)
 	if err != nil {
 		return nil, err
 	}
@@ -307,11 +316,18 @@ func noteBriefEvidence(ctx context.Context, written MeetingBriefResult) {
 // other error is returned — a permission failure or a database fault reported
 // as a brief-less answer would look exactly like an ordinary meeting-less
 // record, and the caller would act on a picture it was never told was partial.
-func (t prepForMeeting) writtenBrief(ctx context.Context, args anchorArgs) (MeetingBriefResult, bool, error) {
-	if t.brief == nil || args.RecordType != string(datasource.EntityActivity) {
+// writtenBrief takes the anchor's RESOLVED id rather than the args it came
+// from. An anchor named in words is resolved during assembly, so the argument
+// still holds the zero uuid at this point, and a brief looked up under it finds
+// nothing — which the ErrNotFound arm below reads as "this meeting has no
+// written brief" and cannot tell from "we asked about the wrong record".
+func (t prepForMeeting) writtenBrief(
+	ctx context.Context, recordType string, anchored ids.UUID,
+) (MeetingBriefResult, bool, error) {
+	if t.brief == nil || recordType != string(datasource.EntityActivity) {
 		return MeetingBriefResult{}, false, nil
 	}
-	written, err := t.brief(ctx, args.RecordID)
+	written, err := t.brief(ctx, anchored)
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound):
 		return MeetingBriefResult{}, false, nil
