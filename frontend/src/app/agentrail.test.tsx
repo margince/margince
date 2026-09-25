@@ -39,9 +39,9 @@ import type { Route } from "./router";
 import { stubPhoneViewport } from "./testing/shellharness";
 
 // The agent section at the foot of the workspace rail reads every one of its
-// facts off the wire (approvals, connectors, dedupe, AI posture, licence
-// entitlement, the served model, the month's spend, the account's own
-// suggestions) — nothing left standing in for a read that has not answered.
+// facts off the wire (approvals, connectors, AI posture, licence entitlement,
+// the served model, the month's spend, the account's own suggestions) —
+// nothing left standing in for a read that has not answered.
 // Every case here proves the section draws exactly what the API said, and
 // never a number nobody computed.
 //
@@ -81,9 +81,8 @@ const CANDIDATE = (id: string): Candidate => ({
   right_id: "o-2",
   confidence: 0.91,
   evidence: [],
-  // The rail only counts what is waiting; it renders no decide button, so this
-  // fixture says the caller could decide rather than leaving the count and the
-  // authority tangled in a test about neither.
+  // Fed only to the test that proves the rail says nothing of the queue, so
+  // the authority is granted rather than left as a second reason for silence.
   can_decide: true,
   status: "open",
   created_at: "2026-08-01T09:00:00Z",
@@ -468,24 +467,23 @@ describe("AgentRail", () => {
   // not colour the orb: a corner that flashed red on a flaky connection is
   // exactly the failure mode this derivation was rebuilt to avoid.
   it("does not colour the orb for a transient tool failure", async () => {
-    const fetchMock = stubAgentRailApi({
+    stubAgentRailApi({
       connectors: () =>
         jsonResponse(
           { code: "internal_error", title: "internal error", status: 500 },
           500,
         ),
     });
-    const { container } = render(ROUTE);
-    // The LINE has to settle before the state is worth asserting: `.arline` is
-    // in the markup from the first render, so waiting for the element alone
-    // would let this pass before the 500 ever reached React Query, which is the
-    // one moment the assertion is supposed to be about.
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { container } = render(ROUTE, { client });
+    // A connectors read still in flight also reads as idle, so the state is
+    // asserted only once the 500 has landed in the cache as an error.
+    await waitFor(() =>
+      expect(client.getQueryState(["connectors"])?.status).toBe("error"),
+    );
     await settlesOnLine(container, en["agent.line.allClear"]);
-    expect(
-      fetchMock.mock.calls.some(([request]) =>
-        new URL(request.url).pathname.endsWith("/connectors"),
-      ),
-    ).toBe(true);
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
   });
 
@@ -539,14 +537,14 @@ describe("AgentRail", () => {
   });
 
   // The duplicate queue is not the agent's work. It is a queue the product
-  // keeps, repaired on the screen that owns it, and it reached this surface in
-  // three places at once: a turn in the resting rotation, a tile in the panel,
-  // and a second telling of a number the worklist already carries. None of them
-  // is here now, and the state was never one of them because a queue is not a
-  // fault.
+  // keeps, decided in its own lane of the Worklist, and it reached this surface
+  // in three places at once: a turn in the resting rotation, a tile in the
+  // panel, and a second telling of a number the worklist already carries. None
+  // of them is here now, and the state was never one of them because a queue is
+  // not a fault.
   it("says nothing about the duplicate queue, in the line, the state or the panel", async () => {
     const user = userEvent.setup();
-    stubAgentRailApi({
+    const fetchMock = stubAgentRailApi({
       dedupe: () =>
         jsonResponse({ data: [CANDIDATE("d-1"), CANDIDATE("d-2")] }),
     });
@@ -559,6 +557,11 @@ describe("AgentRail", () => {
       screen.queryByRole("link", { name: /Duplicate pairs open/ }),
     ).toBeNull();
     expect(panel().textContent).not.toContain("Duplicate");
+    expect(
+      fetchMock.mock.calls.some(([request]) =>
+        new URL(request.url).pathname.endsWith("/dedupe/candidates"),
+      ),
+    ).toBe(false);
   });
 
   // Absence, not zero: a count nobody has computed yet must not be printed —

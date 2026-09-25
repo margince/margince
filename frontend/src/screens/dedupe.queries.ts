@@ -1,10 +1,7 @@
-import {
-  type QueryKey,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { throwProblem } from "./common";
+import { worklistKey } from "./worklist.queries";
 
 /**
  * Deciding one pair: merge into a surviving record, or say they are not the
@@ -21,11 +18,8 @@ import { throwProblem } from "./common";
  * bytes on the wire, so the refusal cannot be tripped by a shape this function
  * can produce. What it CAN produce, and what the caller must not do, is pass a
  * winner alongside `not_a_duplicate`.
- *
- * Which cached reads to drop depends on where the pair was decided — the dedupe
- * screen and the Worklist both draw these — so the caller passes them in.
  */
-export function useDedupeDisposition(invalidateKeys: readonly QueryKey[]) {
+export function useDedupeDisposition() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
@@ -42,9 +36,7 @@ export function useDedupeDisposition(invalidateKeys: readonly QueryKey[]) {
       }
     },
     onSuccess: () => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
-      }
+      queryClient.invalidateQueries({ queryKey: worklistKey });
     },
   });
 }

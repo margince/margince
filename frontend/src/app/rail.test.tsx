@@ -52,14 +52,13 @@ vi.mock("@composition/extensions", () => ({
 // B-EP09.4 acceptance, for the SIDEBAR — the left-hand panel and nothing else.
 //
 // It is destinations only: the canonical nav in order (AC-shell-1b —
-// Automations left it for Settings → AI while the dedupe queue and the filter
-// builder took rows, which is a UI divergence on the founder's back-fill list),
-// at most one active
-// item tracking the route (AC-shell-2), badges only on the attention screens and
-// only from live counts (AC-shell-1e), collapsed rows on the expanded rows' own
-// geometry with a dismissible tooltip (AC-shell-1d), and the phone bar with its
-// More sheet. It carries no search row, no collapse control, no Settings door
-// and no account block any more — each of those moved to the top bar
+// Automations left it for Settings → AI while the filter builder took a row and
+// the duplicate queue is a lane inside Today, a UI divergence on the founder's
+// back-fill list), at most one active item tracking the route (AC-shell-2),
+// badges only on the attention screens and only from live counts (AC-shell-1e),
+// collapsed rows on the expanded rows' own geometry with a dismissible tooltip
+// (AC-shell-1d), and the phone bar with its More sheet. It carries no search
+// row, no collapse control, no Settings door and no account block any more — each of those moved to the top bar
 // (topbar.test.tsx).
 //
 // The second suite is the panel's own DEPTH: a section route replaces the
