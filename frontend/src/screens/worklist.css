@@ -464,6 +464,13 @@
 .worklist-more > p {
   margin: 0;
 }
+/* A thumb needs the WCAG 2.2 target the row verbs already get; `max()` so a
+   later rise in the shared control height is not capped by this floor. */
+@media (pointer: coarse) {
+  .worklist-more .btn {
+    min-block-size: max(var(--controlHeight), 44px);
+  }
+}
 
 /* The spans behind the snooze's caret, as LINES of a list.
    Four answers to one question — "come back tomorrow, in three days, next week,
