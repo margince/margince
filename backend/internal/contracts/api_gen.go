@@ -16963,6 +16963,27 @@ func (e ListAutomationRunsParamsOutcome) Valid() bool {
 	}
 }
 
+// Defines values for GetAvailability200JSONResponseBodyCalendarBacking.
+const (
+	GetAvailability200JSONResponseBodyCalendarBackingCalendar GetAvailability200JSONResponseBodyCalendarBacking = "calendar"
+	GetAvailability200JSONResponseBodyCalendarBackingNone     GetAvailability200JSONResponseBodyCalendarBacking = "none"
+	GetAvailability200JSONResponseBodyCalendarBackingUnknown  GetAvailability200JSONResponseBodyCalendarBacking = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the GetAvailability200JSONResponseBodyCalendarBacking enum.
+func (e GetAvailability200JSONResponseBodyCalendarBacking) Valid() bool {
+	switch e {
+	case GetAvailability200JSONResponseBodyCalendarBackingCalendar:
+		return true
+	case GetAvailability200JSONResponseBodyCalendarBackingNone:
+		return true
+	case GetAvailability200JSONResponseBodyCalendarBackingUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BookMeetingJSONBodyLinksEntityType.
 const (
 	BookMeetingJSONBodyLinksEntityTypeCompany BookMeetingJSONBodyLinksEntityType = "company"
@@ -42139,6 +42160,9 @@ type GetAvailabilityParams struct {
 	To              time.Time           `form:"to" json:"to"`
 	DurationMinutes *int                `form:"duration_minutes,omitempty" json:"duration_minutes,omitempty"`
 }
+
+// GetAvailability200JSONResponseBodyCalendarBacking defines parameters for GetAvailability.
+type GetAvailability200JSONResponseBodyCalendarBacking string
 
 // BookMeetingJSONBody defines parameters for BookMeeting.
 type BookMeetingJSONBody struct {
