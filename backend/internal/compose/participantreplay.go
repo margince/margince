@@ -232,6 +232,10 @@ func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replay
 	// guessing when two mailboxes share a provider. A stamp naming a seat never
 	// reaches the fallback, so a workspace with two Gmail mailboxes resolves both
 	// of its NEW rows, which the single-connection rule alone could not do.
+	// The stored LINK first, the key join only for a row carrying none: a
+	// mailbox that could prove nothing about a colliding Message-ID files its
+	// activity under a key scoped to its own seat, and a key join alone would
+	// leave exactly those rows unreplayed.
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.payload,
 		       coalesce(a.counterparty_outbound_attested, false),
@@ -247,7 +251,9 @@ func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replay
 		          LIMIT 1), '')
 		  FROM activity a
 		  JOIN raw_capture rc
-		    ON rc.source_system = a.source_system AND rc.source_id = a.source_id
+		    ON rc.id = a.raw_capture_id
+		    OR (a.raw_capture_id IS NULL
+		        AND rc.source_system = a.source_system AND rc.source_id = a.source_id)
 		 WHERE a.archived_at IS NULL
 		   AND a.source_system <> ''
 		   AND a.captured_by LIKE 'connector:%'
