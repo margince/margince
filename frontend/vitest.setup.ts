@@ -262,7 +262,9 @@ if (skewRequest !== "") {
   const skewMs = days * 24 * 60 * 60 * 1000;
   const RealDate = globalThis.Date;
   class SkewedDate extends RealDate {
-    constructor(...args: ConstructorParameters<typeof Date>) {
+    // ConstructorParameters names only Date's last overload, which never has
+    // zero arguments; the no-argument form is the one this lane moves.
+    constructor(...args: [] | ConstructorParameters<typeof Date>) {
       if (args.length === 0) {
         super(RealDate.now() + skewMs);
         return;
