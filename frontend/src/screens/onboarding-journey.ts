@@ -13,14 +13,19 @@ import { useOnboardingProgress } from "./onboarding";
 // gates. Below the `onboarding` rollout stage there is no journey to walk, only
 // the manual company form, so the gate holds nobody there either.
 //
+// The rollout is asked once the session is `authed`, beside the company read
+// rather than behind it; `pending` still counts it only where the gate needs it.
 // A read that FAILED — the rollout's or the row's — does not gate: the shell
 // renders, and the journey is asked for again on the next load. An unfinished
 // row, or none, does.
-export function useJourneyProgress(wanted: boolean): Readonly<{
+export function useJourneyProgress(
+  authed: boolean,
+  wanted: boolean,
+): Readonly<{
   pending: boolean;
   unfinished: boolean;
 }> {
-  const rollout = useCompanyContextCapabilities(wanted);
+  const rollout = useCompanyContextCapabilities(authed);
   const walkable = wanted && rollout.data?.onboarding_enabled === true;
   const progress = useOnboardingProgress(walkable);
   return {

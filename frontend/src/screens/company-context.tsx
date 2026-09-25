@@ -43,7 +43,7 @@ import {
 } from "./common";
 import { ReadWarnings, SavedNotice } from "./company-context.notices";
 import { CompanyMark } from "./companymark";
-import { useCompany } from "./onboarding";
+import { useCompany } from "./installationcompany";
 import "./company-context.css";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];

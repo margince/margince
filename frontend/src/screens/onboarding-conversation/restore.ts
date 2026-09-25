@@ -34,6 +34,9 @@ export type RestoreInputs = Readonly<{
   /** Whether the installation has described itself (useInstallationDescribed):
    * the saved profile for an admin, implied for any other seat. */
   described: boolean;
+  /** Whether this seat holds the admin role, the only one that may save the
+   * company: any other seat walks the member path, whatever its row says. */
+  mayDescribe: boolean;
   /** Voice server truth; null when the probe was not needed (member path,
    * or the journey has not reached the voice act). */
   voice: VoiceRestoreProbe | null;
@@ -237,7 +240,7 @@ function memberPlan(
 }
 
 export function restorePlan(inputs: RestoreInputs): RestorePlan {
-  const { state, described, read, routeConnect, locale } = inputs;
+  const { state, described, mayDescribe, read, routeConnect, locale } = inputs;
   // "complete" is the wizard row's own word, and it can outrun the record it
   // claims: the state row and the company profile are separate writes, and the
   // connect act persists completion without requiring a saved profile. An
@@ -253,7 +256,10 @@ export function restorePlan(inputs: RestoreInputs): RestorePlan {
   if (state?.step === "complete" && described) {
     return { kind: "complete" };
   }
-  const memberPath = state !== null ? state.path === "member" : described;
+  // A creator row outlives a demoted admin, and its company act ends in a save
+  // the seat may no longer make.
+  const memberPath =
+    !mayDescribe || (state !== null ? state.path === "member" : described);
   if (memberPath) {
     return memberPlan(inputs, state);
   }

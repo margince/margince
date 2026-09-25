@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import { meFixture } from "./app/mefixture";
+import { type GrantSpec, meFixture } from "./app/mefixture";
 import { createQueryClient } from "./app/queryclient";
 import { parseHash, routeHash } from "./app/router";
 import { LocaleProvider } from "./i18n";
@@ -323,6 +323,7 @@ describe("onboarding gate", () => {
     session: {
       seat?: "full" | "read";
       roles?: string[];
+      allow?: GrantSpec;
       onboarding?: boolean;
     } = {},
   ) =>
@@ -336,6 +337,7 @@ describe("onboarding gate", () => {
               meFixture({
                 roles: session.roles ?? ["admin"],
                 seat: session.seat,
+                allow: session.allow,
               }),
             ),
             { status: 200, headers: { "Content-Type": "application/json" } },
@@ -448,14 +450,36 @@ describe("onboarding gate", () => {
 
   // GET /company answers only an admin, so no other seat asks for it. It needs
   // no answer either: nobody is invited before the company is described.
-  const companyReads = () =>
+  const requestsEndingIn = (path: string) =>
     vi
       .mocked(fetch)
       .mock.calls.filter(([input]) =>
-        String(input instanceof Request ? input.url : input).endsWith(
-          "/v1/company",
-        ),
+        String(input instanceof Request ? input.url : input).endsWith(path),
       );
+  const companyReads = () => requestsEndingIn("/v1/company");
+  const ROLLOUT = "/v1/company/context/capabilities";
+
+  // Wraps the stubbed fetch so every request to `path` waits for the returned
+  // release; the rest answer at once.
+  const holdAnswersTo = (path: string) => {
+    const served = vi.mocked(fetch);
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        if (
+          String(input instanceof Request ? input.url : input).endsWith(path)
+        ) {
+          await held;
+        }
+        return served(input);
+      }),
+    );
+    return release;
+  };
 
   it("leaves a non-admin with a finished journey on its route, unasked", async () => {
     window.location.hash = "#/contacts";
@@ -480,6 +504,24 @@ describe("onboarding gate", () => {
       expect(companyReads()).toHaveLength(0);
     },
   );
+
+  // ops holds automation:update, so its journey names the configured model:
+  // the model read follows the grant, not the admin role.
+  it("walks an ops seat with no row through the member journey, model named", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      403,
+      { row: { code: "not_found" }, status: 404 },
+      { roles: ["ops"], allow: { automation: ["update"] } },
+    );
+    mount();
+    expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
+    expect(window.location.hash).toBe("#/onboarding/company");
+    expect(companyReads()).toHaveLength(0);
+    await waitFor(() =>
+      expect(requestsEndingIn("/v1/ai/profile")).toHaveLength(1),
+    );
+  });
 
   it("leaves a non-admin on a read seat alone, whatever its journey says", async () => {
     window.location.hash = "#/contacts";
@@ -517,6 +559,17 @@ describe("onboarding gate", () => {
     },
   );
 
+  // The first half of the gate reads no rollout: the manual company form is
+  // what an installation below the `onboarding` stage describes itself with.
+  it("sends an undescribed installation to the company form below the onboarding stage", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(404, undefined, { onboarding: false });
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+  });
+
   // A shell painted before the rollout answers is a landing page the gate may
   // then pull away from under the reader, so the splash waits for it.
   it("holds the splash until the rollout says whether there is a journey", async () => {
@@ -528,30 +581,26 @@ describe("onboarding gate", () => {
         roles: ["rep"],
       },
     );
-    const served = vi.mocked(fetch);
-    let release = () => {};
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const isRollout = (input: Request | string | URL) =>
-      String(input instanceof Request ? input.url : input).endsWith(
-        "/v1/company/context/capabilities",
-      );
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: Request | string | URL) => {
-        if (isRollout(input)) {
-          await held;
-        }
-        return served(input);
-      }),
-    );
+    const release = holdAnswersTo(ROLLOUT);
     mount();
+    await waitFor(() => expect(requestsEndingIn(ROLLOUT)).not.toHaveLength(0));
+    expect(
+      screen.queryByRole("navigation", { name: "Primary navigation" }),
+    ).toBeNull();
+    release();
     await waitFor(() =>
-      expect(
-        vi.mocked(fetch).mock.calls.some(([input]) => isRollout(input)),
-      ).toBe(true),
+      expect(window.location.hash).toBe("#/onboarding/company"),
     );
+  });
+
+  // Serialised behind the company read, the rollout would add a round trip to
+  // every admin's splash, so it goes out while the company is still unanswered.
+  it("asks an admin's rollout beside the company read, not behind it", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(200, { row: { code: "not_found" }, status: 404 });
+    const release = holdAnswersTo("/v1/company");
+    mount();
+    await waitFor(() => expect(requestsEndingIn(ROLLOUT)).not.toHaveLength(0));
     expect(
       screen.queryByRole("navigation", { name: "Primary navigation" }),
     ).toBeNull();

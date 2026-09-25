@@ -54,10 +54,8 @@ import {
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./screens/common";
 import { isContactTab } from "./screens/contacttab";
 import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
-import {
-  OnboardingScreen,
-  useInstallationDescribed,
-} from "./screens/onboarding";
+import { useInstallationDescribed } from "./screens/installationcompany";
+import { OnboardingScreen } from "./screens/onboarding";
 import { useJourneyProgress } from "./screens/onboarding-journey";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
 import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
@@ -797,6 +795,7 @@ function AuthedApp({
   const { described, pending: companyPending } =
     useInstallationDescribed(authed);
   const progress = useJourneyProgress(
+    authed,
     authed &&
       described === true &&
       me.data?.authorization?.seat_type === "full",
@@ -892,9 +891,9 @@ function AuthedApp({
   // onboarding and OAuth consent among them. A read that FAILS falls through
   // to the shell, where each screen renders its own error state and its own
   // retry; the splash is for waiting, not for having waited.
-  // The progress read joins the splash for the same reason the company read
-  // does: a shell painted before it answers is a landing page the gate then
-  // pulls away from under the reader.
+  // The progress and rollout reads join the splash for the same reason the
+  // company read does: a shell painted before they answer is a landing page the
+  // gate then pulls away from under the reader.
   if (companyPending || recordZone.pending || progress.pending) {
     return (
       <RaillessFrame>

@@ -4,17 +4,16 @@ import type { Dispatch } from "react";
 import { useEffect, useReducer, useRef } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useHoldsAdminRole } from "../../app/capability";
 import { navigate, navigateReplacing, useRoute } from "../../app/router";
 import { Button } from "../../design-system/atoms";
 import { useLocale, useT } from "../../i18n";
 import { throwProblem } from "../common";
 import {
-  EMPTY_DRAFT,
-  loadWizardState,
-  pickBuiltVersion,
   type useCompany,
   useInstallationDescribed,
-} from "../onboarding";
+} from "../installationcompany";
+import { EMPTY_DRAFT, loadWizardState, pickBuiltVersion } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
 import { BasisAct } from "./basis-act";
 import { CompanyAct } from "./company-act";
@@ -59,12 +58,17 @@ const voiceProbeSteps = new Set<OnboardingState["step"]>([
 ]);
 
 // Whether the restore needs the voice probe, from the same facts restorePlan
-// routes on: the wizard row's path when one exists, else whether the
+// routes on: a seat that may not describe the installation walks the member
+// path; else the wizard row's path when one exists, else whether the
 // installation is described.
 function voiceProbeNeeded(
   wizard: OnboardingState | null,
   described: boolean,
+  mayDescribe: boolean,
 ): boolean {
+  if (!mayDescribe) {
+    return true;
+  }
   if (wizard === null) {
     return described;
   }
@@ -184,6 +188,7 @@ function useRestore(
 ) {
   const { locale } = useLocale();
   const { company: existing, described } = useInstallationDescribed(true);
+  const mayDescribe = useHoldsAdminRole();
   // The restore's own snapshot, not the live entry the shell gates on: a
   // checkpoint landing mid-journey must not re-run the restore's reads.
   const wizard = useQuery({
@@ -193,7 +198,7 @@ function useRestore(
   const voiceNeeded =
     wizard.isSuccess &&
     described !== undefined &&
-    voiceProbeNeeded(wizard.data ?? null, described);
+    voiceProbeNeeded(wizard.data ?? null, described, mayDescribe);
   const voice = useQuery({
     queryKey: ["onboarding-conv-voice"],
     queryFn: probeVoice,
@@ -203,6 +208,7 @@ function useRestore(
   // still open: a reload must reattach a running or finished read instead
   // of stranding the user's work behind a fresh intro.
   const persistedReadId =
+    mayDescribe &&
     wizard.data != null &&
     (wizard.data.step === "read" || wizard.data.step === "confirm")
       ? (wizard.data.site_read_id ?? null)
@@ -242,6 +248,7 @@ function useRestore(
       state: wizard.data ?? null,
       profile: existing.data ?? null,
       described: described === true,
+      mayDescribe,
       voice: voice.data ?? null,
       read: persistedRead.data ?? null,
       routeConnect,
@@ -277,6 +284,7 @@ function useRestore(
     wizard.data,
     existing.data,
     described,
+    mayDescribe,
     voice.data,
     persistedRead.data,
     routeConnect,

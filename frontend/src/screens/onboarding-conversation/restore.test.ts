@@ -93,6 +93,7 @@ describe("restorePlan", () => {
         state: null,
         profile: null,
         described: false,
+        mayDescribe: true,
         voice: null,
         read: null,
         routeConnect: false,
@@ -117,6 +118,7 @@ describe("restorePlan", () => {
         state: null,
         profile,
         described: true,
+        mayDescribe: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -137,6 +139,7 @@ describe("restorePlan", () => {
         state: stateRow({ step: "voice" }),
         profile,
         described: true,
+        mayDescribe: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -151,6 +154,7 @@ describe("restorePlan", () => {
         state: stateRow({ path: "member", step: "connect" }),
         profile,
         described: true,
+        mayDescribe: true,
         voice: null,
         read: null,
         routeConnect: false,
@@ -168,6 +172,7 @@ describe("restorePlan", () => {
       state: stateRow({ path: "member", step: "voice", voice_skipped: true }),
       profile,
       described: true,
+      mayDescribe: true,
       voice: emptyVoice,
       read: null,
       routeConnect: false,
@@ -191,6 +196,7 @@ describe("restorePlan", () => {
         state: stateRow({ step: "basis" }),
         profile,
         described: true,
+        mayDescribe: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -206,6 +212,7 @@ describe("restorePlan", () => {
           state: stateRow({ step }),
           profile: null,
           described: false,
+          mayDescribe: true,
           voice: null,
           read: null,
           routeConnect: false,
@@ -224,6 +231,7 @@ describe("restorePlan", () => {
       state: stateRow({ step: "voice" }),
       profile,
       described: true,
+      mayDescribe: true,
       voice: words(1240),
       read: null,
       routeConnect: false,
@@ -247,6 +255,7 @@ describe("restorePlan", () => {
         state: stateRow({ step: "voice", voice_skipped: true }),
         profile,
         described: true,
+        mayDescribe: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -258,6 +267,7 @@ describe("restorePlan", () => {
         state: stateRow({ step: "team", voice_skipped: true }),
         profile,
         described: true,
+        mayDescribe: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -271,6 +281,7 @@ describe("restorePlan", () => {
       state: stateRow({ step: "results", voice_skipped: true }),
       profile,
       described: true,
+      mayDescribe: true,
       voice: emptyVoice,
       read: null,
       routeConnect: false,
@@ -290,6 +301,7 @@ describe("restorePlan", () => {
       state: stateRow({ step: "connect" }),
       profile: null,
       described: false,
+      mayDescribe: true,
       voice: { ...words(2000), built: true },
       read: null,
       routeConnect: false,
@@ -312,6 +324,7 @@ describe("restorePlan", () => {
         state: stateRow({ step: "voice" }),
         profile,
         described: true,
+        mayDescribe: true,
         voice: emptyVoice,
         read: null,
         routeConnect: true,
@@ -326,6 +339,7 @@ describe("restorePlan", () => {
         state: stateRow({ step: "confirm" }),
         profile: null,
         described: false,
+        mayDescribe: true,
         voice: null,
         read: readRow(status),
         routeConnect: false,
@@ -352,6 +366,7 @@ describe("restorePlan", () => {
       state: stateRow(),
       profile: null,
       described: false,
+      mayDescribe: true,
       voice: null,
       read: readRow("reading"),
       routeConnect: false,
@@ -378,6 +393,7 @@ describe("restorePlan", () => {
         state: stateRow(),
         profile: null,
         described: false,
+        mayDescribe: true,
         voice: null,
         read: readRow(status),
         routeConnect: false,
@@ -399,6 +415,7 @@ describe("restorePlan", () => {
         state: stateRow({ step: "complete" }),
         profile,
         described: true,
+        mayDescribe: true,
         voice: null,
         read: null,
         routeConnect: false,
@@ -417,6 +434,7 @@ describe("restorePlan", () => {
       state: stateRow({ step: "complete" }),
       profile: null,
       described: false,
+      mayDescribe: true,
       voice: null,
       read: null,
       routeConnect: false,
@@ -437,6 +455,7 @@ describe("restorePlan", () => {
     const seat = {
       profile: null,
       described: true,
+      mayDescribe: false,
       voice: emptyVoice,
       read: null,
       routeConnect: false,
@@ -467,6 +486,26 @@ describe("restorePlan", () => {
       expect(keys).not.toContain("ob.conv.recap.companyUnsaved");
       expect(keys).not.toContain("ob.conv.recap.company");
     });
+
+    // A demoted admin keeps the creator row it wrote, but the company act it
+    // names ends in a save only an admin may make.
+    it.each(["read", "confirm"] as const)(
+      "walks a creator row left at %s on the member path",
+      (step) => {
+        const plan = restorePlan({
+          ...seat,
+          state: stateRow({ path: "creator", step }),
+          read: readRow("ready"),
+        });
+        if (plan.kind !== "start") {
+          throw new Error("expected a start plan");
+        }
+        expect(plan.memberPath).toBe(true);
+        expect(plan.companyConfirmed).toBe(true);
+        expect(plan.resumeTarget).toBe("vo.collecting");
+        expect(plan.adoptRead).toBeNull();
+      },
+    );
 
     it("lets a finished journey leave", () => {
       expect(

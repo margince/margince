@@ -300,8 +300,8 @@ function stubApi(options: StubOptions = {}) {
       if (path.endsWith("/connectors") && request.method === "GET") {
         return jsonResponse({ data: [] });
       }
-      // No grants: the reporting basis is an admin's to change, and these
-      // fixtures never claim to be one.
+      // No grants, so the reporting basis stays unchangeable. The role is
+      // admin, meFixture's default, unless a case names another.
       if (path.endsWith("/me") && request.method === "GET") {
         return jsonResponse(meFixture({ allow: {}, roles: options.roles }));
       }
@@ -420,6 +420,21 @@ describe("restore into the conversational shell", () => {
       new URL(request.url).pathname.endsWith("/company"),
     );
     expect(companyReads).toHaveLength(0);
+  });
+
+  // A demoted admin keeps its creator row, open on the company act. Saving
+  // that act is admin-only, so the seat resumes its own journey instead.
+  it("a non-admin with a creator row left on the company act begins at the voice act", async () => {
+    const calls = stubApi({
+      state: stateRow({ step: "confirm", site_read_id: READ_ID }),
+      reads: [readRow("ready")],
+      roles: ["rep"],
+    });
+    render(<OnboardingScreen />);
+
+    expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
+    expect(screen.queryByLabelText(/Website address/)).toBeNull();
+    expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(1);
   });
 
   it("reopens the invite for a creator whose company is confirmed", async () => {
