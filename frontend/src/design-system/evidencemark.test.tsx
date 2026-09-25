@@ -10,17 +10,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { EvidenceMark } from "./evidencemark";
+import { armHoverIntent } from "./hoverintent-testing";
 
-// EVERY ASSERTION AFTER AN INTERACTION IS AWAITED, and the reason is the
-// component rather than the test runner. The panel settles against a
-// hover-intent poll on the REAL clock — a 25ms tick with a 260ms ceiling, the
-// one the last case here already documents — so its open state is not a
-// function of the click alone. `await userEvent.click` guarantees the events
-// were dispatched, never that React has re-rendered and that poll has settled,
-// and an immediate assertion reads the DOM in between. On a loaded machine that
-// gap is wide enough to observe: this file failed a full run on
-// `aria-expanded` still being "false" one line after the click that opens it
-// (issue 2661).
+// Hover intent is inert here unless a case arms it (vitest.setup.ts), so a
+// click alone decides whether the panel is open. The cases that arm it wait for
+// the settle and leave the trigger before they end.
 //
 // The one provenance affordance. What it has to get right:
 //
@@ -130,12 +124,6 @@ describe("evidence mark", () => {
     const trigger = screen.getByRole("button", { name: /1998/ });
     await userEvent.click(trigger);
     await userEvent.click(screen.getByText("Full history"));
-    // The pointer leaves, which is what a reader who has navigated away has
-    // done. Without it the hover-intent poll this click armed is still running
-    // on the real clock — a 25ms tick with a 260ms ceiling that settles
-    // whatever the pointer is doing — and it re-opens the panel a moment after
-    // the assertion below, or a moment before it on a loaded machine.
-    await userEvent.unhover(trigger);
 
     expect(opened).toBe(true);
     // The panel closes on the way out, so the reader does not return to a
@@ -164,6 +152,7 @@ describe("evidence mark", () => {
   });
 
   it("leaves focus on the value when the panel opened under a settled pointer", async () => {
+    armHoverIntent();
     show(
       <EvidenceMark
         value="1998"
@@ -217,6 +206,7 @@ describe("evidence mark", () => {
 // A claim is checked by resting on it: the receipt opens under a pointer that
 // has settled on the value and closes once it has left, without a click.
 it("opens under a settled pointer and closes when it leaves", async () => {
+  armHoverIntent();
   show(
     <EvidenceMark
       value="1998"
