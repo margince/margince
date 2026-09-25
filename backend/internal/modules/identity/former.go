@@ -85,6 +85,9 @@ func (s *Service) CreateFormerMember(ctx context.Context, actor Identity, in For
 	if err != nil {
 		return ids.UserID{}, err
 	}
+	if err := s.refuseUntilDescribed(ctx); err != nil {
+		return ids.UserID{}, err
+	}
 	role := in.Role
 	if role == "" {
 		role = defaultFormerRole

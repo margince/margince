@@ -163,6 +163,9 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	// Bound to the workspace just created: this suite seeds one per env, so
 	// there is no installation singleton to resolve.
 	svc := NewServiceFor(database.BindTo(pool, wsID))
+	// Described, as onboarding leaves it. Contacts owns the anchor and identity
+	// may not import it; the compose suite asks the real owner.
+	svc.installationDescribed = func(context.Context) (bool, error) { return true, nil }
 	// Login resolves the admin's full Identity (roles, permissions) the
 	// way the HTTP surface would.
 	admin, _, err := svc.Login(principal.WithWorkspaceID(ctx, wsID.UUID), adminEmail, bootstrapPassword, noDevice)
