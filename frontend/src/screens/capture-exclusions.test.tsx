@@ -44,6 +44,14 @@ function backend(allow: GrantSpec, rules: unknown[] = RULES) {
           headers: { "Content-Type": "application/json" },
         });
       }
+      if (url.includes("/containers")) {
+        return new Response(
+          JSON.stringify({
+            containers: [{ id: "Label_7", name: "Privat" }],
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
       if (method === "POST") {
         return new Response(JSON.stringify({ id: "cx-3" }), {
           status: 201,
@@ -237,5 +245,53 @@ describe("CaptureExclusionsCard", () => {
     expect(submit.disabled).toBe(true);
     await user.click(submit);
     expect(calls.some((call) => call.method === "POST")).toBe(false);
+  });
+});
+
+describe("the container kind", () => {
+  // The whole point of the picker: a rule names a provider's own token, and
+  // the reader chooses a name they recognise.
+  it("offers the mailbox's folders by name and stores the provider's token", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, calls } = backend(CAPTURE_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["captureExclusions.kind.container"],
+      }),
+    );
+
+    // The NAME is what the reader sees and picks.
+    const picker = await screen.findByRole("combobox");
+    await user.click(picker);
+    await user.click(await screen.findByRole("option", { name: "Privat" }));
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.add"] }),
+    );
+
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "POST")).toBe(true),
+    );
+    const posted = calls.find((call) => call.method === "POST");
+    // The provider-qualified TOKEN is stored, never the display name: a
+    // rename must not silently re-point a rule. And the scope is the
+    // reader's own, because a label means nothing in anybody else's mailbox.
+    expect(posted?.body).toMatchObject({
+      kind: "container",
+      value: "gmail:Label_7",
+      scope: "user",
+    });
   });
 });
