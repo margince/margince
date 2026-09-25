@@ -45,16 +45,18 @@ package gates
 //     table may sit outside it — contact_consent, for instance, is deliberately
 //     kept under Art. 5 accountability rather than erased. Re-deciding that here
 //     would fork the judgment across two gates.
-//   - The merge's own corpus is what relinkContactReferences can REACH, read
-//     from the package call graph rather than from one file's SQL. The merge
-//     spans three files today and a gate naming them would go quiet the day a
-//     fourth appeared.
 //
-// Presence is the whole check: each path is a source-text scan of the file that
-// discharges it, reusing the write-target extraction the ownership gate already
-// spells (sqlWriteTargets). It proves the table is WRITTEN by that path, not
-// that the write is correct — semantics belong to the module's own tests. What
-// it catches is the silent omission.
+// Presence is the whole check: each path's corpus is what its entry point can
+// REACH through the package call graph, reusing the write-target extraction the
+// ownership gate already spells (sqlWriteTargets). It proves the table is
+// WRITTEN by that path, not that the write is correct — semantics belong to the
+// module's own tests. What it catches is the silent omission.
+//
+// REACH, never a filename. A path keyed to the file its statements sit in today
+// reports a dropped obligation the moment somebody splits a long function, which
+// is a constraint nobody chose and a failure that fires when nothing is wrong.
+// The merge already spans three files; the other two paths would have said the
+// same thing the first time they grew a second.
 
 import (
 	"io/fs"
@@ -68,12 +70,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// satellitePath is one lifecycle obligation: the file that discharges it, and
-// the message a missing table gets. Every path here is a WRITE — archiving,
-// deleting or relinking the satellite's rows.
+// satellitePath is one lifecycle obligation: the entry point that discharges
+// it, and the message a missing table gets. Every path here is a WRITE —
+// archiving, deleting or relinking the satellite's rows.
 type satellitePath struct {
-	name   string
-	file   string
+	name string
+	// pkg and from together name the path's corpus: everything the entry point
+	// reaches inside its own package.
+	pkg    string
+	from   string
 	remedy string
 	// archivedOnly restricts the path to satellites carrying archived_at.
 	archivedOnly bool
@@ -83,9 +88,6 @@ type satellitePath struct {
 	// everyTableNamingAContact widens the corpus past the contact_ prefix to
 	// every table carrying a contact_id column.
 	everyTableNamingAContact bool
-	// from names the function whose call-graph reach is the path's corpus,
-	// instead of `file`'s SQL literals. Exactly one of the two is set.
-	from string
 }
 
 // satelliteLifecyclePaths are the contact-satellite obligations this gate owns.
@@ -95,14 +97,16 @@ type satellitePath struct {
 var satelliteLifecyclePaths = []satellitePath{
 	{
 		name:         "archive_cascade",
-		file:         "internal/modules/contacts/contactarchive.go",
-		remedy:       "add it to ArchiveContact's statement list — an unlisted satellite stays LIVE under an archived Contact",
+		pkg:          "internal/modules/contacts",
+		from:         "Store.ArchiveContact",
+		remedy:       "archive its rows somewhere ArchiveContact reaches — an unlisted satellite stays LIVE under an archived Contact",
 		archivedOnly: true,
 	},
 	{
 		name:    "retention_anonymize",
-		file:    "internal/modules/privacy/retentionactions.go",
-		remedy:  "delete its rows in the contact/anonymize executor — the sweep anonymizes the contact row and would leave this satellite's copy of the subject behind",
+		pkg:     "internal/modules/privacy",
+		from:    "RetentionService.anonymizeContact",
+		remedy:  "delete its rows somewhere the contact/anonymize executor reaches — the sweep anonymizes the contact row and would leave this satellite's copy of the subject behind",
 		piiOnly: true,
 	},
 	{
@@ -117,13 +121,8 @@ var satelliteLifecyclePaths = []satellitePath{
 		// reasons of their own: an anonymizer owes only what carries the
 		// subject, and an archive only what has an archived_at to set.
 		everyTableNamingAContact: true,
-		// REACHED, not read from one file. The merge's relinks live in
-		// mergerelink.go, its consent carry in consentcarry.go and its stop
-		// carry behind a port in stopcarry.go, and a gate naming those three
-		// files would be a second copy of where merge code happens to sit — it
-		// would go quiet the day a fourth appeared. The corpus is what
-		// relinkContactReferences can reach instead.
-		from: "relinkContactReferences",
+		pkg:                      "internal/modules/contacts",
+		from:                     "relinkContactReferences",
 	},
 }
 
@@ -224,18 +223,6 @@ func contactSatellites(t *testing.T) map[string]map[string]bool {
 	return satellites
 }
 
-// pathWrites returns the tables one lifecycle file writes.
-func pathWrites(t *testing.T, file string) map[string]bool {
-	t.Helper()
-	writes := map[string]bool{}
-	for _, lit := range sqlLiterals(t, file) {
-		for _, table := range sqlWriteTargets(lit) {
-			writes[table] = true
-		}
-	}
-	return writes
-}
-
 // notYetCarried is NOT a ratification. It is a list of tables the merge does
 // not carry and SHOULD, kept apart from carriedElsewhere on purpose: that
 // register says who moves a row instead, and an entry saying "nobody, yet"
@@ -313,18 +300,12 @@ const mergeRelinkPath = "merge_relink"
 // everything its entry point can reach.
 func (p satellitePath) writes(t *testing.T) map[string]bool {
 	t.Helper()
-	if p.from == "" {
-		return pathWrites(t, p.file)
-	}
-	return reachedWrites(t, "internal/modules/contacts", p.from)
+	return reachedWrites(t, p.pkg, p.from)
 }
 
 // where names the path in a finding, so a reader knows where to go.
 func (p satellitePath) where() string {
-	if p.from == "" {
-		return p.file
-	}
-	return p.from + " and what it calls"
+	return p.from + " and what it calls, in " + p.pkg
 }
 
 // reachedWrites collects the tables written by `from` and by anything it calls,
@@ -340,7 +321,7 @@ func reachedWrites(t *testing.T, dir, from string) map[string]bool {
 	t.Helper()
 	graph := packageCallGraph(t, dir)
 	if _, known := graph[from]; !known {
-		t.Fatalf("no function %s in %s — the merge entry point was renamed and this census now "+
+		t.Fatalf("no function %s in %s — the entry point was renamed and this census now "+
 			"reads an empty corpus, which is PASS for every table", from, dir)
 	}
 	writes := map[string]bool{}
