@@ -46,6 +46,30 @@ func aCompany() datasource.Record {
 	return datasource.Record{Ref: datasource.EntityRef{Type: "company", ID: ids.NewV7()}}
 }
 
+// requireBadArgs asserts the refusal is the actionable kind.
+//
+// BadArgsError is what carries the caller's own words back to them; anything
+// else reaches an agent as this program's prose, which it can neither act on
+// nor is entitled to read.
+func requireBadArgs(t *testing.T, err error) {
+	t.Helper()
+	var bad *BadArgsError
+	if !errors.As(err, &bad) {
+		t.Fatalf("err = %v, want a BadArgsError a host can act on", err)
+	}
+}
+
+// refuseAnchor resolves and requires a refusal, answering it for inspection.
+func refuseAnchor(t *testing.T, p datasource.SystemOfRecordProvider, args anchorArgs) error {
+	t.Helper()
+	got, err := resolveAnchor(context.Background(), p, args)
+	requireBadArgs(t, err)
+	if got != (ids.UUID{}) {
+		t.Errorf("returned id %s beside a refusal", got)
+	}
+	return err
+}
+
 // An id given outright is used as given: naming the record precisely must not
 // cost a search.
 func TestAnAnchorGivenAnIDDoesNotSearch(t *testing.T) {
@@ -94,13 +118,8 @@ func TestAnAmbiguousNameIsRefusedWithItsCandidates(t *testing.T) {
 	first, second := aCompany(), aCompany()
 	p := &searchingProvider{hits: []datasource.Record{first, second}}
 
-	_, err := resolveAnchor(context.Background(), p,
-		anchorArgs{RecordType: "company", RecordName: "Contoso"})
+	err := refuseAnchor(t, p, anchorArgs{RecordType: "company", RecordName: "Contoso"})
 
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
-		t.Fatalf("err = %v, want a BadArgsError a host can act on", err)
-	}
 	for _, want := range []ids.UUID{first.Ref.ID, second.Ref.ID} {
 		if !strings.Contains(err.Error(), want.String()) {
 			t.Errorf("the refusal does not name candidate %s: %v", want, err)
@@ -119,16 +138,7 @@ func TestAnAmbiguousNameIsRefusedWithItsCandidates(t *testing.T) {
 func TestANameMatchingNothingIsRefused(t *testing.T) {
 	p := &searchingProvider{}
 
-	got, err := resolveAnchor(context.Background(), p,
-		anchorArgs{RecordType: "company", RecordName: "Nobody"})
-
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
-		t.Fatalf("err = %v, want a BadArgsError", err)
-	}
-	if got != (ids.UUID{}) {
-		t.Errorf("returned id %s beside an error", got)
-	}
+	refuseAnchor(t, p, anchorArgs{RecordType: "company", RecordName: "Nobody"})
 }
 
 // The candidate list carries ids and nothing else. The refusal travels to an
@@ -140,12 +150,8 @@ func TestTheCandidateListPublishesNoRecordContent(t *testing.T) {
 	first.Fields = []byte(`{"name":"Contoso Pharmaceuticals","owner":"a colleague"}`)
 	p := &searchingProvider{hits: []datasource.Record{first, second}}
 
-	_, err := resolveAnchor(context.Background(), p,
-		anchorArgs{RecordType: "company", RecordName: "Contoso"})
+	err := refuseAnchor(t, p, anchorArgs{RecordType: "company", RecordName: "Contoso"})
 
-	if err == nil {
-		t.Fatal("an ambiguous name must be refused")
-	}
 	for _, leaked := range []string{"Pharmaceuticals", "a colleague"} {
 		if strings.Contains(err.Error(), leaked) {
 			t.Errorf("the refusal published record content (%q): %v", leaked, err)
@@ -157,12 +163,9 @@ func TestTheCandidateListPublishesNoRecordContent(t *testing.T) {
 // request carrying both is one whose author believed they agreed, and answering
 // from the id hides the disagreement on the call where it could still be seen.
 func TestNamingARecordBothWaysIsRefused(t *testing.T) {
-	err := anchorArgs{RecordType: "company", RecordID: ids.NewV7(), RecordName: "Contoso"}.validate()
-
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
-		t.Fatalf("err = %v, want a BadArgsError", err)
-	}
+	requireBadArgs(t, anchorArgs{
+		RecordType: "company", RecordID: ids.NewV7(), RecordName: "Contoso",
+	}.validate())
 }
 
 // Naming it neither way is refused too. `record_id` left the schema's required
@@ -173,9 +176,6 @@ func TestNamingARecordNoWayIsRefused(t *testing.T) {
 		{RecordType: "company"},
 		{RecordType: "company", RecordName: "   "},
 	} {
-		var bad *BadArgsError
-		if err := args.validate(); !errors.As(err, &bad) {
-			t.Errorf("%+v: err = %v, want a BadArgsError", args, err)
-		}
+		requireBadArgs(t, args.validate())
 	}
 }
