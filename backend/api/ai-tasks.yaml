@@ -59,6 +59,17 @@
 #                     somebody rebinds it — which is legal under every profile
 #                     but sovereign. The routing config refuses a binding that
 #                     would put such a task on a hosted provider.
+#   decision          this task has a decision form: a site whose question a
+#                     calibrated decision model may answer before the ladder is
+#                     asked, falling back to the ladder when it is not sure.
+#                     Only a shipped background task may declare it — the
+#                     attempt is a further network call an interactive deadline
+#                     does not budget for — and every declaring site owes an
+#                     adapter that builds the typed question from the same
+#                     inputs its prompt reads. The lane never widens a task's
+#                     reach: it serves only where its endpoint goes no further
+#                     than the task's own bound ladder, and a local_only task
+#                     only from a local decision model.
 #   company_context   the ADR-0065 policy: `none`, or scopes + token_budget
 #                     (+ conditional, meaning "only when the caller requests
 #                     it"). Absent-by-accident must be a build error, never a
@@ -380,6 +391,7 @@ tasks:
     on_budget_exhausted: queue
     status: shipped
     sites: [triage]
+    decision: true
     company_context: none
     doc: "what a mail domain's own site says it IS, before any company is created from it: a company, one contact's site, or a mailbox vendor selling addresses to the public. Runs on the SEED PAGE ALONE and leads with a fast tier because its whole job is to stop the crawl early — a personal page answered here costs one page instead of twelve. The provider class is the live.fr trap: that site belongs to a real company (Microsoft's) which is emphatically not the sender's employer."
 

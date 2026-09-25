@@ -138,7 +138,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "21432f2444576909fb0ef31fc8bc795b37b260aa6b48b26a26613b2555b59932"
+const TaskContractHash = "c69ba5636eb70074884d2327d5fe99ccbeccc9bf1d525d672ba77356ce63e98e"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -510,6 +510,24 @@ var localOnlyTaskList = []Task{
 
 // LocalOnlyTasks returns the local-only tasks in contract order.
 func LocalOnlyTasks() []Task { return localOnlyTaskList }
+
+// taskDecisions are the tasks that declare a decision form. DECLARED,
+// because a decision site needs an adapter that builds the typed question
+// from the same inputs its prompt reads, and the census holds the two in step.
+var taskDecisions = map[Task]bool{
+	TaskSiteTriage: true,
+}
+
+// TaskDecides reports whether a task declares a decision form.
+func TaskDecides(t Task) bool { return taskDecisions[t] }
+
+// decisionTaskList is the same set in sorted name order.
+var decisionTaskList = []Task{
+	TaskSiteTriage,
+}
+
+// DecisionTasks returns the decision tasks in sorted name order.
+func DecisionTasks() []Task { return decisionTaskList }
 
 // CompanyContextPolicy is the ADR-0065 anchor-company policy: which
 // scopes ride the prompt, under what character budget, and whether the

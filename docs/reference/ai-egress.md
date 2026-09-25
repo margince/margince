@@ -7,85 +7,96 @@ provider outside the installation. Generated from `backend/api/ai-tasks.yaml`,
 so it says what the routing table does rather than what somebody believed when
 they last wrote this page down.
 
-Two different promises, and a task can make either without the other:
+Three different promises, and a task can make any of them without the others:
 
+- **Local-only (enforced)** — the task declares `local_only`, so its prompt is
+  served only by a provider running on this installation, under every AI
+  profile. At call time every rung bound to a hosted provider is dropped from
+  the task's ladder, and a task left with no local rung is refused rather than
+  sent out. This is the column that answers "can this text leave".
 - **Local-only ladder** — the task's ladder names only rungs (`local_small`,
   `local_large`) meant to run on this installation's own hardware. That is a
-  fact about the LADDER'S NAMES, not a guarantee that text stays put: whether
-  it is enforced depends on the deployment's AI profile. Under `sovereign`
-  it is enforced — validation refuses a cloud binding for either tier
-  outright, so no cloud client for one is ever constructed. Under every OTHER
-  profile (`eu_hosted`, `cloud_frontier`) it is unenforced: an operator's
-  own binding can point `local_small` or `local_large` at a hosted
-  provider, and a task with a local-only ladder then leaves the machine
-  anyway. Read `GET /v1/ai/routing` for what a given deployment actually
-  bound, and `GET /v1/ai/profile` for which of the two rules applies to it.
+  fact about the LADDER'S NAMES, not a guarantee that text stays put: those
+  rungs are size classes, and an operator's binding can point either at a
+  hosted provider. Under `sovereign` validation refuses a cloud binding for
+  either tier outright; under every other profile (`eu_hosted`,
+  `cloud_frontier`) only a task that ALSO declares `local_only` stays put.
+  Read `GET /v1/ai/routing` for what a given deployment actually bound, and
+  `GET /v1/ai/profile` for which rule applies to it.
 - **Prompt not retained** — the task declares `no_payload`, so its prompt is
   never written to `ai_call_payload` whatever the deployment's capture posture
   says.
 
-A task that is neither sends its text to whichever provider the operator bound
-for its ladder's rungs, and may retain the prompt for debugging. That is the
-ordinary case and is not a defect: it is the deployment's choice, stated here so
-it can be answered for.
+The **Decision model** column is where else a task's text can go. A task that
+declares a decision form may be answered first by the deployment's decision
+model, and only when that model's endpoint reaches no further than the task's
+own bound ladder: a task already sent to a known cloud may ask a decision model
+in a known cloud, and a local-only task may ask only a local one. A "—" task is
+never sent to a decision model.
 
-| Task | Ladder | Local-only ladder | Prompt not retained | Status |
-| --- | --- | --- | --- | --- |
-| `account_scan` | `cheap_cloud` → `premium` | no | yes | shipped |
-| `agent_loop` | `cheap_cloud` → `premium` | no | no | shipped |
-| `brief_ranking` | `premium` → `cheap_cloud` | no | no | shipped |
-| `capture_classify` | `local_small` → `cheap_cloud` | no | yes | shipped |
-| `capture_confidentiality_verdict` | `local_small` | yes | yes | shipped |
-| `capture_counterparty_verdict` | `local_small` | yes | yes | shipped |
-| `cert_judge` | `premium` → `cheap_cloud` | no | no | shipped |
-| `cold_start` | `cheap_cloud` → `premium` | no | no | shipped |
-| `corpus_ask` | `premium` | no | no | shipped |
-| `deal_health` | `cheap_cloud` → `premium` | no | no | shipped |
-| `document_extract` | `premium` | no | yes | shipped |
-| `draft_reply` | `cheap_cloud` → `premium` | no | no | shipped |
-| `enrich` | `local_small` → `cheap_cloud` | no | no | shipped |
-| `growth_fit` | `cheap_cloud` → `premium` | no | no | shipped |
-| `nl_search` | `cheap_cloud` → `premium` | no | no | planned |
-| `offer_draft` | `cheap_cloud` → `premium` | no | no | shipped |
-| `owed_verdict` | `local_small` → `cheap_cloud` | no | yes | shipped |
-| `propose_roles` | `cheap_cloud` → `premium` | no | no | shipped |
-| `rate_extract` | `premium` → `cheap_cloud` | no | no | shipped |
-| `request_settlement` | `local_small` → `cheap_cloud` | no | yes | shipped |
-| `signal_extract` | `cheap_cloud` → `premium` | no | yes | shipped |
-| `site_extract` | `premium` | no | no | shipped |
-| `site_fact_extract` | `cheap_cloud` → `premium` | no | no | shipped |
-| `site_triage` | `cheap_cloud` → `premium` | no | no | shipped |
-| `stage_evidence_extract` | `cheap_cloud` → `premium` | no | yes | shipped |
-| `summarize` | `cheap_cloud` → `premium` | no | no | shipped |
-| `transcript` | `cheap_cloud` → `premium` | no | no | planned |
-| `transcript_propose` | `cheap_cloud` → `premium` | no | no | shipped |
-| `voice_build` | `cheap_cloud` → `premium` | no | no | shipped |
-| `weekly_learnings` | `cheap_cloud` → `premium` | no | no | shipped |
-| `weekly_review` | `cheap_cloud` → `premium` | no | no | shipped |
+A task that is none of these sends its text to whichever provider the operator
+bound for its ladder's rungs, and may retain the prompt for debugging. That is
+the ordinary case and is not a defect: it is the deployment's choice, stated
+here so it can be answered for.
+
+| Task | Ladder | Local-only ladder | Prompt not retained | Local-only (enforced) | Decision model | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| `account_scan` | `cheap_cloud` → `premium` | no | yes | no | — | shipped |
+| `agent_loop` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `brief_ranking` | `premium` → `cheap_cloud` | no | no | no | — | shipped |
+| `capture_classify` | `local_small` → `cheap_cloud` | no | yes | no | — | shipped |
+| `capture_confidentiality_verdict` | `local_small` | yes | yes | yes | — | shipped |
+| `capture_counterparty_verdict` | `local_small` | yes | yes | yes | — | shipped |
+| `cert_judge` | `premium` → `cheap_cloud` | no | no | no | — | shipped |
+| `cold_start` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `corpus_ask` | `premium` | no | no | no | — | shipped |
+| `deal_health` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `document_extract` | `premium` | no | yes | no | — | shipped |
+| `draft_reply` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `enrich` | `local_small` → `cheap_cloud` | no | no | no | — | shipped |
+| `growth_fit` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `nl_search` | `cheap_cloud` → `premium` | no | no | no | — | planned |
+| `offer_draft` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `owed_verdict` | `local_small` → `cheap_cloud` | no | yes | no | — | shipped |
+| `propose_roles` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `rate_extract` | `premium` → `cheap_cloud` | no | no | no | — | shipped |
+| `request_settlement` | `local_small` → `cheap_cloud` | no | yes | no | — | shipped |
+| `signal_extract` | `cheap_cloud` → `premium` | no | yes | no | — | shipped |
+| `site_extract` | `premium` | no | no | no | — | shipped |
+| `site_fact_extract` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `site_triage` | `cheap_cloud` → `premium` | no | no | no | no further than its ladder reaches | shipped |
+| `stage_evidence_extract` | `cheap_cloud` → `premium` | no | yes | no | — | shipped |
+| `summarize` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `transcript` | `cheap_cloud` → `premium` | no | no | no | — | planned |
+| `transcript_propose` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `voice_build` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `weekly_learnings` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
+| `weekly_review` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
 
 ## Reading this against a data-protection question
 
-"Does our mail leave the building?" needs TWO facts, not one, for the tasks
-that read mail: `capture_classify`, `capture_counterparty_verdict` and
-`capture_confidentiality_verdict`. The last two decide whether a sender or a
-thread is private, so sending their text away to ask would be the question
-answering itself the wrong way round.
+"Does our mail leave the building?" is answered for the tasks that read mail —
+`capture_classify`, `capture_counterparty_verdict` and
+`capture_confidentiality_verdict` — by the **Local-only (enforced)** column.
+The last two decide whether a sender or a thread is private, so sending their
+text away to ask would be the question answering itself the wrong way round,
+and both declare `local_only`: their prompt reaches no hosted provider under
+any profile, and no hosted decision model either.
 
-The **Local-only ladder** column is the first fact and, on its own, does NOT
-answer the question — it names the ladder's tiers, not what a deployment does
-with them. The second fact is the AI profile: under `sovereign`, a local-only
-ladder is enforced (validation refuses a cloud binding for it outright) and
-the column's "yes" is a real guarantee. Under `eu_hosted` or
-`cloud_frontier`, it is not — an admin's own binding can point `local_small`
-or `local_large` at a hosted provider, and a "yes" task then leaves the
-machine anyway. Read `GET /v1/ai/profile` for which rule applies to the
-deployment in question, and `GET /v1/ai/routing` for what it actually bound
-— never this page alone.
+The **Local-only ladder** column on its own does NOT answer the question — it
+names the ladder's tiers, not what a deployment does with them. For a task
+that does not declare `local_only`, the AI profile decides: under `sovereign`
+a local-only ladder is enforced (validation refuses a cloud binding for it
+outright); under `eu_hosted` or `cloud_frontier` an admin's own binding can
+point `local_small` or `local_large` at a hosted provider, and the task then
+leaves the machine. Read `GET /v1/ai/profile` for which rule applies to the
+deployment in question, and `GET /v1/ai/routing` for what it actually bound —
+never this page alone.
 
 "Is a copy kept?" is the **Prompt not retained** column, and it is about this
 installation's own database rather than about the provider. What a bound
-provider retains is between the operator and that provider; the egress column
-is what says whether there is a provider involved at all.
+provider retains is between the operator and that provider; the egress columns
+are what say whether there is a provider involved at all.
 
 ## Everything else this installation can call
 
