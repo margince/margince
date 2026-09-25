@@ -39,17 +39,25 @@ If the file is not on the deal yet, click **Upload a file** first; it is filed o
 Also called: share a file with the buyer, upload a PDF to the room.
 
 ### How do I pause, close or set an end date on a deal room?
-To pause or close a Deal Room in Margince, open the room's own page and use the **Room access** menu: **Pause**, **Resume**, **Close room** or **Set end date**. They are not on the deal's **Deal Room** tab: the room page is the deal's address with `/room` added (`#/deals/<deal id>/room`), and no button links to it today.
+To pause or close a Deal Room in Margince, open the deal's **Deal Room** tab, click **Manage room**, and use the **Room access** menu on the room's page: **Pause**, **Resume**, **Close room** or **Set end date**.
 - **Pause** — "Buyers keep their links but see a paused page until you resume."
 - **Close room** — "Buyers can still read. Nothing new can be added."
 - **Set end date** — "Access stops on that day." Leave **Access ends on** empty for no end date.
+Without permission to change Deal Rooms, **Manage room** is not shown.
 Also called: stop sharing, lock the room, expire the room.
 
 ### How do I remove a buyer from a deal room?
 To remove a buyer from a Deal Room in Margince, open the deal's **Deal Room** tab and, in the **Access** panel, open the buyer's row actions and choose **Revoke access**.
 "Their session ends and their link stops working. Their comments stay visible and attributed. Requesting a new link does not restore access."
-The same menu has **Issue new link** (their current link stops working) and **Change permissions**. Once the room is closed or expired the tab hides this menu; it stays on the room's own page (`#/deals/<deal id>/room`).
+The same menu has **Issue new link** (their current link stops working) and **Change permissions**. Once the room is closed or expired the tab hides this menu; click **Manage room** to reach it on the room's own page.
 Also called: revoke access, kick out, remove a participant.
+
+### How do I see which deal rooms a contact is in?
+To see the Deal Rooms a contact can still enter in Margince, open the contact and choose the **Deals** tab: the **Deal Rooms** panel lists each room with its state.
+- **Open** goes to the room's own page.
+- **Revoke access** ends that contact's seat in the room, the same revoke the room's **Access** panel performs.
+The panel is not shown when the contact holds no seat, or when your role cannot read Deal Rooms.
+Also called: which rooms has this buyer been invited to, remove someone who left the customer from every room.
 
 ### How do I see what the buyer sees?
 To see a Deal Room as the buyer does in Margince, open the deal's **Deal Room** tab and click **View as buyer**. It opens the real buyer page in a new tab as a read-only preview: "This is the buyer’s view. You can read everything but change nothing."
@@ -82,7 +90,8 @@ to its title or welcome reaches the buyer on their next load.
 
 **Close** — "Buyers can still read the room. No document, comment or decision is
 accepted afterward." You can still revoke buyers and issue links, but only from
-the room's own page: the deal's tab hides those actions once the room is closed.
+the room's own page, reached with **Manage room**: the deal's tab hides those
+actions once the room is closed.
 
 Read that carefully, because it is the unusual one. Closing a Deal Room is
 **not** a freeze. A buyer keeps reading the room and downloading its documents;
@@ -187,11 +196,6 @@ the product, but nothing on any screen calls it. That matters because a deal
 holds **one** room at a time, and opening a second needs the first archived — so
 in practice a deal gets one Deal Room, and the refusal that tells you to archive
 the old one names something you cannot do.
-
-**The room's own page, which holds Pause, Resume, Close room and Set end date,
-has no link in the app.** You reach it by adding `/room` to the deal's address.
-A panel listing the rooms a contact can still enter exists in the code but is
-not shown on the contact page.
 
 **A buyer's first click on a dead link always shows the dead-link page.** There
 is no check before the link is spent, so a link that was already used reads the

@@ -7,10 +7,9 @@
 // each drawing its own — a second copy of "who is in the room" is how a tab
 // and a page come to disagree about it.
 //
-// The tab is the narrower of the two: it carries the reading and the editable
-// text, not the room's own verbs (pause, close, set an expiry) or the "view
-// as buyer" preview, which stay on the room's own page where the room's
-// identity band already stands.
+// The tab is the narrower of the two: it carries the reading, the editable
+// text and the preview, and links to the room's own page for the room's verbs
+// (pause, close, set an expiry), which stand there beside its identity band.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DoorOpen, ExternalLink } from "lucide-react";
@@ -19,6 +18,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useCanWrite } from "../../app/capability";
+import { navigate } from "../../app/router";
 
 import {
   Button,
@@ -81,12 +81,17 @@ function RoomReading({
   const refusal = refusalFor(finished, mayWrite, t);
   return (
     <div className="record-stack">
-      {/* Who has been in, and the one way to see what they see. The preview
-          stands with the attendance rather than inside a panel: it is the
-          room's own verb, not a verb about its access list or its text. */}
+      {/* Who has been in, the one way to see what they see, and the way to the
+          room's own verbs. They stand with the attendance rather than inside a
+          panel: they are the room's, not its access list's or its text's. */}
       <div className="roomtab-head">
         <RoomFacts room={room} />
-        {mayWrite ? <ViewAsBuyerButton room={room} /> : null}
+        {mayWrite ? (
+          <div className="roomtab-verbs">
+            <ViewAsBuyerButton room={room} />
+            <ManageRoomButton room={room} />
+          </div>
+        ) : null}
       </div>
       {/* Who may walk in, and the verbs that change it, ON the tab rather than
           only in the record's details pane: the pane is shut when a reader
@@ -96,6 +101,23 @@ function RoomReading({
       <RoomText room={room} refusal={refusal} />
       <DealRoomConversation room={room} refusal={refusal} />
     </div>
+  );
+}
+
+// The way to the room's own page, where its lifecycle verbs live — and, once
+// the room is closed, the revoke and new-link verbs this tab stops offering.
+function ManageRoomButton({ room }: Readonly<{ room: DealRoom }>) {
+  const t = useT();
+  return (
+    <Button
+      variant="ghost"
+      onClick={() =>
+        navigate({ screen: "deals", id: room.deal_id, id2: "room" })
+      }
+    >
+      <DoorOpen aria-hidden />
+      {t("roompage.manage")}
+    </Button>
   );
 }
 
