@@ -20,6 +20,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem } from "./common";
+import { SUBMIT_COPY, type SubmitIntent } from "./create";
 import { EntityRef } from "./entityref";
 import {
   type ListPage,
@@ -188,13 +189,13 @@ function PartnerForm({
   partner,
   onSaved,
   onCancel,
-  submitLabel,
+  intent,
 }: Readonly<{
   companyId: string;
   partner?: Partner;
   onSaved: () => void;
   onCancel?: () => void;
-  submitLabel: MessageKey;
+  intent: SubmitIntent;
 }>) {
   const t = useT();
   // This form only mounts while editing (PartnerDetail/PartnerTab remount it
@@ -365,9 +366,9 @@ function PartnerForm({
           variant="primary"
           type="submit"
           pending={mutation.isPending}
-          busyLabel={t("create.saving")}
+          busyLabel={t(SUBMIT_COPY[intent].busy)}
         >
-          {t(submitLabel)}
+          {t(SUBMIT_COPY[intent].label)}
         </Button>
       </div>
     </form>
@@ -393,7 +394,7 @@ function PartnerDetail({
         <PartnerForm
           companyId={companyId}
           partner={partner}
-          submitLabel="record.save"
+          intent="save"
           onCancel={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);
@@ -501,7 +502,7 @@ export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
               <SectionHeader title={t("partner.setup")} />
               <PartnerForm
                 companyId={companyId}
-                submitLabel="create.save"
+                intent="create"
                 onSaved={invalidateAfterSave}
               />
             </PanelBody>

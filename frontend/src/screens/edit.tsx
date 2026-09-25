@@ -255,7 +255,7 @@ export function EditRecordModal({
           onSubmit(submitted, submittedRows, opened)
         }
         onClose={onClose}
-        submitLabelKey="record.save"
+        intent="save"
       />
     </Modal>
   );

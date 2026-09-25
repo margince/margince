@@ -2529,7 +2529,7 @@ test.describe("filters and views", () => {
   async function authorIndustryIs(page: Page) {
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
     await page.getByRole("combobox", { name: "Feld" }).click();
-    await page.getByRole("option", { name: "industry" }).click();
+    await page.getByRole("option", { name: "Branche" }).click();
     await page.getByRole("combobox", { name: "Operator" }).click();
     await page.getByRole("option", { name: "ist", exact: true }).click();
     await page.getByRole("textbox", { name: "Wert" }).fill("automotive");
@@ -2550,20 +2550,20 @@ test.describe("filters and views", () => {
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
 
     // The field picker is the SERVER's vocabulary, not a list this screen keeps:
-    // `industry` and `lifecycle` are company fields, `tag` is the leaf that
-    // is an EXISTS over a join rather than a column, and none of them is
-    // spelled anywhere in the frontend.
+    // `industry` and `lifecycle` are company fields and `tag` is the leaf that
+    // is an EXISTS over a join rather than a column. The screen only names each
+    // field the server sends, in the reader's language.
     await page.getByRole("combobox", { name: "Feld" }).click();
     expect(await textsOf(page.getByRole("option"))).toEqual([
-      "owner id",
-      "industry",
-      "lifecycle",
-      "tag",
+      "Zuständig",
+      "Branche",
+      "Lebenszyklus",
+      "Tag",
       // The custom field, and it sorts after the core ones — a reader scanning
       // for a column they added finds it in one place rather than interleaved.
       "fleet size",
     ]);
-    await page.getByRole("option", { name: "industry" }).click();
+    await page.getByRole("option", { name: "Branche" }).click();
 
     // And the operator set is the FIELD's. `industry` is text, so `enthält` is
     // offered; the tag clause in AC-4 proves the narrowing by its absence.
@@ -2650,7 +2650,7 @@ test.describe("filters and views", () => {
     // operators — `enthält` is gone, and a picker that offered it would produce
     // a 422 the reader could not interpret.
     await page.getByRole("combobox", { name: "Feld" }).first().click();
-    await page.getByRole("option", { name: "tag" }).click();
+    await page.getByRole("option", { name: "Tag", exact: true }).click();
     await page.getByRole("combobox", { name: "Operator" }).first().click();
     expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",

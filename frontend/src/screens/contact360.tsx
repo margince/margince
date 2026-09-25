@@ -2,24 +2,20 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { Badge, Button, Disclosure } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { FactList } from "../design-system/factlist";
 import { Panel, PanelBody } from "../design-system/panel";
 import type { ConfidenceLevel } from "../design-system/trust";
-import { formatDate, formatDecimal, formatNumber } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
 import { provenanceOf, throwProblem } from "./common";
 import { currentEmployer, stillHeld } from "./employmentcurrency";
 import { EntityRef } from "./entityref";
 import { dealRoleLabel } from "./record360";
-import { changeSentence } from "./relationshipchange";
 import "./contact360.css";
 
 export type Contact360 = components["schemas"]["Contact360"];
 type ProfileField = components["schemas"]["ContactProfileField"];
-type Colleague = components["schemas"]["ContactNetworkColleague"];
 
 /**
  * useContact360 is the contact page's ONE read. It replaces the seven
@@ -129,96 +125,6 @@ export function ThinState({
         )}
       </PanelBody>
     </Panel>
-  );
-}
-
-/**
- * RelationshipPulse is the contact's warmth in WORDS, following the company
- * pattern (ADR-0079 arc): no verdict number on the face of the card.
- *
- * The two directions are shown side by side and never folded. A contact we
- * mailed a fortnight ago with no reply and one who wrote to us this morning
- * share a last-touch date and mean opposite things, and that difference is
- * the one a rep acts on.
- *
- * The score, its three factors and the literal arithmetic live one
- * disclosure away — computed, inspectable, just not leading.
- */
-export function RelationshipPulse({ view }: Readonly<{ view: Contact360 }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const s = view.strength;
-  const warmest = view.network?.colleagues[0];
-
-  return (
-    <Panel title={t("contact.pulse.title")}>
-      <PanelBody>
-        <p className="pe-panel-text">
-          {warmest
-            ? t("contact.pulse.warmestIs", { name: warmest.display_name })
-            : t("contact.pulse.nobodyYet")}
-        </p>
-        <RelationshipChanges view={view} />
-        <FactList
-          className="contact-pulse-facts"
-          facts={[
-            {
-              key: "last-inbound",
-              term: t("contact.pulse.lastInbound"),
-              // The record's zone, not the reader's: when a message arrived
-              // is a fact about the record, and two colleagues comparing the
-              // same relationship have to name the same day for it.
-              value: view.last_inbound_at
-                ? formatDate(view.last_inbound_at, locale, recordZone)
-                : t("contact.pulse.neverInbound"),
-            },
-            {
-              key: "last-outbound",
-              term: t("contact.pulse.lastOutbound"),
-              value: view.last_outbound_at
-                ? formatDate(view.last_outbound_at, locale, recordZone)
-                : t("contact.pulse.neverOutbound"),
-            },
-          ]}
-        />
-        {s && (
-          <Disclosure summary={t("contact.pulse.why")}>
-            <p className="pe-panel-text">
-              {t("contact.pulse.arithmetic", {
-                score: formatNumber(s.score, locale),
-                recency: formatDecimal(s.factors.recency, locale, 2),
-                frequency: formatDecimal(s.factors.frequency, locale, 2),
-                reciprocity: formatDecimal(s.factors.reciprocity, locale, 2),
-              })}
-            </p>
-          </Disclosure>
-        )}
-      </PanelBody>
-    </Panel>
-  );
-}
-
-/**
- * RelationshipChanges says what HAPPENED to the relationship, beneath what it
- * currently is.
- *
- * The two belong together and are deliberately not folded. "Warm" is a
- * description the reader can already infer from the two dates above; "they
- * replied after 41 quiet days" is what makes those dates mean something.
- */
-function RelationshipChanges({ view }: Readonly<{ view: Contact360 }>) {
-  const t = useT();
-  const changes = view.relationship_changes ?? [];
-  if (changes.length === 0) {
-    return null;
-  }
-  return (
-    <ul className="pe-changes">
-      {changes.map((c) => (
-        <li key={c.kind}>{changeSentence(c, t)}</li>
-      ))}
-    </ul>
   );
 }
 
@@ -436,60 +342,4 @@ function confidenceBand(score?: number | null): ConfidenceLevel | undefined {
     return "high";
   }
   return score >= 0.5 ? "med" : "low";
-}
-
-/** WhoKnowsThem ranks colleagues by warmth — the ordering IS the answer. */
-export function WhoKnowsThem({ view }: Readonly<{ view: Contact360 }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const colleagues = view.network?.colleagues ?? [];
-  if (colleagues.length === 0) {
-    return null;
-  }
-  return (
-    <Panel title={t("contact.network.title")}>
-      <PanelBody>
-        <ul className="pe-network">
-          {colleagues.map((c) => (
-            <li key={c.user_id} className="pe-network-item">
-              <strong>{c.display_name}</strong>
-              <div>{proofLine(c, t, locale, recordZone)}</div>
-            </li>
-          ))}
-        </ul>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-/**
- * proofLine says WHY this colleague is the route, not just that they are.
- * Two-way traffic is named as such: six unanswered sends and six real
- * exchanges are different relationships wearing the same count.
- */
-function proofLine(
-  c: Colleague,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-  recordZone: string,
-): string {
-  const twoWay = (c.inbound_90d ?? 0) > 0 && (c.outbound_90d ?? 0) > 0;
-  const parts = [
-    twoWay
-      ? t("contact.network.twoWay", {
-          count: formatNumber(c.interactions_90d, locale),
-        })
-      : t("contact.network.oneSided", {
-          count: formatNumber(c.interactions_90d, locale),
-        }),
-  ];
-  if (c.last_inbound_at) {
-    parts.push(
-      t("contact.network.replied", {
-        when: formatDate(c.last_inbound_at, locale, recordZone),
-      }),
-    );
-  }
-  return parts.join(" · ");
 }

@@ -934,6 +934,15 @@ export const de = {
   "views.saveTitle": "Diese Ansicht speichern",
   "views.name": "Name",
   "views.rail": "Gespeicherte Ansichten",
+  "views.manage": "Ansichten verwalten",
+  "views.none": "Keine gespeicherten Ansichten",
+  "views.rename": "Umbenennen",
+  "views.renameNamed": "{name} umbenennen",
+  "views.delete": "Löschen",
+  "views.deleteNamed": "{name} löschen",
+  "views.deleteAsk":
+    "Das Löschen von {name} entfernt den Tab. Die Datensätze darin bleiben unverändert.",
+  "views.deleteConfirm": "Ansicht löschen",
   "list.viewMine": "Meine",
   "list.viewCustomers": "Kunden",
   "list.viewProspects": "Interessenten",
@@ -1193,6 +1202,7 @@ export const de = {
     "Dieser Deal hat noch keinen Deal Room. Eröffne einen auf der Deal-Seite.",
   "roompage.backToDeal": "← Zurück zum Deal",
   "roompage.accessMenu": "Zugang zum Raum",
+  "roompage.manage": "Raum verwalten",
   "roompage.pause": "Pausieren",
   "roompage.pauseHint":
     "Die Käuferseite behält ihre Links, sieht aber eine Pausenseite, bis du fortsetzt.",
@@ -1333,7 +1343,7 @@ export const de = {
   "finance.syncing":
     "Synchronisierung mit dem Buchhaltungssystem läuft. Die Zahlen erscheinen nach der ersten Synchronisierung.",
   "finance.noConnection":
-    "Kein Buchhaltungssystem verbunden. Verbinde eines, um Rechnungen und Zahlungsverhalten dieses Kunden zu sehen.",
+    "Kein Buchhaltungssystem verbunden. Rechnungen und Zahlungsverhalten dieses Kunden erscheinen, sobald eines verbunden ist.",
   "finance.unmapped":
     "Verbunden, aber dieses Unternehmen ist noch keinem Kunden im Buchhaltungssystem zugeordnet.",
   "finance.netInvoiced": "Netto fakturiert · 12 Monate",
@@ -1362,7 +1372,6 @@ export const de = {
   "finance.col.status": "Status",
   "finance.unnumbered": "Ohne Nummer",
   "finance.moreInvoices": "Weitere Rechnungen im Buchhaltungssystem",
-  "finance.connect": "Finanzsystem verbinden",
   "finance.syncedFrom": "Aus {provider} · synchronisiert {when}",
   "finance.fromNeverSynced": "Aus {provider} · noch nicht synchronisiert",
   "finance.status.draft": "Entwurf",
@@ -1490,17 +1499,6 @@ export const de = {
   "co.next.overdue": "\u00dcberfällig",
   "co.next.due": "Fällig {when}",
   "co.next.undated": "Kein Fälligkeitsdatum",
-  "co.facts.pipeline": "Offene Deals",
-  "co.facts.inFlight": "Laufend",
-  "co.facts.reading": "Wird geladen…",
-  "co.facts.noDeals": "Keine offenen Deals",
-  "co.facts.unpriced": "Noch ohne Betrag",
-  "co.facts.nothing": "Nichts",
-  "co.facts.deals_one": "1 Deal",
-  "co.facts.deals_other": "{count} Deals",
-  "co.facts.projects_one": "1 Projekt",
-  "co.facts.projects_other": "{count} Projekte",
-  "co.facts.atLeast": "oder mehr",
   "co.work.noDeals": "Keine offenen Deals.",
   "co.work.closes": "Abschluss {date}",
   "co.brief.by.model": "Von Margince geschrieben",
@@ -3347,6 +3345,10 @@ export const de = {
   "create.postalCode": "Postleitzahl",
   "create.country": "Ländercode (ISO 3166)",
   "create.companyName": "Unternehmen",
+  "create.companyPicked":
+    "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
+  "create.companyNew":
+    "Legt ein neues Unternehmen an, sofern keines aus der Liste gewählt wird.",
   "create.dealName": "Deal-Name",
   "create.amount": "Wert",
   "create.currency": "Währung",
@@ -4025,6 +4027,10 @@ export const de = {
   "analytics.share.copyFailed":
     "Markiere den Link oben und kopiere ihn von Hand.",
   "analytics.share.done": "Fertig",
+  "analytics.share.revoke": "Link schließen",
+  "analytics.share.closedTitle": "Link geschlossen",
+  "analytics.share.closedBody":
+    "Der Link öffnet nicht mehr. Wer ihm folgt, wird abgewiesen.",
   "analytics.frame": "Stand {asOf} · {zone}",
   "review.title": "Prüfungen vor der Einschätzung",
   "review.ready": "Bereit",
@@ -6763,18 +6769,7 @@ export const de = {
   "strength.inout": "{in} eingehend · {out} ausgehend (90 Tage)",
   "strength.computedFrom": "Berechnet aus Aktivitäten: {count}",
 
-  // Die Beziehungsgraph-Karten (ADR-0078). Die Kollegen-Stufen sind die von
-  // PO-F-3b und unterscheiden sich bewusst von denen der arbeitsbereichsweiten
-  // Karte: beide messen Verschiedenes und dürfen nicht vergleichbar wirken.
-  "network.title": "Verbindungen im Team",
-  "network.empty":
-    "Noch kein Teammitglied stand mit diesem Kontakt in Verbindung.",
-  "network.interactions": "Interaktionen (90 Tage): {count}",
-  "network.neverSpoken": "Kein Kontakt erfasst",
-  "network.bucket.none": "Kein Kontakt",
-  "network.bucket.weak": "Schwach",
-  "network.bucket.moderate": "Mittel",
-  "network.bucket.strong": "Stark",
+  // Die Abdeckungskarte des Beziehungsgraphen (ADR-0078).
   "coverage.engaged": "Im Austausch",
   "coverage.quiet": "Kein beidseitiger Kontakt",
   "coverage.seatWithheld": "Ein Kontakt, den du nicht lesen kannst",
@@ -8652,18 +8647,6 @@ export const de = {
   "contact.bandBadge.weak": "Schwach",
   "contact.bandBadge.moderate": "Mittel",
   "contact.bandBadge.strong": "Stark",
-  "contact.pulse.title": "Beziehung",
-  "contact.pulse.warmestIs":
-    "{name} hat die stärkste Beziehung zu diesem Kontakt.",
-  "contact.pulse.nobodyYet":
-    "Im Unternehmen hat noch niemand einen erfassten Austausch mit diesem Kontakt.",
-  "contact.pulse.lastInbound": "Letzte Nachricht des Kontakts",
-  "contact.pulse.lastOutbound": "Letzte Nachricht deines Teams",
-  "contact.pulse.neverInbound": "nie",
-  "contact.pulse.neverOutbound": "nie",
-  "contact.pulse.why": "So wird das berechnet",
-  "contact.pulse.arithmetic":
-    "Score {score}/100 = 100 × Aktualität {recency} × Häufigkeit {frequency} × Gegenseitigkeit {reciprocity}. Wird beim Laden aus erfassten Aktivitäten berechnet und nicht gespeichert.",
   "contact.identity.title": "Identität",
   "contact.identity.emailDead":
     "Unzustellbar. E-Mails an diese Adresse werden nicht zugestellt.",
@@ -8678,9 +8661,6 @@ export const de = {
     "Für keinen Zweck ist eine Einwilligung erteilt, daher sind ausgehende Nachrichten blockiert.",
   "contact.consent.blocked": "Blockiert: {purposes}",
   "contact.network.title": "Teammitglieder, die diesen Kontakt kennen",
-  "contact.network.twoWay": "Wechselseitige Austausche in 90 Tagen: {count}",
-  "contact.network.oneSided": "Einseitige Interaktionen in 90 Tagen: {count}",
-  "contact.network.replied": "hat am {when} geantwortet",
 
   "contact.page.loading": "Wird geladen…",
   "contact.page.notOpened": "Dieser Kontakt wurde nicht geöffnet.",
@@ -9131,6 +9111,20 @@ export const de = {
   "filters.emptyGroup":
     "Noch keine Bedingungen. Eine leere Gruppe trifft auf nichts zu; füge eine Bedingung hinzu.",
   "filters.field": "Feld",
+  "filters.field.classification": "Klassifizierung",
+  "filters.field.company_industry": "Branche des Unternehmens",
+  "filters.field.company_lifecycle": "Lebenszyklus des Unternehmens",
+  "filters.field.company_size_band": "Größe des Unternehmens",
+  "filters.field.hosting_provider": "Hosting",
+  "filters.field.mail_provider": "E-Mail-System",
+  "filters.field.operated_service": "Betriebener Dienst",
+  "filters.field.owner_team_id": "Zuständiges Team",
+  "filters.field.phase": "Projektphase",
+  "filters.field.pipeline_id": "Pipeline",
+  "filters.field.relationship_type": "Beziehungstyp",
+  "filters.field.stage_id": "Phase",
+  "filters.field.tag": "Tag",
+  "filters.field.technology": "Technologie",
   "filters.choosePlaceholder": "Feld ausw\u00e4hlen",
   "filters.customBadge": "Eigenes Feld",
   "filters.operator": "Operator",
@@ -9256,6 +9250,7 @@ export const de = {
     "Noch keine Unternehmen. Ein Projekt kann den Kunden und alle Partner oder Subunternehmen umfassen, die es umsetzen.",
   "projectCompanies.attach": "Unternehmen verknüpfen",
   "projectCompanies.detachTitle": "Unternehmen aus dem Projekt entfernen?",
+  "projectCompanies.detachConfirm": "Unternehmen entfernen",
   "projectCompanies.searchLabel": "Unternehmen nach Name suchen",
   "contactProjects.title": "Projekte",
   "contactProjects.empty":
@@ -9268,7 +9263,6 @@ export const de = {
   "contactRole.deliveryLead": "Umsetzungsleitung",
   "contactRole.expert": "Fachexpertise",
   "contactRole.user": "Nutzende",
-  "projectLinks.new": "Neues Projekt",
   "projectLinks.attach": "Projekt verknüpfen",
   "projectLinks.move": "Zu anderem Projekt verschieben",
   "projectLinks.detach": "Verknüpfung lösen",

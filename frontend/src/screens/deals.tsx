@@ -141,6 +141,7 @@ import {
   useEntityName,
   useRoster,
 } from "./entityref";
+import { searchCompanies } from "./filterreference";
 import {
   LIST_PAGE_SIZES,
   type ListQuery,
@@ -1579,24 +1580,6 @@ function setOrClearFilter(
   });
 }
 
-// The company filter's own value source: a workspace holds more companies
-// than any fixed list should offer, so the value step searches /companies
-// by name instead of one this screen happened to fetch for something else.
-async function searchCompanies(
-  query: string,
-): Promise<readonly { value: string; label: string }[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q: query, limit: 20 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.map((company) => ({
-    value: company.id,
-    label: company.display_name,
-  }));
-}
-
 // Whether the reader has narrowed this list themselves.
 //
 // The same question `SaveViewAction` asks before it offers to save, asked here
@@ -1614,9 +1597,9 @@ function narrowsTheDealList(query: ListQuery): boolean {
 
 // The stage and company filters. The stage list is loaded whole already (a
 // pipeline has few stages), so it stays a fixed chip; the company filter
-// searches rather than listing (see searchCompanies above). Both are still
-// filters, so they read as the same chip as every other one instead of as a
-// native select sitting among them.
+// searches rather than listing (see searchCompanies in filterreference.ts).
+// Both are still filters, so they read as the same chip as every other one
+// instead of as a native select sitting among them.
 function dealFilterChips(
   stages: Stage[],
   t: ReturnType<typeof useT>,

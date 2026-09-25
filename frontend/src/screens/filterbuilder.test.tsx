@@ -487,7 +487,7 @@ describe("editing the tree", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /Remove owner id clause/ }),
+      screen.getByRole("button", { name: "Remove Owner clause" }),
     );
 
     expect(wire()).toEqual({
