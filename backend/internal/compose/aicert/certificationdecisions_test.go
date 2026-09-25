@@ -132,7 +132,7 @@ func TestTheDecisionSectionShowsEachRecordAndWhetherItServes(t *testing.T) {
 		FallbackByReason: map[string]int{"below_floor": 1}, ServedPassRate: 1,
 	}
 	current := aicert.Record{
-		Task: "site_triage", Kind: aicert.KindDecision, Site: "triage", Provider: "openrouter_decision",
+		Task: "site_triage", Kind: aicert.KindDecision, Site: "triage", Provider: "jev_compatible",
 		Model: "typesafe/jev-1.13", EnvClass: "cloud_frontier", Verdict: aicert.VerdictCertified, Runs: 15,
 		Decision: stats, Scenarios: []aicert.ScenarioRecord{{Scenario: "a", Site: "triage", Stamp: "s-a"}},
 	}
@@ -153,7 +153,7 @@ func TestTheDecisionSectionShowsEachRecordAndWhetherItServes(t *testing.T) {
 	var page strings.Builder
 	writeAICertDecisions(&page, decisions)
 	for _, want := range []string{
-		"| `site_triage/triage` | `openrouter_decision · typesafe/jev-1.13 · cloud_frontier` | `current` | `certified` | yes | 15 | 14 | 0 | 0.07 | `below_floor` 1 | 1.00 |",
+		"| `site_triage/triage` | `jev_compatible · typesafe/jev-1.13 · cloud_frontier` | `current` | `certified` | yes | 15 | 14 | 0 | 0.07 | `below_floor` 1 | 1.00 |",
 		"`stale` — the prompt this build sends changed under scenario a",
 	} {
 		if !strings.Contains(page.String(), want) {

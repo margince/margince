@@ -46,13 +46,19 @@ type providerDescriptor struct {
 	// wildcardReason is why this adapter's carriage keeps a wildcard; empty
 	// means the adapter names its decoders.
 	wildcardReason string
-	// keyOwner is the provider whose credential this adapter sends, for an
-	// adapter that reaches a vendor already holding one. Empty means its own
-	// keyEnv (or none): one vendor account is one vault ref, however many
-	// wires reach it.
-	keyOwner string
-	// decisionPath is the decision wire's path under the binding's base_url.
-	decisionPath string
+	// keyOptional marks an adapter that sends its keyEnv credential when one is
+	// held and calls without one otherwise: a self-hosted server needs none, so
+	// nothing that asks whether a binding can be served demands the key.
+	keyOptional bool
+	// defaultEndpoint is the full decision endpoint an omitted base_url resolves
+	// to; empty means the binding must name one. A decision binding's base_url
+	// is the whole URL, posted to as written.
+	defaultEndpoint string
+	// localByEndpoint marks an adapter whose locality is its endpoint's: it is
+	// local exactly when its base_url's host is the customer's own
+	// (classifyHost). That one answer makes it sovereign-eligible and decides
+	// whether a local-only task may take it.
+	localByEndpoint bool
 }
 
 // capSet is the set of wires an adapter answers on.
@@ -65,13 +71,13 @@ const (
 
 func (c capSet) has(want capSet) bool { return c&want != 0 }
 
-// The decision-wire provider words. openrouter_decision is OpenRouter's
-// decisions endpoint, reached with the openai_compatible key; laya is a
-// same-host encoder answering the same wire, keyless and sovereign-eligible.
+// The decision-wire provider words. jev is TypeSafe's own hosted API; any
+// other server answering the same wire — a broker, or an encoder on the
+// operator's own host — is jev_compatible, at the endpoint the binding names.
 const (
-	providerOpenRouterDecision = "openrouter_decision"
-	providerLaya               = "laya"
-	defaultLayaBaseURL         = "http://127.0.0.1:8765"
+	providerJev           = "jev"
+	providerJevCompatible = "jev_compatible"
+	defaultJevEndpoint    = "https://api.typesafe.ai/v1/systemone"
 )
 
 // providerRegistry's row order is the order knownProviders reports, which
@@ -113,8 +119,9 @@ var providerRegistry = []providerDescriptor{
 		// operator's own network is a documented one — so a private address is
 		// a binding this lane must serve, and the key travelling there travels
 		// to the operator's own infrastructure.
-		// TestEveryLocalProviderTakesTheOperatorLane names it as the sole
-		// exception, so a future adapter cannot join it quietly. Its key
+		// TestEveryLocalProviderTakesTheOperatorLane names it and
+		// jev_compatible as the only exceptions, so a future adapter cannot
+		// join them quietly. Its key
 		// variable is namespaced because it has no vendor convention.
 		name: providerOpenAICompatible, caps: capChat, egress: egressOperatorEndpoint,
 		keyEnv: "OPENAI_COMPATIBLE_API_KEY", servedSource: servedIdentitySourceEcho,
@@ -132,16 +139,19 @@ var providerRegistry = []providerDescriptor{
 		carriage: geminiCarries,
 	},
 	{
-		name: providerOpenRouterDecision, caps: capDecision, egress: egressPublicOnly,
-		keyOwner: providerOpenAICompatible, servedSource: servedIdentitySourceResponse,
-		decisionPath: "/alpha/decisions",
+		// TypeSafe's own API: a vendor cloud, so never local and never pinned
+		// to an EU host.
+		name: providerJev, caps: capDecision, egress: egressPublicOnly, keyEnv: "TYPESAFE_API_KEY",
+		servedSource: servedIdentitySourceResponse, vendorHosted: true, defaultEndpoint: defaultJevEndpoint,
 	},
 	{
-		// Keyless and same-host: the operator lane, sovereign-eligible, and its
-		// omitted base_url is loopback, so the sovereign rule checks it.
-		name: providerLaya, caps: capDecision, local: true, egress: egressOperatorEndpoint,
-		servedSource: servedIdentitySourceEcho, defaultBaseURL: defaultLayaBaseURL,
-		decisionPath: "/v1/systemone",
+		// Any server on the Jev wire. The operator lane for the reason
+		// openai_compatible takes it: a self-hosted encoder on the operator's
+		// own network is a binding this lane must serve. Such a server needs no
+		// key, so the key is sent when held and never demanded.
+		name: providerJevCompatible, caps: capDecision, egress: egressOperatorEndpoint,
+		keyEnv: "JEV_COMPATIBLE_API_KEY", keyOptional: true, servedSource: servedIdentitySourceEcho,
+		localByEndpoint: true,
 	},
 }
 
@@ -202,12 +212,4 @@ func providerNamesWhere(keep func(providerDescriptor) bool) []string {
 // the source.
 func DecisionProviders() []string {
 	return providerNamesWhere(func(d providerDescriptor) bool { return d.caps.has(capDecision) })
-}
-
-// keyOwnerOf is the provider whose credential a binding of provider sends.
-func keyOwnerOf(provider string) string {
-	if d, _ := providerByName(provider); d.keyOwner != "" {
-		return d.keyOwner
-	}
-	return provider
 }

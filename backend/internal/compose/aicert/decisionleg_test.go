@@ -21,7 +21,7 @@ import (
 
 // jevLane is the lane the leg certifies in these tests. Its provider and
 // model name every record; the scripted decider stands in for its client.
-var jevLane = ai.DecisionsConfig{Provider: "openrouter_decision", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api"}
+var jevLane = ai.DecisionsConfig{Provider: "jev_compatible", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api/alpha/decisions"}
 
 // scriptedDecider answers each call with the next scripted answer, the last
 // one repeating, and counts the calls it was sent.
@@ -258,7 +258,7 @@ func TestTheDecisionPreflightFailsOnAFailedProbeAndSkipsLocalOnlyTasks(t *testin
 
 	failing := &scriptedDecider{replies: []decision.Response{{}}, errs: []error{errors.New("the endpoint is down")}}
 	err := preflightDecisions(wsContext(t), cfg, scenarios, &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(failing)}}, quietLogger())
-	if err == nil || !strings.Contains(err.Error(), "decisions lane openrouter_decision:typesafe/jev-1.13") {
+	if err == nil || !strings.Contains(err.Error(), "decisions lane jev_compatible:typesafe/jev-1.13") {
 		t.Fatalf("a failed probe: want the run refused naming the lane, got %v", err)
 	}
 	if failing.called() != 1 {

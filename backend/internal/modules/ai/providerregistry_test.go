@@ -21,13 +21,12 @@ func TestTheProviderListKeepsItsOrder(t *testing.T) {
 	if !slices.Equal(knownProviders, want) {
 		t.Fatalf("knownProviders = %v, want %v", knownProviders, want)
 	}
-	if got, want := DecisionProviders(), []string{providerOpenRouterDecision, providerLaya}; !slices.Equal(got, want) {
+	if got, want := DecisionProviders(), []string{providerJev, providerJevCompatible}; !slices.Equal(got, want) {
 		t.Fatalf("DecisionProviders() = %v, want %v", got, want)
 	}
 }
 
-// A decision adapter answers no chat call, so no chat-side table may name it,
-// and its credential is its key owner's.
+// A decision adapter answers no chat call, so no chat-side table may name it.
 func TestADecisionProviderIsKnownOnlyToTheDecisionLane(t *testing.T) {
 	for _, provider := range DecisionProviders() {
 		if slices.Contains(knownProviders, provider) || localProviders[provider] {
@@ -36,15 +35,19 @@ func TestADecisionProviderIsKnownOnlyToTheDecisionLane(t *testing.T) {
 		if _, carried := wireCarriage()[provider]; carried {
 			t.Errorf("%s declares a chat carriage", provider)
 		}
-		if _, keyed := cloudKeyEnv[provider]; keyed {
-			t.Errorf("%s has a key slot of its own; it must use its key owner's", provider)
+	}
+}
+
+// Every key slot is one row on the key screen, and only a jev_compatible key
+// is optional: a self-hosted Jev-wire server needs none.
+func TestOnlyTheJevCompatibleKeyIsOptional(t *testing.T) {
+	if got, want := CloudProvidersNeedingKeys(), []string{providerAnthropic, providerOpenAICompatible, providerOpenAI, providerGemini, providerJev, providerJevCompatible}; !slices.Equal(got, want) {
+		t.Errorf("CloudProvidersNeedingKeys() = %v, want %v", got, want)
+	}
+	for _, provider := range CloudProvidersNeedingKeys() {
+		if got, want := keyIsOptional(provider), provider == providerJevCompatible; got != want {
+			t.Errorf("keyIsOptional(%s) = %v, want %v", provider, got, want)
 		}
-	}
-	if got := keyOwnerOf(providerOpenRouterDecision); got != providerOpenAICompatible {
-		t.Errorf("keyOwnerOf(openrouter_decision) = %q, want openai_compatible", got)
-	}
-	if got := keyOwnerOf(providerGemini); got != providerGemini {
-		t.Errorf("keyOwnerOf(gemini) = %q, want itself", got)
 	}
 }
 
@@ -56,23 +59,23 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 		ProviderFake: egressPublicOnly, providerAnthropic: egressPublicOnly,
 		providerOpenAI: egressPublicOnly, providerGemini: egressPublicOnly,
 		providerOllama: egressOperatorEndpoint, providerVLLM: egressOperatorEndpoint,
-		providerOpenAICompatible:   egressOperatorEndpoint,
-		providerOpenRouterDecision: egressPublicOnly, providerLaya: egressOperatorEndpoint,
+		providerOpenAICompatible: egressOperatorEndpoint,
+		providerJev:              egressPublicOnly, providerJevCompatible: egressOperatorEndpoint,
 	})
 	assertMap(t, "cloudKeyEnv", cloudKeyEnv, map[string]string{
 		providerAnthropic: "ANTHROPIC_API_KEY", providerOpenAI: "OPENAI_API_KEY",
 		providerGemini: "GEMINI_API_KEY", providerOpenAICompatible: "OPENAI_COMPATIBLE_API_KEY",
+		providerJev: "TYPESAFE_API_KEY", providerJevCompatible: "JEV_COMPATIBLE_API_KEY",
 	})
 	assertMap(t, "servedSource", servedSource, map[string]string{
 		providerAnthropic: servedIdentitySourceResponse, providerOllama: servedIdentitySourceResponse,
 		providerGemini: servedIdentitySourceResponse, providerOpenAI: servedIdentitySourceResponse,
 		providerOpenAICompatible: servedIdentitySourceEcho, providerVLLM: servedIdentitySourceEcho,
-		ProviderFake: servedIdentitySourceResponse, providerOpenRouterDecision: servedIdentitySourceResponse,
-		providerLaya: servedIdentitySourceEcho,
+		ProviderFake: servedIdentitySourceResponse, providerJev: servedIdentitySourceResponse,
+		providerJevCompatible: servedIdentitySourceEcho,
 	})
 	assertMap(t, "localBaseURLDefaults", localBaseURLDefaults, map[string]string{
 		providerOllama: defaultOllamaBaseURL, providerVLLM: defaultVLLMBaseURL,
-		providerLaya: defaultLayaBaseURL,
 	})
 	if got, want := slices.Sorted(maps.Keys(wildcardWires)), []string{ProviderFake, providerOllama, providerOpenAICompatible, providerVLLM}; !slices.Equal(got, want) {
 		t.Errorf("wildcardWires keys = %v, want %v", got, want)

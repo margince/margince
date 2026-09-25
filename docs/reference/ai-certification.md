@@ -641,7 +641,7 @@ Everything the grades above are computed from, folded so the page stays short.
 | … best state `stale` | 1 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 152 |
-| Committed records | 173 |
+| Committed records | 172 |
 | Bindings measured | 17 |
 
 #### Why the stale records went stale
@@ -1054,9 +1054,7 @@ any run, and at least one was kept. The lane serves a site only while its
 record is certified and not stale (*Serves*); `make gen` writes those rows into
 `internal/modules/ai/decisioncert_gen.go`.
 
-| Site | Binding | State | Verdict | Serves | Runs | Kept | Kept wrong | Fallback rate | Fallbacks by reason | Served pass rate |
-|---|---|---|---|---|---:|---:|---:|---:|---|---:|
-| `site_triage/triage` | `openrouter_decision · typesafe/jev-1.13 · cloud_frontier` | `current` | `certified` | yes | 15 | 15 | 0 | 0.00 | - | 1.00 |
+No decision record is committed, so the decision lane serves no site.
 
 </details>
 

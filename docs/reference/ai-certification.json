@@ -6,7 +6,7 @@
     "sites_best_stale": 1,
     "sites_absent": 0,
     "scenarios": 152,
-    "records": 173,
+    "records": 172,
     "bindings": 17,
     "self_judged_records": 4
   },
@@ -13463,25 +13463,5 @@
       "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
     }
   ],
-  "decisions": [
-    {
-      "task": "site_triage",
-      "site": "triage",
-      "binding": {
-        "provider": "openrouter_decision",
-        "model": "typesafe/jev-1.13",
-        "env": "cloud_frontier"
-      },
-      "state": "current",
-      "verdict": "certified",
-      "serves": true,
-      "runs": 15,
-      "kept": 15,
-      "kept_wrong": 0,
-      "fallback_rate": 0,
-      "fallback_by_reason": {},
-      "served_pass_rate": 1,
-      "stale_reason": ""
-    }
-  ]
+  "decisions": []
 }

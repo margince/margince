@@ -78,7 +78,7 @@ func TestWireAiCallNamesEachAttemptsKindAndBinding(t *testing.T) {
 	wire := wireAiCall(CallDetail{
 		CallSummary: CallSummary{ID: ids.NewV7(), Task: "site_triage", Kind: callKindCompletion, Tier: "cheap_cloud"},
 		Attempts: []CallAttempt{
-			{Attempt: 1, Kind: callKindDecision, Tier: string(TierDecideLane), Provider: providerOpenRouterDecision, ModelID: "typesafe/jev-1.13"},
+			{Attempt: 1, Kind: callKindDecision, Tier: string(TierDecideLane), Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13"},
 			{Attempt: 2, IsTerminal: true, Kind: callKindCompletion, AttemptReason: attemptReasonDecisionBelowFloor},
 		},
 	})
@@ -87,7 +87,7 @@ func TestWireAiCallNamesEachAttemptsKindAndBinding(t *testing.T) {
 	}
 	first, second := wire.Attempts[0], wire.Attempts[1]
 	if first.Kind != callKindDecision || first.Tier == nil || *first.Tier != "decide" ||
-		first.Provider == nil || *first.Provider != providerOpenRouterDecision || first.ModelId == nil || *first.ModelId != "typesafe/jev-1.13" {
+		first.Provider == nil || *first.Provider != providerJevCompatible || first.ModelId == nil || *first.ModelId != "typesafe/jev-1.13" {
 		t.Errorf("decision attempt = %+v", first)
 	}
 	if second.Kind != callKindCompletion || second.Tier != nil || second.Provider != nil || second.ModelId != nil {

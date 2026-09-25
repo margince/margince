@@ -20,8 +20,8 @@ import (
 
 // The two fixtures: decision_jev_response.json is one real answer from
 // OpenRouter's decisions endpoint, captured 2026-09-25 with only its id
-// replaced. decision_laya_response.json is CONSTRUCTED, shaped from the
-// 2026-09-24 observation of Laya's /v1/systemone: Jev's fields plus
+// replaced. decision_selfhosted_response.json is CONSTRUCTED, shaped from the
+// 2026-09-24 observation of a self-hosted server's (Laya's) /v1/systemone: Jev's fields plus
 // answer_confidence, action and routing, output_tokens 0 and no cost.
 
 var triageQuestion = decision.Request{
@@ -68,8 +68,8 @@ func fixture(t *testing.T, name string) []byte {
 
 func TestTheDecisionWireDecodesJevAndPostsItsShape(t *testing.T) {
 	srv, seen := decisionServer(t, http.StatusOK, fixture(t, "decision_jev_response.json"))
-	lane := DecisionsConfig{Provider: providerOpenRouterDecision, Model: "typesafe/jev-1.13", BaseURL: srv.URL + "/api/"}
-	client, err := selectDeciderOn(lane, cloudKeyFor(providerOpenAICompatible, "or-key"), srv.Client())
+	lane := DecisionsConfig{Provider: providerJevCompatible, Model: "typesafe/jev-1.13", BaseURL: srv.URL + "/api/alpha/decisions"}
+	client, err := selectDeciderOn(lane, cloudKeyFor(providerJevCompatible, "or-key"), srv.Client())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,10 +99,13 @@ func TestTheDecisionWireDecodesJevAndPostsItsShape(t *testing.T) {
 	}
 }
 
-func TestTheDecisionWireDecodesLayaAndSendsNoKey(t *testing.T) {
-	srv, seen := decisionServer(t, http.StatusOK, fixture(t, "decision_laya_response.json"))
-	lane := DecisionsConfig{Provider: providerLaya, Model: "typed-decisions", BaseURL: srv.URL}
-	client, err := selectDeciderOn(lane, allCloudKeys(), srv.Client())
+// A self-hosted server holds no key of this installation's, so with none
+// sealed the client calls without one — and the endpoint is the one written,
+// with nothing appended.
+func TestTheDecisionWireDecodesASelfHostedServerAndSendsNoKeyItDoesNotHold(t *testing.T) {
+	srv, seen := decisionServer(t, http.StatusOK, fixture(t, "decision_selfhosted_response.json"))
+	lane := DecisionsConfig{Provider: providerJevCompatible, Model: "typed-decisions", BaseURL: srv.URL + "/v1/systemone"}
+	client, err := selectDeciderOn(lane, noCloudKeys(), srv.Client())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +139,7 @@ func TestTheDecisionWireClassifiesEachRefusal(t *testing.T) {
 	}
 	for _, tc := range cases {
 		srv, _ := decisionServer(t, tc.status, []byte(tc.body))
-		client, err := selectDeciderOn(DecisionsConfig{Provider: providerLaya, Model: "m", BaseURL: srv.URL}, nil, srv.Client())
+		client, err := selectDeciderOn(DecisionsConfig{Provider: providerJevCompatible, Model: "m", BaseURL: srv.URL}, nil, srv.Client())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -157,10 +160,12 @@ func TestTheDecisionWireClassifiesEachRefusal(t *testing.T) {
 }
 
 func TestSelectDeciderNamesTheMissingKey(t *testing.T) {
-	lane := DecisionsConfig{Provider: providerOpenRouterDecision, Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api"}
-	_, err := selectDecider(lane, noCloudKeys())
-	if !errors.Is(err, errNoProviderKey) || !strings.Contains(err.Error(), "OPENAI_COMPATIBLE_API_KEY") {
-		t.Fatalf("err = %v, want the missing OPENAI_COMPATIBLE_API_KEY named", err)
+	_, err := selectDecider(DecisionsConfig{Provider: providerJev, Model: "jev-1.13.0"}, noCloudKeys())
+	if !errors.Is(err, errNoProviderKey) || !strings.Contains(err.Error(), "TYPESAFE_API_KEY") {
+		t.Fatalf("err = %v, want the missing TYPESAFE_API_KEY named", err)
+	}
+	if _, err := selectDecider(DecisionsConfig{Provider: providerJevCompatible, Model: "m"}, noCloudKeys()); !errors.Is(err, errNoBaseURL) {
+		t.Fatalf("a jev_compatible lane with no endpoint: err = %v, want errNoBaseURL", err)
 	}
 	if _, err := selectDecider(DecisionsConfig{Provider: providerOllama, Model: "m"}, noCloudKeys()); err == nil {
 		t.Fatal("a chat provider built a decision client")
@@ -171,25 +176,36 @@ func TestSelectDeciderNamesTheMissingKey(t *testing.T) {
 	}
 }
 
-// The production constructor carries the lane's egress guard: the Jev lane
-// sends this installation's OpenRouter key, so it may not be pointed at this
-// host, while a same-host Laya must still reach loopback.
+// The production constructor carries the lane's egress guard: the official
+// lane sends this installation's TypeSafe key, so it may not be pointed at this
+// host, while a self-hosted jev_compatible server must still reach loopback.
 func TestSelectDeciderWiresTheEgressGuard(t *testing.T) {
-	srv, _ := decisionServer(t, http.StatusOK, fixture(t, "decision_laya_response.json"))
-	jev, err := selectDecider(DecisionsConfig{Provider: providerOpenRouterDecision, Model: "m", BaseURL: srv.URL},
-		cloudKeyFor(providerOpenAICompatible, "k"))
+	srv, _ := decisionServer(t, http.StatusOK, fixture(t, "decision_selfhosted_response.json"))
+	official, err := selectDecider(DecisionsConfig{Provider: providerJev, Model: "m", BaseURL: srv.URL},
+		cloudKeyFor(providerJev, "k"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := jev.Decide(context.Background(), triageQuestion); err == nil || !strings.Contains(err.Error(), "netguard") {
-		t.Fatalf("the Jev lane dialed loopback, or refused for another reason: %v", err)
+	if _, err := official.Decide(context.Background(), triageQuestion); err == nil || !strings.Contains(err.Error(), "netguard") {
+		t.Fatalf("the official lane dialed loopback, or refused for another reason: %v", err)
 	}
-	laya, err := selectDecider(DecisionsConfig{Provider: providerLaya, Model: "m", BaseURL: srv.URL}, noCloudKeys())
+	selfHosted, err := selectDecider(DecisionsConfig{Provider: providerJevCompatible, Model: "m", BaseURL: srv.URL}, noCloudKeys())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := laya.Decide(context.Background(), triageQuestion); err != nil {
-		t.Fatalf("the Laya lane could not reach its own loopback endpoint: %v", err)
+	if _, err := selfHosted.Decide(context.Background(), triageQuestion); err != nil {
+		t.Fatalf("the self-hosted lane could not reach its own loopback endpoint: %v", err)
+	}
+}
+
+// With no base_url the official lane posts to TypeSafe's own endpoint.
+func TestTheOfficialLaneDefaultsToTypeSafesEndpoint(t *testing.T) {
+	client, err := selectDeciderOn(DecisionsConfig{Provider: providerJev, Model: "jev-1.13.0"}, cloudKeyFor(providerJev, "ts-key"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client.url != "https://api.typesafe.ai/v1/systemone" || client.apiKey != "ts-key" {
+		t.Errorf("url = %q, key = %q", client.url, client.apiKey)
 	}
 }
 
@@ -201,9 +217,9 @@ func TestADecisionProviderIsNeverDialledForAList(t *testing.T) {
 		provider string
 		want     ModelAvailability
 	}{
-		{ProfileCloudFrontier, providerOpenRouterDecision, AvailabilityNotPublished},
-		{ProfileSovereign, providerOpenRouterDecision, AvailabilityProfileForbids},
-		{ProfileSovereign, providerLaya, AvailabilityNotPublished},
+		{ProfileCloudFrontier, providerJev, AvailabilityNotPublished},
+		{ProfileSovereign, providerJev, AvailabilityProfileForbids},
+		{ProfileSovereign, providerJevCompatible, AvailabilityNotPublished},
 		{ProfileSovereign, providerOllama, AvailabilityOK},
 		{ProfileSovereign, providerGemini, AvailabilityProfileForbids},
 		{ProfileCloudFrontier, providerGemini, AvailabilityOK},

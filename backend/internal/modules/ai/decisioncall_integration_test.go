@@ -38,7 +38,7 @@ func recordDecisionThenLadder(ctx context.Context, t *testing.T, meter *CallMete
 	if err := meter.Record(ctx, []Call{
 		{
 			LogicalCallID: logical, Attempt: 1, Kind: callKindDecision, Task: TaskSiteTriage, Tier: TierDecideLane,
-			Provider: providerOpenRouterDecision, ModelID: "typesafe/jev-1.13", RequestFingerprint: "",
+			Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13", RequestFingerprint: "",
 			TokensIn: 425, ServedModel: "typesafe/jev-1.13-20260917", ServedIdentitySource: servedIdentitySourceResponse,
 			ServedProvider: "TypeSafe",
 		},
@@ -76,7 +76,7 @@ func TestADecisionCallRoundTripsTheTrace(t *testing.T) {
 	}
 	first, second := detail.Attempts[0], detail.Attempts[1]
 	if first.Kind != callKindDecision || first.Tier != string(TierDecideLane) ||
-		first.Provider != providerOpenRouterDecision || first.ModelID != "typesafe/jev-1.13" || first.TokensIn != 425 {
+		first.Provider != providerJevCompatible || first.ModelID != "typesafe/jev-1.13" || first.TokensIn != 425 {
 		t.Errorf("decision attempt = %+v", first)
 	}
 	if second.Kind != callKindCompletion || second.Tier != string(TierCheapCloud) || second.AttemptReason != attemptReasonDecisionBelowFloor {
@@ -107,13 +107,13 @@ func TestTheRateLaneAcceptsDecisions(t *testing.T) {
 	store := env.storeFor(ws)
 
 	row, err := store.SetModelRate(ctx, SetModelRateInput{
-		Provider: providerOpenRouterDecision, ModelID: "typesafe/jev-1.13",
+		Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13",
 		InputUsd: "0.042", OutputUsd: "0", CacheReadUsd: "0", CacheWriteUsd: "0", Lane: LaneDecisions,
 	})
 	if err != nil {
 		t.Fatalf("SetModelRate: %v", err)
 	}
-	if row.Lane != LaneDecisions || laneOf(ctx, t, store, providerOpenRouterDecision, "typesafe/jev-1.13") != LaneDecisions {
+	if row.Lane != LaneDecisions || laneOf(ctx, t, store, providerJevCompatible, "typesafe/jev-1.13") != LaneDecisions {
 		t.Errorf("filed as %q, want %q", row.Lane, LaneDecisions)
 	}
 }

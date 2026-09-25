@@ -30,9 +30,9 @@ func TestRoutingFromDeployConfigCarriesDecisions(t *testing.T) {
 		t.Fatalf("the preset has no seeds.ai_routing.tiers block to add the lane beside")
 	}
 	withLane := strings.Replace(string(preset), anchor, "\n    decisions:\n"+
-		"      provider: openrouter_decision\n"+
+		"      provider: jev_compatible\n"+
 		"      model: typesafe/jev-1.13\n"+
-		"      base_url: https://openrouter.ai/api\n"+anchor[1:], 1)
+		"      base_url: https://openrouter.ai/api/alpha/decisions\n"+anchor[1:], 1)
 	path := filepath.Join(t.TempDir(), "openrouter_cloud_decisions.yaml")
 	if err := os.WriteFile(path, []byte(withLane), 0o600); err != nil {
 		t.Fatalf("writing the scratch config: %v", err)
@@ -42,7 +42,7 @@ func TestRoutingFromDeployConfigCarriesDecisions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RoutingFromDeployConfig: %v", err)
 	}
-	want := ai.DecisionsConfig{Provider: "openrouter_decision", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api"}
+	want := ai.DecisionsConfig{Provider: "jev_compatible", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api/alpha/decisions"}
 	if routing.Decisions == nil || *routing.Decisions != want {
 		t.Fatalf("decisions = %+v, want %+v", routing.Decisions, want)
 	}

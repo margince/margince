@@ -133,7 +133,7 @@ func TestEveryRoutingFieldSurvivesTheRoundTrip(t *testing.T) {
 		Profile:    ai.ProfileEUHosted,
 		Tiers:      map[ai.Tier]ai.ProviderConfig{ai.TierPremium: openRouter},
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: openRouter, Dimensions: 768},
-		Decisions:  &ai.DecisionsConfig{Provider: "openrouter_decision", Model: "jev", BaseURL: "https://openrouter.ai/api"},
+		Decisions:  &ai.DecisionsConfig{Provider: "jev_compatible", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api/alpha/decisions"},
 	}
 	assertEveryFieldSet(t, reflect.ValueOf(full), "RoutingConfig")
 

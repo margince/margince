@@ -205,8 +205,8 @@ func TestAnAcceptedDecisionIsTracedAndMeteredOnTheDecideTier(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := f.store.recorded[0]
-	if row.Provider != providerOpenRouterDecision || row.ModelID != jevLane.Model || row.TokensIn != 400 || row.TokensOut != 0 ||
-		row.ServedModel != "typesafe/jev-1.13-20260917" || row.ServedIdentitySource != servedIdentitySourceResponse || row.ServedProvider != "TypeSafe" {
+	if row.Provider != providerJevCompatible || row.ModelID != jevLane.Model || row.TokensIn != 400 || row.TokensOut != 0 ||
+		row.ServedModel != "typesafe/jev-1.13-20260917" || row.ServedIdentitySource != servedIdentitySourceEcho || row.ServedProvider != "TypeSafe" {
 		t.Errorf("decision row = %+v", row)
 	}
 	if len(f.meter.records) != 1 || f.meter.records[0] != (Usage{Task: TaskSiteTriage, Tier: TierDecideLane, TokensIn: 400}) {
@@ -360,7 +360,7 @@ func TestALocalLaneAnswersALocalOnlyTaskAndCapturesNothing(t *testing.T) {
 	}
 	decider := &scriptedDecider{replies: []decisionReply{answered("parked", 0.99)}}
 	store := &fakeCallStore{}
-	out, _, err := verdictRouter(layaLane, decider, store).Decide(wsContext(t), TaskCaptureCounterpartyVerdict, "verdict",
+	out, _, err := verdictRouter(selfHostedLane, decider, store).Decide(wsContext(t), TaskCaptureCounterpartyVerdict, "verdict",
 		triageQuestion, triageLLMRequest, acceptAnything, floorGate)
 	if err != nil || !out.Decided {
 		t.Fatalf("outcome=%+v err=%v", out, err)

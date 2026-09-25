@@ -46,26 +46,36 @@ func laneRouting(profile, lane string) string {
 }
 
 func TestTheDecisionsLaneIsValidatedLikeTheEmbedLane(t *testing.T) {
-	const jev = "decisions: {provider: openrouter_decision, model: typesafe/jev-1.13, base_url: \"https://openrouter.ai/api\"}\n"
+	const (
+		broker   = "decisions: {provider: jev_compatible, model: typesafe/jev-1.13, base_url: \"https://openrouter.ai/api/alpha/decisions\"}\n"
+		official = "decisions: {provider: jev, model: jev-1.13.0}\n"
+		selfHost = "decisions: {provider: jev_compatible, model: typed-decisions, base_url: \"http://127.0.0.1:8767/v1/systemone\"}\n"
+	)
 	cases := []struct {
 		name, yaml, wantErr string
 	}{
-		{"jev under cloud_frontier", laneRouting("cloud_frontier", jev), ""},
+		{"the broker under cloud_frontier", laneRouting("cloud_frontier", broker), ""},
+		{"the official API at its default endpoint", laneRouting("cloud_frontier", official), ""},
+		{"the official API at an endpoint of its own", laneRouting("cloud_frontier", "decisions: {provider: jev, model: jev-latest, base_url: \"https://eu.api.typesafe.ai/v1/systemone\"}\n"), ""},
+		{"any other Jev-wire host", laneRouting("cloud_frontier", strings.Replace(broker, "https://openrouter.ai/api/alpha/decisions", "https://decide.example.com/v1/systemone", 1)), ""},
 		{"no lane at all", laneRouting("cloud_frontier", ""), ""},
 		{"unknown provider", laneRouting("cloud_frontier", "decisions: {provider: jevv, model: m}\n"), "answers no decisions"},
 		{"a chat provider on the lane", laneRouting("cloud_frontier", "decisions: {provider: ollama, model: m}\n"), "answers no decisions"},
-		{"no model", laneRouting("cloud_frontier", "decisions: {provider: laya, model: \" \"}\n"), "names no model"},
-		{"a decision provider on a tier", strings.Replace(laneRouting("cloud_frontier", ""), "cheap_cloud: {provider: openai_compatible", "cheap_cloud: {provider: laya", 1), "bind it under `decisions:`"},
-		{"a decision provider on the embeddings lane", strings.Replace(laneRouting("cloud_frontier", ""), "embeddings: {provider: openai_compatible, model: e, base_url: \"https://openrouter.ai/api\", routing: {only: [mistral/eu]}}", "embeddings: {provider: laya, model: e}", 1), "bind it under `decisions:`"},
-		{"jev off an OpenRouter host", laneRouting("cloud_frontier", strings.Replace(jev, "https://openrouter.ai/api", "https://decide.example.com", 1)), "set base_url to an OpenRouter host"},
-		{"jev with no base_url", laneRouting("cloud_frontier", "decisions: {provider: openrouter_decision, model: typesafe/jev-1.13}\n"), "set base_url to an OpenRouter host"},
-		{"jev under sovereign", laneRouting("sovereign", jev), "sovereign forbids cloud provider"},
-		{"laya at a name under sovereign", laneRouting("sovereign", "decisions: {provider: laya, model: typed-decisions, base_url: \"http://gpu.internal:8765\"}\n"), "is a name"},
-		{"laya on loopback under sovereign", laneRouting("sovereign", "decisions: {provider: laya, model: typed-decisions, base_url: \"http://127.0.0.1:8765\"}\n"), ""},
-		{"laya at its default under sovereign", laneRouting("sovereign", "decisions: {provider: laya, model: typed-decisions}\n"), ""},
-		{"laya at link-local", laneRouting("cloud_frontier", "decisions: {provider: laya, model: typed-decisions, base_url: \"http://169.254.169.254\"}\n"), "the decisions lane"},
-		{"jev under eu_hosted", laneRouting("eu_hosted", jev), "cannot be pinned to an EU host"},
-		{"a typo'd lane key", laneRouting("cloud_frontier", "decisions: {provider: laya, model: m, input: [text]}\n"), "field input not found"},
+		{"no model", laneRouting("cloud_frontier", "decisions: {provider: jev, model: \" \"}\n"), "names no model"},
+		{"a decision provider on a tier", strings.Replace(laneRouting("cloud_frontier", ""), "cheap_cloud: {provider: openai_compatible", "cheap_cloud: {provider: jev_compatible", 1), "bind it under `decisions:`"},
+		{"a decision provider on the embeddings lane", strings.Replace(laneRouting("cloud_frontier", ""), "embeddings: {provider: openai_compatible, model: e, base_url: \"https://openrouter.ai/api\", routing: {only: [mistral/eu]}}", "embeddings: {provider: jev, model: e}", 1), "bind it under `decisions:`"},
+		{"jev_compatible with no endpoint", laneRouting("cloud_frontier", "decisions: {provider: jev_compatible, model: typesafe/jev-1.13}\n"), "set base_url to the full decision endpoint URL"},
+		{"the official API in cleartext", laneRouting("cloud_frontier", "decisions: {provider: jev, model: jev-1.13.0, base_url: \"http://api.typesafe.ai/v1/systemone\"}\n"), "the decisions lane"},
+		{"the broker under sovereign", laneRouting("sovereign", broker), "is a name"},
+		{"the official API under sovereign", laneRouting("sovereign", official), "sovereign forbids cloud provider"},
+		{"self-hosted at a name under sovereign", laneRouting("sovereign", "decisions: {provider: jev_compatible, model: typed-decisions, base_url: \"http://gpu.internal:8767/v1/systemone\"}\n"), "is a name"},
+		{"self-hosted on loopback under sovereign", laneRouting("sovereign", selfHost), ""},
+		{"self-hosted in a private range under sovereign", laneRouting("sovereign", strings.Replace(selfHost, "127.0.0.1", "10.0.4.2", 1)), ""},
+		{"self-hosted at link-local", laneRouting("cloud_frontier", strings.Replace(selfHost, "127.0.0.1:8767", "169.254.169.254", 1)), "the decisions lane"},
+		{"the broker under eu_hosted", laneRouting("eu_hosted", broker), "cannot be pinned to an EU host"},
+		{"the official API under eu_hosted", laneRouting("eu_hosted", official), "not pinned to an EU host"},
+		{"self-hosted under eu_hosted", laneRouting("eu_hosted", selfHost), ""},
+		{"a typo'd lane key", laneRouting("cloud_frontier", "decisions: {provider: jev, model: m, input: [text]}\n"), "field input not found"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -89,31 +99,36 @@ func TestTheLocalDecisionRoutingFileParses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the local decision routing file does not parse: %v", err)
 	}
-	if cfg.Decisions == nil || cfg.Decisions.Provider != providerLaya {
-		t.Fatalf("decisions = %+v, want the laya lane", cfg.Decisions)
+	if cfg.Decisions == nil || cfg.Decisions.Provider != providerJevCompatible {
+		t.Fatalf("decisions = %+v, want the self-hosted jev_compatible lane", cfg.Decisions)
 	}
 	if got := cfg.CloudProvidersBound(); len(got) != 0 {
 		t.Errorf("a local lane needs no key, got %v", got)
 	}
 }
 
-// The Jev lane sends the OpenRouter key, so a config whose tiers never touch
-// OpenRouter still needs it sealed; the rate refresh and the trace must see
-// the lane's model too.
-func TestAJevOnlyLaneStillNeedsTheOpenRouterKey(t *testing.T) {
+// The official lane's key is TYPESAFE_API_KEY, demanded like any vendor's even
+// when no tier touches TypeSafe; a jev_compatible lane's key is sent when held
+// and never demanded. The rate refresh and the trace see the lane's model
+// either way.
+func TestTheDecisionsLaneNamesItsOwnKeyUnlessTheKeyIsOptional(t *testing.T) {
 	cfg := RoutingConfig{
 		Profile:    ProfileCloudFrontier,
 		Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: providerGemini, Model: "gemini-3.1-flash-lite"}},
 		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerGemini, Model: "gemini-embedding-001"}},
-		Decisions:  &DecisionsConfig{Provider: providerOpenRouterDecision, Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api"},
+		Decisions:  &DecisionsConfig{Provider: providerJev, Model: "jev-1.13.0"},
 	}
-	if got := cfg.CloudProvidersBound(); !slices.Contains(got, providerOpenAICompatible) {
-		t.Errorf("CloudProvidersBound() = %v, want it to name openai_compatible", got)
+	if got := cfg.CloudProvidersBound(); !slices.Equal(got, []string{providerGemini, providerJev}) {
+		t.Errorf("CloudProvidersBound() = %v, want gemini and jev", got)
 	}
-	if !cfg.BoundModelIDsByProvider()[providerOpenRouterDecision]["typesafe/jev-1.13"] {
+	cfg.Decisions = &DecisionsConfig{Provider: providerJevCompatible, Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api/alpha/decisions"}
+	if got := cfg.CloudProvidersBound(); !slices.Equal(got, []string{providerGemini}) {
+		t.Errorf("CloudProvidersBound() = %v, want gemini alone: a jev_compatible key is never demanded", got)
+	}
+	if !cfg.BoundModelIDsByProvider()[providerJevCompatible]["typesafe/jev-1.13"] {
 		t.Error("BoundModelIDsByProvider leaves the decisions lane's model out, so its rate is never refreshed")
 	}
-	if meta := embedInclusiveMeta(cfg)[TierDecideLane]; meta.provider != providerOpenRouterDecision || meta.model != "typesafe/jev-1.13" {
+	if meta := embedInclusiveMeta(cfg)[TierDecideLane]; meta.provider != providerJevCompatible || meta.model != "typesafe/jev-1.13" {
 		t.Errorf("routeMeta[decide] = %+v, want the lane's binding", meta)
 	}
 	if _, stamped := embedInclusiveMeta(RoutingConfig{Tiers: cfg.Tiers})[TierDecideLane]; stamped {

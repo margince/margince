@@ -23,7 +23,7 @@ import (
 func triageDecisionRow(logical ids.UUID, terminal bool, sentinel string) Call {
 	return Call{
 		LogicalCallID: logical, Attempt: 1, IsTerminal: terminal, Kind: callKindDecision, Task: TaskSiteTriage,
-		Tier: TierDecideLane, Provider: providerOpenRouterDecision, ModelID: "typesafe/jev-1.13",
+		Tier: TierDecideLane, Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13",
 		TokensIn: 400, ErrorSentinel: sentinel,
 	}
 }
