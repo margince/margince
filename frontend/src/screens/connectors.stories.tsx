@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ConnectorsCard } from "./connectors";
 import {
@@ -395,9 +395,15 @@ export const TelegramReadOnly: Story = {
     ),
   ),
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByText(
+    const canvas = within(canvasElement);
+    await canvas.findByText(
       "Only an administrator or operations user can connect or change the bot.",
     );
+    const row = within(canvas.getByTestId("telegram-connection"));
+    await expect(
+      row.queryByRole("button", { name: "Replace token" }),
+    ).toBeNull();
+    await expect(row.queryByRole("button", { name: "Disconnect" })).toBeNull();
   },
 };
 

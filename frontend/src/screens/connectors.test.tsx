@@ -852,6 +852,17 @@ describe("the Telegram connector panel", () => {
     expect(within(row).getByText("@acme_sales_bot")).toBeTruthy();
     expect(within(row).queryByRole("button")).toBeNull();
     expect(row.querySelector(".connector-actions")).toBeNull();
+  });
+
+  it("withholds Connect on an empty roster from a reader without channel_connection:create", async () => {
+    stubApi([], {
+      me: meFixture({
+        roles: ["rep"],
+        allow: { channel_connection: ["read"] },
+      }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByText(readOnlyNote)).toBeTruthy();
     expect(screen.queryByTestId("telegram-connect")).toBeNull();
   });
 
