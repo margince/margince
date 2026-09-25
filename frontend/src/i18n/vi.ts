@@ -8104,6 +8104,11 @@ export const vi = {
   "aiRouting.baseUrl.label": "Máy chủ",
   "aiRouting.baseUrl.help":
     "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
+  "aiRouting.baseUrl.help.openrouterDecision":
+    "Gốc host của OpenRouter, ví dụ https://openrouter.ai/api. Bộ chuyển thêm /alpha/decisions. Bắt buộc vì bộ chuyển này không có host mặc định.",
+  "aiRouting.baseUrl.help.laya":
+    "Gốc máy chủ Laya, không kèm đường dẫn. Bộ chuyển thêm /v1/systemone. Để trống để dùng mặc định http://127.0.0.1:8765.",
+  "aiRouting.baseUrl.placeholder.laya": "http://127.0.0.1:8765",
   "aiRouting.models.noKey":
     "Chỉ hiện bảng giá — nhà cung cấp này chưa có khoá nên không thể hỏi nó phục vụ những gì. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
   "aiRouting.models.noEndpoint":

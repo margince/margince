@@ -8319,6 +8319,11 @@ export const en = {
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
     "Provider host root without a version segment; /v1 is added. Required for openai_compatible, which has no default.",
+  "aiRouting.baseUrl.help.openrouterDecision":
+    "OpenRouter host root, such as https://openrouter.ai/api; /alpha/decisions is added. Required: this adapter has no default host.",
+  "aiRouting.baseUrl.help.laya":
+    "Laya server root without a path; /v1/systemone is added. Leave blank for the default, http://127.0.0.1:8765.",
+  "aiRouting.baseUrl.placeholder.laya": "http://127.0.0.1:8765",
   "aiRouting.models.noKey":
     "Price sheet only: this provider has no key, so its model list cannot be requested. Any model ID it serves still works; type it.",
   "aiRouting.models.noEndpoint":

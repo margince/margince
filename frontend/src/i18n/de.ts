@@ -8158,6 +8158,11 @@ export const de = {
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
     "Host-Wurzel des Anbieters ohne Versionssegment; /v1 wird angehängt. Erforderlich für openai_compatible, das keinen Standardwert hat.",
+  "aiRouting.baseUrl.help.openrouterDecision":
+    "Host-Wurzel von OpenRouter, etwa https://openrouter.ai/api; /alpha/decisions wird angehängt. Erforderlich: Dieser Adapter hat keinen Standard-Host.",
+  "aiRouting.baseUrl.help.laya":
+    "Wurzel des Laya-Servers ohne Pfad; /v1/systemone wird angehängt. Leer lassen für den Standardwert http://127.0.0.1:8765.",
+  "aiRouting.baseUrl.placeholder.laya": "http://127.0.0.1:8765",
   "aiRouting.models.noKey":
     "Nur Preisliste: Dieser Anbieter hat keinen Schlüssel, daher kann seine Modellliste nicht abgerufen werden. Jede Modell-ID, die er bereitstellt, funktioniert trotzdem, wenn du sie direkt eingibst.",
   "aiRouting.models.noEndpoint":

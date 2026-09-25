@@ -6,6 +6,7 @@ import { Field, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import {
   type AvailableModels,
   type ModelCatalogue,
@@ -37,14 +38,44 @@ const PROVIDERS = [
 // backend/gates/frontendproviders_test.go.
 export const DECISION_PROVIDERS = ["openrouter_decision", "laya"] as const;
 
-// The adapters with no host of their own, so the endpoint is the binding rather
-// than a tweak to it: every OpenAI-wire vendor is reached through the first, and
-// the second promises OpenRouter's decisions endpoint, which the server holds to
-// an OpenRouter host it has to be told.
-const OPENAI_WIRE = "openai_compatible";
-const HOST_REQUIRED: ReadonlySet<string> = new Set([
-  OPENAI_WIRE,
-  "openrouter_decision",
+// The adapters whose host this form asks for, and what each does with it.
+//
+// Two have no host of their own, so the endpoint is the binding rather than a
+// tweak to it: every OpenAI-wire vendor is reached through openai_compatible,
+// and openrouter_decision promises OpenRouter's decisions endpoint, which the
+// server holds to an OpenRouter host it has to be told. laya has a default,
+// but it is loopback, which is right only where the decision server runs
+// beside the API — so its host is offered, blank meaning that default.
+//
+// The help differs because the path each appends differs: a sentence written
+// for one told the others the wrong thing. The paths are the server's
+// provider registry's (providerregistry.go), spelled here as copy.
+type HostField = Readonly<{
+  help: MessageKey;
+  placeholder: MessageKey;
+}>;
+const HOST_FIELDS: ReadonlyMap<string, HostField> = new Map([
+  [
+    "openai_compatible",
+    {
+      help: "aiRouting.baseUrl.help",
+      placeholder: "aiRouting.baseUrl.placeholder",
+    },
+  ],
+  [
+    "openrouter_decision",
+    {
+      help: "aiRouting.baseUrl.help.openrouterDecision",
+      placeholder: "aiRouting.baseUrl.placeholder",
+    },
+  ],
+  [
+    "laya",
+    {
+      help: "aiRouting.baseUrl.help.laya",
+      placeholder: "aiRouting.baseUrl.placeholder.laya",
+    },
+  ],
 ]);
 
 type TierBindingLike = {
@@ -118,6 +149,7 @@ export function AdapterFields<B extends TierBindingLike>({
   // travels with it so an installation binding one vendor at two hosts is asked
   // at the one THIS lane points at.
   const available = useAvailableModels(binding.provider, laneName, true);
+  const host = HOST_FIELDS.get(binding.provider);
   return (
     <>
       <Field label={label}>
@@ -164,23 +196,20 @@ export function AdapterFields<B extends TierBindingLike>({
           />
         )}
       </Field>
-      {/* Only where it is load-bearing. An adapter in HOST_REQUIRED has no
-          default host and the server refuses a binding without one, so leaving this off the
-          form made every broker unbindable from here: the write was accepted
-          and the running role then declined to adopt it. A native vendor
-          addresses its own API, and an empty box beside it invites somebody to
-          fill it in with something that overrides a working default. */}
-      {HOST_REQUIRED.has(binding.provider) && (
-        <Field
-          label={t("aiRouting.baseUrl.label")}
-          hint={t("aiRouting.baseUrl.help")}
-        >
+      {/* Only where it is load-bearing. An adapter with no default host is
+          refused a binding without one, so leaving this off the form made
+          every broker unbindable from here: the write was accepted and the
+          running role then declined to adopt it. A native vendor addresses
+          its own API, and an empty box beside it invites somebody to fill it
+          in with something that overrides a working default. */}
+      {host && (
+        <Field label={t("aiRouting.baseUrl.label")} hint={t(host.help)}>
           {(control) => (
             <TextInput
               {...control}
               value={binding.base_url ?? ""}
               disabled={disabled}
-              placeholder={t("aiRouting.baseUrl.placeholder")}
+              placeholder={t(host.placeholder)}
               onChange={(e) =>
                 onChange(rebind(binding, { base_url: e.target.value }))
               }
