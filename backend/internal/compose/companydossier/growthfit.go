@@ -256,9 +256,22 @@ func (c GrowthFitClaims) empty() bool {
 	return len(c.All()) == 0
 }
 
-// All flattens every claim into one list. The cert case asks what the whole
-// assessment cited, and a question about the assessment should not have to
-// know which of five buckets an answer landed in.
+// Evidence lists the records the kept assessment cites, sub-scores included: a
+// sub-score's reason passes the same grounding filter as a claim, and the
+// reader opens its evidence the same way.
+func (c GrowthFitClaims) Evidence() []claims.Evidence {
+	var out []claims.Evidence
+	for _, sub := range c.SubScores {
+		out = append(out, sub.Evidence...)
+	}
+	for _, sentence := range c.All() {
+		out = append(out, sentence.Evidence...)
+	}
+	return out
+}
+
+// All flattens every claim into one list, so a question about the assessment
+// need not know which of five buckets an answer landed in.
 func (c GrowthFitClaims) All() []claims.Sentence {
 	out := make([]claims.Sentence, 0,
 		len(c.PositiveFactors)+len(c.NegativeFactors)+len(c.Whitespace)+len(c.Objections)+1)

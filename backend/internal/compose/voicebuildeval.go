@@ -43,10 +43,17 @@ const (
 // Two to three short paragraphs, not a one-liner: the drafts double as the
 // sample the owner reads on the onboarding result screen, and a voice has no
 // room to show in two sentences — every draft reads the same at that length.
-const voiceEvalDraftSystem = `Write an email reply in the author's voice, as described by the supplied voice profile.
-Length: two or three short paragraphs, roughly 80 to 140 words — enough for the voice to show, never padding.
-The profile controls expression, never facts; invent no names, numbers, or commitments.
-Return ONLY a JSON object: {"subject":"...","body":"..."}.`
+const voiceEvalDraftSystem = voiceDraftOpening + "\n" +
+	"Length: two or three short paragraphs, roughly 80 to 140 words — enough for the voice to show, never padding.\n" +
+	voiceDraftFactsAndShape
+
+// voiceDraftOpening and voiceDraftFactsAndShape are the drafting lines every
+// built-voice draft shares; only the length differs between the calls.
+const (
+	voiceDraftOpening       = "Write an email reply in the author's voice, as described by the supplied voice profile."
+	voiceDraftFactsAndShape = "The profile controls expression, never facts; invent no names, numbers, or commitments.\n" +
+		`Return ONLY a JSON object: {"subject":"...","body":"..."}.`
+)
 
 // voiceEvalHeldOutRule is what only the evaluation's call needs: its message is
 // evalSampleOpening's cut of a real mail, and the reply is graded on answering it.

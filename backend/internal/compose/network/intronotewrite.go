@@ -84,7 +84,7 @@ Rules you must not break:
 - Say why the recipient might care ONLY when "why_it_matters" carries a reason, in one sentence, and say nothing beyond what it states. When it is empty, ask for the conversation without giving a reason: an introduction is a complete request on its own, and a reason nobody wrote is one you invented.
 - When "through_contact" names somebody, you may say they suggested the introduction. Say nothing else about them, and never say they asked for it.
 - Write a short subject line in the "subject" field, naming the colleague you are introducing.
-- Do not invent anything about the relationship or about the recipient's company. "relationship" and "last_spoke" describe the sender's link to "through_contact" when one is named — not to the recipient — and otherwise the link to the recipient; say no more than that.
+- Do not invent anything about the relationship or about the recipient's company. "relationship" and "last_spoke" set your tone only; never state the strength or the date.
 - Ask for nothing more than a conversation. No pitch, no pricing, no meeting times.
 - No subject line inside the body.`
 

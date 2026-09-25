@@ -112,6 +112,12 @@ func Feedback(findings []Finding) string {
 	var b strings.Builder
 	b.WriteString("\n\nThe previous draft was rejected. Rewrite it, and this time:\n")
 	for _, f := range findings {
+		if f.InLabel {
+			b.WriteString("- Do not write \"" + f.Phrase + "\" or any synonym of it in a reasoning label. " +
+				f.Why + ". Label that input by its purpose instead; the rule is about the label, " +
+				"so the body may still say who is writing and why.\n")
+			continue
+		}
 		b.WriteString("- Do not write \"" + f.Phrase + "\" or any synonym of it. " + f.Why + ".\n")
 	}
 	// A correction that only says what to delete gets the nearest synonym back:

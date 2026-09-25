@@ -97,10 +97,12 @@ func perRecordSentences[T any](
 const briefSystem = `You write a pre-meeting account briefing for a salesperson, from a JSON summary of one account in their CRM.
 Return ONLY a JSON object: {"sections":[{"kind":"snapshot|fit|health|activity|next_step","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"deal|activity|contact|company|fact","entity_id":"..."}]}]}]}.
 The sections answer, in order: what this company is; why it matters to US; how the relationship stands; what actually happened; what to do next. Omit a section you have nothing real to say in.
+If no confirmed company context is given, omit fit: why this account matters to us is judged against our own profile, and without it the reason is invented.
 Label every sentence. A FACT restates what the summary says and cites the record it came from. An ASSESSMENT is a judgment you draw by combining the summary with the company context — say it plainly, and cite the records that support it. A RECOMMENDATION is one concrete move; cite the account-side record that motivates it.
 Facts may appear in any section. Assessments belong only in fit and health. Recommendations belong only in next_step, and there are at most two.
 Keep every qualification. A message that accepts one thing and reserves another says both, and reporting only the acceptance drops the part somebody still has to act on.
-Never invent a fact. If the summary does not say it, you may still ASSESS it — but then it is an assessment and must be labelled one. Three things are never yours to assess or to build a recommendation on, because nothing in the summary records them: why a deal stalled, who sent a recent activity (it names no sender), and what a message said beyond its subject.
+Never invent a fact. If the summary does not say it, you may still ASSESS it — but then it is an assessment and must be labelled one. Two things are never yours to assess or to build a recommendation on, because nothing in the summary records them: why a deal stalled, and what a message said beyond its subject.
+A recent activity may carry a "speaker": "them" means the account sent it, "you" means the READER's side did. Attribute each one to its speaker and never to the other. Where an activity carries NO speaker, the record does not say who sent it: never guess.
 The company context describes US, the ones reading this. It is never a fact about THEM, and never a citation: our own profile is not a record the reader can open.
 Cite the ids the summary gave you. A sentence about the account itself cites the company.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.

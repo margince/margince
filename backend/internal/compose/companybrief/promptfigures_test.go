@@ -206,3 +206,27 @@ func TestAWithheldDealsSectionSendsNoLostCount(t *testing.T) {
 		})
 	}
 }
+
+// Who sent a message is recorded as its direction, and the brief is told who
+// spoke rather than left to guess; a row with no direction names nobody.
+func TestATimelineMessageCarriesWhoSentIt(t *testing.T) {
+	inbound, outbound := crmcontracts.ActivityDirectionInbound, crmcontracts.ActivityDirectionOutbound
+	occurredAt := time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)
+	view := crmcontracts.Company360{
+		Company: crmcontracts.Company{DisplayName: "Nordwind AG"},
+		Activities: &crmcontracts.ActivityListResponse{Data: []crmcontracts.Activity{
+			{Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail, Direction: &inbound, OccurredAt: occurredAt},
+			{Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail, Direction: &outbound, OccurredAt: occurredAt},
+			{Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindNote, OccurredAt: occurredAt},
+		}},
+	}
+	recent := FromView(view).Recent
+	if len(recent) != 3 {
+		t.Fatalf("the assembled input carries %d recent rows, want 3", len(recent))
+	}
+	for i, want := range []string{"them", "you", ""} {
+		if recent[i].Speaker != want {
+			t.Errorf("row %d speaker = %q, want %q", i, recent[i].Speaker, want)
+		}
+	}
+}

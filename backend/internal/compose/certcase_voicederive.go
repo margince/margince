@@ -17,18 +17,20 @@ package compose
 // run in outside the claim, and a copy stays green through the change that
 // breaks the original.
 //
-// It is also why nothing in modules/ai is exported for it. The seam that runs
+// It is also why nothing on that path is exported for it. The seam that runs
 // the whole path already exists, so widening the module's surface to reach one
 // piece of it would buy a weaker claim at the price of a wider module.
 //
-// What the expectation MEANS here is which of the author's own samples the
+// What the expectation MEANS here is which of the author's registers the
 // derived profile grounds its signature moves in. The rest of a profile is
 // prose — how the author thinks, what they avoid — and pinning sentences would
 // fail every model that said the same thing differently, which is what the
 // rubric and the judge are for. The grounding is not prose: the build demands
 // that every signature move quote a verbatim fragment and name the sample it
 // came from, so a scenario can say which sample carries the style it is about
-// and a profile that invented one cannot satisfy it.
+// and a profile that invented one cannot satisfy it. It names registers rather
+// than samples because two samples in one register carry one style: a scenario
+// naming one of them would fail a profile that quoted its sibling.
 //
 // The quote itself is deliberately NOT the expectation. Which fragment of a
 // sample proves a move is the model's own reading, and a scenario naming one
@@ -80,8 +82,8 @@ func (voiceDeriveCases) Site() aitasks.Site {
 	}
 }
 
-// Prepare turns one corpus and the samples the scenario says the profile grounds
-// itself in into a runnable case.
+// Prepare turns one corpus and the registers the scenario says the profile
+// grounds itself in into a runnable case.
 //
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
 func (voiceDeriveCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
@@ -93,16 +95,16 @@ func (voiceDeriveCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 		return nil, err
 	}
 	// A profile that found the author's style differs from one that invented it
-	// in which samples it can point at, so the expectation IS those ids rather
-	// than a wrapper carrying them.
+	// in which registers it can point at, so the expectation IS those registers
+	// rather than a wrapper carrying them.
 	var want []string
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"%s: the expected answer is not a list of corpus sample ids: %w", voiceDeriveSite, err)
+			"%s: the expected answer is not a list of corpus registers: %w", voiceDeriveSite, err)
 	}
 	if len(want) == 0 {
 		return nil, fmt.Errorf(
-			"%s: the scenario names no sample the profile must ground itself in, so it asserts nothing",
+			"%s: the scenario names no register the profile must ground itself in, so it asserts nothing",
 			voiceDeriveSite)
 	}
 	if err := refuseUngroundableVoiceExpectation(want, f.Samples); err != nil {
@@ -122,9 +124,10 @@ func (voiceDeriveCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 
 // refuseUnbuildableCorpus names a corpus the builder could never have been
 // handed, and so a prompt the product never sends. Every clause is a bound the
-// voice feature already holds: a stored source carries an id and content, its
-// word count is the word count of that content, and DeriveVoice refuses a corpus
-// under the starter floor before it calls anything.
+// voice feature already holds: a stored source carries an id, content and a
+// register ingest accepts, its word count is the word count of that content,
+// and DeriveVoice refuses a corpus under the starter floor before it calls
+// anything.
 func refuseUnbuildableCorpus(samples []ai.VoiceSample) error {
 	seen := make(map[string]bool, len(samples))
 	for _, sample := range samples {
@@ -136,6 +139,9 @@ func refuseUnbuildableCorpus(samples []ai.VoiceSample) error {
 		case seen[sample.ID]:
 			return fmt.Errorf(
 				"%s: the fixture supplies sample %q twice, and a citation names one source", voiceDeriveSite, sample.ID)
+		case !ai.IsVoiceRegister(sample.Register):
+			return fmt.Errorf(
+				"%s: sample %q carries register %q, which ingest never stores", voiceDeriveSite, sample.ID, sample.Register)
 		case strings.TrimSpace(sample.Text) == "":
 			return fmt.Errorf(
 				"%s: sample %q carries no text, and a source with no content is never stored",
@@ -160,27 +166,28 @@ func refuseUnbuildableCorpus(samples []ai.VoiceSample) error {
 // would never let a reply satisfy. The build closes its validator over the
 // SELECTED samples — the ones the word cap left in the prompt — and refuses a
 // signature move citing anything else as unknown, so an expectation naming a
-// sample the selection drops could only ever be measured as invalid.
+// register whose every sample the selection drops could only ever be measured
+// as invalid.
 func refuseUngroundableVoiceExpectation(want []string, samples []ai.VoiceSample) error {
 	supplied := make(map[string]bool, len(samples))
 	for _, sample := range samples {
-		supplied[sample.ID] = true
+		supplied[sample.Register] = true
 	}
 	shown := make(map[string]bool, len(samples))
 	for _, sample := range ai.SelectVoiceSamples(samples) {
-		shown[sample.ID] = true
+		shown[sample.Register] = true
 	}
-	for _, id := range want {
+	for _, register := range want {
 		switch {
-		case shown[id]:
-		case supplied[id]:
+		case shown[register]:
+		case supplied[register]:
 			return fmt.Errorf(
-				"%s: the scenario expects the profile to ground itself in sample %q, and the prompt's word cap "+
-					"drops that sample from the corpus this call is shown", voiceDeriveSite, id)
+				"%s: the scenario expects the profile to ground itself in the %q register, and the prompt's word "+
+					"cap drops every sample of it from the corpus this call is shown", voiceDeriveSite, register)
 		default:
 			return fmt.Errorf(
-				"%s: the scenario expects the profile to ground itself in sample %q, which the fixture never supplies",
-				voiceDeriveSite, id)
+				"%s: the scenario expects the profile to ground itself in the %q register, which no sample the "+
+					"fixture supplies is written in", voiceDeriveSite, register)
 		}
 	}
 	return nil
@@ -203,7 +210,7 @@ func voiceDeriveSourceHash(samples []ai.VoiceSample) (string, error) {
 }
 
 // voiceDeriveCase is one corpus ready to be derived from, closed over the
-// samples the answer is expected to be grounded in.
+// registers the answer is expected to be grounded in.
 type voiceDeriveCase struct {
 	personality string
 	sourceHash  string
@@ -262,9 +269,9 @@ func (r *voiceDeriveRecorder) Complete(ctx context.Context, req model.Request) (
 // Evaluate re-derives the profile from the recorded reply, which runs the
 // build's own validator over it in the build's own order: parse, then every
 // citation against the samples this call actually showed. Only a profile the
-// build would have kept is then asked whether it grounds itself where the
-// scenario says the style lives — the order is the meaning, since a reply the
-// build refuses has no grounding to disagree with.
+// build would have kept is then asked whether it cites at least one sample of
+// every register the scenario names — the order is the meaning, since a reply
+// the build refuses has no grounding to disagree with.
 //
 // Re-deriving costs a rebuilt prompt that is thrown away, and buys a verdict
 // that comes from the shipped path instead of from this file. The replay does no
@@ -275,26 +282,32 @@ func (c *voiceDeriveCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
+	registerOf := make(map[string]string, len(c.samples))
+	for _, sample := range c.samples {
+		registerOf[sample.ID] = sample.Register
+	}
+	cites := make(map[string]bool, len(artifact.Inference.SignatureMoves))
 	grounded := make(map[string]bool, len(artifact.Inference.SignatureMoves))
 	for _, move := range artifact.Inference.SignatureMoves {
-		grounded[move.SampleID] = true
+		cites[move.SampleID] = true
+		grounded[registerOf[move.SampleID]] = true
 	}
 	// All of the missing ones, not the first: a profile that found the style in
-	// one sample and missed it in two others is not the near miss one line would
-	// read as.
+	// one register and missed it in two others is not the near miss one line
+	// would read as.
 	var missing []string
-	for _, id := range c.expected {
-		if !grounded[id] {
-			missing = append(missing, id)
+	for _, register := range c.expected {
+		if !grounded[register] {
+			missing = append(missing, register)
 		}
 	}
-	cited := slices.Sorted(maps.Keys(grounded))
+	cited := slices.Sorted(maps.Keys(cites))
 	if len(missing) > 0 {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf(
-				"the derived profile grounds no signature move in %s, which the scenario expects it to draw on; "+
-					"it cites %s", strings.Join(missing, ", "), voiceDeriveCitations(cited)),
+				"the derived profile grounds no signature move in the %s register, which the scenario expects it "+
+					"to draw on; it cites %s", strings.Join(missing, ", "), voiceDeriveCitations(cited)),
 		}
 	}
 	return aitasks.Outcome{

@@ -17,9 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// firstDrafter is a drafter with a brain and an envelope resolver and nothing
-// else: DraftFirstEmail reads no store, which is the property the seam has that
-// the reply seam does not.
 // firstMessageContext is the floor's own reading of a first message.
 //
 // It is a value rather than a literal at each assertion because a test that
@@ -28,6 +25,9 @@ import (
 // test is only about the fallback if it asks for the one the code asks for.
 var firstMessageContext = activities.DraftContext{Band: convstate.BandFresh, Threaded: false}
 
+// firstDrafter is a drafter with a brain and an envelope resolver and nothing
+// else: DraftFirstEmail reads no store, which is the property the seam has that
+// the reply seam does not.
 func firstDrafter(brain completer) replyDrafter {
 	return replyDrafter{brain: brain, envelope: draftfloor.NewResolver()}
 }
@@ -163,5 +163,25 @@ func TestTheAccountDraftAsksTheFirstMessageSeamWhenTheDrafterHasOne(t *testing.T
 	}
 	if subject != floorSubject || body != floorBody {
 		t.Errorf("a reply-only drafter did not fall to the floor: subject=%q body=%q", subject, body)
+	}
+}
+
+// The site tells the model it may say it met the recipient where the intent
+// names the meeting, so the checker must not send that draft back — and must
+// still refuse the same sentence under an intent that names no meeting.
+func TestAFirstMessageMaySayItMetWhereTheIntentSaysSo(t *testing.T) {
+	const met = `{"subject":"Hello from the trade fair","body":"Hello,\n\nIt was a pleasure meeting you at the trade fair. Would a short call suit you?"}`
+	for intent, wantRetry := range map[string]bool{
+		"introduce ourselves after meeting at the trade fair and ask for a call": false,
+		"introduce ourselves and ask for a short call":                           true,
+	} {
+		brain := &replyBrainStub{response: model.Response{Text: met}}
+		if _, _, err := firstDrafter(brain).DraftFirstEmail(context.Background(), intent); err != nil {
+			t.Fatalf("DraftFirstEmail: %v", err)
+		}
+		retried := strings.Contains(brain.request.Messages[0].Content, "previous draft was rejected")
+		if retried != wantRetry {
+			t.Errorf("intent %q: retried=%v, want %v", intent, retried, wantRetry)
+		}
 	}
 }

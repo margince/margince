@@ -150,3 +150,57 @@ func hasRule(findings []Finding, rule Rule) bool {
 	}
 	return false
 }
+
+// The caller knows whether a meeting happened, and the input does not. An intent
+// naming one grounds "it was a pleasure meeting you"; an intent that only asks
+// for a call leaves the same sentence invented.
+func TestAMeetingIsSayableOnlyWhenTheIntentNamesIt(t *testing.T) {
+	body := "Hello,\n\nIt was a pleasure meeting you at the trade fair. Would a short call next month suit you?"
+
+	named := Grounds{Met: IntentNamesMeeting("Introduce ourselves after meeting at the trade fair and ask for a call.")}
+	if findings := Body(body, textlang.English, convstate.BandFresh, named); len(findings) > 0 {
+		t.Fatalf("a meeting the caller named was refused: %+v", findings)
+	}
+	unnamed := Grounds{Met: IntentNamesMeeting("Introduce ourselves and ask for a short call.")}
+	if findings := Body(body, textlang.English, convstate.BandFresh, unnamed); len(findings) == 0 {
+		t.Fatal("a meeting the intent never named must still be refused")
+	}
+}
+
+// Only a PAST encounter grounds the claim. An intent proposing a meeting names
+// one that has not happened, and reading it as met would ground the invention.
+func TestOnlyAnEncounterThatHappenedCounts(t *testing.T) {
+	for intent, want := range map[string]bool{
+		"Introduce ourselves after meeting at the trade fair": true,
+		"We met at the conference last week; ask for a demo":  true,
+		"Wir haben uns auf der Messe kennengelernt":           true,
+		"Nach unserem Gespräch auf der Konferenz nachhaken":   true,
+		"Ask for a short call":                                false,
+		"Propose a meeting next week":                         false,
+		"Ein Treffen auf der Messe vorschlagen":               false,
+		"Mich kurz vorstellen und ein Gespräch dazu anbieten": false,
+	} {
+		if got := IntentNamesMeeting(intent); got != want {
+			t.Errorf("IntentNamesMeeting(%q) = %v, want %v", intent, got, want)
+		}
+	}
+}
+
+// A chip labelled with the rep's own purpose trips the introduction stem, and
+// the correction has to say the fault was in the LABEL: told only "do not write
+// vorstell", the retry strips the sender's self-introduction from a good body.
+func TestALabelFindingIsCorrectedAsALabel(t *testing.T) {
+	findings := Reasoning([]string{"Mich kurz vorstellen"}, textlang.German, convstate.BandNone)
+	if len(findings) == 0 || !findings[0].InLabel {
+		t.Fatalf("the chip finding should be marked as a label finding, got %+v", findings)
+	}
+	feedback := Feedback(findings)
+	for _, want := range []string{"reasoning label", "the body may still"} {
+		if !strings.Contains(feedback, want) {
+			t.Errorf("label feedback should say %q:\n%s", want, feedback)
+		}
+	}
+	if body := Feedback(Body("Hello,\n\nI hope you are doing well.", textlang.English, convstate.BandFresh, Grounds{})); strings.Contains(body, "reasoning label") {
+		t.Errorf("a body finding must not be corrected as a label:\n%s", body)
+	}
+}

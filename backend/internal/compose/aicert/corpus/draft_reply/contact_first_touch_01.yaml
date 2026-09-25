@@ -57,7 +57,9 @@ expect:
 
     Full marks for a short German first-touch that says who is writing and why,
     asks for the conversation the intent named, and is honest that this is the
-    first contact rather than dressing it as a continuation.
+    first contact rather than dressing it as a continuation. Any greeting the
+    product rules allow is correct, and naming Beispiel Maschinenbau GmbH in
+    the subject is fine.
   bands:
     certified_min: 70
     degraded_min: 50

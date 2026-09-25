@@ -126,7 +126,7 @@ func contactBriefInput(f contactBriefFixture) (contactbrief.Input, map[string]st
 	byLabel := foldFixtureMessages(&in, f, now)
 	for _, claim := range f.Claims {
 		in.Claims = append(in.Claims, contactbrief.ClaimIn{
-			ID: ids.NewV7().String(), Kind: claim.Kind, Body: claim.Body,
+			Kind: claim.Kind, Body: claim.Body,
 			Status: claim.Status, DueAt: claim.DueAt, Quote: claim.Quote,
 			SourceID: byLabel[claim.FromLabel],
 		})

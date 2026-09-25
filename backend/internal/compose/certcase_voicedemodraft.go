@@ -17,9 +17,8 @@ package compose
 // The expectation is eval_draft's, deliberately: a stylometric floor, measured
 // by the same stylometricProximity the evaluation itself spends. A content
 // token would have been the wrong instrument — this call answers a FIXED
-// hypothetical task about unspecified work, and the prompt forbids inventing
-// particulars, so a phrase from the corpus is one the correct answer has no
-// reason to reach for. Asking for it would reward parroting an exemplar and
+// sample task whose facts the prompt supplies and forbids adding to, so a
+// phrase from the corpus is one the correct answer has no reason to reach for. Asking for it would reward parroting an exemplar and
 // fail the drafts that did the job.
 
 import (

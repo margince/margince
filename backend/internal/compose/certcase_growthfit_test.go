@@ -190,6 +190,51 @@ func TestAReplyProductionWouldDiscardIsReportedAsAnAbstention(t *testing.T) {
 	}
 }
 
+// subScoreLane cites their offer in a factor and their stack ONLY in a
+// sub-score, reading both ids out of the request in the order it sends them:
+// profile fields first, then facts.
+type subScoreLane struct{ stackID func(ids []string) string }
+
+func (l subScoreLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
+	var ids []string
+	for _, found := range promptFieldID.FindAllStringSubmatch(req.Messages[len(req.Messages)-1].Content, -1) {
+		ids = append(ids, found[1])
+	}
+	if len(ids) != 3 {
+		return model.Response{}, errors.New("the request did not carry the fixture's three records")
+	}
+	return model.Response{Text: `{"band":"strong","sub_scores":[{"dimension":"transformation_need","score":70,` +
+		`"reason":"They run SAP S/4HANA.","evidence":[{"entity_type":"fact","entity_id":"` + l.stackID(ids) + `"}]}],` +
+		`"positive_factors":[{"text":"They sell load-shifting software.","nature":"fact",` +
+		`"evidence":[{"entity_type":"profile_field","entity_id":"` + ids[0] + `"}]}]}`}, nil
+}
+
+// A sub-score's evidence is grounded by the same filter as a claim's and opened
+// by the reader the same way, so a record cited only there was cited; a
+// sub-score citing an id the summary never gave was dropped and cites nothing.
+func TestTheGrowthFitCaseCountsWhatASubScoreCites(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		stackID func(ids []string) string
+		want    string
+	}{
+		{"their stack, cited by a sub-score", func(ids []string) string { return ids[2] }, aitasks.OutcomeAccepted},
+		{"an id the summary never gave", func([]string) string { return "0198c0de-0000-7000-8000-000000000000" },
+			aitasks.OutcomeWrongAnswer},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			prepared := prepareGrowthFit(t, `{"cites":["their_offer","their_stack"],"bands":["strong","moderate"]}`)
+			trace, err := prepared.Run(context.Background(), subScoreLane{stackID: tc.stackID})
+			if err != nil {
+				t.Fatalf("run: %v", err)
+			}
+			if got := prepared.Evaluate(trace); got.Result != tc.want {
+				t.Errorf("outcome = %v (%s), want %v", got.Result, got.Detail, tc.want)
+			}
+		})
+	}
+}
+
 // The dossier case grades the records a description had to rest on, not its
 // wording — the whole reason that lane exists is that the same facts read
 // better as prose, and pinning sentences would fail a good dossier.

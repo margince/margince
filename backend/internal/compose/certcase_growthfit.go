@@ -267,10 +267,8 @@ func (c *growthFitCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		}
 	}
 	cited := map[string]bool{}
-	for _, sentence := range kept.All() {
-		for _, evidence := range sentence.Evidence {
-			cited[evidence.EntityID] = true
-		}
+	for _, evidence := range kept.Evidence() {
+		cited[evidence.EntityID] = true
 	}
 	var missing []string
 	for _, name := range c.expected.Cites {

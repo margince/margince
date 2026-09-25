@@ -21,6 +21,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -175,6 +176,10 @@ type ActIn struct {
 	ID      string `json:"id"`
 	Kind    string `json:"kind"`
 	Subject string `json:"subject,omitempty"`
+	// Speaker is who sent it — "them" for the account, "you" for the reader's
+	// side — named the way the contact brief names it, and empty on a row that
+	// records no direction.
+	Speaker string `json:"speaker,omitempty"`
 	At      string `json:"at"`
 	// Done says whether a timeline item that CAN be finished has been. It is a
 	// pointer because most items cannot: a call happened, and asking whether it
@@ -345,6 +350,9 @@ func foldRecent(view crmcontracts.Company360, in *Input) {
 		}
 		if activity.Subject != nil {
 			act.Subject = *activity.Subject
+		}
+		if activity.Direction != nil {
+			act.Speaker = contactbrief.SpeakerFor(*activity.Direction)
 		}
 		// Only the kinds that HAVE an outcome carry one. A call or a mail is
 		// neither outstanding nor complete, and answering for it would invent

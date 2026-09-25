@@ -161,8 +161,11 @@ func renderedAmount(minor int64, currency string) string {
 // opposite claims about the same sentence, and the body alone loses which one
 // it was. So does the status: a commitment that is still open and one that was
 // kept read identically as bodies, and only one of them is something to do.
+//
+// It carries no id of its own: a claim is cited by the activity it was read
+// from, and an id the grounding filter refuses would only invite a citation it
+// drops.
 type ClaimIn struct {
-	ID     string `json:"id"`
 	Kind   string `json:"kind"`
 	Body   string `json:"body"`
 	Status string `json:"status"`
@@ -328,7 +331,6 @@ func foldClaims(in *Input, view crmcontracts.Contact360) {
 			continue
 		}
 		folded := ClaimIn{
-			ID:       claim.Id.String(),
 			Kind:     string(claim.Kind),
 			Body:     claim.Body,
 			Status:   string(claim.Status),

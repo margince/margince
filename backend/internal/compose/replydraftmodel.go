@@ -34,10 +34,11 @@ import (
 // site is.
 type draftSystem string
 
-const replyDraftSystem draftSystem = `Draft a professional email reply on behalf of the CRM user's company.
+const replyDraftSystem draftSystem = `Draft a professional email reply, for the sender to send under their own name.
 Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - The selected activity and stated intent are the authoritative reason for this reply. Answer that exact message.
 - Conversation contains other readable messages in the same thread, with their directions and dates, for context only. Do not switch the reply target. An outbound selected message calls for a follow-up to its recipient, not an answer to ourselves.
+- Where the message raises several distinct points, answer at least two by name, a clause each, before the ask.
 - Company context may improve positioning, relevant proof, and language, but never overrides the activity.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.`
@@ -56,9 +57,9 @@ Return ONLY a JSON object: {"subject":"...","body":"..."}.
 // The intent is stated as the WHOLE brief, positively, for the same reason. A
 // caller's sentence is thin material and the honest instruction is to write
 // from it rather than around it.
-const firstDraftSystem draftSystem = `Draft the FIRST email of a new conversation, on behalf of the CRM user's company.
+const firstDraftSystem draftSystem = `Draft the FIRST email of a new conversation, for the sender to send under their own name.
 Return ONLY a JSON object: {"subject":"...","body":"..."}.
-- Nothing has been sent or received yet. There is no thread and no earlier message: never refer to one, and never open with a follow-up phrase.
+- Nothing has been sent or received yet: conversation_state is "fresh" because this message opens the conversation now, not because an exchange is running. There is no thread and no earlier message, so never refer to one, never open with a follow-up phrase, and never give the subject "Follow-up", "Re:" or any word for a reply.
 - The stated intent is the whole brief. Write the message it describes; if it is thin, keep the message short rather than inventing a reason for it. Where it names an earlier meeting ("after meeting at the trade fair"), you may say you met there, and nothing more about it.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities — and never a prior meeting, call or email the intent does not name.
 - Say one thing and ask for one thing. Three short paragraphs at most.
@@ -187,7 +188,8 @@ func (d replyDrafter) completeWith(ctx context.Context, site draftSystem, activi
 // correction rides the user turn, so a plain draft told to fix a phrase stays a
 // plain draft rather than silently becoming a voiced one.
 func (d replyDrafter) completeChecked(ctx context.Context, site draftSystem, data replyActivityData, voiceBlock voiceBlockFor) (replyDraft, error) {
-	return draftcore.CorrectOnce(ctx, data.Lang(), data.Band(), data.Booked(),
+	record := draftcheck.Grounds{Booked: data.Booked(), Met: draftcheck.IntentNamesMeeting(data.Intent)}
+	return draftcore.CorrectOnce(ctx, data.Lang(), data.Band(), record,
 		func(ctx context.Context, correction string) (replyDraft, error) {
 			return d.completeWith(ctx, site, data, voiceBlock, correction)
 		},

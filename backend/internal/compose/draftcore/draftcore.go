@@ -88,43 +88,12 @@ type SubjectOf[D any] func(D) (subject string, threaded bool)
 // When the retry does not clear the findings, the attempt carrying FEWER of them
 // is served. A second attempt is not automatically better, and the count is the
 // only evidence available without asking a model to judge its own output.
-// Findings is everything the phrasing rules say is wrong with one draft.
-//
-// Exported because CorrectOnce is not the only pass that has to ask. The voice
-// floor runs AFTER this loop and may substitute a retried draft, so it needs
-// the same answer to know whether the substitution regressed anything — and a
-// second spelling of "what is wrong with a draft" would drift from this one
-// until the two disagreed about a phrase in front of a user.
-func Findings[D any](
-	draft D, lang textlang.Lang, band convstate.Band, booked bool,
-	textOf TextOf[D], subjectOf SubjectOf[D],
-) []draftcheck.Finding {
-	body, reasoning := textOf(draft)
-	// Whether this draft answers a real inbound message decides more than the
-	// subject's reply prefix: a reply is written from the counterparty's own
-	// words, so it may echo a call THEY named, where a message opening a new
-	// conversation has no such ground to stand on.
-	subject, threaded := "", false
-	if subjectOf != nil {
-		subject, threaded = subjectOf(draft)
-	}
-	findings := append(draftcheck.Body(body, lang, band, draftcheck.Grounds{Threaded: threaded, Booked: booked}),
-		draftcheck.Reasoning(reasoning, lang, band)...)
-	// Shape is asked of the BODY alone. Reasoning chips travel through the same
-	// phrasing rules but are labels, not messages.
-	findings = append(findings, draftcheck.Formatting(body)...)
-	if subjectOf != nil {
-		findings = append(findings, draftcheck.Subject(subject, lang, band, threaded)...)
-	}
-	return findings
-}
-
 func CorrectOnce[D any](
-	ctx context.Context, lang textlang.Lang, band convstate.Band, booked bool,
+	ctx context.Context, lang textlang.Lang, band convstate.Band, record draftcheck.Grounds,
 	write Writer[D], textOf TextOf[D], subjectOf SubjectOf[D], observe Observer,
 ) (D, error) {
 	check := func(draft D) []draftcheck.Finding {
-		return Findings(draft, lang, band, booked, textOf, subjectOf)
+		return Findings(draft, lang, band, record, textOf, subjectOf)
 	}
 
 	draft, err := write(ctx, "")
@@ -159,6 +128,42 @@ func CorrectOnce[D any](
 		return retried, nil
 	}
 	return draft, nil
+}
+
+// Findings is everything the phrasing rules say is wrong with one draft.
+//
+// Exported because CorrectOnce is not the only pass that has to ask. The voice
+// floor runs AFTER this loop and may substitute a retried draft, so it needs
+// the same answer to know whether the substitution regressed anything — and a
+// second spelling of "what is wrong with a draft" would drift from this one
+// until the two disagreed about a phrase in front of a user.
+//
+// record carries what the caller knows — a booking, a meeting the intent
+// names. Threaded is not the caller's to say: it is read off subjectOf, beside
+// the subject whose reply prefix it decides.
+func Findings[D any](
+	draft D, lang textlang.Lang, band convstate.Band, record draftcheck.Grounds,
+	textOf TextOf[D], subjectOf SubjectOf[D],
+) []draftcheck.Finding {
+	body, reasoning := textOf(draft)
+	// Whether this draft answers a real inbound message decides more than the
+	// subject's reply prefix: a reply is written from the counterparty's own
+	// words, so it may echo a call THEY named, where a message opening a new
+	// conversation has no such ground to stand on.
+	subject := ""
+	record.Threaded = false
+	if subjectOf != nil {
+		subject, record.Threaded = subjectOf(draft)
+	}
+	findings := append(draftcheck.Body(body, lang, band, record),
+		draftcheck.Reasoning(reasoning, lang, band)...)
+	// Shape is asked of the BODY alone. Reasoning chips travel through the same
+	// phrasing rules but are labels, not messages.
+	findings = append(findings, draftcheck.Formatting(body)...)
+	if subjectOf != nil {
+		findings = append(findings, draftcheck.Subject(subject, lang, band, record.Threaded)...)
+	}
+	return findings
 }
 
 // servesRetry decides which attempt a reader would call safer.

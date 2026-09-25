@@ -97,10 +97,12 @@ expect:
     the register is given. A draft that switches to Sie mid-message, or writes
     English, scores at the floor whatever else it gets right.
 
-    Invent nothing. No date, no figure, no commitment the message did not
-    contain; a timeframe for the deep dive ("nächste Woche", "in den kommenden
-    Tagen") is a date nobody proposed. Naming a specific next step the sender
-    never proposed is invention even when it sounds helpful.
+    Invent nothing. No figure and no commitment the message did not contain.
+    Proposing the deep dive for a loose timeframe ("in den kommenden Tagen")
+    is the ask itself and is correct; no weekday or date, which the shared
+    rules forbid while nothing is booked. Naming a
+    specific next step the sender never proposed is invention even when it
+    sounds helpful.
   bands:
     certified_min: 70
     degraded_min: 50

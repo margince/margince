@@ -12,7 +12,11 @@ package draftcheck
 // call either happened or it did not, and a sentence was either written or it
 // was not — no amount of recent correspondence makes an invented one true.
 
-import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 // Grounds is what the RECORD supports, as opposed to what the draft says.
 //
@@ -27,6 +31,44 @@ type Grounds struct {
 	// Booked: the record carries a meeting with this recipient, so the draft
 	// may refer to its day.
 	Booked bool
+	// Met: the caller's own intent names an earlier meeting with this
+	// recipient, so the draft may say they met. Set it from IntentNamesMeeting.
+	Met bool
+}
+
+// IntentNamesMeeting reports whether the caller's intent says an encounter
+// already HAPPENED. The caller can know that; nothing else in the input can.
+//
+// Every language at once, because the intent is typed in whatever the rep
+// writes in, not the draft's language. Past forms only, the bar spokenExchange
+// holds too: "propose a meeting" names one that has not taken place, and
+// reading it as met would ground the very invention the rule refuses.
+func IntentNamesMeeting(intent string) bool {
+	lowered := strings.ToLower(intent)
+	for _, phrases := range namedMeeting {
+		for _, phrase := range phrases {
+			if contains(lowered, phrase) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// namedMeeting are the ways an intent says the rep and the recipient have met.
+var namedMeeting = map[textlang.Lang][]string{
+	textlang.English: {
+		"met", "after meeting", "since meeting", "spoke", "talked",
+		"after the call", "after our call", "after the meeting", "after our meeting",
+	},
+	textlang.German: {
+		"getroffen", "kennengelernt", "gesprochen", "begegnet",
+		"nach dem treffen", "nach unserem treffen", "nach dem gespräch",
+		"nach unserem gespräch", "nach dem telefonat", "nach unserem telefonat",
+	},
+	textlang.Vietnamese: {
+		"đã gặp", "sau buổi gặp", "đã trao đổi",
+	},
 }
 
 // spokenExchange are the ways a draft asserts that a CONVERSATION happened —
