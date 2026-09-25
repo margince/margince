@@ -38,9 +38,9 @@ fixture:
 expect:
   outcome: accepted
   answer:
-    # A weak band has to say WHY, and the why is what they sell and to whom:
-    # a bakery selling to households is outside a market of software vendors.
-    cites: [their_offer, their_icp]
+    # A weak band has to say WHY, and what they sell is enough: bread is outside
+    # a market of software vendors whoever buys it.
+    cites: [their_offer]
     # Only weak. A bakery with no software product and no ERP is not a
     # judgment two careful readers differ on against an SAP integration
     # offering; a moderate band means the model graded effort, not fit.

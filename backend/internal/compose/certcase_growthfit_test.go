@@ -41,7 +41,8 @@ const growthFitFixtureJSON = `{
 func prepareGrowthFit(t *testing.T, expected string) aitasks.PreparedCase {
 	t.Helper()
 	prepared, err := growthFitCases{}.Prepare(
-		json.RawMessage(growthFitFixtureJSON), json.RawMessage(expected))
+		json.RawMessage(growthFitFixtureJSON), json.RawMessage(expected),
+	)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -107,7 +108,8 @@ func TestAScenarioThatCouldNeverDisagreeWithAReplyIsRefused(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := (growthFitCases{}).Prepare(
-				json.RawMessage(growthFitFixtureJSON), json.RawMessage(expected)); err == nil {
+				json.RawMessage(growthFitFixtureJSON), json.RawMessage(expected),
+			); err == nil {
 				t.Error("a scenario that measures nothing was accepted into the corpus")
 			}
 		})
@@ -219,8 +221,10 @@ func TestTheGrowthFitCaseCountsWhatASubScoreCites(t *testing.T) {
 		want    string
 	}{
 		{"their stack, cited by a sub-score", func(ids []string) string { return ids[2] }, aitasks.OutcomeAccepted},
-		{"an id the summary never gave", func([]string) string { return "0198c0de-0000-7000-8000-000000000000" },
-			aitasks.OutcomeWrongAnswer},
+		{
+			"an id the summary never gave", func([]string) string { return "0198c0de-0000-7000-8000-000000000000" },
+			aitasks.OutcomeWrongAnswer,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			prepared := prepareGrowthFit(t, `{"cites":["their_offer","their_stack"],"bands":["strong","moderate"]}`)
@@ -240,7 +244,8 @@ func TestTheGrowthFitCaseCountsWhatASubScoreCites(t *testing.T) {
 // better as prose, and pinning sentences would fail a good dossier.
 func TestTheDossierCaseGradesTheRecordsADescriptionRestsOn(t *testing.T) {
 	prepared, err := (companyDossierCases{}).Prepare(
-		json.RawMessage(growthFitFixtureJSON), json.RawMessage(`["their_offer"]`))
+		json.RawMessage(growthFitFixtureJSON), json.RawMessage(`["their_offer"]`),
+	)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -258,7 +263,8 @@ func TestTheDossierCaseGradesTheRecordsADescriptionRestsOn(t *testing.T) {
 // production shows as the deterministic floor rather than as prose.
 func TestADossierCitingNothingOfThisCompanyAbstains(t *testing.T) {
 	prepared, err := (companyDossierCases{}).Prepare(
-		json.RawMessage(growthFitFixtureJSON), json.RawMessage(`["their_offer"]`))
+		json.RawMessage(growthFitFixtureJSON), json.RawMessage(`["their_offer"]`),
+	)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
