@@ -17,7 +17,9 @@ import {
 type Routing = components["schemas"]["AiRouting"];
 // The adapters a tier may name. Written out because the wire carries a free
 // string — the server refuses an unknown one, and a reader choosing from a list
-// should not have to discover that by being refused.
+// should not have to discover that by being refused. A declared mirror of the
+// server's provider registry, held in both directions by
+// backend/gates/frontendproviders_test.go, which reads this `[…] as const` form.
 const PROVIDERS = [
   "gemini",
   "anthropic",
@@ -32,6 +34,32 @@ const PROVIDERS = [
 // through it, so the endpoint is the binding rather than a tweak to it.
 const OPENAI_WIRE = "openai_compatible";
 
+type TierBindingLike = {
+  provider: string;
+  model: string;
+  base_url?: string;
+  routing?: unknown;
+};
+
+// Broker preferences were written for one provider at one address, and the
+// server refuses them on any binding that is not OpenRouter. Changing either
+// therefore takes them off, rather than turning a routine vendor switch into a
+// refused save. Which hosts ARE OpenRouter is the server's rule; the editor
+// keeps no second copy of it, so it drops on any move instead of guessing.
+export function rebind<B extends TierBindingLike>(
+  binding: B,
+  patch: Partial<Pick<TierBindingLike, "provider" | "model" | "base_url">>,
+): B {
+  const next: B = { ...binding, ...patch };
+  const moved =
+    next.provider !== binding.provider ||
+    (next.base_url ?? "") !== (binding.base_url ?? "");
+  if (moved) {
+    delete next.routing;
+  }
+  return next;
+}
+
 // The three controls that name an adapter: which vendor, which model on it,
 // and -- only where the vendor has no address of its own -- where to reach it.
 //
@@ -42,9 +70,7 @@ const OPENAI_WIRE = "openai_compatible";
 // embedding row names itself -- and the LANE, which decides whether this field
 // offers chat models or embedders. An embedder on a chat tier cannot serve a
 // call, so offering one would be worse than offering nothing.
-export function AdapterFields<
-  B extends { provider: string; model: string; base_url?: string },
->({
+export function AdapterFields<B extends TierBindingLike>({
   label,
   lane,
   laneName,
@@ -80,7 +106,7 @@ export function AdapterFields<
             value={binding.provider}
             disabled={disabled}
             options={PROVIDERS.map((p) => ({ value: p, label: p }))}
-            onChange={(provider) => onChange({ ...binding, provider })}
+            onChange={(provider) => onChange(rebind(binding, { provider }))}
           />
         )}
       </Field>
@@ -113,7 +139,7 @@ export function AdapterFields<
               locale,
             )}
             disabled={disabled}
-            onChange={(model) => onChange({ ...binding, model })}
+            onChange={(model) => onChange(rebind(binding, { model }))}
           />
         )}
       </Field>
@@ -135,7 +161,7 @@ export function AdapterFields<
               disabled={disabled}
               placeholder={t("aiRouting.baseUrl.placeholder")}
               onChange={(e) =>
-                onChange({ ...binding, base_url: e.target.value })
+                onChange(rebind(binding, { base_url: e.target.value }))
               }
             />
           )}

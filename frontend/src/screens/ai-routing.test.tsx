@@ -15,6 +15,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { type Locale, LocaleProvider } from "../i18n";
 import { AiRoutingCard } from "./ai-routing";
+import { rebind } from "./ai-routing-fields";
 
 // Settings → AI → Model routing: which vendor this installation's text is sent
 // to. The server is the RBAC authority; this screen mirrors it by disabling
@@ -39,7 +40,10 @@ const ROUTING_READER: GrantSpec = { ai_routing: ["read"] };
 /** What PUT /ai/routing carries, as these tests read it back. */
 type CapturedRouting = {
   profile: string;
-  tiers: Record<string, { provider: string; model: string; base_url?: string }>;
+  tiers: Record<
+    string,
+    { provider: string; model: string; base_url?: string; routing?: unknown }
+  >;
   embeddings: {
     provider: string;
     model: string;
@@ -525,6 +529,46 @@ describe("AiRoutingCard", () => {
     expect(sent?.tiers.premium.provider).toBe("openai_compatible");
     expect(sent?.tiers.premium.base_url).toBe("https://openrouter.ai/api");
   });
+  // Broker preferences belong to the OpenRouter binding they were written for,
+  // and the server refuses them on any other. Carried onto a new vendor, they
+  // would turn a routine switch into a save refused with no field to fix.
+  it("drops a tier's broker preferences when it leaves OpenRouter", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      tiers: {
+        ...BOUND.tiers,
+        premium: {
+          provider: "openai_compatible",
+          model: "openai/gpt-oss-120b",
+          base_url: "https://openrouter.ai/api",
+          routing: { sort: "throughput" },
+        },
+      },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("openai/gpt-oss-120b");
+
+    const tier = await openLane(user, "ai-routing-tier-premium");
+    await pickOption(
+      user,
+      within(tier).getByRole("combobox", { name: "Provider" }),
+      "gemini",
+    );
+    await user.click(screen.getByRole("button", { name: /preview effects/i }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /save routing/i }),
+      ).not.toBeDisabled(),
+    );
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    const sent = backend.getCapturedPut()?.tiers.premium;
+    expect(sent?.provider).toBe("gemini");
+    expect(sent).not.toHaveProperty("routing");
+  });
   // The lane the operator reported as unreachable: it takes a provider of its
   // own, and re-pointing it has to carry the host and the width with it or the
   // server refuses the binding it just accepted.
@@ -807,4 +851,44 @@ it("keeps a manually opened advanced section open after closing a tier editor", 
   const tier = await openLane(user, "ai-routing-tier-premium");
   await user.click(within(tier).getByRole("button", { name: "Done" }));
   expect(details).toHaveAttribute("open");
+});
+
+// Which edits take a binding's broker preferences off. Only a move to another
+// provider or another address does: a new model at the same OpenRouter address
+// is still the binding the preferences were written for.
+describe("rebind", () => {
+  const openRouterTier = {
+    provider: "openai_compatible",
+    model: "openai/gpt-oss-120b",
+    base_url: "https://openrouter.ai/api",
+    routing: { sort: "throughput" },
+  };
+
+  it("keeps broker preferences when only the model changes", () => {
+    const next = rebind(openRouterTier, {
+      model: "mistralai/mistral-large-2512",
+    });
+    expect(next.model).toBe("mistralai/mistral-large-2512");
+    expect(next.routing).toEqual({ sort: "throughput" });
+  });
+
+  it("drops them when the provider changes, so the save is not refused", () => {
+    const next = rebind(openRouterTier, { provider: "gemini" });
+    expect(next.provider).toBe("gemini");
+    expect(next).not.toHaveProperty("routing");
+  });
+
+  it("drops them when base_url moves off OpenRouter", () => {
+    const next = rebind(openRouterTier, { base_url: "https://api.mistral.ai" });
+    expect(next.base_url).toBe("https://api.mistral.ai");
+    expect(next).not.toHaveProperty("routing");
+  });
+
+  it("keeps them when the patch re-states the same provider and base_url", () => {
+    const next = rebind(openRouterTier, {
+      provider: "openai_compatible",
+      base_url: "https://openrouter.ai/api",
+    });
+    expect(next.routing).toEqual({ sort: "throughput" });
+  });
 });
