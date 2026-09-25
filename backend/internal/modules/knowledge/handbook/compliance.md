@@ -19,7 +19,11 @@ can verify.
 
 1. **Tell the colleagues whose mail will be read** —
    [Mitarbeiterinformation](../compliance/de/mitarbeiterinformation.md)
-   (Art. 13 GDPR). Before a mailbox is connected, not after.
+   (Art. 13 GDPR). Before a mailbox is connected, not after. Keep the receipt:
+   [Empfangsbestätigung](../compliance/de/empfangsbestaetigung.md) is what shows
+   you did it, which Art. 5(2) asks of you separately from doing it. Where there
+   is no works council — Austria in particular — that same sheet is where the
+   individual agreement goes, because step 3 below has nothing to agree with.
 2. **Settle private use** —
    [Einwilligung](../compliance/de/einwilligung-email-erfassung.md)
    (§26(2) BDSG, Art. 7 GDPR). If private use of work mail is permitted or
