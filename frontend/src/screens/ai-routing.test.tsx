@@ -60,7 +60,7 @@ type CapturedRouting = {
 function sheetRow(
   provider: string,
   model_id: string,
-  lane: "chat" | "embeddings",
+  lane: "chat" | "embeddings" | "decisions",
   input_per_mtok: string,
   output_per_mtok: string,
 ) {
@@ -82,6 +82,8 @@ const SHEET = [
   sheetRow("gemini", "gemini-3.1-pro-preview", "chat", "2.00", "12.00"),
   sheetRow("gemini", "gemini-embedding-001", "embeddings", "0.15", "0"),
   sheetRow("anthropic", "claude-opus-4-8", "chat", "5.00", "25.00"),
+  // A decision model bills input alone, so the sheet leaves output blank.
+  sheetRow("openrouter_decision", "jev-classify", "decisions", "0.40", ""),
 ];
 
 // Which vendors hold a credential. `anthropic` is bound by nothing in BOUND,
@@ -881,6 +883,25 @@ describe("the decision model lane", () => {
     });
     // The lanes it sits beside are sent untouched.
     expect(sent?.embeddings.model).toBe("gemini-embedding-001");
+  });
+
+  // A decision is billed on its input alone, as an embedding is: the row
+  // prints one figure, and a blank output price is the sheet being right
+  // rather than a reason to call the binding unpriced.
+  it("prices a decision model on its input alone", async () => {
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      decisions: { provider: "openrouter_decision", model: "jev-classify" },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("jev-classify");
+
+    const lane = screen.getByTestId("ai-routing-decisions");
+    expect(
+      await within(lane).findByText("Input US$0.40 per 1M tokens"),
+    ).toBeInTheDocument();
+    expect(within(lane).queryByText("Unpriced")).toBeNull();
   });
 
   it("removing the decision model drops the key", async () => {

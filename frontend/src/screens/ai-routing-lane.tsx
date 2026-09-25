@@ -10,6 +10,7 @@ import { formatUsdPerMTok } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { processingLabel, useAiStatus } from "./ai-admin";
 import {
+  inputOnlyLane,
   type ModelCatalogue,
   type ModelLane,
   unreadablePrice,
@@ -324,9 +325,7 @@ function isUnpriced(
   if (unreadablePrice(rate.input_per_mtok)) {
     return true;
   }
-  // An embedding lane has no output, so a blank there is the sheet being right
-  // rather than unreadable.
-  return lane !== "embeddings" && unreadablePrice(rate.output_per_mtok);
+  return !inputOnlyLane(lane) && unreadablePrice(rate.output_per_mtok);
 }
 
 // The host part of a base URL, for a row that has room for the address but not
@@ -393,14 +392,13 @@ function priceLabel(
   // RangeError — during render, on a card the whole settings page is composed
   // from. The picker's own hint guards the same way for the same reason.
   //
-  // The output side is only asked about where it MEANS something: an embedding
-  // lane has no output, so its price is a single figure and a blank second
-  // column there is the sheet being right rather than unreadable.
+  // The output side is only asked about where it MEANS something: an
+  // input-only lane's price is a single figure.
   if (unreadablePrice(rate.input_per_mtok)) {
     return "";
   }
   const input = formatUsdPerMTok(rate.input_per_mtok, locale);
-  if (lane === "embeddings") {
+  if (inputOnlyLane(lane)) {
     return t("aiAdmin.inputRate", { input });
   }
   if (unreadablePrice(rate.output_per_mtok)) {
