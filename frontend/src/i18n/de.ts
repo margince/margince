@@ -3342,6 +3342,10 @@ export const de = {
   "create.postalCode": "Postleitzahl",
   "create.country": "Ländercode (ISO 3166)",
   "create.companyName": "Unternehmen",
+  "create.companyPicked":
+    "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
+  "create.companyNew":
+    "Legt ein neues Unternehmen an, sofern keines aus der Liste gewählt wird.",
   "create.dealName": "Deal-Name",
   "create.amount": "Wert",
   "create.currency": "Währung",

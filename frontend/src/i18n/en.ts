@@ -3465,6 +3465,9 @@ export const en = {
   "create.postalCode": "Postal code",
   "create.country": "Country code (ISO 3166)",
   "create.companyName": "Company",
+  "create.companyPicked": "Adds the contact to this existing company.",
+  "create.companyNew":
+    "Creates a new company unless one is picked from the list.",
   "create.dealName": "Deal name",
   "create.amount": "Value",
   "create.currency": "Currency",

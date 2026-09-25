@@ -82,7 +82,7 @@ Also called: create a contact, add someone to the CRM, new customer contact.
 ### How do I add a contact quickly, or import contacts from vCards?
 To add a contact quickly in Margince, open **Contacts** and choose **Quick capture**; to add many from a card file, choose **Import vCards**.
 - **Quick capture** asks for **Full name** (required), **Title**, **Company**, **LinkedIn**, **Email** and **Phone**, and confirms with "{name} saved"; the form stays open.
-- The **Company** box in Quick capture creates a new company from the name you type. If that company already existed, merge the two afterwards.
+- The **Company** box in Quick capture lists existing companies matching what you type: pick one to attach it. A name you do not pick creates a new company.
 - **Import vCards** asks for a **vCard file**: choose **Select .vcf file**. Each card is reported as Added, Missing fields added, Possible duplicate or Skipped.
 Also called: import contacts, upload a .vcf.
 
