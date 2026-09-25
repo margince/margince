@@ -72,9 +72,9 @@ func TestCertifyTaskRecordsEachScenariosOwnCounts(t *testing.T) {
 		byName[row.Scenario] = row
 	}
 	answers, wanders := byName["answers"], byName["wanders"]
-	// Three of three is too few runs for one case's own row to certify alone.
-	if answers.Runs != 3 || answers.Passed != 3 || answers.Verdict != VerdictSupportedDegraded {
-		t.Errorf("the passing scenario reads %+v, want 3 of 3 passed and %s", answers, VerdictSupportedDegraded)
+	// A row is held to the per-case gates, which three passing runs at 90 clear.
+	if answers.Runs != 3 || answers.Passed != 3 || answers.Verdict != VerdictCertified {
+		t.Errorf("the passing scenario reads %+v, want 3 of 3 passed and %s", answers, VerdictCertified)
 	}
 	if wanders.Runs != 3 || wanders.Passed != 0 || wanders.Verdict != VerdictNotSupported {
 		t.Errorf("the failing scenario reads %+v, want 0 of 3 passed and %s", wanders, VerdictNotSupported)

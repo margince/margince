@@ -110,8 +110,8 @@ type ScenarioRuns struct {
 	Bands Bands
 }
 
-// Verdict folds a set of scenario run sets into one certification outcome — a
-// single scenario for its record row, every scenario of a task for the task.
+// Verdict folds a set of scenario run sets into one certification outcome —
+// every scenario of a task, or of one site; a record row reads caseVerdict.
 // K of N is the pooled pass count, k of n one case's, and a score is one run's
 // median judge opinion:
 //
@@ -155,6 +155,46 @@ func Verdict(sets ...ScenarioRuns) (verdict string, reliability float64) {
 		cases = append(cases, caseOf(set))
 	}
 	return verdictOver(cases)
+}
+
+// caseVerdict is one case's standing against the per-case gates Verdict applies
+// to it inside a pool: not_supported when it would veto the task, certified when
+// it clears every gate a certified task holds each case to, degraded otherwise.
+//
+// It never re-runs the pooled bounds on the case alone. A task's evidence is
+// its pool, and three passing runs held to a pool's Wilson bound read as weak
+// however good they were, so every case of a certified task looked it.
+func caseVerdict(c caseStats) string {
+	return lowerVerdict(caseMechanicalBand(c), caseJudgeBand(c))
+}
+
+// caseMechanicalBand is the pass-count half of caseVerdict.
+func caseMechanicalBand(c caseStats) string {
+	switch {
+	case passVetoed(c):
+		return VerdictNotSupported
+	case c.passed*100 < casePassPercent*c.runs:
+		return VerdictSupportedDegraded
+	default:
+		return VerdictCertified
+	}
+}
+
+// caseJudgeBand is the judge-score half of caseVerdict; a case no judge graded
+// vetoes, as it does in the pool.
+func caseJudgeBand(c caseStats) string {
+	if len(c.scores) == 0 {
+		return VerdictNotSupported
+	}
+	upper := judgeUpper(c)
+	switch {
+	case upper < float64(c.bands.DegradedMin) || upper < float64(c.bands.Floor):
+		return VerdictNotSupported
+	case upper < float64(c.bands.CertifiedMin) || underFloor(c):
+		return VerdictSupportedDegraded
+	default:
+		return VerdictCertified
+	}
 }
 
 // caseStats is what the verdict rule reads of one case: its run and pass
@@ -249,7 +289,7 @@ func mechanicalBand(cases []caseStats, passed, runs int) string {
 }
 
 // judgeBand is the best grade the judge scores alone reach, ignoring pass/fail;
-// a scenario row carries its own. A case no judge graded reaches nothing: a
+// a scenario row carries caseJudgeBand. A case no judge graded reaches nothing: a
 // band is not met by a score nobody gave.
 func judgeBand(cases []caseStats) string {
 	vetoed, belowCertified := false, false

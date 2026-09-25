@@ -50,6 +50,9 @@ type aiCertPreset struct {
 	Bands    aiCertBands `json:"bands"`
 	Untested int         `json:"untested"`
 	Unbound  int         `json:"unbound"`
+	// NotServed counts the local-only tasks this preset binds only hosted
+	// models for: the router refuses them, so no grade describes them.
+	NotServed int `json:"not_served"`
 	// Unrecognised counts rows whose band this rollup has no column for. Always
 	// zero today; a nonzero one means the verdict vocabulary grew and this
 	// section is reporting less than it reads.
@@ -73,6 +76,9 @@ type aiCertPresetTask struct {
 	Model aiCertBindingRef `json:"model"`
 	Band  string           `json:"band"`
 	State string           `json:"state"`
+	// NotServed says the task is local-only and every rung this preset binds
+	// for it is hosted; Tier stays empty, since no rung serves it.
+	NotServed bool `json:"not_served,omitempty"`
 	// Runs and Passed are the record's pooled counts over every case of the
 	// task, and the two case counts say which half of the rule held a grade
 	// down: a case failing too many of its own runs, or its answers' quality.
@@ -169,12 +175,18 @@ func presetTaskRow(task string, preset aiCertPreset,
 	// The FIRST rung the preset binds, not the first rung the ladder names: a
 	// task whose primary tier this preset leaves unbound is served by the next
 	// one down, and reporting the primary would credit the preset with a model
-	// it never reaches.
+	// it never reaches. A local-only task skips hosted rungs, as the router does.
+	localOnly := ai.LocalOnly(ai.Task(task))
 	for _, tier := range ai.TaskLadder(ai.Task(task)) {
 		rung, ok := bound[string(tier)]
 		if !ok {
 			continue
 		}
+		if localOnly && !ai.ProviderIsLocal(rung.Provider) {
+			row.NotServed = true
+			continue
+		}
+		row.NotServed = false
 		row.Tier = rung.Tier
 		row.Model = aiCertBindingRef{
 			Provider: rung.Provider, Model: rung.Model, Env: preset.Profile, ThinkingLevel: rung.ThinkingLevel,
@@ -190,6 +202,8 @@ func presetTaskRow(task string, preset aiCertPreset,
 
 func countPresetTask(preset *aiCertPreset, row aiCertPresetTask) {
 	switch {
+	case row.NotServed:
+		preset.NotServed++
 	case row.Tier == "":
 		preset.Unbound++
 	case row.Band == "":
@@ -250,9 +264,9 @@ func aiCertCasesHoldingDown(rec aicert.Record) (failingOften, belowQuality int) 
 		if aicert.CaseFallsShort(sc.Passed, sc.Runs) {
 			failingOften++
 		}
-		band := sc.JudgeBand
+		band := sc.CaseJudgeBand()
 		if band == "" && sc.Passed == sc.Runs {
-			band = sc.Verdict
+			band = sc.CaseVerdict()
 		}
 		if band != "" && band != aicert.VerdictCertified {
 			belowQuality++
@@ -368,6 +382,54 @@ func TestAPresetIsCreditedOnlyByARecordAtItsOwnThinkingLevel(t *testing.T) {
 			if got.Band != tc.wantBand {
 				t.Errorf("preset at %q reads band %q from a record at %q, want %q",
 					tc.presetLevel, got.Band, tc.recordLevel, tc.wantBand)
+			}
+		})
+	}
+}
+
+// A local-only task is refused on every hosted rung, so a cloud preset shows it
+// as not served — never the grade its old hosted record earned — and a preset
+// binding a local model grades it as usual.
+func TestALocalOnlyTaskReadsNotServedOnACloudPreset(t *testing.T) {
+	task := ai.LocalOnlyTasks()[0]
+	cases := []struct {
+		name, provider, profile string
+		wantNotServed           bool
+		wantBand                string
+	}{
+		{"a cloud preset does not serve it", "gemini", string(ai.ProfileCloudFrontier), true, ""},
+		{"a local preset grades it", "ollama", string(ai.ProfileSovereign), false, aicert.VerdictCertified},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := aicert.Record{
+				Task: string(task), Provider: tc.provider, ServedModel: "m", EnvClass: tc.profile,
+				Verdict: aicert.VerdictCertified, Runs: 3, Passed: 3,
+			}
+			doc := aiCertDoc{Sites: []aiCertSite{{
+				Task:    rec.Task,
+				Records: []aiCertRecord{{Binding: bindingRefOf(rec), State: aicert.StatusCurrent}},
+			}}}
+			tiers := []aiCertPresetTier{}
+			for _, tier := range ai.TaskLadder(task) {
+				tiers = append(tiers, aiCertPresetTier{Tier: string(tier), Provider: tc.provider, Model: "m"})
+			}
+			preset := attributeAICertPresets([]aiCertPreset{{File: "p.yaml", Profile: tc.profile, Tiers: tiers}},
+				doc, []aicert.Record{rec})[0]
+			row := preset.Tasks[0]
+			if row.NotServed != tc.wantNotServed || row.Band != tc.wantBand {
+				t.Fatalf("row = not_served %v band %q, want %v and %q", row.NotServed, row.Band, tc.wantNotServed, tc.wantBand)
+			}
+			if tc.wantNotServed {
+				if preset.NotServed != 1 || preset.Bands.Certified != 0 || preset.Untested != 0 || preset.Unbound != 0 {
+					t.Errorf("counts = %+v, want the task counted as not served and nowhere else", preset)
+				}
+				if got := aiCertBottomLine(preset); got != "0 of 0 features ready, 1 not served (local-only data)" {
+					t.Errorf("bottom line = %q", got)
+				}
+				if aiCertGrade(row) != aiCertNotServed {
+					t.Errorf("grade = %q, want %q", aiCertGrade(row), aiCertNotServed)
+				}
 			}
 		})
 	}

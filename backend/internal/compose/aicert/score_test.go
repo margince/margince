@@ -237,3 +237,38 @@ func TestRecordForSiteAppliesTheSetRule(t *testing.T) {
 		t.Fatalf("legacy site verdict = %q, want the record's own verdict for a site holding every row", tally.Verdict)
 	}
 }
+
+// A row's case verdict reads the per-case gates the pooled rule applies, never
+// the pooled bounds re-run on one case's three runs; a stored verdict is
+// re-read wherever the row kept its scores and bands.
+func TestAScenarioRowsCaseVerdictReadsThePerCaseGates(t *testing.T) {
+	bands := &aicert.RowBands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}
+	row := func(passed int, scores ...int) aicert.ScenarioRecord {
+		return aicert.ScenarioRecord{
+			Runs: 3, Passed: passed, JudgeScores: scores, Bands: bands,
+			Verdict: aicert.VerdictSupportedDegraded,
+		}
+	}
+	for _, tc := range []struct {
+		name string
+		row  aicert.ScenarioRecord
+		want string
+	}{
+		{"three of three at 90 certifies", row(3, 90, 90, 90), aicert.VerdictCertified},
+		{"failing every run is vetoed", row(0, 90, 90, 90), aicert.VerdictNotSupported},
+		{"scored below the degraded bar every run is vetoed", row(3, 30, 30, 30), aicert.VerdictNotSupported},
+		{"one run under the floor degrades", row(3, 90, 90, 35), aicert.VerdictSupportedDegraded},
+		{"no judge grade is vetoed", row(3), aicert.VerdictNotSupported},
+		{
+			"a row without bands keeps its stored verdict",
+			aicert.ScenarioRecord{Runs: 3, Passed: 3, Verdict: aicert.VerdictSupportedDegraded},
+			aicert.VerdictSupportedDegraded,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.row.CaseVerdict(); got != tc.want {
+				t.Errorf("case verdict = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

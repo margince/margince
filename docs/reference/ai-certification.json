@@ -104,33 +104,35 @@
         {
           "task": "capture_confidentiality_verdict",
           "label": "Thread confidentiality check",
-          "tier": "local_small",
+          "tier": "",
           "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
+            "provider": "",
+            "model": "",
+            "env": ""
           },
-          "band": "certified",
-          "state": "stale",
-          "runs": 42,
-          "passed": 42,
+          "band": "",
+          "state": "",
+          "not_served": true,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
           "task": "capture_counterparty_verdict",
           "label": "First-time sender check",
-          "tier": "local_small",
+          "tier": "",
           "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
+            "provider": "",
+            "model": "",
+            "env": ""
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 57,
-          "passed": 52,
-          "cases_failing_often": 2,
+          "band": "",
+          "state": "",
+          "not_served": true,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
@@ -503,12 +505,13 @@
         }
       ],
       "bands": {
-        "certified": 11,
+        "certified": 10,
         "supported_degraded": 2,
-        "not_supported": 14
+        "not_supported": 13
       },
       "untested": 2,
       "unbound": 0,
+      "not_served": 2,
       "unrecognised": 0
     },
     {
@@ -604,32 +607,34 @@
         {
           "task": "capture_confidentiality_verdict",
           "label": "Thread confidentiality check",
-          "tier": "local_small",
+          "tier": "",
           "model": {
-            "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "cloud_frontier"
+            "provider": "",
+            "model": "",
+            "env": ""
           },
-          "band": "certified",
-          "state": "stale",
-          "runs": 42,
-          "passed": 42,
+          "band": "",
+          "state": "",
+          "not_served": true,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
           "task": "capture_counterparty_verdict",
           "label": "First-time sender check",
-          "tier": "local_small",
+          "tier": "",
           "model": {
-            "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "cloud_frontier"
+            "provider": "",
+            "model": "",
+            "env": ""
           },
-          "band": "certified",
-          "state": "stale",
-          "runs": 57,
-          "passed": 57,
+          "band": "",
+          "state": "",
+          "not_served": true,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -1003,12 +1008,13 @@
         }
       ],
       "bands": {
-        "certified": 23,
+        "certified": 21,
         "supported_degraded": 2,
         "not_supported": 4
       },
       "untested": 0,
       "unbound": 0,
+      "not_served": 2,
       "unrecognised": 0
     },
     {
@@ -1509,6 +1515,7 @@
       },
       "untested": 17,
       "unbound": 0,
+      "not_served": 0,
       "unrecognised": 0
     },
     {
@@ -1604,33 +1611,35 @@
         {
           "task": "capture_confidentiality_verdict",
           "label": "Thread confidentiality check",
-          "tier": "local_small",
+          "tier": "",
           "model": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
+            "provider": "",
+            "model": "",
+            "env": ""
           },
-          "band": "supported_degraded",
-          "state": "stale",
-          "runs": 42,
-          "passed": 37,
+          "band": "",
+          "state": "",
+          "not_served": true,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
           "task": "capture_counterparty_verdict",
           "label": "First-time sender check",
-          "tier": "local_small",
+          "tier": "",
           "model": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
+            "provider": "",
+            "model": "",
+            "env": ""
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 57,
-          "passed": 49,
-          "cases_failing_often": 2,
+          "band": "",
+          "state": "",
+          "not_served": true,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
@@ -2004,11 +2013,12 @@
       ],
       "bands": {
         "certified": 7,
-        "supported_degraded": 3,
-        "not_supported": 13
+        "supported_degraded": 2,
+        "not_supported": 12
       },
       "untested": 6,
       "unbound": 0,
+      "not_served": 2,
       "unrecognised": 0
     },
     {
@@ -2104,33 +2114,35 @@
         {
           "task": "capture_confidentiality_verdict",
           "label": "Thread confidentiality check",
-          "tier": "local_small",
+          "tier": "",
           "model": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-8b-2512",
-            "env": "eu_hosted"
+            "provider": "",
+            "model": "",
+            "env": ""
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 42,
-          "passed": 38,
-          "cases_failing_often": 1,
+          "band": "",
+          "state": "",
+          "not_served": true,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
           "task": "capture_counterparty_verdict",
           "label": "First-time sender check",
-          "tier": "local_small",
+          "tier": "",
           "model": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-8b-2512",
-            "env": "eu_hosted"
+            "provider": "",
+            "model": "",
+            "env": ""
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 57,
-          "passed": 51,
-          "cases_failing_often": 1,
+          "band": "",
+          "state": "",
+          "not_served": true,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
@@ -2505,10 +2517,11 @@
       "bands": {
         "certified": 10,
         "supported_degraded": 1,
-        "not_supported": 16
+        "not_supported": 14
       },
       "untested": 2,
       "unbound": 0,
+      "not_served": 2,
       "unrecognised": 0
     },
     {
@@ -3009,6 +3022,7 @@
       },
       "untested": 1,
       "unbound": 0,
+      "not_served": 0,
       "unrecognised": 0
     }
   ],

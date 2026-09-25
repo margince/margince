@@ -37,11 +37,11 @@ is waiting to be re-checked.
 
 | Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
 |---|---|---:|---:|---:|---:|---|
-| [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 11 | 2 | 14 | 2 | 11 of 29 features ready (re-check pending) |
-| [`gemini_cloud`](#gemini_cloud) | global cloud | 23 | 2 | 4 | 0 | 23 of 29 features ready (re-check pending) |
+| [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 10 | 2 | 13 | 2 | 10 of 27 features ready (re-check pending), 2 not served (local-only data) |
+| [`gemini_cloud`](#gemini_cloud) | global cloud | 21 | 2 | 4 | 0 | 21 of 27 features ready (re-check pending), 2 not served (local-only data) |
 | [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 6 | 1 | 5 | 17 | 6 of 29 features ready (re-check pending) |
-| [`openrouter_cloud`](#openrouter_cloud) | global cloud | 7 | 3 | 13 | 6 | 7 of 29 features ready (re-check pending) |
-| [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 10 | 1 | 16 | 2 | 10 of 29 features ready (re-check pending) |
+| [`openrouter_cloud`](#openrouter_cloud) | global cloud | 7 | 2 | 12 | 6 | 7 of 27 features ready (re-check pending), 2 not served (local-only data) |
+| [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 10 | 1 | 14 | 2 | 10 of 27 features ready (re-check pending), 2 not served (local-only data) |
 | [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 6 | 2 | 20 | 1 | 6 of 29 features ready (re-check pending) |
 
 **What the grades mean**
@@ -52,6 +52,7 @@ is waiting to be re-checked.
 | ⚠️ Usable with care | Right in at least two thirds of tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |
 | ❌ Not reliable yet | Wrong too often, or answers below the quality bar. | Leave it off, or check every answer by hand. |
 | ❔ Not measured | This preset has a model for the feature, but nobody has tested it yet. | Ask for a test before relying on it. |
+| 🔒 Not served here | The feature reads data that must stay on your own servers, and this preset has only cloud models for it, so the product never sends it there. | Bind a model running on your own servers to one of its tiers, or leave the feature off. |
 
 *re-check pending* after a grade means the product has changed since it was
 measured. The grade is the last one we have, and it is shown until the next test replaces it.
@@ -59,7 +60,7 @@ measured. The grade is the last one we have, and it is shown until the next test
 
 ### `consumer_class_brokered`
 
-Your data goes to: global cloud. 11 of 29 features ready (re-check pending). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
+Your data goes to: global cloud. 10 of 27 features ready (re-check pending), 2 not served (local-only data). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -71,7 +72,7 @@ Your data goes to: global cloud. 11 of 29 features ready (re-check pending). Pre
 | Did our reply settle it <sub>`request_settlement`</sub> | ❌ Not reliable yet | Right in 8 of 12 tries; one test case wrong too often · re-check pending |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured | Not measured yet |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet | Right in 52 of 57 tries; 2 test cases wrong too often · re-check pending |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
 | Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet | Right in 13 of 15 tries; one test case wrong too often · re-check pending |
 | Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
@@ -84,7 +85,7 @@ Your data goes to: global cloud. 11 of 29 features ready (re-check pending). Pre
 | Signal extraction <sub>`signal_extract`</sub> | ✅ Ready | Right every time (12 of 12) · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 12 of 27 tries; 5 test cases wrong too often · re-check pending |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready | Right every time (42 of 42) · re-check pending |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often · re-check pending |
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often · re-check pending |
 | Website deep read <sub>`site_extract`</sub> | ⚠️ Usable with care | Right every time (15 of 15); answer quality below the bar in one test case · re-check pending |
@@ -103,6 +104,10 @@ Your data goes to: global cloud. 11 of 29 features ready (re-check pending). Pre
 | `premium` | `openai_compatible` | `google/gemma-4-31b-it` |
 | `frontier` | `openai_compatible` | `google/gemma-4-31b-it` |
 
+A feature marked 🔒 Not served here is `local_only` in `backend/api/ai-tasks.yaml`: its
+data may reach only a model on your own servers, and every rung this preset binds for it
+is a cloud model, so the router refuses it instead of sending it there.
+
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
@@ -112,8 +117,8 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `agent_loop` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
 | `brief_ranking` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
 | `capture_classify` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
-| `capture_confidentiality_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ✅ Ready | re-check pending |
-| `capture_counterparty_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
+| `capture_confidentiality_verdict` | - | - | 🔒 Not served here | not served — local-only data |
+| `capture_counterparty_verdict` | - | - | 🔒 Not served here | not served — local-only data |
 | `cert_judge` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
 | `cold_start` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
 | `corpus_ask` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
@@ -142,7 +147,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `gemini_cloud`
 
-Your data goes to: global cloud. 23 of 29 features ready (re-check pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
+Your data goes to: global cloud. 21 of 27 features ready (re-check pending), 2 not served (local-only data). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -154,7 +159,7 @@ Your data goes to: global cloud. 23 of 29 features ready (re-check pending). Pre
 | Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready | Right every time (12 of 12) · re-check pending |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
 | Document extraction <sub>`document_extract`</sub> | ✅ Ready | Right every time (12 of 12) · re-check pending |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ✅ Ready | Right every time (57 of 57) · re-check pending |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
 | Message classification <sub>`capture_classify`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
 | Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
@@ -167,7 +172,7 @@ Your data goes to: global cloud. 23 of 29 features ready (re-check pending). Pre
 | Signal extraction <sub>`signal_extract`</sub> | ✅ Ready | Right every time (12 of 12) · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready | Right every time (27 of 27) · re-check pending |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready | Right every time (42 of 42) · re-check pending |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready | Right every time (12 of 12) · re-check pending |
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right every time (12 of 12); answer quality below the bar in 2 test cases · re-check pending |
 | Website deep read <sub>`site_extract`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
@@ -186,6 +191,10 @@ Your data goes to: global cloud. 23 of 29 features ready (re-check pending). Pre
 | `premium` | `gemini` | `gemini-3.5-flash` |
 | `frontier` | `gemini` | `gemini-3.1-pro-preview` |
 
+A feature marked 🔒 Not served here is `local_only` in `backend/api/ai-tasks.yaml`: its
+data may reach only a model on your own servers, and every rung this preset binds for it
+is a cloud model, so the router refuses it instead of sending it there.
+
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
@@ -195,8 +204,8 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
 | `brief_ranking` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
 | `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
-| `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
-| `capture_counterparty_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
+| `capture_confidentiality_verdict` | - | - | 🔒 Not served here | not served — local-only data |
+| `capture_counterparty_verdict` | - | - | 🔒 Not served here | not served — local-only data |
 | `cert_judge` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
 | `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
 | `corpus_ask` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
@@ -308,7 +317,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `openrouter_cloud`
 
-Your data goes to: global cloud. 7 of 29 features ready (re-check pending). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
+Your data goes to: global cloud. 7 of 27 features ready (re-check pending), 2 not served (local-only data). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -320,7 +329,7 @@ Your data goes to: global cloud. 7 of 29 features ready (re-check pending). Pres
 | Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready | Right every time (12 of 12) · re-check pending |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured | Not measured yet |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet | Right in 49 of 57 tries; 2 test cases wrong too often · re-check pending |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ⚠️ Usable with care | Right in 8 of 9 tries · re-check pending |
 | Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet | Right in 13 of 15 tries; one test case wrong too often · re-check pending |
 | Model pricing extraction <sub>`rate_extract`</sub> | ❔ Not measured | Not measured yet |
@@ -333,7 +342,7 @@ Your data goes to: global cloud. 7 of 29 features ready (re-check pending). Pres
 | Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet | Right in 8 of 12 tries; 2 test cases wrong too often · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 11 of 27 tries; 5 test cases wrong too often · re-check pending |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ⚠️ Usable with care | Right in 37 of 42 tries · re-check pending |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often · re-check pending |
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often · re-check pending |
 | Website deep read <sub>`site_extract`</sub> | ❔ Not measured | Not measured yet |
@@ -352,6 +361,10 @@ Your data goes to: global cloud. 7 of 29 features ready (re-check pending). Pres
 | `premium` | `openai_compatible` | `mistralai/mistral-medium-3-5` |
 | `frontier` | `openai_compatible` | `anthropic/claude-sonnet-4.6` |
 
+A feature marked 🔒 Not served here is `local_only` in `backend/api/ai-tasks.yaml`: its
+data may reach only a model on your own servers, and every rung this preset binds for it
+is a cloud model, so the router refuses it instead of sending it there.
+
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
@@ -361,8 +374,8 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `agent_loop` | `cheap_cloud` | `openai/gpt-oss-120b` | ❔ Not measured | not measured |
 | `brief_ranking` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
 | `capture_classify` | `local_small` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `capture_confidentiality_verdict` | `local_small` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
-| `capture_counterparty_verdict` | `local_small` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `capture_confidentiality_verdict` | - | - | 🔒 Not served here | not served — local-only data |
+| `capture_counterparty_verdict` | - | - | 🔒 Not served here | not served — local-only data |
 | `cert_judge` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
 | `cold_start` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
 | `corpus_ask` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | re-check pending |
@@ -391,7 +404,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `openrouter_cloud_eu`
 
-Your data goes to: EU-hosted cloud. 10 of 29 features ready (re-check pending). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
+Your data goes to: EU-hosted cloud. 10 of 27 features ready (re-check pending), 2 not served (local-only data). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -403,7 +416,7 @@ Your data goes to: EU-hosted cloud. 10 of 29 features ready (re-check pending). 
 | Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready | Right every time (12 of 12) · re-check pending |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured | Not measured yet |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet | Right in 51 of 57 tries; one test case wrong too often · re-check pending |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
 | Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet | Right in 13 of 15 tries; one test case wrong too often · re-check pending |
 | Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
@@ -416,7 +429,7 @@ Your data goes to: EU-hosted cloud. 10 of 29 features ready (re-check pending). 
 | Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 11 of 27 tries; 5 test cases wrong too often · re-check pending |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet | Right in 38 of 42 tries; one test case wrong too often · re-check pending |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet | Right in 5 of 12 tries; 2 test cases wrong too often · re-check pending |
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
 | Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet | Right in 9 of 15 tries; 2 test cases wrong too often · re-check pending |
@@ -435,6 +448,10 @@ Your data goes to: EU-hosted cloud. 10 of 29 features ready (re-check pending). 
 | `premium` | `openai_compatible` | `mistralai/mistral-small-2603` |
 | `frontier` | `openai_compatible` | `mistralai/mistral-small-2603` |
 
+A feature marked 🔒 Not served here is `local_only` in `backend/api/ai-tasks.yaml`: its
+data may reach only a model on your own servers, and every rung this preset binds for it
+is a cloud model, so the router refuses it instead of sending it there.
+
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
@@ -444,8 +461,8 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `agent_loop` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❔ Not measured | not measured |
 | `brief_ranking` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | re-check pending |
 | `capture_classify` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
-| `capture_confidentiality_verdict` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
-| `capture_counterparty_verdict` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
+| `capture_confidentiality_verdict` | - | - | 🔒 Not served here | not served — local-only data |
+| `capture_counterparty_verdict` | - | - | 🔒 Not served here | not served — local-only data |
 | `cert_judge` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | re-check pending |
 | `cold_start` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
 | `corpus_ask` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | re-check pending |

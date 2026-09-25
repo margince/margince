@@ -331,7 +331,7 @@ func TestCertifyTaskIsNotSupportedWhenOneScenarioGradesBelowItsBands(t *testing.
 }
 
 // The task verdict is the pass rate over every scenario's runs: 58 of 60
-// certifies, though two scenario rows do not. Those two passed 2 of 3, which is
+// certifies, and so does each row by the per-case gates. Two passed 2 of 3, which is
 // within one standard error of half, so each runs one more round and no other
 // case does.
 func TestCertifyTaskCertifiesAPoolWithTwoScatteredMisses(t *testing.T) {
@@ -371,8 +371,8 @@ func TestCertifyTaskCertifiesAPoolWithTwoScatteredMisses(t *testing.T) {
 			t.Errorf("row %s ran %d times, want %d", row.Scenario, row.Runs, want)
 		}
 	}
-	if row := rec.Scenarios[0]; row.Verdict != VerdictSupportedDegraded || row.JudgeBand != VerdictCertified {
-		t.Fatalf("row %s: verdict=%q judge_band=%q, want degraded by its own 5 of 6 and a certified judge band",
+	if row := rec.Scenarios[0]; row.Verdict != VerdictCertified || row.JudgeBand != VerdictCertified {
+		t.Fatalf("row %s: verdict=%q judge_band=%q, want its 5 of 6 at 90 to clear every per-case gate",
 			row.Scenario, row.Verdict, row.JudgeBand)
 	}
 }

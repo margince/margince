@@ -133,14 +133,13 @@ func worthRedriving(err error) bool {
 func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
 	results := set.Runs
 	tally := tallyOutcomes(results)
-	verdict, _ := Verdict(set)
 	stats := caseOf(set)
 	row := ScenarioRecord{
 		Scenario:            sc.Name,
 		Site:                sc.Site,
 		Stamp:               stamp,
-		Verdict:             verdict,
-		JudgeBand:           judgeBand([]caseStats{stats}),
+		Verdict:             caseVerdict(stats),
+		JudgeBand:           caseJudgeBand(stats),
 		JudgeScores:         stats.scores,
 		Bands:               &RowBands{CertifiedMin: set.Bands.CertifiedMin, DegradedMin: set.Bands.DegradedMin, Floor: set.Bands.Floor},
 		Runs:                len(results),

@@ -174,10 +174,10 @@ type ScenarioRecord struct {
 	// task: adding a tenth scenario leaves nine measurements true, and a task
 	// stamp has no way to say so. Empty on a record written before this field
 	// existed, which the report reads as "ask the task stamp instead".
-	Stamp   string `json:"stamp,omitempty"`
-	Verdict string `json:"verdict"`
-	// JudgeBand is the best verdict this scenario's judge scores alone reach
-	// against its own bands — what a verdict over several rows needs of each.
+	Stamp string `json:"stamp,omitempty"`
+	// Verdict and JudgeBand are the case's standing and its judge half as
+	// written; a reader asks CaseVerdict and CaseJudgeBand, which re-read them.
+	Verdict   string `json:"verdict"`
 	JudgeBand string `json:"judge_band,omitempty"`
 	Runs      int    `json:"runs"`
 	Passed    int    `json:"passed"`
@@ -227,6 +227,24 @@ type DecisionStats struct {
 	// ServedPassRate is what a caller of the site gets: kept-correct answers,
 	// plus the LLM record's pass rate on the runs that fell back to it.
 	ServedPassRate float64 `json:"served_pass_rate"`
+}
+
+// CaseVerdict is this row's standing against the per-case gates of the verdict
+// rule, recomputed from its scores and bands so a row written before the gates
+// were read this way reads them too; a row without bands keeps its stored one.
+func (sc ScenarioRecord) CaseVerdict() string {
+	if sc.Bands == nil {
+		return sc.Verdict
+	}
+	return caseVerdict(rowCase(sc))
+}
+
+// CaseJudgeBand is CaseVerdict's judge-score half, read the same way.
+func (sc ScenarioRecord) CaseJudgeBand() string {
+	if sc.Bands == nil {
+		return sc.JudgeBand
+	}
+	return caseJudgeBand(rowCase(sc))
 }
 
 // SiteTally is one SITE's share of a task's record, folded from the scenario
@@ -281,7 +299,7 @@ func (r Record) ForSite(variant string) (SiteTally, bool) {
 			continue
 		}
 		legacy = legacy || sc.Bands == nil
-		worst = lowerVerdict(worst, sc.Verdict)
+		worst = lowerVerdict(worst, sc.CaseVerdict())
 		cases = append(cases, rowCase(sc))
 		tally.Runs += sc.Runs
 		tally.Passed += sc.Passed
