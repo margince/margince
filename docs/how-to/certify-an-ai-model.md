@@ -18,7 +18,7 @@ developer/CI tool, never part of a request path.
 > spend — it tells you whether the run you are about to pay for is the missing one.
 
 See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md),
-[add-an-ai-task.md](add-an-ai-task.md) (adding one rather than certifying it), and
+[add-an-ai-task.md](add-an-ai-task.md) (adding one rather than certifying it), [certify-a-decision-site.md](certify-a-decision-site.md) (the decisions lane), and
 [reference/ai-certification.md](../reference/ai-certification.md) — the committed page these records render to.
 
 ## Prerequisites

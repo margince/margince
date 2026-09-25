@@ -376,3 +376,22 @@ Two things to re-check specifically, because both would change the default:
 whether Cerebras is still the throughput leader, and whether it still serves at
 fp16 — the `quantizations` clause admits it today, and a re-quantized host would
 silently fall out of the candidate set.
+
+## 11. The decisions endpoint
+
+OpenRouter also brokers TypeSafe Jev at `POST {base_url}/alpha/decisions`,
+billed on input tokens only. It binds the routing config's `decisions:` lane
+under the provider word `openrouter_decision`, beside `embeddings:` in
+`seeds.ai_routing` or through `PUT /v1/ai/routing`:
+
+```yaml
+    decisions:
+      provider: openrouter_decision
+      model: typesafe/jev-1.13
+      base_url: https://openrouter.ai/api
+```
+
+It sends the `openai_compatible` key, so `base_url` must be an OpenRouter host;
+and it takes no `routing:` preferences, so `eu_hosted` refuses it. A bound lane
+answers only the sites certified for it; the rest go to the ladder
+([ai-runtime.md](../explanation/ai-runtime.md#the-decision-lane)).

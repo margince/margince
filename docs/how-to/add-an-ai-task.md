@@ -274,6 +274,50 @@ and it caps how much of the site one certification run can cover:
    carrier can say `queued`/`running` and declare the lease that makes `stalled`
    derivable.
 
+## Adding a decision site
+
+A site may also carry a **decision form**: a typed question a decision model
+answers before the task's ladder, falling back to the LLM prompt whenever it is
+unsure ([how the lane works](../explanation/ai-runtime.md#the-decision-lane)).
+`site_triage` is the worked example: `sitetriage_decision.go` beside
+`sitetriage.go`, and `certcase_sitetriage.go`.
+
+1. **Declare it.** Add `decision: true` to the task in `ai-tasks.yaml` and run
+   `make gen`. Only a `shipped`, `background` task may declare one: the attempt
+   is an extra network call that no interactive deadline budgets for.
+2. **Build the request** from the same inputs the LLM request builder reads,
+   with `choiceQuestion` under the `decisionQuestionKey`, and call `ai.Decide`
+   where the site called `ai.Ask`, passing the site name and a gate.
+3. **Give the case the form.** The certification case implements
+   `aitasks.DecisionCase`; `TestEveryDecisionTaskHasAnAdapterAndEveryAdapterIsDeclared`
+   fails a declaration without one, and one without a declaration.
+4. **Certify it** ([certify-a-decision-site.md](certify-a-decision-site.md)).
+   Until its row is in `decisioncert_gen.go`, the lane skips the site.
+5. **Regenerate the prompts page**, which now shows the site's decision question:
+   `cd backend && go test ./internal/compose/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts`.
+
+Write the question to the decision-model guideline, not by pasting the prompt:
+
+- [ ] One short question an expert answers in a second, written in
+      full in `instructions`, naming state fields by backtick path
+      (`` `page.text` ``). Question ids are never sent to the model.
+- [ ] The state is JSON with meaningful keys and coded values spelled out in
+      words. It carries **the same inputs** as the LLM request — a test beside
+      the adapter holds that, as `TestTriageDecisionStateCarriesTheLLMInputs` does.
+- [ ] The criteria keys equal the LLM's answer enum (a test holds that too), and
+      each criterion says what makes *that* label right, including the trap it
+      must not fall into. Add an `other` label if the list is not exhaustive.
+- [ ] No fence, no output format, no language rules, no "state your
+      confidence": the wire keeps data apart from instructions and computes
+      confidence itself.
+- [ ] The gate reads the answer into the site's existing answer type at the
+      site's **own** floor constant. There is no second floor; below it, the
+      ladder answers.
+- [ ] Do not split a multi-factor judgment into several questions whose
+      confidences you multiply: combined confidence was measured unsafe here.
+- [ ] A `local_only` task's text never reaches a cloud decision model. That is
+      the router's rule, so the site needs no egress field of its own.
+
 ## Notes
 
 - **A record is a claim about one (provider, model, env) binding**, not about the
