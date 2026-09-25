@@ -526,13 +526,16 @@ describe("useBuiltinCommands", () => {
   // These three hold the claim that they now agree. The knob is the same
   // `meFixture` field `settings-nav.test.tsx` drives, so a predicate that
   // stopped reading it fails on both sides at once.
-  function renderProbeWithCompany(opts: { companyContext: boolean | null }) {
+  function renderProbeWithCompany(opts: {
+    companyContext: boolean | null;
+    roles?: string[];
+  }) {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
         jsonResponse(
           meFixture({
-            roles: [],
+            roles: opts.roles ?? [],
             // The write, which is what Company profile asks: the read is held
             // by every seat and stopped opening the page when the four
             // configuration pages moved off the reads.
@@ -579,6 +582,19 @@ describe("useBuiltinCommands", () => {
     await waitFor(() => {
       expect(screen.queryByText("Company profile")).toBeNull();
     });
+  });
+
+  // A read ends in saving the company, which only an admin may do, so no other
+  // seat is offered one. "Company profile" landing is the sign /me has.
+  it.each([
+    [["admin"], true],
+    [["rep"], false],
+  ])("offers %j reading a company: %s", async (roles, offered) => {
+    const user = userEvent.setup();
+    renderProbeWithCompany({ companyContext: true, roles });
+    await user.type(screen.getByRole("searchbox"), "company");
+    await screen.findByText("Company profile");
+    expect(screen.queryByText("Read a company") !== null).toBe(offered);
   });
 
   // The two destinations that carry a word the rail no longer prints. A reader

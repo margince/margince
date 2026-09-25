@@ -36,6 +36,7 @@ type userListWire struct {
 func TestAdminUserManagementOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
 
 	// Invite a member.
 	var invited userWire
@@ -328,6 +329,7 @@ func TestTheAccessPreviewIsAReadAndAnswersOnTheQuery(t *testing.T) {
 func TestTheAccessReadCarriesTheMembersStatusOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
 
 	var invited userWire
 	if status := e.Call(t, "POST", "/v1/users", map[string]any{

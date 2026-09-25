@@ -54496,7 +54496,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Refused, with the reason distinguished by the problem `code`: `email_taken` (a member with this email already exists), or `no_delivery_channel` (this installation has neither an outbound-email channel nor a public base URL, so neither the mailed link nor an admin-issued one could reach the member — an invite would create an ACTIVE account nobody could ever sign in as). */
+            /** @description Refused, with the reason distinguished by the problem `code`: `email_taken` (a member with this email already exists), `no_delivery_channel` (this installation has neither an outbound-email channel nor a public base URL, so neither the mailed link nor an admin-issued one could reach the member — an invite would create an ACTIVE account nobody could ever sign in as), or `company_not_described` (this installation has not yet saved its own company through `PUT /company`; the onboarding gate holds every admin on the company form until it is saved, so no seat of any role is added before then, and a client may read any non-admin seat as proof that the company exists. Asked after the caller's grant, so a caller who may not invite is answered 403 either way). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -54601,7 +54601,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description `email_taken` — a seat with this address already exists. A former member is recorded once; if they came back, reactivate the seat rather than adding a second one. */
+            /** @description Refused, with the reason distinguished by the problem `code`: `email_taken` — a seat with this address already exists. A former member is recorded once; if they came back, reactivate the seat rather than adding a second one. Or `company_not_described` — this installation has not yet saved its own company through `PUT /company`. The onboarding gate holds every admin on the company form until it is saved, so no seat of any role is added before then. */
             409: {
                 headers: {
                     [name: string]: unknown;

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   Building2,
   Check,
@@ -34,6 +34,7 @@ import {
 } from "../i18n";
 import { coldFieldLabel, throwProblem } from "./common";
 import { onboardingLocale } from "./onboarding-conversation/onboarding-locale";
+import { useConfiguredModel } from "./onboarding-conversation/workbench";
 
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 type AiProfile = components["schemas"]["AiProfile"];
@@ -158,30 +159,6 @@ type ConversationEntry =
   | { role: "user"; message: string; id: string }
   | { role: "assistant"; reply: MessageReply; id: string };
 
-const tierKeys = {
-  local_small: "ob.ai.tier.localSmall",
-  cheap_cloud: "ob.ai.tier.cheapCloud",
-  premium: "ob.ai.tier.premium",
-  frontier: "ob.ai.tier.frontier",
-  local_large: "ob.ai.tier.localLarge",
-} as const;
-
-export function configuredModelLabel(
-  profile: AiProfile | undefined,
-  unavailable: string,
-  t: Translator,
-) {
-  const configured = profile?.configured_models
-    ?.map(
-      (binding) =>
-        `${binding.provider}/${binding.model} · ${t(tierKeys[binding.tier])}`,
-    )
-    .filter((binding, index, all) => binding && all.indexOf(binding) === index);
-  if (configured?.length) return configured.join(" + ");
-  if (profile?.providers?.length) return profile.providers.join(" + ");
-  return unavailable;
-}
-
 // Which locale key names each running mode, singular and plural: the map
 // itself is the honesty check — a mode the backend adds without a key here
 // fails to compile rather than silently rendering nothing.
@@ -209,7 +186,7 @@ function distinctModelIds(models: readonly AssistantConfiguredModel[]) {
  * The plain-language line the rail footer shows by default: how many models
  * are configured and where they run, with the exact identifiers left for the
  * runtime chip's disclosure to name. Derived from the same profile as
- * {@link configuredModelLabel} so the two can never disagree about the count
+ * the workbench's configuredModelLabel so the two can never disagree about the count
  * or the mode — this never invents a friendly model name, only counts and
  * places what the server actually reports.
  */
@@ -258,15 +235,7 @@ function WebsiteWorkbench(
     props.companyDraft,
   );
   const [applied, setApplied] = useState<Set<string>>(new Set());
-  const profile = useQuery({
-    queryKey: ["ai-profile"],
-    queryFn: async (): Promise<AiProfile> => {
-      const { data, error } = await api.GET("/ai/profile");
-      if (error) throwProblem(error);
-      return data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const configuredModels = useConfiguredModel();
   const latestReply = [...conversation.entries]
     .reverse()
     .find(
@@ -282,11 +251,6 @@ function WebsiteWorkbench(
     (!readRuntime || replyRuntime.call_attempts >= readRuntime.call_attempts)
       ? replyRuntime
       : readRuntime;
-  const configuredModels = configuredModelLabel(
-    profile.data,
-    t("ob.ai.runtimeUnavailable"),
-    t,
-  );
   const state = presenceState(props, props.running);
   const presentation = props.read
     ? coreReadPresentation(

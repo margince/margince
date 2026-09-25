@@ -43,6 +43,7 @@ import {
 } from "./common";
 import { ReadWarnings, SavedNotice } from "./company-context.notices";
 import { CompanyMark } from "./companymark";
+import { useCompany } from "./installationcompany";
 import "./company-context.css";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];
@@ -299,25 +300,13 @@ export function CompanyContextCard() {
   // the server would have admitted.
   const me = useMe();
   const canEdit = useCanUpsert("company");
-  // The installation's own profile is administered, not read on a grant.
-  // GET /company takes auth.RequireAdmin (contacts' requireAnchorAdministrator)
-  // and refuses every other role outright — so a seat without the admin role
-  // has no profile to show and asking for one earns a 403 it can do nothing
-  // with. The settings tab this card sits on is reachable on
+  // The installation's own profile is administered, not read on a grant:
+  // useCompany asks only from an admin seat, and for any other this card draws
+  // nothing (below). The settings tab it sits on opens on
   // installation_settings:read, which four roles hold, and the two cards beside
   // this one are theirs to see; this one simply is not.
   const isAdmin = useHoldsAdminRole();
-  const company = useQuery({
-    queryKey: ["company"],
-    enabled: isAdmin,
-    queryFn: async (): Promise<CompanyProfile> => {
-      const { data, error } = await api.GET("/company");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const company = useCompany(true);
   const [form, setForm] = useState<CompanyInput | null>(null);
   // Which row's Edit was pressed, and so where the dialog puts focus. One
   // dialog holds every field because ONE PUT writes them: a per-group form
@@ -631,7 +620,7 @@ function CompanyFactsCard({
   saved,
   onEdit,
 }: Readonly<{
-  company: QueryLike<CompanyProfile>;
+  company: QueryLike<CompanyProfile | null>;
   /** Which rollout stage this installation is on, once the probe has answered. */
   rollout?: Capabilities["rollout"];
   form: CompanyInput | null;
@@ -684,6 +673,7 @@ function CompanyFactsCard({
           pendingLabel={t("settings.companySourceTitle")}
         >
           {(profile) =>
+            profile !== null &&
             form && (
               <>
                 {/* The company's FACE, above the statements about it. It is the

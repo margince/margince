@@ -4,8 +4,8 @@ import type { Locale } from "../../i18n";
 import type { NarrationEntry, ResumePoint } from "./conversation-types";
 
 // Session restore as a pure decision: server state in, a start plan out.
-// The wizard state's `path` field is THE member signal; an existing company
-// profile is only the fallback when no state row exists (a returning creator
+// The wizard state's `path` field is THE member signal; a described
+// installation is only the fallback when no state row exists (a returning creator
 // has both a state row and a saved company, and must NOT be demoted to the
 // member path, which would silently skip the installation acts). A member's
 // company is settled before they arrive, so their plan always opens confirmed
@@ -28,8 +28,15 @@ export type VoiceRestoreProbe = Readonly<{
 export type RestoreInputs = Readonly<{
   /** GET /onboarding/state; null when nothing was persisted (404). */
   state: OnboardingState | null;
-  /** GET /company; null while no human confirmed one (404). */
+  /** GET /company; null while no human confirmed one (404), and always null
+   * for a seat that is not an admin, which may not read it. */
   profile: CompanyProfile | null;
+  /** Whether the installation has described itself (useInstallationDescribed):
+   * the saved profile for an admin, implied for any other seat. */
+  described: boolean;
+  /** Whether this seat holds the admin role, the only one that may save the
+   * company: any other seat walks the member path, whatever its row says. */
+  mayDescribe: boolean;
   /** Voice server truth; null when the probe was not needed (member path,
    * or the journey has not reached the voice act). */
   voice: VoiceRestoreProbe | null;
@@ -161,12 +168,13 @@ function recapEntries(
   inputs: RestoreInputs,
   target: ResumePoint,
 ): NarrationEntry[] {
-  const { state, profile, voice, locale } = inputs;
+  const { state, profile, described, voice, locale } = inputs;
   const entries: NarrationEntry[] = [
     { kind: "narration", id: "recap:back", i18nKey: "ob.conv.recap.back" },
   ];
   // The company act's recap: confirmed with the saved name, or the honest
-  // "not saved" when the state row claims progress the profile lacks.
+  // "not saved" when the state row claims progress the profile lacks. A seat
+  // that may not read the name gets no company line: its company is settled.
   if (profile !== null) {
     entries.push({
       kind: "narration",
@@ -174,7 +182,7 @@ function recapEntries(
       i18nKey: "ob.conv.recap.company",
       params: { name: profile.display_name },
     });
-  } else {
+  } else if (!described) {
     entries.push({
       kind: "narration",
       id: "recap:company-unsaved",
@@ -232,12 +240,11 @@ function memberPlan(
 }
 
 export function restorePlan(inputs: RestoreInputs): RestorePlan {
-  const { state, profile, read, routeConnect, locale } = inputs;
+  const { state, described, mayDescribe, read, routeConnect, locale } = inputs;
   // "complete" is the wizard row's own word, and it can outrun the record it
   // claims: the state row and the company profile are separate writes, and the
   // connect act persists completion without requiring a saved profile. An
-  // installation whose profile read comes back absent is not finished, whatever
-  // the row says.
+  // installation that is not described is not finished, whatever the row says.
   //
   // Reporting it finished anyway does not merely show the wrong screen. The
   // app's onboarding gate sends every route back here while the profile is
@@ -246,11 +253,13 @@ export function restorePlan(inputs: RestoreInputs): RestorePlan {
   // whole shell unmounts. The disagreement is already modelled a few lines
   // below as the "company unsaved" recap; this is the same fact, decided
   // earlier.
-  if (state?.step === "complete" && profile !== null) {
+  if (state?.step === "complete" && described) {
     return { kind: "complete" };
   }
+  // A creator row outlives a demoted admin, and its company act ends in a save
+  // the seat may no longer make.
   const memberPath =
-    state !== null ? state.path === "member" : profile !== null;
+    !mayDescribe || (state !== null ? state.path === "member" : described);
   if (memberPath) {
     return memberPlan(inputs, state);
   }

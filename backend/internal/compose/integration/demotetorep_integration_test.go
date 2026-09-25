@@ -134,6 +134,7 @@ func assertSignedInAsRep(t *testing.T, e *apptest.AppEnv) {
 func TestDemoteToRepDemotesTheSeatMakingTheRequests(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Demotion", "admin@demote.test", "Admin")
+	e.DescribeCompany(t)
 
 	var invited struct {
 		ID string `json:"id"`

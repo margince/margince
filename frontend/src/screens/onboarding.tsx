@@ -198,28 +198,6 @@ export function formFromProfile(p: CompanyProfile): CompanyForm {
   };
 }
 
-// useCompany reads the installation's own company, or null when it has not
-// saved one yet: GET /company 404s until a human does, and that 404 IS the
-// onboarding signal — there is no separate "onboarded" flag that could drift
-// from the records it claims to describe. The app shell's gate and this form
-// share it, so one cache entry answers both and they cannot disagree.
-export function useCompany(enabled: boolean) {
-  return useQuery({
-    queryKey: ["company"],
-    enabled,
-    queryFn: async (): Promise<CompanyProfile | null> => {
-      const { data, error, response } = await api.GET("/company");
-      if (error) {
-        if (response.status === 404) {
-          return null;
-        }
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
-
 /**
  * The cache key of the LIVE wizard state: what the app shell's gate reads,
  * and where the conversation's checkpoint writer lands each server answer —

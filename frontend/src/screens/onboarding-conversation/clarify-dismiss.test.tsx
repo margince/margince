@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
 import { OnboardingScreen } from "../onboarding";
 import { resolutionsFromAnswers } from "./company-proposal";
@@ -293,6 +294,10 @@ function stubApi(read: CompanySiteRead, proposal: Proposal) {
       }
       if (path.includes("/company/site-reads/") && request.method === "GET") {
         return jsonResponse(read);
+      }
+      // GET /company answers only an admin, so the journey's session is one.
+      if (path.endsWith("/me") && request.method === "GET") {
+        return jsonResponse(meFixture());
       }
       if (path.endsWith("/company") && request.method === "GET") {
         return jsonResponse({ detail: "no company yet" }, 404);

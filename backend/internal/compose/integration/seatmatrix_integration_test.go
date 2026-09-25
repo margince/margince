@@ -417,6 +417,7 @@ func callForCode(t *testing.T, e *apptest.AppEnv, method, path string, body AnyM
 // bootstrap admin on a full seat, before any role or seat is changed.
 func seedSeatFixtures(t *testing.T, e *apptest.AppEnv) seatFixtures {
 	t.Helper()
+	e.DescribeCompany(t)
 	seeded := apptest.DiscoverSeededPipeline(t, e)
 	var contact struct {
 		ID string `json:"id"`

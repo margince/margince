@@ -4,7 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { configuredAiProfile } from "./onboarding.stories.fixtures";
 import { ConversationEntries, ReadCompanyStep } from "./onboarding-read";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "./story-utils";
 import "./onboarding.css";
 // `.staging-card` is the panel-ai family's staged member and lives in the
 // design system's own sheet; nothing in this surface's import graph pulls it,
@@ -183,6 +188,7 @@ function ReadStory({
   error?: string | null;
 }>) {
   installFetchStub({
+    "GET /me": meRoute({ automation: ["update"] }),
     "GET /ai/profile": () => jsonResponse(configuredAiProfile),
   });
   return (
