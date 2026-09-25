@@ -26,7 +26,7 @@ const triageDecisionSite = "triage"
 const triageDecisionInstructions = "What is this website, judged only from what `page.text` states (never from the domain in `page.url`)?"
 
 var triageDecisionCriteria = map[string]string{
-	siteKindCompany:  "A business, agency, institution or association offering something, including a one-person consultancy that presents itself as a business.",
+	siteKindCompany:  "A business, agency, institution or association offering something, including a solo consultancy that presents itself as a business.",
 	siteKindPersonal: "One individual's own homepage, CV, portfolio or blog.",
 	siteKindProvider: "A vendor's own site selling email mailboxes, web hosting or domains to the public.",
 	siteKindParked:   "A registrar placeholder, coming-soon or under-construction page, error page, or domain-for-sale listing.",

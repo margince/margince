@@ -34,9 +34,9 @@ const (
 	attemptReasonDecisionLocalOnly     = "decision_local_only"
 )
 
-// decisionAttemptReasons is every reason a decision attempt hands the walk
-// after it, so the one test of "is this a decision reason" reads a list the
-// constants above are written into once.
+// decisionAttemptReasons lists the reasons a decision attempt hands the walk
+// after it; isDecisionFallbackReason reads it rather than repeating the
+// constants.
 var decisionAttemptReasons = []string{
 	attemptReasonDecisionBelowFloor, attemptReasonDecisionError, attemptReasonDecisionOffEnum,
 	attemptReasonDecisionStateTooLarge, attemptReasonDecisionUncertified, attemptReasonDecisionLocalOnly,
@@ -93,8 +93,8 @@ type decidingLane interface {
 
 // Decide sends a decision site's call. A lane that cannot decide — the offline
 // fake, a recorder, a test double — is asked the LLM question exactly as Ask
-// would ask it, so a site is written once against this seam and a lane without
-// the decision form still serves it.
+// would ask it, so a lane without the decision form still serves a decision
+// site.
 func Decide(ctx context.Context, lane Completer, site string, dreq decision.Request,
 	req model.Request, validate Validator, gate DecisionGate,
 ) (DecideOutcome, error) {

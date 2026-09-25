@@ -34,12 +34,14 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-var providerSwitchAllowed = map[string]string{
+var providerSwitchAllowed = gatekit.Waive(map[string]string{
 	"selectBrainOn":    "builds each adapter; a recipe per provider is the switch's job",
 	"NewPublicProfile": `switches on the runtime state "fake", not on a provider`,
-}
+})
 
 func TestProviderFactsLiveOnlyInTheRegistry(t *testing.T) {
 	files, err := filepath.Glob("*.go")
@@ -77,9 +79,13 @@ func TestProviderFactsLiveOnlyInTheRegistry(t *testing.T) {
 			continue
 		}
 		for _, hit := range providerFactSites(f, idents) {
+			if hit.switchIn != "" && providerSwitchAllowed.Waived(t, hit.switchIn) {
+				continue
+			}
 			t.Errorf("%s:%d: %s — declare it as a providerDescriptor field and project it", name, fset.Position(hit.pos).Line, hit.what)
 		}
 	}
+	providerSwitchAllowed.AssertAllMatched(t)
 }
 
 // The detector must fire on every shape it claims, or the census above reads
@@ -102,20 +108,23 @@ func TestTheProviderCensusFiresOnEachShape(t *testing.T) {
 		}
 	}
 	cases["map key assigned to a field that is not ProviderMetadata"] = `package ai; func f(r *R) { r.Other = map[string]int{"gemini": 1} }`
-	quiet := `package ai; func selectBrainOn(p string) { switch p { case providerGemini: } }; var m = map[string]int{"other": 1}
+	quiet := `package ai; var m = map[string]int{"other": 1}
 func g(r *R, meta []byte) { r.ProviderMetadata = map[string][]byte{"gemini": meta} }`
 	f, err := parser.ParseFile(token.NewFileSet(), "x.go", quiet, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if hits := providerFactSites(f, idents); len(hits) != 0 {
-		t.Errorf("census fired on an allowed switch or an unrelated key: %v", hits)
+		t.Errorf("census fired on an unrelated key or on ProviderMetadata: %v", hits)
 	}
 }
 
 type providerFactSite struct {
 	pos  token.Pos
 	what string
+	// switchIn names the function a switch-case hit sits in, which is what
+	// providerSwitchAllowed is keyed on; empty for a table.
+	switchIn string
 }
 
 // providerNameSet is the provider words as a set, read from the registry so the
@@ -174,15 +183,12 @@ func providerFactSites(f *ast.File, idents map[string]string) []providerFactSite
 				return !assignsProviderMetadata(v)
 			case *ast.KeyValueExpr:
 				if isProvider(v.Key) {
-					hits = append(hits, providerFactSite{v.Pos(), "a table keyed by provider"})
+					hits = append(hits, providerFactSite{pos: v.Pos(), what: "a table keyed by provider"})
 				}
 			case *ast.CaseClause:
-				if _, allowed := providerSwitchAllowed[fn]; allowed {
-					return true
-				}
 				for _, e := range v.List {
 					if isProvider(e) {
-						hits = append(hits, providerFactSite{e.Pos(), "a switch case on a provider"})
+						hits = append(hits, providerFactSite{e.Pos(), "a switch case on a provider", fn})
 					}
 				}
 			}

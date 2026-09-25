@@ -302,7 +302,7 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 // the sovereign profile, then narrowed to same-host rungs for a local-only
 // task. Profile and clients come from the one binding snapshot, so no ladder
 // mixes two loads. serveAttempt walks it and Decide peeks the cache against
-// it, so the two cannot disagree about which cached answer would serve.
+// it, so both read the same ladder when asking which cached answer would serve.
 func servableLadder(b *binding, task Task, ladder []Tier) []Tier {
 	_, hasLarge := b.clients[TierLocalLarge]
 	return localOnlyLadder(task, b.routeMeta, profileLadder(b.profile, hasLarge, ladder))
