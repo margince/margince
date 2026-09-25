@@ -7989,7 +7989,6 @@ export const en = {
   "aiusage.col.task": "Task",
   "aiusage.col.tier": "Tier",
   "aiTier.decide": "Decision model",
-  "aiusage.decisionShare": "{task}: decision model answered {share} of calls",
   "aiusage.col.calls": "Calls",
   "aiusage.col.cached": "Cached",
   "aiusage.col.tokensIn": "Tokens in",

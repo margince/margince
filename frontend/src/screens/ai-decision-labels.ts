@@ -18,10 +18,6 @@ export function tierLabel(tier: string, t: T): string {
   return tier === DECIDE_TIER ? t("aiTier.decide") : tier;
 }
 
-export function isDecideTier(tier: string | undefined): boolean {
-  return tier === DECIDE_TIER;
-}
-
 // Why an attempt ran, where the answer is that the decision model before it did
 // not stand. An explicit switch rather than a key built from the wire string:
 // the catalog is a closed union, and the reason field is a free string the

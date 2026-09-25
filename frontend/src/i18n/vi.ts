@@ -7772,8 +7772,6 @@ export const vi = {
   "aiusage.col.task": "Tác vụ",
   "aiusage.col.tier": "Bậc",
   "aiTier.decide": "Mô hình quyết định",
-  "aiusage.decisionShare":
-    "{task}: mô hình quyết định đã trả lời {share} số lệnh gọi",
   "aiusage.col.calls": "Lượt gọi",
   "aiusage.col.cached": "Đã cache",
   "aiusage.col.tokensIn": "Token vào",

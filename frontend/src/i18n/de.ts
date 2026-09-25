@@ -7820,8 +7820,6 @@ export const de = {
   "aiusage.col.task": "Aufgabe",
   "aiusage.col.tier": "Modellstufe",
   "aiTier.decide": "Entscheidungsmodell",
-  "aiusage.decisionShare":
-    "{task}: Entscheidungsmodell hat {share} der Aufrufe beantwortet",
   "aiusage.col.calls": "Aufrufe",
   "aiusage.col.cached": "Aus dem Cache",
   "aiusage.col.tokensIn": "Tokens (Eingabe)",
