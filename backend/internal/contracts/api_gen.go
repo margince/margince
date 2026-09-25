@@ -19694,7 +19694,7 @@ type AiRungHealth struct {
 	// counted.
 	Calls int `json:"calls"`
 
-	// Failures How many of those attempts carried an error, whether or not a later attempt answered the caller.
+	// Failures How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached.
 	Failures int `json:"failures"`
 
 	// Healthy The tier's latest attempt in the window answered. The latest, not a ratio: a tier

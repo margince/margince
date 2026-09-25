@@ -106,3 +106,21 @@ func TestRungHealthReadsATiersLatestAttemptWithinOneCall(t *testing.T) {
 		t.Errorf("%s = %+v, want unhealthy — its latest attempt failed", TierLocalSmall, rung)
 	}
 }
+
+// A withheld answer or a rejected request is an outcome, not an outage: the
+// model was reached and decided. Counted as failures they would mark a
+// responding tier down on the one screen an operator reads to find an outage.
+func TestRungHealthDoesNotCountAnOutcomeAsAFailure(t *testing.T) {
+	withheld, rejected := ids.NewV7(), ids.NewV7()
+	rungs := rungHealthAfter(t,
+		[]Call{
+			ladderRow(withheld, 1, false, TierCheapCloud, "", sentinelOutputWithheld),
+			ladderRow(withheld, 2, true, TierPremium, attemptReasonProviderError, ""),
+		},
+		[]Call{ladderRow(rejected, 1, true, TierCheapCloud, "", sentinelRequestRejected)},
+	)
+	cheap := rungs[string(TierCheapCloud)]
+	if cheap.Calls != 2 || cheap.Failures != 0 || !cheap.Healthy() {
+		t.Errorf("%s = %+v, want 2 calls, 0 failed, healthy", TierCheapCloud, cheap)
+	}
+}

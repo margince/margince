@@ -18436,7 +18436,7 @@ export interface components {
              *     counted.
              */
             calls: number;
-            /** @description How many of those attempts carried an error, whether or not a later attempt answered the caller. */
+            /** @description How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached. */
             failures: number;
             /**
              * @description The most recent error this tier reported, absent when it reported none. It is the

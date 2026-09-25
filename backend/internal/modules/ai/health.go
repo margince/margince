@@ -115,7 +115,9 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 		// `metering_failed` is a SUCCESS here. It marks a call the model
 		// answered where only the usage-meter write failed (callstore.go), and
 		// callstats.go already treats it as served for exactly that reason.
-		// Counting it as a failure would report a working lane as down.
+		// `output_withheld` and `request_rejected` are outcomes, not failures:
+		// the model was reached and decided. Counting any of the three would
+		// report a responding lane as down (answeredSentinels).
 		//
 		// Latest is ordered by occurred_at, then attempt: every attempt of one
 		// logical call is written in one transaction and shares occurred_at,
@@ -125,7 +127,7 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 			  SELECT tier, occurred_at, attempt, latency_ms,
 			         (error_sentinel IS NOT NULL
 			          AND error_sentinel <> ''
-			          AND error_sentinel <> 'metering_failed') AS failed,
+			          AND NOT error_sentinel = ANY($2)) AS failed,
 			         coalesce(error_sentinel, '') AS sentinel
 			    FROM ai_call
 			   WHERE occurred_at >= $1
@@ -145,7 +147,7 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 			       coalesce((array_agg(failed ORDER BY occurred_at DESC, attempt DESC))[1], false) AS last_failed
 			  FROM attempts
 			 GROUP BY tier
-			 ORDER BY tier`, since)
+			 ORDER BY tier`, since, answeredSentinels)
 		if err != nil {
 			return fmt.Errorf("ai: reading rung health: %w", err)
 		}
