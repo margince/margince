@@ -26,10 +26,12 @@ can verify.
    individual agreement goes, because step 3 below has nothing to agree with.
 2. **Settle private use** —
    [Einwilligung](../compliance/de/einwilligung-email-erfassung.md)
-   (§26(2) BDSG, Art. 7 GDPR). If private use of work mail is permitted or
-   tolerated, you are a telecommunications provider to your own staff and the
-   ordinary employment basis does not carry you. Get consent, per colleague, per
-   version — or ban private use in writing and enforce it.
+   (§26(2) BDSG, Art. 7 GDPR). Where private use of the work mailbox is
+   permitted or tolerated, the archive fills with correspondence from outside
+   the company entirely — a friend, a doctor, a landlord. The employment basis
+   reaches the employee. It reaches nobody who merely wrote to them, and those
+   third parties were never asked. Get consent, per colleague, per version — or
+   ban private use in writing and enforce it.
 3. **Agree it with the works council** —
    [Betriebsvereinbarung](../compliance/de/betriebsvereinbarung-vorlage.md)
    (§87(1) Nr. 6 BetrVG). Mail capture is a system suitable for monitoring
