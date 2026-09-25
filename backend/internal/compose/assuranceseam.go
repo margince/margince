@@ -66,7 +66,12 @@ const assuranceSubjectsSQL = `
 		         WHERE al.deal_id = d.id
 		           AND a.archived_at IS NULL
 		           AND ((a.kind = 'task' AND a.is_done = false)
-		                OR (a.kind = 'meeting' AND a.meeting_status = 'booked'
+		                -- NULL is a meeting nothing has said is off. An imported
+		                -- one carries no status, and the strict form raised a
+		                -- "no next step" finding against a deal whose next step
+		                -- was in the rep's calendar.
+		                OR (a.kind = 'meeting'
+		                    AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
 		                    AND a.occurred_at > $2))) AS has_next_step,
 		       EXISTS (SELECT 1
 		          FROM relationship r
