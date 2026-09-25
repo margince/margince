@@ -281,14 +281,14 @@ export const en = {
   "history.undo.unsupportedRecordType":
     "Changes to this record type cannot be undone.",
   "history.undo.superseded":
-    "These fields have changed since. Undoing this change also undoes the later edits.",
+    "These fields have changed since, so this change cannot be undone.",
   "history.undo.behindErasureBoundary":
     "This change predates an erasure, and its values were permanently deleted.",
   "history.undo.alreadyUndone": "This change was already undone.",
   "history.undo.notRestorableByThisPath":
     "These fields cannot be restored by undo.",
   "history.undo.recordArchived":
-    "The record is archived. Restore the record before undoing a change.",
+    "The record is archived and takes no changes, so this change cannot be undone.",
   "history.undo.nullUnwritable":
     "Undoing this change would clear a field that cannot be empty, so it cannot be undone.",
   "history.undo.notWritableByCaller":
@@ -607,8 +607,7 @@ export const en = {
   "record.disqualify": "Disqualify",
   "record.archiveConfirm": "Archive this record? There is no undo.",
   "record.archived": "Archived",
-  "record.archivedReadOnly":
-    "This company is archived. Restore it to make changes.",
+  "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange":
     "You cannot edit this company. Ask its owner to share it, or an administrator for edit rights.",
   "record.logActivityRefused":
@@ -2440,7 +2439,7 @@ export const en = {
   "lead.demote": "Reverse qualification",
   "lead.demoteDialog": "Reverse qualification?",
   "lead.demoteExplain":
-    "The lead returns to “Working”. A contact created by the qualification is archived; a contact it merged into is unchanged. A qualification cannot be reversed while the contact is on a live deal.",
+    "The lead returns to “Engaged”. A contact created by the qualification is archived; a contact it merged into is unchanged. A qualification cannot be reversed while the contact is on a live deal.",
   "lead.demoteReason": "Reason (recorded in the audit trail)",
   "lead.demoteReasonRequired": "Enter a reason first.",
   "lead.demoteConfirm": "Reverse",
@@ -4099,8 +4098,7 @@ export const en = {
     "Figures as they stood when the snapshot was taken. They do not change, and the link names the time it was taken.",
   "analytics.share.snapshotUnavailable":
     "No snapshot exists for this period yet.",
-  "analytics.share.expiryNote":
-    "The link stops working after 30 days. You can close it sooner.",
+  "analytics.share.expiryNote": "The link stops working after 30 days.",
   "analytics.share.create": "Create link",
   "analytics.share.linkTitle": "Your link",
   "analytics.share.linkWarning":
@@ -7914,7 +7912,7 @@ export const en = {
   "template.edit": "Edit template",
   "template.archive": "Archive template",
   "template.archiveConfirm":
-    "Archive this template? Offers that reference it fall back to the locale default.",
+    "Archive this template? Offers that already use it keep its layout. New offers cannot select it.",
   "template.name": "Name",
   "template.locale": "Locale",
   "template.isDefault": "Default for locale",
@@ -8804,7 +8802,7 @@ export const en = {
   // the six relationship sections below it.
   "contact.rail.detailsTitle": "Details",
   "contact.rail.archivedReadOnly":
-    "This contact is archived. Restore the contact to make changes.",
+    "This contact is archived and takes no changes.",
   "contact.notYoursToChange":
     "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights.",
   // Fired when an employment row's version could not be read back before a

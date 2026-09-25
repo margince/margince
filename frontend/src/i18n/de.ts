@@ -286,7 +286,7 @@ export const de = {
   "history.undo.unsupportedRecordType":
     "Änderungen an diesem Datensatztyp lassen sich nicht rückgängig machen.",
   "history.undo.superseded":
-    "Diese Felder wurden seitdem geändert. Beim Rückgängigmachen werden auch die späteren Bearbeitungen rückgängig gemacht.",
+    "Diese Felder wurden seitdem geändert, daher lässt sich diese Änderung nicht rückgängig machen.",
   "history.undo.behindErasureBoundary":
     "Diese Änderung liegt vor einer Löschung, und ihre Werte wurden endgültig gelöscht.",
   "history.undo.alreadyUndone":
@@ -294,7 +294,7 @@ export const de = {
   "history.undo.notRestorableByThisPath":
     "Änderungen an diesen Feldern lassen sich nicht rückgängig machen.",
   "history.undo.recordArchived":
-    "Der Datensatz ist archiviert. Stelle den Datensatz wieder her, bevor du eine Änderung rückgängig machst.",
+    "Der Datensatz ist archiviert und lässt keine Änderungen zu, daher lässt sich diese Änderung nicht rückgängig machen.",
   "history.undo.nullUnwritable":
     "Diese Änderung lässt sich nicht rückgängig machen, weil dabei ein Pflichtfeld leer würde.",
   "history.undo.notWritableByCaller":
@@ -595,7 +595,7 @@ export const de = {
     "Diesen Datensatz archivieren? Das lässt sich nicht rückgängig machen.",
   "record.archived": "Archiviert",
   "record.archivedReadOnly":
-    "Dieses Unternehmen ist archiviert. Stelle es wieder her, um es zu ändern.",
+    "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
   "record.notYoursToChange":
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die zuständige Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "record.logActivityRefused":
@@ -2371,7 +2371,7 @@ export const de = {
   "lead.demote": "Qualifizierung zurücknehmen",
   "lead.demoteDialog": "Qualifizierung zurücknehmen?",
   "lead.demoteExplain":
-    "Der Lead erhält wieder den Status „In Bearbeitung“. Ein bei der Qualifizierung angelegter Kontakt wird archiviert, ein zusammengeführter Kontakt bleibt unverändert. Ist der Kontakt an einem laufenden Deal beteiligt, lässt sich die Qualifizierung nicht zurücknehmen.",
+    "Der Lead erhält wieder den Status „Im Gespräch“. Ein bei der Qualifizierung angelegter Kontakt wird archiviert, ein zusammengeführter Kontakt bleibt unverändert. Ist der Kontakt an einem laufenden Deal beteiligt, lässt sich die Qualifizierung nicht zurücknehmen.",
   "lead.demoteReason": "Grund (wird im Audit-Log erfasst)",
   "lead.demoteReasonRequired": "Gib zuerst einen Grund ein.",
   "lead.demoteConfirm": "Zurücknehmen",
@@ -3978,7 +3978,7 @@ export const de = {
   "analytics.share.snapshotUnavailable":
     "Für diesen Zeitraum gibt es noch keinen Snapshot.",
   "analytics.share.expiryNote":
-    "Der Link funktioniert nach 30 Tagen nicht mehr. Du kannst ihn früher schließen.",
+    "Der Link funktioniert nach 30 Tagen nicht mehr.",
   "analytics.share.create": "Link erstellen",
   "analytics.share.linkTitle": "Dein Link",
   "analytics.share.linkWarning":
@@ -7738,7 +7738,7 @@ export const de = {
   "template.edit": "Vorlage bearbeiten",
   "template.archive": "Vorlage archivieren",
   "template.archiveConfirm":
-    "Diese Vorlage archivieren? Angebote, die sie verwenden, greifen auf die Standardvorlage der Sprache zurück.",
+    "Diese Vorlage archivieren? Angebote, die sie bereits verwenden, behalten ihr Layout. Neue Angebote können sie nicht mehr auswählen.",
   "template.name": "Name",
   "template.locale": "Sprache",
   "template.isDefault": "Standard für die Sprache",
@@ -8640,7 +8640,7 @@ export const de = {
 
   "contact.rail.detailsTitle": "Details",
   "contact.rail.archivedReadOnly":
-    "Dieser Kontakt ist archiviert. Stelle den Kontakt wieder her, um ihn zu ändern.",
+    "Dieser Kontakt ist archiviert und lässt keine Änderungen zu.",
   "contact.notYoursToChange":
     "Du kannst diesen Kontakt nicht bearbeiten. Frage die zuständige Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "contact.rail.employmentVersionUnresolved":

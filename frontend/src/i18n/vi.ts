@@ -292,14 +292,14 @@ export const vi = {
   "history.undo.unsupportedRecordType":
     "Không thể hoàn tác thay đổi trên loại bản ghi này.",
   "history.undo.superseded":
-    "Đã có người sửa các trường này sau đó. Hoàn tác sẽ xoá cả quyết định của họ.",
+    "Các trường này đã thay đổi sau đó, nên không thể hoàn tác thay đổi này.",
   "history.undo.behindErasureBoundary":
     "Thay đổi này nằm sau một lần xoá dữ liệu, nội dung của nó đã bị xoá vĩnh viễn.",
   "history.undo.alreadyUndone": "Thay đổi này đã được hoàn tác.",
   "history.undo.notRestorableByThisPath":
     "Các trường này không được ghi qua đường mà thao tác hoàn tác đi.",
   "history.undo.recordArchived":
-    "Bản ghi đang được lưu trữ. Hãy khôi phục bản ghi trước khi hoàn tác một thay đổi.",
+    "Bản ghi này đã lưu trữ và không nhận thay đổi, nên không thể hoàn tác thay đổi này.",
   "history.undo.nullUnwritable":
     "Không thể hoàn tác vì thao tác này sẽ phải xoá trống một trường mà bản ghi này không thể xoá trống.",
   "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
@@ -598,8 +598,7 @@ export const vi = {
   "record.archiveConfirm":
     "Bạn chắc chứ? Thao tác này lưu trữ bản ghi — không có nút hoàn tác.",
   "record.archived": "Đã lưu trữ",
-  "record.archivedReadOnly":
-    "Công ty này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào.",
+  "record.archivedReadOnly": "Công ty này đã lưu trữ và không nhận thay đổi.",
   "record.notYoursToChange":
     "Bạn không thể thay đổi công ty này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "record.logActivityRefused":
@@ -2361,7 +2360,7 @@ export const vi = {
   "lead.demote": "Hoàn tác chuyển đổi",
   "lead.demoteDialog": "Hoàn tác việc chuyển đổi này?",
   "lead.demoteExplain":
-    "Lead quay lại hàng đợi ở trạng thái “Đang xử lý”. Liên hệ do việc chuyển tạo ra sẽ được lưu trữ; liên hệ đã được gộp vào giữ nguyên. Không thể hoàn tác với liên hệ đang gắn với một deal.",
+    "Lead quay lại trạng thái “Đang trao đổi”. Liên hệ do việc chuyển tạo ra sẽ được lưu trữ; liên hệ đã được gộp vào giữ nguyên. Không thể hoàn tác khi liên hệ đang gắn với một deal chưa lưu trữ.",
   "lead.demoteReason": "Lý do (được ghi vào nhật ký)",
   "lead.demoteReasonRequired": "H\u00e3y n\u00eau l\u00fd do tr\u01b0\u1edbc.",
   "lead.demoteConfirm": "Hoàn tác",
@@ -3945,8 +3944,7 @@ export const vi = {
     "Các con số như khi trạng thái được lưu lại. Chúng không thay đổi, nên liên kết nêu rõ thời điểm.",
   "analytics.share.snapshotUnavailable":
     "Chưa có trạng thái nào được đóng băng cho kỳ này.",
-  "analytics.share.expiryNote":
-    "Liên kết ngừng hoạt động sau 30 ngày. Bạn có thể đóng sớm hơn.",
+  "analytics.share.expiryNote": "Liên kết ngừng hoạt động sau 30 ngày.",
   "analytics.share.create": "Tạo liên kết",
   "analytics.share.linkTitle": "Liên kết của bạn",
   "analytics.share.linkWarning":
@@ -7692,7 +7690,7 @@ export const vi = {
   "template.edit": "Sửa mẫu",
   "template.archive": "Lưu trữ mẫu",
   "template.archiveConfirm":
-    "Lưu trữ mẫu này? Các báo giá tham chiếu tới mẫu này sẽ quay về mẫu mặc định của ngôn ngữ.",
+    "Lưu trữ mẫu này? Các báo giá đang dùng mẫu này vẫn giữ bố cục của nó. Báo giá mới không thể chọn mẫu này.",
   "template.name": "Tên",
   "template.locale": "Ngôn ngữ",
   "template.isDefault": "Mặc định cho ngôn ngữ này",
@@ -8566,7 +8564,7 @@ export const vi = {
 
   "contact.rail.detailsTitle": "Chi tiết",
   "contact.rail.archivedReadOnly":
-    "Liên hệ này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào tại đây.",
+    "Liên hệ này đã lưu trữ và không nhận thay đổi.",
   "contact.notYoursToChange":
     "Bạn không thể thay đổi liên hệ này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "contact.rail.employmentVersionUnresolved":

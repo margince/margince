@@ -477,7 +477,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "heldThreads.heldByOthers",
     "history.field.assignee_id",
     "history.field.owner_id",
-    "history.undo.superseded",
     "import.objectHint.lead",
     "lead.bulkOwner",
     "lead.bulkOwnerPick",

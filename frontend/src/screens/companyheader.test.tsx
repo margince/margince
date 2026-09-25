@@ -269,7 +269,7 @@ describe("an archived account's verbs", () => {
       // sentence the control does not point at reaches no reader who needed it.
       const describedBy = control.getAttribute("aria-describedby");
       expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-        "This company is archived. Restore it to make changes.",
+        "This company is archived and takes no changes.",
       );
     }
     // The reads next to them are untouched: what happened to a record is
