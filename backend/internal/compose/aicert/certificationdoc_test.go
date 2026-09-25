@@ -42,6 +42,9 @@ type aiCertDoc struct {
 	Bindings  []aiCertBinding   `json:"bindings"`
 	Sites     []aiCertSite      `json:"sites"`
 	Unclaimed []aiCertUnclaimed `json:"unclaimed_records"`
+	// Decisions is every decision record: a measurement of the decision lane
+	// on one site, which no completion site above claims.
+	Decisions []aiCertDecision `json:"decisions"`
 }
 
 type aiCertTotals struct {

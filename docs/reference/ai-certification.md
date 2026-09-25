@@ -1041,6 +1041,24 @@ model, real network).
 
 </details>
 
+<details>
+<summary>Decision models</summary>
+
+### Decision models
+
+A decision model answers a site's closed question first. The site's LLM ladder
+answers instead whenever the lane may not be asked (a local-only task), fails,
+or answers below the site's own floor. A decision record comes from a
+`make e2e-ai ROUTING=` run whose config binds `decisions:`, and is certified
+per site with no judge: `certified` means no answer the site kept was wrong in
+any run, and at least one was kept. The lane serves a site only while its
+record is certified and not stale (*Serves*); `make gen` writes those rows into
+`internal/modules/ai/decisioncert_gen.go`.
+
+No decision record is committed, so the decision lane serves no site.
+
+</details>
+
 ### Sites, their scenarios and their records
 
 One section per task, and one folded block per site it ships. The scenario table
