@@ -11,13 +11,15 @@ import type { MessageKey } from "../i18n/en";
 
 // The factors this build has a word for.
 //
-// The value type admits `undefined` because the compiler cannot: the contract
-// pins the stored vocabulary to `warmth`, so a token outside this map reaches a
-// reader only from a NEWER server. Typed as a total record it would read as
-// exhaustive and the unnamed arm below would look like dead code.
-const FACTOR_NAMES: Readonly<Record<string, MessageKey | undefined>> = {
-  warmth: "brief.factor.warmth",
-};
+// A Map rather than an object literal, because the lookup key arrives off the
+// wire: an object inherits from `Object.prototype`, so a run naming the factor
+// `toString` would resolve to a FUNCTION, pass an `=== undefined` guard and be
+// handed to the translator as though it were a message key. A Map has no
+// prototype to reach through, and its miss is the `undefined` the unnamed arm
+// below is written for.
+const FACTOR_NAMES: ReadonlyMap<string, MessageKey> = new Map([
+  ["warmth", "brief.factor.warmth"],
+]);
 
 /**
  * omittedFactorsText is the sentence a run owes when it could not weigh a
@@ -37,7 +39,7 @@ export function omittedFactorsText(
   const named: string[] = [];
   let unnamed = false;
   for (const factor of factors) {
-    const key = FACTOR_NAMES[factor];
+    const key = FACTOR_NAMES.get(factor);
     if (key === undefined) {
       unnamed = true;
     } else {

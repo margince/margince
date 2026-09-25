@@ -32,6 +32,19 @@ it("folds several unknown factors into one phrase, not a repeated one", () => {
   expect(text.split(en["brief.factor.unknown"])).toHaveLength(2);
 });
 
+// A token naming something every object inherits. Looked up in an object
+// literal these resolve to functions rather than to a miss, which is a crash
+// one version skew away: the server names the factor and the translator is
+// handed `Object.prototype.toString`.
+it.each(["toString", "constructor", "hasOwnProperty", "__proto__"])(
+  "treats the inherited name %s as a factor it cannot name",
+  (factor) => {
+    expect(omittedFactorsText([factor], t)).toContain(
+      en["brief.factor.unknown"],
+    );
+  },
+);
+
 it("keeps a named factor beside an unknown one", () => {
   const text = omittedFactorsText(["warmth", "revenue"], t) ?? "";
   expect(text).toContain(en["brief.factor.warmth"]);
