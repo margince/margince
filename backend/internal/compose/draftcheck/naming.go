@@ -44,6 +44,15 @@ var vagueSubjects = map[string]bool{
 	"es": true, "das": true, "dies": true, "darüber": true,
 }
 
+// determiners come before a subject without being one, so the word after them
+// is the one tested: "the last time" and "a couple of things" name nothing.
+var determiners = map[string]bool{
+	"the": true, "a": true, "an": true, "our": true, "your": true,
+	"this": true, "these": true, "those": true, "few": true, "couple": true, "of": true,
+	"der": true, "die": true, "den": true, "dem": true, "das": true,
+	"ein": true, "eine": true, "einen": true, "einem": true, "unser": true, "unsere": true, "unseren": true,
+}
+
 // gestures reports whether text carries phrase anywhere as a bare gesture
 // rather than as the lead of a clause naming what the exchange was about.
 func gestures(lowered, phrase string, lang textlang.Lang) bool {
@@ -80,9 +89,13 @@ func namesSubject(before, after string, connectors []string) bool {
 		}
 		words = words[1:]
 	}
+	// A determiner with punctuation on it ends the clause, so it is the subject.
+	for len(words) > 1 && determiners[words[0]] {
+		words = words[1:]
+	}
 	if len(words) == 0 {
 		return false
 	}
 	subject := strings.TrimFunc(words[0], func(r rune) bool { return !unicode.IsLetter(r) })
-	return subject != "" && !vagueSubjects[subject]
+	return subject != "" && !vagueSubjects[subject] && !determiners[subject]
 }

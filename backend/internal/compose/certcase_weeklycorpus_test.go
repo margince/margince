@@ -96,3 +96,28 @@ func TestTheLossPatternScenarioWantsACitedLearningAndRefusesSilence(t *testing.T
 		}
 	}
 }
+
+// A fixture may state only the rows production sends. One listing commitments
+// would certify a prompt fed rows the shipping job never builds.
+func TestALearningsFixtureListingARowKindProductionNeverSendsIsRefused(t *testing.T) {
+	census, err := compose.NewTaskCensus()
+	if err != nil {
+		t.Fatalf("building the task census: %v", err)
+	}
+	factory, ok := census.CaseFor(ai.TaskWeeklyLearnings, "learn")
+	if !ok {
+		t.Fatal("weekly_learnings/learn binds no case")
+	}
+	deals := `"deals":[{"id":"01a05500-0000-7000-8000-0000000000e1","label":"A","outcome":"lost"},` +
+		`{"id":"01a05500-0000-7000-8000-0000000000e2","label":"B","outcome":"lost"},` +
+		`{"id":"01a05500-0000-7000-8000-0000000000e3","label":"C","outcome":"lost"}]`
+	expected := json.RawMessage(`{"must_abstain":true}`)
+	if _, err := factory.Prepare(json.RawMessage(`{"week_start":"2026-07-13",`+deals+`}`), expected); err != nil {
+		t.Fatalf("the production-shaped fixture must prepare: %v", err)
+	}
+	withCommitments := `{"week_start":"2026-07-13",` + deals +
+		`,"commitments":[{"type":"commitment","id":"01a05500-0000-7000-8000-0000000000c1","label":"Call"}]}`
+	if _, err := factory.Prepare(json.RawMessage(withCommitments), expected); err == nil {
+		t.Fatal("a fixture carrying commitment rows must be refused: production sends none")
+	}
+}

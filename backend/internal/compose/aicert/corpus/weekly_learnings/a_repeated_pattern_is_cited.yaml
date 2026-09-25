@@ -10,8 +10,7 @@ sanitized_by: hand_authored/claude-opus-5
 #
 # The shape lives in the outcome field because that is the only per-deal fact
 # production sends: a deal line carries its label and its outcome, nothing
-# else. The labels are plain names, so the pattern cannot be read out of one,
-# and no commitment row is listed because the production input sends none.
+# else. The labels are plain names, so the pattern cannot be read out of one.
 fixture:
   week_start: "2026-07-13"
   counts:
@@ -26,16 +25,13 @@ fixture:
     meetings_held: 3
     leads_routed: 5
   deals:
-    - type: deal
-      id: "01a05500-0000-7000-8000-0000000000e1"
+    - id: "01a05500-0000-7000-8000-0000000000e1"
       label: "Aurora Logistik"
       outcome: "lost"
-    - type: deal
-      id: "01a05500-0000-7000-8000-0000000000e2"
+    - id: "01a05500-0000-7000-8000-0000000000e2"
       label: "Borealis Pumpen"
       outcome: "lost"
-    - type: deal
-      id: "01a05500-0000-7000-8000-0000000000e3"
+    - id: "01a05500-0000-7000-8000-0000000000e3"
       label: "Cascade Foods"
       outcome: "lost"
 expect:

@@ -135,9 +135,25 @@ func TestVerdictPoolsEveryCaseAndVetoesAClearlyBrokenOne(t *testing.T) {
 			repeated(10, graded(testBands, 3, 60, 60, 60)), aicert.VerdictSupportedDegraded,
 		},
 		{
+			// Its mean of 88 is under its own bar of 90; its bound is not.
 			"a case with stricter bands is held to its own bar, pooled",
-			append(repeated(18, graded(testBands, 3, 80, 80, 80)), graded(strict, 3, 80, 80, 80)),
+			append(repeated(18, graded(testBands, 3, 80, 80, 80)), graded(strict, 3, 80, 90, 95)),
 			aicert.VerdictCertified,
+		},
+		{
+			"a case consistently under its certified_min cannot certify through the pool",
+			append(repeated(18, graded(testBands, 3, 80, 80, 80)), graded(testBands, 3, 60, 60, 60)),
+			aicert.VerdictSupportedDegraded,
+		},
+		{
+			"one run under its floor withholds certified however high its siblings",
+			append(repeated(10, perfect), graded(testBands, 3, 90, 90, 30)),
+			aicert.VerdictSupportedDegraded,
+		},
+		{
+			"identical scores a point over the bar still carry the judge's doubt",
+			[]aicert.ScenarioRuns{graded(testBands, 9, 71, 71, 71, 71, 71, 71, 71, 71, 71)},
+			aicert.VerdictSupportedDegraded,
 		},
 		{
 			"a case with laxer bands is held to its own bar, pooled",

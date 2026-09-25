@@ -21,8 +21,12 @@ const (
 	AdaptiveMaxRuns = adaptiveMaxRuns
 )
 
-// JudgeOpinions is how many times every run is graded.
-const JudgeOpinions = judgeOpinions
+// JudgeOpinions is how many times every run is graded, and JudgeScoreSDFloor
+// the least spread an average score's bound assumes.
+const (
+	JudgeOpinions     = judgeOpinions
+	JudgeScoreSDFloor = judgeScoreSDFloor
+)
 
 // CaseFallsShort says a case passed fewer than casePassPercent of its runs;
 // the page counts the cases that do.

@@ -224,9 +224,9 @@ func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sce
 			_, err := compose.ParseJudgeVerdict(text)
 			return err
 		})
-	// A withheld judgement is no opinion, as an unparseable one is. A REJECTED
-	// one is not let through: the same request is refused on every run, so the
-	// grader's binding is what is broken and the run should stop and say so.
+	// A withheld or validator-rejected judgement is no opinion, as an unparseable
+	// one is, and leaves the run ungraded. Any other failure is the grader's
+	// binding breaking, so the run stops and says so.
 	if callErr != nil && !ai.ModelDeclined(callErr) {
 		return opinion{}, fmt.Errorf("judge call: %w", callErr)
 	}

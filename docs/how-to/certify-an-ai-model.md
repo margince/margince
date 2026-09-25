@@ -140,9 +140,8 @@ you change the binding.
 
 The binding carries its own endpoint, so an `openai_compatible` candidate is the
 same one-liner with `BASE_URL=` added (the Prerequisites example above).
-A broker slug may carry its own variant suffix (`:free`, `:batch`, `:thinking`);
-the provider/model split cuts at the FIRST colon, so
-`openai_compatible:openai/gpt-oss-20b:free` binds the whole slug.
+A broker slug may carry its own variant suffix (`:free`, `:batch`, `:thinking`); the
+provider/model split cuts at the FIRST colon, so `openai_compatible:openai/gpt-oss-20b:free` binds the whole slug.
 
 Other knobs: `RUNS=5` (first round; 9+ turns extension off), `PROFILE=` (environment class),
 `JUDGE_BASE_URL=` for an `openai_compatible` judge — unset, it rides the
@@ -320,14 +319,15 @@ answer the scenario expects, and it stayed inside its caps. The judge scores it
 0–100 three times on every run (re-asking only low scores biased it upward) and
 the run takes the median. [The exact rule](../reference/ai-certification.md#how-the-scoring-works)
 pools the task's scenarios: `certified` needs 90% passing with a one-sided 90%
-Wilson bound of 80%, half of each scenario's runs, and the runs' margins over
-their own `certified_min` averaging ≥ 0 at a t lower bound; `supported_degraded`
-two thirds, and the margin over `degraded_min`. A **veto** keeps a broken
-scenario from being averaged away; one no judge scored is `not_supported`. A
-borderline scenario runs 3 more times, up to 9 (a lone one always does), and a
-resume replays the same extensions. Every number is in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go)
-(edit, bump `gradingRule`, regenerate). **reliability** is the HardPass fraction,
-the number to trend. A served model not uniform across runs or calls **voids** the record: you cannot certify a moving target.
+Wilson bound of 80%, half of each scenario's runs, every run at or above its
+`floor`, each scenario's t upper bound at its `certified_min`, and the runs'
+margins over it averaging ≥ 0 at a t lower bound; `supported_degraded` two
+thirds, and the margin over `degraded_min`. A **veto** keeps a broken scenario
+from being averaged away; one no judge scored is `not_supported`. A borderline
+scenario runs 3 more times, up to 9 (a lone one always does), and a resume
+replays the same extensions: at most 9 candidate and 27 judge calls a scenario,
+nine times the judge spend of three runs graded once. Every number is in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go) (edit, bump `gradingRule`, regenerate).
+**reliability** is the HardPass fraction, the number to trend. A served model not uniform across runs or calls **voids** the record: you cannot certify a moving target.
 
 A run is not always one model call — a site may retry, fall back, or turn a tool
 loop — and everything the run is judged and charged for is pooled across all of

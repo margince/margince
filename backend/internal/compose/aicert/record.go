@@ -267,9 +267,10 @@ type RowBands struct {
 // from measuring it and finding nothing, which is why it is not a zero tally.
 //
 // The verdict is Verdict's rule over the site's scenario rows, the same rule
-// the task's own verdict is. A row graded before the rule kept its judge scores
-// cannot be re-graded, so a site holding one reads the verdict it was graded
-// under: the record's own when the site holds every row, else its worst row's.
+// the task's own verdict is. A row with no bands predates rows keeping their
+// bands and scores and cannot be re-graded, and one such row leaves the pool
+// incomplete, so the site reads stored verdicts instead: the record's own when
+// the site's rows are the whole record, else the worst any of its rows holds.
 func (r Record) ForSite(variant string) (SiteTally, bool) {
 	var tally SiteTally
 	var cases []caseStats

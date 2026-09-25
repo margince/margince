@@ -41,3 +41,17 @@ func TestTheBoundsMatchTheirTextbookValues(t *testing.T) {
 		t.Errorf("t past the table = %v, want its last, wider entry", got)
 	}
 }
+
+// Identical scores are not certainty: a judge that scores in steps of about ten
+// could as easily have given 61 as 71, so the bound keeps a floor of doubt.
+func TestIdenticalScoresStillCarryTheJudgesDoubt(t *testing.T) {
+	lower, upper := meanBounds([]float64{1, 1, 1})
+	half := tQuantile(2) * judgeScoreSDFloor / math.Sqrt(3)
+	if math.Abs(lower-(1-half)) > 1e-9 || math.Abs(upper-(1+half)) > 1e-9 {
+		t.Errorf("bounds of 1,1,1 = [%v, %v], want 1 ± %v", lower, upper, half)
+	}
+	three71 := caseStats{runs: 3, passed: 3, scores: []int{71, 71, 71}, bands: Bands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}}
+	if got := judgeBand([]caseStats{three71}); got == VerdictCertified {
+		t.Errorf("three scores of 71 against a bar of 70 reached %s on the judge alone", got)
+	}
+}

@@ -325,3 +325,31 @@ func TestTwoBrokenRulesLoseToThreePhrasingsOfOne(t *testing.T) {
 			"rate.\n  served: %q", got.body)
 	}
 }
+
+// A tie between two false claims goes to the retry when it cleared the claim it
+// was told about: it did what the correction asked, and the claim it made
+// instead is no worse. A retry repeating the reported claim still loses the tie.
+func TestAClaimTieGoesToTheRetryThatClearedTheReportedClaim(t *testing.T) {
+	invented := "It was great speaking with you earlier. The quote is attached."
+	attributed := "You mentioned the depot slots were the blocker, so the quote is attached."
+	for _, tc := range []struct {
+		name   string
+		retry  string
+		served string
+	}{
+		{"cleared the reported claim", attributed, attributed},
+		{"repeated the reported claim", invented, invented},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lane := &scripted{bodies: []string{invented, tc.retry}}
+			got, err := draftcore.CorrectOnce(context.Background(),
+				textlang.English, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.body != tc.served {
+				t.Errorf("served %q, want %q", got.body, tc.served)
+			}
+		})
+	}
+}

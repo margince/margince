@@ -261,7 +261,7 @@ func certifyAndWrite(ctx context.Context, cfg RunnerConfig, task ai.Task, scenar
 	if err := WriteRecord(cfg.RecordDir, rec); err != nil {
 		return nil, fmt.Errorf("task %s: writing record: %w", task, err)
 	}
-	decisions, err := certifyDecisionsFor(ctx, cfg, task, scenarios, binding, rec, repeats, hooks, log)
+	decisions, err := certifyDecisionsFor(ctx, cfg, task, scenarios, binding, rec, hooks, log)
 	if err != nil {
 		log.ErrorContext(ctx, "aicert: decision leg failed — no decision record written", "task", string(task), "err", err)
 		return []Record{rec}, fmt.Errorf("task %s: %w", task, err)
@@ -281,30 +281,6 @@ func runPreflights(ctx context.Context, cfg RunnerConfig, journal *runJournal, b
 		return err
 	}
 	return preflightDecisions(ctx, cfg, byTask, nil, log)
-}
-
-// certifyHooks is the injection seam for certifyTask's two router
-// constructions and the per-run payload trace both routers feed. The
-// candidate/judge LocalOption lists let this package's own tests reach in —
-// a scripted *ai.FakeClient via ai.WithFakeClient, a starved
-// ai.WithMonthlyBudget to force a deterministic degrade — none of which
-// RunnerConfig's pinned shape has room for. trace is the one field a real
-// run sets: Run passes &certifyHooks{trace: t} (t nil unless
-// MARGINCE_AICERT_TRACE named a directory), the tests leave it nil. This
-// mirrors ai.assembleRouter: "the seam unit tests inject fakes through."
-type certifyHooks struct {
-	candidateOpts []ai.LocalOption
-	judgeOpts     []ai.LocalOption
-	// decisionOpts reach the decision leg's router alone — a scripted
-	// decision model via ai.WithFakeDecider.
-	decisionOpts []ai.LocalOption
-	trace        *payloadTrace
-	// journal is this task's view of the resume journal. Its zero value is the
-	// disabled one, so a caller that resumes nothing leaves it alone.
-	journal taskJournal
-	// maxRuns, when set, caps each case's adaptive runs below adaptiveMaxRuns:
-	// a test pinning an exact run count sets it to the repeats it asks for.
-	maxRuns int
 }
 
 // certifyTask runs every scenario for one task over a fresh
@@ -468,20 +444,6 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 		acc.passed++
 	}
 	return nil
-}
-
-// repeatsOrDefault applies RunnerConfig.Repeats' default and validates it up
-// front — a zero-run case into Verdict is a programmer bug (score.go panics on
-// it), but a wrong MARGINCE_AICERT_RUNS is an operator input error and must
-// fail with a message that says so.
-func repeatsOrDefault(n int) (int, error) {
-	if n == 0 {
-		n = defaultRepeats
-	}
-	if n < 1 {
-		return 0, fmt.Errorf("aicert: runner: repeats must be positive, got %d", n)
-	}
-	return n, nil
 }
 
 // ensureWorkspace mints a fixed, DB-less workspace principal when ctx

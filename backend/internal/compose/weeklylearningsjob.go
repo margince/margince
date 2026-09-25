@@ -25,7 +25,7 @@ import (
 //
 // Longer than the sentence beside it because the work is different in kind: a
 // narrative restates counts the model was handed, and a learning has to read
-// across deals and commitments to find what they have in common. Still bounded
+// across the week's deals to find what they have in common. Still bounded
 // for narrateBudget's reason — one wedged provider must not spend the
 // workspace's whole deadline on the first rep.
 const learnBudget = 60 * time.Second
@@ -90,26 +90,21 @@ func (w *weeklyGenerateWorker) learn(ctx context.Context, review weekly.Review, 
 //
 // The deal lines carry their FROZEN ids and labels — the same rows the review
 // already shows — so a citation the model returns names something the reader
-// can open.
+// can open. The certification case builds its week through learnings.NewInput
+// too, so the rows it certifies are the rows this sends.
 func learningsInput(review weekly.Review) learnings.Input {
-	in := learnings.Input{
-		WeekStart: review.LocalWeekStart.Format(time.DateOnly),
-		Counts: learnings.Counts{
-			TasksDue: review.Counts.TasksDue, TasksDone: review.Counts.TasksDone,
-			TasksCarriedOver: review.Counts.TasksCarriedOver,
-			DealsMoved:       review.Counts.DealsMoved,
-			DealsWon:         review.Counts.DealsWon, DealsLost: review.Counts.DealsLost,
-			CommitmentsDue:  review.Counts.CommitmentsDue,
-			CommitmentsKept: review.Counts.CommitmentsKept,
-			MeetingsHeld:    review.Counts.MeetingsHeld,
-			LeadsRouted:     review.Counts.LeadsRouted,
-		},
-	}
+	deals := make([]learnings.Deal, 0, len(review.Deals))
 	for _, line := range review.Deals {
-		in.Deals = append(in.Deals, learnings.Subject{
-			Type: learnings.SubjectDeal, ID: line.DealID,
-			Label: line.Label, Outcome: line.Outcome,
-		})
+		deals = append(deals, learnings.Deal{ID: line.DealID, Label: line.Label, Outcome: line.Outcome})
 	}
-	return in
+	return learnings.NewInput(review.LocalWeekStart.Format(time.DateOnly), learnings.Counts{
+		TasksDue: review.Counts.TasksDue, TasksDone: review.Counts.TasksDone,
+		TasksCarriedOver: review.Counts.TasksCarriedOver,
+		DealsMoved:       review.Counts.DealsMoved,
+		DealsWon:         review.Counts.DealsWon, DealsLost: review.Counts.DealsLost,
+		CommitmentsDue:  review.Counts.CommitmentsDue,
+		CommitmentsKept: review.Counts.CommitmentsKept,
+		MeetingsHeld:    review.Counts.MeetingsHeld,
+		LeadsRouted:     review.Counts.LeadsRouted,
+	}, deals)
 }

@@ -97,6 +97,9 @@ func loadAICertVerdictRule(t *testing.T) string {
 	if want := fmt.Sprintf("z = %v", aicert.ConfidenceZ); !strings.Contains(joined, want) {
 		t.Fatalf("Verdict's documented rule does not state the %s its bounds are drawn at:\n%s", want, joined)
 	}
+	if want := fmt.Sprintf("max(sd, %d)", aicert.JudgeScoreSDFloor); !strings.Contains(joined, want) {
+		t.Fatalf("Verdict's documented rule does not state the %s spread floor its t bounds use:\n%s", want, joined)
+	}
 	return joined
 }
 
@@ -473,12 +476,13 @@ func writeAICertThresholds(page *strings.Builder, bars []aiCertQualityBar) {
 	fmt.Fprintf(page, "| Tries per test case | %d at first (`RUNS=` changes it for one run); a borderline case gets %d more at a time, up to %d |\n",
 		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns)
 	fmt.Fprintf(page, "| Quality opinions per try | %d, and the middle one counts |\n", aicert.JudgeOpinions)
-	fmt.Fprintf(page, "| How sure every bound is | one-sided 90%% (z = %v for a pass rate, Student's t for an average score) |\n", aicert.ConfidenceZ)
+	fmt.Fprintf(page, "| How sure every bound is | one-sided 90%% (z = %v for a pass rate, Student's t for an average score, whose spread is taken as at least %d points) |\n",
+		aicert.ConfidenceZ, aicert.JudgeScoreSDFloor)
 	for _, bar := range bars {
 		b := bar.Bands
-		fmt.Fprintf(page, "| Quality bar %d / %d / %d — %s | %s needs scores averaging at least %d, allowing for doubt, and no case whose best-case average is under %d; %s needs at least %d, and none under %d |\n",
+		fmt.Fprintf(page, "| Quality bar %d / %d / %d — %s | %s needs scores averaging at least %d, allowing for doubt, no case whose best-case average is under %d, and no single try under %d; %s needs at least %d, and no case whose best-case average is under %d |\n",
 			b.CertifiedMin, b.DegradedMin, b.Floor, aiCertCases(bar.Cases),
-			aiCertReady, b.CertifiedMin, b.DegradedMin, aiCertCare, b.DegradedMin, b.Floor)
+			aiCertReady, b.CertifiedMin, b.CertifiedMin, b.Floor, aiCertCare, b.DegradedMin, b.Floor)
 	}
 	page.WriteString("\nAll of these live in [`backend/internal/compose/aicert/thresholds.go`](" + corpusLinkPrefix + aiCertCorpusDocs +
 		"thresholds.go) (quality bars: in each test case's file); change them there and regenerate this page.\n\n")

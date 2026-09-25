@@ -46,8 +46,9 @@ var tQuantile90 = [...]float64{
 const defaultRepeats = 3
 
 // adaptiveRound is how many runs a borderline case gains per extension, and
-// adaptiveMaxRuns the most any case reaches: extension stops there, so a
-// task's cost is bounded at adaptiveMaxRuns/defaultRepeats times a plain run.
+// adaptiveMaxRuns the most any case reaches. Every run pays judgeOpinions judge
+// calls, so a case costs at most 9 candidate and 27 judge calls: nine times the
+// judge spend of three runs graded once.
 const (
 	adaptiveRound   = 3
 	adaptiveMaxRuns = 9
@@ -56,3 +57,8 @@ const (
 // judgeOpinions is how many times the judge grades every run; the run scores
 // at their median. Three is the fewest whose median outvotes one outlier.
 const judgeOpinions = 3
+
+// judgeScoreSDFloor is the least standard deviation, in points, a mean's bound
+// assumes. The judge scores in steps of about ten, so three identical scores
+// say "around here", not "exactly here": half a step is the doubt they keep.
+const judgeScoreSDFloor = 5

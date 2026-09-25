@@ -95,19 +95,35 @@ func finishStats(s *DecisionStats, runs int, servedPasses float64) {
 	s.ServedPassRate = servedPasses / float64(runs)
 }
 
-// llmPassRate is the LLM record's pass rate on one scenario: what a fallen-back
-// run of it is credited with. A scenario the LLM record did not run earns
+// llmPassRate is the LLM record's pass rate on one scenario, over the n runs
+// its adaptive rounds reached: what a fallen-back run of it is credited with.
+// The decision leg asks the scenario that same n times (llmRuns), so both legs'
+// rates share a denominator. A scenario the LLM record did not run earns
 // nothing, rather than a pass nobody measured.
 //
 // A rate rather than a pairing by run index: the two legs' runs are independent
 // repeats, and run 2 of one says nothing about run 2 of the other.
 func llmPassRate(llm Record, scenario string) float64 {
+	row, ok := llmRow(llm, scenario)
+	if !ok || row.Runs == 0 {
+		return 0
+	}
+	return float64(row.Passed) / float64(row.Runs)
+}
+
+// llmRuns is how many runs the LLM record made of one scenario.
+func llmRuns(llm Record, scenario string) int {
+	row, _ := llmRow(llm, scenario)
+	return row.Runs
+}
+
+func llmRow(llm Record, scenario string) (ScenarioRecord, bool) {
 	for _, row := range llm.Scenarios {
-		if row.Scenario == scenario && row.Runs > 0 {
-			return float64(row.Passed) / float64(row.Runs)
+		if row.Scenario == scenario {
+			return row, true
 		}
 	}
-	return 0
+	return ScenarioRecord{}, false
 }
 
 // buildDecisionRecord folds one site's scenario runs into its decision record.

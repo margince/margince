@@ -13897,10 +13897,14 @@
           "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
           "stale_cause": {
             "case_changed": [
-              "a_pattern_across_three_deals_is_drawn_and_cited"
+              "a_deal_named_like_an_instruction_teaches_no_lesson",
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
             ],
             "prompt_changed": [
-              "a_pattern_across_three_deals_is_drawn_and_cited"
+              "a_deal_named_like_an_instruction_teaches_no_lesson",
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
             ],
             "grader_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
@@ -13934,7 +13938,8 @@
           "stale_cause": {
             "case_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
-              "a_pattern_across_three_deals_is_drawn_and_cited"
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
             ],
             "prompt_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
@@ -13973,7 +13978,8 @@
           "stale_cause": {
             "case_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
-              "a_pattern_across_three_deals_is_drawn_and_cited"
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
             ],
             "prompt_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
@@ -14012,7 +14018,8 @@
           "stale_cause": {
             "case_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
-              "a_pattern_across_three_deals_is_drawn_and_cited"
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
             ],
             "prompt_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
@@ -14051,7 +14058,8 @@
           "stale_cause": {
             "case_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
-              "a_pattern_across_three_deals_is_drawn_and_cited"
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
             ],
             "prompt_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",

@@ -45,8 +45,8 @@ func refuseInvalidDecisionLane(cfg RunnerConfig) error {
 }
 
 // decisionLeg is one task's decision certification: the scenarios, the chat
-// binding its router is built on, the lane, and the LLM record whose pass rate
-// the fallen-back runs are credited with.
+// binding its router is built on, the lane, and the LLM record that sets each
+// scenario's run count and credits the fallen-back runs with its pass rate.
 type decisionLeg struct {
 	task      ai.Task
 	scenarios []Scenario
@@ -54,7 +54,6 @@ type decisionLeg struct {
 	candidate ai.ProviderConfig
 	lane      ai.DecisionsConfig
 	profile   ai.Profile
-	repeats   int
 	llm       Record
 	hooks     *certifyHooks
 }
@@ -93,8 +92,8 @@ type decisionRun struct {
 	outcome aitasks.Outcome
 }
 
-// certify asks every decision scenario repeats times and folds each site's
-// runs into its own record. A task with no decision form has none.
+// certify asks every decision scenario as many times as the LLM leg ran it and
+// folds each site's runs into its own record. A task with no decision form has none.
 func (leg decisionLeg) certify(ctx context.Context, log *slog.Logger) ([]Record, error) {
 	stamps, err := DecisionScenarioStamps(leg.scenarios, leg.census)
 	if err != nil || len(stamps) == 0 {
@@ -130,7 +129,8 @@ func (leg decisionLeg) certify(ctx context.Context, log *slog.Logger) ([]Record,
 	return records, nil
 }
 
-// askScenario asks one scenario's decision question repeats times. A probe
+// askScenario asks one scenario's decision question as many times as the LLM
+// record ran it, so a fallback's credit and the kept runs share one n. A probe
 // error — no workspace, a budget the router cannot read, metering that failed
 // — is the harness failing, not the lane answering, and voids the leg.
 func (leg decisionLeg) askScenario(ctx context.Context, router *ai.Router, rec *traceRecorder, sc Scenario,
@@ -144,8 +144,12 @@ func (leg decisionLeg) askScenario(ctx context.Context, router *ai.Router, rec *
 	if leg.hooks != nil {
 		trace = leg.hooks.trace
 	}
-	runs := make([]decisionRun, 0, leg.repeats)
-	for i := 0; i < leg.repeats; i++ {
+	n := llmRuns(leg.llm, sc.Name)
+	if n == 0 {
+		return nil, fmt.Errorf("the LLM record has no runs of scenario %s to match", sc.Name)
+	}
+	runs := make([]decisionRun, 0, n)
+	for i := 0; i < n; i++ {
 		mark := rec.mark()
 		probe, err := router.DecideProbe(ctx, leg.task, dc.DecisionSite(), dc.DecisionRequest(), dc.GateDecision)
 		if err != nil {
@@ -169,7 +173,7 @@ func (leg decisionLeg) askScenario(ctx context.Context, router *ai.Router, rec *
 // writes each site's record beside the LLM record llm. The LLM record is
 // already written: a decision leg that fails costs its own records only.
 func certifyDecisionsFor(ctx context.Context, cfg RunnerConfig, task ai.Task, scenarios []Scenario, candidate ai.ProviderConfig,
-	llm Record, repeats int, hooks *certifyHooks, log *slog.Logger,
+	llm Record, hooks *certifyHooks, log *slog.Logger,
 ) ([]Record, error) {
 	lane := cfg.decisionLane()
 	if lane == nil {
@@ -177,7 +181,7 @@ func certifyDecisionsFor(ctx context.Context, cfg RunnerConfig, task ai.Task, sc
 	}
 	leg := decisionLeg{
 		task: task, scenarios: scenarios, census: cfg.Census, candidate: candidate, lane: *lane,
-		profile: cfg.recordProfile(), repeats: repeats, llm: llm, hooks: hooks,
+		profile: cfg.recordProfile(), llm: llm, hooks: hooks,
 	}
 	records, err := leg.certify(ctx, log)
 	if err != nil {

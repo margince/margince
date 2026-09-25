@@ -83,6 +83,11 @@ func TestNamingTheExchangeIsNotAnAssumedMemory(t *testing.T) {
 		"I wanted to pick up the integration we discussed previously.":                 true,
 		"Since we discussed it, has anything moved?":                                   true,
 		"I would like to continue our conversation.":                                   true,
+		"It has been a while since we discussed the last time.":                        true,
+		"It has been a while since we discussed a few things.":                         true,
+		"It has been a while since we discussed a couple of things.":                   true,
+		"It has been a while since we discussed this.":                                 true,
+		"It has been a while since we discussed our pricing options.":                  false,
 	} {
 		findings := Body("Hello Priya,\n\n"+opening, textlang.English, convstate.BandMonths, Grounds{Threaded: true})
 		if got := hasRule(findings, RuleAssumedMemory); got != refused {

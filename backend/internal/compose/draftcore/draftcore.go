@@ -189,9 +189,9 @@ func Findings[D any](
 // A TIE goes to the first attempt. The retry was asked to clear a finding and
 // did not, so the correction bought nothing the check can see, while a retry
 // written under a list of things not to say drops what the check does not
-// measure — on a first touch, the sender's own name.
-// The first attempt is what the prompt alone produced. Only a retry that is
-// strictly better is served.
+// measure — on a first touch, the sender's own name. Only a retry that is
+// strictly better is served, save one case: in a tie between false claims, a
+// retry that cleared every claim it was told about did what it was asked.
 func servesRetry(first, retried []draftcheck.Finding) bool {
 	firstWorst, _ := draftcheck.Worst(first)
 	retriedWorst, _ := draftcheck.Worst(retried)
@@ -201,6 +201,9 @@ func servesRetry(first, retried []draftcheck.Finding) bool {
 	if firstRules, retriedRules := draftcheck.Rules(first), draftcheck.Rules(retried); retriedRules != firstRules {
 		return retriedRules < firstRules
 	}
+	if firstWorst == draftcheck.Claim && clearedReportedClaims(first, retried) {
+		return true
+	}
 	// SAME SEVERITY AND THE SAME NUMBER OF RULES: the raw match count is the
 	// last thing that separates them, and here it is honest. The comparison the
 	// ticket objected to was across DIFFERENT rules, where one rule reports per
@@ -208,4 +211,19 @@ func servesRetry(first, retried []draftcheck.Finding) bool {
 	// drafts break the same number of rules, and a draft saying the same wrong
 	// thing three ways is more of it than a draft saying it once.
 	return len(retried) < len(first)
+}
+
+// clearedReportedClaims says retried breaks none of the Claim rules first was
+// corrected for.
+func clearedReportedClaims(first, retried []draftcheck.Finding) bool {
+	still := make(map[string]bool, len(retried))
+	for _, f := range retried {
+		still[f.Rule.Name()] = true
+	}
+	for _, f := range first {
+		if f.Rule.Severity() == draftcheck.Claim && still[f.Rule.Name()] {
+			return false
+		}
+	}
+	return true
 }

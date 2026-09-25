@@ -91,3 +91,27 @@ func (d taskDriver) scoreRun(ctx context.Context, sc Scenario, stamp string, run
 	}
 	return outcome.RunResult, nil
 }
+
+// certifyHooks is the injection seam for certifyTask's two router
+// constructions and the per-run payload trace both routers feed. The
+// candidate/judge LocalOption lists let this package's own tests reach in —
+// a scripted *ai.FakeClient via ai.WithFakeClient, a starved
+// ai.WithMonthlyBudget to force a deterministic degrade — none of which
+// RunnerConfig's pinned shape has room for. trace is the one field a real
+// run sets: Run passes &certifyHooks{trace: t} (t nil unless
+// MARGINCE_AICERT_TRACE named a directory), the tests leave it nil. This
+// mirrors ai.assembleRouter: "the seam unit tests inject fakes through."
+type certifyHooks struct {
+	candidateOpts []ai.LocalOption
+	judgeOpts     []ai.LocalOption
+	// decisionOpts reach the decision leg's router alone — a scripted
+	// decision model via ai.WithFakeDecider.
+	decisionOpts []ai.LocalOption
+	trace        *payloadTrace
+	// journal is this task's view of the resume journal. Its zero value is the
+	// disabled one, so a caller that resumes nothing leaves it alone.
+	journal taskJournal
+	// maxRuns, when set, caps each case's adaptive runs below adaptiveMaxRuns:
+	// a test pinning an exact run count sets it to the repeats it asks for.
+	maxRuns int
+}

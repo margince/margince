@@ -118,6 +118,8 @@ type ScenarioRuns struct {
 //	certified          = K/N ≥ 90% ∧ WilsonLower(K, N) ≥ 80%
 //	                   ∧ every case passes ≥ 50% of its own n runs
 //	                   ∧ TLower(score − its case's certified_min, over every graded run) ≥ 0
+//	                   ∧ every case's TUpper(scores) ≥ its certified_min
+//	                   ∧ every graded run's score ≥ its case's floor
 //	                   ∧ no case vetoed
 //	supported_degraded = K ≥ ⌈2N/3⌉
 //	                   ∧ TLower(score − its case's degraded_min, over every graded run) ≥ 0
@@ -126,7 +128,7 @@ type ScenarioRuns struct {
 //
 //	vetoed             = WilsonUpper(k, n) < 50% ∨ TUpper(its scores) < its degraded_min
 //	WilsonLower/Upper  = the one-sided 90% Wilson score bounds (z = 1.2816)
-//	TLower/TUpper      = mean ∓ t(0.90, m−1)·sd/√m over m values; the mean itself when m = 1
+//	TLower/TUpper      = mean ∓ t(0.90, m−1)·max(sd, 5)/√m over m values; the mean itself when m = 1
 //
 // Pooled so that a task of many cases, each right nine times in ten, is graded
 // on its whole evidence instead of failing on whichever case drew the unlucky
@@ -191,6 +193,12 @@ func judgeUpper(c caseStats) float64 {
 	return upper
 }
 
+// underFloor says one of c's graded runs scored under its floor: the worst
+// single run, which Bands.Floor gates.
+func underFloor(c caseStats) bool {
+	return len(c.scores) > 0 && slices.Min(c.scores) < c.bands.Floor
+}
+
 // rowCase reads a record's scenario row back into what the rule needs of its
 // case; a row graded before the pooled rule has no bands and no scores.
 func rowCase(sc ScenarioRecord) caseStats {
@@ -244,7 +252,7 @@ func mechanicalBand(cases []caseStats, passed, runs int) string {
 // a scenario row carries its own. A case no judge graded reaches nothing: a
 // band is not met by a score nobody gave.
 func judgeBand(cases []caseStats) string {
-	vetoed := false
+	vetoed, belowCertified := false, false
 	for _, c := range cases {
 		if len(c.scores) == 0 {
 			return VerdictNotSupported
@@ -256,11 +264,14 @@ func judgeBand(cases []caseStats) string {
 		if upper < float64(c.bands.DegradedMin) {
 			vetoed = true
 		}
+		if upper < float64(c.bands.CertifiedMin) || underFloor(c) {
+			belowCertified = true
+		}
 	}
 	certifiedLower, _ := meanBounds(marginsOver(cases, func(b Bands) int { return b.CertifiedMin }))
 	degradedLower, _ := meanBounds(marginsOver(cases, func(b Bands) int { return b.DegradedMin }))
 	switch {
-	case !vetoed && certifiedLower >= 0:
+	case !vetoed && !belowCertified && certifiedLower >= 0:
 		return VerdictCertified
 	case degradedLower >= 0:
 		return VerdictSupportedDegraded

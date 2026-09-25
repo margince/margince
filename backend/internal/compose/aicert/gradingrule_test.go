@@ -34,7 +34,7 @@ var gradingRuleOwners = []struct {
 	names []string
 }{
 	{"score.go", []string{
-		"Verdict", "caseOf", "passVetoed", "judgeUpper", "rowCase", "verdictOver", "mechanicalBand",
+		"Verdict", "caseOf", "passVetoed", "judgeUpper", "underFloor", "rowCase", "verdictOver", "mechanicalBand",
 		"judgeBand", "marginsOver", "lowerVerdict", "verdictRank", "majorityOf", "judgeMedianAndMin", "medianOf",
 	}},
 	{"stats.go", []string{"wilsonBounds", "meanBounds", "meanAndSD", "tQuantile"}},
@@ -44,7 +44,7 @@ var gradingRuleOwners = []struct {
 	{"../certjudge.go", []string{"ParseJudgeVerdict"}},
 	{"thresholds.go", []string{
 		"certifiedPassPercent", "certifiedPassBoundPercent", "casePassPercent", "vetoPassPercent",
-		"majorityNumerator", "majorityDenominator", "confidenceZ", "tQuantile90", "adaptiveRound", "adaptiveMaxRuns", "judgeOpinions",
+		"majorityNumerator", "majorityDenominator", "confidenceZ", "tQuantile90", "adaptiveRound", "adaptiveMaxRuns", "judgeOpinions", "judgeScoreSDFloor",
 	}},
 }
 

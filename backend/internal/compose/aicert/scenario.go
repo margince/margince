@@ -89,8 +89,9 @@ func (v JSONValue) MarshalJSON() ([]byte, error) {
 }
 
 // Bands are the 0-100 score thresholds one scenario's run set is graded
-// against: CertifiedMin and DegradedMin gate the median score, Floor gates the
-// worst single run.
+// against: CertifiedMin and DegradedMin gate the bounds on its mean score, and
+// Floor gates the worst single run for certified and the mean's upper bound
+// for any grade. Verdict states the rule exactly.
 type Bands struct {
 	CertifiedMin int `yaml:"certified_min"`
 	DegradedMin  int `yaml:"degraded_min"`

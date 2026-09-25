@@ -27,16 +27,18 @@ func wilsonBounds(passed, runs int) (lower, upper float64) {
 	return (centre - radius) / denom, (centre + radius) / denom
 }
 
-// meanBounds is the t interval on the mean of xs, with its small-n quantile.
+// meanBounds is the t interval on the mean of xs, with its small-n quantile and
+// a standard deviation of at least judgeScoreSDFloor, so identical scores keep
+// the doubt the judge's coarse steps leave in them.
 //
-// Fewer than two values measure no spread, so the interval is the value
-// itself: the rule never invents a variance it did not observe.
+// One value has no degrees of freedom for a t quantile, so its interval is the
+// value itself.
 func meanBounds(xs []float64) (lower, upper float64) {
 	mean, sd := meanAndSD(xs)
 	if len(xs) < 2 {
 		return mean, mean
 	}
-	half := tQuantile(len(xs)-1) * sd / math.Sqrt(float64(len(xs)))
+	half := tQuantile(len(xs)-1) * max(sd, judgeScoreSDFloor) / math.Sqrt(float64(len(xs)))
 	return mean - half, mean + half
 }
 

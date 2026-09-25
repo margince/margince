@@ -599,10 +599,10 @@ back however well the others do.
 | A test case is clearly broken | its pass rate's upper bound is under 50 of every 100 (blocks ✅ Ready and ⚠️ Usable with care), or its quality score's upper bound is under its acceptable bar (blocks ✅ Ready) |
 | Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 9 |
 | Quality opinions per try | 3, and the middle one counts |
-| How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score) |
-| Quality bar 70 / 50 / 40 — 148 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, and no case whose best-case average is under 50; ⚠️ Usable with care needs at least 50, and none under 40 |
-| Quality bar 80 / 60 / 50 — 4 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, and no case whose best-case average is under 60; ⚠️ Usable with care needs at least 60, and none under 50 |
-| Quality bar 75 / 55 / 45 — 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, and no case whose best-case average is under 55; ⚠️ Usable with care needs at least 55, and none under 45 |
+| How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
+| Quality bar 70 / 50 / 40 — 148 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 80 / 60 / 50 — 4 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
+| Quality bar 75 / 55 / 45 — 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
 All of these live in [`backend/internal/compose/aicert/thresholds.go`](../../backend/internal/compose/aicert/thresholds.go) (quality bars: in each test case's file); change them there and regenerate this page.
 
@@ -615,6 +615,8 @@ From `Verdict` in [`score.go`](../../backend/internal/compose/aicert/score.go), 
 certified          = K/N ≥ 90% ∧ WilsonLower(K, N) ≥ 80%
                    ∧ every case passes ≥ 50% of its own n runs
                    ∧ TLower(score − its case's certified_min, over every graded run) ≥ 0
+                   ∧ every case's TUpper(scores) ≥ its certified_min
+                   ∧ every graded run's score ≥ its case's floor
                    ∧ no case vetoed
 supported_degraded = K ≥ ⌈2N/3⌉
                    ∧ TLower(score − its case's degraded_min, over every graded run) ≥ 0
@@ -622,7 +624,7 @@ supported_degraded = K ≥ ⌈2N/3⌉
 otherwise          = not_supported, which includes any case no judge graded
 vetoed             = WilsonUpper(k, n) < 50% ∨ TUpper(its scores) < its degraded_min
 WilsonLower/Upper  = the one-sided 90% Wilson score bounds (z = 1.2816)
-TLower/TUpper      = mean ∓ t(0.90, m−1)·sd/√m over m values; the mean itself when m = 1
+TLower/TUpper      = mean ∓ t(0.90, m−1)·max(sd, 5)/√m over m values; the mean itself when m = 1
 ```
 
 Each case sets its own quality bands (`certified_min`, `degraded_min`, `floor`), so

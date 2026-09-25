@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -60,7 +61,8 @@ func answer(label string, confidence float64, served string) decision.Response {
 
 // legRun is site_triage certified the way Run certifies it, with or without a
 // decisions lane; the chat fake answers every LLM run with a widget reply, so
-// the LLM record passes every run.
+// the LLM record passes every run — and, being a small pool, extends every
+// scenario to adaptiveMaxRuns.
 type legRun struct {
 	llm       Record
 	decisions []Record
@@ -72,10 +74,8 @@ func certifyWithLane(t *testing.T, lane *ai.DecisionsConfig, decider *scriptedDe
 	t.Helper()
 	task := ai.TaskSiteTriage
 	census := decidingCensus(t, task, defaultWidgetForm())
-	replies, scores := make([]string, 3*len(scenarios)), make([]string, 3*len(scenarios))
-	for i := range replies {
-		replies[i], scores[i] = "the widget is blue", scoreJSON(90)
-	}
+	replies := slices.Repeat([]string{"the widget is blue"}, adaptiveMaxRuns*len(scenarios))
+	scores := slices.Repeat([]string{scoreJSON(90)}, judgeOpinions*len(replies))
 	candidateFake := ai.NewFakeClient().Script(replies...)
 	judgeFake := ai.NewFakeClient().Script(scores...)
 	hooks := &certifyHooks{
@@ -93,7 +93,7 @@ func certifyWithLane(t *testing.T, lane *ai.DecisionsConfig, decider *scriptedDe
 		Census: census, RecordDir: t.TempDir(),
 		Routing: &ai.RoutingConfig{Profile: ai.ProfileCloudFrontier, Decisions: lane},
 	}
-	decisions, err := certifyDecisionsFor(wsContext(t), cfg, task, scenarios, candidate, llm, 3, hooks, quietLogger())
+	decisions, err := certifyDecisionsFor(wsContext(t), cfg, task, scenarios, candidate, llm, hooks, quietLogger())
 	return legRun{llm: llm, decisions: decisions, chatCalls: len(candidateFake.Calls()), err: err}
 }
 
@@ -112,11 +112,15 @@ func TestTheDecisionLegRecordsKeptWrongAndFallbacks(t *testing.T) {
 		t.Fatalf("got %d decision records, want one for the one site", len(got.decisions))
 	}
 	rec := got.decisions[0]
+	if got.llm.Runs != adaptiveMaxRuns {
+		t.Fatalf("the LLM leg ran %d runs, want %d: the case must extend for this test to mean anything", got.llm.Runs, adaptiveMaxRuns)
+	}
+	// The last scripted reply repeats, so every run after the third falls back.
 	want := DecisionStats{
-		Kept: 2, KeptCorrect: 1, KeptWrong: 1, Fallbacks: 1, FallbackRate: 1.0 / 3,
-		FallbackByReason: map[string]int{"below_floor": 1}, MinKeptConfidence: 0.9,
-		// One kept-correct run, plus the fallback credited with the LLM's 3/3.
-		ServedPassRate: 2.0 / 3,
+		Kept: 2, KeptCorrect: 1, KeptWrong: 1, Fallbacks: 7, FallbackRate: 7.0 / 9,
+		FallbackByReason: map[string]int{"below_floor": 7}, MinKeptConfidence: 0.9,
+		// One kept-correct run, plus seven fallbacks credited with the LLM's 9/9.
+		ServedPassRate: 8.0 / 9,
 	}
 	if !reflect.DeepEqual(*rec.Decision, want) {
 		t.Errorf("decision stats = %+v, want %+v", *rec.Decision, want)
@@ -131,8 +135,8 @@ func TestTheDecisionLegRecordsKeptWrongAndFallbacks(t *testing.T) {
 	if len(rec.Scenarios) != 1 || rec.Scenarios[0].Stamp == "" || rec.Scenarios[0].Decision == nil {
 		t.Errorf("scenario rows = %+v, want one stamped row with its own stats", rec.Scenarios)
 	}
-	if decider.called() != 3 {
-		t.Errorf("the decision model was asked %d times, want one per run", decider.called())
+	if decider.called() != got.llm.Runs || rec.Runs != got.llm.Runs {
+		t.Errorf("the decision leg asked %d times over %d runs, want the LLM leg's %d", decider.called(), rec.Runs, got.llm.Runs)
 	}
 }
 
@@ -142,7 +146,7 @@ func TestTheDecisionVerdictNeedsAKeptAnswerAndNoWrongOne(t *testing.T) {
 	kept := &scriptedDecider{replies: []decision.Response{answer(labelWidget, 0.9, "jev")}}
 	got := certifyWithLane(t, &jevLane, kept, decidingScenario("basic", ai.TaskSiteTriage))
 	if got.err != nil || len(got.decisions) != 1 || got.decisions[0].Verdict != VerdictCertified {
-		t.Fatalf("three right answers kept: %+v, %v; want certified", got.decisions, got.err)
+		t.Fatalf("every answer right and kept: %+v, %v; want certified", got.decisions, got.err)
 	}
 
 	unsure := &scriptedDecider{replies: []decision.Response{answer(labelWidget, 0.2, "jev")}}
@@ -180,11 +184,16 @@ func TestTheLLMLegRunsEveryScenarioEvenWhenTheDecisionKept(t *testing.T) {
 	if got.err != nil {
 		t.Fatalf("certifyDecisionsFor: %v", got.err)
 	}
-	if got.llm.Runs != 6 || got.chatCalls != 6 {
-		t.Errorf("the LLM leg ran %d runs over %d chat calls, want 6 and 6 with every decision kept", got.llm.Runs, got.chatCalls)
+	if got.llm.Runs <= 2*defaultRepeats || got.chatCalls != got.llm.Runs {
+		t.Errorf("the LLM leg ran %d runs over %d chat calls, want one call a run and an extended pool", got.llm.Runs, got.chatCalls)
 	}
-	if got.decisions[0].Decision.Kept != 6 {
-		t.Errorf("the decision leg kept %d, want all 6", got.decisions[0].Decision.Kept)
+	if got.decisions[0].Decision.Kept != got.llm.Runs {
+		t.Errorf("the decision leg kept %d, want all of the LLM leg's %d", got.decisions[0].Decision.Kept, got.llm.Runs)
+	}
+	for _, row := range got.decisions[0].Scenarios {
+		if n := llmRuns(got.llm, row.Scenario); row.Runs != n {
+			t.Errorf("scenario %s: the decision leg ran %d times, the LLM leg %d — a fallback's credit needs one n", row.Scenario, row.Runs, n)
+		}
 	}
 }
 
@@ -200,7 +209,7 @@ func TestAVerdictTaskIsLocalOnlyRefusedOnJev(t *testing.T) {
 	leg := decisionLeg{
 		task: task, scenarios: []Scenario{decidingScenario("basic", task)}, census: decidingCensus(t, task, defaultWidgetForm()),
 		candidate: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, lane: jevLane,
-		profile: ai.ProfileCloudFrontier, repeats: 3,
+		profile: ai.ProfileCloudFrontier, llm: Record{Scenarios: []ScenarioRecord{{Scenario: "basic", Runs: 3, Passed: 3}}},
 		hooks: &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(decider)}},
 	}
 	records, err := leg.certify(wsContext(t), quietLogger())
@@ -230,7 +239,7 @@ func TestADecisionLegServedByTwoModelsWritesNoDecisionRecord(t *testing.T) {
 	if got.err == nil || !strings.Contains(got.err.Error(), "jev-b") {
 		t.Fatalf("want a refusal naming the second served model, got %v", got.err)
 	}
-	if got.llm.Runs != 3 {
+	if got.llm.Runs != adaptiveMaxRuns {
 		t.Errorf("the LLM record was lost with the decision leg: %+v", got.llm)
 	}
 }

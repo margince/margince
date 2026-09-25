@@ -17,6 +17,7 @@ package compose
 // the correct answer rather than a failure to score.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,12 +30,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// weeklyLearningsFixture is one week, as a case states it.
+// weeklyLearningsFixture is one week, as a case states it: the rows the
+// production job sends and no others. Decoded strictly, so a fixture listing a
+// row kind production never carries is refused rather than silently dropped.
 type weeklyLearningsFixture struct {
-	WeekStart   string              `json:"week_start"`
-	Counts      learnings.Counts    `json:"counts"`
-	Deals       []learnings.Subject `json:"deals"`
-	Commitments []learnings.Subject `json:"commitments"`
+	WeekStart string           `json:"week_start"`
+	Counts    learnings.Counts `json:"counts"`
+	Deals     []learnings.Deal `json:"deals"`
 }
 
 // weeklyLearningsExpectation is what the pass must and must not conclude.
@@ -68,7 +70,9 @@ func (weeklyLearningsCases) Site() aitasks.Site {
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
 func (weeklyLearningsCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
 	var f weeklyLearningsFixture
-	if err := json.Unmarshal(fixture, &f); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(fixture))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&f); err != nil {
 		return nil, fmt.Errorf("weekly_learnings/learn: the fixture is not the shape this site takes: %w", err)
 	}
 	if f.WeekStart == "" {
@@ -84,16 +88,13 @@ func (weeklyLearningsCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 		// worse than no case: it reports a certified site nobody measured.
 		return nil, fmt.Errorf("weekly_learnings/learn: the expectation asserts nothing")
 	}
-	in := learnings.Input{
-		WeekStart: f.WeekStart, Counts: f.Counts,
-		Deals: f.Deals, Commitments: f.Commitments,
-	}
+	in := learnings.NewInput(f.WeekStart, f.Counts, f.Deals)
 	// A fixture below the floor would never reach the model in production, so a
 	// case built on one would certify a call the product does not make.
 	if !learnings.Floor(in) {
 		return nil, fmt.Errorf(
 			"weekly_learnings/learn: the fixture holds %d citable rows, below the floor the lane checks before it calls",
-			len(f.Deals)+len(f.Commitments))
+			len(f.Deals))
 	}
 	return &weeklyLearningsCase{in: in, want: want}, nil
 }

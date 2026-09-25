@@ -9,7 +9,7 @@ package aicert
 // the same journaled outcomes produce the same extensions, run for run.
 
 import (
-	"math"
+	"fmt"
 	"slices"
 )
 
@@ -66,16 +66,16 @@ func nextRunCounts(sets []ScenarioRuns, maxRuns int) []int {
 	return counts
 }
 
-// caseBorderline says a case sits within one standard error of a threshold it
-// is graded against:
+// caseBorderline says a threshold a case is graded against is still in doubt:
 //
-//	pass rate:    |k/n − ½| ≤ ½/√n, the binomial standard error AT the half the
-//	              case must pass and the veto line, i.e. (2k − n)² ≤ n
-//	judge median: |median − bar| ≤ sd/√m for bar = certified_min or degraded_min,
-//	              over its m ≥ 2 graded scores
+//	pass rate:  |k/n − ½| ≤ ½/√n, the binomial standard error AT the half the
+//	            case must pass and the veto line, i.e. (2k − n)² ≤ n
+//	judge mean: TLower(scores) ≤ bar ≤ TUpper(scores) for bar = certified_min or
+//	            degraded_min, over its m ≥ 2 graded scores
 //
-// The pass-rate test is in integers so a tie on the line is never a rounding
-// accident. With fewer than two scores there is no standard error to be within.
+// The judge test reads the interval the verdict reads (meanBounds), so a case
+// extends exactly while more runs could move its grade. The pass-rate test is
+// in integers so a tie on the line is never a rounding accident.
 func caseBorderline(c caseStats) bool {
 	off := 2*c.passed - c.runs
 	if off*off <= c.runs {
@@ -84,11 +84,9 @@ func caseBorderline(c caseStats) bool {
 	if len(c.scores) < 2 {
 		return false
 	}
-	_, sd := meanAndSD(asFloats(c.scores))
-	standardError := sd / math.Sqrt(float64(len(c.scores)))
-	median := medianOf(slices.Sorted(slices.Values(c.scores)))
+	lower, upper := meanBounds(asFloats(c.scores))
 	for _, bar := range []int{c.bands.CertifiedMin, c.bands.DegradedMin} {
-		if math.Abs(float64(median-bar)) <= standardError {
+		if lower <= float64(bar) && float64(bar) <= upper {
 			return true
 		}
 	}
@@ -113,4 +111,18 @@ func poolUndecided(cases []caseStats) bool {
 	mean, _ := meanAndSD(margins)
 	marginLower, _ := meanBounds(margins)
 	return len(margins) > 0 && mean >= 0 && marginLower < 0
+}
+
+// repeatsOrDefault applies RunnerConfig.Repeats' default and validates it up
+// front — a zero-run case into Verdict is a programmer bug (score.go panics on
+// it), but a wrong MARGINCE_AICERT_RUNS is an operator input error and must
+// fail with a message that says so.
+func repeatsOrDefault(n int) (int, error) {
+	if n == 0 {
+		n = defaultRepeats
+	}
+	if n < 1 {
+		return 0, fmt.Errorf("aicert: runner: repeats must be positive, got %d", n)
+	}
+	return n, nil
 }
