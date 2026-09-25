@@ -131,7 +131,7 @@ func DocumentMIMEs() []string {
 // Held by: TestTheOpenAICompatibleWireHasNoDocumentPart (backend/internal/modules/ai/carriage_test.go)
 func wireCarriage() map[string][]string {
 	return projectProviders(
-		func(d providerDescriptor) []string { return d.carriage }, everyProvider)
+		func(d providerDescriptor) []string { return d.carriage }, speaksChat)
 }
 
 // declaresAWildcard reports whether a carriage declaration leaves a media type

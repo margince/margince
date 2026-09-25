@@ -101,9 +101,10 @@ const (
 )
 
 // knownProviders is the provider names SelectBrain accepts: the registry's
-// names, in its order — read by the default error below and by the config
-// JSON-schema drift test.
-var knownProviders = providerNames()
+// chat-speaking names, in its order — read by the default error below and by
+// the config JSON-schema drift test. A decision-only adapter is absent: it
+// answers no chat call, so no tier may name it.
+var knownProviders = providerNamesWhere(speaksChat)
 
 // KnownProviders lists the adapter names knownProviders holds, which is the
 // same slice SelectBrain's switch and the config enum read.

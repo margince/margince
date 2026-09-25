@@ -67,7 +67,7 @@ func TestProviderFactsLiveOnlyInTheRegistry(t *testing.T) {
 	// that constant reads as clean. A second constant sharing a provider's
 	// spelling (a ProviderOptions namespace) is read as a provider too: that
 	// errs toward a finding, never toward silence.
-	for _, provider := range KnownProviders() {
+	for _, provider := range providerNames() {
 		if !slices.Contains(slices.Collect(maps.Values(idents)), provider) {
 			t.Fatalf("no constant spells provider %q — the census would read a smaller tree than it claims", provider)
 		}
@@ -122,7 +122,7 @@ type providerFactSite struct {
 // census recognises a provider the day its row is added.
 func providerNameSet() map[string]bool {
 	names := map[string]bool{}
-	for _, p := range KnownProviders() {
+	for _, p := range providerNames() {
 		names[p] = true
 	}
 	return names

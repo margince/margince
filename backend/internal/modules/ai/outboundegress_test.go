@@ -26,7 +26,7 @@ func TestEveryProviderDeclaresAnEgressClass(t *testing.T) {
 	t.Parallel()
 
 	declared := make(map[string]bool, len(providerEgress))
-	for _, provider := range KnownProviders() {
+	for _, provider := range providerNames() {
 		if _, ok := providerEgress[provider]; !ok {
 			t.Errorf("provider %q declares no egress class, so its outbound client is guarded by a default nobody chose", provider)
 		}
@@ -34,7 +34,7 @@ func TestEveryProviderDeclaresAnEgressClass(t *testing.T) {
 	}
 	for provider := range providerEgress {
 		if !declared[provider] {
-			t.Errorf("providerEgress declares %q, which SelectBrain does not accept — a rule for a lane that does not exist", provider)
+			t.Errorf("providerEgress declares %q, which the registry does not hold — a rule for a lane that does not exist", provider)
 		}
 	}
 	if egressPublicOnly != 0 {
@@ -54,15 +54,16 @@ func TestEveryProviderDeclaresAnEgressClass(t *testing.T) {
 func TestEveryLocalProviderTakesTheOperatorLane(t *testing.T) {
 	t.Parallel()
 
-	for _, provider := range KnownProviders() {
+	for _, provider := range providerNames() {
 		if provider == ProviderFake {
 			continue // dials nothing, so its class binds nothing
 		}
 		onOperatorLane := egressFor(provider) == egressOperatorEndpoint
-		if ProviderIsLocal(provider) && !onOperatorLane {
+		d, _ := providerByName(provider)
+		if d.local && !onOperatorLane {
 			t.Errorf("provider %q is sovereign-eligible but may not dial the operator's own network", provider)
 		}
-		if !ProviderIsLocal(provider) && onOperatorLane && provider != providerOpenAICompatible {
+		if !d.local && onOperatorLane && provider != providerOpenAICompatible {
 			t.Errorf("provider %q is a cloud vendor on the permissive lane, so a binding may point this installation's model key at an address inside its own network", provider)
 		}
 	}

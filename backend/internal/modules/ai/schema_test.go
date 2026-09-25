@@ -59,6 +59,11 @@ func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
 			EmbeddingsBinding struct {
 				Properties map[string]any `json:"properties"`
 			} `json:"embeddingsBinding"`
+			DecisionsBinding struct {
+				Properties struct {
+					Provider struct{ Enum []string } `json:"provider"`
+				} `json:"properties"`
+			} `json:"decisionsBinding"`
 		} `json:"$defs"`
 	}
 	// $defs/binding and $defs/embeddingsBinding sit at the document root, so
@@ -79,6 +84,7 @@ func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
 	}
 	assertSetEqual(t, "tiers", schema.Properties.Tiers.PropertyNames.Enum, tierNames)
 	assertSetEqual(t, "providers", schema.Defs.Binding.Properties.Provider.Enum, knownProviders)
+	assertSetEqual(t, "decision providers", schema.Defs.DecisionsBinding.Properties.Provider.Enum, DecisionProviders())
 	assertSetEqual(t, "input modalities", schema.Defs.Binding.Properties.Input.Items.Enum, acceptedModalities)
 
 	// `input:` is accepted on every provider — as the whole answer on the

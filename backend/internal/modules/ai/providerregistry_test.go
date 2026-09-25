@@ -21,6 +21,31 @@ func TestTheProviderListKeepsItsOrder(t *testing.T) {
 	if !slices.Equal(knownProviders, want) {
 		t.Fatalf("knownProviders = %v, want %v", knownProviders, want)
 	}
+	if got, want := DecisionProviders(), []string{providerOpenRouterDecision, providerLaya}; !slices.Equal(got, want) {
+		t.Fatalf("DecisionProviders() = %v, want %v", got, want)
+	}
+}
+
+// A decision adapter answers no chat call, so no chat-side table may name it,
+// and its credential is its key owner's.
+func TestADecisionProviderIsKnownOnlyToTheDecisionLane(t *testing.T) {
+	for _, provider := range DecisionProviders() {
+		if slices.Contains(knownProviders, provider) || localProviders[provider] {
+			t.Errorf("%s is offered to a chat tier", provider)
+		}
+		if _, carried := wireCarriage()[provider]; carried {
+			t.Errorf("%s declares a chat carriage", provider)
+		}
+		if _, keyed := cloudKeyEnv[provider]; keyed {
+			t.Errorf("%s has a key slot of its own; it must use its key owner's", provider)
+		}
+	}
+	if got := keyOwnerOf(providerOpenRouterDecision); got != providerOpenAICompatible {
+		t.Errorf("keyOwnerOf(openrouter_decision) = %q, want openai_compatible", got)
+	}
+	if got := keyOwnerOf(providerGemini); got != providerGemini {
+		t.Errorf("keyOwnerOf(gemini) = %q, want itself", got)
+	}
 }
 
 func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
@@ -31,7 +56,8 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 		ProviderFake: egressPublicOnly, providerAnthropic: egressPublicOnly,
 		providerOpenAI: egressPublicOnly, providerGemini: egressPublicOnly,
 		providerOllama: egressOperatorEndpoint, providerVLLM: egressOperatorEndpoint,
-		providerOpenAICompatible: egressOperatorEndpoint,
+		providerOpenAICompatible:   egressOperatorEndpoint,
+		providerOpenRouterDecision: egressPublicOnly, providerLaya: egressOperatorEndpoint,
 	})
 	assertMap(t, "cloudKeyEnv", cloudKeyEnv, map[string]string{
 		providerAnthropic: "ANTHROPIC_API_KEY", providerOpenAI: "OPENAI_API_KEY",
@@ -41,10 +67,12 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 		providerAnthropic: servedIdentitySourceResponse, providerOllama: servedIdentitySourceResponse,
 		providerGemini: servedIdentitySourceResponse, providerOpenAI: servedIdentitySourceResponse,
 		providerOpenAICompatible: servedIdentitySourceEcho, providerVLLM: servedIdentitySourceEcho,
-		ProviderFake: servedIdentitySourceResponse,
+		ProviderFake: servedIdentitySourceResponse, providerOpenRouterDecision: servedIdentitySourceResponse,
+		providerLaya: servedIdentitySourceEcho,
 	})
 	assertMap(t, "localBaseURLDefaults", localBaseURLDefaults, map[string]string{
 		providerOllama: defaultOllamaBaseURL, providerVLLM: defaultVLLMBaseURL,
+		providerLaya: defaultLayaBaseURL,
 	})
 	if got, want := slices.Sorted(maps.Keys(wildcardWires)), []string{ProviderFake, providerOllama, providerOpenAICompatible, providerVLLM}; !slices.Equal(got, want) {
 		t.Errorf("wildcardWires keys = %v, want %v", got, want)
