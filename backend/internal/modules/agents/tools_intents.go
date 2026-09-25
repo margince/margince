@@ -12,6 +12,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -24,31 +26,66 @@ import (
 // RegisterIntentTools wires the intent surface; compose passes the
 // search module's Retriever. No retriever, no tools — a surface that
 // cannot ground does not pretend to.
-func RegisterIntentTools(r *Registry, retriever retrieval.Retriever, brief MeetingBriefReader) {
+// The provider is what resolves a `record_name`, and it is the SAME one
+// search_records resolves through — so a name means here exactly what that tool
+// would have said it means.
+func RegisterIntentTools(
+	r *Registry, retriever retrieval.Retriever, brief MeetingBriefReader,
+	p datasource.SystemOfRecordProvider,
+) {
 	if retriever == nil {
 		return
 	}
-	r.Register(catchMeUpOn{retriever: retriever})
-	r.Register(prepForMeeting{retriever: retriever, brief: brief})
+	r.Register(catchMeUpOn{retriever: retriever, p: p})
+	r.Register(prepForMeeting{retriever: retriever, brief: brief, p: p})
 }
 
 // anchorArgs is the shared input shape: one record to build around.
 type anchorArgs struct {
 	RecordType string   `json:"record_type"`
 	RecordID   ids.UUID `json:"record_id"`
-	MaxItems   int      `json:"max_items"`
+	// RecordName names the record in the words somebody used, for a caller
+	// that has not looked it up. Exactly one of this and RecordID is supplied;
+	// validate settles that, and resolveAnchor turns a name into an id or
+	// refuses with the candidates.
+	RecordName string `json:"record_name"`
+	MaxItems   int    `json:"max_items"`
 	// ProjectID narrows the picture to one body of work. It is a co-filter on
 	// the anchor, not an anchor: material filed under another project drops
 	// out, material filed under none stays (retrieval.AssembleOptions).
 	ProjectID *ids.UUID `json:"project_id"`
 }
 
-const anchorSchema = `{"type":"object","required":["record_type","record_id"],"properties":{
+const anchorSchema = `{"type":"object","required":["record_type"],"properties":{
 	"record_type":{"type":"string","enum":["contact","company","deal","lead","project","activity"]},
-	"record_id":{"type":"string","format":"uuid"},
+	"record_id":{"type":"string","format":"uuid","description":"The record to build around. Give this or record_name, not both."},
+	"record_name":{"type":"string","description":"The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing."},
 	"max_items":{"type":"integer","minimum":1,"maximum":20},
 	"project_id":{"type":"string","format":"uuid","description":"Keep only what is filed under this project or under none"}},
 	"additionalProperties":false}`
+
+// validate settles that the caller named the record exactly one way.
+//
+// Both is refused rather than preferring the id: a request carrying both is one
+// whose author believed they agreed, and answering from the id would hide the
+// disagreement on the call where it could still be seen. Neither is refused
+// because `record_id` left the schema's required list when `record_name`
+// arrived — the surface-wide id check no longer makes this claim, so it is made
+// here.
+func (a anchorArgs) validate() error {
+	byID := a.RecordID != (ids.UUID{})
+	byName := strings.TrimSpace(a.RecordName) != ""
+	switch {
+	case byID && byName:
+		return &BadArgsError{Cause: fmt.Errorf(
+			"name the record by `record_id` or by `record_name`, not both")}
+	case !byID && !byName:
+		return &BadArgsError{Cause: fmt.Errorf(
+			"name the record by `record_id` or by `record_name`")}
+	default:
+		return nil
+	}
+}
 
 // assembleOptions carries the caller's narrowing to the retriever.
 func (a anchorArgs) assembleOptions() retrieval.AssembleOptions {
@@ -112,6 +149,8 @@ func assembledContext(ctx context.Context, assembled retrieval.Context) Assemble
 
 type catchMeUpOn struct {
 	retriever retrieval.Retriever
+	// p resolves a `record_name`. See RegisterIntentTools.
+	p datasource.SystemOfRecordProvider
 }
 
 func (t catchMeUpOn) Spec() mcp.ToolSpec {
@@ -130,8 +169,15 @@ func (t catchMeUpOn) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
+	if err := args.validate(); err != nil {
+		return nil, err
+	}
+	anchored, err := resolveAnchor(ctx, t.p, args)
+	if err != nil {
+		return nil, err
+	}
 	assembled, err := t.retriever.AssembleContext(ctx,
-		datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.RecordID},
+		datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: anchored},
 		args.assembleOptions())
 	if err != nil {
 		return nil, err
@@ -143,6 +189,8 @@ func (t catchMeUpOn) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 
 type prepForMeeting struct {
 	retriever retrieval.Retriever
+	// p resolves a `record_name`. See RegisterIntentTools.
+	p datasource.SystemOfRecordProvider
 	// brief is the contact page's own assembler. Nil is a wiring the tool
 	// survives rather than refuses: an installation without it answers the
 	// assembled picture, which is what this tool has always returned, instead
@@ -166,8 +214,15 @@ func (t prepForMeeting) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
+	if err := args.validate(); err != nil {
+		return nil, err
+	}
+	anchored, err := resolveAnchor(ctx, t.p, args)
+	if err != nil {
+		return nil, err
+	}
 	assembled, err := t.retriever.AssembleContext(ctx,
-		datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.RecordID},
+		datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: anchored},
 		args.assembleOptions())
 	if err != nil {
 		return nil, err

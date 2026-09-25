@@ -10,16 +10,16 @@
   "totals": {
     "tools": 76,
     "resources": 12,
-    "tool_catalog_bytes": 224514,
+    "tool_catalog_bytes": 225070,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 57274,
-    "largest_tool_bytes": 8975,
+    "approx_wire_tokens_total": 57413,
+    "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 58858,
-      "input_schema_bytes": 47242,
+      "input_schema_bytes": 47798,
       "output_schema_bytes": 101983,
-      "description_plus_input_schema_bytes": 106100
+      "description_plus_input_schema_bytes": 106656
     }
   },
   "tools": {
@@ -1173,7 +1173,12 @@
               "type": "string"
             },
             "record_id": {
+              "description": "The record to build around. Give this or record_name, not both.",
               "format": "uuid",
+              "type": "string"
+            },
+            "record_name": {
+              "description": "The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
               "type": "string"
             },
             "record_type": {
@@ -1189,8 +1194,7 @@
             }
           },
           "required": [
-            "record_type",
-            "record_id"
+            "record_type"
           ],
           "type": "object"
         },
@@ -7209,7 +7213,12 @@
               "type": "string"
             },
             "record_id": {
+              "description": "The record to build around. Give this or record_name, not both.",
               "format": "uuid",
+              "type": "string"
+            },
+            "record_name": {
+              "description": "The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
               "type": "string"
             },
             "record_type": {
@@ -7225,8 +7234,7 @@
             }
           },
           "required": [
-            "record_type",
-            "record_id"
+            "record_type"
           ],
           "type": "object"
         },
