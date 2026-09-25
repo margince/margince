@@ -9,10 +9,9 @@ package compose
 // with Mistral's and Gemma's instruction models raises "conversation roles must
 // alternate user/assistant/user/assistant", and a server that renders the
 // model's own template (vLLM does) answers the whole call with a 400. The
-// onboarding conversations are the requests that break it, because each opens
-// with a user turn carrying the fenced context and then replays the history and
-// the new message as user turns of their own. Ollama renders its own template
-// and never refused them, which is why nothing said so until a vLLM binding did.
+// onboarding conversations open with a user turn carrying the fenced context
+// and then send the history and the new message as turns of their own, so they
+// are the requests that need joining.
 
 import (
 	"strings"

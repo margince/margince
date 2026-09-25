@@ -52,10 +52,12 @@ vllm serve <model> \
 | `--enable-prompt-tokens-details` | Reports cached prompt tokens, which the product records per call. Without it the count is always 0. |
 
 The binding in the routing config then needs only the model id and, if it is
-not `http://localhost:8000`, the host root (no `/v1`):
+not `http://localhost:8000`, the host root (no `/v1`). The id is the name the
+server answers to: what `vllm serve` was given, unless `--served-model-name`
+renames it.
 
 ```yaml
-local_small: { provider: vllm, model: "Qwen/Qwen3-14B", base_url: http://gpu-box.internal:8000 }
+local_small: { provider: vllm, model: "mlx-community/Qwen3-14B-4bit", base_url: http://gpu-box.internal:8000 }
 ```
 
 Two more things the server decides, and the product cannot see:
