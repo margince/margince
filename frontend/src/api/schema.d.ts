@@ -18635,6 +18635,22 @@ export interface components {
             /** @description Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which. */
             decision_attempted: boolean;
         };
+        /**
+         * @description The configuration an AI call ran under, resolved from its `config_hash`.
+         *
+         *     Written on every call since the table existed and joined by nothing: a
+         *     reader could see that two calls shared a configuration and never what
+         *     changed between two that did not.
+         */
+        AiCallConfig: {
+            task_contract_hash: string;
+            routing_config_hash: string;
+            prompt_version: string;
+            /** @description The provider parameters this configuration pinned. */
+            provider_params?: {
+                [key: string]: unknown;
+            };
+        };
         /** @description One attempt (terminal or not) within a logical call. */
         AiCallAttempt: {
             attempt: number;
@@ -18684,6 +18700,17 @@ export interface components {
             served_identity_source: string;
             /** @description Routing/prompt config identity of this call. */
             config_hash?: string | null;
+            /**
+             * @description What that identity resolves to. OMITTED — not null — on a call
+             *     that names no configuration, which is the only case it is absent
+             *     for: `ai_call_config_fk` binds a hash that IS set to a row, so a
+             *     call carrying one always resolves.
+             *
+             *     The hash alone tells a reader that two calls shared a
+             *     configuration, and nothing about what it was — which is the
+             *     question a diagnostics reader is actually asking.
+             */
+            config?: components["schemas"]["AiCallConfig"];
             /** @description Company-context scopes injected into the request. */
             context_scopes: string[];
             context_fingerprint: string;
