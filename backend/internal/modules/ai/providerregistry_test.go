@@ -72,7 +72,7 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 		providerGemini: servedIdentitySourceResponse, providerOpenAI: servedIdentitySourceResponse,
 		providerOpenAICompatible: servedIdentitySourceEcho, providerVLLM: servedIdentitySourceEcho,
 		ProviderFake: servedIdentitySourceResponse, providerJev: servedIdentitySourceResponse,
-		providerJevCompatible: servedIdentitySourceEcho,
+		providerJevCompatible: servedIdentityPerReply,
 	})
 	assertMap(t, "localBaseURLDefaults", localBaseURLDefaults, map[string]string{
 		providerOllama: defaultOllamaBaseURL, providerVLLM: defaultVLLMBaseURL,

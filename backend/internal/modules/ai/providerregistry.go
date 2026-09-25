@@ -28,7 +28,9 @@ type providerDescriptor struct {
 	egress egressClass
 	// keyEnv is the environment variable a BYOK key is read from; empty means
 	// the adapter takes no key.
-	keyEnv       string
+	keyEnv string
+	// servedSource is how far the adapter's reported served model is trusted:
+	// a Call.ServedIdentitySource label, or servedIdentityPerReply.
 	servedSource string
 	// defaultBaseURL is the endpoint an omitted base_url resolves to, for the
 	// local adapters whose endpoint the sovereign rule checks.
@@ -148,9 +150,11 @@ var providerRegistry = []providerDescriptor{
 		// Any server on the Jev wire. The operator lane for the reason
 		// openai_compatible takes it: a self-hosted encoder on the operator's
 		// own network is a binding this lane must serve. Such a server needs no
-		// key, so the key is sent when held and never demanded.
+		// key, so the key is sent when held and never demanded. A broker names
+		// the dated snapshot it served and a bare server may hand the request
+		// back, so its served identity is graded per reply.
 		name: providerJevCompatible, caps: capDecision, egress: egressOperatorEndpoint,
-		keyEnv: "JEV_COMPATIBLE_API_KEY", keyOptional: true, servedSource: servedIdentitySourceEcho,
+		keyEnv: "JEV_COMPATIBLE_API_KEY", keyOptional: true, servedSource: servedIdentityPerReply,
 		localByEndpoint: true,
 	},
 }

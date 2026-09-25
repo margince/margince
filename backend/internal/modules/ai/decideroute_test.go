@@ -206,7 +206,7 @@ func TestAnAcceptedDecisionIsTracedAndMeteredOnTheDecideTier(t *testing.T) {
 	}
 	row := f.store.recorded[0]
 	if row.Provider != providerJevCompatible || row.ModelID != jevLane.Model || row.TokensIn != 400 || row.TokensOut != 0 ||
-		row.ServedModel != "typesafe/jev-1.13-20260917" || row.ServedIdentitySource != servedIdentitySourceEcho || row.ServedProvider != "TypeSafe" {
+		row.ServedModel != "typesafe/jev-1.13-20260917" || row.ServedIdentitySource != servedIdentitySourceResponse || row.ServedProvider != "TypeSafe" {
 		t.Errorf("decision row = %+v", row)
 	}
 	if len(f.meter.records) != 1 || f.meter.records[0] != (Usage{Task: TaskSiteTriage, Tier: TierDecideLane, TokensIn: 400}) {

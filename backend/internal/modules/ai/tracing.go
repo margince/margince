@@ -37,6 +37,11 @@ const (
 	servedIdentitySourceConfigured = "configured"
 )
 
+// servedIdentityPerReply is a registry value, never a stored label: the
+// adapter's server may name its own snapshot or may hand the requested model
+// back, so servedIdentity grades each reply as one of the two above.
+const servedIdentityPerReply = "per_reply"
+
 // servedSource maps a provider to its served-identity source.
 var servedSource = projectProviders(
 	func(d providerDescriptor) string { return d.servedSource }, everyProvider,
@@ -47,12 +52,20 @@ var servedSource = projectProviders(
 // report (the provider named none, or the call never reached a provider at
 // all — a total ladder failure) falls back to the tier's configured binding,
 // honestly labeled servedIdentitySourceConfigured rather than passed off as
-// confirmed.
+// confirmed. On a per-reply wire a name other than the one requested cannot
+// be a reflection of the request, so it is the server's own report.
 func servedIdentity(provider, configuredModel, respServedModel string) (servedModel, source string) {
 	if respServedModel == "" {
 		return configuredModel, servedIdentitySourceConfigured
 	}
-	return respServedModel, servedSource[provider]
+	source = servedSource[provider]
+	if source == servedIdentityPerReply {
+		source = servedIdentitySourceEcho
+		if respServedModel != configuredModel {
+			source = servedIdentitySourceResponse
+		}
+	}
+	return respServedModel, source
 }
 
 // newAttemptTrace opens the ai_call row for one completion attempt with
