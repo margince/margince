@@ -290,12 +290,12 @@ describe("the onboarding gate and the wizard's restore", () => {
   });
 });
 
-// The onboarding gate (A107/ADR-0061 + the 0082 anchor): an installation that
-// has not saved its own company has nothing for any other screen to show, so
-// the shell sends the human to the company form. GET /company 404s until a
-// human saves it — that 404 IS the signal, which is why the gate lives here
-// rather than on the login path: a live session never passes through login, so
-// a reload would otherwise walk straight past onboarding.
+// The onboarding gate: an installation that has not saved its own company has
+// nothing for any other screen to show, so an admin is sent to the company form
+// (GET /company 404s until then). Any other seat implies a described
+// installation, and every full seat is walked through its own journey until
+// that is recorded as finished. The gate lives in the shell, not on the login
+// path, because a live session never passes through login.
 describe("onboarding gate", () => {
   const mount = () => {
     const client = new QueryClient({
