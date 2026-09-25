@@ -193,6 +193,34 @@ type MessageRemover interface {
 	RemoveMessage(ctx context.Context, key NaturalKey) error
 }
 
+// NamedContainer is one folder or label a mailbox owner can recognise: the
+// provider's own token, and the name they see for it.
+//
+// Both halves, because neither works alone. A Gmail label id is an opaque
+// "Label_7" and a Graph folder id is base64url — asking somebody to type one is
+// asking them to look it up — while the NAME is what they read in their mail
+// client and is not stable enough to match on.
+type NamedContainer struct {
+	// ID is the provider's own token, and what a capture_exclusion rule stores.
+	ID string
+	// Name is what the owner sees. For display only: two folders may share it,
+	// and a rename must not silently re-point a rule.
+	Name string
+}
+
+// ContainerLister is the mail connectors' third optional verb: which folders or
+// labels this mailbox has, so an owner can pick one to keep out of capture.
+//
+// Optional for MessageRemover's reason — a channel or calendar connector has no
+// folders to offer — and READ-ONLY by design. Listing is what makes the rule
+// authorable; the rule itself is capture's, and a connector that could write
+// one would be deciding what its own mailbox keeps out.
+type ContainerLister interface {
+	// ListContainers returns the mailbox's folders or labels, in the order the
+	// provider gives them.
+	ListContainers(ctx context.Context, auth Auth) ([]NamedContainer, error)
+}
+
 // NormalizedRecord — a provider record mapped onto the clean relational
 // core with provenance. Fields holds the typed domain struct for
 // EntityType so a wrong mapping fails to compile, not at runtime.

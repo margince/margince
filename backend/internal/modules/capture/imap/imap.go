@@ -30,9 +30,11 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
@@ -156,8 +158,9 @@ type Stats struct {
 }
 
 var (
-	_ connector.Connector      = (*Connector)(nil)
-	_ connector.AccountLabeler = (*Connector)(nil)
+	_ connector.Connector       = (*Connector)(nil)
+	_ connector.AccountLabeler  = (*Connector)(nil)
+	_ connector.ContainerLister = (*Connector)(nil)
 )
 
 // Credentials is the request payload the transport hands to Authenticate.
@@ -352,4 +355,45 @@ func boundedWindow(requested int) uint32 {
 		return uint32(requested)
 	}
 	return uint32(maxMessagesCap)
+}
+
+// ListContainers returns the account's mailboxes, satisfying
+// connector.ContainerLister.
+//
+// One LIST over the whole account ("*" under the empty reference), because a
+// picker asks about the mailbox somebody keeps private mail in and that is
+// rarely beside the one being captured. The server's own hierarchy delimiter is
+// left in the name: "INBOX/Privat" is what the owner reads in their client, and
+// rewriting it to something tidier would offer a name no rule can match.
+//
+// \Noselect mailboxes are dropped. They are hierarchy nodes rather than places
+// mail sits — a folder that cannot be opened cannot hold a message to exclude —
+// and offering one gives somebody a choice that excludes nothing.
+func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]connector.NamedContainer, error) {
+	var creds Credentials
+	if err := json.Unmarshal(auth, &creds); err != nil {
+		return nil, fmt.Errorf("imap: malformed auth bundle: %w", err)
+	}
+	client, _, err := c.dial(ctx, creds)
+	if err != nil {
+		return nil, err
+	}
+	//craft:ignore swallowed-errors best-effort close of the listing session — the LIST below answered the question
+	defer func() { _ = client.Close() }()
+
+	mailboxes, err := client.List("", "*", nil).Collect()
+	if err != nil {
+		return nil, fmt.Errorf("imap: listing the account's mailboxes: %w", err)
+	}
+	out := make([]connector.NamedContainer, 0, len(mailboxes))
+	for _, m := range mailboxes {
+		if m.Mailbox == "" || slices.Contains(m.Attrs, imap.MailboxAttrNoSelect) {
+			continue
+		}
+		// The id and the name are the SAME string here, and that is the
+		// provider's doing rather than a shortcut: an IMAP mailbox is named by
+		// its path, so there is no opaque token to hide behind a label.
+		out = append(out, connector.NamedContainer{ID: m.Mailbox, Name: m.Mailbox})
+	}
+	return out, nil
 }

@@ -472,3 +472,22 @@ func reportRemovals(ctx context.Context, sink connector.Sink, deleted []string) 
 		}
 	}
 }
+
+// ListContainers returns the mailbox's labels, satisfying
+// connector.ContainerLister.
+//
+// The auth state is unmarshalled here rather than taken apart by the caller for
+// the reason Sync does it: the refresh token is this connector's to hold, and a
+// registry that opened the blob to mint a token would be a second place that
+// knows what shape it has.
+func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]connector.NamedContainer, error) {
+	var st authState
+	if err := json.Unmarshal(auth, &st); err != nil {
+		return nil, fmt.Errorf("gmail: malformed auth state: %w", err)
+	}
+	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	if err != nil {
+		return nil, err
+	}
+	return c.api.ListLabels(ctx, access)
+}

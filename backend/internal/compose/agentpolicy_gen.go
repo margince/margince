@@ -240,6 +240,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/company/site-reads/{readId}/logo":                              {Op: "getAnchorCompanySiteReadLogo", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/confirm-submissions":                                           {Op: "listConfirmSubmissions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/connectors":                                                    {Op: "listConnectors", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/connectors/{provider}/containers":                              {Op: "listConnectorContainers", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/contacts":                                                      {Op: "listContacts", Access: "tool", Tool: "list_records", RecordType: "contact", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/contacts/{id}":                                                 {Op: "getContact", Access: "tool", Tool: "read_record", RecordType: "contact", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/contacts/{id}/360":                                             {Op: "getContact360", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

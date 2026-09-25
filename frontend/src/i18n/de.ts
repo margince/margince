@@ -8281,6 +8281,9 @@ export const de = {
   "captureExclusions.kind.domain": "Domain",
   "captureExclusions.kind.container": "Label, Ordner oder Postfach",
   "captureExclusions.scopeLabel": "Gilt für",
+  "captureExclusions.containerLabel": "Ordner oder Label",
+  "captureExclusions.noContainers":
+    "Dieses Postfach hat keine Ordner gemeldet. Verbinde ein Postfach mit Ordnern, oder schließe Absender nach Adresse oder Domain aus.",
   "captureExclusions.kindLabel": "Art",
   "captureExclusions.addLabel": "Adresse oder Domain ausschließen",
   "captureExclusions.placeholder.address": "name@beispiel.example",

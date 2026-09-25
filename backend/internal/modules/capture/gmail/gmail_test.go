@@ -40,6 +40,8 @@ type fakeAPI struct {
 	sent               map[string]bool // ids Gmail filed under the SENT label
 	drafts             map[string]bool // ids Gmail filed under the DRAFT label
 	deletedIDs         []string        // ids the owner deleted at the provider
+	labels             []connector.NamedContainer
+	labelsErr          error
 	spam               map[string]bool // ids Gmail filed under the SPAM label
 	trash              map[string]bool // ids Gmail filed under the TRASH label
 	gone               map[string]bool
@@ -80,6 +82,10 @@ func (f *fakeAPI) History(context.Context, string, string) ([]string, []string, 
 		return nil, nil, "", f.historyErr
 	}
 	return f.added, f.deletedIDs, f.addedHistoryID, nil
+}
+
+func (f *fakeAPI) ListLabels(context.Context, string) ([]connector.NamedContainer, error) {
+	return f.labels, f.labelsErr
 }
 
 func (f *fakeAPI) Watch(_ context.Context, _, topic string) (string, time.Time, error) {

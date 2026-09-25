@@ -62,6 +62,8 @@ type fakeAPI struct {
 	sentInitAfter time.Time
 	// Delta's canned round (the incremental resume).
 	deltaRemoved []string // ids Graph tombstoned in the round
+	folders      []connector.NamedContainer
+	foldersErr   error
 	deltaIDs     []string
 	deltaLink    string
 	deltaErr     error
@@ -251,6 +253,10 @@ const (
 	sentFolderID  = "folder-sent"
 	inboxFolderID = "folder-inbox"
 )
+
+func (f *fakeAPI) ListFolders(context.Context, string) ([]connector.NamedContainer, error) {
+	return f.folders, f.foldersErr
+}
 
 func (f *fakeAPI) SentFolderID(context.Context, string) (string, error) {
 	if f.sentFolderErr != nil {

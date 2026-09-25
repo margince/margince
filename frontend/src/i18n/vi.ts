@@ -8229,6 +8229,9 @@ export const vi = {
   "captureExclusions.kind.domain": "Tên miền",
   "captureExclusions.kind.container": "Nhãn, thư mục hoặc hộp thư",
   "captureExclusions.scopeLabel": "Áp dụng cho",
+  "captureExclusions.containerLabel": "Thư mục hoặc nhãn",
+  "captureExclusions.noContainers":
+    "Hộp thư này không báo cáo thư mục nào. Hãy kết nối hộp thư có thư mục, hoặc loại trừ theo địa chỉ hoặc tên miền.",
   "captureExclusions.kindLabel": "Loại",
   "captureExclusions.addLabel": "Loại trừ một địa chỉ hoặc tên miền",
   "captureExclusions.placeholder.address": "ten@vidu.com",
