@@ -289,14 +289,14 @@ func scanShare(row pgx.Row) (Share, error) {
 // ListIssued answers the caller's own open shares, newest first — the links
 // they may still close. Never the token: the table holds only its digest.
 func (s *AnalyticsShareStore) ListIssued(ctx context.Context, tx pgx.Tx) ([]Share, error) {
+	actor, err := storekit.Actor(ctx)
+	if err != nil {
+		return nil, err
+	}
 	// Create, as Issue and Revoke take it: the list is what this seat issued,
 	// and whoever may issue a link may see the links they issued.
 	if err := auth.Require(ctx, objectForecast, principal.ActionCreate); err != nil {
 		return nil, err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return nil, fmt.Errorf("compose: listing shares without an actor")
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT `+shareColumns+`
@@ -353,14 +353,14 @@ func (s *AnalyticsShareStore) Resolve(
 // calling seat issued, open or not — an expired or closed one is a no-op — and
 // anybody else's is ErrNotFound, so its existence stays hidden.
 func (s *AnalyticsShareStore) Revoke(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	actor, err := storekit.Actor(ctx)
+	if err != nil {
+		return err
+	}
 	// CREATE, not delete: no role holds forecast:delete (policy/defaults.go),
 	// and withdrawing a link is the issuing seat's act rather than a deletion.
 	if err := auth.Require(ctx, objectForecast, principal.ActionCreate); err != nil {
 		return err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return fmt.Errorf("compose: revoking a share without an actor")
 	}
 	// The row is locked before it is read-modified-written. Idempotence here
 	// is COALESCE over a value the statement itself reads, so two concurrent
@@ -372,7 +372,7 @@ func (s *AnalyticsShareStore) Revoke(ctx context.Context, tx pgx.Tx, id ids.UUID
 		return err
 	}
 	var revoked time.Time
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		UPDATE analytics_share
 		SET revoked_at = COALESCE(revoked_at, $2), version = version + 1, updated_at = now()
 		WHERE id = $1 AND created_by = $3

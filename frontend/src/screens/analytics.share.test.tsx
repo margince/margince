@@ -566,6 +566,63 @@ describe("the links a reader has shared", () => {
     expect(calls).toContain("GET /forecast/shares");
   });
 
+  it("says why when the list cannot be read", async () => {
+    serve(
+      {
+        "GET /forecast/shares": () =>
+          problem(500, "The shared links could not be read."),
+      },
+      FORECAST_CREATE,
+    );
+    const user = userEvent.setup();
+    mountActions();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Shared links" }),
+    );
+
+    expect(
+      await screen.findByText("The shared links could not be read."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Close link" })).toBeNull();
+  });
+
+  it("cancelling a refused close forgets the refusal and returns focus to the row", async () => {
+    serve(
+      {
+        "GET /forecast/shares": () => json({ data: [northLink] }),
+        "DELETE /forecast/shares/share-north": () =>
+          problem(409, "The link is being closed elsewhere."),
+      },
+      FORECAST_CREATE,
+    );
+    const user = userEvent.setup();
+    mountActions();
+    await user.click(
+      await screen.findByRole("button", { name: "Shared links" }),
+    );
+    await screen.findByText("Team North");
+    const rowVerb = screen.getByRole("button", { name: "Close link" });
+
+    await user.click(rowVerb);
+    const confirm = screen.getByRole("dialog", { name: "Close this link?" });
+    await user.click(
+      within(confirm).getByRole("button", { name: "Close link" }),
+    );
+    await within(confirm).findByText("The link is being closed elsewhere.");
+    await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
+
+    // The link stays, and the reader is put back on the verb they pressed.
+    await waitFor(() => expect(document.activeElement).toBe(rowVerb));
+    expect(screen.getByText("Team North")).toBeTruthy();
+    // Asked again, the confirmation starts clean rather than repeating the
+    // last refusal.
+    await user.click(rowVerb);
+    expect(
+      screen.queryByText("The link is being closed elsewhere."),
+    ).toBeNull();
+  });
+
   it("hands focus to the link now in a closed middle link's place", async () => {
     const { user, closeVerb, confirmClose } =
       await closeOneOfThree(companyLink);
@@ -621,4 +678,11 @@ async function closeOneOfThree(closed: OpenShare) {
     );
   };
   return { user, closeVerb, confirmClose };
+}
+
+function problem(status: number, detail: string) {
+  return new Response(JSON.stringify({ title: "Refused", status, detail }), {
+    status,
+    headers: { "Content-Type": "application/problem+json" },
+  });
 }
