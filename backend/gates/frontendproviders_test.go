@@ -12,7 +12,8 @@ package gates
 // provider registry. Both directions fail: a name the form offers that
 // SelectBrain does not serve is a save refused for a choice the form made, and
 // an adapter SelectBrain serves that the form omits is a binding nobody can
-// choose from Settings.
+// choose from Settings. Its DECISION_PROVIDERS list mirrors the registry's
+// decision adapters the same way, both directions.
 
 import (
 	"os"
@@ -63,6 +64,25 @@ func TestTheRoutingFormOffersExactlyTheAdaptersTheServerServes(t *testing.T) {
 	for _, provider := range served {
 		if !slices.Contains(offered, provider) {
 			t.Errorf("SelectBrain serves provider %q and the routing form's PROVIDERS omits it — it cannot be bound from Settings", provider)
+		}
+	}
+}
+
+// The decision model row offers only the adapters that answer a typed question
+// with calibrated confidence. A completion adapter there would save a lane no
+// decision site can call; a decision adapter missing from it cannot be bound.
+func TestTheDecisionRowOffersExactlyTheDecisionProviders(t *testing.T) {
+	t.Parallel()
+	offered := readFormConstant(t, routingFieldsFile, "DECISION_PROVIDERS")
+	served := ai.DecisionProviders()
+	for _, provider := range offered {
+		if !slices.Contains(served, provider) {
+			t.Errorf("the decision model row offers provider %q, which the registry does not mark as a decision provider — saving it is refused over a name the reader picked from our own list", provider)
+		}
+	}
+	for _, provider := range served {
+		if !slices.Contains(offered, provider) {
+			t.Errorf("the registry serves decision provider %q and the routing form's DECISION_PROVIDERS omits it — it cannot be bound from Settings", provider)
 		}
 	}
 }
