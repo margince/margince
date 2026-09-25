@@ -294,4 +294,85 @@ describe("the container kind", () => {
       scope: "user",
     });
   });
+
+  // A mailbox that reports no folders is told so, rather than left with a
+  // picker that looks broken. The server refuses a container rule it has no
+  // token for anyway, so an empty picker would be a dead control.
+  it("says so when the mailbox reports no folders", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backend(CAPTURE_EDITOR);
+    // Answer the containers read with an empty list.
+    const empty = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (request.url.includes("/containers")) {
+          return new Response(JSON.stringify({ containers: [] }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return fetchMock(input, init);
+      },
+    );
+    vi.stubGlobal("fetch", empty);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["captureExclusions.kind.container"],
+      }),
+    );
+
+    expect(
+      await screen.findByText(en["captureExclusions.noContainers"]),
+    ).toBeTruthy();
+  });
+
+  // A label lives in ONE mailbox, so there is no workspace choice to offer —
+  // the database refuses that rule, and showing the control would offer a
+  // scope the write cannot take.
+  it("offers no scope choice, because a label is the reader's own", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backend(CAPTURE_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
+    );
+    // The scope control is there for an address rule...
+    expect(
+      screen.queryByRole("button", {
+        name: en["captureExclusions.scope.workspace"],
+      }),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: en["captureExclusions.kind.container"],
+      }),
+    );
+    // ...and gone for a container one.
+    expect(
+      screen.queryByRole("button", {
+        name: en["captureExclusions.scope.workspace"],
+      }),
+    ).toBeNull();
+  });
 });
