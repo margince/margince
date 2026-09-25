@@ -24,6 +24,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -33,7 +34,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -439,5 +442,236 @@ func TestAnUnwiredUndoJudgeSaysItDidNotLook(t *testing.T) {
 	undo := receipt.Done[0].Undo
 	if undo == nil || undo.Undoable || undo.Reason == nil || *undo.Reason != "undo_not_evaluated" {
 		t.Errorf("unwired undo = %+v, want a stated not-evaluated reason", undo)
+	}
+}
+
+// pendingStub and sourceStub fix the SIZE of the two optional lanes, which is
+// what a totals assertion needs and what no real queue gives a test control
+// over. What the real engine puts in one is answered where that engine is bound,
+// in the compose package's own integration suite.
+type pendingStub struct {
+	approvals []crmcontracts.Approval
+	err       error
+}
+
+func (p pendingStub) PendingApprovals(
+	context.Context, int,
+) ([]crmcontracts.Approval, error) {
+	return p.approvals, p.err
+}
+
+type sourceStub struct {
+	concerns []magic.CaptureConcern
+	err      error
+}
+
+func (s sourceStub) CaptureConcerns(context.Context) ([]magic.CaptureConcern, error) {
+	return s.concerns, s.err
+}
+
+type troubledStub struct {
+	runs []automation.TroubledAutomationRun
+}
+
+func (t troubledStub) TroubledRuns(
+	context.Context, time.Time, int,
+) ([]automation.TroubledAutomationRun, error) {
+	return t.runs, nil
+}
+
+// stubInstant dates the stubbed rows. Fixed rather than read off the clock: a
+// stub answers the same rows whatever window it is handed, so no case below
+// turns on a row's age, and reading the wall clock here would suggest one did.
+var stubInstant = time.Date(2026, time.March, 4, 7, 30, 0, 0, time.UTC)
+
+func stagedRow(kind string) crmcontracts.Approval {
+	return crmcontracts.Approval{
+		Id:         openapi_types.UUID(ids.NewV7()),
+		CreatedAt:  stubInstant,
+		Kind:       kind,
+		ProposedBy: "agent:overnight",
+		Status:     crmcontracts.ApprovalStatus("pending"),
+	}
+}
+
+// THE HEADER MUST AGREE WITH THE PAGE UNDER IT.
+//
+// Each lane is assembled by its own arm and the four totals are written
+// together, after all of them — so a lane added to the array and forgotten in that block
+// ships a receipt whose own count contradicts what it carries. A client draws
+// "5 of 8" from the total, and an 8 no row supports is worse than no figure.
+//
+// Every lane here carries something, and that is the point of the fixture: four
+// zeroes would agree with any arithmetic at all.
+func TestTheTotalsCountEveryLaneDrawn(t *testing.T) {
+	e := Setup(t)
+	since := time.Now().Add(-time.Hour)
+	seedMachineAction(t, e, e.Rep1, "agent", "agent:auto-apply", "advance_stage")
+
+	receipt, err := magic.NewService(e.Pool, nil, time.Now).
+		WithPendingDecisions(pendingStub{approvals: []crmcontracts.Approval{
+			stagedRow("advance_deal"), stagedRow("send_email"),
+		}}).
+		WithSourceHealth(sourceStub{concerns: []magic.CaptureConcern{
+			{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "google"},
+		}}).
+		WithTroubledRuns(troubledStub{runs: []automation.TroubledAutomationRun{{
+			ID: ids.NewV7(), AutomationID: ids.New[ids.AutomationKind](),
+			Name: "Recap the call", Outcome: "failed", CreatedAt: stubInstant,
+		}}}).
+		Read(e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms), &since, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+
+	for _, lane := range []struct {
+		name   string
+		drawn  int
+		stated int
+	}{
+		{"done", len(receipt.Done), receipt.Totals.Done},
+		{"needs_you", len(receipt.NeedsYou), receipt.Totals.NeedsYou},
+		{"could_not_complete", len(receipt.CouldNotComplete), receipt.Totals.CouldNotComplete},
+		{"watching", len(receipt.Watching), receipt.Totals.Watching},
+	} {
+		if lane.drawn == 0 {
+			t.Errorf("the %s lane drew nothing, so its total is 0 = 0 and proves nothing", lane.name)
+		}
+		if lane.stated != lane.drawn {
+			t.Errorf("totals.%s says %d over %d drawn lines — the header contradicts the page",
+				lane.name, lane.stated, lane.drawn)
+		}
+	}
+}
+
+// AN EMPTY LANE IS `[]` ON THE WIRE, NEVER `null`.
+//
+// The contract declares all six as required arrays, and a generated client
+// iterates what the schema promised. A nil slice satisfies every Go assertion a
+// test could make about emptiness and still marshals to null, so the claim is
+// only proved by marshalling — which is why this case does.
+func TestEveryLaneSerialisesAsAListRatherThanNull(t *testing.T) {
+	e := Setup(t)
+	since := time.Now().Add(-time.Hour)
+
+	// No optional seam bound: the state an installation running no automations
+	// and capturing from nothing is in on its first morning.
+	receipt, err := magic.NewService(e.Pool, nil, time.Now).
+		Read(e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms), &since, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+	if receipt.NotShown == nil || receipt.SourcesUnavailable == nil {
+		t.Errorf("not_shown = %v and sources_unavailable = %v — both are declared arrays",
+			receipt.NotShown, receipt.SourcesUnavailable)
+	}
+
+	body, err := json.Marshal(receipt)
+	if err != nil {
+		t.Fatalf("marshalling the receipt: %v", err)
+	}
+	var wire map[string]json.RawMessage
+	if err := json.Unmarshal(body, &wire); err != nil {
+		t.Fatalf("reading back the marshalled receipt: %v", err)
+	}
+	for _, lane := range []string{
+		"done", "needs_you", "could_not_complete", "watching",
+		"not_shown", "sources_unavailable",
+	} {
+		drawn, present := wire[lane]
+		if !present {
+			t.Errorf("%s is absent from the wire, and the contract requires it", lane)
+			continue
+		}
+		if string(drawn) != "[]" {
+			t.Errorf("%s serialises as %s — a client that iterates the array the schema "+
+				"promised breaks on it", lane, drawn)
+		}
+	}
+}
+
+// ONE REFUSAL DOES NOT MASK ANOTHER.
+//
+// The three possible refusals are appended in one loop, so a page where two
+// lanes are withheld must name both. A reader told only about the queue would
+// read the empty watching lane as "every source is healthy" on the day they lost
+// the grant to check, which is the exact conflation each lane refuses on its own.
+func TestEveryRefusedSourceIsNamedOnOnePage(t *testing.T) {
+	e := Setup(t)
+	since := time.Now().Add(-time.Hour)
+
+	receipt, err := magic.NewService(e.Pool, nil, time.Now).
+		WithPendingDecisions(pendingStub{err: apperrors.ErrPermissionDenied}).
+		WithSourceHealth(sourceStub{err: apperrors.ErrPermissionDenied}).
+		Read(e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms), &since, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+
+	named := make(map[string]crmcontracts.WorklistSourceUnavailableReason,
+		len(receipt.SourcesUnavailable))
+	for _, unavailable := range receipt.SourcesUnavailable {
+		named[unavailable.Source] = unavailable.Reason
+	}
+	for _, source := range []string{"approval", "capture_health"} {
+		reason, reported := named[source]
+		if !reported {
+			t.Errorf("%s is missing from sources_unavailable %+v — the other refusal masked it",
+				source, receipt.SourcesUnavailable)
+			continue
+		}
+		if reason != crmcontracts.WorklistSourceUnavailableReasonWithheld {
+			t.Errorf("%s was refused as %q, want withheld", source, reason)
+		}
+	}
+	if len(receipt.NeedsYou) != 0 || len(receipt.Watching) != 0 {
+		t.Errorf("a withheld lane drew lines: needs_you = %+v, watching = %+v",
+			receipt.NeedsYou, receipt.Watching)
+	}
+}
+
+// THE WINDOW DOES NOT BOUND THE WATCHING LANE.
+//
+// A mailbox that broke before the reader last looked is the one they most need
+// told about, and every other arm of this read is windowed — so folding this one
+// in beside them is a plausible simplification that would silently drop exactly
+// the standing conditions nobody has cleared.
+func TestAStandingConditionIsReportedHoweverOldItIs(t *testing.T) {
+	e := Setup(t)
+	since := time.Now().Add(-time.Hour)
+	// Older than the window asked for AND older than the floor any window can
+	// reach, so no widening of either would rescue this line.
+	brokeLongAgo := time.Now().UTC().Add(-90 * 24 * time.Hour)
+	connection := ids.NewV7()
+
+	receipt, err := magic.NewService(e.Pool, nil, time.Now).
+		WithSourceHealth(sourceStub{concerns: []magic.CaptureConcern{{
+			ConnectionID: connection, Kind: "sync_failing",
+			Provider: "google", FailingSince: &brokeLongAgo,
+		}}}).
+		Read(e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms), &since, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+
+	if len(receipt.Watching) != 1 || ids.UUID(receipt.Watching[0].Id) != connection {
+		t.Fatalf("watching = %+v, want the connection failing since %v — a condition that "+
+			"predates the window is still true now", receipt.Watching, brokeLongAgo)
+	}
+	// Asserted on the value rather than on occurred_at, which for this lane is
+	// when the condition was seen. Without it the case would pass over a
+	// condition that began inside the window and prove nothing.
+	began, dated := (*receipt.Watching[0].Summary.Values)["failing_since"]
+	if !dated {
+		t.Fatalf("the line carries no failing_since, so nothing here says the condition "+
+			"predates the window: %+v", receipt.Watching[0].Summary.Values)
+	}
+	startedAt, err := time.Parse(time.RFC3339, began)
+	if err != nil {
+		t.Fatalf("failing_since = %q, which no client can read as an instant: %v", began, err)
+	}
+	if !startedAt.Before(receipt.Since) {
+		t.Errorf("the condition began at %v, inside the window starting %v — this case proves "+
+			"nothing unless it predates the window", startedAt, receipt.Since)
 	}
 }

@@ -31,6 +31,7 @@ import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { WeeklySection } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
+import { MagicPanel } from "./magic";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import { drawerScope } from "./worklist.address";
 import { WorklistPane } from "./worklist.pane";
@@ -244,6 +245,12 @@ function PersonalMorning({
           <>
             <BriefChanges />
             <BriefUpdates day={day} />
+            {/* THE RECEIPT, last and open. Everything above asks the reader for
+                something; this asks for nothing, and it is the reason the acts
+                above it are safe to take at all. It goes last because a reader
+                opens this page to find what to do next and a list of what is
+                already finished answers a different question. */}
+            <MagicPanel />
           </>
         }
         aside={

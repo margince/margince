@@ -22,7 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -32,13 +34,70 @@ import (
 )
 
 // newMagicService assembles the receipt's read.
-func newMagicService(pool *pgxpool.Pool, now func() time.Time) *magic.Service {
+//
+// The staged queue arrives as an argument rather than being built here because
+// the inbox decides through that same engine: a proposal counted on this
+// receipt and a row in that inbox are one queue, not two readings of it.
+func newMagicService(
+	pool *pgxpool.Pool, staged *approvals.Service, now func() time.Time,
+) *magic.Service {
 	db := InstallationDB(pool)
 	return magic.NewService(pool, magicBriefCutoff{
 		engine: briefs.NewBriefEngine(pool, nil),
 		now:    now,
 	}, now).
-		WithTroubledRuns(automation.NewAutomationStore(db))
+		WithTroubledRuns(automation.NewAutomationStore(db)).
+		WithPendingDecisions(magicPendingDecisions{svc: staged}).
+		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)})
+}
+
+// magicPendingDecisions reads the staged queue for the needs-you lane.
+//
+// Only the approvals this caller could themselves decide come back, because
+// that filter lives in the engine: the lane adds no authority of its own, and a
+// receipt that widened the inbox would be a side channel around it.
+//
+// attentionApprovals.ListWire spells the same read for the feed; the two stay
+// separate because each satisfies its own consumer's interface.
+type magicPendingDecisions struct{ svc *approvals.Service }
+
+// stagedAndUndecided is the status the inbox filter takes, in the contract's
+// own spelling rather than a literal of this package's.
+var stagedAndUndecided = string(crmcontracts.ApprovalStatusPending)
+
+func (m magicPendingDecisions) PendingApprovals(
+	ctx context.Context, limit int,
+) ([]crmcontracts.Approval, error) {
+	status := stagedAndUndecided
+	rows, _, err := m.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: limit})
+	return rows, err
+}
+
+// magicSourceHealth binds the watching lane to capture's own per-user read; the
+// human-only arm lives there, and its refusal is what the lane renders as
+// withheld.
+//
+// attentionCaptureHealth is the same conversion for the feed. They cannot share
+// a body: each converts into its OWN consumer package's row type, and neither
+// consumer may depend on the other.
+type magicSourceHealth struct{ registry *capture.Registry }
+
+func (m magicSourceHealth) CaptureConcerns(ctx context.Context) ([]magic.CaptureConcern, error) {
+	concerns, err := m.registry.HealthConcerns(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]magic.CaptureConcern, 0, len(concerns))
+	for _, concern := range concerns {
+		out = append(out, magic.CaptureConcern{
+			ConnectionID: concern.ConnectionID,
+			Kind:         concern.Kind,
+			Provider:     concern.Provider,
+			AccountLabel: concern.AccountLabel,
+			FailingSince: concern.FailingSince,
+		})
+	}
+	return out, nil
 }
 
 // magicBriefCutoff answers when the acting rep's night last read the records.

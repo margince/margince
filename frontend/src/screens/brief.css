@@ -465,6 +465,44 @@
   }
 }
 
+/* ── The receipt ───────────────────────────────────────────────────────────
+ * Four lanes inside one panel. The spacing is all that lives here: a lane is a
+ * heading, a count and a table, and every one of those draws itself. */
+
+.magic-lane + .magic-lane {
+  margin-top: var(--space-6);
+}
+
+/* The heading and its page count on one line, the way the queue's own bands
+   carry theirs. */
+.magic-lane-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.magic-lane-head > h3 {
+  margin: 0;
+}
+
+.magic-lane-count {
+  margin-left: auto;
+}
+
+/* The two caveats: what could not be read, above the lanes, and what was left
+   out, below them. Both are lists of captions and neither wants a bullet. */
+.magic-withheld,
+.magic-notshown {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+}
+
+.magic-notshown {
+  margin: var(--space-4) 0 0;
+}
+
 /* ── Folds ────────────────────────────────────────────────────────────────
  * `PageZones` folds the columns; what folds here is the briefing's own scale.
  * A display-size greeting on a phone costs three lines before a reader has

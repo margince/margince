@@ -10359,6 +10359,85 @@ export const en = {
   "employment.end": "End date",
   "employment.dateHint": "YYYY-MM or YYYY-MM-DD. Leave blank if unknown.",
   "employment.more": "Show more employment",
+
+  // The machinery's receipt on Home: what ran while the reader was away, in
+  // four lanes. The `magic.action.*` and `magic.consequence.*` families are
+  // the client half of a mirror the server sends keys against, so the set is
+  // the contract rather than one screen's copy (src/screens/magic.keys.ts).
+  "magic.title": "What Margince did",
+  "magic.since": "Since {when}",
+  "magic.loading": "Reading what the machinery did",
+  "magic.lane.done": "Done for you",
+  "magic.lane.needsYou": "Waiting on you",
+  "magic.lane.couldNotComplete": "Could not be finished",
+  "magic.lane.watching": "Needs restoring",
+  "magic.empty.done": "Nothing was done on your behalf in this window.",
+  "magic.empty.needsYou": "No decision is waiting on you.",
+  "magic.empty.couldNotComplete": "Everything that was started landed.",
+  "magic.empty.watching": "Every source and rule is healthy.",
+  "magic.laneCount_one": "{count} line",
+  "magic.laneCount_other": "{count} lines",
+  "magic.col.what": "What happened",
+  "magic.col.about": "About",
+  "magic.col.when": "When",
+  "magic.failingSince": "Failing since {when}",
+  "magic.col.wayBack": "Way back",
+  "magic.noRecord": "No record named",
+  "magic.undo.fromHistory": "Can be put back from the record’s history",
+  "magic.undoReason.noCompletedChange":
+    "Nothing changed, so there is nothing to put back.",
+  "magic.undoReason.notEvaluated":
+    "This installation has not checked whether this can be put back.",
+  "magic.notShown_one": "{count} change is not shown: {reason}",
+  "magic.notShown_other": "{count} changes are not shown: {reason}",
+  "magic.notShown.unadmittedAction": "housekeeping with nothing to tell you",
+  "magic.notShown.unknownEntityType": "a record type this page cannot place",
+  "magic.notShown.outOfScope": "outside your own records",
+  "magic.action.advance_stage": "A deal moved to its next stage",
+  "magic.action.promote": "A lead became a deal",
+  "magic.action.update": "A record was updated",
+  "magic.action.assign": "Work was handed to a new owner",
+  "magic.action.activity_relink":
+    "An exchange was filed under the right record",
+  "magic.action.send_email": "A message was sent",
+  "magic.action.schedule": "A meeting was booked",
+  "magic.action.disqualify": "A lead was disqualified",
+  "magic.action.automation_troubled": "{name} is in trouble: {outcome}",
+  "magic.action.approval_coldstart":
+    "A first approach is waiting for your word",
+  "magic.action.approval_send_email": "A message is waiting for your word",
+  "magic.action.approval_advance_deal": "A stage move is waiting for your word",
+  "magic.action.approval_promote_lead":
+    "Promoting a lead is waiting for your word",
+  "magic.action.approval_overnight":
+    "An overnight proposal is waiting for your word",
+  "magic.action.approval_transcript_proposal":
+    "A proposal from a recording is waiting for your word",
+  "magic.action.approval_pending": "A {kind} proposal is waiting for your word",
+  "magic.action.capture_reauth_required":
+    "{provider} needs to be connected again",
+  "magic.action.capture_connection_error": "{provider} could not be reached",
+  "magic.action.capture_sync_failing": "{provider} is not keeping up",
+  "magic.action.capture_backfill_failed":
+    "{provider} could not finish reading its history",
+  "magic.consequence.stage_moved": "The deal sits in a later stage now.",
+  "magic.consequence.lead_promoted": "There is a new deal in the pipeline.",
+  "magic.consequence.owner_changed": "Somebody else answers for it now.",
+  "magic.consequence.record_relinked":
+    "The exchange now sits under the record it belongs to.",
+  "magic.consequence.message_sent":
+    "The recipient has it, and it cannot be unsent.",
+  "magic.consequence.meeting_booked": "It is in the calendar.",
+  "magic.consequence.lead_disqualified": "The lead has left the pipeline.",
+  "magic.consequence.automation_did_nothing":
+    "Nothing the rule promised has happened.",
+  "magic.consequence.awaits_your_decision": "Nothing happens until you decide.",
+  "magic.consequence.capture_not_collecting":
+    "Nothing is being collected from this source.",
+  "magic.consequence.capture_may_be_incomplete":
+    "What you see from this source may be short.",
+  "magic.consequence.capture_history_incomplete":
+    "Older exchanges from this source are missing.",
 } as const;
 
 export type MessageKey = keyof typeof en;

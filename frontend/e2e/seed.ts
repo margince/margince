@@ -1159,6 +1159,56 @@ export async function mockApi(
     ...briefRun,
     items: briefRun.items.map((item) => ({ ...item })),
   };
+
+  // One line per lane, so the sweep meets the panel drawing rather than the
+  // panel reporting four empty lanes — an all-clear page exercises none of the
+  // rows, the counts or the way-back column.
+  const magicReceipt = {
+    as_of: "2026-09-13T08:00:00Z",
+    since: "2026-09-12T08:00:00Z",
+    done: [
+      {
+        id: "00000000-0000-7000-8000-00000000ma01",
+        occurred_at: "2026-09-13T07:30:00Z",
+        lane: "done",
+        summary: { key: "magic.action.advance_stage" },
+        actor: { type: "agent", id: "auto-apply" },
+        undo: { undoable: false, reason: "not_a_replayable_verb" },
+      },
+    ],
+    needs_you: [
+      {
+        id: "00000000-0000-7000-8000-00000000ma02",
+        occurred_at: "2026-09-13T06:10:00Z",
+        lane: "needs_you",
+        summary: {
+          key: "magic.action.approval_send_email",
+          values: { kind: "send_email" },
+        },
+        consequence: "magic.consequence.awaits_your_decision",
+        actor: { type: "agent", id: "overnight" },
+        undo: { undoable: false, reason: "no_completed_change" },
+      },
+    ],
+    could_not_complete: [],
+    watching: [
+      {
+        id: "00000000-0000-7000-8000-00000000ma03",
+        occurred_at: "2026-09-13T08:00:00Z",
+        lane: "watching",
+        summary: {
+          key: "magic.action.capture_reauth_required",
+          values: { provider: "Gmail" },
+        },
+        consequence: "magic.consequence.capture_not_collecting",
+        actor: { type: "system", id: "system:capture" },
+        undo: { undoable: false, reason: "no_completed_change" },
+      },
+    ],
+    totals: { done: 1, needs_you: 1, could_not_complete: 0, watching: 1 },
+    not_shown: [],
+    sources_unavailable: [],
+  };
   // The mailbox-privacy fixtures, per page for the same reason as the rest:
   // a posture change, a sender overrule and a hold all have to be readable
   // back within one test.
@@ -2058,6 +2108,13 @@ export async function mockApi(
     if (path.startsWith("/deals/")) {
       const base = deals.find((deal) => path.endsWith(deal.id)) ?? deals[0];
       return json({ ...base, ...dealPatches[base.id] });
+    }
+    // The receipt Home draws last. Mocked rather than left to the fallback,
+    // which answers every unknown path with a page shape: the panel would then
+    // read a receipt that has no lanes and no totals, which is the version-skew
+    // case its own unit suite covers and not what this sweep is for.
+    if (path === "/magic" && method === "GET") {
+      return json(magicReceipt);
     }
     if (path === "/brief" && method === "GET") {
       return json(brief);
