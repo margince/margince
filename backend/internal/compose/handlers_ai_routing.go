@@ -80,6 +80,7 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 		tiers[string(tier)] = crmcontracts.AiTierBinding{
 			Provider: b.Provider, Model: b.Model,
 			BaseUrl: optionalString(b.BaseURL), Input: optionalStrings(b.Input),
+			Routing: routingToWire(b.Routing),
 		}
 	}
 	return crmcontracts.AiRouting{
@@ -89,6 +90,7 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 			Provider: cfg.Embeddings.Provider, Model: cfg.Embeddings.Model,
 			BaseUrl: optionalString(cfg.Embeddings.BaseURL),
 			Input:   optionalStrings(cfg.Embeddings.Input),
+			Routing: routingToWire(cfg.Embeddings.Routing),
 			// Reported as stored rather than as defaulted, so a round-trip of
 			// GET → PUT does not silently freeze today's compiled default into
 			// the document as though an operator had chosen it.
@@ -101,9 +103,15 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 // validates nothing: the store holds it to the same bar the file loader
 // applies, so there is exactly one place a bad binding is refused.
 func fromContractAiRouting(req crmcontracts.AiRouting) ai.RoutingConfig {
+	// The embeddings lane carries routing too: it may narrow which hosts read
+	// the text (only, ignore, allow_fallbacks), and the store refuses the rest.
+	embeddings := crmcontracts.AiTierBinding{
+		Provider: req.Embeddings.Provider, Model: req.Embeddings.Model,
+		BaseUrl: req.Embeddings.BaseUrl, Input: req.Embeddings.Input, Routing: req.Embeddings.Routing,
+	}
 	cfg := ai.RoutingConfig{
 		Profile:    ai.Profile(req.Profile),
-		Embeddings: ai.EmbeddingsConfig{ProviderConfig: tierFromWire(req.Embeddings.Provider, req.Embeddings.Model, req.Embeddings.BaseUrl, req.Embeddings.Input)},
+		Embeddings: ai.EmbeddingsConfig{ProviderConfig: tierFromWire(embeddings)},
 	}
 	if req.Embeddings.Dimensions != nil {
 		cfg.Embeddings.Dimensions = *req.Embeddings.Dimensions
@@ -111,24 +119,66 @@ func fromContractAiRouting(req crmcontracts.AiRouting) ai.RoutingConfig {
 	if len(req.Tiers) > 0 {
 		cfg.Tiers = make(map[ai.Tier]ai.ProviderConfig, len(req.Tiers))
 		for name, b := range req.Tiers {
-			cfg.Tiers[ai.Tier(name)] = tierFromWire(b.Provider, b.Model, b.BaseUrl, b.Input)
+			cfg.Tiers[ai.Tier(name)] = tierFromWire(b)
 		}
 	}
 	return cfg
 }
 
-func tierFromWire(provider, model string, baseURL *string, input *[]string) ai.ProviderConfig {
-	out := ai.ProviderConfig{Provider: provider, Model: model}
-	if baseURL != nil {
-		out.BaseURL = *baseURL
+func tierFromWire(b crmcontracts.AiTierBinding) ai.ProviderConfig {
+	out := ai.ProviderConfig{Provider: b.Provider, Model: b.Model, Routing: routingFromWire(b.Routing)}
+	if b.BaseUrl != nil {
+		out.BaseURL = *b.BaseUrl
 	}
-	if input != nil {
-		out.Input = *input
+	if b.Input != nil {
+		out.Input = *b.Input
 	}
 	return out
 }
 
-// The three omitempty helpers exist so an absent value reads as absent rather
+// routingToWire and routingFromWire carry a binding's broker preferences. The
+// pointer is the meaning: nil is "the product default" and an empty struct is
+// "no preferences", so neither direction may turn one into the other.
+func routingToWire(r *ai.OpenRouterRouting) *crmcontracts.AiOpenRouterRouting {
+	if r == nil {
+		return nil
+	}
+	return &crmcontracts.AiOpenRouterRouting{
+		Only: optionalStrings(r.Only), Ignore: optionalStrings(r.Ignore),
+		Quantizations: optionalStrings(r.Quantizations), Sort: optionalString(r.Sort),
+		RequireParameters: r.RequireParameters, AllowFallbacks: r.AllowFallbacks,
+		PreferredMaxLatencyP90: optionalFloat(r.PreferredMaxLatencyP90),
+		ReasoningEffort:        optionalString(r.ReasoningEffort),
+	}
+}
+
+func routingFromWire(r *crmcontracts.AiOpenRouterRouting) *ai.OpenRouterRouting {
+	if r == nil {
+		return nil
+	}
+	out := &ai.OpenRouterRouting{RequireParameters: r.RequireParameters, AllowFallbacks: r.AllowFallbacks}
+	if r.Only != nil {
+		out.Only = *r.Only
+	}
+	if r.Ignore != nil {
+		out.Ignore = *r.Ignore
+	}
+	if r.Quantizations != nil {
+		out.Quantizations = *r.Quantizations
+	}
+	if r.Sort != nil {
+		out.Sort = *r.Sort
+	}
+	if r.PreferredMaxLatencyP90 != nil {
+		out.PreferredMaxLatencyP90 = *r.PreferredMaxLatencyP90
+	}
+	if r.ReasoningEffort != nil {
+		out.ReasoningEffort = *r.ReasoningEffort
+	}
+	return out
+}
+
+// The omitempty helpers exist so an absent value reads as absent rather
 // than as a deliberate empty: "no base_url override" and "base_url set to the
 // empty string" are the same to a Go zero value and different to an operator.
 func optionalString(v string) *string {
@@ -146,6 +196,13 @@ func optionalStrings(v []string) *[]string {
 }
 
 func optionalInt(v int) *int {
+	if v == 0 {
+		return nil
+	}
+	return &v
+}
+
+func optionalFloat(v float64) *float64 {
 	if v == 0 {
 		return nil
 	}

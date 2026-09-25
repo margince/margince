@@ -10,6 +10,7 @@ package compose
 import (
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -77,6 +78,94 @@ func TestAnUnsetOptionalIsAbsentRatherThanEmpty(t *testing.T) {
 	// had chosen it, because then tomorrow's default would not reach them.
 	if wire.Embeddings.Dimensions != nil {
 		t.Errorf("dimensions = %d, want absent for an unset width", *wire.Embeddings.Dimensions)
+	}
+}
+
+// Three states, and the difference between the last two is an operator's
+// choice: absent is the product default, `{}` is the broker's own routing. A
+// round trip that turns absent into `{}` silently re-routes every call, and one
+// that drops a false pointer turns "do not" into the broker's default.
+func TestABindingsRoutingSurvivesTheRoundTripInAllThreeStates(t *testing.T) {
+	no := false
+	cases := map[string]*ai.OpenRouterRouting{
+		"absent":    nil,
+		"empty":     {},
+		"populated": {Only: []string{"deepinfra"}, RequireParameters: &no, AllowFallbacks: &no, ReasoningEffort: "low"},
+	}
+	for label, routing := range cases {
+		openRouter := ai.ProviderConfig{
+			Provider: "openai_compatible", Model: "openai/gpt-oss-120b",
+			BaseURL: "https://openrouter.ai/api", Routing: routing,
+		}
+		original := ai.RoutingConfig{
+			Profile:    ai.ProfileEUHosted,
+			Tiers:      map[ai.Tier]ai.ProviderConfig{ai.TierCheapCloud: openRouter},
+			Embeddings: ai.EmbeddingsConfig{ProviderConfig: openRouter},
+		}
+		back := fromContractAiRouting(toContractAiRouting(original))
+		if got := back.Tiers[ai.TierCheapCloud].Routing; !reflect.DeepEqual(got, routing) {
+			t.Errorf("%s: tier routing came back as %#v, want %#v", label, got, routing)
+		}
+		if got := back.Embeddings.Routing; !reflect.DeepEqual(got, routing) {
+			t.Errorf("%s: embeddings routing came back as %#v, want %#v", label, got, routing)
+		}
+	}
+}
+
+// Every field of a routing document reaches the wire and comes back. The
+// fixture is checked for completeness first, by reflection: a field added to
+// RoutingConfig, ProviderConfig, EmbeddingsConfig or OpenRouterRouting and left
+// out of the fixture fails here, rather than passing a round trip that never
+// exercised it — which is how a whole preferences block once went missing on
+// every admin save without a test noticing.
+func TestEveryRoutingFieldSurvivesTheRoundTrip(t *testing.T) {
+	yes := true
+	openRouter := ai.ProviderConfig{
+		Provider: "openai_compatible", Model: "m", BaseURL: "https://openrouter.ai/api",
+		Input: []string{"text", "image"},
+		Routing: &ai.OpenRouterRouting{
+			Only: []string{"a"}, Ignore: []string{"b"}, Quantizations: []string{"bf16"},
+			Sort: "throughput", RequireParameters: &yes, AllowFallbacks: &yes,
+			PreferredMaxLatencyP90: 2.5, ReasoningEffort: "low",
+		},
+	}
+	full := ai.RoutingConfig{
+		Profile:    ai.ProfileEUHosted,
+		Tiers:      map[ai.Tier]ai.ProviderConfig{ai.TierPremium: openRouter},
+		Embeddings: ai.EmbeddingsConfig{ProviderConfig: openRouter, Dimensions: 768},
+	}
+	assertEveryFieldSet(t, reflect.ValueOf(full), "RoutingConfig")
+
+	back := fromContractAiRouting(toContractAiRouting(full))
+	if !reflect.DeepEqual(back, full) {
+		t.Errorf("routing came back as %#v, want %#v", back, full)
+	}
+}
+
+// assertEveryFieldSet walks a fixture and fails on any exported field left at
+// its zero value, descending through pointers, structs and map values. Only
+// exported fields are configuration a document carries; the unexported ones
+// (a source digest, a key resolver) are stamped by whoever loaded the config
+// and have no wire spelling to lose.
+func assertEveryFieldSet(t *testing.T, v reflect.Value, path string) {
+	t.Helper()
+	if v.IsZero() {
+		t.Errorf("%s is unset in the fixture — set it so the round trip exercises it", path)
+		return
+	}
+	switch v.Kind() {
+	case reflect.Pointer:
+		assertEveryFieldSet(t, v.Elem(), path)
+	case reflect.Map:
+		for _, key := range v.MapKeys() {
+			assertEveryFieldSet(t, v.MapIndex(key), path+"["+key.String()+"]")
+		}
+	case reflect.Struct:
+		for i := range v.NumField() {
+			if field := v.Type().Field(i); field.IsExported() {
+				assertEveryFieldSet(t, v.Field(i), path+"."+field.Name)
+			}
+		}
 	}
 }
 
