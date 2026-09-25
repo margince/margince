@@ -127,14 +127,7 @@ func (s *RoutingStore) ListAvailableModels(
 		return AvailableModels{}, err
 	}
 	out := AvailableModels{Provider: provider}
-	// The profile decides where inference may happen, and a list call is egress
-	// like any other. Refused here for the same reason a binding is refused at
-	// save time: a sovereign installation must not reach a cloud vendor, and
-	// discovering that at the first call is too late. OpenRouter is cloud
-	// egress like any other broker, so it is refused here too rather than
-	// falling through to the unauthenticated read below.
-	if cfg.Profile == ProfileSovereign && !ProviderIsLocal(provider) {
-		out.Unavailable = AvailabilityProfileForbids
+	if out.Unavailable = listRefusal(cfg.Profile, provider); out.Unavailable != AvailabilityOK {
 		return out, nil
 	}
 	// OpenRouter publishes its list unauthenticated and unbound: there is no
@@ -173,6 +166,30 @@ func (s *RoutingStore) ListAvailableModels(
 		out.Models[i] = AvailableModel{Info: m}
 	}
 	return out, nil
+}
+
+// listRefusal is why provider's list is not asked for at all, or
+// AvailabilityOK when it may be.
+//
+// The profile decides where inference may happen, and a list call is egress
+// like any other. Refused for the same reason a binding is refused at save
+// time: a sovereign installation must not reach a cloud vendor, and
+// discovering that at the first call is too late. OpenRouter is cloud egress
+// like any other broker, so it is refused too rather than falling through to
+// the unauthenticated read. The registry's own local flag decides, so a local
+// decision adapter is not mistaken for a cloud one.
+//
+// A decision adapter publishes no list, so it is never dialled for one: the
+// price sheet's rows are its suggestions.
+func listRefusal(profile Profile, provider string) ModelAvailability {
+	d, _ := providerByName(provider)
+	if profile == ProfileSovereign && !d.local {
+		return AvailabilityProfileForbids
+	}
+	if d.caps.has(capDecision) {
+		return AvailabilityNotPublished
+	}
+	return AvailabilityOK
 }
 
 // unavailableFor reads why a binding could not be turned into a client.

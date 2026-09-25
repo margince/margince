@@ -59,8 +59,9 @@ type Call struct {
 	// "budget_degrade" (the budget guardrail forced a demoted ladder on
 	// what is still attempt 1). Empty for an ordinary first attempt.
 	AttemptReason string
-	// Kind distinguishes a chat-ladder attempt from an embed-lane call —
-	// callKindCompletion or callKindEmbedding.
+	// Kind distinguishes a chat-ladder attempt from an embed-lane call and a
+	// decision-lane attempt — callKindCompletion, callKindEmbedding or
+	// callKindDecision.
 	Kind string
 	// SecretsRemoved and SecretKinds are the stripper's report for THIS
 	// attempt's marshalled body — how many matches it replaced and which rule

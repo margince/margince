@@ -192,3 +192,25 @@ func TestSelectDeciderWiresTheEgressGuard(t *testing.T) {
 		t.Fatalf("the Laya lane could not reach its own loopback endpoint: %v", err)
 	}
 }
+
+// A decision adapter publishes no model list, so the picker never dials one
+// for it; and a local one is not refused under sovereign as if it were cloud.
+func TestADecisionProviderIsNeverDialledForAList(t *testing.T) {
+	cases := []struct {
+		profile  Profile
+		provider string
+		want     ModelAvailability
+	}{
+		{ProfileCloudFrontier, providerOpenRouterDecision, AvailabilityNotPublished},
+		{ProfileSovereign, providerOpenRouterDecision, AvailabilityProfileForbids},
+		{ProfileSovereign, providerLaya, AvailabilityNotPublished},
+		{ProfileSovereign, providerOllama, AvailabilityOK},
+		{ProfileSovereign, providerGemini, AvailabilityProfileForbids},
+		{ProfileCloudFrontier, providerGemini, AvailabilityOK},
+	}
+	for _, tc := range cases {
+		if got := listRefusal(tc.profile, tc.provider); got != tc.want {
+			t.Errorf("listRefusal(%s, %s) = %q, want %q", tc.profile, tc.provider, got, tc.want)
+		}
+	}
+}

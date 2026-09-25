@@ -95,7 +95,8 @@ var carriesImages = []string{mimeAnyImage}
 // forgets to narrow has to argue with this list.
 var wildcardWires = projectProviders(
 	func(d providerDescriptor) string { return d.wildcardReason },
-	func(d providerDescriptor) bool { return d.wildcardReason != "" })
+	func(d providerDescriptor) bool { return d.wildcardReason != "" },
+)
 
 // DocumentMIMEs is every media type some adapter in this build carries as an
 // input part. It answers "could any binding have been handed this", which is a
@@ -131,7 +132,8 @@ func DocumentMIMEs() []string {
 // Held by: TestTheOpenAICompatibleWireHasNoDocumentPart (backend/internal/modules/ai/carriage_test.go)
 func wireCarriage() map[string][]string {
 	return projectProviders(
-		func(d providerDescriptor) []string { return d.carriage }, speaksChat)
+		func(d providerDescriptor) []string { return d.carriage }, speaksChat,
+	)
 }
 
 // declaresAWildcard reports whether a carriage declaration leaves a media type

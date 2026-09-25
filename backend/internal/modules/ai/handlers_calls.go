@@ -60,7 +60,7 @@ func (h Handlers) GetAiCall(w http.ResponseWriter, r *http.Request, id crmcontra
 func wireAiCallSummary(summary CallSummary) crmcontracts.AiCallSummary {
 	return crmcontracts.AiCallSummary{
 		Id: openapi_types.UUID(summary.ID), OccurredAt: summary.OccurredAt,
-		Task: summary.Task, Tier: summary.Tier, Provider: summary.Provider,
+		Task: summary.Task, Kind: summary.Kind, Tier: summary.Tier, Provider: summary.Provider,
 		ModelId: summary.ModelID, ServedModel: summary.ServedModel,
 		CallsAttempted: summary.Attempt, TokensIn: int(summary.TokensIn),
 		TokensOut: int(summary.TokensOut), ReasoningTokens: int(summary.ReasoningTokens),
@@ -74,7 +74,7 @@ func wireAiCall(detail CallDetail) crmcontracts.AiCall {
 	summary := wireAiCallSummary(detail.CallSummary)
 	out := crmcontracts.AiCall{
 		Id: summary.Id, OccurredAt: summary.OccurredAt, Task: summary.Task,
-		Tier: summary.Tier, Provider: summary.Provider, ModelId: summary.ModelId,
+		Kind: summary.Kind, Tier: summary.Tier, Provider: summary.Provider, ModelId: summary.ModelId,
 		ServedModel: summary.ServedModel, CallsAttempted: summary.CallsAttempted,
 		TokensIn: summary.TokensIn, TokensOut: summary.TokensOut,
 		ReasoningTokens: summary.ReasoningTokens, CachedTokens: summary.CachedTokens,
@@ -96,7 +96,9 @@ func wireAiCall(detail CallDetail) crmcontracts.AiCall {
 	}
 	for _, attempt := range detail.Attempts {
 		out.Attempts = append(out.Attempts, crmcontracts.AiCallAttempt{
-			Attempt: attempt.Attempt, IsTerminal: attempt.IsTerminal,
+			Attempt: attempt.Attempt, IsTerminal: attempt.IsTerminal, Kind: attempt.Kind,
+			Tier: optionalText(attempt.Tier), Provider: optionalText(attempt.Provider),
+			ModelId:       optionalText(attempt.ModelID),
 			AttemptReason: attempt.AttemptReason, ErrorSentinel: attempt.ErrorSentinel,
 			TokensIn: int(attempt.TokensIn), TokensOut: int(attempt.TokensOut),
 			LatencyMs: int(attempt.LatencyMS), OccurredAt: attempt.OccurredAt,
@@ -109,4 +111,14 @@ func wireAiCall(detail CallDetail) crmcontracts.AiCall {
 		}{Request: detail.Payload.Request, Response: detail.Payload.Response}
 	}
 	return out
+}
+
+// optionalText is an optional wire field from a column that stores "" for
+// "none": a failed walk that never reached a rung names no tier, and the wire
+// says so by omitting it rather than by sending an empty string.
+func optionalText(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }
