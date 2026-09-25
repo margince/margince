@@ -430,3 +430,41 @@ it("says what the decision model answered, and at what confidence", async () => 
   const second = screen.getByText("#2").closest("li");
   expect(second?.textContent).not.toContain("answered");
 });
+
+// The ladder rung a decision model fell back to is the SECOND model asked, not
+// a second try of the first, so the retry count on the row is the ladder's own:
+// the attempts beyond the decision one.
+it("does not count the fall back from a decision model as a retry", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).toContain("Decision model");
+  expect(task.textContent).not.toContain("Retry");
+});
+
+it("counts the ladder's own retries after a decision model fell back", async () => {
+  mount(true, true, OPERATOR, {
+    ...DECIDED_THEN_FELL_BACK,
+    call: { ...DECIDED_THEN_FELL_BACK.call, calls_attempted: 3 },
+  });
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).toContain("Retry ×2");
+});
+
+// An ordinary first attempt and a decision that stood have no reason to run,
+// so the line names its binding and its latency and nothing in between.
+it("leaves the reason out of an attempt that had none", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+  await userEvent.click(
+    await screen.findByRole("button", { name: /show attempts/i }),
+  );
+
+  const first = (await screen.findByText("#1")).closest("li");
+  expect(first?.textContent).toContain("jev_compatible/jev-classify · 600 ms");
+  expect(first?.textContent).not.toContain("—");
+});

@@ -105,7 +105,12 @@ export function CallDetailPanel({
                     rung, so a decision attempt that fell through names a model
                     nothing else on the page does. */}
                 {attempt.model_id ? `${attemptBinding(attempt)} · ` : ""}
-                {attemptReasonLabel(attempt.attempt_reason, t)} ·{" "}
+                {/* An ordinary first attempt and a decision that stood ran
+                    for no reason worth naming, so they print none rather than
+                    a placeholder between the binding and the latency. */}
+                {attempt.attempt_reason
+                  ? `${attemptReasonLabel(attempt.attempt_reason, t)} · `
+                  : ""}
                 {t("aicalls.ms", {
                   value: formatNumber(attempt.latency_ms, locale),
                 })}
@@ -416,6 +421,12 @@ function FragmentRow({
   const t = useT();
   const { locale } = useLocale();
   const panelId = useId();
+  // The attempts the ladder itself made. A decision model that fell back is
+  // the first of `calls_attempted`, and the rung after it is a second model
+  // asked, not a retry of the first — so it does not count toward the badge.
+  const ladderAttempts = call.decision_attempted
+    ? call.calls_attempted - 1
+    : call.calls_attempted;
   return (
     <>
       {/* The disclosure is a real button in the first cell, not a click handler on
@@ -467,10 +478,10 @@ function FragmentRow({
             {call.error_sentinel && (
               <Badge tone="danger">{call.error_sentinel}</Badge>
             )}
-            {call.calls_attempted > 1 && (
+            {ladderAttempts > 1 && (
               <Badge>
                 {t("aicalls.badge.retries", {
-                  count: formatNumber(call.calls_attempted, locale),
+                  count: formatNumber(ladderAttempts, locale),
                 })}
               </Badge>
             )}

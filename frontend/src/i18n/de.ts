@@ -5377,7 +5377,8 @@ export const de = {
   "aiHealth.colLast": "Letzte Antwort",
   "aiHealth.answering": "Antwortet",
   "aiHealth.notAnswering": "Antwortet nicht",
-  "aiHealth.callCounts": "Aufrufe: {calls}, fehlgeschlagen: {failures}",
+  "aiHealth.callCounts_one": "Aufrufe: {count}, fehlgeschlagen: {failures}",
+  "aiHealth.callCounts_other": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Zurückgehaltene Threads",
   "heldThreads.sub":

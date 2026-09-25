@@ -5340,7 +5340,8 @@ export const vi = {
   "aiHealth.colLast": "Trả lời gần nhất",
   "aiHealth.answering": "Đang trả lời",
   "aiHealth.notAnswering": "Không trả lời",
-  "aiHealth.callCounts": "{calls} lượt gọi, {failures} thất bại",
+  "aiHealth.callCounts_one": "{count} lượt gọi, {failures} thất bại",
+  "aiHealth.callCounts_other": "{count} lượt gọi, {failures} thất bại",
   "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Đang giữ lại khỏi nhóm",
   "heldThreads.sub":

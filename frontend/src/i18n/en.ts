@@ -5550,7 +5550,8 @@ export const en = {
   "aiHealth.colLast": "Last response",
   "aiHealth.answering": "Responding",
   "aiHealth.notAnswering": "Not responding",
-  "aiHealth.callCounts": "{calls} calls, {failures} failed",
+  "aiHealth.callCounts_one": "{count} call, {failures} failed",
+  "aiHealth.callCounts_other": "{count} calls, {failures} failed",
   "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Held threads",
   "heldThreads.sub":
