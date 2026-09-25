@@ -4133,7 +4133,19 @@ export const en = {
   "review.sourcesUnread":
     "Not checked: {sources}. Findings below cover only what was checked.",
   "review.notCheckedYet":
-    "Nothing checked yet: no nightly run has completed. The figures above reflect current records.",
+    "Nothing checked yet: the first check has not been run. The figures above reflect current records.",
+  "review.firstCheck.title": "Start the input check",
+  "review.firstCheck.body":
+    "The nightly check does not run here until you start it. The first pass raises every problem it finds at once and opens one task per affected deal, so it is worth knowing the size before you begin.",
+  "review.firstCheck.scope":
+    "Deals it would check: {deals}. Problems it would raise: {findings}.",
+  "review.firstCheck.start": "Start checking",
+  "review.firstCheck.starting": "Starting the check",
+  "review.firstCheck.pending": "Working out what a check would find",
+  "review.check.running":
+    "The check is running. Findings appear here when it lands.",
+  "review.recheck.label": "Check again",
+  "review.recheck.starting": "Starting the check",
   "review.nothingToCheck": "Nothing to check.",
   "review.answer": "Answer",
   "review.colSeverity": "Severity",

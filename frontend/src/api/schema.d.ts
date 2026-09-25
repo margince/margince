@@ -13643,6 +13643,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forecast/assurance/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a check would find, without recording any of it.
+         * @description The scope before the queue. A first pass over a workspace with a backlog raises
+         *     every exception it can see at once, and a queue that arrives that way is one
+         *     nobody reads — so the first pass is a decision somebody makes, and this is what
+         *     they read to make it.
+         *
+         *     It WRITES NOTHING: no run, no finding, no task. A preview is deliberately not a
+         *     state a run can be in, because a reading nobody should act on must not be
+         *     available to act on — `GET /forecast/assurance` keeps answering `404` until a
+         *     real pass has run.
+         *
+         *     Same rules, same eligible set, same verdict logic as the pass it previews, from
+         *     the same code — so it cannot promise a finding the run it authorises then does
+         *     not raise.
+         *
+         *     `started` is whether any pass has ever run here, and it is what tells a first
+         *     check from a recheck.
+         *
+         *     COUNTS ONLY. No finding names its deal and none carries an amount: the check
+         *     reads the whole pipeline on purpose, so a preview carrying subjects or money
+         *     would hand a seat aggregates over records it cannot open — the same reason the
+         *     findings list publishes no count of what it withheld.
+         */
+        get: operations["previewForecastAssurance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run the input check now.
+         * @description Starts one pass over this workspace. It is the same act twice: the FIRST press
+         *     starts the nightly cycle for a workspace that has never been checked, and every
+         *     press after it is a recheck for somebody who has just fixed a record and wants
+         *     the panel to confirm it before a call.
+         *
+         *     Until a workspace is started the nightly sweep skips it, however often it fires.
+         *     Enrolment is the run history itself rather than a flag beside it, so this route
+         *     enrols by doing the work, and a preview — which writes nothing — cannot enrol a
+         *     workspace by being looked at.
+         *
+         *     `202` and the pass runs in the background; the findings appear on the panel when
+         *     it lands. One pass per workspace at a time: a second press while one is in flight
+         *     is `409 assurance_run_running` rather than a second walk of the same pipeline.
+         *
+         *     The run is recorded as the SYSTEM, like the nightly one, and names the seat that
+         *     asked separately. A run attributed to the manager who pressed the button would
+         *     sign them to every exception it raises.
+         */
+        post: operations["startForecastAssuranceRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/coverage": {
         parameters: {
             query?: never;
@@ -28384,6 +28460,34 @@ export interface components {
             as_of: string;
             /** @description The sources the run tried, and how far it reached into each. A source absent from this list is one the run did not attempt — different from one it attempted and could not read, which the state field says. */
             sources: components["schemas"]["ForecastAssuranceSource"][];
+        };
+        /** @description What a pass would find now, for somebody deciding whether to start one. Nothing here was recorded, and looking changed nothing. */
+        ForecastAssurancePreview: {
+            /** @description Whether any pass has ever run in this workspace. False is a workspace the nightly sweep is skipping until somebody starts it — which is what makes this a first check rather than a recheck. */
+            started: boolean;
+            /** @description How much there would be to check, counted once per deal evaluated. */
+            eligible_deals: number;
+            /** @description What would be raised, grouped by type and severity. Counts only — no deal is named and no amount is given. */
+            findings: components["schemas"]["AssuranceFindingCount"][];
+            /**
+             * @description The verdict this pass would reach. `checks_incomplete` here means the preview itself could not read a required source — starting on it would produce a run that says the same.
+             * @enum {string}
+             */
+            readiness?: "ready" | "ready_with_exceptions" | "needs_review" | "checks_incomplete";
+            /** @description Which sources the preview could reach, and how far. */
+            sources: components["schemas"]["ForecastAssuranceSource"][];
+        };
+        /** @description One exception type at one severity, and how many of it a pass would raise. */
+        AssuranceFindingCount: {
+            type: string;
+            /** @enum {string} */
+            severity: "low" | "medium" | "high";
+            count: number;
+        };
+        /** @description The pass is enqueued. Its findings appear when it lands. */
+        AssuranceRunAccepted: {
+            /** @enum {string} */
+            status: "enqueued";
         };
         /** @description What the most recent nightly input check found, and how much of the pipeline it was able to reach. */
         ForecastAssurance: {
@@ -57844,6 +57948,59 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    previewForecastAssurance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What a pass would find now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastAssurancePreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    startForecastAssuranceRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pass is enqueued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssuranceRunAccepted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description A pass is already running for this workspace. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
         };
     };

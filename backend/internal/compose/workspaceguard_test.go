@@ -155,6 +155,9 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		GraphWatchRenewArgs{}.Kind(): func(ctx context.Context) error {
 			return (&graphWatchRenewWorker{}).Work(ctx, &river.Job[GraphWatchRenewArgs]{})
 		},
+		AssuranceRunArgs{}.Kind(): func(ctx context.Context) error {
+			return (&assuranceRunWorker{}).Work(ctx, &river.Job[AssuranceRunArgs]{})
+		},
 		FxRateRefreshArgs{}.Kind(): func(ctx context.Context) error {
 			return (&fxRefreshWorker{}).Work(ctx, &river.Job[FxRateRefreshArgs]{})
 		},

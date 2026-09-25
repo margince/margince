@@ -3975,7 +3975,18 @@ export const vi = {
   "review.sourcesUnread":
     "Chưa đọc: {sources}. Các phát hiện bên dưới chỉ bao gồm những gì kiểm tra được.",
   "review.notCheckedYet":
-    "Chưa có gì được kiểm tra — chưa có lần chạy hằng đêm nào hoàn tất cho bản cài đặt này. Các số liệu ở trên dựa trên dữ liệu hiện có.",
+    "Chưa kiểm tra gì: lần kiểm tra đầu tiên chưa chạy. Các số liệu ở trên phản ánh hồ sơ hiện tại.",
+  "review.firstCheck.title": "Bắt đầu kiểm tra dữ liệu đầu vào",
+  "review.firstCheck.body":
+    "Việc kiểm tra hằng đêm chỉ chạy sau khi bạn bắt đầu. Lượt chạy đầu tiên nêu mọi vấn đề tìm được cùng một lúc và mở một việc cho mỗi giao dịch liên quan, nên biết trước quy mô là điều đáng làm.",
+  "review.firstCheck.scope":
+    "Giao dịch sẽ kiểm tra: {deals}. Vấn đề sẽ nêu: {findings}.",
+  "review.firstCheck.start": "Bắt đầu kiểm tra",
+  "review.firstCheck.starting": "Đang bắt đầu kiểm tra",
+  "review.firstCheck.pending": "Đang tính xem một lượt kiểm tra sẽ tìm thấy gì",
+  "review.check.running": "Đang kiểm tra. Kết quả sẽ hiện ở đây khi xong.",
+  "review.recheck.label": "Kiểm tra lại",
+  "review.recheck.starting": "Đang bắt đầu kiểm tra",
   "review.nothingToCheck": "Không có gì để kiểm tra.",
   "review.answer": "Trả lời",
   "review.colSeverity": "Mức độ",

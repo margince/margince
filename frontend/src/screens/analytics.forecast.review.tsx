@@ -14,6 +14,7 @@ import {
 } from "../design-system/resolvesheet";
 import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
 import { QueryGate, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 
@@ -64,14 +65,10 @@ export function ForecastReview() {
     <QueryGate query={assurance} pendingLabel={t("review.title")}>
       {(run) =>
         run === null ? (
-          <Panel title={t("review.title")}>
-            <PanelBody>
-              {/* Said plainly, because the alternative reading is dangerous: a
-                  reader who takes an unchecked pipeline for a clean one has
-                  been told the opposite of what happened. */}
-              <p>{t("review.notCheckedYet")}</p>
-            </PanelBody>
-          </Panel>
+          // 404 here is a workspace nobody has started, not a wait: the nightly
+          // pass skips it until somebody does. So the panel ASKS, with the
+          // preview that makes the ask answerable.
+          <FirstCheck title={t("review.title")} />
         ) : (
           <ReviewPanel run={run} locale={locale} title={t("review.title")} />
         )
@@ -108,6 +105,10 @@ function ReviewPanel({
             clean pipeline when nobody could look has been told the opposite of
             what happened. */}
         <CoverageLine run={run} />
+        {/* Beside the coverage line rather than in the header: a recheck is an
+            answer to what the coverage line just said, and the header already
+            carries the verdict. */}
+        <Recheck />
       </PanelBody>
       <QueryGate query={checks} pendingLabel={title}>
         {(found) =>
