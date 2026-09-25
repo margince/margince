@@ -25,6 +25,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // activityScan holds one row mid-flight: the contract record being built, and
@@ -188,7 +189,7 @@ func SourceAuthorOf(id *ids.UUID, seatName, sourceName, sourceSystem *string) *c
 	return &crmcontracts.SourceAuthor{
 		UserId:      uuidPtr(id),
 		DisplayName: name,
-		Via:         sourceSystem,
+		Via:         provenance.DisplayVia(sourceSystem),
 	}
 }
 

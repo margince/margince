@@ -27005,16 +27005,19 @@ type CreateCompanyRequest struct {
 	Address *Address `json:"address,omitempty"`
 
 	// Description One human-written line saying what the company does.
-	Description          *string                       `json:"description,omitempty"`
-	DisplayName          string                        `json:"display_name"`
-	Domains              *[]CompanyDomainInput         `json:"domains,omitempty"`
-	Industry             *string                       `json:"industry,omitempty"`
-	LegalName            *string                       `json:"legal_name,omitempty"`
-	OwnerId              *openapi_types.UUID           `json:"owner_id,omitempty"`
-	ParentCompanyId      *openapi_types.UUID           `json:"parent_company_id,omitempty"`
-	SizeBand             *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
-	Source               string                        `json:"source"`
-	AdditionalProperties map[string]interface{}        `json:"-"`
+	Description     *string                       `json:"description,omitempty"`
+	DisplayName     string                        `json:"display_name"`
+	Domains         *[]CompanyDomainInput         `json:"domains,omitempty"`
+	Industry        *string                       `json:"industry,omitempty"`
+	LegalName       *string                       `json:"legal_name,omitempty"`
+	OwnerId         *openapi_types.UUID           `json:"owner_id,omitempty"`
+	ParentCompanyId *openapi_types.UUID           `json:"parent_company_id,omitempty"`
+	SizeBand        *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
+	Source          string                        `json:"source"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	SourceSystem         *string                `json:"source_system,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // CreateCompanyRequestSizeBand defines model for CreateCompanyRequest.SizeBand.
@@ -27045,17 +27048,20 @@ type CreateContactEnrichmentRunRequest struct {
 // CreateContactRequest defines model for CreateContactRequest.
 type CreateContactRequest struct {
 	// Address Structured postal address.
-	Address              *Address                `json:"address,omitempty"`
-	Emails               *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName            *string                 `json:"first_name,omitempty"`
-	FullName             string                  `json:"full_name"`
-	LastName             *string                 `json:"last_name,omitempty"`
-	OwnerId              *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones               *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social               *map[string]interface{} `json:"social,omitempty"`
-	Source               string                  `json:"source"`
-	Title                *string                 `json:"title,omitempty"`
-	AdditionalProperties map[string]interface{}  `json:"-"`
+	Address   *Address                `json:"address,omitempty"`
+	Emails    *[]ContactEmailInput    `json:"emails,omitempty"`
+	FirstName *string                 `json:"first_name,omitempty"`
+	FullName  string                  `json:"full_name"`
+	LastName  *string                 `json:"last_name,omitempty"`
+	OwnerId   *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones    *[]ContactPhoneInput    `json:"phones,omitempty"`
+	Social    *map[string]interface{} `json:"social,omitempty"`
+	Source    string                  `json:"source"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	SourceSystem         *string                `json:"source_system,omitempty"`
+	Title                *string                `json:"title,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // CreateContractRequest defines model for CreateContractRequest.
@@ -27148,8 +27154,11 @@ type CreateDealRequest struct {
 	Priority *CreateDealRequestPriority `json:"priority,omitempty"`
 
 	// ProjectId The body of work this deal belongs to; must name the same company as the deal.
-	ProjectId            *openapi_types.UUID    `json:"project_id,omitempty"`
-	Source               string                 `json:"source"`
+	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+	Source    string              `json:"source"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	SourceSystem         *string                `json:"source_system,omitempty"`
 	StageId              openapi_types.UUID     `json:"stage_id"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -27453,11 +27462,14 @@ type CreateProjectHealthCorrectionRequest struct {
 
 // CreateProjectRequest defines model for CreateProjectRequest.
 type CreateProjectRequest struct {
-	CompanyId            openapi_types.UUID     `json:"company_id"`
-	Description          *string                `json:"description,omitempty"`
-	Name                 string                 `json:"name"`
-	OwnerId              *openapi_types.UUID    `json:"owner_id,omitempty"`
-	Source               string                 `json:"source"`
+	CompanyId   openapi_types.UUID  `json:"company_id"`
+	Description *string             `json:"description,omitempty"`
+	Name        string              `json:"name"`
+	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
+	Source      string              `json:"source"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	SourceSystem         *string                `json:"source_system,omitempty"`
 	StartedAt            *openapi_types.Date    `json:"started_at,omitempty"`
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -36957,6 +36969,7 @@ type SourceAuthor struct {
 	UserId *openapi_types.UUID `json:"user_id,omitempty"`
 
 	// Via Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
+	// An import writes its rows inside a reserved `mirror:` namespace, which is machinery for the replay key and is never what a reader should see. The prefix is stripped here: a row stored as `mirror:hubspot` reads `hubspot`.
 	Via *string `json:"via,omitempty"`
 }
 
@@ -49105,6 +49118,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -49188,6 +49209,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	for fieldName, field := range a.AdditionalProperties {
@@ -49296,6 +49324,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["title"]; found {
 		err = json.Unmarshal(raw, &a.Title)
 		if err != nil {
@@ -49380,6 +49416,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	if a.Title != nil {
@@ -49840,6 +49883,14 @@ func (a *CreateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["stage_id"]; found {
 		err = json.Unmarshal(raw, &a.StageId)
 		if err != nil {
@@ -49971,6 +50022,13 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	object["stage_id"], err = json.Marshal(a.StageId)
@@ -50799,6 +50857,14 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["started_at"]; found {
 		err = json.Unmarshal(raw, &a.StartedAt)
 		if err != nil {
@@ -50861,6 +50927,13 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	if a.StartedAt != nil {

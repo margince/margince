@@ -75,6 +75,9 @@ type CreateContactInput struct {
 	Emails      []ContactEmailInput
 	Phones      []ContactPhoneInput
 	Source      string
+	// SourceSystem names the system an import took this contact from; nil
+	// for one created here, which is what makes it unattributable.
+	SourceSystem *string
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (customfields.go).
@@ -182,6 +185,7 @@ func createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by
 		Emails:       in.Emails,
 		Phones:       in.Phones,
 		Source:       in.Source,
+		SourceSystem: in.SourceSystem,
 		CapturedBy:   by,
 		CustomFields: in.CustomFields,
 		Active:       active,

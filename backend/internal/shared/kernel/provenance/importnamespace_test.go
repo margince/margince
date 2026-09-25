@@ -88,6 +88,92 @@ func TestTheRefusalNamesEveryReservedIdentity(t *testing.T) {
 	}
 }
 
+// ImporterNamespace is the prefix ALONE. If it ever widened to the whole
+// reserved set, the importer door would also hand a caller the three internal
+// reminder identities, and a planted row under a reminder's replay key makes
+// the scan read it back as already asked.
+func TestImporterNamespaceIsThePrefixAlone(t *testing.T) {
+	for _, inside := range []string{"mirror:hubspot", "mirror:legacy_crm", "mirror:"} {
+		if !provenance.ImporterNamespace(inside) {
+			t.Errorf("ImporterNamespace(%q) = false, want true — the importer writes this", inside)
+		}
+	}
+	for _, outside := range []string{
+		"hubspot", "", "mirrorless", "MIRROR:hubspot",
+		// Reserved, but never an import's to spell.
+		provenance.EmailRequestSource,
+		provenance.NoActivityReminderSource,
+		provenance.CheckInCadenceSource,
+	} {
+		if provenance.ImporterNamespace(outside) {
+			t.Errorf("ImporterNamespace(%q) = true, want false", outside)
+		}
+	}
+}
+
+// author.via is copied verbatim from the column, so without stripping, an
+// imported row reads "Logged in mirror:hubspot by …" on the timeline.
+func TestDisplaySourceSystemStripsOnlyThePrefix(t *testing.T) {
+	for value, want := range map[string]string{
+		"mirror:hubspot":              "hubspot",
+		"mirror:legacy_crm":           "legacy_crm",
+		"mirror:":                     "",
+		"hubspot":                     "hubspot",
+		"":                            "",
+		provenance.EmailRequestSource: provenance.EmailRequestSource,
+		// Only a leading occurrence is machinery; one inside the name is part
+		// of the name.
+		"legacy_mirror:crm": "legacy_mirror:crm",
+	} {
+		if got := provenance.DisplaySourceSystem(value); got != want {
+			t.Errorf("DisplaySourceSystem(%q) = %q, want %q", value, got, want)
+		}
+	}
+}
+
+// Both provenance fields are guarded, and source_system is answered first:
+// it is the field the namespace is keyed on, so a caller sending two reserved
+// values is told about the one that matters.
+func TestRefuseWireGuardsBothFieldsSourceSystemFirst(t *testing.T) {
+	reservedValue := provenance.ReservedSourceSystemPrefix + "hubspot"
+
+	var refusedSystem *provenance.ReservedError
+	if err := provenance.RefuseWire("", &reservedValue); !errors.As(err, &refusedSystem) {
+		t.Fatalf("err = %v, want ReservedError for source_system", err)
+	} else if refusedSystem.Field != "source_system" {
+		t.Errorf("field = %q, want source_system", refusedSystem.Field)
+	}
+
+	var refusedSource *provenance.ReservedError
+	if err := provenance.RefuseWire(reservedValue, nil); !errors.As(err, &refusedSource) {
+		t.Fatalf("err = %v, want ReservedError for source", err)
+	} else if refusedSource.Field != "source" {
+		t.Errorf("field = %q, want source", refusedSource.Field)
+	}
+
+	// Both reserved: source_system is named, or a caller fixes source and is
+	// refused again by the field nothing told them about.
+	var refusedBoth *provenance.ReservedError
+	if err := provenance.RefuseWire(reservedValue, &reservedValue); !errors.As(err, &refusedBoth) {
+		t.Fatalf("err = %v, want ReservedError", err)
+	} else if refusedBoth.Field != "source_system" {
+		t.Errorf("field = %q, want source_system answered first", refusedBoth.Field)
+	}
+
+	// Ordinary provenance — and an absent source_system — stay writable, or
+	// every create wire breaks.
+	ordinary := "legacy_crm"
+	for _, err := range []error{
+		provenance.RefuseWire("", nil),
+		provenance.RefuseWire("legacy_crm", nil),
+		provenance.RefuseWire("legacy_crm", &ordinary),
+	} {
+		if err != nil {
+			t.Errorf("RefuseWire on ordinary provenance = %v, want nil", err)
+		}
+	}
+}
+
 func TestReservedErrorStatesItselfAsCallerFixable(t *testing.T) {
 	// Implementing apperrors.FieldFault is what carries this refusal to
 	// the caller as a 422 naming the field — on the HTTP surface AND on
