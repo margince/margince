@@ -72,7 +72,7 @@ func setupConcurrentIngest(t *testing.T) *concurrentIngestEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	return &concurrentIngestEnv{owner: owner, pool: pool}
 }
 

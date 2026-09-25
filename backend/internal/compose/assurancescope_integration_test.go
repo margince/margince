@@ -114,7 +114,7 @@ func TestAFindingIsVisibleExactlyWhereItsDealIs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 
 	// A rep who may read only their OWN deals.
 	repCtx := principal.WithWorkspaceID(context.Background(), ws)

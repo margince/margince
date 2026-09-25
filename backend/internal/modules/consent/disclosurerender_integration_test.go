@@ -74,7 +74,7 @@ func settingsStoreFor(t *testing.T) *settings.Store {
 	// cleanup of its own, so it runs last and sees a package that has
 	// genuinely stopped — a goroutine still holding a connection would go on
 	// writing into the database the NEXT test just reset.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	return settings.New(pool, settings.NewRegistry(Definitions()...))
 }
 

@@ -112,7 +112,7 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 	}
 	// Registered here, before the test adds any cleanup of its own, so it runs
 	// last and sees a package that has genuinely stopped.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 
 	// The delivery machinery every send transport is composed with in the api
 	// role. Without it a send refuses rather than log an activity claiming a

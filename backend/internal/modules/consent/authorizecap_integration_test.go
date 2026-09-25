@@ -147,7 +147,7 @@ func setupCap(t *testing.T) *capEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
 
 	opCtx := principal.WithWorkspaceID(context.Background(), e.ws)
