@@ -92,6 +92,7 @@ describe("restorePlan", () => {
       restorePlan({
         state: null,
         profile: null,
+        described: false,
         voice: null,
         read: null,
         routeConnect: false,
@@ -115,6 +116,7 @@ describe("restorePlan", () => {
       restorePlan({
         state: null,
         profile,
+        described: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -134,6 +136,7 @@ describe("restorePlan", () => {
       restorePlan({
         state: stateRow({ step: "voice" }),
         profile,
+        described: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -147,6 +150,7 @@ describe("restorePlan", () => {
       restorePlan({
         state: stateRow({ path: "member", step: "connect" }),
         profile,
+        described: true,
         voice: null,
         read: null,
         routeConnect: false,
@@ -163,6 +167,7 @@ describe("restorePlan", () => {
     const plan = restorePlan({
       state: stateRow({ path: "member", step: "voice", voice_skipped: true }),
       profile,
+      described: true,
       voice: emptyVoice,
       read: null,
       routeConnect: false,
@@ -185,6 +190,7 @@ describe("restorePlan", () => {
       restorePlan({
         state: stateRow({ step: "basis" }),
         profile,
+        described: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -199,6 +205,7 @@ describe("restorePlan", () => {
         restorePlan({
           state: stateRow({ step }),
           profile: null,
+          described: false,
           voice: null,
           read: null,
           routeConnect: false,
@@ -216,6 +223,7 @@ describe("restorePlan", () => {
     const plan = restorePlan({
       state: stateRow({ step: "voice" }),
       profile,
+      described: true,
       voice: words(1240),
       read: null,
       routeConnect: false,
@@ -238,6 +246,7 @@ describe("restorePlan", () => {
       restorePlan({
         state: stateRow({ step: "voice", voice_skipped: true }),
         profile,
+        described: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -248,6 +257,7 @@ describe("restorePlan", () => {
       restorePlan({
         state: stateRow({ step: "team", voice_skipped: true }),
         profile,
+        described: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -260,6 +270,7 @@ describe("restorePlan", () => {
     const results = restorePlan({
       state: stateRow({ step: "results", voice_skipped: true }),
       profile,
+      described: true,
       voice: emptyVoice,
       read: null,
       routeConnect: false,
@@ -278,6 +289,7 @@ describe("restorePlan", () => {
     const plan = restorePlan({
       state: stateRow({ step: "connect" }),
       profile: null,
+      described: false,
       voice: { ...words(2000), built: true },
       read: null,
       routeConnect: false,
@@ -299,6 +311,7 @@ describe("restorePlan", () => {
       restorePlan({
         state: stateRow({ step: "voice" }),
         profile,
+        described: true,
         voice: emptyVoice,
         read: null,
         routeConnect: true,
@@ -312,6 +325,7 @@ describe("restorePlan", () => {
       const plan = restorePlan({
         state: stateRow({ step: "confirm" }),
         profile: null,
+        described: false,
         voice: null,
         read: readRow(status),
         routeConnect: false,
@@ -337,6 +351,7 @@ describe("restorePlan", () => {
     const plan = restorePlan({
       state: stateRow(),
       profile: null,
+      described: false,
       voice: null,
       read: readRow("reading"),
       routeConnect: false,
@@ -362,6 +377,7 @@ describe("restorePlan", () => {
       const plan = restorePlan({
         state: stateRow(),
         profile: null,
+        described: false,
         voice: null,
         read: readRow(status),
         routeConnect: false,
@@ -382,6 +398,7 @@ describe("restorePlan", () => {
       restorePlan({
         state: stateRow({ step: "complete" }),
         profile,
+        described: true,
         voice: null,
         read: null,
         routeConnect: false,
@@ -399,6 +416,7 @@ describe("restorePlan", () => {
     const plan = restorePlan({
       state: stateRow({ step: "complete" }),
       profile: null,
+      described: false,
       voice: null,
       read: null,
       routeConnect: false,
@@ -410,5 +428,53 @@ describe("restorePlan", () => {
     }
     expect(plan.companyConfirmed).toBe(false);
     expect(plan.resumeTarget).toBeNull();
+  });
+
+  // A seat that is not an admin may not read the profile, so it arrives with
+  // none — over an installation that is described, or it could not have been
+  // invited into it.
+  describe("for a seat that may not read the company", () => {
+    const seat = {
+      profile: null,
+      described: true,
+      voice: emptyVoice,
+      read: null,
+      routeConnect: false,
+      locale: "en",
+    } as const;
+
+    it("starts a first visit on the member path at the voice act", () => {
+      expect(restorePlan({ ...seat, state: null })).toEqual({
+        kind: "start",
+        memberPath: true,
+        companyConfirmed: true,
+        resumeTarget: "vo.collecting",
+        adoptRead: null,
+        recap: [],
+      });
+    });
+
+    it("recaps a returning member without claiming the company is unsaved", () => {
+      const plan = restorePlan({
+        ...seat,
+        state: stateRow({ path: "member", step: "voice" }),
+      });
+      if (plan.kind !== "start") {
+        throw new Error("expected a start plan");
+      }
+      const keys = plan.recap.map((entry) => entry.i18nKey);
+      expect(keys).toContain("ob.conv.recap.back");
+      expect(keys).not.toContain("ob.conv.recap.companyUnsaved");
+      expect(keys).not.toContain("ob.conv.recap.company");
+    });
+
+    it("lets a finished journey leave", () => {
+      expect(
+        restorePlan({
+          ...seat,
+          state: stateRow({ path: "member", step: "complete" }),
+        }),
+      ).toEqual({ kind: "complete" });
+    });
   });
 });

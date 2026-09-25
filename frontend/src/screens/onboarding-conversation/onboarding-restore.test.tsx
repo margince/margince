@@ -136,6 +136,8 @@ type StubOptions = {
    * repeats): the restore fetch first, then the resumed poll. */
   reads?: CompanySiteRead[];
   proposal?: Proposal;
+  /** GET /me roles; an admin unless the case says otherwise. */
+  roles?: string[];
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -301,7 +303,7 @@ function stubApi(options: StubOptions = {}) {
       // No grants: the reporting basis is an admin's to change, and these
       // fixtures never claim to be one.
       if (path.endsWith("/me") && request.method === "GET") {
-        return jsonResponse(meFixture({ allow: {} }));
+        return jsonResponse(meFixture({ allow: {}, roles: options.roles }));
       }
       throw new Error(`unstubbed request: ${request.method} ${request.url}`);
     }),
@@ -405,6 +407,19 @@ describe("restore into the conversational shell", () => {
     // those were the creator's, and the voice probe feeds the corpus meter.
     expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
     expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(1);
+  });
+
+  // A seat that is not an admin may not read the company, and it is only ever
+  // invited into a described installation, so its journey needs no answer.
+  it("a non-admin with no row begins at the voice act without asking for the company", async () => {
+    const calls = stubApi({ state: null, roles: ["rep"] });
+    render(<OnboardingScreen />);
+
+    expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
+    const companyReads = calls.filter((request) =>
+      new URL(request.url).pathname.endsWith("/company"),
+    );
+    expect(companyReads).toHaveLength(0);
   });
 
   it("reopens the invite for a creator whose company is confirmed", async () => {

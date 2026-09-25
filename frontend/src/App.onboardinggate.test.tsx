@@ -1,13 +1,14 @@
 /** @vitest-environment happy-dom */
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { meFixture } from "./app/mefixture";
 import { createQueryClient } from "./app/queryclient";
+import { parseHash, routeHash } from "./app/router";
 import { LocaleProvider } from "./i18n";
-import { memoryStorage } from "./testing/appharness";
+import { memoryStorage, wizardRow } from "./testing/appharness";
 
 // Two places decide, on their own, where a session belongs when the
 // installation has not described itself, and each rewrites the hash to say so:
@@ -286,5 +287,354 @@ describe("the onboarding gate and the wizard's restore", () => {
       expect(window.location.hash).toBe(GATE_TARGET);
     });
     expect(window.history.length).toBe(onArrival);
+  });
+});
+
+// The onboarding gate (A107/ADR-0061 + the 0082 anchor): an installation that
+// has not saved its own company has nothing for any other screen to show, so
+// the shell sends the human to the company form. GET /company 404s until a
+// human saves it — that 404 IS the signal, which is why the gate lives here
+// rather than on the login path: a live session never passes through login, so
+// a reload would otherwise walk straight past onboarding.
+describe("onboarding gate", () => {
+  const mount = () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <App />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+  };
+
+  // Every call the shell makes resolves; only /company's status and the
+  // journey's own row vary, so the gate is the single thing under test. The
+  // journey defaults to finished, which is what lets a described installation
+  // stay where it was asked to go.
+  const stubCompany = (
+    status: number,
+    journey: { row: unknown; status: number } = {
+      row: wizardRow("complete"),
+      status: 200,
+    },
+    session: {
+      seat?: "full" | "read";
+      roles?: string[];
+      onboarding?: boolean;
+    } = {},
+  ) =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/me")) {
+          return new Response(
+            JSON.stringify(
+              meFixture({
+                roles: session.roles ?? ["admin"],
+                seat: session.seat,
+              }),
+            ),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        // The rollout stage: the journey runs at `onboarding`, unless a case
+        // sets the installation below it.
+        if (url.endsWith("/v1/company/context/capabilities")) {
+          return new Response(
+            JSON.stringify({
+              onboarding_enabled: session.onboarding ?? true,
+              read_enabled: true,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        if (url.endsWith("/v1/onboarding/state")) {
+          return new Response(JSON.stringify(journey.row), {
+            status: journey.status,
+            headers: {
+              "Content-Type":
+                journey.status === 200
+                  ? "application/json"
+                  : "application/problem+json",
+            },
+          });
+        }
+        if (url.endsWith("/v1/company")) {
+          return status === 200
+            ? new Response(
+                JSON.stringify({
+                  company_id: "o1",
+                  display_name: "Acme GmbH",
+                }),
+                {
+                  status: 200,
+                  headers: { "Content-Type": "application/json" },
+                },
+              )
+            : new Response(JSON.stringify({ code: "not_found" }), {
+                status,
+                headers: { "Content-Type": "application/problem+json" },
+              });
+        }
+        return new Response(JSON.stringify({ data: [], page: {} }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+  it("sends an installation that has not described itself to the company form", async () => {
+    stubCompany(404);
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+  });
+
+  it("holds on every navigation — steering away mid-onboarding lands back on the form", async () => {
+    stubCompany(404);
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+
+    // The palette, a typed hash, a stray link: any client-side navigation
+    // away from onboarding must be turned around, not just the first load.
+    window.location.hash = "#/contacts";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+  });
+
+  // The gate's second half: a described installation still walks every human
+  // whose own journey is unfinished through it. That is how a member invited
+  // later trains their voice and connects their mailbox as the creator did.
+  it("sends a human with no journey of their own to onboarding, company or not", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(200, { row: { code: "not_found" }, status: 404 });
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+  });
+
+  it("sends a human whose journey stopped short back into it", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(200, { row: wizardRow("voice"), status: 200 });
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+  });
+
+  // A read seat cannot write the checkpoint the journey ends on, so a gate
+  // that held it would hold it forever.
+  it("leaves a read seat alone, whatever its journey says", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      200,
+      { row: { code: "not_found" }, status: 404 },
+      { seat: "read" },
+    );
+    mount();
+    await screen.findByRole("navigation", { name: "Primary navigation" });
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
+  });
+
+  // GET /company answers only an admin, so no other seat asks for it. It needs
+  // no answer either: nobody is invited before the company is described.
+  const companyReads = () =>
+    vi
+      .mocked(fetch)
+      .mock.calls.filter(([input]) =>
+        String(input instanceof Request ? input.url : input).endsWith(
+          "/v1/company",
+        ),
+      );
+
+  it("leaves a non-admin with a finished journey on its route, unasked", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(403, undefined, { roles: ["rep"] });
+    mount();
+    await screen.findByRole("navigation", { name: "Primary navigation" });
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
+    expect(companyReads()).toHaveLength(0);
+  });
+
+  it.each([
+    ["no journey row", { row: { code: "not_found" }, status: 404 }],
+    ["an unfinished journey", { row: wizardRow("voice"), status: 200 }],
+  ])(
+    "walks a non-admin with %s through the member journey, unasked",
+    async (_, journey) => {
+      window.location.hash = "#/contacts";
+      stubCompany(403, journey, { roles: ["rep"] });
+      mount();
+      expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
+      expect(window.location.hash).toBe("#/onboarding/company");
+      expect(companyReads()).toHaveLength(0);
+    },
+  );
+
+  it("leaves a non-admin on a read seat alone, whatever its journey says", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      403,
+      { row: { code: "not_found" }, status: 404 },
+      { roles: ["rep"], seat: "read" },
+    );
+    mount();
+    await screen.findByRole("navigation", { name: "Primary navigation" });
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
+    expect(companyReads()).toHaveLength(0);
+  });
+
+  // Below the `onboarding` rollout stage there is no journey, only the manual
+  // company form, which a rep cannot save and an admin's save never finishes.
+  it.each([
+    ["a non-admin", 403, ["rep"]],
+    ["an admin", 200, ["admin"]],
+  ])(
+    "leaves %s alone when the installation has no journey to walk",
+    async (_, status, roles) => {
+      window.location.hash = "#/contacts";
+      stubCompany(
+        status,
+        { row: { code: "not_found" }, status: 404 },
+        {
+          roles,
+          onboarding: false,
+        },
+      );
+      mount();
+      await screen.findByRole("navigation", { name: "Primary navigation" });
+      expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
+    },
+  );
+
+  // A shell painted before the rollout answers is a landing page the gate may
+  // then pull away from under the reader, so the splash waits for it.
+  it("holds the splash until the rollout says whether there is a journey", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      403,
+      { row: { code: "not_found" }, status: 404 },
+      {
+        roles: ["rep"],
+      },
+    );
+    const served = vi.mocked(fetch);
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const isRollout = (input: Request | string | URL) =>
+      String(input instanceof Request ? input.url : input).endsWith(
+        "/v1/company/context/capabilities",
+      );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        if (isRollout(input)) {
+          await held;
+        }
+        return served(input);
+      }),
+    );
+    mount();
+    await waitFor(() =>
+      expect(
+        vi.mocked(fetch).mock.calls.some(([input]) => isRollout(input)),
+      ).toBe(true),
+    );
+    expect(
+      screen.queryByRole("navigation", { name: "Primary navigation" }),
+    ).toBeNull();
+    release();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+  });
+
+  it("leaves a described installation on the route it asked for", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(200);
+    mount();
+    // The company resolves before this settles, so a gate that redirected
+    // would have replaced the hash by now.
+    await screen.findByRole("navigation", { name: "Primary navigation" });
+    // The SCREEN, not the whole address. A list spells its own opening dials
+    // into the hash on arrival, so contacts settles at `#/contacts?sort=…` a
+    // moment after the shell renders; an equality against the bare address
+    // holds only while that write is still pending. Where the gate left the
+    // reader is this test's claim — how the list is sorted is contacts.tsx's.
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
+  });
+
+  // A pending /oauth/authorize request lives entirely in the hash (the
+  // client_id/scope/consent-nonce query string) — navigate() rewrites
+  // location.hash, so a gate redirect here would destroy the request with no
+  // way to recover it, unlike an ordinary screen a human can simply re-visit.
+  it("does not redirect away from oauth-consent when the company is undescribed", async () => {
+    const pendingHash =
+      "#/oauth-consent?client_id=c1&scope=read&consent=nonce123";
+    window.location.hash = pendingHash;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/me")) {
+          return new Response(
+            JSON.stringify({ user: { id: "u1" }, roles: ["admin"], teams: [] }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        if (url.endsWith("/v1/company")) {
+          return new Response(JSON.stringify({ code: "not_found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        if (url.includes("/oauth/consent-request")) {
+          return new Response(
+            JSON.stringify({
+              client_name: "Acme Client",
+              offline: false,
+              scopes: ["read"],
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return new Response(JSON.stringify({ data: [], page: {} }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    mount();
+    // The consent screen itself is proof the gate never fired — an
+    // onboarding redirect would have replaced the hash before this renders.
+    expect(
+      await screen.findByRole("heading", { name: "Authorize access" }),
+    ).toBeTruthy();
+    expect(window.location.hash).toBe(pendingHash);
+  });
+
+  // The control for the exemption above: it must be scoped to the consent
+  // route, not a gate that stopped firing. This is the third premise the gate
+  // has to answer — an ordinary route named in the hash on FIRST load (the
+  // cases above cover an empty hash, and a hashchange after mount).
+  it("still redirects an ordinary screen away when the company is undescribed", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(404);
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
   });
 });

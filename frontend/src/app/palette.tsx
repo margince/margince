@@ -16,6 +16,7 @@ import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import type { SettingsPageId } from "../screens/settingscatalog";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
 import { settingsHref } from "../screens/settingsrouting";
+import { useHoldsAdminRole } from "./capability";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
@@ -94,6 +95,9 @@ export function useBuiltinCommands(): Command[] {
   // The same table the settings rail walks, not a second opinion about it: a
   // palette reading its own list offers a page the rail no longer lists.
   const visible = useVisibleSettingsPages();
+  // A read ends in saving the company, which only an admin may do (contacts'
+  // requireAnchorAdministrator); any other seat would read a site it cannot keep.
+  const isAdmin = useHoldsAdminRole();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
@@ -120,6 +124,12 @@ export function useBuiltinCommands(): Command[] {
       type: "screen",
       route: { screen: CUSTOM_SCREEN, id: screen.key },
     }));
+    const readCompany: Command = {
+      id: "action:read-company",
+      label: t("action.readCompany"),
+      type: "action",
+      route: { screen: "onboarding", id: "company" },
+    };
     const actions: Command[] = [
       {
         id: "action:new-deal",
@@ -127,12 +137,7 @@ export function useBuiltinCommands(): Command[] {
         type: "action",
         route: { screen: "deals", id: CREATE_ID },
       },
-      {
-        id: "action:read-company",
-        label: t("action.readCompany"),
-        type: "action",
-        route: { screen: "onboarding", id: "company" },
-      },
+      ...(isAdmin ? [readCompany] : []),
       {
         id: "action:booking",
         label: t("action.booking"),
@@ -189,7 +194,7 @@ export function useBuiltinCommands(): Command[] {
       ...offRailScreens,
       ...settingsScreens,
     ];
-  }, [t, visible, locale]);
+  }, [t, visible, locale, isAdmin]);
 }
 
 const TYPE_KEY: Record<Command["type"], MessageKey> = {

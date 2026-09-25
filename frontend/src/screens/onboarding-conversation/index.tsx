@@ -12,7 +12,8 @@ import {
   EMPTY_DRAFT,
   loadWizardState,
   pickBuiltVersion,
-  useCompany,
+  type useCompany,
+  useInstallationDescribed,
 } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
 import { BasisAct } from "./basis-act";
@@ -58,13 +59,14 @@ const voiceProbeSteps = new Set<OnboardingState["step"]>([
 ]);
 
 // Whether the restore needs the voice probe, from the same facts restorePlan
-// routes on: the wizard row's path when one exists, else company existence.
+// routes on: the wizard row's path when one exists, else whether the
+// installation is described.
 function voiceProbeNeeded(
   wizard: OnboardingState | null,
-  companyExists: boolean,
+  described: boolean,
 ): boolean {
   if (wizard === null) {
-    return companyExists;
+    return described;
   }
   return wizard.path === "member" || voiceProbeSteps.has(wizard.step);
 }
@@ -181,7 +183,7 @@ function useRestore(
   routeConnect: boolean,
 ) {
   const { locale } = useLocale();
-  const existing = useCompany(true);
+  const { company: existing, described } = useInstallationDescribed(true);
   // The restore's own snapshot, not the live entry the shell gates on: a
   // checkpoint landing mid-journey must not re-run the restore's reads.
   const wizard = useQuery({
@@ -190,8 +192,8 @@ function useRestore(
   });
   const voiceNeeded =
     wizard.isSuccess &&
-    existing.isSuccess &&
-    voiceProbeNeeded(wizard.data ?? null, existing.data !== null);
+    described !== undefined &&
+    voiceProbeNeeded(wizard.data ?? null, described);
   const voice = useQuery({
     queryKey: ["onboarding-conv-voice"],
     queryFn: probeVoice,
@@ -227,7 +229,7 @@ function useRestore(
 
   const restored = useRef(false);
   const settled =
-    existing.isSuccess &&
+    described !== undefined &&
     wizard.isSuccess &&
     (!voiceNeeded || voice.isSuccess) &&
     (persistedReadId === null || persistedRead.isSuccess);
@@ -239,6 +241,7 @@ function useRestore(
     const plan = restorePlan({
       state: wizard.data ?? null,
       profile: existing.data ?? null,
+      described: described === true,
       voice: voice.data ?? null,
       read: persistedRead.data ?? null,
       routeConnect,
@@ -273,6 +276,7 @@ function useRestore(
     settled,
     wizard.data,
     existing.data,
+    described,
     voice.data,
     persistedRead.data,
     routeConnect,
