@@ -18099,6 +18099,8 @@ export interface components {
             backfill_id?: string | null;
             /** @enum {string|null} */
             window?: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m" | null;
+            /** @description The windows THIS installation admits, in reach order — the product's supported set narrowed by `capture.max_backfill_months` where an operator set one. A picker offers these and no others: the preview and the start both refuse a window above the cap, so offering one is offering a choice that 422s. Absent or empty means the client should fall back to the full supported set rather than render an empty picker. */
+            offered_windows?: ("3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m")[];
             /** @description The previewed count the user consented to — the progress fraction's denominator. */
             estimated_messages?: number | null;
             /** @description True when `estimated_messages` is a floor (see BackfillPreview): the denominator can be passed, so a client shows counts rather than a percentage instead of drawing a bar past its end. Persisted with the run, because the preview that produced the number is long gone by the time progress is read. */
