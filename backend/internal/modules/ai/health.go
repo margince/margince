@@ -122,8 +122,9 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 		// Latest is ordered by occurred_at, then attempt, then id: every
 		// attempt of one logical call is written in one transaction and shares
 		// occurred_at, so within a call the higher attempt is the later one;
-		// two calls committed together can tie on both, and the id — a UUIDv7
-		// minted at insert — names the row written last.
+		// two calls committed together can tie on both, and neither is later,
+		// so the id settles it: arbitrary between them, but the same on every
+		// read, so the badge cannot flicker.
 		rows, err := tx.Query(ctx, `
 			WITH attempts AS (
 			  SELECT tier, occurred_at, attempt, id, latency_ms,

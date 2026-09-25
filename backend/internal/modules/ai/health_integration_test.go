@@ -126,29 +126,39 @@ func TestRungHealthDoesNotCountAnOutcomeAsAFailure(t *testing.T) {
 }
 
 // Two calls committed together share occurred_at, and each is its own attempt
-// 1, so only the row id — minted in insert order — tells which came last. The
-// read must name the same row as latest whichever order the two arrive in.
-func TestRungHealthBreaksAnOccurredAtAndAttemptTieByTheLaterRow(t *testing.T) {
-	cases := []struct {
-		name        string
-		failedFirst bool
-		wantHealthy bool
-	}{
-		{"the answered call landed last", true, true},
-		{"the failed call landed last", false, false},
+// 1, so neither is "later": the row id breaks the tie, which makes the answer
+// arbitrary between them but the SAME answer on every read, so a health badge
+// cannot flicker between two reads of one set of rows.
+func TestRungHealthAnswersATiedLatestAttemptTheSameOnEveryRead(t *testing.T) {
+	env := setupRateStore(t)
+	ws, ctx := env.seedWorkspace(context.Background(), t)
+	calls := NewCallMeter(env.dbFor(ws))
+	failed := ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", "provider_unavailable")
+	answered := ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", "")
+	if err := calls.Record(ctx, []Call{failed, answered}); err != nil {
+		t.Fatalf("recording: %v", err)
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			failed := ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", "provider_unavailable")
-			answered := ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", "")
-			together := []Call{answered, failed}
-			if tc.failedFirst {
-				together = []Call{failed, answered}
+	var first *RungHealth
+	for range 5 {
+		report, err := NewMeter(env.dbFor(ws)).RungHealthReport(diagnosticsReader(ws))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, rung := range report {
+			if rung.Tier != string(TierCheapCloud) {
+				continue
 			}
-			rung := rungHealthAfter(t, together)[string(TierCheapCloud)]
-			if rung.Calls != 2 || rung.Failures != 1 || rung.Healthy() != tc.wantHealthy {
-				t.Errorf("%s = %+v, want 2 calls, 1 failed, healthy=%v", TierCheapCloud, rung, tc.wantHealthy)
+			if rung.Calls != 2 || rung.Failures != 1 {
+				t.Fatalf("%s calls/failures = %d/%d, want 2/1", TierCheapCloud, rung.Calls, rung.Failures)
 			}
-		})
+			if first == nil {
+				first = &rung
+			} else if rung.Healthy() != first.Healthy() || rung.LastSentinel != first.LastSentinel {
+				t.Fatalf("two reads of the same rows disagree: %+v then %+v", *first, rung)
+			}
+		}
+	}
+	if first == nil {
+		t.Fatalf("no %s rung in the report", TierCheapCloud)
 	}
 }
