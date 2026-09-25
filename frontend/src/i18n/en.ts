@@ -3040,6 +3040,16 @@ export const en = {
   "brief.sentence.one": "First: {lead}",
   "brief.sentence.many": "First: {lead}. Then {rest}.",
   "brief.sentence.rest": "{count} more",
+  // What the ORDER could not weigh, as against what scored low. A factor with
+  // no input floors on every deal, so the queue reads as fully ranked while
+  // deals sit lower than they are; naming it is what separates an absence from
+  // a reading. The unknown arm is the version-skew case: a newer server may
+  // name a factor this build has no word for, and dropping it silently is the
+  // failure the field exists to end.
+  "brief.order.withheld":
+    "This order does not account for {factors}, hidden for your role.",
+  "brief.factor.warmth": "relationship warmth",
+  "brief.factor.unknown": "a ranking factor this version cannot name",
 
   // The weekly Brief's opening sentence, composed from the counts the week was
   // frozen with. Result first, then what carried — the outcome before the debt.

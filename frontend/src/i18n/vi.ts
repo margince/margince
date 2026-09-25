@@ -2940,6 +2940,10 @@ export const vi = {
   "brief.sentence.one": "Trước tiên: {lead}",
   "brief.sentence.many": "Trước tiên: {lead}. Rồi {rest}.",
   "brief.sentence.rest": "{count} mục nữa",
+  "brief.order.withheld":
+    "Thứ tự này chưa tính đến {factors}, bị ẩn với vai trò của bạn.",
+  "brief.factor.warmth": "mức độ thân thiết của mối quan hệ",
+  "brief.factor.unknown": "một yếu tố mà phiên bản này chưa gọi tên được",
 
   // Câu mở đầu của Bản tin tuần, dựng từ các con số đã đóng băng.
   "brief.week.won_one": "Bạn đã chốt {count} deal.",
