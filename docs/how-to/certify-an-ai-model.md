@@ -42,15 +42,15 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
 
    `JUDGE=provider:model` is the second model that grades the answers, and **one
    judge grades every task of a run** — a judge swap flips verdicts on its own.
-   It defaults to `openai_compatible:openai/gpt-oss-120b` on OpenRouter, chosen
-   for cost (needs `OPENAI_COMPATIBLE_API_KEY`); an exported
-   `MARGINCE_AICERT_JUDGE_MODEL` replaces it and `JUDGE=` overrides both —
-   `gemini:gemini-3.1-flash-lite` (also cheap) or `gemini:gemini-3.5-flash`, with
-   `GEMINI_API_KEY`. It is **never resolved from the routing**, and a model never
-   grades itself: a run in which any task it certifies has the judge as its
-   candidate is refused before the first paid call, naming those tasks.
-   `openrouter_cloud` binds gpt-oss-120b itself, so certify it with
-   `JUDGE=gemini:gemini-3.1-flash-lite`.
+   It defaults to `claude_cli:claude-sonnet-4-6`, graded through `claude -p` on a
+   Claude Code subscription (needs `claude` on PATH and `CLAUDE_CODE_OAUTH_TOKEN`);
+   an exported `MARGINCE_AICERT_JUDGE_MODEL` replaces it and `JUDGE=` overrides
+   both — `openai_compatible:anthropic/claude-sonnet-4.6` with
+   `JUDGE_UPSTREAM='{}'` (same model, paid per call) or `gemini:gemini-3.5-flash`.
+   It is **never resolved from the routing**, and a model never grades itself: a
+   run in which any task it certifies has the judge's family as its candidate is
+   refused before the first paid call, naming those tasks, so a preset binding a
+   Claude model names a non-Claude judge.
 
    For an OpenAI-wire broker — one OpenRouter key reaching every open-weight
    model — add the endpoint, which `openai_compatible` fails closed without:

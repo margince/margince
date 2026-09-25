@@ -273,20 +273,21 @@ e2e-siteread: composition ## Deep-read quality floor vs the real gradion.com (pa
 # JUDGE is a SECOND model on purpose: one grading itself is certified by
 # construction. ONE judge grades every task of a run — a judge swap flips
 # verdicts on the same candidate — and a task whose candidate is the judge is
-# refused before the first paid call. The default is gpt-oss-120b on OpenRouter
-# for cost; `JUDGE=gemini:gemini-3.1-flash-lite` grades a run that certifies it.
+# refused before the first paid call. The default is claude-sonnet-4-6 through
+# `claude -p` on a Claude Code subscription (CLAUDE_CODE_OAUTH_TOKEN), which
+# costs nothing per run; a run certifying a Claude candidate names another judge.
 # The defaults sit on the exported names, so an operator's environment wins;
 # JUDGE* default to those and override both, and `?=` keeps an explicit empty one
 # empty. BASE_URL carries a broker host — openai_compatible fails closed without
-# one — so the OpenRouter host is the default only while JUDGE is the default
-# model: a native vendor judge, and a claude_cli one (the CLI dials its own
-# host), leaves it empty.
-AICERT_DEFAULT_JUDGE           := openai_compatible:openai/gpt-oss-120b
+# one — so the OpenRouter host is set only for an openai_compatible judge; a
+# native vendor judge, and a claude_cli one (the CLI dials its own host), leaves
+# it empty.
+AICERT_DEFAULT_JUDGE           := claude_cli:claude-sonnet-4-6
 MARGINCE_AICERT_ROUTING        ?=
 MARGINCE_AICERT_MODEL          ?=
 MARGINCE_AICERT_BASE_URL       ?=
 MARGINCE_AICERT_JUDGE_MODEL    ?= $(AICERT_DEFAULT_JUDGE)
-MARGINCE_AICERT_JUDGE_BASE_URL ?= $(if $(filter $(AICERT_DEFAULT_JUDGE),$(JUDGE)),https://openrouter.ai/api)
+MARGINCE_AICERT_JUDGE_BASE_URL ?= $(if $(filter openai_compatible:%,$(JUDGE)),https://openrouter.ai/api)
 JUDGE                          ?= $(MARGINCE_AICERT_JUDGE_MODEL)
 JUDGE_BASE_URL                 ?= $(MARGINCE_AICERT_JUDGE_BASE_URL)
 MARGINCE_AICERT_PROFILE        ?= cloud_frontier
@@ -344,7 +345,7 @@ AICERT_TIMEOUT ?= 90m
 # itself a task and leads at premium, so a config binding claude-haiku-4.5 there
 # makes the grader collide with every premium-led candidate — the run checks that
 # for every resolved task up front rather than failing mid-corpus after paying.
-e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=openai_compatible:openai/gpt-oss-120b by default, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies that model, JUDGE=claude_cli:sonnet grades through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (no JUDGE_BASE_URL; refuses Claude candidates). BYOK key auto-loaded from .env.local. TASK=x RUNS=<odd n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
+e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-4-6 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<odd n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
 	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \
