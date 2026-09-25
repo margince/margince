@@ -519,3 +519,80 @@ func sourceIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string {
 	}
 	return sourceID
 }
+
+// What a mailbox-side deletion destroys, and what it leaves standing.
+//
+// The owner went to Gmail and got rid of a message this CRM holds a copy of.
+// For mail nobody else has seen that is the clearest signal available, and the
+// narrowest: it speaks about THAT message and no other. The cases below are the
+// three outcomes PurgeRemoved sorts a removal into, and two of them keep it.
+func TestAMailboxDeletionDestroysOnlyTheOwnersSoleCopy(t *testing.T) {
+	e := integration.Setup(t)
+	mine := seedPurgeableMail(t, e, "anwalt@kanzlei.example", "nur meine", e.Rep1)
+
+	if err := purgerFor(t, e).PurgeRemoved(
+		purgeCtx(e, e.Rep1), e.Rep1, "gmail", "pg-"+mine.String()); err != nil {
+		t.Fatalf("acting on the deletion: %v", err)
+	}
+
+	if body := activityBody(t, e, mine); body != "" {
+		t.Fatalf("the deleted message kept its body %q — the copy they threw away is still here", body)
+	}
+	// The import row is NOT asserted here. PurgeActivities empties the activity
+	// and leaves capture_import pointing at it; only a workspace-rule purge
+	// releases every claim (capturepurge.go says why). Pinning it either way in
+	// this test would assert a decision this test is not about.
+}
+
+// A colleague's claim is not the owner's to end. Tidying an inbox must not
+// reach into somebody else's timeline, and this falls out of SharedImports
+// rather than being special-cased.
+func TestAMailboxDeletionLeavesAColleaguesCopyStanding(t *testing.T) {
+	e := integration.Setup(t)
+	shared := seedPurgeableMail(t, e, "anwalt@kanzlei.example", "auch bei der Kollegin", e.Rep1)
+	addImporter(t, e, shared, e.Rep2)
+
+	if err := purgerFor(t, e).PurgeRemoved(
+		purgeCtx(e, e.Rep1), e.Rep1, "gmail", "pg-"+shared.String()); err != nil {
+		t.Fatalf("acting on the deletion: %v", err)
+	}
+
+	if body := activityBody(t, e, shared); body == "" {
+		t.Fatal("a message the colleague also imported lost its body — their correspondence is not this owner's to destroy")
+	}
+	if n := importCount(t, e, shared, e.Rep2); n != 1 {
+		t.Fatalf("the colleague has %d import rows, want 1 — their claim survives the other seat's deletion", n)
+	}
+}
+
+// Most deleted mail was never captured. A removal naming a key this product
+// does not hold is the ordinary case, not an error to report — a connector
+// that failed its whole pull over one such key would stop syncing entirely.
+func TestAMailboxDeletionForUncapturedMailIsNotAnError(t *testing.T) {
+	e := integration.Setup(t)
+
+	if err := purgerFor(t, e).PurgeRemoved(
+		purgeCtx(e, e.Rep1), e.Rep1, "gmail", "pg-"+ids.NewV7().String()); err != nil {
+		t.Fatalf("a deletion for mail this CRM never captured must not error: %v", err)
+	}
+}
+
+// A removal reaching another seat's message destroys nothing: the selection is
+// scoped to the seat whose connection reported it. A connector speaking for a
+// mailbox it does not own cannot reach a colleague's copy through this door.
+func TestAMailboxDeletionCannotReachAnotherSeatsImport(t *testing.T) {
+	e := integration.Setup(t)
+	theirs := seedPurgeableMail(t, e, "anwalt@kanzlei.example", "der Kollegin ihre", e.Rep2)
+
+	if err := purgerFor(t, e).PurgeRemoved(
+		purgeCtx(e, e.Rep1), e.Rep1, "gmail", "pg-"+theirs.String()); err != nil {
+		t.Fatalf("acting on the deletion: %v", err)
+	}
+
+	if body := activityBody(t, e, theirs); body == "" {
+		t.Fatal("a seat's deletion destroyed a message only another seat had imported")
+	}
+	if n := importCount(t, e, theirs, e.Rep2); n != 1 {
+		t.Fatalf("the owning seat has %d import rows, want 1", n)
+	}
+}
