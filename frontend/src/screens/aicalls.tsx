@@ -29,6 +29,16 @@ function payloadText(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
 }
 
+// One attempt's binding as `provider/model`, the spelling the call row uses. A
+// row with no provider still names its model rather than a stray slash.
+function attemptBinding(
+  attempt: components["schemas"]["AiCallAttempt"],
+): string {
+  return attempt.provider
+    ? `${attempt.provider}/${attempt.model_id}`
+    : (attempt.model_id ?? "");
+}
+
 export function CallDetailPanel({
   id,
   captureEnabled,
@@ -85,6 +95,11 @@ export function CallDetailPanel({
                     names what went wrong BEFORE it, so read beside the tier it
                     says where the walk went next. */}
                 {attempt.tier ? `${tierLabel(attempt.tier, t)} · ` : ""}
+                {/* The binding THIS attempt asked, spelled as the row above
+                    spells the call's. The call's own binding is the terminal
+                    rung, so a decision attempt that fell through names a model
+                    nothing else on the page does. */}
+                {attempt.model_id ? `${attemptBinding(attempt)} · ` : ""}
                 {attemptReasonLabel(attempt.attempt_reason, t)} ·{" "}
                 {t("aicalls.ms", {
                   value: formatNumber(attempt.latency_ms, locale),

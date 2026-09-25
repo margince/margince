@@ -380,7 +380,9 @@ it("says why the ladder answered after the decision model, and where it went", a
     ),
   ).toBeTruthy();
   expect(screen.queryByText(/decision_below_floor/)).toBeNull();
-  // And the decision attempt itself carries the badge.
+  // And the decision attempt itself carries the badge, and names the model it
+  // asked: the terminal row's binding is the rung that answered after it.
   const first = screen.getByText("#1").closest("li");
   expect(first?.textContent).toContain("Decision model");
+  expect(first?.textContent).toContain("openrouter_decision/jev-classify");
 });
