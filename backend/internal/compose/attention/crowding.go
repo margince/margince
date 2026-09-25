@@ -19,7 +19,19 @@ import (
 // crowdLead is how many rows of one source lead the page. Not a cap on the
 // source — the rest stay ranked and reachable — and the number answers "how many
 // can somebody act on this morning" rather than "how many are there".
-const crowdLead = 8
+//
+// DERIVED FROM focusLimit, and that is the whole point of the expression. While
+// this was a hand-picked 8 against a focus card of 6, every slot the card draws
+// sat inside the lead group, so the anti-monopoly rule could not fire anywhere
+// the card could see it: a reader with eight overdue commitments got six of
+// them and no sign that the morning had another shape. The rule was working and
+// invisible, which is the worst of both.
+//
+// One short of the card leaves room for a second kind of work in the last slot
+// whenever a second kind exists. Written as an expression rather than as 5 with
+// a comment, because the two numbers are one decision and a later widening of
+// the card would otherwise silently restore the gap.
+const crowdLead = focusLimit - 1
 
 // markCrowding marks every row past the lead group of its own source.
 //
