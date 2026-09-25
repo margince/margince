@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -41,6 +42,20 @@ func localOnlyLadder(task Task, meta map[Tier]routeMeta, ladder []Tier) []Tier {
 	return out
 }
 
+// ErrLocalOnlyUnservable reports a local-only task that this configuration
+// cannot serve: every rung of its ladder is bound to a hosted provider.
+//
+// A SENTINEL because the callers have to tell it from a provider that failed.
+// A failure is worth retrying and worth alarming about; this is neither — it is
+// a standing property of the binding, true on every row until somebody rebinds
+// a rung, and a caller that retried it would fail the same way forever.
+//
+// What a caller does with it is theirs: the counterparty verdict asks a human
+// instead, and the confidentiality verdict holds the thread. Both already have
+// that path for an installation with no model at all, which is the same
+// situation from the pass's point of view — there is no model it may ask.
+var ErrLocalOnlyUnservable = errors.New("ai: no local provider is bound for a local-only task")
+
 // localOnlyRefusal explains a local-only task whose every rung is hosted.
 //
 // It names what each rung is actually bound to, because the operator's next
@@ -48,8 +63,8 @@ func localOnlyLadder(task Task, meta map[Tier]routeMeta, ladder []Tier) []Tier {
 // may not have written — a preset they copied, or a rebind made through the
 // settings UI months ago.
 func localOnlyRefusal(task Task, meta map[Tier]routeMeta) error {
-	return fmt.Errorf("ai: task %s is local_only and no rung of its ladder is bound to a local provider (%s): %s",
-		task, localProviderNames(), boundProviderSummary(task, meta))
+	return fmt.Errorf("%w: task %s needs one of (%s), and its ladder binds %s",
+		ErrLocalOnlyUnservable, task, localProviderNames(), boundProviderSummary(task, meta))
 }
 
 // localProviderNames lists the providers that can serve a local-only task, so a
