@@ -89,7 +89,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if !alreadyFiled {
 		id, created, err = s.upsertActivity(ctx, tx, rec, fields, birth)
 		if err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+			return s.upsertRefused(ctx, tx, id, err, rec, fields, birth, memberBound)
 		}
 	}
 	ref := datasource.EntityRef{Type: datasource.EntityActivity, ID: id.UUID}
@@ -167,10 +167,12 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		if !same {
-			// Skipped, and traced, as a replay onto an incumbent outside this
-			// seat's authority: from the seat's side a message in its mailbox
-			// never arrived, and the ref would name somebody else's row.
-			return datasource.EntityRef{}, false, counterpartyDecision{}, skipInvisibleIncumbent(rec, "activity")
+			// The collision proves nothing — the natural key is a header the
+			// sender typed — so the seat is given nothing over the incumbent.
+			// It keeps its own message instead, under a key of its own:
+			// refusing used to drop the message for good, because the skip
+			// advances the watermark and no later pass retries it.
+			return s.fileUnderOwnReplayKey(ctx, tx, rec, fields, birth, memberBound)
 		}
 		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
@@ -420,7 +422,11 @@ func (s *Sink) upsertActivity(
 	}
 	if err := auth.EnsureActivityVisible(ctx, tx, id.UUID); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
-			return ids.ActivityID{}, false, skipInvisibleIncumbent(rec, "activity")
+			// The id rides WITH the refusal: the caller's next question is
+			// whether this seat can prove anything about that row, and asking
+			// it needs the row the conflict resolved to. Nothing about the row
+			// is returned — the id names it, the refusal still names neither.
+			return id, false, skipInvisibleIncumbent(rec, "activity")
 		}
 		return ids.ActivityID{}, false, err
 	}
