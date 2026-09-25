@@ -758,8 +758,8 @@
           "state": "current",
           "runs": 6,
           "passed": 4,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 1
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 0
         },
         {
           "task": "offer_draft",
@@ -930,12 +930,12 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
+          "band": "not_supported",
           "state": "current",
           "runs": 27,
-          "passed": 24,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 4
+          "passed": 25,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 3
         },
         {
           "task": "transcript_propose",
@@ -962,7 +962,7 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
+          "band": "not_supported",
           "state": "current",
           "runs": 12,
           "passed": 12,
@@ -1004,8 +1004,8 @@
       ],
       "bands": {
         "certified": 22,
-        "supported_degraded": 5,
-        "not_supported": 2
+        "supported_degraded": 3,
+        "not_supported": 4
       },
       "untested": 0,
       "unbound": 0,
@@ -2524,13 +2524,13 @@
       "sites_partial": 0,
       "sites_stale": 1,
       "runs": 411,
-      "passed": 401,
-      "reliability": 0.975669099756691,
-      "slowest_p95_ms": 5359,
+      "passed": 402,
+      "reliability": 0.9781021897810219,
+      "slowest_p95_ms": 8311,
       "bands": {
-        "certified": 26,
-        "supported_degraded": 12,
-        "not_supported": 3
+        "certified": 29,
+        "supported_degraded": 7,
+        "not_supported": 5
       }
     },
     {
@@ -7444,8 +7444,8 @@
           "runs": 6,
           "passed": 4,
           "reliability": 0.6666666666666666,
-          "latency_p50_ms": 3796,
-          "latency_p95_ms": 4122,
+          "latency_p50_ms": 4274,
+          "latency_p95_ms": 8311,
           "reported": {
             "accepted": 4,
             "wrong_answer": 2,
@@ -9898,8 +9898,8 @@
           "model": "gemini-3.1-flash-lite",
           "env": "cloud_frontier"
         },
-        "band": "supported_degraded",
-        "reliability": 0.8333333333333334,
+        "band": "not_supported",
+        "reliability": 0.6666666666666666,
         "state": "current"
       },
       "scenarios": [
@@ -9922,19 +9922,19 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "not_supported",
           "scenarios_measured": 2,
           "scenarios_total": 2,
           "runs": 6,
-          "passed": 5,
-          "reliability": 0.8333333333333334,
-          "latency_p50_ms": 2193,
-          "latency_p95_ms": 3064,
+          "passed": 4,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 2159,
+          "latency_p95_ms": 3459,
           "reported": {
-            "accepted": 5,
-            "wrong_answer": 1,
+            "accepted": 4,
+            "wrong_answer": 0,
             "invalid": 0,
-            "abstained": 0
+            "abstained": 2
           },
           "stale_reason": ""
         },
@@ -10084,8 +10084,8 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 2193,
-          "latency_p95_ms": 3064,
+          "latency_p50_ms": 2159,
+          "latency_p95_ms": 3459,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -10247,8 +10247,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 2193,
-          "latency_p95_ms": 3064,
+          "latency_p50_ms": 2159,
+          "latency_p95_ms": 3459,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -10367,8 +10367,8 @@
           "model": "gemini-3.1-flash-lite",
           "env": "cloud_frontier"
         },
-        "band": "supported_degraded",
-        "reliability": 0.8333333333333334,
+        "band": "certified",
+        "reliability": 1,
         "state": "current"
       },
       "scenarios": [
@@ -10391,17 +10391,17 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "certified",
           "scenarios_measured": 2,
           "scenarios_total": 2,
           "runs": 6,
-          "passed": 5,
-          "reliability": 0.8333333333333334,
-          "latency_p50_ms": 2193,
-          "latency_p95_ms": 3064,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 2159,
+          "latency_p95_ms": 3459,
           "reported": {
-            "accepted": 5,
-            "wrong_answer": 1,
+            "accepted": 6,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -10523,8 +10523,8 @@
           "model": "gemini-3.1-flash-lite",
           "env": "cloud_frontier"
         },
-        "band": "supported_degraded",
-        "reliability": 0.6666666666666666,
+        "band": "certified",
+        "reliability": 1,
         "state": "current"
       },
       "scenarios": [
@@ -10542,17 +10542,17 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "certified",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "latency_p50_ms": 2193,
-          "latency_p95_ms": 3064,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 2159,
+          "latency_p95_ms": 3459,
           "reported": {
-            "accepted": 2,
-            "wrong_answer": 1,
+            "accepted": 3,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -10677,7 +10677,7 @@
           "model": "gemini-3.1-flash-lite",
           "env": "cloud_frontier"
         },
-        "band": "supported_degraded",
+        "band": "certified",
         "reliability": 1,
         "state": "current"
       },
@@ -10696,14 +10696,14 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "certified",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 2193,
-          "latency_p95_ms": 3064,
+          "latency_p50_ms": 2159,
+          "latency_p95_ms": 3459,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -11045,8 +11045,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1413,
-          "latency_p95_ms": 4203,
+          "latency_p50_ms": 1241,
+          "latency_p95_ms": 4311,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -11197,8 +11197,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1413,
-          "latency_p95_ms": 4203,
+          "latency_p50_ms": 1241,
+          "latency_p95_ms": 4311,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -11347,7 +11347,7 @@
           "model": "gemini-3.1-flash-lite",
           "env": "cloud_frontier"
         },
-        "band": "supported_degraded",
+        "band": "not_supported",
         "reliability": 1,
         "state": "current"
       },
@@ -11366,14 +11366,14 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "not_supported",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1413,
-          "latency_p95_ms": 4203,
+          "latency_p50_ms": 1241,
+          "latency_p95_ms": 4311,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -11547,8 +11547,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1413,
-          "latency_p95_ms": 4203,
+          "latency_p50_ms": 1241,
+          "latency_p95_ms": 4311,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
