@@ -108,6 +108,11 @@ describe("model lane health", () => {
     expect(await screen.findByText(/5 calls, 5 failed/)).toBeInTheDocument();
   });
 
+  it("counts a single call in the singular", async () => {
+    renderCard([{ ...ANSWERING, calls: 1 }]);
+    expect(await screen.findByText("1 call, 0 failed")).toBeInTheDocument();
+  });
+
   it("reports an unused installation as unused rather than as an outage", async () => {
     // Nobody called a model this hour. That is not a failure, and an empty
     // table would read as one.

@@ -73,9 +73,17 @@ type decideFixture struct {
 
 func newDecideFixture(t *testing.T, decider decision.Client, spent int64) decideFixture {
 	t.Helper()
+	ladder := stubClient{resp: model.Response{Text: "ladder answer", InputTokens: 30, OutputTokens: 5}}
+	return newDecideFixtureOver(t, decider, spent, ladder)
+}
+
+// newDecideFixtureOver is newDecideFixture with the cheap rung answered by
+// cheap, for a case whose walk must fail over to premium.
+func newDecideFixtureOver(t *testing.T, decider decision.Client, spent int64, cheap model.Client) decideFixture {
+	t.Helper()
 	store, meter := &fakeCallStore{}, &memMeter{spent: spent}
 	ladder := stubClient{resp: model.Response{Text: "ladder answer", InputTokens: 30, OutputTokens: 5}}
-	r := assembleRouter(map[Tier]model.Client{TierCheapCloud: ladder, TierPremium: ladder}, NewFakeClient(),
+	r := assembleRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: ladder}, NewFakeClient(),
 		ProfileCloudFrontier, meter, StaticBudget(100), store,
 		map[Tier]routeMeta{TierCheapCloud: {provider: "gemini", model: "cheap"}, TierPremium: {provider: "gemini", model: "premium"}},
 		false, nil)
@@ -205,7 +213,7 @@ func TestAnAcceptedDecisionIsTracedAndMeteredOnTheDecideTier(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := f.store.recorded[0]
-	if row.Provider != providerOpenRouterDecision || row.ModelID != jevLane.Model || row.TokensIn != 400 || row.TokensOut != 0 ||
+	if row.Provider != providerJevCompatible || row.ModelID != jevLane.Model || row.TokensIn != 400 || row.TokensOut != 0 ||
 		row.ServedModel != "typesafe/jev-1.13-20260917" || row.ServedIdentitySource != servedIdentitySourceResponse || row.ServedProvider != "TypeSafe" {
 		t.Errorf("decision row = %+v", row)
 	}
@@ -214,6 +222,59 @@ func TestAnAcceptedDecisionIsTracedAndMeteredOnTheDecideTier(t *testing.T) {
 	}
 	if got := decider.calls[0].Model; got != jevLane.Model {
 		t.Errorf("the decider was asked for model %q, want the lane's", got)
+	}
+}
+
+// A decision row keeps what the lane answered whether or not the answer
+// stood: a below-floor or off-enum answer is the one a site's floor is tuned
+// from. Only an attempt that got no answer at all, and every row that is not a
+// decision, carries none.
+func TestEveryDecisionRowKeepsTheAnswerItRead(t *testing.T) {
+	cases := []struct {
+		name  string
+		reply decisionReply
+		want  *DecisionAnswer
+	}{
+		{"accepted", answered("parked", 0.95), &DecisionAnswer{Choice: "parked", Confidence: 0.95}},
+		{"below the floor", answered("company", 0.62), &DecisionAnswer{Choice: "company", Confidence: 0.62}},
+		{"a label the question never offered", answered("personal", 0.99), &DecisionAnswer{Choice: "personal", Confidence: 0.99}},
+		{"no answer to the question", decisionReply{resp: decision.Response{Answers: map[string]decision.Answer{}}}, nil},
+		{"a provider error", decisionReply{err: errors.New("down")}, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newDecideFixture(t, &scriptedDecider{replies: []decisionReply{tc.reply}}, 0)
+			if _, _, err := f.decide(t, triageQuestion); err != nil {
+				t.Fatal(err)
+			}
+			if got := f.store.recorded[0].DecisionAnswer; !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("decision row answer = %+v, want %+v", got, tc.want)
+			}
+			for _, row := range f.store.recorded[1:] {
+				if row.DecisionAnswer != nil {
+					t.Errorf("the %s row carries a decision answer %+v", row.Kind, row.DecisionAnswer)
+				}
+			}
+		})
+	}
+}
+
+// The decision reason says why the ladder walked at all, so it sits on the
+// walk's first rung; a rung above it ran because that one failed.
+func TestADecisionFallbackWhoseFirstRungFailsKeepsTheReasonOnThatRung(t *testing.T) {
+	decider := &scriptedDecider{replies: []decisionReply{answered("parked", 0.5)}}
+	f := newDecideFixtureOver(t, decider, 0, stubClient{err: errors.New("cheap down")})
+	if _, _, err := f.decide(t, triageQuestion); err != nil {
+		t.Fatal(err)
+	}
+	assertOneLogicalCall(t, f.store.recorded)
+	want := []rowShape{
+		{kind: callKindDecision, tier: TierDecideLane},
+		{kind: callKindCompletion, tier: TierCheapCloud, reason: attemptReasonDecisionBelowFloor},
+		{kind: callKindCompletion, tier: TierPremium, reason: attemptReasonProviderError},
+	}
+	if got := shapes(f.store.recorded); !reflect.DeepEqual(got, want) {
+		t.Fatalf("rows = %+v, want %+v", got, want)
 	}
 }
 
@@ -360,7 +421,7 @@ func TestALocalLaneAnswersALocalOnlyTaskAndCapturesNothing(t *testing.T) {
 	}
 	decider := &scriptedDecider{replies: []decisionReply{answered("parked", 0.99)}}
 	store := &fakeCallStore{}
-	out, _, err := verdictRouter(layaLane, decider, store).Decide(wsContext(t), TaskCaptureCounterpartyVerdict, "verdict",
+	out, _, err := verdictRouter(selfHostedLane, decider, store).Decide(wsContext(t), TaskCaptureCounterpartyVerdict, "verdict",
 		triageQuestion, triageLLMRequest, acceptAnything, floorGate)
 	if err != nil || !out.Decided {
 		t.Fatalf("outcome=%+v err=%v", out, err)

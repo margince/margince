@@ -9258,12 +9258,14 @@ export interface paths {
          *
          *     Read from `ai_call`, which already records every attempt. Nothing is written for this: a
          *     health surface with its own bookkeeping would be a second account of what happened, free
-         *     to disagree with the first. A chat tier counts its terminal attempts only, so a failure a
-         *     retry rescued does not report a lane as failing while every caller of it got an answer.
-         *     The `decide` tier counts every decision attempt: it is asked once per call and never
-         *     retried on its own tier, so its attempt is its final outcome even when the ladder answers
-         *     after it — counting terminal attempts alone would call a decision endpoint that fails
-         *     every call healthy.
+         *     to disagree with the first. Every tier, `decide` included, counts each attempt it made
+         *     once: a call that walked three tiers is one call on each, and a same-tier retry is
+         *     another call on that tier. An attempt that carried an error is a failure on its own tier
+         *     even when a later tier or retry answered the caller, so a tier that fails over on every
+         *     call shows it. A schema retry's first attempt is an answer, not a failure: the model
+         *     replied and the task refused the text. Cache hits never reached a model and are not
+         *     counted. `healthy` reads the tier's latest attempt, not the ratio, so a failure a retry
+         *     rescued is counted without reporting a lane that is answering now as down.
          *
          *     An hour, because the question is whether it is answering NOW — a day-long window would
          *     call a lane that died forty minutes ago healthy on the strength of this morning.
@@ -16984,7 +16986,7 @@ export interface components {
             /** @description This model's score under the list's `ranked_by`, so a screen can show WHY a model is in a shortened list rather than asking a reader to trust the order. A decimal string for the same reason the prices are: it is displayed, never arithmetic. Absent where the vendor publishes no such measure, which is also when the list cannot be ranked. */
             rank_score?: string;
         };
-        /** @description What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
+        /** @description What may be known about one vendor's credential. Facts about the vendor and whether a key is held, and nothing about the key: it has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
         AiProviderKeyStatus: {
             /** @description The routing name of the vendor, the same string a binding uses. */
             provider: string;
@@ -16992,6 +16994,8 @@ export interface components {
             configured: boolean;
             /** @description The variable the same key may arrive in. Named so an operator can see which export seeded a vendor; the names follow each vendor's own convention, which is why they carry no MARGINCE_ prefix. */
             env_var: string;
+            /** @description Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix. */
+            optional: boolean;
         };
         AiProviderKeyInput: {
             /** @description The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
@@ -17078,11 +17082,11 @@ export interface components {
          *     reaches no further than the task's own bindings.
          */
         AiDecisionsBinding: {
-            /** @description openrouter_decision | laya. */
+            /** @description jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY is sent when held and never required). */
             provider: string;
-            /** @description The decision model id: a Jev slug, or a Laya checkpoint. */
+            /** @description The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter. */
             model: string;
-            /** @description Endpoint root; openrouter_decision requires an OpenRouter host. */
+            /** @description The FULL decision endpoint URL, posted to as written. Optional for jev (default https://api.typesafe.ai/v1/systemone); required for jev_compatible, e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone. */
             base_url?: string;
         };
         /**
@@ -18419,15 +18423,20 @@ export interface components {
             /** @description The rung's name — `local_small`, `cloud_large` and the rest. */
             tier: string;
             /**
-             * @description The tier answered at least once in the window without every attempt failing. Decided
+             * @description The tier's latest attempt in the window answered. The latest, not a ratio: a tier
+             *     that answered fifty minutes ago and has failed every attempt since is down now. Decided
              *     here rather than left to each client: two clients deciding what an all-failed rung
              *     means would be two answers, and one surface would call an outage while the other did
              *     not.
              */
             healthy: boolean;
-            /** @description Attempts in the window — terminal ones for a chat tier, every one for `decide`. */
+            /**
+             * @description Attempts this tier made in the window, each counted once — including one that failed
+             *     and handed the call to the next tier, and each same-tier retry. Cache hits are not
+             *     counted.
+             */
             calls: number;
-            /** @description How many of them carried an error. */
+            /** @description How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached. */
             failures: number;
             /**
              * @description The most recent error this tier reported, absent when it reported none. It is the
@@ -18658,7 +18667,19 @@ export interface components {
             provider?: string;
             /** @description The configured binding this attempt ran on. */
             model_id?: string;
+            /** @description This attempt's failure code, as on the call; null when it answered. */
             error_sentinel?: string | null;
+            /** @description What the provider reported serving this attempt; absent when it reported nothing. */
+            served_model?: string;
+            /** @description The upstream a broker routed this attempt to; absent on a direct vendor or when the broker named none. */
+            served_provider?: string;
+            /** @description The label a decision attempt was answered with, whether or not it stood; absent on every other kind and on a decision attempt that got no answer. */
+            decision_choice?: string;
+            /**
+             * Format: double
+             * @description The confidence the decision model gave decision_choice, as it sent it; present exactly when decision_choice is.
+             */
+            decision_confidence?: number;
             tokens_in: number;
             tokens_out: number;
             latency_ms: number;
@@ -18666,6 +18687,11 @@ export interface components {
             occurred_at: string;
         };
         AiCall: components["schemas"]["AiCallSummary"] & {
+            /**
+             * Format: uuid
+             * @description Shared by every attempt of this call: the id that groups them in the trace.
+             */
+            logical_call_id: string;
             /** Format: uuid */
             correlation_id?: string | null;
             /** Format: uuid */

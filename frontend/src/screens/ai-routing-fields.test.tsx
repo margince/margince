@@ -51,21 +51,29 @@ describe("the Host field's help", () => {
     );
   });
 
-  it("tells OpenRouter's decisions endpoint the path it appends", () => {
-    mountFields("openrouter_decision", "decisions");
+  // Any server on the Jev wire has no address of its own, so its endpoint is
+  // required, and it is the full URL: nothing is appended to it.
+  it("asks jev_compatible for its full endpoint, with both shapes it takes", () => {
+    mountFields("jev_compatible", "decisions");
     const host = screen.getByLabelText("Host");
-    expect(host).toHaveAccessibleDescription(/\/alpha\/decisions is added/);
-    expect(host).not.toHaveAccessibleDescription(/\/v1 is added/);
+    expect(host).toHaveAccessibleDescription(/used as written.*Required/);
+    expect(host).toHaveAccessibleDescription(
+      /https:\/\/openrouter\.ai\/api\/alpha\/decisions/,
+    );
+    expect(host).toHaveAccessibleDescription(
+      /http:\/\/127\.0\.0\.1:8767\/v1\/systemone/,
+    );
+    expect(host).not.toHaveAccessibleDescription(/is added/);
   });
 
-  // A local decision server has a default address, so its host is optional —
-  // and it is offered at all because the default is loopback, which is only
-  // right when the server runs beside the API.
-  it("offers a local decision server its host, with the default it falls back to", () => {
-    mountFields("laya", "decisions");
+  // TypeSafe's own API has a default endpoint, so its host is optional.
+  it("offers jev its host, with the official endpoint it falls back to", () => {
+    mountFields("jev", "decisions");
     const host = screen.getByLabelText("Host");
-    expect(host).toHaveAccessibleDescription(/\/v1\/systemone is added/);
-    expect(host).toHaveAccessibleDescription(/http:\/\/127\.0\.0\.1:8765/);
-    expect(host).toHaveAttribute("placeholder", "http://127.0.0.1:8765");
+    expect(host).toHaveAccessibleDescription(/Leave blank/);
+    expect(host).toHaveAttribute(
+      "placeholder",
+      "https://api.typesafe.ai/v1/systemone",
+    );
   });
 });

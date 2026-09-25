@@ -14,7 +14,7 @@ import (
 // which is read per call because it is per site.
 //
 // The rule is deliberately small: a bound lane serves every task, except that
-// a local-only task takes only a local provider. Its ladder was narrowed to
+// a local-only task takes only a local lane. Its ladder was narrowed to
 // same-host rungs because its prompt carries mail nobody agreed to send off
 // the machine, and a decision question built from the same inputs carries the
 // same mail.
@@ -22,7 +22,7 @@ func decisionSkipFor(lane *DecisionsConfig, task Task) string {
 	if lane == nil {
 		return DecisionSkipUnbound
 	}
-	if d, _ := providerByName(lane.Provider); LocalOnly(task) && !d.local {
+	if LocalOnly(task) && !lane.isLocal() {
 		return DecisionSkipLocalOnly
 	}
 	return ""
@@ -55,7 +55,7 @@ func decisionRoute(row *crmcontracts.AiFeatureRoute, cfg RoutingConfig, task Tas
 	if lane := cfg.Decisions; lane != nil {
 		row.DecisionCandidate = &crmcontracts.AiRouteCandidate{
 			Tier: string(TierDecideLane), Provider: lane.Provider, Model: lane.Model,
-			Processing: decisionProcessing(lane.Provider),
+			Processing: decisionProcessing(*lane),
 		}
 	}
 	if skip != "" {
@@ -68,10 +68,10 @@ func decisionRoute(row *crmcontracts.AiFeatureRoute, cfg RoutingConfig, task Tas
 }
 
 // decisionProcessing is where the lane's inference happens, in the preview's
-// two words: a local provider runs on an endpoint the operator configured,
-// and any other reaches a vendor's cloud.
-func decisionProcessing(provider string) string {
-	if d, _ := providerByName(provider); d.local {
+// two words: a local lane runs on an endpoint the operator configured, and any
+// other reaches a cloud. The same isLocal the local-only rule reads.
+func decisionProcessing(lane DecisionsConfig) string {
+	if lane.isLocal() {
 		return "configured_endpoint"
 	}
 	return "cloud_provider"

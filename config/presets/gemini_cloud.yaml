@@ -33,3 +33,14 @@ seeds:
       provider: gemini
       model: gemini-embedding-001
       dimensions: 1536
+    # The decision model, opt-in: uncomment ONE block to have a decision site
+    # asked a decision model before its ladder. Through OpenRouter,
+    # JEV_COMPATIBLE_API_KEY takes your OpenRouter key:
+    # decisions:
+    #   provider: jev_compatible
+    #   model: typesafe/jev-1.13
+    #   base_url: https://openrouter.ai/api/alpha/decisions
+    # Or TypeSafe's own API, keyed by TYPESAFE_API_KEY:
+    # decisions:
+    #   provider: jev
+    #   model: jev-1.13.0

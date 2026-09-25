@@ -23,7 +23,7 @@ import (
 func triageDecisionRow(logical ids.UUID, terminal bool, sentinel string) Call {
 	return Call{
 		LogicalCallID: logical, Attempt: 1, IsTerminal: terminal, Kind: callKindDecision, Task: TaskSiteTriage,
-		Tier: TierDecideLane, Provider: providerOpenRouterDecision, ModelID: "typesafe/jev-1.13",
+		Tier: TierDecideLane, Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13",
 		TokensIn: 400, ErrorSentinel: sentinel,
 	}
 }
@@ -36,6 +36,16 @@ func triageLadderRow(logical ids.UUID, attempt int, reason string) Call {
 	}
 }
 
+// triageFailedOverWalk is a fallback walk whose first rung failed: the walk's
+// reason sits on that rung, and the rung that answered reads provider_error.
+func triageFailedOverWalk(logical ids.UUID, reason string) []Call {
+	first := triageLadderRow(logical, 2, reason)
+	first.IsTerminal, first.ErrorSentinel, first.TokensOut = false, "provider_unavailable", 0
+	answered := triageLadderRow(logical, 3, attemptReasonProviderError)
+	answered.Tier = TierPremium
+	return []Call{first, answered}
+}
+
 // recordDecisionOutcomes writes one logical call of each shape Decide leaves,
 // plus an ordinary completion that never consulted the decision lane.
 func recordDecisionOutcomes(ctx context.Context, t *testing.T, meter *CallMeter) {
@@ -43,7 +53,7 @@ func recordDecisionOutcomes(ctx context.Context, t *testing.T, meter *CallMeter)
 	decided, belowFloor, errored, refused, plain := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	logicalCalls := [][]Call{
 		{triageDecisionRow(decided, true, "")},
-		{triageDecisionRow(belowFloor, false, ""), triageLadderRow(belowFloor, 2, attemptReasonDecisionBelowFloor)},
+		append([]Call{triageDecisionRow(belowFloor, false, "")}, triageFailedOverWalk(belowFloor, attemptReasonDecisionBelowFloor)...),
 		// The errored decision's own row and the reason its ladder carries are
 		// one consultation, not two.
 		{triageDecisionRow(errored, false, "provider_error"), triageLadderRow(errored, 2, attemptReasonDecisionError)},

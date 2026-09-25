@@ -5550,7 +5550,8 @@ export const en = {
   "aiHealth.colLast": "Last response",
   "aiHealth.answering": "Responding",
   "aiHealth.notAnswering": "Not responding",
-  "aiHealth.callCounts": "{calls} calls, {failures} failed",
+  "aiHealth.callCounts_one": "{count} call, {failures} failed",
+  "aiHealth.callCounts_other": "{count} calls, {failures} failed",
   "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Held threads",
   "heldThreads.sub":
@@ -8054,6 +8055,7 @@ export const en = {
     "Decision model not certified for this task",
   "aicalls.reason.decision_local_only":
     "Task is local-only and the decision model is not",
+  "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
   "aicalls.filter.all": "All tasks",
   "aicalls.loadMore": "Load more",
@@ -8262,6 +8264,9 @@ export const en = {
     "Typed questions, asked before the tiers where certified",
   "aiRouting.decisions.add": "Add decision model",
   "aiRouting.decisions.remove": "Remove decision model",
+  "aiRouting.decisions.preset.openrouter": "Use OpenRouter",
+  "aiRouting.decisions.preset.openrouterKey":
+    "Fills in OpenRouter’s endpoint and model. JEV_COMPATIBLE_API_KEY takes your OpenRouter key.",
   "aiRouting.decisions.absent": "No decision model. Every task uses the tiers.",
   "aiRouting.lanes.title": "Routing tiers",
   "aiRouting.priceSheet": "Price sheet",
@@ -8281,6 +8286,7 @@ export const en = {
   "aiProviderKeys.saveFailed": "Provider not updated",
   "aiProviderKeys.configured": "Configured",
   "aiProviderKeys.absent": "Not set",
+  "aiProviderKeys.optional": "Optional",
   "aiProviderKeys.configuredHint":
     "Stored in the key vault and cannot be read back. Paste a new key to replace it. It can also be supplied as {envVar}.",
   "aiProviderKeys.absentHint":
@@ -8322,11 +8328,13 @@ export const en = {
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
     "Provider host root without a version segment; /v1 is added. Required for openai_compatible, which has no default.",
-  "aiRouting.baseUrl.help.openrouterDecision":
-    "OpenRouter host root, such as https://openrouter.ai/api; /alpha/decisions is added. Required: this adapter has no default host.",
-  "aiRouting.baseUrl.help.laya":
-    "Laya server root without a path; /v1/systemone is added. Leave blank for the default, http://127.0.0.1:8765.",
-  "aiRouting.baseUrl.placeholder.laya": "http://127.0.0.1:8765",
+  "aiRouting.baseUrl.help.jev":
+    "Full endpoint URL, used as written. Leave blank for TypeSafe’s own API, https://api.typesafe.ai/v1/systemone.",
+  "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.jevCompatible":
+    "Full endpoint URL, used as written. Required: OpenRouter is https://openrouter.ai/api/alpha/decisions, and a self-hosted server looks like http://127.0.0.1:8767/v1/systemone.",
+  "aiRouting.baseUrl.placeholder.jevCompatible":
+    "https://openrouter.ai/api/alpha/decisions",
   "aiRouting.models.noKey":
     "Price sheet only: this provider has no key, so its model list cannot be requested. Any model ID it serves still works; type it.",
   "aiRouting.models.noEndpoint":

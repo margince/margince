@@ -16,7 +16,11 @@ import {
   type ModelLane,
   unreadablePrice,
 } from "./ai-models";
-import { AdapterFields, DECISION_PROVIDERS } from "./ai-routing-fields";
+import {
+  AdapterFields,
+  DECISION_PROVIDERS,
+  OPENROUTER_DECISION_PRESET,
+} from "./ai-routing-fields";
 
 // The routing card's lane rows: one per tier, the embedder, and the optional
 // decision model. Apart from the form that holds them, because a row is a
@@ -239,26 +243,52 @@ export function DecisionLaneRow({
       providers={DECISION_PROVIDERS}
       chip={processing ? <Badge>{processing}</Badge> : null}
       extra={
-        <div>
-          <Button
-            disabled={disabled}
-            onClick={() => {
-              onChange(undefined);
-              onOpen(false);
-            }}
-          >
-            {t("aiRouting.decisions.remove")}
-          </Button>
-        </div>
+        <>
+          {binding.provider === OPENROUTER_DECISION_PRESET.provider && (
+            // A jev_compatible endpoint is a full URL nobody remembers, and
+            // OpenRouter's is the one most installations want. The preset
+            // fills the endpoint and the model certified there; the key is
+            // the one thing it cannot fill, so the sentence beside it says
+            // which one.
+            <div>
+              <Button
+                disabled={disabled}
+                onClick={() =>
+                  onChange({
+                    ...binding,
+                    base_url: OPENROUTER_DECISION_PRESET.base_url,
+                    model: OPENROUTER_DECISION_PRESET.model,
+                  })
+                }
+              >
+                {t("aiRouting.decisions.preset.openrouter")}
+              </Button>
+              <p className="t-sub">
+                {t("aiRouting.decisions.preset.openrouterKey")}
+              </p>
+            </div>
+          )}
+          <div>
+            <Button
+              disabled={disabled}
+              onClick={() => {
+                onChange(undefined);
+                onOpen(false);
+              }}
+            >
+              {t("aiRouting.decisions.remove")}
+            </Button>
+          </div>
+        </>
       }
     />
   );
 }
 
-// A decision model and its host name one adapter's endpoint: Jev's slug on
-// OpenRouter means nothing to a Laya checkpoint on loopback. A provider switch
-// therefore starts the binding over rather than pointing the new adapter at the
-// old one's address.
+// A decision model and its host name one adapter's endpoint: OpenRouter's Jev
+// slug means nothing to TypeSafe's own API or to a self-hosted checkpoint. A
+// provider switch therefore starts the binding over rather than pointing the
+// new adapter at the old one's address.
 function reboundDecision(
   previous: DecisionsBinding,
   next: DecisionsBinding,

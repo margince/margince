@@ -204,17 +204,17 @@ func TestCloudProvidersBoundNamesEveryCloudVendorAndOnlyThose(t *testing.T) {
 		}
 	})
 
-	// The decisions lane binds apart from the tiers and sends its key owner's
-	// credential, so an installation on Gemini tiers whose ONLY OpenRouter
-	// binding is the lane still needs the OpenRouter key.
-	t.Run("the decisions lane names its key owner", func(t *testing.T) {
+	// The decisions lane binds apart from the tiers, so an installation on
+	// Gemini tiers whose ONLY TypeSafe binding is the lane still needs the
+	// TypeSafe key.
+	t.Run("the decisions lane names its own key", func(t *testing.T) {
 		cfg := RoutingConfig{
 			Tiers:      map[Tier]ProviderConfig{"fast": {Provider: providerGemini}, "deep": {Provider: providerGemini}},
 			Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerGemini}},
-			Decisions:  &DecisionsConfig{Provider: providerOpenRouterDecision, Model: "typesafe/jev"},
+			Decisions:  &DecisionsConfig{Provider: providerJev, Model: "jev-1.13.0"},
 		}
-		if got := cfg.CloudProvidersBound(); !slices.Contains(got, providerOpenAICompatible) || !slices.Contains(got, providerGemini) {
-			t.Errorf("a Gemini binding with an OpenRouter decisions lane reports %v, want %s and %s", got, providerGemini, providerOpenAICompatible)
+		if got := cfg.CloudProvidersBound(); !slices.Contains(got, providerJev) || !slices.Contains(got, providerGemini) {
+			t.Errorf("a Gemini binding with a jev decisions lane reports %v, want %s and %s", got, providerGemini, providerJev)
 		}
 	})
 

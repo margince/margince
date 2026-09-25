@@ -29,25 +29,24 @@ func selectDecider(lane DecisionsConfig, keys config.Lookup) (*decisionClient, e
 
 // selectDeciderOn is selectDecider with the transport supplied, the seam a
 // test binds the client to an httptest server through. Every decision adapter
-// speaks one wire, so the recipe is the registry row — its path, its default
-// endpoint and whose key it sends — and no per-provider switch.
+// speaks one wire, so the recipe is the registry row — its default endpoint
+// and its key — and no per-provider switch. The binding's base_url is the full
+// endpoint: nothing is appended to it.
 func selectDeciderOn(lane DecisionsConfig, keys config.Lookup, httpc *http.Client) (*decisionClient, error) {
 	d, known := providerByName(lane.Provider)
 	if !known || !d.caps.has(capDecision) {
 		return nil, fmt.Errorf("ai: unknown decision provider %q (have: %s)", lane.Provider, strings.Join(DecisionProviders(), ", "))
 	}
-	client := &decisionClient{http: httpc}
-	if d.keyOwner != "" {
-		client.apiKey = cloudKey(d.keyOwner, keys)
-		if client.apiKey == "" {
-			return nil, byokKeyRequired(d.keyOwner)
+	client := &decisionClient{http: httpc, url: defaulted(lane.BaseURL, d.defaultEndpoint)}
+	if d.keyEnv != "" {
+		client.apiKey = cloudKey(d.name, keys)
+		if client.apiKey == "" && !d.keyOptional {
+			return nil, byokKeyRequired(d.name)
 		}
 	}
-	base := defaulted(lane.BaseURL, d.defaultBaseURL)
-	if base == "" {
-		return nil, fmt.Errorf("%w: %s (the endpoint root, e.g. https://openrouter.ai/api)", errNoBaseURL, lane.Provider)
+	if client.url == "" {
+		return nil, fmt.Errorf("%w: %s (the full decision endpoint, e.g. %s)", errNoBaseURL, lane.Provider, exampleBrokerDecisionEndpoint)
 	}
-	client.url = strings.TrimRight(base, "/") + d.decisionPath
 	return client, nil
 }
 

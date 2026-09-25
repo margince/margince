@@ -62,6 +62,12 @@ func poolRunCalls(calls []ai.Call) (runCalls, error) {
 		return runCalls{}, fmt.Errorf("no model call was recorded, so there is nothing to score")
 	}
 	first := calls[0]
+	for _, c := range calls {
+		if identifiesItsModel(c) {
+			first = c
+			break
+		}
+	}
 	pooled := runCalls{
 		Calls:                calls,
 		Provider:             first.Provider,
@@ -89,9 +95,16 @@ func poolRunCalls(calls []ai.Call) (runCalls, error) {
 // another under a single (provider, model) heading, and nothing in the record
 // would ever show it. The fix is a re-run once the ladder is stable, not an
 // edit, so the message names what to compare rather than what to change.
+//
+// Every call must name the same provider and configured model: a change there
+// is a fallback. Beyond that only identities a call carries are compared — a
+// reply that merely echoes the configured model says nothing about which
+// snapshot served it, so it cannot contradict one the provider reported.
 func (r runCalls) servedUniformly() error {
+	head := r.Calls[0]
 	for i, c := range r.Calls {
-		if c.Provider != r.Provider || c.ServedModel != r.ServedModel {
+		if c.Provider != head.Provider || c.ModelID != head.ModelID ||
+			(identifiesItsModel(c) && c.ServedModel != r.ServedModel) {
 			return fmt.Errorf(
 				"call %d of %d was served by %s:%s, but call 1 was served by %s:%s — refusing to certify one run answered by two models",
 				i+1, len(r.Calls), c.Provider, c.ServedModel, r.Provider, r.ServedModel,
@@ -99,6 +112,13 @@ func (r runCalls) servedUniformly() error {
 		}
 	}
 	return nil
+}
+
+// identifiesItsModel reports whether a call's served model tells more than its
+// configuration: a provider's own report, or any identity that differs from
+// the model it was asked for.
+func identifiesItsModel(c ai.Call) bool {
+	return c.ReportsItsServedModel() || c.ServedModel != c.ModelID
 }
 
 // withheldReason is the filter or stop a withheld candidate call named, and

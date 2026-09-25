@@ -2,7 +2,7 @@
   "task": "site_triage",
   "kind": "decision",
   "site": "triage",
-  "provider": "openrouter_decision",
+  "provider": "jev_compatible",
   "model": "typesafe/jev-1.13",
   "served_model": "typesafe/jev-1.13-20260917",
   "env_class": "cloud_frontier",
@@ -21,8 +21,8 @@
   "context_scopes": [],
   "judge_score_p50": 0,
   "judge_score_min": 0,
-  "latency_p50": 345,
-  "latency_p95": 432,
+  "latency_p50": 361,
+  "latency_p95": 976,
   "mean_tokens": 548,
   "mean_tokens_in": 548,
   "mean_tokens_out": 0,
@@ -32,7 +32,7 @@
   "judge_served_model": "",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-09-25T08:53:06Z",
+  "ran_at": "2026-09-25T14:09:26Z",
   "decision": {
     "kept": 15,
     "kept_correct": 15,
@@ -123,7 +123,7 @@
         "kept_wrong": 0,
         "fallbacks": 0,
         "fallback_rate": 0,
-        "min_kept_confidence": 0.98,
+        "min_kept_confidence": 0.99,
         "served_pass_rate": 1
       }
     },

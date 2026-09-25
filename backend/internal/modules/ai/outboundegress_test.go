@@ -48,10 +48,11 @@ func TestEveryProviderDeclaresAnEgressClass(t *testing.T) {
 // reason it may dial the operator's own network. Derived rather than restated,
 // so a new local provider cannot arrive on the vendor lane.
 //
-// The implication runs one way. openai_compatible is a BYOK cloud adapter that
-// is nonetheless documented to reach a self-hosted gateway, so it takes the
-// permissive lane too — named HERE, as the sole exception, so the next adapter
-// that wants it has to say so in a diff rather than inherit it.
+// The implication runs one way. openai_compatible and jev_compatible are
+// adapters for "any server on this wire", documented to reach a self-hosted
+// gateway, so they take the permissive lane too — named HERE, as the only
+// exceptions, so the next adapter that wants it has to say so in a diff rather
+// than inherit it.
 func TestEveryLocalProviderTakesTheOperatorLane(t *testing.T) {
 	t.Parallel()
 
@@ -64,7 +65,7 @@ func TestEveryLocalProviderTakesTheOperatorLane(t *testing.T) {
 		if d.local && !onOperatorLane {
 			t.Errorf("provider %q is sovereign-eligible but may not dial the operator's own network", provider)
 		}
-		if !d.local && onOperatorLane && provider != providerOpenAICompatible {
+		if !d.local && onOperatorLane && provider != providerOpenAICompatible && provider != providerJevCompatible {
 			t.Errorf("provider %q is a cloud vendor on the permissive lane, so a binding may point this installation's model key at an address inside its own network", provider)
 		}
 	}

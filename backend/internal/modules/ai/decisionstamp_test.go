@@ -12,8 +12,9 @@ import (
 var (
 	// jevLane names a model no committed record certifies, so a test reads the
 	// certification table as empty for it whatever the generated table holds.
-	jevLane  = &DecisionsConfig{Provider: providerOpenRouterDecision, Model: "typesafe/jev-uncertified", BaseURL: "https://openrouter.ai/api"}
-	layaLane = &DecisionsConfig{Provider: providerLaya, Model: "typed-decisions"}
+	jevLane = &DecisionsConfig{Provider: providerJevCompatible, Model: "typesafe/jev-uncertified", BaseURL: "https://openrouter.ai/api/alpha/decisions"}
+	// selfHostedLane is a Jev-wire server on this host: local by its endpoint.
+	selfHostedLane = &DecisionsConfig{Provider: providerJevCompatible, Model: "typed-decisions", BaseURL: "http://127.0.0.1:8767/v1/systemone"}
 )
 
 func TestTheDecisionLaneServesEveryTaskButKeepsLocalOnlyDataLocal(t *testing.T) {
@@ -26,8 +27,11 @@ func TestTheDecisionLaneServesEveryTaskButKeepsLocalOnlyDataLocal(t *testing.T) 
 		{"unbound", nil, TaskSiteTriage, DecisionSkipUnbound},
 		{"jev on a cloud task", jevLane, TaskSiteTriage, ""},
 		{"jev on a local-only task", jevLane, TaskCaptureCounterpartyVerdict, DecisionSkipLocalOnly},
-		{"laya on a cloud task", layaLane, TaskSiteTriage, ""},
-		{"laya on a local-only task", layaLane, TaskCaptureCounterpartyVerdict, ""},
+		{"the official API on a local-only task", &DecisionsConfig{Provider: providerJev, Model: "jev-1.13.0"}, TaskCaptureCounterpartyVerdict, DecisionSkipLocalOnly},
+		{"self-hosted on a cloud task", selfHostedLane, TaskSiteTriage, ""},
+		{"self-hosted on a local-only task", selfHostedLane, TaskCaptureCounterpartyVerdict, ""},
+		{"a private-range endpoint on a local-only task", &DecisionsConfig{Provider: providerJevCompatible, Model: "m", BaseURL: "http://10.0.4.2:8767/v1/systemone"}, TaskCaptureCounterpartyVerdict, ""},
+		{"a named endpoint on a local-only task", &DecisionsConfig{Provider: providerJevCompatible, Model: "m", BaseURL: "http://gpu.internal:8767/v1/systemone"}, TaskCaptureCounterpartyVerdict, DecisionSkipLocalOnly},
 		{"an unknown provider is not local", &DecisionsConfig{Provider: "jevv"}, TaskCaptureConfidentialityVerdict, DecisionSkipLocalOnly},
 	}
 	for _, tc := range cases {
@@ -92,7 +96,7 @@ func TestTheRoutingPreviewSaysWhyTheDecisionLaneIsSkipped(t *testing.T) {
 		t.Error("a deferred background feature is reported as answered by the lane")
 	}
 
-	cfg.Decisions = layaLane
+	cfg.Decisions = selfHostedLane
 	if row := triageRoute(t, cfg, BandNormal); row.DecisionCandidate == nil || row.DecisionCandidate.Processing != "configured_endpoint" {
 		t.Errorf("a local lane's candidate = %v, want configured_endpoint processing", row.DecisionCandidate)
 	}

@@ -45,6 +45,9 @@ type ProviderKeyStatus struct {
 	// EnvVar is the variable the key may also arrive in, so a screen can tell
 	// an operator which export seeded it.
 	EnvVar string
+	// Optional reports that the adapter calls without a key when none is held,
+	// so an absent one is no gap.
+	Optional bool
 }
 
 // ProviderKeyStore reads and changes the sealed BYOK credentials.
@@ -110,6 +113,7 @@ func (s *ProviderKeyStore) List(ctx context.Context) ([]ProviderKeyStatus, error
 			Provider:   provider,
 			Configured: refs[provider] != "",
 			EnvVar:     KeyEnvVarFor(provider),
+			Optional:   keyIsOptional(provider),
 		})
 	}
 	return out, nil

@@ -5340,7 +5340,8 @@ export const vi = {
   "aiHealth.colLast": "Trả lời gần nhất",
   "aiHealth.answering": "Đang trả lời",
   "aiHealth.notAnswering": "Không trả lời",
-  "aiHealth.callCounts": "{calls} lượt gọi, {failures} thất bại",
+  "aiHealth.callCounts_one": "{count} lượt gọi, {failures} thất bại",
+  "aiHealth.callCounts_other": "{count} lượt gọi, {failures} thất bại",
   "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Đang giữ lại khỏi nhóm",
   "heldThreads.sub":
@@ -7838,6 +7839,7 @@ export const vi = {
     "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
   "aicalls.reason.decision_local_only":
     "Tác vụ chỉ chạy cục bộ, mô hình quyết định thì không",
+  "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Các lệnh gọi gần đây",
   "aicalls.filter.all": "Mọi tác vụ",
   "aicalls.loadMore": "Tải thêm",
@@ -8046,6 +8048,9 @@ export const vi = {
     "Câu hỏi có kiểu, hỏi trước các tầng khi đã chứng nhận",
   "aiRouting.decisions.add": "Thêm mô hình quyết định",
   "aiRouting.decisions.remove": "Gỡ mô hình quyết định",
+  "aiRouting.decisions.preset.openrouter": "Dùng OpenRouter",
+  "aiRouting.decisions.preset.openrouterKey":
+    "Điền sẵn endpoint và mô hình của OpenRouter. JEV_COMPATIBLE_API_KEY nhận khóa OpenRouter của bạn.",
   "aiRouting.decisions.absent":
     "Chưa có mô hình quyết định. Mọi tác vụ dùng các tầng.",
   "aiRouting.lanes.title": "Các làn định tuyến",
@@ -8066,6 +8071,7 @@ export const vi = {
   "aiProviderKeys.saveFailed": "Không thể cập nhật nhà cung cấp này",
   "aiProviderKeys.configured": "Đã cấu hình",
   "aiProviderKeys.absent": "Chưa đặt",
+  "aiProviderKeys.optional": "Không bắt buộc",
   "aiProviderKeys.configuredHint":
     "Đã niêm phong trong kho khóa. Không thể đọc lại — dán khóa mới để thay thế. Khóa cũng có thể đến qua {envVar}.",
   "aiProviderKeys.absentHint":
@@ -8107,11 +8113,13 @@ export const vi = {
   "aiRouting.baseUrl.label": "Máy chủ",
   "aiRouting.baseUrl.help":
     "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
-  "aiRouting.baseUrl.help.openrouterDecision":
-    "Gốc host của OpenRouter, ví dụ https://openrouter.ai/api. Bộ chuyển thêm /alpha/decisions. Bắt buộc vì bộ chuyển này không có host mặc định.",
-  "aiRouting.baseUrl.help.laya":
-    "Gốc máy chủ Laya, không kèm đường dẫn. Bộ chuyển thêm /v1/systemone. Để trống để dùng mặc định http://127.0.0.1:8765.",
-  "aiRouting.baseUrl.placeholder.laya": "http://127.0.0.1:8765",
+  "aiRouting.baseUrl.help.jev":
+    "URL endpoint đầy đủ, dùng đúng như đã nhập. Để trống để dùng API của chính TypeSafe, https://api.typesafe.ai/v1/systemone.",
+  "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.jevCompatible":
+    "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc: OpenRouter là https://openrouter.ai/api/alpha/decisions, còn máy chủ tự vận hành có dạng http://127.0.0.1:8767/v1/systemone.",
+  "aiRouting.baseUrl.placeholder.jevCompatible":
+    "https://openrouter.ai/api/alpha/decisions",
   "aiRouting.models.noKey":
     "Chỉ hiện bảng giá — nhà cung cấp này chưa có khoá nên không thể hỏi nó phục vụ những gì. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
   "aiRouting.models.noEndpoint":

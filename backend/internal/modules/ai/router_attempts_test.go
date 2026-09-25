@@ -26,8 +26,9 @@ import (
 // TestLadderFallbackBuffersOneLogicalCallWithTwoAttempts is the grain-change
 // contract (spec §4): premium fails, cheap serves — that is ONE logical
 // call spanning two attempt rows, not two independent ai_call rows. The
-// failed rung is non-terminal with attempt_reason=provider_error; the rung
-// that served is terminal; both share LogicalCallID and Task/CorrelationID.
+// failed rung is non-terminal and, as the walk's ordinary first try, carries
+// no reason; the rung that served ran because it failed, so it reads
+// provider_error and is terminal; both share LogicalCallID and CorrelationID.
 func TestLadderFallbackBuffersOneLogicalCallWithTwoAttempts(t *testing.T) {
 	fcs := &fakeCallStore{}
 	r := assembleRouter(
@@ -52,10 +53,10 @@ func TestLadderFallbackBuffersOneLogicalCallWithTwoAttempts(t *testing.T) {
 		t.Fatalf("want 2 attempt rows for one logical call, got %d: %+v", len(fcs.recorded), fcs.recorded)
 	}
 	first, second := fcs.recorded[0], fcs.recorded[1]
-	if first.IsTerminal || first.Tier != TierPremium || first.AttemptReason != attemptReasonProviderError || first.Attempt != 1 {
+	if first.IsTerminal || first.Tier != TierPremium || first.AttemptReason != "" || first.Attempt != 1 {
 		t.Fatalf("first attempt (the failed premium rung) wrong: %+v", first)
 	}
-	if !second.IsTerminal || second.Tier != TierCheapCloud || second.Attempt != 2 {
+	if !second.IsTerminal || second.Tier != TierCheapCloud || second.AttemptReason != attemptReasonProviderError || second.Attempt != 2 {
 		t.Fatalf("second attempt (the served cheap rung) wrong: %+v", second)
 	}
 	if first.LogicalCallID != second.LogicalCallID {
@@ -483,4 +484,68 @@ func TestAThrottleStillEscalates(t *testing.T) {
 	if premiumCalls != 1 {
 		t.Fatalf("premium calls = %d, want 1", premiumCalls)
 	}
+}
+
+// TestOnlyAWalksFirstRungCarriesTheWalksReason is the attempt_reason contract
+// across rungs: a walk's reason — none, schema_invalid, budget_degrade — says
+// why the WALK ran, so it belongs to the first rung it tried. Every later rung
+// ran because the one before it failed, so it reads provider_error, the
+// terminal row included.
+func TestOnlyAWalksFirstRungCarriesTheWalksReason(t *testing.T) {
+	down := func() model.Client { return stubClient{err: errors.New("down")} }
+	meta := map[Tier]routeMeta{
+		TierLocalSmall: {provider: "ollama", model: "small"},
+		TierCheapCloud: {provider: "openai", model: "cheap"},
+		TierPremium:    {provider: "anthropic", model: "premium"},
+	}
+	reasons := func(calls []Call) []string {
+		out := make([]string, len(calls))
+		for i, c := range calls {
+			out[i] = string(c.Tier) + ":" + c.AttemptReason
+		}
+		return out
+	}
+	route := func(clients map[Tier]model.Client, spent int64) (*Router, *fakeCallStore) {
+		fcs := &fakeCallStore{}
+		return assembleRouter(clients, nil, ProfileCloudFrontier, &memMeter{spent: spent}, StaticBudget(100), fcs, meta, false, nil), fcs
+	}
+
+	t.Run("a walk whose every rung fails blames the rung below for the terminal", func(t *testing.T) {
+		r, fcs := route(map[Tier]model.Client{TierCheapCloud: down(), TierPremium: down()}, 0)
+		if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud, TierPremium}, model.Request{}); !errors.Is(err, ErrAllTiersFailed) {
+			t.Fatalf("err = %v, want every tier failed", err)
+		}
+		want := []string{"cheap_cloud:", "premium:" + attemptReasonProviderError}
+		if got := reasons(fcs.recorded); fmt.Sprint(got) != fmt.Sprint(want) {
+			t.Fatalf("rows = %v, want %v", got, want)
+		}
+	})
+	t.Run("a schema retry whose first rung fails", func(t *testing.T) {
+		cheap := NewFakeClient().ScriptSteps(FakeStep{Text: "not json"}, FakeStep{Err: errors.New("down")})
+		premium := NewFakeClient().Script(`{"rescued":true}`)
+		r, fcs := route(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium}, 0)
+		if _, _, err := r.CompleteStructured(wsCtx(), TaskColdStart, structuredReq(), jsonObjectValidator); err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"cheap_cloud:", "cheap_cloud:" + attemptReasonSchemaInvalid, "premium:" + attemptReasonProviderError}
+		if got := reasons(fcs.recorded); fmt.Sprint(got) != fmt.Sprint(want) {
+			t.Fatalf("rows = %v, want %v", got, want)
+		}
+	})
+	t.Run("a degraded walk names the demotion on its first rung only", func(t *testing.T) {
+		cheap := stubClient{resp: model.Response{Text: "cheap answer", OutputTokens: 1}}
+		r, fcs := route(map[Tier]model.Client{TierLocalSmall: down(), TierCheapCloud: cheap}, 90)
+		if _, info, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud, TierPremium}, model.Request{}); err != nil || !info.Degraded {
+			t.Fatalf("info = %+v err = %v, want a degraded serve", info, err)
+		}
+		want := []string{"local_small:" + attemptReasonBudgetDegrade, "cheap_cloud:" + attemptReasonProviderError}
+		if got := reasons(fcs.recorded); fmt.Sprint(got) != fmt.Sprint(want) {
+			t.Fatalf("rows = %v, want %v", got, want)
+		}
+		for _, c := range fcs.recorded {
+			if !c.Degraded {
+				t.Errorf("row %d of a degraded walk is not marked degraded: %+v", c.Attempt, c)
+			}
+		}
+	})
 }

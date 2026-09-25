@@ -110,7 +110,7 @@ func TestSeedModelRatesEveryEntryIsNonNegativeAndUnique(t *testing.T) {
 // no silent 0 for a REAL call, but locals are a real 0 by construction).
 func TestSeedModelRatesLocalsAreZero(t *testing.T) {
 	rates := SeedModelRates(seedRatesTestDay)
-	locals := map[string]bool{ProviderFake: false, providerOllama: false, providerVLLM: false, providerLaya: false}
+	locals := map[string]bool{ProviderFake: false, providerOllama: false, providerVLLM: false}
 	for _, r := range rates {
 		if _, ok := locals[r.Provider]; !ok {
 			continue
@@ -294,7 +294,7 @@ func TestSeedModelRatesFilesTheEmbeddersAsEmbedders(t *testing.T) {
 // decisions lane binds. Jev bills its input alone, at the rate its own
 // usage.cost showed.
 func TestTheSeedSheetFilesJevUnderTheDecisionsLane(t *testing.T) {
-	jevPriced := false
+	jevPriced := map[string]bool{}
 	for _, r := range SeedModelRates(seedRatesTestDay) {
 		d, _ := providerByName(r.Provider)
 		if d.caps.has(capDecision) != (r.Lane == LaneDecisions) {
@@ -303,11 +303,13 @@ func TestTheSeedSheetFilesJevUnderTheDecisionsLane(t *testing.T) {
 		if r.Lane == LaneDecisions && (r.OutputPerMTokMicroUSD != 0 || r.CacheReadPerMTokMicroUSD != 0 || r.CacheWritePerMTokMicroUSD != 0) {
 			t.Errorf("%s/%s: a decision row prices a bucket the lane never records", r.Provider, r.ModelID)
 		}
-		if r.Provider == providerOpenRouterDecision && r.ModelID == "typesafe/jev-1.13" {
-			jevPriced = r.InputPerMTokMicroUSD == 42_000
+		if r.Lane == LaneDecisions && r.InputPerMTokMicroUSD == 42_000 {
+			jevPriced[r.Provider+"/"+r.ModelID] = true
 		}
 	}
-	if !jevPriced {
-		t.Error("no seed row prices typesafe/jev-1.13 at 42,000 micro-USD per million input tokens")
+	for _, want := range []string{providerJev + "/jev-1.13.0", providerJev + "/jev-latest", providerJevCompatible + "/typesafe/jev-1.13"} {
+		if !jevPriced[want] {
+			t.Errorf("no seed row prices %s at 42,000 micro-USD per million input tokens", want)
+		}
 	}
 }

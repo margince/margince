@@ -99,8 +99,8 @@ func TestEditingACriterionDropsItsRowAndNamesTheRecord(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RenderDecisionCertTable: %v", err)
 	}
-	if !strings.Contains(string(committed), "// records/site_triage/decision_widget_openrouter_decision_typesafe_jev-1.13_cloud_frontier.json") ||
-		!strings.Contains(string(committed), `{Task: "site_triage", Site: "widget", Provider: "openrouter_decision", Model: "typesafe/jev-1.13"}`) {
+	if !strings.Contains(string(committed), "// records/site_triage/decision_widget_jev_compatible_typesafe_jev-1.13_cloud_frontier.json") ||
+		!strings.Contains(string(committed), `{Task: "site_triage", Site: "widget", Provider: "jev_compatible", Model: "typesafe/jev-1.13"}`) {
 		t.Fatalf("the rendered row does not name its record and key:\n%s", committed)
 	}
 
@@ -117,7 +117,7 @@ func TestEditingACriterionDropsItsRowAndNamesTheRecord(t *testing.T) {
 	if drift == nil {
 		t.Fatal("the committed row survived its record going stale")
 	}
-	for _, want := range []string{"decision_widget_openrouter_decision_", "re-certify it or delete the record", "make gen"} {
+	for _, want := range []string{"decision_widget_jev_compatible_", "re-certify it or delete the record", "make gen"} {
 		if !strings.Contains(drift.Error(), want) {
 			t.Errorf("the drift %q does not say %q", drift, want)
 		}

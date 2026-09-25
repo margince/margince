@@ -639,6 +639,8 @@ public.ai_call.ai_call_context_bytes_check CHECK ((context_bytes >= 0))
 public.ai_call.ai_call_context_fingerprint_check CHECK (((context_fingerprint = ''::text) OR (context_fingerprint ~ '^[0-9a-f]{64}$'::text)))
 public.ai_call.ai_call_context_scopes_check CHECK ((context_scopes <@ ARRAY['identity'::text, 'positioning'::text, 'sales'::text, 'offer'::text, 'market'::text, 'proof'::text, 'administrative'::text]))
 public.ai_call.ai_call_context_tokens_estimate_check CHECK ((context_tokens_estimate >= 0))
+public.ai_call.ai_call_decision_answer_kind CHECK (((decision_choice IS NULL) OR (kind = 'decision'::text)))
+public.ai_call.ai_call_decision_answer_shape CHECK (((decision_choice IS NULL) = (decision_confidence IS NULL)))
 public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 'embedding'::text, 'decision'::text])))
 public.ai_call.ai_call_pkey PRIMARY KEY (id)
 public.ai_call.ai_call_schema_downgrade_check CHECK ((schema_downgrade = ANY (ARRAY[''::text, 'relaxed'::text, 'unenforced'::text, 'dropped'::text])))
@@ -657,6 +659,8 @@ public.ai_call.context_fingerprint text NOT NULL gen=- def=''::text
 public.ai_call.context_scopes text[] NOT NULL gen=- def='{}'::text[]
 public.ai_call.context_tokens_estimate bigint NOT NULL gen=- def=0
 public.ai_call.correlation_id uuid gen=- def=-
+public.ai_call.decision_choice text gen=- def=-
+public.ai_call.decision_confidence double precision gen=- def=-
 public.ai_call.degraded boolean NOT NULL gen=- def=false
 public.ai_call.error_sentinel text gen=- def=-
 public.ai_call.finish_reason text NOT NULL gen=- def=''::text

@@ -33,12 +33,22 @@ const KEY_READER: GrantSpec = { ai_routing: ["read"] };
 
 const LISTED = {
   providers: [
-    { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-    { provider: "openai", configured: false, env_var: "OPENAI_API_KEY" },
+    {
+      provider: "gemini",
+      configured: true,
+      env_var: "GEMINI_API_KEY",
+      optional: false,
+    },
+    {
+      provider: "openai",
+      configured: false,
+      env_var: "OPENAI_API_KEY",
+      optional: false,
+    },
   ],
 };
 
-function backendFor(allow: GrantSpec) {
+function backendFor(allow: GrantSpec, listed: typeof LISTED = LISTED) {
   const puts: Array<{ url: string; body: unknown }> = [];
   const deletes: string[] = [];
   const fetchMock = vi.fn(
@@ -57,7 +67,7 @@ function backendFor(allow: GrantSpec) {
           deletes.push(req.url);
           return new Response(null, { status: 204 });
         }
-        return jsonResponse(LISTED);
+        return jsonResponse(listed);
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
@@ -114,6 +124,28 @@ describe("AiProviderKeysCard", () => {
     // And no paste field until one is asked for. Six open password boxes is
     // what this card used to be, and it is not a page anybody could audit.
     expect(screen.queryByPlaceholderText(/paste/i)).toBeNull();
+  });
+
+  // A self-hosted decision server needs no key, so an absent one there is not
+  // a gap: the row says optional rather than warning, and still offers Add
+  // for a server that does take one.
+  it("reads an optional key that is not held as optional, not missing", async () => {
+    const selfHostable = {
+      provider: "jev_compatible",
+      configured: false,
+      env_var: "JEV_COMPATIBLE_API_KEY",
+      optional: true,
+    };
+    vi.stubGlobal(
+      "fetch",
+      backendFor(KEY_EDITOR, { providers: [selfHostable] }).fetchMock,
+    );
+    render(<AiProviderKeysCard />);
+
+    const row = await screen.findByTestId("ai-provider-key-jev_compatible");
+    expect(within(row).getByText(/^optional$/i)).toBeTruthy();
+    expect(within(row).queryByText(/^not set$/i)).toBeNull();
+    expect(within(row).getByRole("button", { name: /^add$/i })).toBeTruthy();
   });
 
   it("never renders the key, and offers no field that could hold one read back", async () => {

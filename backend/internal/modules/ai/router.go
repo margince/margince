@@ -242,9 +242,9 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 
 	trace.Degraded = degraded
 	if degraded && !isDecisionFallbackReason(reason) {
-		// The budget guardrail forced a demoted ladder — worth naming even
-		// on what is otherwise attempt 1, since it explains why this
-		// attempt did not run the caller's default route. A decision
+		// The budget guardrail forced a demoted ladder — worth naming on the
+		// walk's first rung even when that is otherwise attempt 1, since it
+		// explains why this walk did not run the caller's default route. A decision
 		// attempt's reason is kept: it says why the ladder ran at all, and
 		// Degraded still says the band demoted it.
 		trace.AttemptReason = attemptReasonBudgetDegrade
@@ -269,7 +269,7 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 		return r.serveCacheHit(ctx, b, &trace, task, tier, cached, degraded)
 	}
 
-	out, tier, served, ladderErr := r.attemptLadder(ctx, b, lc, trace, task, ladder, req, key, wsID, start)
+	out, tier, served, ladderErr := r.attemptLadder(ctx, b, lc, &trace, task, ladder, req, key, wsID, start)
 	// Stamp tier and usage even when the ladder returns an error: a
 	// metering failure of a successfully-served call still spent provider
 	// tokens on a real tier, and an all-rungs-failed walk names the last

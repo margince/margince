@@ -47,25 +47,43 @@ func ValidateDecisionsLane(profile Profile, lane DecisionsConfig) error {
 	if strings.TrimSpace(lane.Model) == "" {
 		return fmt.Errorf("ai: routing config: the decisions lane names no model")
 	}
+	if defaulted(lane.BaseURL, d.defaultEndpoint) == "" {
+		return fmt.Errorf("ai: routing config: the decisions lane binds %s, which has no default endpoint; set base_url "+
+			"to the full decision endpoint URL, e.g. %s or %s", d.name, exampleBrokerDecisionEndpoint, exampleSelfHostedDecisionEndpoint)
+	}
 	if profile == ProfileSovereign {
-		if !d.local {
+		if !d.local && !d.localByEndpoint {
 			return fmt.Errorf("ai: routing config: profile sovereign forbids cloud provider %q on the decisions lane", lane.Provider)
 		}
 		if err := requireSovereignEndpoint("the decisions lane", lane.Provider, lane.BaseURL); err != nil {
 			return err
 		}
 	}
-	if err := requireDialableEndpoint("the decisions lane", lane.Provider, lane.BaseURL); err != nil {
-		return err
+	return requireDialableEndpoint("the decisions lane", lane.Provider, lane.BaseURL)
+}
+
+// The two shapes a jev_compatible endpoint takes, named in the refusal that
+// asks for one: the broker's decisions endpoint and a self-hosted server.
+const (
+	exampleBrokerDecisionEndpoint     = "https://openrouter.ai/api/alpha/decisions"
+	exampleSelfHostedDecisionEndpoint = "http://127.0.0.1:8767/v1/systemone"
+)
+
+// isLocal reports whether the lane's inference stays on infrastructure the
+// customer controls: a local adapter always, an endpoint-local one exactly
+// when its base_url's host is the customer's own. The local-only rule and the
+// routing preview both read this one answer, so the preview cannot promise a
+// lane the runtime then skips.
+func (lane DecisionsConfig) isLocal() bool {
+	d, _ := providerByName(lane.Provider)
+	if d.local {
+		return true
 	}
-	// The provider word promises OpenRouter's decisions endpoint, and the
-	// adapter sends the OpenRouter key: a base_url anywhere else would carry
-	// that key to a host that never issued it.
-	if d.keyOwner == providerOpenAICompatible && !IsOpenRouterHost(lane.BaseURL) {
-		return fmt.Errorf("ai: routing config: the decisions lane binds %s, which is OpenRouter's decisions endpoint; "+
-			"set base_url to an OpenRouter host, e.g. https://openrouter.ai/api", d.name)
+	if !d.localByEndpoint {
+		return false
 	}
-	return nil
+	host, err := hostOf(lane.BaseURL)
+	return err == nil && classifyHost(host) == hostIsLocal
 }
 
 // refuseDecisionOnlyProvider refuses a chat binding (a tier, the embeddings
@@ -79,14 +97,24 @@ func refuseDecisionOnlyProvider(label, provider string) error {
 	return nil
 }
 
-// decisionsResidencyGap refuses a broker decisions lane under eu_hosted. The
-// decisions endpoint takes no `only:` pin, so nothing can hold the broker to
-// an EU host, and eu_hosted is the residency the operator chose.
+// decisionsResidencyGap refuses a decisions lane under eu_hosted that nothing
+// holds to an EU host: the vendor's own API, which promises none, and a broker,
+// whose decisions endpoint takes no `only:` pin. eu_hosted is the residency the
+// operator chose.
 func (cfg RoutingConfig) decisionsResidencyGap() error {
-	if cfg.Profile != ProfileEUHosted || cfg.Decisions == nil || !IsOpenRouterHost(cfg.Decisions.BaseURL) {
+	lane := cfg.Decisions
+	if cfg.Profile != ProfileEUHosted || lane == nil {
+		return nil
+	}
+	if providerIsVendorHosted(lane.Provider) {
+		return fmt.Errorf("ai: routing config: the decisions lane under profile eu_hosted: %s is its vendor's own API, "+
+			"which is not pinned to an EU host; unbind the lane, or declare profile cloud_frontier "+
+			"if this installation does not promise EU inference", lane.Provider)
+	}
+	if !IsOpenRouterHost(lane.BaseURL) {
 		return nil
 	}
 	return fmt.Errorf("ai: routing config: the decisions lane under profile eu_hosted: %s reaches OpenRouter, "+
 		"whose decisions endpoint cannot be pinned to an EU host; unbind the lane, or declare profile cloud_frontier "+
-		"if this installation does not promise EU inference", cfg.Decisions.Provider)
+		"if this installation does not promise EU inference", lane.Provider)
 }

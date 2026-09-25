@@ -86,7 +86,7 @@ export const SHEET = [
   sheetRow("gemini", "gemini-embedding-001", "embeddings", "0.15", "0"),
   sheetRow("anthropic", "claude-opus-4-8", "chat", "5.00", "25.00"),
   // A decision model bills input alone, so the sheet leaves output blank.
-  sheetRow("openrouter_decision", "jev-classify", "decisions", "0.40", ""),
+  sheetRow("jev_compatible", "jev-classify", "decisions", "0.40", ""),
 ];
 
 // Which vendors hold a credential. `anthropic` is bound by nothing in BOUND,

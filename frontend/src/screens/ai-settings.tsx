@@ -188,7 +188,9 @@ export function ProvidersStat() {
   const missing =
     bound === null
       ? null
-      : providers.filter((p) => bound.has(p.provider) && !p.configured).length;
+      : providers.filter(
+          (p) => bound.has(p.provider) && !p.configured && !p.optional,
+        ).length;
   return (
     <StatCard
       label={t("aiSettings.providers.label")}
@@ -309,6 +311,10 @@ function boundProviders(
     named.add(binding.provider);
   }
   named.add(routing.embeddings.provider);
+  // Bound apart from the tiers, and its key is demanded like theirs.
+  if (routing.decisions) {
+    named.add(routing.decisions.provider);
+  }
   return named;
 }
 

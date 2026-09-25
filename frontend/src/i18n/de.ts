@@ -5377,7 +5377,8 @@ export const de = {
   "aiHealth.colLast": "Letzte Antwort",
   "aiHealth.answering": "Antwortet",
   "aiHealth.notAnswering": "Antwortet nicht",
-  "aiHealth.callCounts": "Aufrufe: {calls}, fehlgeschlagen: {failures}",
+  "aiHealth.callCounts_one": "Aufrufe: {count}, fehlgeschlagen: {failures}",
+  "aiHealth.callCounts_other": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Zurückgehaltene Threads",
   "heldThreads.sub":
@@ -7889,6 +7890,7 @@ export const de = {
     "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
   "aicalls.reason.decision_local_only":
     "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
+  "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
   "aicalls.callsLabel": "Letzte Aufrufe",
   "aicalls.filter.all": "Alle Aufgaben",
   "aicalls.loadMore": "Mehr laden",
@@ -8100,6 +8102,9 @@ export const de = {
     "Typisierte Fragen, vor den Modellstufen gestellt, wo zertifiziert",
   "aiRouting.decisions.add": "Entscheidungsmodell hinzufügen",
   "aiRouting.decisions.remove": "Entscheidungsmodell entfernen",
+  "aiRouting.decisions.preset.openrouter": "OpenRouter verwenden",
+  "aiRouting.decisions.preset.openrouterKey":
+    "Trägt Endpunkt und Modell von OpenRouter ein. JEV_COMPATIBLE_API_KEY nimmt deinen OpenRouter-Schlüssel auf.",
   "aiRouting.decisions.absent":
     "Kein Entscheidungsmodell. Jede Aufgabe nutzt die Modellstufen.",
   "aiRouting.lanes.title": "Modellstufen",
@@ -8120,6 +8125,7 @@ export const de = {
   "aiProviderKeys.saveFailed": "Anbieter nicht aktualisiert",
   "aiProviderKeys.configured": "Konfiguriert",
   "aiProviderKeys.absent": "Nicht festgelegt",
+  "aiProviderKeys.optional": "Optional",
   "aiProviderKeys.configuredHint":
     "Im Schlüsseltresor gespeichert und nicht auslesbar. Füge einen neuen Schlüssel ein, um ihn zu ersetzen. Er kann auch als {envVar} bereitgestellt werden.",
   "aiProviderKeys.absentHint":
@@ -8161,11 +8167,13 @@ export const de = {
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
     "Host-Wurzel des Anbieters ohne Versionssegment; /v1 wird angehängt. Erforderlich für openai_compatible, das keinen Standardwert hat.",
-  "aiRouting.baseUrl.help.openrouterDecision":
-    "Host-Wurzel von OpenRouter, etwa https://openrouter.ai/api; /alpha/decisions wird angehängt. Erforderlich: Dieser Adapter hat keinen Standard-Host.",
-  "aiRouting.baseUrl.help.laya":
-    "Wurzel des Laya-Servers ohne Pfad; /v1/systemone wird angehängt. Leer lassen für den Standardwert http://127.0.0.1:8765.",
-  "aiRouting.baseUrl.placeholder.laya": "http://127.0.0.1:8765",
+  "aiRouting.baseUrl.help.jev":
+    "Vollständige Endpunkt-URL, unverändert verwendet. Leer lassen für die API von TypeSafe selbst, https://api.typesafe.ai/v1/systemone.",
+  "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.jevCompatible":
+    "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich: OpenRouter ist https://openrouter.ai/api/alpha/decisions, ein selbst betriebener Server etwa http://127.0.0.1:8767/v1/systemone.",
+  "aiRouting.baseUrl.placeholder.jevCompatible":
+    "https://openrouter.ai/api/alpha/decisions",
   "aiRouting.models.noKey":
     "Nur Preisliste: Dieser Anbieter hat keinen Schlüssel, daher kann seine Modellliste nicht abgerufen werden. Jede Modell-ID, die er bereitstellt, funktioniert trotzdem, wenn du sie direkt eingibst.",
   "aiRouting.models.noEndpoint":

@@ -21,7 +21,7 @@ func TestTheDecisionReportSaysTheLaneServesNothingWithoutARecord(t *testing.T) {
 // A certified current record serves; a stale one does not, and says why.
 func TestTheDecisionReportNamesWhatServesAndWhatWentStale(t *testing.T) {
 	rec := aicert.Record{
-		Task: "site_triage", Kind: aicert.KindDecision, Site: "triage", Provider: "openrouter_decision",
+		Task: "site_triage", Kind: aicert.KindDecision, Site: "triage", Provider: "jev_compatible",
 		Model: "typesafe/jev-1.13", EnvClass: "cloud_frontier", Verdict: aicert.VerdictCertified, Runs: 15,
 		Decision: &aicert.DecisionStats{Kept: 15, KeptCorrect: 15, ServedPassRate: 1},
 	}

@@ -65,7 +65,7 @@ func fxDecisionRecord() aicert.Record {
 	const site = "fx"
 	return aicert.Record{
 		Task: "rate_extract", Kind: aicert.KindDecision, Site: site,
-		Provider: "openrouter_decision", Model: "typesafe/jev-1.13", ServedModel: "typesafe/jev-1.13",
+		Provider: "jev_compatible", Model: "typesafe/jev-1.13", ServedModel: "typesafe/jev-1.13",
 		EnvClass: "cloud_frontier", PromptVersion: "p-dec", Verdict: aicert.VerdictCertified, Runs: 3, Passed: 3,
 		Decision: &aicert.DecisionStats{Kept: 3, KeptCorrect: 3},
 		Scenarios: []aicert.ScenarioRecord{
@@ -103,11 +103,11 @@ func TestADecisionRecordHasItsOwnPathAndKey(t *testing.T) {
 	if err := aicert.WriteRecord(dir, rec); err != nil {
 		t.Fatalf("WriteRecord: %v", err)
 	}
-	want := filepath.Join(dir, "rate_extract", "decision_fx_openrouter_decision_typesafe_jev-1.13_cloud_frontier.json")
+	want := filepath.Join(dir, "rate_extract", "decision_fx_jev_compatible_typesafe_jev-1.13_cloud_frontier.json")
 	if _, err := os.Stat(want); err != nil {
 		t.Fatalf("the decision record is not at %s: %v", want, err)
 	}
-	if got := aicert.RecordKey(rec); got != "rate_extract/decision:fx/openrouter_decision/typesafe/jev-1.13/cloud_frontier" {
+	if got := aicert.RecordKey(rec); got != "rate_extract/decision:fx/jev_compatible/typesafe/jev-1.13/cloud_frontier" {
 		t.Errorf("RecordKey = %q", got)
 	}
 	completion := rec

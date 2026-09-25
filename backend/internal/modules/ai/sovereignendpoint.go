@@ -40,12 +40,14 @@ var localBaseURLDefaults = projectProviders(
 // label names the binding under inspection ("tier premium", "the embeddings
 // lane") so the error points at a line rather than at the file.
 func requireSovereignEndpoint(label, provider, baseURL string) error {
-	fallback, reachesAnEndpoint := localBaseURLDefaults[provider]
-	if !reachesAnEndpoint {
+	fallback, hasDefault := localBaseURLDefaults[provider]
+	if d, _ := providerByName(provider); !hasDefault && !d.localByEndpoint {
 		// fake (no endpoint at all), or a cloud provider the caller already
 		// refused. TestEveryLocalProviderWithAnEndpointIsChecked holds this
 		// closed: a new local provider absent from the defaults map would
-		// otherwise pass unchecked, which is this rule's own failure mode.
+		// otherwise pass unchecked, which is this rule's own failure mode. An
+		// endpoint-local adapter has no default and is local only BY its
+		// endpoint, so it is always checked.
 		return nil
 	}
 	host, err := hostOf(defaulted(baseURL, fallback))

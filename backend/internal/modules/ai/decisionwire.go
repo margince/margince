@@ -4,9 +4,9 @@
 package ai
 
 // The decision wire: a structured state and typed questions in, a calibrated
-// answer per question out. OpenRouter's decisions endpoint (Jev) and a
-// same-host Laya encoder answer the same shape at different paths, so one
-// client serves both and the path comes from the provider's registry row.
+// answer per question out. TypeSafe's own API, a broker's decisions endpoint
+// and a self-hosted server answer the same shape, so one client serves them
+// all, posting to the binding's endpoint as written.
 
 import (
 	"bytes"
@@ -47,10 +47,10 @@ type decisionWireAnswer struct {
 	Probabilities map[string]float64 `json:"probabilities"`
 }
 
-// decisionWireResponse is the fields read off an answer. Jev names the served
-// snapshot in `model` and the serving vendor in `provider`; Laya echoes the
-// checkpoint and names no provider, and adds fields of its own that nothing
-// here reads.
+// decisionWireResponse is the fields read off an answer. A hosted endpoint
+// names the served snapshot in `model` and the serving vendor in `provider`; a
+// self-hosted server may echo the checkpoint and name no provider, and add
+// fields of its own that nothing here reads.
 type decisionWireResponse struct {
 	Model    string                        `json:"model"`
 	Provider string                        `json:"provider"`
@@ -63,9 +63,10 @@ type decisionWireResponse struct {
 // decisionClient sends decision requests to one endpoint.
 type decisionClient struct {
 	http *http.Client
-	// url is the binding's base_url joined with the provider's decision path.
+	// url is the full decision endpoint, posted to as written.
 	url string
-	// apiKey is the key owner's credential; empty for a keyless local adapter.
+	// apiKey is the adapter's credential; empty when it holds none, and then
+	// no Authorization header is sent.
 	apiKey string
 }
 

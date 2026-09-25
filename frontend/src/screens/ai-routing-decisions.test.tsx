@@ -12,6 +12,7 @@ import {
   ROUTING_EDITOR,
   render,
 } from "./ai-routing.testkit";
+import { OPENROUTER_DECISION_PRESET } from "./ai-routing-fields";
 
 afterEach(() => {
   cleanup();
@@ -41,42 +42,99 @@ describe("the decision model lane", () => {
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);
-    expect(offered).toEqual(["openrouter_decision", "laya"]);
+    expect(offered).toEqual(["jev", "jev_compatible"]);
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", {
-        name: "openrouter_decision",
+        name: "jev_compatible",
       }),
     );
     await user.type(
       within(lane).getByRole("combobox", { name: "Model" }),
       "jev-classify",
     );
-    // The decisions endpoint is OpenRouter's, which it has to be told.
+    // Any server on the Jev wire, so the endpoint is the binding: the full
+    // URL, sent as typed.
     await user.type(
       within(lane).getByLabelText("Host"),
-      "https://openrouter.ai/api/v1",
+      "http://127.0.0.1:8767/v1/systemone",
     );
 
     const sent = await previewAndSave(user, backend);
     expect(sent?.decisions).toEqual({
-      provider: "openrouter_decision",
+      provider: "jev_compatible",
       model: "jev-classify",
-      base_url: "https://openrouter.ai/api/v1",
+      base_url: "http://127.0.0.1:8767/v1/systemone",
     });
     // The lanes it sits beside are sent untouched.
     expect(sent?.embeddings.model).toBe("gemini-embedding-001");
   });
 
+  // OpenRouter's endpoint is a URL nobody remembers, so jev_compatible offers
+  // it in one press — the endpoint and the model certified there — and names
+  // the key it needs, which the preset cannot fill.
+  it("fills OpenRouter's endpoint and model from the preset and saves them", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      decisions: { provider: "jev_compatible", model: "" },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    await screen.findByTestId("ai-routing-decisions");
+    const lane = await openLane(user, "ai-routing-decisions");
+    expect(
+      within(lane).getByText(
+        /JEV_COMPATIBLE_API_KEY takes your OpenRouter key/,
+      ),
+    ).toBeInTheDocument();
+    await user.click(
+      within(lane).getByRole("button", { name: "Use OpenRouter" }),
+    );
+    expect(within(lane).getByLabelText("Host")).toHaveValue(
+      OPENROUTER_DECISION_PRESET.base_url,
+    );
+    expect(within(lane).getByRole("combobox", { name: "Model" })).toHaveValue(
+      OPENROUTER_DECISION_PRESET.model,
+    );
+
+    const sent = await previewAndSave(user, backend);
+    expect(sent?.decisions).toEqual({
+      provider: "jev_compatible",
+      model: "typesafe/jev-1.13",
+      base_url: "https://openrouter.ai/api/alpha/decisions",
+    });
+  });
+
+  // The official API has an endpoint of its own; the preset is for the
+  // adapter that needs one named.
+  it("offers the OpenRouter preset only on jev_compatible", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      decisions: { provider: "jev", model: "jev-1.13.0" },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    await screen.findByTestId("ai-routing-decisions");
+    const lane = await openLane(user, "ai-routing-decisions");
+    expect(
+      within(lane).queryByRole("button", { name: "Use OpenRouter" }),
+    ).toBeNull();
+  });
+
   // A model and a host name one adapter's endpoint; carried onto another
-  // adapter they would point Laya at OpenRouter. A provider switch clears both.
+  // adapter they would point TypeSafe's own API at OpenRouter. A provider
+  // switch clears both.
   it("clears the model and host when the decision provider changes", async () => {
     const user = userEvent.setup();
     const backend = backendFor(ROUTING_EDITOR, {
       ...BOUND,
       decisions: {
-        provider: "openrouter_decision",
+        provider: "jev_compatible",
         model: "jev-classify",
-        base_url: "https://openrouter.ai/api",
+        base_url: "https://openrouter.ai/api/alpha/decisions",
       },
     });
     vi.stubGlobal("fetch", backend.fetchMock);
@@ -86,11 +144,11 @@ describe("the decision model lane", () => {
     const lane = await openLane(user, "ai-routing-decisions");
     await user.click(within(lane).getByRole("combobox", { name: "Provider" }));
     await user.click(
-      within(screen.getByRole("listbox")).getByRole("option", { name: "laya" }),
+      within(screen.getByRole("listbox")).getByRole("option", { name: "jev" }),
     );
 
     const sent = await previewAndSave(user, backend);
-    expect(sent?.decisions).toEqual({ provider: "laya", model: "" });
+    expect(sent?.decisions).toEqual({ provider: "jev", model: "" });
   });
 
   // A decision is billed on its input alone, as an embedding is: the row
@@ -99,7 +157,7 @@ describe("the decision model lane", () => {
   it("prices a decision model on its input alone", async () => {
     const backend = backendFor(ROUTING_EDITOR, {
       ...BOUND,
-      decisions: { provider: "openrouter_decision", model: "jev-classify" },
+      decisions: { provider: "jev_compatible", model: "jev-classify" },
     });
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
@@ -116,11 +174,11 @@ describe("the decision model lane", () => {
     const user = userEvent.setup();
     const backend = backendFor(ROUTING_EDITOR, {
       ...BOUND,
-      decisions: { provider: "laya", model: "laya-small" },
+      decisions: { provider: "jev", model: "jev-latest" },
     });
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
-    await screen.findByText("laya-small");
+    await screen.findByText("jev-latest");
 
     const lane = await openLane(user, "ai-routing-decisions");
     await user.click(
