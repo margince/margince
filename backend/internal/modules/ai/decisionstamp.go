@@ -3,7 +3,11 @@
 
 package ai
 
-import crmcontracts "github.com/margince/margince/backend/internal/contracts"
+import (
+	"reflect"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+)
 
 // decisionSkipFor is why the bound decisions lane does not answer task, or ""
 // when it may — subject still to a certification row for the site asking,
@@ -71,4 +75,18 @@ func decisionProcessing(provider string) string {
 		return "configured_endpoint"
 	}
 	return "cloud_provider"
+}
+
+// decisionLeadChanged reports whether the model that answers task FIRST moved
+// between two routing documents on the decision lane alone: the lane started or
+// stopped answering it, or answers it on another binding. after is the
+// proposed document's row, already stamped. A lane that answers the feature in
+// neither document changes nothing a caller sees, whatever its skip reason.
+func decisionLeadChanged(before, proposed RoutingConfig, task Task, beforeBlocked bool, after crmcontracts.AiFeatureRoute) bool {
+	var was crmcontracts.AiFeatureRoute
+	decisionRoute(&was, before, task, beforeBlocked)
+	if was.DecisionFirst != after.DecisionFirst {
+		return true
+	}
+	return after.DecisionFirst && !reflect.DeepEqual(before.Decisions, proposed.Decisions)
 }

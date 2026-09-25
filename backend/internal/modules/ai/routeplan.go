@@ -135,7 +135,7 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 		if task != TaskEmbeddings && Status(task) != StatusShipped {
 			continue
 		}
-		normal, _ := boundPlan(normalConfig, task, normalBand)
+		normal, normalBlocked := boundPlan(normalConfig, task, normalBand)
 		effective, blocked := boundPlan(effectiveConfig, task, band)
 		name := DisplayName(task)
 		mode := string(taskExecutionModes[task])
@@ -151,6 +151,9 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 			Impact: routeImpact(normal, effective, blocked), BudgetExempt: task == TaskEmbeddings,
 		}
 		decisionRoute(&row, effectiveConfig, task, blocked)
+		if decisionLeadChanged(normalConfig, effectiveConfig, task, normalBlocked, row) && (row.Impact == "unchanged" || row.Impact == "fallback_changed") {
+			row.Impact = "model_changed"
+		}
 		out = append(out, row)
 	}
 	return out

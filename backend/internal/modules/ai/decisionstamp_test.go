@@ -102,3 +102,44 @@ func TestTheRoutingPreviewSaysWhyTheDecisionLaneIsSkipped(t *testing.T) {
 		}
 	}
 }
+
+// A decision model that starts or stops answering a feature first changes which
+// model answers it, so the preview may not read that edit as "unchanged" while
+// every tier binding stays put. A lane that answers nothing either way changes
+// nothing a caller sees.
+func TestTheRoutingPreviewReportsADecisionLaneChangeAsAModelChange(t *testing.T) {
+	before := RoutingConfig{Profile: ProfileCloudFrontier, Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: ProviderFake, Model: "cheap"}, TierPremium: {Provider: ProviderFake, Model: "premium"},
+	}}
+	certifyForTest(t, DecisionCertKey{Task: TaskSiteTriage, Site: "triage", Provider: jevLane.Provider, Model: jevLane.Model})
+	certifiedOther := &DecisionsConfig{Provider: jevLane.Provider, Model: "typesafe/jev-other", BaseURL: jevLane.BaseURL}
+	certifyForTest(t, DecisionCertKey{Task: TaskSiteTriage, Site: "triage", Provider: certifiedOther.Provider, Model: certifiedOther.Model})
+	uncertified := &DecisionsConfig{Provider: jevLane.Provider, Model: "typesafe/jev-9.99", BaseURL: jevLane.BaseURL}
+	with := func(lane *DecisionsConfig) RoutingConfig {
+		next := before
+		next.Decisions = lane
+		return next
+	}
+	cases := []struct {
+		name     string
+		from, to *DecisionsConfig
+		want     string
+	}{
+		{"added", nil, jevLane, "model_changed"},
+		{"removed", jevLane, nil, "model_changed"},
+		{"another certified model", jevLane, certifiedOther, "model_changed"},
+		{"the same lane", jevLane, jevLane, "unchanged"},
+		{"unbound to an uncertified model", nil, uncertified, "unchanged"},
+	}
+	for _, tc := range cases {
+		var got string
+		for _, row := range compareFeatureRoutes(with(tc.from), with(tc.to), BandNormal, BandNormal) {
+			if row.Task == string(TaskSiteTriage) {
+				got = row.Impact
+			}
+		}
+		if got != tc.want {
+			t.Errorf("%s: site_triage impact = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
