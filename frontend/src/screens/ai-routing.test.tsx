@@ -969,12 +969,12 @@ describe("rebind", () => {
     routing: { sort: "throughput" },
   };
 
-  it("keeps broker preferences when only the model changes", () => {
+  it("drops them when the model changes, since a pin names one model's hosts", () => {
     const next = rebind(openRouterTier, {
       model: "mistralai/mistral-large-2512",
     });
     expect(next.model).toBe("mistralai/mistral-large-2512");
-    expect(next.routing).toEqual({ sort: "throughput" });
+    expect(next).not.toHaveProperty("routing");
   });
 
   it("drops them when the provider changes, so the save is not refused", () => {
