@@ -1035,6 +1035,7 @@ public.assurance_run.assurance_run_counts_are_tallies CHECK (((eligible_deals >=
 public.assurance_run.assurance_run_pkey PRIMARY KEY (id)
 public.assurance_run.assurance_run_readiness_check CHECK (((readiness IS NULL) OR (readiness = ANY (ARRAY['ready'::text, 'ready_with_exceptions'::text, 'needs_review'::text, 'checks_incomplete'::text]))))
 public.assurance_run.assurance_run_readiness_matches_status CHECK (((status = 'running'::text) = (readiness IS NULL)))
+public.assurance_run.assurance_run_requester_is_named CHECK (((requested_by IS NULL) OR (length(btrim(requested_by)) > 0)))
 public.assurance_run.assurance_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'complete'::text, 'incomplete'::text])))
 public.assurance_run.captured_by text NOT NULL gen=- def=-
 public.assurance_run.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1043,6 +1044,7 @@ public.assurance_run.eligible_deals integer NOT NULL gen=- def=0
 public.assurance_run.eligible_signals integer NOT NULL gen=- def=0
 public.assurance_run.id uuid NOT NULL gen=- def=uuidv7()
 public.assurance_run.readiness text gen=- def=-
+public.assurance_run.requested_by text gen=- def=-
 public.assurance_run.rule_versions jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_run.status text NOT NULL gen=- def='running'::text
 public.assurance_run.updated_at timestamp with time zone NOT NULL gen=- def=now()

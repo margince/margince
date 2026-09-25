@@ -19836,6 +19836,81 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
           description: No run has completed yet. A fresh installation has not been checked.
+  /forecast/assurance/preview:
+    get:
+      tags: [Reports]
+      operationId: previewForecastAssurance
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: What a check would find, without recording any of it.
+      description: |
+        The scope before the queue. A first pass over a workspace with a backlog raises
+        every exception it can see at once, and a queue that arrives that way is one
+        nobody reads — so the first pass is a decision somebody makes, and this is what
+        they read to make it.
+
+        It WRITES NOTHING: no run, no finding, no task. A preview is deliberately not a
+        state a run can be in, because a reading nobody should act on must not be
+        available to act on — `GET /forecast/assurance` keeps answering `404` until a
+        real pass has run.
+
+        Same rules, same eligible set, same verdict logic as the pass it previews, from
+        the same code — so it cannot promise a finding the run it authorises then does
+        not raise.
+
+        `started` is whether any pass has ever run here, and it is what tells a first
+        check from a recheck.
+
+        COUNTS ONLY. No finding names its deal and none carries an amount: the check
+        reads the whole pipeline on purpose, so a preview carrying subjects or money
+        would hand a seat aggregates over records it cannot open — the same reason the
+        findings list publishes no count of what it withheld.
+      responses:
+        '200':
+          description: What a pass would find now.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ForecastAssurancePreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+  /forecast/assurance/runs:
+    post:
+      tags: [Reports]
+      operationId: startForecastAssuranceRun
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Run the input check now.
+      description: |
+        Starts one pass over this workspace. It is the same act twice: the FIRST press
+        starts the nightly cycle for a workspace that has never been checked, and every
+        press after it is a recheck for somebody who has just fixed a record and wants
+        the panel to confirm it before a call.
+
+        Until a workspace is started the nightly sweep skips it, however often it fires.
+        Enrolment is the run history itself rather than a flag beside it, so this route
+        enrols by doing the work, and a preview — which writes nothing — cannot enrol a
+        workspace by being looked at.
+
+        `202` and the pass runs in the background; the findings appear on the panel when
+        it lands. One pass per workspace at a time: a second press while one is in flight
+        is `409 assurance_run_running` rather than a second walk of the same pipeline.
+
+        The run is recorded as the SYSTEM, like the nightly one, and names the seat that
+        asked separately. A run attributed to the manager who pressed the button would
+        sign them to every exception it raises.
+      responses:
+        '202':
+          description: The pass is enqueued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssuranceRunAccepted' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409':
+          description: A pass is already running for this workspace.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /analytics/coverage:
     get:
       tags: [Reports]
@@ -38603,6 +38678,63 @@ components:
             from this list is one the run did not attempt — different from one it
             attempted and could not read, which the state field says.
           items: { $ref: '#/components/schemas/ForecastAssuranceSource' }
+      additionalProperties: false
+    ForecastAssurancePreview:
+      type: object
+      description: >-
+        What a pass would find now, for somebody deciding whether to start one. Nothing
+        here was recorded, and looking changed nothing.
+      required: [started, eligible_deals, findings, sources]
+      properties:
+        started:
+          type: boolean
+          description: >-
+            Whether any pass has ever run in this workspace. False is a workspace the
+            nightly sweep is skipping until somebody starts it — which is what makes this
+            a first check rather than a recheck.
+        eligible_deals:
+          type: integer
+          description: How much there would be to check, counted once per deal evaluated.
+        findings:
+          type: array
+          description: >-
+            What would be raised, grouped by type and severity. Counts only — no deal is
+            named and no amount is given.
+          items: { $ref: '#/components/schemas/AssuranceFindingCount' }
+        readiness:
+          type: string
+          enum: [ready, ready_with_exceptions, needs_review, checks_incomplete]
+          # Prefixed for the same reason ForecastAssurance's are: a bare `Ready`
+          # collides with an existing generated constant and silently renames it.
+          x-enum-varnames:
+            - AssurancePreviewReady
+            - AssurancePreviewReadyWithExceptions
+            - AssurancePreviewNeedsReview
+            - AssurancePreviewChecksIncomplete
+          description: >-
+            The verdict this pass would reach. `checks_incomplete` here means the preview
+            itself could not read a required source — starting on it would produce a run
+            that says the same.
+        sources:
+          type: array
+          description: Which sources the preview could reach, and how far.
+          items: { $ref: '#/components/schemas/ForecastAssuranceSource' }
+      additionalProperties: false
+    AssuranceFindingCount:
+      type: object
+      description: One exception type at one severity, and how many of it a pass would raise.
+      required: [type, severity, count]
+      properties:
+        type: { type: string }
+        severity: { type: string, enum: [low, medium, high], x-enum-varnames: [AssuranceCountLow, AssuranceCountMedium, AssuranceCountHigh] }
+        count: { type: integer }
+      additionalProperties: false
+    AssuranceRunAccepted:
+      type: object
+      description: The pass is enqueued. Its findings appear when it lands.
+      required: [status]
+      properties:
+        status: { type: string, enum: [enqueued], x-enum-varnames: [AssuranceRunEnqueued] }
       additionalProperties: false
     ForecastAssurance:
       type: object

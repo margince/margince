@@ -24,7 +24,9 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -75,7 +77,75 @@ const assuranceActor = "system:assurance"
 func (w *assuranceSweepWorker) assureWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	wsCtx = principal.SystemActing(wsCtx, assuranceActor)
-	return w.check(wsCtx, workspace)
+	started, err := assurance.NewStore(InstallationDB(w.pool)).EverRun(wsCtx)
+	if err != nil {
+		return err
+	}
+	if !started {
+		// A workspace nobody has started is not checked by the calendar. The
+		// first pass over a backlog raises every exception it can see at once,
+		// and a queue that arrives that way is one nobody reads — so somebody
+		// starts it, having read the preview.
+		//
+		// Logged rather than silent because this is the branch that can fail
+		// SHORT: a workspace wrongly read as unstarted stops being checked and
+		// nothing asserts. An installation already being checked cannot enter
+		// it — enrolment IS the run history, and those workspaces have runs.
+		w.log.InfoContext(ctx, "the forecast's inputs were not checked: nobody has started this workspace",
+			"workspace_id", workspace)
+		return nil
+	}
+	return w.check(wsCtx, workspace, nil)
+}
+
+// AssuranceRunArgs is one pass a human asked for, on one workspace.
+//
+// Uniqueness is keyed on Workspace alone (river:"unique"), so two managers
+// pressing recheck at once collapse to one pass rather than racing two;
+// RequestedBy is provenance and stays outside the hash.
+type AssuranceRunArgs struct {
+	Workspace   ids.UUID `json:"workspace_id" river:"unique"`
+	RequestedBy string   `json:"requested_by"`
+}
+
+// Kind is the stable job identifier River persists in river_job.
+func (AssuranceRunArgs) Kind() string { return "assurance_run" }
+
+// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
+func (a AssuranceRunArgs) WorkspaceID() ids.UUID { return a.Workspace }
+
+// assuranceRunWorker runs the pass one human asked for.
+//
+// It shares check with the nightly sweep and skips only the enrolment gate —
+// this IS how a workspace enrols, so a gate here would make starting impossible.
+type assuranceRunWorker struct {
+	sweep *assuranceSweepWorker
+}
+
+func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceRunArgs]) error {
+	// The guard FIRST, before the worker touches anything: a zero workspace
+	// would bind an empty GUC and the pass would then read and write as
+	// whatever the connection happens to carry.
+	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	// SYSTEM, on a pass a human asked for, and deliberately: the pass reads the
+	// whole pipeline, and every exception it raises is captured_by whoever it
+	// runs as. Attributed to the manager who pressed the button, the run would
+	// sign them to hundreds of findings they never made. Who asked is a
+	// different fact and rides on the run row's own requested_by.
+	wsCtx = principal.SystemActing(wsCtx, assuranceActor)
+	// An unnamed asker is refused HERE, before the pass does its work. The run
+	// row's own constraint refuses a blank requester, so the alternative is a
+	// full walk of the pipeline thrown away at the commit — and the transport
+	// that enqueues this already holds an authenticated human, so a blank one
+	// means the args were built somewhere that does not.
+	if strings.TrimSpace(job.Args.RequestedBy) == "" {
+		return jobs.FaultContext(ctx, fmt.Errorf(
+			"%s: a pass somebody asked for carries no asker", job.Args.Kind()))
+	}
+	return jobs.FaultContext(ctx, w.sweep.check(wsCtx, job.Args.Workspace, &job.Args.RequestedBy))
 }
 
 // check runs one pass and reports what it came to.
@@ -90,10 +160,10 @@ func (w *assuranceSweepWorker) assureWorkspace(ctx context.Context, workspace id
 // saying the check happened: the surfaces read the row, not the log, so a pass
 // that had stopped running entirely would otherwise be visible only as a page
 // that stopped changing.
-func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID) error {
+func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID, requestedBy *string) error {
 	store := assurance.NewStore(InstallationDB(w.pool))
 	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig())
-	result, err := scanner.Scan(ctx, w.now())
+	result, err := scanner.Scan(ctx, w.now(), requestedBy)
 	if err != nil {
 		return err
 	}
@@ -117,6 +187,7 @@ func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID) error {
 	w.log.InfoContext(ctx, "the forecast's inputs were checked",
 		"workspace_id", ws, "run_id", result.RunID,
 		"eligible_deals", result.EligibleDeals, "findings", result.Findings, "cleared", result.Cleared,
-		"readiness", result.Readiness, "status", result.Status, "tasks_minted", minted)
+		"readiness", result.Readiness, "status", result.Status, "tasks_minted", minted,
+		"requested", requestedBy != nil)
 	return nil
 }

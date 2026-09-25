@@ -163,7 +163,7 @@ func runToWire(run Run, coverage []SourceCoverage) crmcontracts.ForecastAssuranc
 		// Empty, never nil. A run that recorded no coverage is a real answer
 		// and arrives shaped like the array it is; null reads as "unknown",
 		// which is a different claim from "nothing was tried".
-		Sources: []crmcontracts.ForecastAssuranceSource{},
+		Sources: CoverageToWire(coverage),
 	}
 	if run.EligibleSignals > 0 {
 		signals := run.EligibleSignals
@@ -173,17 +173,32 @@ func runToWire(run Run, coverage []SourceCoverage) crmcontracts.ForecastAssuranc
 		verdict := crmcontracts.ForecastAssuranceReadiness(*run.Readiness)
 		out.Readiness = &verdict
 	}
+	return out
+}
+
+// CoverageToWire renders one run's source health.
+//
+// ONE spelling, for the three surfaces that publish it — the assurance panel,
+// the operator's coverage view, and the preview a human reads before starting
+// the cycle. The rule it carries is the reason it is not inlined at each: only
+// a source actually READ carries a date, and a date copied onto an unread one
+// claims coverage that did not happen. Three copies of that rule is three
+// chances for one of them to stop being true.
+//
+// Empty, never nil. A run that recorded no coverage is a real answer and
+// arrives shaped like the array it is; null reads as "unknown", which is a
+// different claim from "nothing was tried".
+func CoverageToWire(coverage []SourceCoverage) []crmcontracts.ForecastAssuranceSource {
+	out := make([]crmcontracts.ForecastAssuranceSource, 0, len(coverage))
 	for _, c := range coverage {
 		source := crmcontracts.ForecastAssuranceSource{
 			Source: crmcontracts.ForecastAssuranceSourceSource(c.Source),
 			State:  crmcontracts.ForecastAssuranceSourceState(c.State),
 		}
-		// Only a source actually read carries a date. Copying one onto an
-		// unread source would claim coverage that did not happen.
 		if c.State == CoverageChecked {
 			source.CheckedThrough = c.CheckedThrough
 		}
-		out.Sources = append(out.Sources, source)
+		out = append(out, source)
 	}
 	return out
 }
@@ -237,24 +252,9 @@ func (h Handlers) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	out := crmcontracts.DataCoverage{
-		RunId: openapi_types.UUID(run.ID),
-		AsOf:  run.AsOf,
-		// Empty, never nil. A run that recorded no coverage is a real answer;
-		// null reads as "unknown", which on this surface is the difference
-		// between "nothing was tried" and "we cannot tell you".
-		Sources: []crmcontracts.ForecastAssuranceSource{},
-	}
-	for _, c := range coverage {
-		source := crmcontracts.ForecastAssuranceSource{
-			Source: crmcontracts.ForecastAssuranceSourceSource(c.Source),
-			State:  crmcontracts.ForecastAssuranceSourceState(c.State),
-		}
-		// Only a source actually read carries a date.
-		if c.State == CoverageChecked {
-			source.CheckedThrough = c.CheckedThrough
-		}
-		out.Sources = append(out.Sources, source)
-	}
-	httperr.WriteJSON(w, http.StatusOK, out)
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DataCoverage{
+		RunId:   openapi_types.UUID(run.ID),
+		AsOf:    run.AsOf,
+		Sources: CoverageToWire(coverage),
+	})
 }

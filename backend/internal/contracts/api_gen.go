@@ -1378,6 +1378,42 @@ func (e AssistantProfileState) Valid() bool {
 	}
 }
 
+// Defines values for AssuranceFindingCountSeverity.
+const (
+	AssuranceFindingCountSeverityAssuranceCountHigh   AssuranceFindingCountSeverity = "high"
+	AssuranceFindingCountSeverityAssuranceCountLow    AssuranceFindingCountSeverity = "low"
+	AssuranceFindingCountSeverityAssuranceCountMedium AssuranceFindingCountSeverity = "medium"
+)
+
+// Valid indicates whether the value is a known member of the AssuranceFindingCountSeverity enum.
+func (e AssuranceFindingCountSeverity) Valid() bool {
+	switch e {
+	case AssuranceFindingCountSeverityAssuranceCountHigh:
+		return true
+	case AssuranceFindingCountSeverityAssuranceCountLow:
+		return true
+	case AssuranceFindingCountSeverityAssuranceCountMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssuranceRunAcceptedStatus.
+const (
+	AssuranceRunAcceptedStatusAssuranceRunEnqueued AssuranceRunAcceptedStatus = "enqueued"
+)
+
+// Valid indicates whether the value is a known member of the AssuranceRunAcceptedStatus enum.
+func (e AssuranceRunAcceptedStatus) Valid() bool {
+	switch e {
+	case AssuranceRunAcceptedStatusAssuranceRunEnqueued:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttachmentCategory.
 const (
 	AttachmentCategoryContract          AttachmentCategory = "contract"
@@ -8551,6 +8587,30 @@ func (e ForecastAssuranceStatus) Valid() bool {
 	case ForecastAssuranceStatusComplete:
 		return true
 	case ForecastAssuranceStatusIncomplete:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastAssurancePreviewReadiness.
+const (
+	ForecastAssurancePreviewReadinessAssurancePreviewChecksIncomplete    ForecastAssurancePreviewReadiness = "checks_incomplete"
+	ForecastAssurancePreviewReadinessAssurancePreviewNeedsReview         ForecastAssurancePreviewReadiness = "needs_review"
+	ForecastAssurancePreviewReadinessAssurancePreviewReady               ForecastAssurancePreviewReadiness = "ready"
+	ForecastAssurancePreviewReadinessAssurancePreviewReadyWithExceptions ForecastAssurancePreviewReadiness = "ready_with_exceptions"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssurancePreviewReadiness enum.
+func (e ForecastAssurancePreviewReadiness) Valid() bool {
+	switch e {
+	case ForecastAssurancePreviewReadinessAssurancePreviewChecksIncomplete:
+		return true
+	case ForecastAssurancePreviewReadinessAssurancePreviewNeedsReview:
+		return true
+	case ForecastAssurancePreviewReadinessAssurancePreviewReady:
+		return true
+	case ForecastAssurancePreviewReadinessAssurancePreviewReadyWithExceptions:
 		return true
 	default:
 		return false
@@ -19983,6 +20043,24 @@ type AssistantProfileProviders string
 // AssistantProfileState defines model for AssistantProfile.State.
 type AssistantProfileState string
 
+// AssuranceFindingCount One exception type at one severity, and how many of it a pass would raise.
+type AssuranceFindingCount struct {
+	Count    int                           `json:"count"`
+	Severity AssuranceFindingCountSeverity `json:"severity"`
+	Type     string                        `json:"type"`
+}
+
+// AssuranceFindingCountSeverity defines model for AssuranceFindingCount.Severity.
+type AssuranceFindingCountSeverity string
+
+// AssuranceRunAccepted The pass is enqueued. Its findings appear when it lands.
+type AssuranceRunAccepted struct {
+	Status AssuranceRunAcceptedStatus `json:"status"`
+}
+
+// AssuranceRunAcceptedStatus defines model for AssuranceRunAccepted.Status.
+type AssuranceRunAcceptedStatus string
+
 // Attachment A file hung off an entity. Mirrors the `attachment` table: the row is the
 // system of record and the tenant anchor; the bytes live in object storage,
 // addressed by an internal object key that is never exposed on the wire.
@@ -29481,6 +29559,27 @@ type ForecastAssuranceReadiness string
 
 // ForecastAssuranceStatus `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
 type ForecastAssuranceStatus string
+
+// ForecastAssurancePreview What a pass would find now, for somebody deciding whether to start one. Nothing here was recorded, and looking changed nothing.
+type ForecastAssurancePreview struct {
+	// EligibleDeals How much there would be to check, counted once per deal evaluated.
+	EligibleDeals int `json:"eligible_deals"`
+
+	// Findings What would be raised, grouped by type and severity. Counts only — no deal is named and no amount is given.
+	Findings []AssuranceFindingCount `json:"findings"`
+
+	// Readiness The verdict this pass would reach. `checks_incomplete` here means the preview itself could not read a required source — starting on it would produce a run that says the same.
+	Readiness *ForecastAssurancePreviewReadiness `json:"readiness,omitempty"`
+
+	// Sources Which sources the preview could reach, and how far.
+	Sources []ForecastAssuranceSource `json:"sources"`
+
+	// Started Whether any pass has ever run in this workspace. False is a workspace the nightly sweep is skipping until somebody starts it — which is what makes this a first check rather than a recheck.
+	Started bool `json:"started"`
+}
+
+// ForecastAssurancePreviewReadiness The verdict this pass would reach. `checks_incomplete` here means the preview itself could not read a required source — starting on it would produce a run that says the same.
+type ForecastAssurancePreviewReadiness string
 
 // ForecastAssuranceSource defines model for ForecastAssuranceSource.
 type ForecastAssuranceSource struct {
@@ -58003,6 +58102,12 @@ type ServerInterface interface {
 	// Answer a finding from the nightly input check.
 	// (POST /forecast/assurance/exceptions/{id}/resolve)
 	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// What a check would find, without recording any of it.
+	// (GET /forecast/assurance/preview)
+	PreviewForecastAssurance(w http.ResponseWriter, r *http.Request)
+	// Run the input check now.
+	// (POST /forecast/assurance/runs)
+	StartForecastAssuranceRun(w http.ResponseWriter, r *http.Request)
 	// What this period's forecast has been called, newest first.
 	// (GET /forecast/calls)
 	ListForecastCalls(w http.ResponseWriter, r *http.Request, params ListForecastCallsParams)
@@ -61075,6 +61180,18 @@ func (_ Unimplemented) ListInputChecks(w http.ResponseWriter, r *http.Request) {
 // Answer a finding from the nightly input check.
 // (POST /forecast/assurance/exceptions/{id}/resolve)
 func (_ Unimplemented) ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What a check would find, without recording any of it.
+// (GET /forecast/assurance/preview)
+func (_ Unimplemented) PreviewForecastAssurance(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Run the input check now.
+// (POST /forecast/assurance/runs)
+func (_ Unimplemented) StartForecastAssuranceRun(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78007,6 +78124,46 @@ func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// PreviewForecastAssurance operation middleware
+func (siw *ServerInterfaceWrapper) PreviewForecastAssurance(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewForecastAssurance(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartForecastAssuranceRun operation middleware
+func (siw *ServerInterfaceWrapper) StartForecastAssuranceRun(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartForecastAssuranceRun(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListForecastCalls operation middleware
 func (siw *ServerInterfaceWrapper) ListForecastCalls(w http.ResponseWriter, r *http.Request) {
 
@@ -92216,6 +92373,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/resolve", wrapper.ResolveInputCheck)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/assurance/preview", wrapper.PreviewForecastAssurance)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/forecast/assurance/runs", wrapper.StartForecastAssuranceRun)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/calls", wrapper.ListForecastCalls)
