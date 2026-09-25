@@ -66,10 +66,9 @@
 #                     attempt is a further network call an interactive deadline
 #                     does not budget for — and every declaring site owes an
 #                     adapter that builds the typed question from the same
-#                     inputs its prompt reads. The lane never widens a task's
-#                     reach: it serves only where its endpoint goes no further
-#                     than the task's own bound ladder, and a local_only task
-#                     only from a local decision model.
+#                     inputs its prompt reads. A bound lane serves every
+#                     declaring task, except that a local_only task takes
+#                     only a local decision model.
 #   company_context   the ADR-0065 policy: `none`, or scopes + token_budget
 #                     (+ conditional, meaning "only when the caller requests
 #                     it"). Absent-by-accident must be a build error, never a
@@ -135,6 +134,7 @@ tasks:
     on_budget_exhausted: queue
     status: shipped
     sites: [verdict]
+    decision: true
     no_payload: true
     local_only: true
     company_context: none
@@ -147,6 +147,7 @@ tasks:
     on_budget_exhausted: queue
     status: shipped
     sites: [thread]
+    decision: true
     no_payload: true
     local_only: true
     company_context: none

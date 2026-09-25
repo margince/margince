@@ -98,8 +98,9 @@ func addressLine(row capture.PendingCounterparty) string {
 	}
 }
 
-// ask makes one structured verdict call for the given addresses, and reports
-// WHICH MODEL answered alongside what it said.
+// ask makes one verdict call for the given address, and reports WHICH MODEL
+// answered alongside what it said. A decision model answers first where the
+// lane serves this task; the structured call answers otherwise.
 //
 // The served model was previously read off the response and dropped. It belongs
 // on the ledger: this lane runs on whatever local model a deployment bound, and
@@ -109,18 +110,22 @@ func (e *CounterpartyVerdictEngine) ask(
 ) ([]verdictResult, string, error) {
 	req := verdictRequest(row)
 	validate := verdictShapeValid(row)
-	resp, err := ai.Ask(ctx, e.brain, req, validate)
+	out, err := ai.Decide(ctx, e.brain, counterpartyDecisionSite, counterpartyDecision(row), req, validate,
+		counterpartyDecisionGate)
 	if err != nil {
 		return nil, "", err
 	}
+	if out.Decided {
+		return []verdictResult{readCounterpartyDecision(row, out.Answer)}, out.ServedModel, nil
+	}
 	var payload verdictPayload
-	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
+	if err := json.Unmarshal([]byte(ai.Unfence(out.Response.Text)), &payload); err != nil {
 		return nil, "", fmt.Errorf("verdict: unparseable model output: %w", err)
 	}
 	if msg := validateVerdictPayload(payload, row); msg != "" {
 		return nil, "", fmt.Errorf("verdict: %s", msg)
 	}
-	return payload.Results, resp.ServedModel, nil
+	return payload.Results, out.ServedModel, nil
 }
 
 // verdictShapeValid is the generation-time validator: the requested id exactly

@@ -45,8 +45,8 @@ here so it can be answered for.
 | `agent_loop` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
 | `brief_ranking` | `premium` → `cheap_cloud` | no | no | no | — | shipped |
 | `capture_classify` | `local_small` → `cheap_cloud` | no | yes | no | — | shipped |
-| `capture_confidentiality_verdict` | `local_small` | yes | yes | yes | — | shipped |
-| `capture_counterparty_verdict` | `local_small` | yes | yes | yes | — | shipped |
+| `capture_confidentiality_verdict` | `local_small` | yes | yes | yes | only a local decision model | shipped |
+| `capture_counterparty_verdict` | `local_small` | yes | yes | yes | only a local decision model | shipped |
 | `cert_judge` | `premium` → `cheap_cloud` | no | no | no | — | shipped |
 | `cold_start` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
 | `corpus_ask` | `premium` | no | no | no | — | shipped |
