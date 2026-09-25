@@ -15,7 +15,10 @@ run the lane, [configuration.md](configuration.md) for the `vllm` binding, and
 
 On a 24 GB Apple-silicon machine, **serve `Qwen3-14B` (4-bit MLX) if it must be
 vLLM**: of five models it led or tied on six of seven tasks, at 10 to 13
-seconds for a verdict. **If it need not be vLLM, use Ollama with Gemma 4 12B**
+seconds for a verdict. It is the preset
+[`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml), measured
+on every task (section 5): 6 of 28 certified and 2 usable with care, where the
+Ollama Gemma 4 preset certifies 6 of the 12 it was measured on. **If it need not be vLLM, use Ollama with Gemma 4 12B**
 ([ollama-self-hosting.md](ollama-self-hosting.md)): on this machine vLLM is not
 faster for one user, Gemma 4 12B answers gibberish through it (section 2), and
 Gemma 3 12B's structured output loops (section 4).
@@ -130,12 +133,12 @@ runs per scenario, the judge `openai/gpt-oss-120b` in the cloud, so the latency
 below is the candidate alone on the GPU. The server was started with the flags
 in section 1.
 
-The records were written under a scratch `eu_hosted` profile, because a
-`sovereign` run refuses a cloud judge, and they are **not committed**: they would
-name a profile the run did not have. That is also why there is no vLLM preset
-in `config/presets/`: the readiness page requires every preset to carry records,
-and a sovereign record needs a local judge, which does not fit beside a vLLM
-server on 24 GB (see "Memory" in section 1).
+The comparison runs in section 4 were written under a scratch `eu_hosted`
+profile and are **not committed**. The preset's own run (section 5) is
+`sovereign` and committed: a certification run holds only the candidate to the
+profile, and the judge, which is sent the corpus and nothing of an
+installation's, may be the default cloud one. No local judge would fit beside a
+vLLM server on 24 GB (see "Memory" in section 1).
 
 Statistics warning: three runs per scenario, one machine, one quantization. A
 difference of about 0.15 in pass rate on 15 runs is inside the noise.
@@ -159,7 +162,7 @@ ran at its model card's sampling, set with `--override-generation-config`
 
 ¹ At a 20,480-token window (section 2). A dash is a task not run: after the two loops below there was no configuration left worth measuring.
 ² At a 32,768-token window: its configuration declares no more.
-³ With the id fix in section 5. Before it, at vLLM's default sampling, 0.40; after it, at the same sampling, 0.87.
+³ With the id fix in section 6. Before it, at vLLM's default sampling, 0.40; after it, at the same sampling, 0.87.
 ⁴ Never answered; see the paragraph after this list.
 
 - **Qwen3-14B is the model to serve through vLLM here.** It leads or ties on six
@@ -194,7 +197,53 @@ rate of 0.02 at 39 seconds a call. Forbidding whitespace forces the model off th
 tokens it would write, and the number is where that shows. Through vllm-metal,
 Gemma 3's structured output is not usable either way.
 
-## 5. What we changed in the product
+## 5. The preset, certified
+
+[`config/presets/qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml)
+binds every tier to Qwen3-14B on vLLM and embeddings to `bge-m3` on a second vLLM,
+under `sovereign`. Its header carries the two `vllm serve` command lines; with
+both servers up (0.87 and 0.1 of memory) about 9% of the machine is left free.
+Every shipped task was run through it, three runs per scenario, judged by the
+default cloud judge. The records are committed and the readiness page reads them.
+
+| task | verdict | pass rate | runs | median s | 95th pct s | output tokens |
+|---|---|---|---|---|---|---|
+| agent_loop | certified | 1.00 | 18 | 6.1 | 29.5 | 18 |
+| brief_ranking | certified | 1.00 | 3 | 9.4 | 9.9 | 73 |
+| cert_judge | certified | 1.00 | 6 | 6.7 | 7.1 | 35 |
+| enrich | certified | 1.00 | 3 | 25.2 | 26.6 | 227 |
+| rate_extract | certified | 1.00 | 9 | 10.3 | 22.9 | 113 |
+| transcript_propose | certified | 1.00 | 9 | 9.8 | 16.4 | 29 |
+| weekly_review | supported, degraded | 0.92 | 12 | 6.7 | 11.6 | 39 |
+| capture_classify | supported, degraded | 0.80 | 15 | 10.5 | 25.6 | 102 |
+| account_scan | not supported | 1.00 | 6 | 18.7 | 27.4 | 118 |
+| draft_reply | not supported | 0.92 | 36 | 14.0 | 61.9 | 164 |
+| deal_health | not supported | 0.89 | 9 | 41.4 | 52.7 | 369 |
+| corpus_ask | not supported | 0.87 | 15 | 19.1 | 50.2 | 92 |
+| site_triage | not supported | 0.87 | 15 | 6.2 | 10.6 | 39 |
+| capture_confidentiality_verdict | not supported | 0.86 | 42 | 10.8 | 13.8 | 71 |
+| cold_start | not supported | 0.85 | 27 | 9.8 | 44.0 | 110 |
+| capture_counterparty_verdict | not supported | 0.81 | 57 | 10.8 | 15.0 | 71 |
+| voice_build | not supported | 0.75 | 12 | 14.9 | 92.2 | 221 |
+| site_fact_extract | not supported | 0.67 | 9 | 20.5 | 32.7 | 173 |
+| offer_draft | not supported | 0.60 | 15 | 12.4 | 45.9 | 167 |
+| site_extract | not supported | 0.60 | 15 | 27.4 | 35.2 | 225 |
+| propose_roles | not supported | 0.56 | 9 | 20.8 | 50.1 | 190 |
+| owed_verdict | not supported | 0.50 | 12 | 16.3 | 26.5 | 143 |
+| request_settlement | not supported | 0.50 | 12 | 21.2 | 24.5 | 140 |
+| signal_extract | not supported | 0.50 | 12 | 12.1 | 16.5 | 66 |
+| summarize | not supported | 0.48 | 27 | 40.0 | 98.2 | 437 |
+| stage_evidence_extract | not supported | 0.33 | 27 | 17.5 | 34.2 | 96 |
+| weekly_learnings | not supported | 0.22 | 9 | 33.9 | 44.7 | 338 |
+| growth_fit | not supported | 0.00 | 3 | 88.0 | 105.7 | 888 |
+
+6 certified, 2 supported with care, 20 not supported, of 28 scored; the median call
+took 14.9 s. `document_extract` has no record: it sends a PDF, which this
+text-only binding does not carry. A pass rate of 1.00 beside "not supported"
+(`account_scan`) is the grading rule at work: every run passed the site's own
+validator, and the judge still scored a scenario below its bar.
+
+## 6. What we changed in the product
 
 Two defects no other runtime had shown, both fixed in the same change as this
 page:
@@ -216,14 +265,15 @@ renders the model's own template, so Mistral Nemo answered every `cold_start`
 call with a 400. The turns are now joined, and a gate holds every request in the
 certification corpus to alternating roles.
 
-## 6. What we did not test
+## 7. What we did not test
 
 - **vLLM on an NVIDIA GPU**, which is where most vLLM deployments run. The wire
   findings in section 1 (thinking defaults, the error shape, `max_model_len`)
   are properties of vLLM and hold there; the speeds and the two Gemma failures
   in section 2 are properties of vllm-metal on this Mac and may not.
 - **Gemma 4 at all**, because of the vllm-metal fault above.
-- **The rest of the corpus**: seven of the shipped tasks, and not `agent_loop`.
+- **The rest of the corpus for the other models**: they ran seven tasks; only
+  the preset's model ran all of them.
 - **Embeddings.** vllm-metal lists `BAAI/bge-m3` under experimental pooling
   support; a second server with `--runner pooling` would serve it. Not run.
 - **Concurrency.** One call at a time. Continuous batching is vLLM's reason to

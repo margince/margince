@@ -63,11 +63,8 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
 
    `PROFILE=` names the environment class a record is filed under
    (`cloud_frontier`, the default, `eu_hosted` or `sovereign`). It is enforced:
-   `sovereign` refuses a cloud vendor, and `eu_hosted` a broker candidate that
-   `UPSTREAM=` does not pin to EU-region hosts (`{"only":["mistral/eu"]}`).
-   It binds the **candidate** only: the judge is the lane's own grader, sent the
-   corpus and the candidate's answer and nothing of an installation's, so a
-   `sovereign` run may be graded by the default cloud judge.
+   `sovereign` refuses a cloud candidate (not the judge), and `eu_hosted` a broker
+   candidate that `UPSTREAM=` does not pin to EU hosts (`{"only":["mistral/eu"]}`).
    Under `ROUTING=` it is **ignored**: a record's profile is part of its
    identity, so it comes from the file that named the models.
 
