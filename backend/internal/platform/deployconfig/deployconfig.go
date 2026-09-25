@@ -199,7 +199,7 @@ func (b BootstrapAdmin) passwordRef() Secret {
 
 // RetentionSeed selects the retention POSTURE a fresh installation is
 // bootstrapped into (GCS-PARAM-7). It does not select the policy rows: those stay
-// the data-model's pins (DM-SEED-1..6) under either posture, so an installation
+// the data-model's pins (DM-SEED-1..7) under either posture, so an installation
 // that must keep everything still SEES the ladder it is not running.
 //
 // The key exists because bootstrap plants the rows and the nightly pass can fire
@@ -214,7 +214,7 @@ type RetentionSeed struct {
 
 // The two postures seeds.retention.default_policy admits.
 const (
-	// RetentionStandardPosture plants DM-SEED-1..6 with destruction enabled —
+	// RetentionStandardPosture plants DM-SEED-1..7 with destruction enabled —
 	// storage limitation (Art. 5(1)(e)) as the out-of-the-box posture.
 	RetentionStandardPosture = "standard"
 	// RetentionRetainOnlyPosture plants the same rows and turns the retain-only

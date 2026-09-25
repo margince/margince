@@ -43,9 +43,14 @@ func TestBootstrapSeedsDefaultRetentionPolicies(t *testing.T) {
 		"ai_call_payload/content/erase",
 		"contact/no_consent_no_deal/anonymize",
 		"deal/lost/archive", "lead/unconverted/anonymize",
+		// The provider original, aged on its own clock. Seeded because a scope
+		// shipping with no row reads on the settings page exactly like one whose
+		// number an admin chose, and nothing visits it — which is how this table
+		// reached 92% of a measured database.
+		"raw_capture//erase",
 	}
 	if len(got) != len(want) {
-		t.Fatalf("seeded %d policies %v, want the §3.4 five + ai_call_payload/content/erase", len(got), got)
+		t.Fatalf("seeded %d policies %v, want the §3.4 five plus ai_call_payload/content/erase and raw_capture//erase", len(got), got)
 	}
 	for i := range want {
 		if got[i] != want[i] {

@@ -359,6 +359,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `promptversionderived_test.go` | H2 | A cached answer is keyed by a fingerprint, and the fingerprint has to move when the prompt that produced the answer moves. |
 | `replyverdictvocabulary_test.go` | H1 | The reply verdict is spelled in three places, and they have to agree. |
 | `resetwireshape_test.go` | H2 | The reset-data 200 body as a fitness function. |
+| `retentionseedcoverage_test.go` | H1 | Every scope the retention engine can act on ships a default, or says why not. |
 | `rowgatespelling_test.go` | H2 | A module's READ spelling of a row gate is not a licence to write through it. |
 | `subjectlockorder_test.go` | H2 | The subject lock is the FIRST row a transaction takes. |
 | `tableownership_test.go` | H1 | Table ownership as a fitness function: the import DAG is enforced three ways, but nothing in the import graph stops a package from writing SQL against a table it does not own. |

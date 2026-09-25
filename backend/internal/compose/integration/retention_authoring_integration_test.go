@@ -369,7 +369,7 @@ func TestBootstrapTakesItsRetentionPostureFromTheDeploymentConfiguration(t *test
 	// The seeded ladder is the data-model's pins under BOTH postures, so this is
 	// asserted per case rather than once: a posture that quietly planted fewer
 	// rows would hide the ladder an admin is entitled to see.
-	const seededPolicies = 6
+	const seededPolicies = 7
 
 	cases := []struct {
 		name      string
