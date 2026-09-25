@@ -402,8 +402,8 @@ func TestDeterministicClosesWithWhatTheCompanyIs(t *testing.T) {
 // A profile the page has not gathered yet is not a gap to apologize for.
 func TestDeterministicSaysNothingAboutACompanyItKnowsNothingAbout(t *testing.T) {
 	for _, sentence := range Deterministic("company-1", Input{Name: "Acme"}, "en") {
-		for _, label := range companyCopy[textlang.English].ProfileLabels {
-			if strings.Contains(sentence.Text, label) {
+		for _, label := range floor.ProfileLabels {
+			if strings.Contains(sentence.Text, label.in(textlang.English)) {
 				t.Errorf("sentence %q talks about the company with no profile to talk from", sentence.Text)
 			}
 		}
@@ -568,7 +568,7 @@ func TestQuotedCompanyLinesKeepTheAuthorsOwnTerminator(t *testing.T) {
 		{Field: "offer_summary", Value: "Wer braucht das?"},
 		{Field: "icp", Value: "Mittelstand"},
 	}
-	lines := profileLines(in, accountEvidence(briefCompanyID), companyCopy[textlang.English])
+	lines := profileLines(in, accountEvidence(briefCompanyID), companyPhrasesFor("en"))
 	if len(lines) != 2 {
 		t.Fatalf("lines = %+v, want both statements", lines)
 	}

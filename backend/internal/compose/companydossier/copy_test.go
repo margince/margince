@@ -13,40 +13,19 @@ import (
 	"strings"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestEveryShippedLanguageLabelsTheDossier(t *testing.T) {
-	english, ok := dossierLabels[textlang.English]
-	if !ok {
-		t.Fatal("English is absent from the dossier's label table")
+	if len(dossierLabels) == 0 {
+		t.Fatal("the label table is empty; this census would certify nothing")
 	}
-	if len(english) == 0 {
-		t.Fatal("the English label table is empty; this census would certify nothing")
-	}
-	for _, lang := range textlang.Shipped {
-		labels, ok := dossierLabels[lang]
-		if !ok {
-			t.Errorf("%s ships in this product but labels no dossier field, so its floor states "+
-				"nothing where English states fifteen fields", lang)
-			continue
-		}
-		for field := range english {
-			label, ok := labels[field]
-			if !ok {
+	for field, p := range dossierLabels {
+		for _, lang := range textlang.Shipped {
+			if strings.TrimSpace(p.in(lang)) == "" {
 				t.Errorf("%s has no label for %s, and fieldSentence SKIPS a field it cannot "+
 					"label — the dossier silently carries one statement fewer in that language",
-					lang, field)
-				continue
-			}
-			if strings.TrimSpace(label) == "" {
-				t.Errorf("%s labels %s with blank text", lang, field)
-			}
-		}
-		for field := range labels {
-			if _, ok := english[field]; !ok {
-				t.Errorf("%s labels %s, which English does not — a field labelled in one language "+
-					"only is a statement that appears and disappears with the base language",
 					lang, field)
 			}
 		}
@@ -54,8 +33,12 @@ func TestEveryShippedLanguageLabelsTheDossier(t *testing.T) {
 }
 
 func TestAnUnshippedLanguageFallsBackToTheEnglishDossierLabels(t *testing.T) {
-	if got := labelsFor("kl"); len(got) != len(dossierLabels[textlang.English]) {
-		t.Fatalf("an unshipped language answered %d labels, want the English %d",
-			len(got), len(dossierLabels[textlang.English]))
+	field := crmcontracts.CompanyProfileFieldFieldIcp
+	got, ok := labelFor(field, "kl")
+	if !ok {
+		t.Fatalf("%s is not labelled at all", field)
+	}
+	if want := dossierLabels[field].in(textlang.English); got != want {
+		t.Fatalf("an unshipped language answered %q, want the English %q", got, want)
 	}
 }

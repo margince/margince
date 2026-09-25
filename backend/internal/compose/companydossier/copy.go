@@ -21,67 +21,82 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// dossierLabels is keyed by every language in textlang.Shipped, held by
-// TestEveryShippedLanguageLabelsTheDossier.
-var dossierLabels = map[textlang.Lang]map[crmcontracts.CompanyProfileFieldField]string{
-	textlang.English: {
-		crmcontracts.CompanyProfileFieldFieldIcp:               "Ideal customer",
-		crmcontracts.CompanyProfileFieldFieldIndustry:          "Industry",
-		crmcontracts.CompanyProfileFieldFieldCustomerPains:     "Customer pains",
-		crmcontracts.CompanyProfileFieldFieldDesiredOutcomes:   "Desired outcomes",
-		crmcontracts.CompanyProfileFieldFieldOfferSummary:      "What they offer",
-		crmcontracts.CompanyProfileFieldFieldBuyingCenter:      "Buying centre",
-		crmcontracts.CompanyProfileFieldFieldBuyingIntents:     "Buying intents",
-		crmcontracts.CompanyProfileFieldFieldSalesMotion:       "How they sell",
-		crmcontracts.CompanyProfileFieldFieldCommonObjections:  "Common objections",
-		crmcontracts.CompanyProfileFieldFieldUsp:               "What sets them apart",
-		crmcontracts.CompanyProfileFieldFieldValueProposition:  "Value proposition",
-		crmcontracts.CompanyProfileFieldFieldLegalName:         "Legal name",
-		crmcontracts.CompanyProfileFieldFieldRegisterVat:       "Registration",
-		crmcontracts.CompanyProfileFieldFieldRegisteredAddress: "Registered address",
-		crmcontracts.CompanyProfileFieldFieldHistory:           "History",
+// phrase is one label in every language, kept together so a translator reads
+// the three side by side.
+type phrase struct{ en, de, vi string }
+
+func (p phrase) in(lang textlang.Lang) string {
+	switch lang {
+	case textlang.German:
+		return p.de
+	case textlang.Vietnamese:
+		return p.vi
+	default:
+		return p.en
+	}
+}
+
+// dossierLabels answers every profile field the floor can state, in all three
+// languages. Held by TestEveryShippedLanguageLabelsTheDossier — fieldSentence
+// SKIPS a field it has no label for, so a missing translation carries one
+// statement fewer rather than one statement in English.
+var dossierLabels = map[crmcontracts.CompanyProfileFieldField]phrase{
+	crmcontracts.CompanyProfileFieldFieldIcp: {
+		en: "Ideal customer", de: "Idealer Kunde", vi: "Khách hàng lý tưởng",
 	},
-	textlang.German: {
-		crmcontracts.CompanyProfileFieldFieldIcp:               "Idealer Kunde",
-		crmcontracts.CompanyProfileFieldFieldIndustry:          "Branche",
-		crmcontracts.CompanyProfileFieldFieldCustomerPains:     "Probleme der Kunden",
-		crmcontracts.CompanyProfileFieldFieldDesiredOutcomes:   "Gewünschte Ergebnisse",
-		crmcontracts.CompanyProfileFieldFieldOfferSummary:      "Was sie anbieten",
-		crmcontracts.CompanyProfileFieldFieldBuyingCenter:      "Entscheidergremium",
-		crmcontracts.CompanyProfileFieldFieldBuyingIntents:     "Kaufabsichten",
-		crmcontracts.CompanyProfileFieldFieldSalesMotion:       "Wie sie verkaufen",
-		crmcontracts.CompanyProfileFieldFieldCommonObjections:  "Häufige Einwände",
-		crmcontracts.CompanyProfileFieldFieldUsp:               "Was sie auszeichnet",
-		crmcontracts.CompanyProfileFieldFieldValueProposition:  "Nutzenversprechen",
-		crmcontracts.CompanyProfileFieldFieldLegalName:         "Firmenname",
-		crmcontracts.CompanyProfileFieldFieldRegisterVat:       "Registereintrag",
-		crmcontracts.CompanyProfileFieldFieldRegisteredAddress: "Eingetragene Anschrift",
-		crmcontracts.CompanyProfileFieldFieldHistory:           "Historie",
+	crmcontracts.CompanyProfileFieldFieldIndustry: {
+		en: "Industry", de: "Branche", vi: "Ngành",
 	},
-	textlang.Vietnamese: {
-		crmcontracts.CompanyProfileFieldFieldIcp:               "Khách hàng lý tưởng",
-		crmcontracts.CompanyProfileFieldFieldIndustry:          "Ngành",
-		crmcontracts.CompanyProfileFieldFieldCustomerPains:     "Vấn đề của khách hàng",
-		crmcontracts.CompanyProfileFieldFieldDesiredOutcomes:   "Kết quả mong muốn",
-		crmcontracts.CompanyProfileFieldFieldOfferSummary:      "Họ cung cấp gì",
-		crmcontracts.CompanyProfileFieldFieldBuyingCenter:      "Nhóm ra quyết định mua",
-		crmcontracts.CompanyProfileFieldFieldBuyingIntents:     "Ý định mua",
-		crmcontracts.CompanyProfileFieldFieldSalesMotion:       "Họ bán theo cách nào",
-		crmcontracts.CompanyProfileFieldFieldCommonObjections:  "Phản đối thường gặp",
-		crmcontracts.CompanyProfileFieldFieldUsp:               "Điều làm họ nổi bật",
-		crmcontracts.CompanyProfileFieldFieldValueProposition:  "Giá trị mang lại",
-		crmcontracts.CompanyProfileFieldFieldLegalName:         "Tên pháp lý",
-		crmcontracts.CompanyProfileFieldFieldRegisterVat:       "Đăng ký kinh doanh",
-		crmcontracts.CompanyProfileFieldFieldRegisteredAddress: "Địa chỉ đăng ký",
-		crmcontracts.CompanyProfileFieldFieldHistory:           "Lịch sử",
+	crmcontracts.CompanyProfileFieldFieldCustomerPains: {
+		en: "Customer pains", de: "Probleme der Kunden", vi: "Vấn đề của khách hàng",
+	},
+	crmcontracts.CompanyProfileFieldFieldDesiredOutcomes: {
+		en: "Desired outcomes", de: "Gewünschte Ergebnisse", vi: "Kết quả mong muốn",
+	},
+	crmcontracts.CompanyProfileFieldFieldOfferSummary: {
+		en: "What they offer", de: "Was sie anbieten", vi: "Họ cung cấp gì",
+	},
+	crmcontracts.CompanyProfileFieldFieldBuyingCenter: {
+		en: "Buying centre", de: "Entscheidergremium", vi: "Nhóm ra quyết định mua",
+	},
+	crmcontracts.CompanyProfileFieldFieldBuyingIntents: {
+		en: "Buying intents", de: "Kaufabsichten", vi: "Ý định mua",
+	},
+	crmcontracts.CompanyProfileFieldFieldSalesMotion: {
+		en: "How they sell", de: "Wie sie verkaufen", vi: "Họ bán theo cách nào",
+	},
+	crmcontracts.CompanyProfileFieldFieldCommonObjections: {
+		en: "Common objections", de: "Häufige Einwände", vi: "Phản đối thường gặp",
+	},
+	crmcontracts.CompanyProfileFieldFieldUsp: {
+		en: "What sets them apart", de: "Was sie auszeichnet", vi: "Điều làm họ nổi bật",
+	},
+	crmcontracts.CompanyProfileFieldFieldValueProposition: {
+		en: "Value proposition", de: "Nutzenversprechen", vi: "Giá trị mang lại",
+	},
+	crmcontracts.CompanyProfileFieldFieldLegalName: {
+		en: "Legal name", de: "Firmenname", vi: "Tên pháp lý",
+	},
+	crmcontracts.CompanyProfileFieldFieldRegisterVat: {
+		en: "Registration", de: "Registereintrag", vi: "Đăng ký kinh doanh",
+	},
+	crmcontracts.CompanyProfileFieldFieldRegisteredAddress: {
+		en: "Registered address", de: "Eingetragene Anschrift", vi: "Địa chỉ đăng ký",
+	},
+	crmcontracts.CompanyProfileFieldFieldHistory: {
+		en: "History", de: "Historie", vi: "Lịch sử",
 	},
 }
 
-// labelsFor answers the dossier's labels for a language code, falling back to
-// English for one this build does not speak.
-func labelsFor(lang string) map[crmcontracts.CompanyProfileFieldField]string {
-	if labels, ok := dossierLabels[textlang.Lang(lang)]; ok {
-		return labels
+// labelFor answers one field's label in a language, falling back to English for
+// one this build does not speak.
+func labelFor(field crmcontracts.CompanyProfileFieldField, lang string) (string, bool) {
+	p, ok := dossierLabels[field]
+	if !ok {
+		return "", false
 	}
-	return dossierLabels[textlang.English]
+	if textlang.Known(lang) {
+		return p.in(textlang.Lang(lang)), true
+	}
+	return p.in(textlang.English), true
 }

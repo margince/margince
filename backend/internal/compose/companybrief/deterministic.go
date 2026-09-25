@@ -50,8 +50,8 @@ func Deterministic(companyID string, in Input, lang string) []Sentence {
 	}
 	if len(in.OpenTasks) > 0 {
 		sentences = append(sentences, Sentence{
-			Text: fmt.Sprintf(say.TasksStarting,
-				countPhrase(len(in.OpenTasks), say.OpenTaskOne, say.OpenTaskMany), in.OpenTasks[0].Name),
+			Text: fmt.Sprintf(say.say(floor.TasksStarting),
+				countPhrase(len(in.OpenTasks), say.say(floor.OpenTaskOne), say.say(floor.OpenTaskMany)), in.OpenTasks[0].Name),
 			// Cites the task itself, so the reader can open the one named.
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: in.OpenTasks[0].ID}},
 		})
@@ -67,13 +67,13 @@ func Deterministic(companyID string, in Input, lang string) []Sentence {
 // reader can open underneath.
 const deterministicProfileLines = 2
 
-func profileLines(in Input, account []Evidence, say companyPhrases) []Sentence {
+func profileLines(in Input, account []Evidence, say spoken) []Sentence {
 	out := make([]Sentence, 0, deterministicProfileLines)
 	for _, entry := range in.Profile {
 		if len(out) == deterministicProfileLines {
 			break
 		}
-		label, ok := say.ProfileLabels[entry.Field]
+		label, ok := say.noun(floor.ProfileLabels, entry.Field)
 		if !ok {
 			continue
 		}
@@ -91,38 +91,42 @@ func profileLines(in Input, account []Evidence, say companyPhrases) []Sentence {
 	return out
 }
 
-func identityLine(in Input, say companyPhrases) string {
+func identityLine(in Input, say spoken) string {
 	parts := []string{in.Name}
 	if in.Industry != "" {
 		parts = append(parts, in.Industry)
 	}
 	if in.SizeBand != "" {
-		parts = append(parts, fmt.Sprintf(say.ContactsSuffix, in.SizeBand))
+		parts = append(parts, fmt.Sprintf(say.say(floor.ContactsSuffix), in.SizeBand))
 	}
 	line := strings.Join(parts, ", ") + "."
 	if in.ContactCount > 0 {
 		// The score is reported with the contact count it was taken over, so
 		// a strong number from one contact never reads like a broad
 		// relationship.
-		line += fmt.Sprintf(say.StrengthClause, in.Strength, in.ContactCount)
+		if in.ContactCount == 1 {
+			line += fmt.Sprintf(say.say(floor.StrengthOverOne), in.Strength)
+		} else {
+			line += fmt.Sprintf(say.say(floor.StrengthOverContacts), in.Strength, in.ContactCount)
+		}
 	}
 	return line
 }
 
-func pipelineLine(in Input, say companyPhrases) string {
-	line := countPhrase(len(in.OpenDeals), say.OpenDealOne, say.OpenDealMany)
+func pipelineLine(in Input, say spoken) string {
+	line := countPhrase(len(in.OpenDeals), say.say(floor.OpenDealOne), say.say(floor.OpenDealMany))
 	total, currency, ok := oneCurrencyTotal(in.OpenDeals)
 	if ok && total > 0 {
 		// Minor units are rendered as a plain major-unit figure; the card
 		// formats money properly, and this text is the fallback.
-		line += fmt.Sprintf(say.WorthAbout, values.MajorUnits(total, currency), currency)
+		line += fmt.Sprintf(say.say(floor.WorthAbout), values.MajorUnits(total, currency), currency)
 	}
 	// The won total carries its OWN currency: the 360 converts it to the
 	// workspace base at each deal's frozen close-time rate, which has no
 	// relation to whatever the open deals are priced in. Labelling it with
 	// the open currency reported a real figure under the wrong unit.
 	if in.WonLifetime > 0 && in.WonCurrency != "" {
-		line += fmt.Sprintf(say.WonToDate, values.MajorUnits(in.WonLifetime, in.WonCurrency), in.WonCurrency)
+		line += fmt.Sprintf(say.say(floor.WonToDate), values.MajorUnits(in.WonLifetime, in.WonCurrency), in.WonCurrency)
 	}
 	return line + "."
 }
@@ -180,8 +184,8 @@ func leadDealEvidence(in Input) []Evidence {
 	return []Evidence{{EntityType: citeDeal, EntityID: in.OpenDeals[0].ID}}
 }
 
-func stalledLine(deal DealIn, say companyPhrases) string {
-	return fmt.Sprintf(say.StalledDeal, deal.Name)
+func stalledLine(deal DealIn, say spoken) string {
+	return fmt.Sprintf(say.say(floor.StalledDeal), deal.Name)
 }
 
 // kindNoun names an activity kind as a whole noun phrase in the reader's
@@ -192,27 +196,25 @@ func stalledLine(deal DealIn, say companyPhrases) string {
 // uses no article at all. A kind the table does not name renders as its stored
 // key, which says only that something happened — the honest reading of a row
 // this build has no word for.
-func kindNoun(kind string, say companyPhrases) string {
-	if noun, ok := say.KindNouns[kind]; ok {
-		return noun
-	}
-	return kind
+func kindNoun(kind string, say spoken) string {
+	noun, _ := say.noun(floor.KindNouns, kind)
+	return noun
 }
 
-func lastTouchLine(last ActIn, say companyPhrases) string {
+func lastTouchLine(last ActIn, say spoken) string {
 	noun := kindNoun(last.Kind, say)
 	when := shortDate(last.At, say)
 	switch {
 	case when != "" && last.Subject != "":
 		// The subject is quoted rather than woven into the sentence: it is text
 		// from outside the workspace, and it must read as theirs, not ours.
-		return fmt.Sprintf(say.LastContactFull, noun, when, last.Subject)
+		return fmt.Sprintf(say.say(floor.LastContactFull), noun, when, last.Subject)
 	case when != "":
-		return fmt.Sprintf(say.LastContactDated, noun, when)
+		return fmt.Sprintf(say.say(floor.LastContactDated), noun, when)
 	case last.Subject != "":
-		return fmt.Sprintf(say.LastContactSubject, noun, last.Subject)
+		return fmt.Sprintf(say.say(floor.LastContactSubject), noun, last.Subject)
 	default:
-		return fmt.Sprintf(say.LastContactPlain, noun)
+		return fmt.Sprintf(say.say(floor.LastContactPlain), noun)
 	}
 }
 
@@ -238,7 +240,7 @@ func countPhrase(count int, one, many string) string {
 // this package's own folds, so an unreadable one is a defect upstream of here
 // rather than a fact about the account — and the sentence around it is still
 // true without the date. The layout is the language's own.
-func shortDate(at string, say companyPhrases) string {
+func shortDate(at string, say spoken) string {
 	if at == "" {
 		return ""
 	}
@@ -246,7 +248,7 @@ func shortDate(at string, say companyPhrases) string {
 	if err != nil {
 		return ""
 	}
-	return parsed.UTC().Format(say.DateLayout)
+	return parsed.UTC().Format(say.say(floor.DateLayout))
 }
 
 // DeterministicSections is the floor in the shape the card renders: the same
@@ -291,8 +293,8 @@ func DeterministicSections(companyID string, in Input, lang string) []Section {
 
 	if len(in.OpenTasks) > 0 {
 		sections = append(sections, Section{Kind: sectionNextStep, Sentences: []Sentence{{
-			Text: fmt.Sprintf(say.TasksStarting,
-				countPhrase(len(in.OpenTasks), say.OpenTaskOne, say.OpenTaskMany), in.OpenTasks[0].Name),
+			Text: fmt.Sprintf(say.say(floor.TasksStarting),
+				countPhrase(len(in.OpenTasks), say.say(floor.OpenTaskOne), say.say(floor.OpenTaskMany)), in.OpenTasks[0].Name),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: in.OpenTasks[0].ID}},
 		}}})
 	}

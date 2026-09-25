@@ -32,192 +32,217 @@ const (
 	kindMessage = "message"
 )
 
-// companyPhrases carries the company floor's sentences. Adding a field fails to
-// compile in the languages that have not answered it.
-//
-// Held by: TestEveryShippedLanguageWritesTheCompanyFloor (backend/internal/compose/companybrief/copy_test.go)
+// phrase is one sentence in every language, kept together so a translator reads
+// the three side by side. Keyed per language instead, each sentence sat in a
+// different block a hundred lines from its siblings.
+type phrase struct{ en, de, vi string }
+
+func (p phrase) in(lang textlang.Lang) string {
+	switch lang {
+	case textlang.German:
+		return p.de
+	case textlang.Vietnamese:
+		return p.vi
+	default:
+		return p.en
+	}
+}
+
+// spoken is the floor resolved to one language.
+type spoken struct{ lang textlang.Lang }
+
+func (s spoken) say(p phrase) string { return p.in(s.lang) }
+
+// nouns answers a keyed noun in this language, falling back to the stored key —
+// a kind or field this build has no word for says only that it exists.
+func (s spoken) noun(table map[string]phrase, key string) (string, bool) {
+	p, ok := table[key]
+	if !ok {
+		return key, false
+	}
+	return p.in(s.lang), true
+}
+
+// companyPhrases is the company floor's sentence set. Every field is answered
+// in all three languages by floor below, which
+// TestEveryShippedLanguageWritesTheCompanyFloor holds — a keyed literal may omit
+// a field and Go fills it with "", so an unanswered sentence goes missing
+// rather than failing to build.
 type companyPhrases struct {
 	// ProfileLabels turn a stored profile field into the question it answers.
 	// Joined to the stored value with a colon, never grammatically: the values
 	// are whatever a human accepted off a site read, in the company's own
 	// language, and only a colon is true of both a noun phrase and a sentence.
-	ProfileLabels map[string]string
+	ProfileLabels map[string]phrase
 
 	// KindNouns name an activity kind as a whole noun phrase, article and all
-	// where the language has one. A kind absent here renders as its stored key,
-	// which says only that something happened.
-	KindNouns map[string]string
+	// where the language has one.
+	KindNouns map[string]phrase
 
-	ContactsSuffix string // size band
-	StrengthClause string // strength, contact count
+	ContactsSuffix phrase // size band
+	// The contact count takes its own sentence at one: "über 1 bekannte
+	// Kontakte" is not German.
+	StrengthOverOne      phrase // strength
+	StrengthOverContacts phrase // strength, contact count
 
-	OpenDealOne  string
-	OpenDealMany string // count
-	WorthAbout   string // amount, currency
-	WonToDate    string // amount, currency
+	OpenDealOne  phrase
+	OpenDealMany phrase // count
+	WorthAbout   phrase // amount, currency
+	WonToDate    phrase // amount, currency
 
-	StalledDeal string // deal name
+	StalledDeal phrase // deal name
 
-	LastContactPlain   string // noun phrase
-	LastContactDated   string // noun phrase, date
-	LastContactSubject string // noun phrase, subject
-	LastContactFull    string // noun phrase, date, subject
+	LastContactPlain   phrase // noun phrase
+	LastContactDated   phrase // noun phrase, date
+	LastContactSubject phrase // noun phrase, subject
+	LastContactFull    phrase // noun phrase, date, subject
 
-	OpenTaskOne   string
-	OpenTaskMany  string // count
-	TasksStarting string // task phrase, first task name
+	OpenTaskOne   phrase
+	OpenTaskMany  phrase // count
+	TasksStarting phrase // task phrase, first task name
 
-	// The ask answers' floor, which is the same floor under another question.
-	KnownContactOne  string
-	KnownContactMany string // count
-	KnownContactLine string // contact name
-	TasksEarliestDue string // task phrase, date
-	OpenTaskNamed    string // task name
-	OpenTaskDue      string // task name, date
-	OpenDealNamed    string // deal name
-	DealStalledMark  string
+	KnownContactOne  phrase
+	KnownContactMany phrase // count
+	KnownContactLine phrase // contact name
+	TasksEarliestDue phrase // task phrase, date
+	OpenTaskNamed    phrase // task name
+	OpenTaskDue      phrase // task name, date
+	OpenDealNamed    phrase // deal name
+	DealStalledMark  phrase
 
-	// DateLayout is a Go reference layout, so each language writes a date the
-	// way its readers do. The year is always named: these writers hold no
-	// clock, and a bare day and month on last year's task reads as this year.
-	DateLayout string
+	// DateLayout is a Go reference layout. Only English may name a month in
+	// words: time.Format writes the `Jan` token as an English abbreviation
+	// whatever the reader's language, so a German layout spelling it out would
+	// print "2. May. 2026". The other two are numeric for that reason, held by
+	// TestNoLanguageWritesAnEnglishMonthName.
+	DateLayout phrase
 }
 
-// companyCopy is keyed by every language in textlang.Shipped, held by
-// TestEveryShippedLanguageWritesTheCompanyFloor.
-//
-//nolint:dupl // three translations of one table are structurally identical by construction; that is what makes the census above able to compare them field by field
-var companyCopy = map[textlang.Lang]companyPhrases{
-	textlang.English: {
-		ProfileLabels: map[string]string{
-			string(crmcontracts.CompanyProfileFieldFieldOfferSummary):     "What they sell",
-			string(crmcontracts.CompanyProfileFieldFieldIcp):              "Who they sell to",
-			string(crmcontracts.CompanyProfileFieldFieldValueProposition): "What they promise",
-			string(crmcontracts.CompanyProfileFieldFieldUsp):              "How they differentiate",
-			string(crmcontracts.CompanyProfileFieldFieldCustomerPains):    "What they solve",
-			string(crmcontracts.CompanyProfileFieldFieldDesiredOutcomes):  "What their customers want",
-			string(crmcontracts.CompanyProfileFieldFieldBuyingCenter):     "Who decides there",
-			string(crmcontracts.CompanyProfileFieldFieldSalesMotion):      "How they sell",
+var floor = companyPhrases{
+	ProfileLabels: map[string]phrase{
+		string(crmcontracts.CompanyProfileFieldFieldOfferSummary): {
+			en: "What they sell", de: "Was sie verkaufen", vi: "Họ bán gì",
 		},
-		KindNouns: map[string]string{
-			kindEmail: "an email", kindCall: "a call", kindMeeting: "a meeting",
-			kindNote: "a note", kindTask: "a task", kindMessage: "a message",
+		string(crmcontracts.CompanyProfileFieldFieldIcp): {
+			en: "Who they sell to", de: "An wen sie verkaufen", vi: "Họ bán cho ai",
 		},
-		ContactsSuffix: "%s contacts",
-		StrengthClause: " Relationship strength %d across %d known contact(s).",
-		OpenDealOne:    "1 open deal",
-		OpenDealMany:   "%d open deals",
-		WorthAbout:     " worth about %s %s",
-		WonToDate:      "; %s %s won to date",
-		StalledDeal:    "%s is stalled with no recent activity.",
-
-		LastContactPlain:   "Last contact was %s.",
-		LastContactDated:   "Last contact was %s on %s.",
-		LastContactSubject: "Last contact was %s: %q.",
-		LastContactFull:    "Last contact was %s on %s: %q.",
-
-		OpenTaskOne:      "1 open task",
-		OpenTaskMany:     "%d open tasks",
-		TasksStarting:    "%s, starting with %q.",
-		KnownContactOne:  "1 known contact",
-		KnownContactMany: "%d known contacts",
-		KnownContactLine: "Known contact: %s.",
-		TasksEarliestDue: "%s, the earliest due %s.",
-		OpenTaskNamed:    "Open task: %q.",
-		OpenTaskDue:      "Open task: %q, due %s.",
-		OpenDealNamed:    "Open deal: %s",
-		DealStalledMark:  "stalled",
-		DateLayout:       "2 Jan 2006",
+		string(crmcontracts.CompanyProfileFieldFieldValueProposition): {
+			en: "What they promise", de: "Was sie versprechen", vi: "Họ cam kết điều gì",
+		},
+		string(crmcontracts.CompanyProfileFieldFieldUsp): {
+			en: "How they differentiate", de: "Wodurch sie sich unterscheiden",
+			vi: "Điều gì làm họ khác biệt",
+		},
+		string(crmcontracts.CompanyProfileFieldFieldCustomerPains): {
+			en: "What they solve", de: "Welches Problem sie lösen",
+			vi: "Họ giải quyết vấn đề gì",
+		},
+		string(crmcontracts.CompanyProfileFieldFieldDesiredOutcomes): {
+			en: "What their customers want", de: "Was ihre Kunden erreichen wollen",
+			vi: "Khách hàng của họ muốn đạt được gì",
+		},
+		string(crmcontracts.CompanyProfileFieldFieldBuyingCenter): {
+			en: "Who decides there", de: "Wer dort entscheidet",
+			vi: "Ai là người quyết định bên đó",
+		},
+		string(crmcontracts.CompanyProfileFieldFieldSalesMotion): {
+			en: "How they sell", de: "Wie sie verkaufen", vi: "Họ bán theo cách nào",
+		},
 	},
-	textlang.German: {
-		ProfileLabels: map[string]string{
-			string(crmcontracts.CompanyProfileFieldFieldOfferSummary):     "Was sie verkaufen",
-			string(crmcontracts.CompanyProfileFieldFieldIcp):              "An wen sie verkaufen",
-			string(crmcontracts.CompanyProfileFieldFieldValueProposition): "Was sie versprechen",
-			string(crmcontracts.CompanyProfileFieldFieldUsp):              "Wodurch sie sich unterscheiden",
-			string(crmcontracts.CompanyProfileFieldFieldCustomerPains):    "Welches Problem sie lösen",
-			string(crmcontracts.CompanyProfileFieldFieldDesiredOutcomes):  "Was ihre Kunden erreichen wollen",
-			string(crmcontracts.CompanyProfileFieldFieldBuyingCenter):     "Wer dort entscheidet",
-			string(crmcontracts.CompanyProfileFieldFieldSalesMotion):      "Wie sie verkaufen",
-		},
-		KindNouns: map[string]string{
-			kindEmail: "eine E-Mail", kindCall: "ein Anruf", kindMeeting: "ein Termin",
-			kindNote: "eine Notiz", kindTask: "eine Aufgabe", kindMessage: "eine Nachricht",
-		},
-		ContactsSuffix: "%s Kontakte",
-		StrengthClause: " Beziehungsstärke %d über %d bekannte Kontakte.",
-		OpenDealOne:    "1 offener Deal",
-		OpenDealMany:   "%d offene Deals",
-		WorthAbout:     " im Wert von etwa %s %s",
-		WonToDate:      "; %s %s bisher gewonnen",
-		StalledDeal:    "%s stockt, ohne jüngste Aktivität.",
-
-		LastContactPlain:   "Der letzte Kontakt war %s.",
-		LastContactDated:   "Der letzte Kontakt war %s am %s.",
-		LastContactSubject: "Der letzte Kontakt war %s: %q.",
-		LastContactFull:    "Der letzte Kontakt war %s am %s: %q.",
-
-		OpenTaskOne:      "1 offene Aufgabe",
-		OpenTaskMany:     "%d offene Aufgaben",
-		TasksStarting:    "%s, beginnend mit %q.",
-		KnownContactOne:  "1 bekannter Kontakt",
-		KnownContactMany: "%d bekannte Kontakte",
-		KnownContactLine: "Bekannter Kontakt: %s.",
-		TasksEarliestDue: "%s, die früheste fällig am %s.",
-		OpenTaskNamed:    "Offene Aufgabe: %q.",
-		OpenTaskDue:      "Offene Aufgabe: %q, fällig am %s.",
-		OpenDealNamed:    "Offener Deal: %s",
-		DealStalledMark:  "stockend",
-		DateLayout:       "2. Jan. 2006",
+	KindNouns: map[string]phrase{
+		kindEmail:   {en: "an email", de: "eine E-Mail", vi: "một email"},
+		kindCall:    {en: "a call", de: "ein Anruf", vi: "một cuộc gọi"},
+		kindMeeting: {en: "a meeting", de: "ein Termin", vi: "một cuộc họp"},
+		kindNote:    {en: "a note", de: "eine Notiz", vi: "một ghi chú"},
+		kindTask:    {en: "a task", de: "eine Aufgabe", vi: "một công việc"},
+		kindMessage: {en: "a message", de: "eine Nachricht", vi: "một tin nhắn"},
 	},
-	textlang.Vietnamese: {
-		ProfileLabels: map[string]string{
-			string(crmcontracts.CompanyProfileFieldFieldOfferSummary):     "Họ bán gì",
-			string(crmcontracts.CompanyProfileFieldFieldIcp):              "Họ bán cho ai",
-			string(crmcontracts.CompanyProfileFieldFieldValueProposition): "Họ cam kết điều gì",
-			string(crmcontracts.CompanyProfileFieldFieldUsp):              "Điều gì làm họ khác biệt",
-			string(crmcontracts.CompanyProfileFieldFieldCustomerPains):    "Họ giải quyết vấn đề gì",
-			string(crmcontracts.CompanyProfileFieldFieldDesiredOutcomes):  "Khách hàng của họ muốn đạt được gì",
-			string(crmcontracts.CompanyProfileFieldFieldBuyingCenter):     "Ai là người quyết định bên đó",
-			string(crmcontracts.CompanyProfileFieldFieldSalesMotion):      "Họ bán theo cách nào",
-		},
-		KindNouns: map[string]string{
-			kindEmail: "một email", kindCall: "một cuộc gọi", kindMeeting: "một cuộc họp",
-			kindNote: "một ghi chú", kindTask: "một công việc", kindMessage: "một tin nhắn",
-		},
-		ContactsSuffix: "%s liên hệ",
-		StrengthClause: " Mức độ quan hệ %d trên %d liên hệ đã biết.",
-		OpenDealOne:    "1 cơ hội đang mở",
-		OpenDealMany:   "%d cơ hội đang mở",
-		WorthAbout:     " trị giá khoảng %s %s",
-		WonToDate:      "; đã thắng %s %s đến nay",
-		StalledDeal:    "%s đang chững lại, không có hoạt động gần đây.",
 
-		LastContactPlain:   "Lần liên hệ gần nhất là %s.",
-		LastContactDated:   "Lần liên hệ gần nhất là %s vào %s.",
-		LastContactSubject: "Lần liên hệ gần nhất là %s: %q.",
-		LastContactFull:    "Lần liên hệ gần nhất là %s vào %s: %q.",
-
-		OpenTaskOne:      "1 công việc đang mở",
-		OpenTaskMany:     "%d công việc đang mở",
-		TasksStarting:    "%s, bắt đầu với %q.",
-		KnownContactOne:  "1 liên hệ đã biết",
-		KnownContactMany: "%d liên hệ đã biết",
-		KnownContactLine: "Liên hệ đã biết: %s.",
-		TasksEarliestDue: "%s, sớm nhất đến hạn %s.",
-		OpenTaskNamed:    "Công việc đang mở: %q.",
-		OpenTaskDue:      "Công việc đang mở: %q, đến hạn %s.",
-		OpenDealNamed:    "Cơ hội đang mở: %s",
-		DealStalledMark:  "đang chững lại",
-		DateLayout:       "2 thg 1 2006",
+	ContactsSuffix: phrase{en: "%s contacts", de: "%s Kontakte", vi: "%s liên hệ"},
+	StrengthOverOne: phrase{
+		en: " Relationship strength %d across 1 known contact.",
+		de: " Beziehungsstärke %d über einen bekannten Kontakt.",
+		vi: " Mức độ quan hệ %d trên 1 liên hệ đã biết.",
 	},
+	StrengthOverContacts: phrase{
+		en: " Relationship strength %d across %d known contacts.",
+		de: " Beziehungsstärke %d über %d bekannte Kontakte.",
+		vi: " Mức độ quan hệ %d trên %d liên hệ đã biết.",
+	},
+
+	OpenDealOne:  phrase{en: "1 open deal", de: "1 offener Deal", vi: "1 cơ hội đang mở"},
+	OpenDealMany: phrase{en: "%d open deals", de: "%d offene Deals", vi: "%d cơ hội đang mở"},
+	WorthAbout: phrase{
+		en: " worth about %s %s", de: " im Wert von etwa %s %s",
+		vi: " trị giá khoảng %s %s",
+	},
+	WonToDate: phrase{
+		en: "; %s %s won to date", de: "; %s %s bisher gewonnen",
+		vi: "; đã thắng %s %s đến nay",
+	},
+	StalledDeal: phrase{
+		en: "%s is stalled with no recent activity.",
+		de: "%s stockt, ohne jüngste Aktivität.",
+		vi: "%s đang chững lại, không có hoạt động gần đây.",
+	},
+
+	LastContactPlain: phrase{
+		en: "Last contact was %s.", de: "Der letzte Kontakt war %s.",
+		vi: "Lần liên hệ gần nhất là %s.",
+	},
+	LastContactDated: phrase{
+		en: "Last contact was %s on %s.", de: "Der letzte Kontakt war %s am %s.",
+		vi: "Lần liên hệ gần nhất là %s vào %s.",
+	},
+	LastContactSubject: phrase{
+		en: "Last contact was %s: %q.", de: "Der letzte Kontakt war %s: %q.",
+		vi: "Lần liên hệ gần nhất là %s: %q.",
+	},
+	LastContactFull: phrase{
+		en: "Last contact was %s on %s: %q.", de: "Der letzte Kontakt war %s am %s: %q.",
+		vi: "Lần liên hệ gần nhất là %s vào %s: %q.",
+	},
+
+	OpenTaskOne:  phrase{en: "1 open task", de: "1 offene Aufgabe", vi: "1 công việc đang mở"},
+	OpenTaskMany: phrase{en: "%d open tasks", de: "%d offene Aufgaben", vi: "%d công việc đang mở"},
+	TasksStarting: phrase{
+		en: "%s, starting with %q.", de: "%s, beginnend mit %q.",
+		vi: "%s, bắt đầu với %q.",
+	},
+
+	KnownContactOne: phrase{
+		en: "1 known contact", de: "1 bekannter Kontakt", vi: "1 liên hệ đã biết",
+	},
+	KnownContactMany: phrase{
+		en: "%d known contacts", de: "%d bekannte Kontakte", vi: "%d liên hệ đã biết",
+	},
+	KnownContactLine: phrase{
+		en: "Known contact: %s.", de: "Bekannter Kontakt: %s.", vi: "Liên hệ đã biết: %s.",
+	},
+	TasksEarliestDue: phrase{
+		en: "%s, the earliest due %s.", de: "%s, die früheste fällig am %s.",
+		vi: "%s, sớm nhất đến hạn %s.",
+	},
+	OpenTaskNamed: phrase{
+		en: "Open task: %q.", de: "Offene Aufgabe: %q.", vi: "Công việc đang mở: %q.",
+	},
+	OpenTaskDue: phrase{
+		en: "Open task: %q, due %s.", de: "Offene Aufgabe: %q, fällig am %s.",
+		vi: "Công việc đang mở: %q, đến hạn %s.",
+	},
+	OpenDealNamed: phrase{
+		en: "Open deal: %s", de: "Offener Deal: %s", vi: "Cơ hội đang mở: %s",
+	},
+	DealStalledMark: phrase{en: "stalled", de: "stockend", vi: "đang chững lại"},
+
+	DateLayout: phrase{en: "2 Jan 2006", de: "2.1.2006", vi: "2/1/2006"},
 }
 
-// companyPhrasesFor answers the floor's sentences for a language code, falling
-// back to English for one this build does not speak.
-func companyPhrasesFor(lang string) companyPhrases {
-	if p, ok := companyCopy[textlang.Lang(lang)]; ok {
-		return p
+// companyPhrasesFor answers the floor's language for a code, falling back to
+// English for one this build does not speak.
+func companyPhrasesFor(lang string) spoken {
+	if textlang.Known(lang) {
+		return spoken{lang: textlang.Lang(lang)}
 	}
-	return companyCopy[textlang.English]
+	return spoken{lang: textlang.English}
 }

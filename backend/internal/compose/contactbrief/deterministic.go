@@ -75,7 +75,7 @@ func Deterministic(contactID string, in Input, lang string) []Sentence {
 // evidence by the ladder that selected it, and a floor that reworded it would
 // be a second spelling of the same finding, free to disagree with the one the
 // page prints beside this card.
-func dueNowLine(in Input, self []Evidence, say briefPhrases) (string, []Evidence, bool) {
+func dueNowLine(in Input, self []Evidence, say spoken) (string, []Evidence, bool) {
 	if in.Moment != nil && in.Moment.Headline != "" {
 		return claims.TerminateSentence(in.Moment.Headline), momentEvidence(in, self), true
 	}
@@ -102,54 +102,60 @@ func momentEvidence(in Input, self []Evidence) []Evidence {
 // changeLine says what moved. The span and the bands come from the record; a
 // kind this build does not know renders as the stored key rather than as an
 // invented sentence about it.
-func changeLine(change ChangeIn, say briefPhrases) string {
+func changeLine(change ChangeIn, say spoken) string {
 	switch change.Kind {
 	case string(crmcontracts.ContactRelationshipChangeKindRepliedAfterGap):
-		if change.Days > 0 {
-			return fmt.Sprintf(say.AnsweredAfterDays, change.Days)
+		switch {
+		case change.Days == 1:
+			return say.say(floor.AnsweredAfterADay)
+		case change.Days > 1:
+			return fmt.Sprintf(say.say(floor.AnsweredAfterDays), change.Days)
 		}
-		return say.AnsweredAfterLong
+		return say.say(floor.AnsweredAfterLong)
 	case string(crmcontracts.ContactRelationshipChangeKindWentQuiet):
-		if change.Days > 0 {
-			return fmt.Sprintf(say.QuietForDays, change.Days)
+		switch {
+		case change.Days == 1:
+			return say.say(floor.QuietForADay)
+		case change.Days > 1:
+			return fmt.Sprintf(say.say(floor.QuietForDays), change.Days)
 		}
-		return say.GoneQuiet
+		return say.say(floor.GoneQuiet)
 	case string(crmcontracts.ContactRelationshipChangeKindWarmed), string(crmcontracts.ContactRelationshipChangeKindCooled):
-		return fmt.Sprintf(say.BandMoved,
+		return fmt.Sprintf(say.say(floor.BandMoved),
 			readableBand(change.From, say), readableBand(change.To, say))
 	default:
-		return fmt.Sprintf(say.RelationshipMoved, readableRole(change.Kind))
+		return fmt.Sprintf(say.say(floor.RelationshipMoved), readableRole(change.Kind))
 	}
 }
 
 // readableBand names a strength band, falling back to the stored key for a band
 // this build does not know — the same rule readableRole follows, for the same
 // reason: inventing a label for a value nobody defined would be a claim.
-func readableBand(band string, say briefPhrases) string {
+func readableBand(band string, say spoken) string {
 	if band == "" {
-		return say.UnrecordedBand
+		return say.say(floor.UnrecordedBand)
 	}
 	return readableRole(band)
 }
 
 // identityLine says who this contact is in the current commercial context —
 // the first thing a reader needs and the one sentence that is always true.
-func identityLine(in Input, say briefPhrases) string {
+func identityLine(in Input, say spoken) string {
 	switch {
 	case in.Title != "" && in.Employer != "":
-		return fmt.Sprintf(say.IdentityTitleEmployer, in.Name, in.Title, in.Employer)
+		return fmt.Sprintf(say.say(floor.IdentityTitleEmployer), in.Name, in.Title, in.Employer)
 	case in.Employer != "":
-		return fmt.Sprintf(say.IdentityEmployer, in.Name, in.Employer)
+		return fmt.Sprintf(say.say(floor.IdentityEmployer), in.Name, in.Employer)
 	case in.Title != "":
-		return fmt.Sprintf(say.IdentityTitle, in.Name, in.Title)
+		return fmt.Sprintf(say.say(floor.IdentityTitle), in.Name, in.Title)
 	default:
-		return fmt.Sprintf(say.IdentityBare, in.Name)
+		return fmt.Sprintf(say.say(floor.IdentityBare), in.Name)
 	}
 }
 
 // dealLine states the commercial stake, with the seat this contact holds on it.
 // The role is stored relationship data — it is never inferred from a title.
-func dealLine(in Input, say briefPhrases) string {
+func dealLine(in Input, say spoken) string {
 	deal := in.OpenDeal
 	parts := []string{deal.Name}
 	if spoken := contactcontext.SpokenAmount(deal.AmountMinor, deal.Currency); spoken != "" {
@@ -160,9 +166,9 @@ func dealLine(in Input, say briefPhrases) string {
 	}
 	line := strings.Join(parts, " · ")
 	if in.BuyingRole != "" {
-		return fmt.Sprintf(say.RecordedRoleOnDeal, readableRole(in.BuyingRole), line)
+		return fmt.Sprintf(say.say(floor.RecordedRoleOnDeal), readableRole(in.BuyingRole), line)
 	}
-	return fmt.Sprintf(say.OnDealNoRole, line)
+	return fmt.Sprintf(say.say(floor.OnDealNoRole), line)
 }
 
 // readableRole turns the stored role key into words. The keys are a naming
@@ -175,20 +181,20 @@ func readableRole(role string) string {
 // caresAboutLine names what this contact has explicitly said matters, citing the
 // conversation it was said in rather than the derived claim row — the reader
 // checks a sentence against what was actually written.
-func caresAboutLine(in Input, say briefPhrases) (string, []Evidence, bool) {
+func caresAboutLine(in Input, say spoken) (string, []Evidence, bool) {
 	priorities := claimsOfKind(in, string(crmcontracts.ConversationClaimKindPriority))
 	objections := claimsOfKind(in, string(crmcontracts.ConversationClaimKindObjection))
 	switch {
 	case len(priorities) > 0 && len(objections) > 0:
-		return fmt.Sprintf(say.CaresBoth, priorities[0].Body, objections[0].Body), []Evidence{
+		return fmt.Sprintf(say.say(floor.CaresBoth), priorities[0].Body, objections[0].Body), []Evidence{
 			{EntityType: citeActivity, EntityID: priorities[0].SourceID},
 			{EntityType: citeActivity, EntityID: objections[0].SourceID},
 		}, true
 	case len(priorities) > 0:
-		return fmt.Sprintf(say.CaresPriority, priorities[0].Body),
+		return fmt.Sprintf(say.say(floor.CaresPriority), priorities[0].Body),
 			[]Evidence{{EntityType: citeActivity, EntityID: priorities[0].SourceID}}, true
 	case len(objections) > 0:
-		return fmt.Sprintf(say.CaresObjection, objections[0].Body),
+		return fmt.Sprintf(say.say(floor.CaresObjection), objections[0].Body),
 			[]Evidence{{EntityType: citeActivity, EntityID: objections[0].SourceID}}, true
 	default:
 		return "", nil, false
@@ -210,24 +216,24 @@ func claimsOfKind(in Input, kind string) []ClaimIn {
 // with no reply and one who wrote to us this morning have the same last-touch
 // date and opposite meanings, and neither is worth a sentence if the sentence
 // cannot say what the message was about.
-func lastTouchLine(in Input, last ActIn, say briefPhrases) string {
+func lastTouchLine(in Input, last ActIn, say spoken) string {
 	switch {
 	case last.Withheld:
 		// The date is the reader's even though the words are not, and saying so
 		// is the honest sentence: silence here reads as nobody having written.
-		return say.WithheldMessage
+		return say.say(floor.WithheldMessage)
 	case in.LastInbound != "" && in.LastInbound > in.LastOutbound:
 		if outstanding(last) {
-			return fmt.Sprintf(say.TheyWroteLastOpen, aboutClause(last, say))
+			return fmt.Sprintf(say.say(floor.TheyWroteLastOpen), aboutClause(last, say))
 		}
-		return fmt.Sprintf(say.TheyWroteLastClosed, aboutClause(last, say))
+		return fmt.Sprintf(say.say(floor.TheyWroteLastClosed), aboutClause(last, say))
 	case in.LastOutbound != "":
 		if outstanding(last) {
-			return fmt.Sprintf(say.YouWroteLastOpen, aboutClause(last, say))
+			return fmt.Sprintf(say.say(floor.YouWroteLastOpen), aboutClause(last, say))
 		}
-		return fmt.Sprintf(say.YouWroteLastClosed, aboutClause(last, say))
+		return fmt.Sprintf(say.say(floor.YouWroteLastClosed), aboutClause(last, say))
 	default:
-		return fmt.Sprintf(say.LastCaptured, aboutClause(last, say))
+		return fmt.Sprintf(say.say(floor.LastCaptured), aboutClause(last, say))
 	}
 }
 
@@ -261,14 +267,14 @@ func outstanding(last ActIn) bool {
 // to the subject. A row that carries neither is named by its kind, which says
 // only that something happened — the honest reading of a row that recorded
 // nothing else.
-func aboutClause(last ActIn, say briefPhrases) string {
+func aboutClause(last ActIn, say spoken) string {
 	if last.Preview != "" {
-		return fmt.Sprintf(say.AboutSaying, trimmedPreview(last.Preview))
+		return fmt.Sprintf(say.say(floor.AboutSaying), trimmedPreview(last.Preview))
 	}
 	if last.Subject != "" {
-		return fmt.Sprintf(say.AboutSubject, last.Subject)
+		return fmt.Sprintf(say.say(floor.AboutSubject), last.Subject)
 	}
-	return fmt.Sprintf(say.AboutKind, readableRole(last.Kind))
+	return fmt.Sprintf(say.say(floor.AboutKind), readableRole(last.Kind))
 }
 
 // previewWords bounds the quoted line. A preview is one line by construction,

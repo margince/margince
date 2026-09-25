@@ -191,7 +191,7 @@ func deterministicAnswer(question crmcontracts.CompanyQuestion, companyID string
 // each task gets its own sentence and its own citation. The count is not
 // dropped when the list is short: it carries the money — the pipeline total and
 // what the account has won — which no per-deal line states.
-func openAnswer(in Input, say companyPhrases) []Sentence {
+func openAnswer(in Input, say spoken) []Sentence {
 	sentences := make([]Sentence, 0, 2*listedRecords+2)
 	if len(in.OpenDeals) > 0 {
 		sentences = append(sentences, Sentence{Text: pipelineLine(in, say), Evidence: leadDealEvidence(in)})
@@ -212,7 +212,7 @@ func openAnswer(in Input, say companyPhrases) []Sentence {
 	return sentences
 }
 
-func prepAnswer(companyID string, in Input, say companyPhrases) []Sentence {
+func prepAnswer(companyID string, in Input, say spoken) []Sentence {
 	sentences := make([]Sentence, 0, listedRecords+4)
 	sentences = append(sentences, Sentence{
 		Text:     identityLine(in, say),
@@ -221,7 +221,7 @@ func prepAnswer(companyID string, in Input, say companyPhrases) []Sentence {
 	if len(in.Contacts) > 0 {
 		if len(in.Contacts) > 1 {
 			sentences = append(sentences, Sentence{
-				Text: countPhrase(len(in.Contacts), say.KnownContactOne, say.KnownContactMany) + ".",
+				Text: countPhrase(len(in.Contacts), say.say(floor.KnownContactOne), say.say(floor.KnownContactMany)) + ".",
 				// The count names nobody, so it cites the contact the list
 				// starts with and gives the reader somewhere to open.
 				Evidence: []Evidence{{EntityType: citeContact, EntityID: in.Contacts[0].ID}},
@@ -246,7 +246,7 @@ func prepAnswer(companyID string, in Input, say companyPhrases) []Sentence {
 // changedAnswer walks the timeline newest-first. Each entry is its own
 // sentence citing itself, so the reader can open the one they care about
 // instead of trusting a rolled-up count.
-func changedAnswer(in Input, say companyPhrases) []Sentence {
+func changedAnswer(in Input, say spoken) []Sentence {
 	const mostRecent = 3
 	sentences := make([]Sentence, 0, mostRecent)
 	for i, act := range in.Recent {
@@ -265,8 +265,8 @@ func taskID(task TaskIn) string { return task.ID }
 
 func contactID(contact NamedIn) string { return contact.ID }
 
-func contactLine(contact NamedIn, say companyPhrases) string {
-	return fmt.Sprintf(say.KnownContactLine, contact.Name)
+func contactLine(contact NamedIn, say spoken) string {
+	return fmt.Sprintf(say.say(floor.KnownContactLine), contact.Name)
 }
 
 // openTasksLine counts the open tasks and anchors the count on the one that is
@@ -275,12 +275,12 @@ func contactLine(contact NamedIn, say companyPhrases) string {
 // The count is the TRUE total even when the per-task sentences below it stop at
 // listedRecords, because a reader told "5 open tasks" who has nine is worse off
 // than one told nothing.
-func openTasksLine(tasks []TaskIn, say companyPhrases) Sentence {
+func openTasksLine(tasks []TaskIn, say spoken) Sentence {
 	earliest := earliestDue(tasks)
-	counted := countPhrase(len(tasks), say.OpenTaskOne, say.OpenTaskMany)
+	counted := countPhrase(len(tasks), say.say(floor.OpenTaskOne), say.say(floor.OpenTaskMany))
 	text := counted + "."
 	if due := shortDate(earliest.Due, say); due != "" {
-		text = fmt.Sprintf(say.TasksEarliestDue, counted, due)
+		text = fmt.Sprintf(say.say(floor.TasksEarliestDue), counted, due)
 	}
 	return Sentence{Text: text, Evidence: []Evidence{{EntityType: citeActivity, EntityID: earliest.ID}}}
 }
@@ -301,17 +301,17 @@ func earliestDue(tasks []TaskIn) TaskIn {
 	return earliest
 }
 
-func openTaskLine(task TaskIn, say companyPhrases) string {
+func openTaskLine(task TaskIn, say spoken) string {
 	// The subject is quoted for the same reason an activity's is: a task can be
 	// raised from mail this workspace did not write, and it must read as theirs.
 	if due := shortDate(task.Due, say); due != "" {
-		return fmt.Sprintf(say.OpenTaskDue, task.Name, due)
+		return fmt.Sprintf(say.say(floor.OpenTaskDue), task.Name, due)
 	}
-	return fmt.Sprintf(say.OpenTaskNamed, task.Name)
+	return fmt.Sprintf(say.say(floor.OpenTaskNamed), task.Name)
 }
 
-func openDealLine(deal DealIn, say companyPhrases) string {
-	line := fmt.Sprintf(say.OpenDealNamed, deal.Name)
+func openDealLine(deal DealIn, say spoken) string {
+	line := fmt.Sprintf(say.say(floor.OpenDealNamed), deal.Name)
 	if deal.Stage != "" {
 		line += ", " + deal.Stage
 	}
@@ -323,7 +323,7 @@ func openDealLine(deal DealIn, say companyPhrases) string {
 		line += ", " + amount + " " + deal.Currency
 	}
 	if deal.Stalled {
-		line += ", " + say.DealStalledMark
+		line += ", " + say.say(floor.DealStalledMark)
 	}
 	return line + "."
 }

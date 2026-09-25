@@ -9,8 +9,6 @@ package companybrief
 import (
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func briefLines(sentences []Sentence) string {
@@ -261,7 +259,7 @@ func TestTheLastContactLineAgreesWithItsArticle(t *testing.T) {
 		"meeting": "Last contact was a meeting",
 		"note":    "Last contact was a note",
 	} {
-		got := lastTouchLine(ActIn{Kind: kind}, companyCopy[textlang.English])
+		got := lastTouchLine(ActIn{Kind: kind}, companyPhrasesFor("en"))
 		if !strings.HasPrefix(got, want) {
 			t.Errorf("a %q renders %q, want it to start %q", kind, got, want)
 		}
@@ -278,7 +276,7 @@ func TestProfileLinesSkipAStatementThatIsOnlyPunctuation(t *testing.T) {
 			{Field: "icp", Value: "Mittelstand"},
 		},
 	}
-	lines := profileLines(in, accountEvidence("company-1"), companyCopy[textlang.English])
+	lines := profileLines(in, accountEvidence("company-1"), companyPhrasesFor("en"))
 	if len(lines) != 1 {
 		t.Fatalf("lines = %+v, want the one statement that says something", lines)
 	}

@@ -84,10 +84,9 @@ var sectionOrder = []string{
 // row it came from, exactly as the model path's must, so a sentence is
 // checkable whichever wrote it.
 func Deterministic(in Input, lang string) []Section {
-	labels := labelsFor(lang)
 	bySection := map[string][]claims.Sentence{}
 	for _, field := range in.ProfileFields {
-		sentence, ok := fieldSentence(field, labels)
+		sentence, ok := fieldSentence(field, lang)
 		if !ok {
 			continue
 		}
@@ -114,7 +113,7 @@ func Deterministic(in Input, lang string) []Section {
 // page's own heading, and "display name: Acme." restates it under a label
 // nobody wrote for a reader, six lines below where it is already the
 // biggest text on the page.
-func fieldSentence(field crmcontracts.CompanyProfileField, labels map[crmcontracts.CompanyProfileFieldField]string) (claims.Sentence, bool) {
+func fieldSentence(field crmcontracts.CompanyProfileField, lang string) (claims.Sentence, bool) {
 	value := strings.TrimSpace(field.Value)
 	if value == "" || field.Id == nil {
 		return claims.Sentence{}, false
@@ -125,7 +124,7 @@ func fieldSentence(field crmcontracts.CompanyProfileField, labels map[crmcontrac
 	if value == "" {
 		return claims.Sentence{}, false
 	}
-	label, ok := labels[field.Field]
+	label, ok := labelFor(field.Field, lang)
 	if !ok {
 		return claims.Sentence{}, false
 	}
@@ -146,7 +145,7 @@ func fieldSentence(field crmcontracts.CompanyProfileField, labels map[crmcontrac
 // whatever field it names, so an unmapped one falls back to its own column
 // name with the underscores opened out.
 func fieldLabel(field crmcontracts.CompanyProfileFieldField, lang string) string {
-	if label, ok := labelsFor(lang)[field]; ok {
+	if label, ok := labelFor(field, lang); ok {
 		return label
 	}
 	return strings.ReplaceAll(string(field), "_", " ")
