@@ -18,8 +18,9 @@ function fallbackLine(
   locale: Locale,
   t: ReturnType<typeof useT>,
 ): string {
+  // Ties break on the reason KEY, a machine word, so no locale orders them.
   const entries = Object.entries(fallbacks).sort(
-    ([a, left], [b, right]) => right - left || a.localeCompare(b),
+    ([a, left], [b, right]) => right - left || (a < b ? -1 : a > b ? 1 : 0),
   );
   if (entries.length === 0) return "—";
   return entries
