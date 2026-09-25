@@ -18529,6 +18529,20 @@ export interface components {
                 /** @description ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067). */
                 currency?: string;
             };
+            /** @description Per task, how often the decision model was consulted over the same window and how often its answer stood. Read from the ai_call trace, one logical call counted once, because the metered calls above count attempts and cannot give a rate. Empty when no call in the window consulted a decision model. */
+            decisions?: components["schemas"]["AiDecisionSummary"][];
+        };
+        /** @description One task's decision-model pass and fallback counts over the usage window. */
+        AiDecisionSummary: {
+            task: string;
+            /** @description Logical calls that consulted the decision model, including those refused before any call was sent. */
+            asked: number;
+            /** @description Logical calls the decision model answered: its answer stood and no LLM ran. */
+            decided: number;
+            /** @description Logical calls handed to the LLM ladder, keyed by the attempt reason the ladder's first attempt carries (decision_below_floor, decision_error, …). A reason with no calls is absent. Read an unrecognized key as "some reason" rather than refusing it. */
+            fallbacks: {
+                [key: string]: number;
+            };
         };
         /** @description One terminal model call from the ai_call trace (AIRT-SCHEMA-2). */
         AiCallSummary: {

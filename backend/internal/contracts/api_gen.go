@@ -19300,6 +19300,19 @@ type AiCallSummary struct {
 	TokensOut int    `json:"tokens_out"`
 }
 
+// AiDecisionSummary One task's decision-model pass and fallback counts over the usage window.
+type AiDecisionSummary struct {
+	// Asked Logical calls that consulted the decision model, including those refused before any call was sent.
+	Asked int `json:"asked"`
+
+	// Decided Logical calls the decision model answered: its answer stood and no LLM ran.
+	Decided int `json:"decided"`
+
+	// Fallbacks Logical calls handed to the LLM ladder, keyed by the attempt reason the ladder's first attempt carries (decision_below_floor, decision_error, …). A reason with no calls is absent. Read an unrecognized key as "some reason" rather than refusing it.
+	Fallbacks map[string]int `json:"fallbacks"`
+	Task      string         `json:"task"`
+}
+
 // AiDecisionsBinding The decision-model lane: a model that answers a typed question with calibrated
 // probabilities, asked before a decision site's ladder. Absent means no task uses
 // one. It serves a task only when certified for that site and when its endpoint
@@ -19679,6 +19692,9 @@ type AiUsage struct {
 			UnpricedCalls *int `json:"unpriced_calls,omitempty"`
 		} `json:"tasks"`
 	} `json:"days"`
+
+	// Decisions Per task, how often the decision model was consulted over the same window and how often its answer stood. Read from the ai_call trace, one logical call counted once, because the metered calls above count attempts and cannot give a rate. Empty when no call in the window consulted a decision model.
+	Decisions *[]AiDecisionSummary `json:"decisions,omitempty"`
 }
 
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).

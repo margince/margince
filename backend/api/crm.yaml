@@ -26551,6 +26551,29 @@ components:
             band: { type: string, enum: [normal, degraded, queued], description: '< 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).' }
             band_since: { type: [string, 'null'], format: date-time }
             currency: { type: string, description: 'ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067).' }
+        decisions:
+          type: array
+          description: >-
+            Per task, how often the decision model was consulted over the same window and how
+            often its answer stood. Read from the ai_call trace, one logical call counted once,
+            because the metered calls above count attempts and cannot give a rate. Empty when no
+            call in the window consulted a decision model.
+          items: { $ref: '#/components/schemas/AiDecisionSummary' }
+    AiDecisionSummary:
+      type: object
+      description: One task's decision-model pass and fallback counts over the usage window.
+      required: [task, asked, decided, fallbacks]
+      properties:
+        task: { type: string }
+        asked: { type: integer, minimum: 0, description: 'Logical calls that consulted the decision model, including those refused before any call was sent.' }
+        decided: { type: integer, minimum: 0, description: 'Logical calls the decision model answered: its answer stood and no LLM ran.' }
+        fallbacks:
+          type: object
+          description: >-
+            Logical calls handed to the LLM ladder, keyed by the attempt reason the ladder's first
+            attempt carries (decision_below_floor, decision_error, …). A reason with no calls is
+            absent. Read an unrecognized key as "some reason" rather than refusing it.
+          additionalProperties: { type: integer, minimum: 0 }
     AiCallSummary:
       type: object
       description: One terminal model call from the ai_call trace (AIRT-SCHEMA-2).

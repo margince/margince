@@ -167,19 +167,25 @@ func (m *Meter) usageDays(ctx context.Context, from, to time.Time) ([]DayUsage, 
 // counts and priced cost, so the handler stays a pure wire mapping with
 // no money computation of its own.
 func mergeDayCost(ctx context.Context, rates *RateStore, days []DayUsage, from, to time.Time) error {
-	// CostReport is [from, to) half-open on occurred_at, while usageDays
-	// treats to as an inclusive calendar day (day <= to::date) — widen the
-	// upper bound by a full day so a calendar-date to (midnight UTC)
-	// still prices that whole day's calls instead of dropping them at the
-	// boundary. Harmless when to already carries a time-of-day (the
-	// UsageWindow default, to = now): it only pushes the cutoff into a
-	// future that has no rows yet.
-	costs, err := rates.CostReport(ctx, from, to.Add(24*time.Hour))
+	costs, err := rates.CostReport(ctx, from, usageCallWindowEnd(to))
 	if err != nil {
 		return err
 	}
 	attachDayCost(days, costs)
 	return nil
+}
+
+// usageCallWindowEnd is the exclusive occurred_at bound of an ai_call read
+// that answers for the usage window. The ai_call reads are [from, to)
+// half-open on occurred_at, while usageDays treats to as an inclusive calendar
+// day (day <= to::date) — so the bound is widened by a full day, and a
+// calendar-date to (midnight UTC) still covers that whole day's calls instead
+// of dropping them at the boundary. Harmless when to already carries a
+// time-of-day (the UsageWindow default, to = now): it only pushes the cutoff
+// into a future that has no rows yet. The cost merge and the decision summary
+// both read through it, so the two cover the same calls as the day lines.
+func usageCallWindowEnd(to time.Time) time.Time {
+	return to.Add(24 * time.Hour)
 }
 
 // dayTaskTierKey is the (calendar day, task, tier) grain shared by a
