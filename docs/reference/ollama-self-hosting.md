@@ -279,8 +279,8 @@ make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml \
 ```
 
 `make e2e-ai-report` prints what is already committed. With the default cloud
-judge (omit `JUDGE=`) the run is cheaper and faster, and its recorded latency is
-the candidate's alone.
+judge (omit `JUDGE=`) the run is faster, though it pays for judge tokens where a
+local judge costs nothing, and its recorded latency is the candidate's alone.
 
 To time a model without the judge in the way, call it directly:
 `curl localhost:11434/api/chat` with `"stream": false` and read

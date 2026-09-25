@@ -54,10 +54,12 @@ vllm serve <model> \
 The binding in the routing config then needs only the model id and, if it is
 not `http://localhost:8000`, the host root (no `/v1`). The id is the name the
 server answers to: what `vllm serve` was given, unless `--served-model-name`
-renames it.
+renames it. A server on another host carries every prompt and answer across
+the network, so start it with `--ssl-certfile` and `--ssl-keyfile` (or put it
+behind a TLS proxy) and bind it by `https`:
 
 ```yaml
-local_small: { provider: vllm, model: "mlx-community/Qwen3-14B-4bit", base_url: http://gpu-box.internal:8000 }
+local_small: { provider: vllm, model: "mlx-community/Qwen3-14B-4bit", base_url: https://gpu-box.internal:8000 }
 ```
 
 Two more things the server decides, and the product cannot see:
@@ -205,8 +207,8 @@ Gemma 3's structured output is not usable either way.
 binds every tier to Qwen3-14B on vLLM and embeddings to `bge-m3` on a second vLLM,
 under `sovereign`. Its header carries the two `vllm serve` command lines; with
 both servers up (0.87 and 0.1 of memory) about 9% of the machine is left free.
-Every shipped task was run through it, three runs per scenario, judged by the
-default cloud judge. The records are committed and the readiness page reads them.
+Every shipped task this text-only binding can carry was run through it (all but
+`document_extract`), three runs per scenario, judged by the default cloud judge. The records are committed and the readiness page reads them.
 
 | task | verdict | pass rate | runs | median s | 95th pct s | output tokens |
 |---|---|---|---|---|---|---|

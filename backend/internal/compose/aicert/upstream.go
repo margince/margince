@@ -47,10 +47,7 @@ var (
 // record's claim about where the certified deployment sends its text. The
 // judge is not part of that deployment. It is the lane's own grader, it is sent
 // only the hand-authored corpus and the candidate's answer to it — never an
-// installation's data — and the record names it (judge_served_model). Holding
-// it to the candidate's profile made a sovereign record depend on a judge that
-// fits beside the candidate on the same machine, which on the 24 GB machines
-// these presets are written for left only judges too small to grade reliably.
+// installation's data — and the record names it (judge_served_model).
 func (r bindingRole) profileFor(record ai.Profile) ai.Profile {
 	if r == judgeRole {
 		return ai.ProfileCloudFrontier
