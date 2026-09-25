@@ -830,7 +830,9 @@ describe("the Telegram connector panel", () => {
     "Only an administrator or operations user can connect or change the bot.";
 
   it("offers the connect verb to a reader who holds channel_connection:create", async () => {
-    stubApi([], { me: botManager });
+    stubApi([], {
+      me: meFixture({ allow: { channel_connection: ["read", "create"] } }),
+    });
     render(<ConnectorsCard />);
     expect(await screen.findByTestId("telegram-connect")).toBeTruthy();
     expect(screen.queryByText(readOnlyNote)).toBeNull();
