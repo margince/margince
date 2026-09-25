@@ -239,6 +239,10 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// Mixing two loads could produce a ladder no installed binding chose.
 	_, hasLarge := b.clients[TierLocalLarge]
 	ladder = profileLadder(b.profile, hasLarge, ladder)
+	ladder = localOnlyLadder(task, b.routeMeta, ladder)
+	if len(ladder) == 0 {
+		return model.Response{}, RouteInfo{}, localOnlyRefusal(task, b.routeMeta)
+	}
 
 	// The rail's opening line. It sits HERE and not higher — announceRailStartOnce
 	// says why.
