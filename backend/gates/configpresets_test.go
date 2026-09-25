@@ -17,6 +17,8 @@ package gates
 // added later is covered by this gate without anybody remembering to add it.
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -24,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const presetDir = "../config/presets"
@@ -236,4 +239,147 @@ func TestResidencyGapsSeesEveryUnpinnedShape(t *testing.T) {
 	if gaps := residencyGaps(cfg); len(gaps) != 0 {
 		t.Errorf("a config pinned on every lane reports %q", gaps)
 	}
+}
+
+// hostedLocalOnlyBindings ratifies each shipped configuration that binds a
+// local-only task's every rung to a hosted provider — under which that task
+// does not run at all, because the router drops the rung.
+//
+// These are not oversights and this is not a backlog. `local_small` is a SIZE
+// class in this tree, not a location: every file below binds it deliberately,
+// and the two capture verdicts are the only tasks that ask for more than size.
+// What the waiver buys is that the set cannot grow in silence — a new preset,
+// or a rebind of an existing one, fails this gate until somebody writes down
+// that they know the sender and thread verdicts will not run under it.
+var hostedLocalOnlyBindings = gatekit.Waive(map[string]string{
+	"margince.dev.yaml": "the dev stack rides one vendor on every rung so a contributor needs no local " +
+		"inference to boot it, and it judges seeded fixtures rather than a real mailbox",
+	"presets/gemini_cloud.yaml":     "an all-Gemini deployment has no local rung to offer",
+	"presets/openrouter_cloud.yaml": "a broker deployment has no local rung to offer",
+	"presets/openrouter_cloud_eu.yaml": "the same, pinned to EU endpoints — which bounds the REGION the " +
+		"prompt reaches but not the machine, and local_only is about the machine",
+	"presets/consumer_class_brokered.yaml": "it exists to measure consumer-class WEIGHTS through a broker " +
+		"before the Ollama binding of those same weights exists; its own header says so, and names the " +
+		"endpoints it actually reaches",
+})
+
+// A shipped config that silently excludes a local-only task says so here.
+//
+// capture_counterparty_verdict and capture_confidentiality_verdict declare
+// `local_only` in api/ai-tasks.yaml because their prompts carry the subject and
+// body of mail nobody has judged yet. The router enforces that at the rung: a
+// hosted binding is dropped rather than called. That is the guarantee working,
+// and it is also invisible — an operator reads a shipped task list and has no
+// way to learn that their preset excludes two of them. Pinning the set is what
+// turns the exclusion into a written decision instead of a surprise.
+func TestEveryShippedConfigIsHonestAboutWhereALocalOnlyTaskRuns(t *testing.T) {
+	t.Parallel()
+	local := ai.LocalOnlyTasks()
+	if len(local) == 0 {
+		t.Fatal("no task declares local_only — this gate is watching nothing")
+	}
+	paths := shippedRoutingFiles(t)
+	checked, bindsNothing := 0, 0
+	var findings []string
+	for _, path := range paths {
+		cfg, bound := shippedRouting(t, path)
+		if !bound {
+			// A template with its routing block commented out binds nothing and
+			// owes nothing. COUNTED, not skipped — see the tally below.
+			bindsNothing++
+			continue
+		}
+		checked++
+		for _, task := range local {
+			if servesLocally(cfg, task) {
+				continue
+			}
+			subject := configSubject(path)
+			if hostedLocalOnlyBindings.Waived(t, subject) {
+				continue
+			}
+			findings = append(findings, fmt.Sprintf(
+				"%s: task %s is local_only and no rung of its ladder (%v) binds a local provider, so it will not run there",
+				subject, task, ai.TaskLadder(task)))
+		}
+	}
+	if len(findings) > 0 {
+		sort.Strings(findings)
+		t.Errorf("a shipped config excludes a local-only task without saying so — bind a local rung, or ratify it in hostedLocalOnlyBindings with the reason:\n  %s",
+			strings.Join(findings, "\n  "))
+	}
+	// The one way this gate can go quiet is by reading a smaller corpus: a file
+	// it never reached reports exactly like a clean one. Every path is either
+	// checked or counted as binding nothing, and nothing falls between.
+	if checked+bindsNothing != len(paths) {
+		t.Errorf("%d of %d shipped configs were neither checked nor counted as binding nothing",
+			len(paths)-checked-bindsNothing, len(paths))
+	}
+	if checked == 0 {
+		t.Fatal("no shipped config bound anything — the corpus parsed to nothing and this gate checked nothing")
+	}
+	hostedLocalOnlyBindings.AssertAllMatched(t)
+}
+
+// servesLocally reports whether cfg binds at least one rung of task's ladder to
+// a local provider — the question the router asks per call, over a parsed
+// config rather than an installed binding.
+func servesLocally(cfg ai.RoutingConfig, task ai.Task) bool {
+	for _, tier := range ai.TaskLadder(task) {
+		if binding, bound := cfg.Tiers[tier]; bound && ai.ProviderIsLocal(binding.Provider) {
+			return true
+		}
+	}
+	return false
+}
+
+// shippedRoutingFiles collects the configurations an operator boots on or
+// copies from: the presets, plus config/margince*.yaml — the one a contributor
+// actually runs, and so the one whose exclusions bite first.
+//
+// Both halves are DERIVED from their directory rather than listed, so a config
+// added later arrives inside this gate rather than beside it.
+func shippedRoutingFiles(t *testing.T) []string {
+	t.Helper()
+	paths := presetFiles(t)
+	deployed, err := filepath.Glob("../config/margince*.yaml")
+	if err != nil {
+		t.Fatalf("globbing the shipped configs: %v", err)
+	}
+	// NOT a tolerated zero: the tree ships these, so an empty glob means the
+	// path moved and this gate went half-blind while still reporting PASS.
+	if len(deployed) == 0 {
+		t.Fatal("no config/margince*.yaml found — the corpus moved")
+	}
+	return append(paths, deployed...)
+}
+
+// shippedRouting parses one shipped config, separating "binds nothing" from
+// "binds something broken". routingFromPreset cannot: it fatals on both, and
+// config/margince.example.yaml is a template whose routing block is entirely
+// commented out.
+func shippedRouting(t *testing.T, path string) (ai.RoutingConfig, bool) {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	cfg, err := ai.ParsePreset(raw)
+	if errors.Is(err, ai.ErrNoRoutingBlock) {
+		return ai.RoutingConfig{}, false
+	}
+	if err != nil {
+		t.Fatalf("%s declares a routing block that does not parse: %v", configSubject(path), err)
+	}
+	return cfg, true
+}
+
+// configSubject names a file the way the waiver map does — relative to config/,
+// so an entry reads as the path an operator would open.
+func configSubject(path string) string {
+	dir, file := filepath.Split(filepath.ToSlash(path))
+	if filepath.Base(filepath.Clean(dir)) == "presets" {
+		return "presets/" + file
+	}
+	return file
 }

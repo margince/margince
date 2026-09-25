@@ -75,6 +75,8 @@ func writeDeclarationTables(b *strings.Builder, c contract, taskNames []string) 
 	b.WriteString("// NoPayload reports the contract's payload prohibition for a task.\n")
 	b.WriteString("func NoPayload(t Task) bool { return noPayloadTasks[t] }\n\n")
 
+	writeLocalOnlyTable(b, c, taskNames)
+
 	writeCompanyContextTable(b, c, taskNames)
 
 	b.WriteString("// taskCostUnit names each priced task's unit rule. The arithmetic is\n")
@@ -93,6 +95,44 @@ func writeDeclarationTables(b *strings.Builder, c contract, taskNames []string) 
 	b.WriteString("// task — no prompt, no text answer, no completion path — so it carries\n")
 	b.WriteString("// its own contract section and its own accessor.\n")
 	fmt.Fprintf(b, "func EmbedCostUnit() string { return %q }\n", c.Embed.CostUnit)
+}
+
+// writeLocalOnlyTable emits the egress prohibition: which tasks may be served
+// only by a provider running on this machine.
+//
+// Both a map and a list, which is not duplication. The map answers "may this
+// task go out" at a call site that already holds the task; the list is for a
+// validator that has to walk every one, and deriving it by ranging the map
+// would hand that walk a random order — so a refusal naming "the first
+// offending task" would name a different one each run.
+func writeLocalOnlyTable(b *strings.Builder, c contract, taskNames []string) {
+	b.WriteString("// localOnlyTasks are the tasks whose prompt must never leave this\n")
+	b.WriteString("// machine, whatever an operator binds the rungs of their ladder to.\n")
+	b.WriteString("//\n")
+	b.WriteString("// DECLARED, never inferred from a tier NAME. `local_small` is a rung and\n")
+	b.WriteString("// which provider serves it is the operator's to set, so a guarantee\n")
+	b.WriteString("// resting on the name holds only until somebody rebinds it — and the\n")
+	b.WriteString("// rebinding is legal under every profile but sovereign.\n")
+	b.WriteString("var localOnlyTasks = map[Task]bool{\n")
+	for _, name := range taskNames {
+		if c.Tasks[name].LocalOnly {
+			fmt.Fprintf(b, "\t%s: true,\n", taskConst(name))
+		}
+	}
+	b.WriteString("}\n\n")
+	b.WriteString("// LocalOnly reports the contract's egress prohibition for a task: its\n")
+	b.WriteString("// prompt may be served only by a provider running on this machine.\n")
+	b.WriteString("func LocalOnly(t Task) bool { return localOnlyTasks[t] }\n\n")
+	b.WriteString("// localOnlyTaskList is the same set in contract order.\n")
+	b.WriteString("var localOnlyTaskList = []Task{\n")
+	for _, name := range taskNames {
+		if c.Tasks[name].LocalOnly {
+			fmt.Fprintf(b, "\t%s,\n", taskConst(name))
+		}
+	}
+	b.WriteString("}\n\n")
+	b.WriteString("// LocalOnlyTasks returns the local-only tasks in contract order.\n")
+	b.WriteString("func LocalOnlyTasks() []Task { return localOnlyTaskList }\n\n")
 }
 
 // writeCompanyContextTable emits the ADR-0065 policy table.

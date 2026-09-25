@@ -51,6 +51,14 @@
 #                     whatever the deployment's capture posture says. A parsed
 #                     field, not a phrase in `doc:` — a sentence in a comment
 #                     must not be load-bearing for a data-protection control.
+#   local_only        this task's prompt must never leave the machine, whatever
+#                     an operator binds the rungs of its ladder to. Declared
+#                     rather than inferred from the tier NAME: `local_small` is
+#                     a rung, and which provider serves it is the operator's to
+#                     set, so a guarantee resting on the name holds only until
+#                     somebody rebinds it — which is legal under every profile
+#                     but sovereign. The routing config refuses a binding that
+#                     would put such a task on a hosted provider.
 #   company_context   the ADR-0065 policy: `none`, or scopes + token_budget
 #                     (+ conditional, meaning "only when the caller requests
 #                     it"). Absent-by-accident must be a build error, never a
@@ -117,6 +125,7 @@ tasks:
     status: shipped
     sites: [verdict]
     no_payload: true
+    local_only: true
     company_context: none
     doc: "ADR-0072: the ambiguous first-time-sender creation gate. Exactly one KIND per address from a closed vocabulary — contact, role_mailbox, company_sender, newsletter, transactional, spam, personal, advisor — each resolving to a real|noise lifecycle status. ASYMMETRIC floor: a CREATING answer (contact, advisor) needs 0.85 and every other kind needs 0.7, because the two mistakes are not the same size — refusing a contact leaves the mail visible and the question answerable by a contact, while creating one puts a record in a shared CRM. Below its floor → unsure, never noise. Two kinds create a contact and they differ in WHO can see it: `contact` becomes an ordinary workspace contact, and `advisor` becomes an owner-scoped one — a founder's lawyer is a genuine contact whose existence is not the workspace's business. Every other kind creates none. The question is WHO WROTE, because the older yes/no gate grouped a contact and a company under one `real` answer and so named a contact after the company that sent the mail. `unsure` is deliberately not answerable — abstention is derived from the floor, not self-reported, so a model cannot talk its way past it by claiming certainty about its own uncertainty. Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring. Local-only ladder: the prompt carries subject and body, and this is the task that decides whether a sender is personal — a cloud rung would send a founder's family mail off the machine to ask whether it was family mail."
 
@@ -128,6 +137,7 @@ tasks:
     status: shipped
     sites: [thread]
     no_payload: true
+    local_only: true
     company_context: none
     doc: "Decides what one email THREAD is about, so a classified mailbox can open the ordinary ones instead of holding everything. Closed vocabulary; exactly one kind (ordinary) opens a thread and every other kind holds it, so a wrong answer, an outage and a budget stop all fail towards privacy. Asymmetric floor: an opening answer below 0.8 resolves to unsure, which holds; a holding answer needs no floor, because requiring confidence to hold would publish the threads the model found hardest. Local-only ladder for the same reason as the sender verdict: the prompt carries subject, body and attachment names, and this is the task that decides whether a thread is private."
 
