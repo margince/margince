@@ -142,10 +142,8 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 				}
 			}
 		}
-		for _, id := range messages {
-			if err := activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](id)); err != nil {
-				return err
-			}
+		if err := activities.RecomputeAudiencesTx(ctx, tx, asActivityIDs(messages)); err != nil {
+			return err
 		}
 		outcome.Messages = len(messages)
 		// The ids the CALLER may read, which is narrower than the set whose
