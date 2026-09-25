@@ -191,9 +191,28 @@ jobs:
               - *backend_db
               - 'AGENTS.md'
               - 'CLAUDE.md'
-              - 'frontend/AGENTS.md'
-              - 'frontend/CLAUDE.md'
               - 'docs/**'
+              # The SPA and the launcher, because 48 gates under backend/gates/
+              # READ them: the vocabulary gate reads frontend comments, the
+              # design-system gates read its components, and the launcher's
+              # platform files are walked for build tags. Listed as whole trees
+              # rather than as the files those gates happen to name today — a
+              # scope that lists individual files stops covering the next one,
+              # which is how one frontend path came to sit in backend_db alone.
+              #
+              # A gate must RUN in a lane every path it reads can trigger. It
+              # did not: a frontend-only PR broke the vocabulary gate and merged
+              # green, and the red then surfaced on unrelated backend branches
+              # where it read as their fault — three sessions found and fixed it
+              # independently, two of them paying a full integration lane.
+              # backend/gates/gatelanetrigger_test.go fails when a gate reads a
+              # path this scope does not cover.
+              #
+              # In `backend` and NOT in backend_db: these gates are Go unit
+              # tests, so a frontend edit runs them and still boots no Postgres
+              # shard — the cut this split exists to make.
+              - 'frontend/**'
+              - 'desktop/**'
             frontend:
               - 'frontend/**'
               - 'backend/api/**'
