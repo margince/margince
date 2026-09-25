@@ -553,6 +553,11 @@ export const vi = {
     "Liên kết này không ghi con số được tính vào lúc nào, nên các số dưới đây vừa được tính lại. Nếu tỷ giá đã thay đổi trong khoảng đó, chúng có thể không khớp với con số bạn đã bấm.",
   "explain.title": "Con số này được dựng thế nào",
   "explain.rate": "tỷ giá {rate} ngày {date}",
+  "explain.cell": "Giải thích {figure}",
+  "explain.excluded_one":
+    "1 bản ghi không có trong con số này và các dòng bên dưới. Một trường của bản ghi đó bị ẩn với vai trò của bạn.",
+  "explain.excluded_other":
+    "{count} bản ghi không có trong con số này và các dòng bên dưới. Một trường của các bản ghi đó bị ẩn với vai trò của bạn.",
 
   "board.count": "{count} deal",
   "board.weighted": "trọng số {value}",

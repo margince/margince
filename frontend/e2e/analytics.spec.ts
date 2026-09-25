@@ -234,3 +234,39 @@ test.describe("Analytics sections", () => {
     ).toEqual([]);
   });
 });
+
+test.describe("Explain a cell", () => {
+  const trigger = (figure: string) =>
+    de["explain.cell"].replace("{figure}", figure);
+
+  for (const width of [390, 1440]) {
+    test(`a row opens its own explanation in a drawer at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await openAnalytics(page, "performance");
+      const opener = page.getByRole("button", { name: trigger("Qualify") });
+      await opener.click();
+
+      // The drawer answers for THIS row: its source rows and the notice the
+      // fixture's mask puts there, not the card's result-level panel.
+      const drawer = page.getByRole("dialog");
+      await expect(
+        drawer.getByText("Brandt Automotive, Flottenumrüstung"),
+      ).toBeVisible();
+      await expect(drawer.getByText(de["explain.excluded_one"])).toBeVisible();
+
+      await page.keyboard.press("Escape");
+      await expect(drawer).toBeHidden();
+      await expect(
+        opener,
+        "Escape closed the drawer but left focus nowhere near the row",
+      ).toBeFocused();
+
+      // The unmeasured stage came back without a handle, so it offers none.
+      await expect(
+        page.getByRole("button", { name: trigger("Proposal") }),
+      ).toHaveCount(0);
+    });
+  }
+});

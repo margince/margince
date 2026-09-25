@@ -460,11 +460,15 @@ export const reportFixtures: Record<string, unknown> = {
     plan: { group_by: ["stage_id"] },
     columns: ["stage_id", "deal_count", "median_days", "p75_days"],
     rows: [
+      // The measured stage carries its own drill-through handle, the unmeasured
+      // one none: a row the server sent without one draws no trigger.
       {
         stage_id: "s1",
         deal_count: 6,
         median_days: 12,
         p75_days: 21,
+        derivation_url:
+          "/v1/reports/stage-age/derivation?by=stage_id&agg=count::deal_count&stage_id=s1",
       },
       // Under the sample floor: the server answers null and the card must say
       // so in words rather than drawing a zero.
@@ -567,6 +571,27 @@ export const reportFixtures: Record<string, unknown> = {
     timezone: "Europe/Berlin",
     base_currency: "EUR",
   },
+};
+
+// What any drill-through handle resolves to: a definition, the source rows and
+// the frame they were cut in. One record is masked out, so the notice that says
+// so is on screen wherever the drawer is swept.
+export const derivationFixture = {
+  report: "stage-age",
+  definition: "Anzahl offener Deals in der Phase Qualify",
+  plan: { group_by: ["stage_id"] },
+  columns: ["label", "amount_base_minor"],
+  rows: [
+    {
+      label: "Brandt Automotive, Flottenumrüstung",
+      amount_base_minor: 1_250_000,
+    },
+    { label: "BÄR Pharma, Verpackungsprüfung", amount_base_minor: 480_000 },
+  ],
+  total_rows: 2,
+  excluded_by_permission: 1,
+  as_of: "2026-03-04T09:00:00Z",
+  as_of_pinned: true,
 };
 
 export const seededAutomation = {
@@ -2426,6 +2451,9 @@ export async function mockApi(
     // read: a stage-age card looking for `median_days` on a row carrying
     // `raw_minor` renders its empty state, and a sweep over those tabs proves
     // the fixture rather than the screen.
+    if (path.startsWith("/reports/") && path.endsWith("/derivation")) {
+      return json(derivationFixture);
+    }
     if (path.startsWith("/reports/") && !path.includes("/derivation")) {
       const key = path.slice("/reports/".length);
       const shaped = reportFixtures[key];
@@ -2459,6 +2487,8 @@ export async function mockApi(
             weighted_minor: 250_000,
             deals: 1,
             currency: "EUR",
+            derivation_url:
+              "/v1/reports/pipeline-current/derivation?by=stage_id&agg=count::deals&stage_id=s1",
           },
           {
             stage_id: "s2",

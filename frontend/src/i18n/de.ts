@@ -549,6 +549,11 @@ export const de = {
     "Dieser Link hält nicht fest, wann die Zahl berechnet wurde, daher wurden diese Werte jetzt neu berechnet. Hat sich seitdem ein Wechselkurs geändert, weichen sie möglicherweise von der angeklickten Zahl ab.",
   "explain.title": "So setzt sich diese Zahl zusammen",
   "explain.rate": "Kurs {rate} am {date}",
+  "explain.cell": "{figure} erklären",
+  "explain.excluded_one":
+    "1 Datensatz fehlt in dieser Zahl und in den Zeilen darunter. Ein Feld darin ist für deine Rolle ausgeblendet.",
+  "explain.excluded_other":
+    "{count} Datensätze fehlen in dieser Zahl und in den Zeilen darunter. Ein Feld darin ist für deine Rolle ausgeblendet.",
 
   "board.count": "Deals: {count}",
   "board.weighted": "gewichtet {value}",
