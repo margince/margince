@@ -354,6 +354,8 @@ A fallback leaves its reason on the ladder's first attempt: `decision_local_only
 `ai_call` row (`kind = decision`, tier `decide`), metered on input tokens and
 priced on the `decisions` rate lane. The route preview shows per feature whether
 the lane answers first, or why not: `unbound`, `local_only` or `uncertified`.
+`GET /v1/ai/usage` reports each task's `decisions` (asked, decided, fallbacks by
+reason) from `ai_call` per logical call, since `ai_usage` counts attempts.
 
 Two providers speak the wire. `openrouter_decision` is OpenRouter's decisions
 endpoint (TypeSafe Jev), bound as in [openrouter.md](../reference/openrouter.md#11-the-decisions-endpoint).
