@@ -111,6 +111,55 @@ func (e *ReservedError) FieldFault() (field, code, message string) {
 	return e.Field, "reserved_source_system", e.Error()
 }
 
+// ImporterNamespace reports whether a source system sits in the importer's
+// prefix, and nothing else.
+//
+// Narrower than ReservedSourceSystem on purpose: that one also holds the three
+// exact internal identities, which no import may spell. The door that admits a
+// declared importer asks this, so admitting an importer never admits
+// email_request, no_activity_reminder or check_in_cadence.
+func ImporterNamespace(sourceSystem string) bool {
+	return strings.HasPrefix(sourceSystem, ReservedSourceSystemPrefix)
+}
+
+// DisplaySourceSystem renders a source system for a reader.
+//
+// author.via is set verbatim from the column, so an imported row would
+// otherwise read "Logged in mirror:hubspot by …". The prefix is machinery for
+// the replay key, not something a reader should ever see.
+func DisplaySourceSystem(sourceSystem string) string {
+	return strings.TrimPrefix(sourceSystem, ReservedSourceSystemPrefix)
+}
+
+// DisplayVia is DisplaySourceSystem over the nullable column, for the four
+// record reads that project author.via straight out of it.
+//
+// Here rather than four identical locals in four modules: the stripping rule
+// belongs to the namespace, and a fifth read added later gets it by calling
+// this rather than by remembering that it exists.
+func DisplayVia(sourceSystem *string) *string {
+	if sourceSystem == nil {
+		return nil
+	}
+	shown := DisplaySourceSystem(*sourceSystem)
+	return &shown
+}
+
+// RefuseWire guards BOTH provenance fields a create wire can carry, in one
+// statement so a mapper spends one line rather than two `if err != nil` blocks.
+//
+// source_system is checked first because it is the field the reserved
+// namespace is actually keyed on; a caller sending both reserved values hears
+// about that one.
+func RefuseWire(source string, sourceSystem *string) error {
+	if sourceSystem != nil {
+		if err := Refuse("source_system", *sourceSystem); err != nil {
+			return err
+		}
+	}
+	return Refuse("source", source)
+}
+
 // Refuse guards ONE provenance field on a create wire. The flip stamps
 // its own writes inside this namespace and reads them back to recognize
 // records a crashed attempt landed, which is safe only while nothing

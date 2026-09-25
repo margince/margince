@@ -201,7 +201,38 @@ func meetingStatusArg(status *crmcontracts.UpdateActivityRequestMeetingStatus) *
 // a second mapping written beside this one would be a second set of rules
 // about the reserved import namespace, and the two would drift.
 func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
-	return logActivityInput(req, false)
+	return logActivityInput(req, provenanceAdmission{})
+}
+
+// provenanceAdmission says which reserved identities THIS writer may spell.
+//
+// Two writers, two disjoint sets, and neither is "the reserved names": the
+// engine stamps its quiet-account reminders, the importer stamps its own
+// namespace, and each must stay refused the other's. A single boolean would
+// have opened both sets to whichever writer asked.
+//
+// The zero value admits nothing, so a door that says nothing is the client
+// door — the safe default, and what every existing caller gets.
+type provenanceAdmission struct{ engineReminder, importer bool }
+
+// admits answers whether this writer may spell one reserved source system.
+func (a provenanceAdmission) admits(sourceSystem string) bool {
+	if a.engineReminder && provenance.EngineReminderSource(sourceSystem) {
+		return true
+	}
+	return a.importer && provenance.ImporterNamespace(sourceSystem)
+}
+
+// LogActivityInputFromImporter is LogActivityInputFrom for a declared
+// importer: a human holding import_run:create, decided by
+// auth.DeclaredImporter at the HANDLER and nowhere else.
+//
+// Handler-only is the whole boundary. provider.go, handlers_task.go and
+// compose/extcore.go keep the client door, so an agent or an extension holding
+// its human's grants cannot reach this one —
+// activities/provider_reminderidentity_test.go pins that at the provider seam.
+func LogActivityInputFromImporter(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
+	return logActivityInput(req, provenanceAdmission{importer: true})
 }
 
 // logActivityInputAllowingReminderIdentity is LogActivityInputFrom for the
@@ -213,7 +244,7 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 // mapping beside this one would be a second set of rules about the reserved
 // namespace, and the two would drift.
 func logActivityInputAllowingReminderIdentity(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
-	return logActivityInput(req, true)
+	return logActivityInput(req, provenanceAdmission{engineReminder: true})
 }
 
 // refuseReservedProvenance guards the two provenance fields on a create wire.
@@ -224,27 +255,32 @@ func logActivityInputAllowingReminderIdentity(req crmcontracts.CreateActivityReq
 // have a later import hand it back as already existing
 // (provenance.ReservedSourceSystemPrefix).
 //
-// engineReminder admits the automation engine's own reminder identity and
-// nothing else — the importer's namespace stays refused even for it.
-func refuseReservedProvenance(req crmcontracts.CreateActivityRequest, engineReminder bool) error {
+// The admission is narrow on BOTH sides: the engine may spell its reminder
+// identities and never the importer's namespace, the importer its namespace
+// and never a reminder identity.
+func refuseReservedProvenance(req crmcontracts.CreateActivityRequest, adm provenanceAdmission) error {
 	if req.SourceSystem != nil {
-		if !engineReminder || !provenance.EngineReminderSource(*req.SourceSystem) {
+		if !adm.admits(*req.SourceSystem) {
 			if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
 				return err
 			}
 		}
+		// Outside the admission deliberately: `email` is the one identity every
+		// mail transport shares, and no writer — the importer included — may
+		// claim it on this wire.
 		if *req.SourceSystem == connector.EmailSourceSystem {
 			return &ReservedMailIdentityError{}
 		}
 	}
+	// `source` is nobody's to forge, and the admission says nothing about it.
 	return provenance.Refuse("source", req.Source)
 }
 
-func logActivityInput(req crmcontracts.CreateActivityRequest, engineReminder bool) (LogActivityInput, error) {
+func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmission) (LogActivityInput, error) {
 	if req.Kind == "" {
 		return LogActivityInput{}, &RequiredFieldError{Field: "kind"}
 	}
-	if err := refuseReservedProvenance(req, engineReminder); err != nil {
+	if err := refuseReservedProvenance(req, adm); err != nil {
 		return LogActivityInput{}, err
 	}
 	in := LogActivityInput{

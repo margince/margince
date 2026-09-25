@@ -41,22 +41,25 @@ type s3Store struct {
 //
 //nolint:ireturn // the seam has three providers (memory + filesystem + s3) behind one Store; returning the interface is the design.
 func New(ctx context.Context, cfg Config) (Store, error) {
-	if cfg.Endpoint == "" || cfg.Bucket == "" {
-		return nil, fmt.Errorf("blobstore: endpoint and bucket are required")
-	}
+	// EVERY missing setting, in one error. These used to refuse one at a time —
+	// endpoint and bucket together, then region — so an operator starting the
+	// binary by hand learned the requirements one boot at a time, and the count
+	// of restarts was the count of things they had not set. Nothing about the
+	// three is sequential: they are read from the same environment at the same
+	// instant, and reporting the first is a choice to withhold the rest.
+	//
 	// The region is chosen, never defaulted. ensureBucket passes it to
 	// MakeBucket, so an unset value does not stay inert — it decides where a
 	// bucket holding attachment bytes is CREATED, and any default here resolves
 	// that toward one jurisdiction for every operator who did not think about it.
-	// ADR-0051 makes object storage sovereign by default and ADR-0027 makes every
-	// installation operator-run; a silent fallback contradicts both in exactly
-	// the case where it matters and reports nothing afterwards.
-	//
-	// For MinIO the value is arbitrary and any string will do, which is why
-	// refusing costs a self-hosted operator one line of configuration and saves
-	// an S3 one from discovering the answer in a bucket listing.
-	if cfg.Region == "" {
-		return nil, fmt.Errorf("blobstore: region is required — it decides where the bucket holding attachments is created, so it is not defaulted; set MARGINCE_BLOBSTORE_REGION (for MinIO any value works, e.g. us-east-1)")
+	// Object storage is sovereign by default and every installation is
+	// operator-run; a silent fallback contradicts both in exactly the case where
+	// it matters and reports nothing afterwards. (Those rulings carry the labels
+	// ADR-0051 and ADR-0027.) For MinIO the value is arbitrary and any string
+	// will do, which is why refusing costs a self-hosted operator one line and
+	// saves an S3 one from discovering the answer in a bucket listing.
+	if err := missingBlobstoreSettings(cfg); err != nil {
+		return nil, err
 	}
 	region := cfg.Region
 	client, err := minio.New(cfg.Endpoint, &minio.Options{
@@ -203,3 +206,29 @@ func objectInfoTo(key string, info minio.ObjectInfo) Object {
 }
 
 var _ Store = (*s3Store)(nil)
+
+// missingBlobstoreSettings names every required setting this config leaves
+// empty, or nil when it leaves none.
+//
+// The access key and secret are deliberately NOT here. An S3-compatible store
+// may serve an anonymous client, and minio.New accepts empty credentials
+// rather than refusing them, so demanding a pair here would refuse a
+// deployment that works today — a stricter boot than the one this function was
+// asked to make clearer.
+func missingBlobstoreSettings(cfg Config) error {
+	var missing []string
+	for _, want := range []struct{ value, envVar, why string }{
+		{cfg.Endpoint, EnvEndpoint, "the S3/MinIO endpoint attachment bytes are read from and written to"},
+		{cfg.Bucket, EnvBucket, "the bucket within it"},
+		{cfg.Region, EnvRegion, "the region the bucket is CREATED in, which is not defaulted (for MinIO any value works, e.g. us-east-1)"},
+	} {
+		if want.value == "" {
+			missing = append(missing, fmt.Sprintf("%s — %s", want.envVar, want.why))
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	return fmt.Errorf("blobstore: object storage is configured but %d required setting(s) are unset:\n  %s",
+		len(missing), strings.Join(missing, "\n  "))
+}

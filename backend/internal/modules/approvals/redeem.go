@@ -113,8 +113,8 @@ func validateRedemption(a row, p principal.Principal, tool, diffHash string, now
 		return fmt.Errorf("call differs from the approved change: %w", apperrors.ErrApprovalTokenInvalid)
 	case !p.PassportID.IsZero() && a.PassportID == nil:
 		return fmt.Errorf("approval is not bound to a passport: %w", apperrors.ErrApprovalTokenInvalid)
-	case !p.PassportID.IsZero() && *a.PassportID != ids.From[ids.PassportKind](p.PassportID):
-		return fmt.Errorf("approval was staged by a different passport: %w", apperrors.ErrApprovalTokenInvalid)
+	case !p.PassportID.IsZero() && !sameAgent(a, p):
+		return fmt.Errorf("approval was staged by a different agent: %w", apperrors.ErrApprovalTokenInvalid)
 	// Undecided is not a bad token, and the two must not share a sentinel. An
 	// agent whose retry lands before the human clicks is told the token is
 	// INVALID by any answer that wraps ErrApprovalTokenInvalid, and the only

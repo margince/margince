@@ -26,13 +26,21 @@ import (
 // passport revoked, a fresh one minted under the same grant.
 func (e *revocationEnv) rotate(t *testing.T, fixture *connectFixture) {
 	t.Helper()
-	_, refreshed, err := e.svc.rotateRefreshToken(e.wsCtx(e.admin), refreshRequest{
+	e.rotateIssuing(t, fixture)
+}
+
+// rotateIssuing is rotate for a caller that needs the credential the renewal
+// handed back, rather than only the rows it left behind.
+func (e *revocationEnv) rotateIssuing(t *testing.T, fixture *connectFixture) IssuedPassport {
+	t.Helper()
+	issued, refreshed, err := e.svc.rotateRefreshToken(e.wsCtx(e.admin), refreshRequest{
 		Token: fixture.refresh, ClientID: fixture.clientID,
 	})
 	if err != nil {
 		t.Fatalf("rotating the connection: %v", err)
 	}
 	fixture.refresh = refreshed
+	return issued
 }
 
 // mintOwnPassport issues a human-minted passport with the given scopes. It is

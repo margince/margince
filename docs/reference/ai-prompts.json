@@ -885,6 +885,9 @@
                   "type": "number"
                 },
                 "id": {
+                  "enum": [
+                    "\u003cid minted for this call\u003e"
+                  ],
                   "type": "string"
                 },
                 "label": {
@@ -954,6 +957,9 @@
                   "type": "number"
                 },
                 "id": {
+                  "enum": [
+                    "\u003cid minted for this call\u003e"
+                  ],
                   "type": "string"
                 },
                 "verdict": {
@@ -1011,6 +1017,9 @@
                   "type": "number"
                 },
                 "id": {
+                  "enum": [
+                    "\u003cid minted for this call\u003e"
+                  ],
                   "type": "string"
                 },
                 "verdict": {
@@ -1999,6 +2008,10 @@
                   "type": "number"
                 },
                 "id": {
+                  "enum": [
+                    "\u003cid minted for this call\u003e",
+                    "\u003cid minted for this call\u003e"
+                  ],
                   "type": "string"
                 },
                 "verdict": {
@@ -2241,6 +2254,10 @@
                   "type": "string"
                 },
                 "id": {
+                  "enum": [
+                    "\u003cid minted for this call\u003e",
+                    "\u003cid minted for this call\u003e"
+                  ],
                   "type": "string"
                 },
                 "remaining": {

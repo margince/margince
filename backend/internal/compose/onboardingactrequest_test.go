@@ -41,8 +41,10 @@ func TestOnboardingActRequestFencesTheContextUnderTheMarkerItDeclares(t *testing
 	if !declared {
 		t.Fatalf("the act system prompt declares no data boundary: %q", req.System)
 	}
-	if len(req.Messages) != 2 {
-		t.Fatalf("got %d messages, want the context turn and the administrator's own", len(req.Messages))
+	// The context and the administrator's message are both user text, so they
+	// arrive as one turn: the fenced context, then the message.
+	if len(req.Messages) != 1 || !strings.HasSuffix(req.Messages[0].Content, "How is my corpus doing?") {
+		t.Fatalf("got %+v, want one turn carrying the context and then the administrator's message", req.Messages)
 	}
 	// Containment is not a question of membership: a prompt that keeps the fence
 	// and ALSO repeats the block beside it puts that copy in the instruction
@@ -70,16 +72,7 @@ func TestOnboardingActRequestReplaysTheConversationInOrder(t *testing.T) {
 	req := onboardingActRequest(string(crmcontracts.OnboardingActOnboardingActConnect), "And what does it not do?",
 		history, actContextFixture(t), "en")
 
-	if len(req.Messages) != len(history)+2 {
-		t.Fatalf("got %d messages, want the context turn, %d replayed turns and the administrator's own",
-			len(req.Messages), len(history))
-	}
-	for i, turn := range history {
-		replayed := req.Messages[i+1]
-		if replayed.Role != turn.Role || replayed.Content != turn.Content {
-			t.Errorf("replayed turn %d = %+v, want %+v", i+1, replayed, turn)
-		}
-	}
+	requireTurnsInOrder(t, req.Messages, append(history, model.Message{Role: chatRoleUser, Content: "And what does it not do?"}))
 	current := req.Messages[len(req.Messages)-1]
 	if current.Role != chatRoleUser || current.Content != "And what does it not do?" {
 		t.Errorf("the administrator's own message is not the last turn: %+v", current)

@@ -31,6 +31,10 @@ type row struct {
 	ProposedBy string
 	OnBehalfOf *ids.UserID
 	PassportID *ids.PassportID
+	// ConnectionID is the OAuth grant behind PassportID, nil for a proposal no
+	// connection staged. It outlives rotation where PassportID does not, which
+	// is why sameAgent asks it first.
+	ConnectionID *ids.UUID
 	// TargetType + TargetID are the polymorphic pointer to the entity the
 	// staging acts on (deal, company, contact, lead, activity, …); the id stays
 	// untyped because the pair IS the discriminated reference.
@@ -67,7 +71,7 @@ type row struct {
 	EffectFailure  *string
 }
 
-const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id,
+const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id, staged_by_connection,
 	target_entity_type, target_entity_id, target_version,
 	co_target_entity_type, co_target_entity_id, co_target_version, target_label, summary,
 	proposed_change, diff_hash, expires_at, decided_by, decided_at, consumed_at, created_at,
@@ -75,7 +79,7 @@ const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id,
 
 func scan(r pgx.Row) (row, error) {
 	var a row
-	err := r.Scan(&a.ID, &a.Kind, &a.Status, &a.ProposedBy, &a.OnBehalfOf, &a.PassportID,
+	err := r.Scan(&a.ID, &a.Kind, &a.Status, &a.ProposedBy, &a.OnBehalfOf, &a.PassportID, &a.ConnectionID,
 		&a.TargetType, &a.TargetID, &a.TargetVersion,
 		&a.CoTargetType, &a.CoTargetID, &a.CoTargetVersion, &a.TargetLabel, &a.Summary,
 		&a.ProposedChange, &a.DiffHash, &a.ExpiresAt, &a.DecidedBy, &a.DecidedAt, &a.ConsumedAt, &a.CreatedAt,

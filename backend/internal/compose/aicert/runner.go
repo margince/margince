@@ -278,7 +278,7 @@ type certifyHooks struct {
 // certifyTask runs every scenario for one task over a fresh
 // candidate/judge router pair and folds the outcome into one Record.
 func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census *aitasks.Registry, binding, judgeBinding ai.ProviderConfig, profile ai.Profile, repeats int, log *slog.Logger, hooks *certifyHooks) (Record, error) {
-	candidateCfg, err := ladderForTask("candidate (MARGINCE_AICERT_MODEL, or the rung MARGINCE_AICERT_ROUTING resolved)", binding, profile, task)
+	candidateCfg, err := ladderForTask("candidate (MARGINCE_AICERT_MODEL, or the rung MARGINCE_AICERT_ROUTING resolved)", binding, candidateRole.profileFor(profile), task)
 	if err != nil {
 		return Record{}, err
 	}
@@ -318,7 +318,7 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	// The judge NEVER rides the candidate's binding — a model grading itself is
 	// certified by construction, which defeats the whole point of a second
 	// router. Run refuses the two being equal before a single call is paid for.
-	judgeCfg, err := ladderForTask("judge (MARGINCE_AICERT_JUDGE_MODEL / _JUDGE_BASE_URL)", judgeBinding, profile, task)
+	judgeCfg, err := ladderForTask("judge (MARGINCE_AICERT_JUDGE_MODEL / _JUDGE_BASE_URL)", judgeBinding, judgeRole.profileFor(profile), task)
 	if err != nil {
 		return Record{}, err
 	}

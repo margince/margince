@@ -40,6 +40,21 @@ var (
 	}
 )
 
+// profileFor is the profile this role's binding is validated under, in a run
+// that files its records under record.
+//
+// The candidate is held to the record's profile, because that profile is the
+// record's claim about where the certified deployment sends its text. The
+// judge is not part of that deployment. It is the lane's own grader, it is sent
+// only the hand-authored corpus and the candidate's answer to it — never an
+// installation's data — and the record names it (judge_served_model).
+func (r bindingRole) profileFor(record ai.Profile) ai.Profile {
+	if r == judgeRole {
+		return ai.ProfileCloudFrontier
+	}
+	return record
+}
+
 // refuseUnreachableUpstream refuses preferences on a binding they cannot reach:
 // accepted, they would be applied to nothing and the record would name them.
 func refuseUnreachableUpstream(cfg RunnerConfig) error {
@@ -93,7 +108,7 @@ func preflight(ctx context.Context, cfg RunnerConfig, tasks []ai.Task, hooks *ce
 	for _, p := range preflightProbes(cfg, tasks, hooks) {
 		// A binding that cannot be set up is certifyTask's to report, per task,
 		// where it costs that task's record alone; the pre-flight only notes it.
-		routing, err := ladderForTask(p.role.name, p.binding, cfg.recordProfile(), p.ladderTask)
+		routing, err := ladderForTask(p.role.name, p.binding, p.role.profileFor(cfg.recordProfile()), p.ladderTask)
 		if err != nil {
 			log.DebugContext(ctx, "aicert: pre-flight skipped a binding it could not route", "role", p.role.name, "err", err)
 			continue

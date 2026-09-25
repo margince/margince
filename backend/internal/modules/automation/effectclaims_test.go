@@ -20,15 +20,33 @@ import (
 )
 
 // scriptedClaims answers every Claim with a fixed verdict and records the
-// keys it was asked for.
+// keys it was asked for, plus the ones it was asked to confirm.
 type scriptedClaims struct {
-	grant bool
-	asked []string
+	grant      bool
+	asked      []string
+	confirmed  []string
+	confirmErr error
 }
 
 func (c *scriptedClaims) Claim(_ context.Context, handler, occurrenceKey, fingerprint string) (bool, error) {
 	c.asked = append(c.asked, handler+"|"+occurrenceKey+"|"+fingerprint)
 	return c.grant, nil
+}
+
+func (c *scriptedClaims) Confirm(_ context.Context, handler, occurrenceKey, fingerprint string) error {
+	c.confirmed = append(c.confirmed, handler+"|"+occurrenceKey+"|"+fingerprint)
+	return c.confirmErr
+}
+
+// refusingProvider fails every create, so what the claim does about a create
+// that did not land is observable.
+type refusingProvider struct {
+	datasource.SystemOfRecordProvider
+	err error
+}
+
+func (p *refusingProvider) Create(context.Context, datasource.CreateInput) (datasource.EntityRef, error) {
+	return datasource.EntityRef{}, p.err
 }
 
 // unitCountingProvider records creates; only Create is ever reached.
@@ -143,5 +161,78 @@ func TestDifferentArgsFingerprintApart(t *testing.T) {
 	}
 	if one == other {
 		t.Fatal("two different parameterizations share a fingerprint — the claim would eat a legitimate create")
+	}
+}
+
+// A create that LANDED confirms its claim, so no later firing reclaims it.
+func TestAnAppliedCreateConfirmsItsClaim(t *testing.T) {
+	claims := &scriptedClaims{grant: true}
+	provider := &unitCountingProvider{}
+
+	if _, err := ApplyActions(context.Background(),
+		Executors{Provider: provider, Claims: claims}, createTaskEffect(t, "route_lead")); err != nil {
+		t.Fatalf("ApplyActions: %v", err)
+	}
+
+	if provider.created != 1 {
+		t.Fatalf("created %d records, want 1", provider.created)
+	}
+	if len(claims.confirmed) != 1 || claims.confirmed[0] != claims.asked[0] {
+		t.Errorf("confirmed %v, want the one claim it took (%v)", claims.confirmed, claims.asked)
+	}
+}
+
+// A create that FAILED leaves its claim unconfirmed — which is the whole point.
+//
+// Confirming here would deduplicate every future firing against a record that
+// does not exist, and the task would be lost with nothing to repair it. Left
+// unconfirmed, the store's lease collects the claim and a redelivery applies it.
+func TestAFailedCreateLeavesItsClaimUnconfirmed(t *testing.T) {
+	claims := &scriptedClaims{grant: true}
+	wanted := errors.New("the provider refused")
+
+	_, err := ApplyActions(context.Background(),
+		Executors{Provider: &refusingProvider{err: wanted}, Claims: claims}, createTaskEffect(t, "route_lead"))
+
+	if !errors.Is(err, wanted) {
+		t.Fatalf("err = %v, want the provider's own", err)
+	}
+	if len(claims.confirmed) != 0 {
+		t.Errorf("confirmed %v after a create that never landed — a later firing would now fold against nothing", claims.confirmed)
+	}
+}
+
+// A folded firing confirms nothing: it took no claim, so it has no record to
+// vouch for, and confirming would vouch for somebody else's in-flight create.
+func TestAFoldedFiringConfirmsNothing(t *testing.T) {
+	claims := &scriptedClaims{grant: false}
+	provider := &unitCountingProvider{}
+
+	if _, err := ApplyActions(context.Background(),
+		Executors{Provider: provider, Claims: claims}, createTaskEffect(t, "route_lead")); err != nil {
+		t.Fatalf("ApplyActions: %v", err)
+	}
+
+	if provider.created != 0 {
+		t.Fatal("a folded firing created a record")
+	}
+	if len(claims.confirmed) != 0 {
+		t.Errorf("a folded firing confirmed %v", claims.confirmed)
+	}
+}
+
+// A confirm that fails does not fail the firing. The record LANDED; re-running
+// would create it twice, and the unconfirmed claim costs at most one duplicate
+// after the lease — the smaller of the two wrongs.
+func TestAFailedConfirmDoesNotFailAFiringWhoseRecordLanded(t *testing.T) {
+	claims := &scriptedClaims{grant: true, confirmErr: errors.New("the claim row is unreachable")}
+	provider := &unitCountingProvider{}
+
+	if _, err := ApplyActions(context.Background(),
+		Executors{Provider: provider, Claims: claims}, createTaskEffect(t, "route_lead")); err != nil {
+		t.Fatalf("a failed confirm must not fail a firing whose create succeeded: %v", err)
+	}
+	if provider.created != 1 {
+		t.Fatalf("created %d records, want 1", provider.created)
 	}
 }

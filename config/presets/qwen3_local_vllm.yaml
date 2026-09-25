@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=../margince.schema.json
+# config/presets/qwen3_local_vllm.yaml — Qwen3-14B on the operator's own box,
+# through vLLM on loopback, embeddings through a second vLLM. Zero egress.
+#
+# The vLLM counterpart of gemma4_local_ollama.yaml, sized for the same 24GB
+# Apple-silicon machine (vLLM with the vllm-metal plugin). Everything that
+# depends on WHICH model is served lives on the server's command line, not in
+# this file, because the vllm binding sends a plain OpenAI-wire request:
+#
+#     vllm serve mlx-community/Qwen3-14B-4bit --port 8000 \
+#       --max-model-len 40960 --gpu-memory-utilization 0.87 \
+#       --reasoning-parser qwen3 \
+#       --default-chat-template-kwargs '{"enable_thinking": false}' \
+#       --override-generation-config '{"temperature": 0.7, "top_p": 0.8, "top_k": 20}' \
+#       --enable-prompt-tokens-details
+#     vllm serve BAAI/bge-m3 --runner pooling --port 8001 --gpu-memory-utilization 0.1
+#
+# Each flag, and what leaving it out measured, is in
+# docs/reference/vllm-self-hosting.md section 1. The two that change answers:
+# without enable_thinking=false Qwen3 thinks before every answer and a short
+# budget returns no answer at all; and this MLX build ships no sampling config,
+# so without the override vLLM samples at temperature 1.0.
+#
+# WHY QWEN3-14B. Of five models served this way on a 24GB M4 it led or tied on
+# six of seven tasks. Gemma 4 12B answers gibberish through vllm-metal, Gemma
+# 3 12B cannot hold a 40,960 window here and its JSON output loops, gpt-oss-20b
+# thinks at "medium" on every call because vLLM has no server-side default for
+# its effort, and both Mistral models trailed. On an NVIDIA host serve the
+# original weights instead (Qwen/Qwen3-14B) and bind that id; the records
+# below certify the MLX 4-bit build and do not transfer to it.
+#
+# WHY THOSE MEMORY SHARES. 40,960 is the window the agent loop's prompt budget
+# needs; at it Qwen3-14B needs 6.25GiB of KV cache beside 8.3GB of weights,
+# which vLLM grants from 0.87 of the machine and not from less. bge-m3 fits in
+# the remaining 0.1. With both up about 9% of memory is left free: nothing else
+# that needs the GPU fits on a 24GB machine.
+#
+# `document_extract` cannot be served: it sends a PDF, and a vllm binding carries
+# only what its `input:` declares, which for this text-only model is nothing.
+#
+# Not loaded automatically — see README.md.
+version: 1
+
+seeds:
+  ai_routing:
+    # sovereign is enforced, not labelled: it refuses any cloud provider, and it
+    # refuses a vllm base_url that is not loopback or a private range. Omitting
+    # base_url on the tiers resolves to http://localhost:8000, which passes.
+    profile: sovereign
+    tiers:
+      local_small: { provider: vllm, model: "mlx-community/Qwen3-14B-4bit" }
+      cheap_cloud: { provider: vllm, model: "mlx-community/Qwen3-14B-4bit" }
+      premium:     { provider: vllm, model: "mlx-community/Qwen3-14B-4bit" }
+      frontier:    { provider: vllm, model: "mlx-community/Qwen3-14B-4bit" }
+    # A second server, because vLLM serves one model per process. bge-m3 is
+    # 1024-wide, the width gemma4_local_ollama.yaml's Ollama bge-m3 has, so
+    # moving between the two presets changes no column; the vectors are still
+    # not comparable across runtimes — re-embed on any change.
+    embeddings:
+      provider: vllm
+      model: BAAI/bge-m3
+      base_url: http://localhost:8001
+      dimensions: 1024

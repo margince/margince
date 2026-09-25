@@ -758,5 +758,6 @@ type SourceAuthor struct {
 	UserId *string `json:"user_id,omitempty"`
 
 	// Via Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
+	// An import writes its rows inside a reserved `mirror:` namespace, which is machinery for the replay key and is never what a reader should see. The prefix is stripped here: a row stored as `mirror:hubspot` reads `hubspot`.
 	Via *string `json:"via,omitempty"`
 }

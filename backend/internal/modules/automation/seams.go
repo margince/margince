@@ -146,8 +146,14 @@ var ErrNoApprovalStaging = errors.New("automation: no approval staging configure
 // table (NewEffectClaims); a seam so ApplyActions stays drivable without a
 // database in unit tests (effectclaims_test.go drives both fold and win
 // through a scripted implementation).
+// The claim is TWO-PHASE: Claim takes it, Confirm records that the create it
+// guards has landed. A claim taken and never confirmed is what a crash between
+// the two leaves behind, and the store's lease is what lets a later firing
+// reclaim it — without that, the lost create could never be repaired, because
+// the sibling folds against a write that never happened.
 type EffectClaims interface {
 	Claim(ctx context.Context, handler, occurrenceKey, fingerprint string) (bool, error)
+	Confirm(ctx context.Context, handler, occurrenceKey, fingerprint string) error
 }
 
 // ErrNoEffectClaims refuses an engine-driven create in a composition that

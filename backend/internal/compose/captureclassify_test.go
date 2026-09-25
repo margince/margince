@@ -162,7 +162,7 @@ func TestClassifyValidationMessagesDoNotEchoUnboundedModelText(t *testing.T) {
 func TestAnAbsentReplyVerdictIsSpelledNull(t *testing.T) {
 	outbound := unlabeledMessage{ID: ids.NewV7()}
 	answer := `{"results":[{"id":"` + outbound.ID.String() + `","label":"noise","confidence":0.9,"reply":null}]}`
-	if err := schema.ValidateJSON(classifySchema(), answer); err != nil {
+	if err := schema.ValidateJSON(classifySchema([]string{outbound.ID.String()}), answer); err != nil {
 		t.Fatalf("the schema refused a null reply: %v", err)
 	}
 	if err := classifyShapeValid([]unlabeledMessage{outbound})(answer); err != nil {
@@ -173,7 +173,7 @@ func TestAnAbsentReplyVerdictIsSpelledNull(t *testing.T) {
 		if reply != "" {
 			body += `,"reply":` + reply
 		}
-		if err := schema.ValidateJSON(classifySchema(), `{"results":[`+body+`}]}`); err == nil {
+		if err := schema.ValidateJSON(classifySchema([]string{outbound.ID.String()}), `{"results":[`+body+`}]}`); err == nil {
 			t.Errorf("the schema admitted %s", name)
 		}
 	}

@@ -10,7 +10,8 @@ run the lane, [enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md)
 for pointing a stack at Ollama, [ai-certification.md](ai-certification.md) for
 the committed readiness report, and
 [`config/presets/gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml)
-for the binding this page recommends.
+for the binding this page recommends. The same machine serving models through vLLM instead is
+[vllm-self-hosting.md](vllm-self-hosting.md).
 
 ## The short answer
 
@@ -150,7 +151,8 @@ generation is 12 tokens a second and there is no way around it on this chip.
 
 **The verdicts the current grading rule gives**, for the twelve tasks whose
 records are committed under the `sovereign` profile (judged by `gpt-oss:20b`
-running locally, because that profile refuses a cloud judge):
+running locally, because the lane then refused a cloud judge under that profile;
+it no longer does):
 
 | verdict | tasks |
 |---|---|
@@ -213,9 +215,11 @@ in front of Ollama) gets nothing, which is what the adapter sent before.
 and the adapter threw it away. (The certification rework that landed the same
 day fixed this too; both changes are in.)
 
-**A cloud judge is refused under `sovereign`.** The profile is checked against
-every binding a run makes, the judge included. So a sovereign run needs a local
-judge from a different family. A 7B local judge (`mistral`) was unreliable: one
+**A cloud judge was refused under `sovereign`.** The profile was checked against
+every binding a run makes, the judge included, so a sovereign run needed a local
+judge from a different family. It is no longer: the profile binds the candidate
+only (see [vllm-self-hosting.md](vllm-self-hosting.md)), and what follows is why
+these records were taken the harder way. A 7B local judge (`mistral`) was unreliable: one
 call scored a correct answer 0 and pushed two tasks down a band. `gpt-oss:20b` is
 the better local judge but shares the GPU with the candidate, which is why the
 committed sovereign records show 14 to 34 seconds at the median. The same twelve
@@ -269,15 +273,14 @@ So the next reader knows where the gaps are, rather than assuming coverage.
 
 ```bash
 ollama pull gemma4:12b && ollama pull gpt-oss:20b
-# The committed preset is sovereign, so the judge must be local:
+# The committed records were judged locally; the default cloud judge is allowed too:
 make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml \
   JUDGE=ollama:gpt-oss:20b TASK=capture_classify
 ```
 
-`make e2e-ai-report` prints what is already committed. For a cloud judge (cheaper
-and faster, but not `sovereign`), certify one model with `MODEL=ollama:<tag>
-PROFILE=<a non-sovereign profile>` and do not commit the records: they would
-name a profile the run did not have.
+`make e2e-ai-report` prints what is already committed. With the default cloud
+judge (omit `JUDGE=`) the run is faster, though it pays for judge tokens where a
+local judge costs nothing, and its recorded latency is the candidate's alone.
 
 To time a model without the judge in the way, call it directly:
 `curl localhost:11434/api/chat` with `"stream": false` and read

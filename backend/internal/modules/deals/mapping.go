@@ -114,7 +114,7 @@ func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error
 	// on the attempt rather than only on an otherwise-complete body. Answering
 	// "pipeline_id is required" to a forged-provenance write would tell the caller
 	// how to make the forgery land.
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.RefuseWire(req.Source, req.SourceSystem); err != nil {
 		return CreateDealInput{}, err
 	}
 	// A deal is born INTO a stage of a pipeline, and neither is defaultable here:
@@ -136,6 +136,7 @@ func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error
 		PipelineID:       pathID[ids.PipelineKind](req.PipelineId),
 		StageID:          pathID[ids.StageKind](req.StageId),
 		Source:           req.Source,
+		SourceSystem:     req.SourceSystem,
 		CompanyID:        idArg[ids.CompanyKind](req.CompanyId),
 		PartnerCompanyID: idArg[ids.CompanyKind](req.PartnerCompanyId),
 		ProjectID:        idArg[ids.ProjectKind](req.ProjectId),
