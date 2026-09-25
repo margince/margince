@@ -40,6 +40,29 @@ func RegisterIntentTools(
 	r.Register(prepForMeeting{retriever: retriever, brief: brief, p: p})
 }
 
+// assembleAnchored settles which record the caller meant and builds the
+// picture around it.
+//
+// Both intent tools open this way, so it is written once: they take the same
+// anchor, and an anchor validated in one and not the other — or resolved
+// through a different reader — would be two answers to "which record is this
+// about" on a surface whose whole job is to be about one record.
+func assembleAnchored(
+	ctx context.Context, p datasource.SystemOfRecordProvider,
+	retriever retrieval.Retriever, args anchorArgs,
+) (retrieval.Context, error) {
+	if err := args.validate(); err != nil {
+		return retrieval.Context{}, err
+	}
+	anchored, err := resolveAnchor(ctx, p, args)
+	if err != nil {
+		return retrieval.Context{}, err
+	}
+	return retriever.AssembleContext(ctx,
+		datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: anchored},
+		args.assembleOptions())
+}
+
 // anchorArgs is the shared input shape: one record to build around.
 type anchorArgs struct {
 	RecordType string   `json:"record_type"`
@@ -169,16 +192,7 @@ func (t catchMeUpOn) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	if err := args.validate(); err != nil {
-		return nil, err
-	}
-	anchored, err := resolveAnchor(ctx, t.p, args)
-	if err != nil {
-		return nil, err
-	}
-	assembled, err := t.retriever.AssembleContext(ctx,
-		datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: anchored},
-		args.assembleOptions())
+	assembled, err := assembleAnchored(ctx, t.p, t.retriever, args)
 	if err != nil {
 		return nil, err
 	}
@@ -214,16 +228,7 @@ func (t prepForMeeting) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	if err := args.validate(); err != nil {
-		return nil, err
-	}
-	anchored, err := resolveAnchor(ctx, t.p, args)
-	if err != nil {
-		return nil, err
-	}
-	assembled, err := t.retriever.AssembleContext(ctx,
-		datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: anchored},
-		args.assembleOptions())
+	assembled, err := assembleAnchored(ctx, t.p, t.retriever, args)
 	if err != nil {
 		return nil, err
 	}
