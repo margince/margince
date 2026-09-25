@@ -328,7 +328,22 @@ func metInPersonTx(
 		     AND a.captured_by LIKE 'connector:%'
 		     AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
 		     AND a.occurred_at <= now() + $2::interval
-		     AND (lower(p.address) = $1
+		     AND (
+		          -- The BARE invitation address, bounded by the address's own
+		          -- tenure. An activity_participant row records what the
+		          -- invitation said, and archiving a contact_email never
+		          -- rewrites it — so once an address changes hands, a meeting
+		          -- its FORMER holder attended would go on standing as evidence
+		          -- about the new one, and mint a contact for a stranger.
+		          -- Archiving the old holder's address is the only mark the
+		          -- hand-over leaves, so it is the boundary: meetings after it
+		          -- are the new holder's, meetings before it are not anybody's
+		          -- to inherit. An address that never changed hands has no such
+		          -- row and is unaffected.
+		          (lower(p.address) = $1 AND a.occurred_at > COALESCE(
+		             (SELECT max(pe.archived_at) FROM contact_email pe
+		               WHERE lower(pe.email) = $1 AND pe.archived_at IS NOT NULL),
+		             '-infinity'::timestamptz))
 		          OR EXISTS (
 		            SELECT 1 FROM contact_email pe
 		             WHERE pe.contact_id = p.contact_id
