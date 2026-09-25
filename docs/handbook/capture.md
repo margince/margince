@@ -219,7 +219,7 @@ mailbox is on:
 |---|---|---|
 | Gmail | Your mail, and your sent mail | Spam and Trash — the listing asks Gmail to leave them out, and any message that carries the Spam or Trash label when it is read is refused even so. Drafts, by the same label rule. |
 | Microsoft 365 / Outlook | Inbox and Sent Items | Junk Email, Deleted Items and Drafts, which are simply never followed. |
-| IMAP | The folder you configured (usually INBOX), and your Sent folder | Junk and Trash folders, which are never opened. Other folders are not read either. |
+| IMAP | The one folder you configured (usually INBOX); point it at the server's Sent folder and its mail counts as sent by you | Every other folder, Junk and Trash included, is never opened. |
 
 The Gmail row is two rules rather than one because listing the mail and reading
 it are separate calls, and a message can be moved to Spam or Trash in between.
