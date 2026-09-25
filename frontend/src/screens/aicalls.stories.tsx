@@ -17,6 +17,7 @@ const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 const summary = {
   id: "call-1",
   occurred_at: "2026-07-20T10:00:00Z",
+  kind: "completion",
   task: "capture_classify",
   tier: "cheap_cloud",
   provider: "gemini",
@@ -42,6 +43,7 @@ const detail = {
     {
       attempt: 1,
       is_terminal: false,
+      kind: "completion",
       attempt_reason: "",
       tokens_in: 100,
       tokens_out: 0,
@@ -51,6 +53,7 @@ const detail = {
     {
       attempt: 2,
       is_terminal: true,
+      kind: "completion",
       attempt_reason: "retry_on_5xx",
       tokens_in: 100,
       tokens_out: 20,

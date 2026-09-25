@@ -63,6 +63,7 @@ const PRICED_USAGE = {
 const AI_CALL = {
   id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
   occurred_at: "2026-07-20T10:00:00Z",
+  kind: "completion",
   task: "capture_classify",
   tier: "cheap_cloud",
   provider: "gemini",
