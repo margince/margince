@@ -84,6 +84,7 @@ func wireAiCall(detail CallDetail) crmcontracts.AiCall {
 		HasPayload: summary.HasPayload, ServedIdentitySource: detail.ServedIdentitySource,
 		ConfigHash: detail.ConfigHash, ContextScopes: detail.ContextScopes,
 		ContextFingerprint: detail.ContextFingerprint,
+		LogicalCallId:      openapi_types.UUID(detail.LogicalCallID),
 		Attempts:           make([]crmcontracts.AiCallAttempt, 0, len(detail.Attempts)),
 		PayloadCaptured:    detail.Payload != nil,
 		DecisionAttempted:  summary.DecisionAttempted,
@@ -97,20 +98,31 @@ func wireAiCall(detail CallDetail) crmcontracts.AiCall {
 		out.AgentRunId = &value
 	}
 	for _, attempt := range detail.Attempts {
-		out.Attempts = append(out.Attempts, crmcontracts.AiCallAttempt{
-			Attempt: attempt.Attempt, IsTerminal: attempt.IsTerminal, Kind: attempt.Kind,
-			Tier: optionalText(attempt.Tier), Provider: optionalText(attempt.Provider),
-			ModelId:       optionalText(attempt.ModelID),
-			AttemptReason: attempt.AttemptReason, ErrorSentinel: attempt.ErrorSentinel,
-			TokensIn: int(attempt.TokensIn), TokensOut: int(attempt.TokensOut),
-			LatencyMs: int(attempt.LatencyMS), OccurredAt: attempt.OccurredAt,
-		})
+		out.Attempts = append(out.Attempts, wireAiCallAttempt(attempt))
 	}
 	if detail.Payload != nil {
 		out.Payload = &struct {
 			Request  interface{} `json:"request"`
 			Response interface{} `json:"response"`
 		}{Request: detail.Payload.Request, Response: detail.Payload.Response}
+	}
+	return out
+}
+
+func wireAiCallAttempt(attempt CallAttempt) crmcontracts.AiCallAttempt {
+	out := crmcontracts.AiCallAttempt{
+		Attempt: attempt.Attempt, IsTerminal: attempt.IsTerminal, Kind: attempt.Kind,
+		Tier: optionalText(attempt.Tier), Provider: optionalText(attempt.Provider),
+		ModelId:       optionalText(attempt.ModelID),
+		AttemptReason: attempt.AttemptReason, ErrorSentinel: attempt.ErrorSentinel,
+		ServedModel:    optionalText(attempt.ServedModel),
+		ServedProvider: optionalText(attempt.ServedProvider),
+		TokensIn:       int(attempt.TokensIn), TokensOut: int(attempt.TokensOut),
+		LatencyMs: int(attempt.LatencyMS), OccurredAt: attempt.OccurredAt,
+	}
+	if answer := attempt.DecisionAnswer; answer != nil {
+		choice, confidence := answer.Choice, answer.Confidence
+		out.DecisionChoice, out.DecisionConfidence = &choice, &confidence
 	}
 	return out
 }

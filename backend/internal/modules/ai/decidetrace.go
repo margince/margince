@@ -16,6 +16,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/decision"
 )
 
+// DecisionAnswer is the label a decision attempt's lane chose and the
+// confidence it gave, kept on the attempt's row whether or not the answer
+// stood: a site's floor is tuned from the answers that did not.
+type DecisionAnswer struct {
+	Choice     string
+	Confidence float64
+}
+
+// answerTrace is the row's record of an answer read off the wire: nil when the
+// question went unanswered, since a zero confidence would claim an answer.
+func answerTrace(answer decision.Answer) *DecisionAnswer {
+	if answer.Choice == "" {
+		return nil
+	}
+	return &DecisionAnswer{Choice: answer.Choice, Confidence: answer.Confidence}
+}
+
 // newDecisionTrace opens the row for one decision attempt, joined on the same
 // ambient ids a completion attempt of the call carries.
 func (r *Router) newDecisionTrace(ctx context.Context, task Task, lane routeMeta) Call {

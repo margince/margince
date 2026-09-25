@@ -12,6 +12,8 @@ package ai
 
 import (
 	"context"
+	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -147,5 +149,92 @@ func TestTheTraceListSaysWhichCallsAskedADecisionModel(t *testing.T) {
 	}
 	if attempted[string(TaskEnrich)] {
 		t.Errorf("the ordinary call reads decision_attempted = true, want false")
+	}
+}
+
+// decidedDetail runs one Decide through the router with the real ai_call
+// writer behind it, payload capture on, and reads the call back as the trace
+// detail serves it.
+func decidedDetail(t *testing.T, task Task, reply decisionReply) CallDetail {
+	t.Helper()
+	env := setupRateStore(t)
+	ws, ctx := env.seedWorkspace(context.Background(), t)
+	f := newDecideFixture(t, &scriptedDecider{replies: []decisionReply{reply}}, 0)
+	f.router.calls = NewCallMeter(env.dbFor(ws))
+	f.router.capturePayloads = true
+	if _, _, err := f.router.Decide(ctx, task, "triage", triageQuestion, triageLLMRequest, acceptAnything, floorGate); err != nil {
+		t.Fatal(err)
+	}
+	reader := NewCallReadStore(env.dbFor(ws))
+	readCtx := diagnosticsReader(ws)
+	page, err := reader.ListCalls(readCtx, nil, nil, nil)
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("ListCalls: %d items, %v", len(page.Items), err)
+	}
+	detail, err := reader.GetCall(readCtx, page.Items[0].ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return detail
+}
+
+// assertAnswers holds each attempt's decision answer, in order, to want.
+func assertAnswers(t *testing.T, attempts []CallAttempt, want ...*DecisionAnswer) {
+	t.Helper()
+	if len(attempts) != len(want) {
+		t.Fatalf("attempts = %+v, want %d", attempts, len(want))
+	}
+	for i, attempt := range attempts {
+		if !reflect.DeepEqual(attempt.DecisionAnswer, want[i]) {
+			t.Errorf("attempt %d (%s) answer = %+v, want %+v", attempt.Attempt, attempt.Kind, attempt.DecisionAnswer, want[i])
+		}
+	}
+}
+
+// The answer a floor is tuned from is the one that did not stand, and it is
+// kept on the decision row although that row is not the terminal one.
+func TestAFallenBackDecisionKeepsItsAnswer(t *testing.T) {
+	detail := decidedDetail(t, TaskSiteTriage, answered("company", 0.62))
+
+	assertAnswers(t, detail.Attempts, &DecisionAnswer{Choice: "company", Confidence: 0.62}, nil)
+	decided := detail.Attempts[0]
+	if decided.IsTerminal || decided.ServedModel != "typesafe/jev-1.13-20260917" || decided.ServedProvider != "TypeSafe" {
+		t.Errorf("decision attempt = %+v, want non-terminal and served by TypeSafe", decided)
+	}
+	if detail.LogicalCallID.IsZero() {
+		t.Error("the call detail carries no logical call id")
+	}
+}
+
+func TestAnAcceptedDecisionKeepsItsAnswer(t *testing.T) {
+	detail := decidedDetail(t, TaskSiteTriage, answered("parked", 0.95))
+
+	assertAnswers(t, detail.Attempts, &DecisionAnswer{Choice: "parked", Confidence: 0.95})
+	if detail.Payload == nil {
+		t.Error("the accepted decision's payload was not captured")
+	}
+}
+
+// A failed call answered nothing, and a zero confidence would claim it had.
+func TestAnErroredDecisionRecordsNoAnswer(t *testing.T) {
+	detail := decidedDetail(t, TaskSiteTriage, decisionReply{err: errors.New("down")})
+
+	assertAnswers(t, detail.Attempts, nil, nil)
+	if sentinel := detail.Attempts[0].ErrorSentinel; sentinel == nil || *sentinel != "provider_error" {
+		t.Errorf("decision attempt sentinel = %v, want provider_error", sentinel)
+	}
+}
+
+// The answer is a label and a number, never the prompt, so a task that may
+// keep no payload keeps it as well.
+func TestANoPayloadTaskStillKeepsTheDecisionAnswer(t *testing.T) {
+	if !NoPayload(TaskAccountScan) {
+		t.Fatalf("%s is no longer no_payload; pick a task that is", TaskAccountScan)
+	}
+	detail := decidedDetail(t, TaskAccountScan, answered("company", 0.62))
+
+	assertAnswers(t, detail.Attempts, &DecisionAnswer{Choice: "company", Confidence: 0.62}, nil)
+	if detail.Payload != nil {
+		t.Error("a no_payload task's call captured a payload")
 	}
 }

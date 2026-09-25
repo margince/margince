@@ -348,11 +348,11 @@ unless every check passes, in this order:
    bytes, the call has 15 seconds, and the answer must be an offered label at
    or above the **site's own** floor (the one its LLM path applies).
 
-A fallback leaves its reason on the ladder's first attempt: `decision_local_only`,
-`decision_uncertified`, `decision_state_too_large`, `decision_error`,
-`decision_off_enum` or `decision_below_floor`. A decision attempt is its own
-`ai_call` row (`kind = decision`, tier `decide`), metered on input tokens and
-priced on the `decisions` rate lane. The route preview shows per feature whether
+A fallback leaves its reason on the ladder's first attempt: `decision_local_only`, `decision_uncertified`,
+`decision_state_too_large`, `decision_error`, `decision_off_enum` or `decision_below_floor`. A decision
+attempt is its own `ai_call` row (`kind = decision`, tier `decide`), metered on input tokens and priced on
+the `decisions` rate lane. It keeps the answer (`decision_choice`, `decision_confidence`) whether or not it
+stood, `no_payload` tasks included, so floors can be tuned from real fallbacks; the call detail shows it. The route preview shows per feature whether
 the lane answers first, or why not: `unbound`, `local_only` or `uncertified`.
 `GET /v1/ai/usage` reports each task's `decisions` (asked, decided, fallbacks by
 reason) from `ai_call` per logical call, since `ai_usage` counts attempts.

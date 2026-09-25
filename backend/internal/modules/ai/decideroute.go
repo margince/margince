@@ -216,6 +216,12 @@ func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, t
 	if callErr == nil {
 		meterErr = r.meterDecision(ctx, task, resp)
 	}
+	var answer decision.Answer
+	var verdict DecisionVerdict
+	if callErr == nil {
+		answer, verdict = readDecision(dreq, resp, gate)
+		trace.DecisionAnswer = answerTrace(answer)
+	}
 	// Before finalize, which buffers the row, as on a completion attempt.
 	trace.SecretsRemoved, trace.SecretKinds = strips.report()
 	r.finalizeDecisionAttempt(ctx, lc, &trace, dreq, resp, errors.Join(callErr, meterErr), start)
@@ -228,7 +234,6 @@ func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, t
 		try.reason = attemptReasonDecisionError
 		return try, nil
 	}
-	answer, verdict := readDecision(dreq, resp, gate)
 	try.answer = answer
 	switch verdict {
 	case DecisionAccepted:

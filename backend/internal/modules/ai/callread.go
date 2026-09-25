@@ -64,16 +64,25 @@ type CallAttempt struct {
 	ModelID       string
 	AttemptReason string
 	ErrorSentinel *string
-	TokensIn      int64
-	TokensOut     int64
-	LatencyMS     int64
-	OccurredAt    time.Time
+	// ServedModel and ServedProvider are what the provider reported serving
+	// THIS attempt; "" when it reported nothing.
+	ServedModel    string
+	ServedProvider string
+	// DecisionAnswer is a decision attempt's answer, stood or not; nil on
+	// every other kind and on a decision attempt that got no answer.
+	DecisionAnswer *DecisionAnswer
+	TokensIn       int64
+	TokensOut      int64
+	LatencyMS      int64
+	OccurredAt     time.Time
 }
 
 // CallDetail joins a terminal summary to routing, context, attempts, and
 // optional captured payload content.
 type CallDetail struct {
 	CallSummary
+	// LogicalCallID is what every attempt of this call shares.
+	LogicalCallID        ids.UUID
 	CorrelationID        *ids.UUID
 	AgentRunID           *ids.UUID
 	ServedIdentitySource string
@@ -226,6 +235,7 @@ func scanCallDetail(row rowScanner) (CallDetail, ids.UUID, error) {
 	if err != nil {
 		return CallDetail{}, ids.UUID{}, err
 	}
+	detail.LogicalCallID = logicalID
 	if requestPayload != nil && responsePayload != nil {
 		detail.Payload = &Payload{Request: requestPayload, Response: responsePayload}
 	}
@@ -257,28 +267,42 @@ func (s *CallReadStore) GetCall(ctx context.Context, id ids.UUID) (CallDetail, e
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, `
-			SELECT attempt, is_terminal, kind, tier, provider, model_id, attempt_reason,
-				error_sentinel, tokens_in, tokens_out, latency_ms, occurred_at
-			FROM ai_call WHERE logical_call_id = $1 ORDER BY attempt ASC`, logicalID)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var attempt CallAttempt
-			if err := rows.Scan(&attempt.Attempt, &attempt.IsTerminal, &attempt.Kind, &attempt.Tier,
-				&attempt.Provider, &attempt.ModelID, &attempt.AttemptReason,
-				&attempt.ErrorSentinel, &attempt.TokensIn, &attempt.TokensOut,
-				&attempt.LatencyMS, &attempt.OccurredAt); err != nil {
-				return err
-			}
-			detail.Attempts = append(detail.Attempts, attempt)
-		}
-		return rows.Err()
+		detail.Attempts, err = readCallAttempts(ctx, tx, logicalID)
+		return err
 	})
 	if err != nil {
 		return CallDetail{}, err
 	}
 	return detail, nil
+}
+
+// readCallAttempts is one logical call's attempt ladder, oldest first.
+func readCallAttempts(ctx context.Context, tx pgx.Tx, logicalID ids.UUID) ([]CallAttempt, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT attempt, is_terminal, kind, tier, provider, model_id, attempt_reason,
+			error_sentinel, served_model, served_provider, decision_choice, decision_confidence,
+			tokens_in, tokens_out, latency_ms, occurred_at
+		FROM ai_call WHERE logical_call_id = $1 ORDER BY attempt ASC`, logicalID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var attempts []CallAttempt
+	for rows.Next() {
+		var attempt CallAttempt
+		var choice *string
+		var confidence *float64
+		if err := rows.Scan(&attempt.Attempt, &attempt.IsTerminal, &attempt.Kind, &attempt.Tier,
+			&attempt.Provider, &attempt.ModelID, &attempt.AttemptReason,
+			&attempt.ErrorSentinel, &attempt.ServedModel, &attempt.ServedProvider, &choice, &confidence,
+			&attempt.TokensIn, &attempt.TokensOut, &attempt.LatencyMS, &attempt.OccurredAt); err != nil {
+			return nil, err
+		}
+		// The schema holds the two columns NULL together.
+		if choice != nil && confidence != nil {
+			attempt.DecisionAnswer = &DecisionAnswer{Choice: *choice, Confidence: *confidence}
+		}
+		attempts = append(attempts, attempt)
+	}
+	return attempts, rows.Err()
 }

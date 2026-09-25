@@ -18651,7 +18651,19 @@ export interface components {
             provider?: string;
             /** @description The configured binding this attempt ran on. */
             model_id?: string;
+            /** @description This attempt's failure code, as on the call; null when it answered. */
             error_sentinel?: string | null;
+            /** @description What the provider reported serving this attempt; absent when it reported nothing. */
+            served_model?: string;
+            /** @description The upstream a broker routed this attempt to; absent on a direct vendor or when the broker named none. */
+            served_provider?: string;
+            /** @description The label a decision attempt was answered with, whether or not it stood; absent on every other kind and on a decision attempt that got no answer. */
+            decision_choice?: string;
+            /**
+             * Format: double
+             * @description The confidence the decision model gave decision_choice, as it sent it; present exactly when decision_choice is.
+             */
+            decision_confidence?: number;
             tokens_in: number;
             tokens_out: number;
             latency_ms: number;
@@ -18659,6 +18671,11 @@ export interface components {
             occurred_at: string;
         };
         AiCall: components["schemas"]["AiCallSummary"] & {
+            /**
+             * Format: uuid
+             * @description Shared by every attempt of this call: the id that groups them in the trace.
+             */
+            logical_call_id: string;
             /** Format: uuid */
             correlation_id?: string | null;
             /** Format: uuid */

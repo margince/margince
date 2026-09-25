@@ -217,6 +217,40 @@ func TestAnAcceptedDecisionIsTracedAndMeteredOnTheDecideTier(t *testing.T) {
 	}
 }
 
+// A decision row keeps what the lane answered whether or not the answer
+// stood: a below-floor or off-enum answer is the one a site's floor is tuned
+// from. Only an attempt that got no answer at all, and every row that is not a
+// decision, carries none.
+func TestEveryDecisionRowKeepsTheAnswerItRead(t *testing.T) {
+	cases := []struct {
+		name  string
+		reply decisionReply
+		want  *DecisionAnswer
+	}{
+		{"accepted", answered("parked", 0.95), &DecisionAnswer{Choice: "parked", Confidence: 0.95}},
+		{"below the floor", answered("company", 0.62), &DecisionAnswer{Choice: "company", Confidence: 0.62}},
+		{"a label the question never offered", answered("personal", 0.99), &DecisionAnswer{Choice: "personal", Confidence: 0.99}},
+		{"no answer to the question", decisionReply{resp: decision.Response{Answers: map[string]decision.Answer{}}}, nil},
+		{"a provider error", decisionReply{err: errors.New("down")}, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newDecideFixture(t, &scriptedDecider{replies: []decisionReply{tc.reply}}, 0)
+			if _, _, err := f.decide(t, triageQuestion); err != nil {
+				t.Fatal(err)
+			}
+			if got := f.store.recorded[0].DecisionAnswer; !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("decision row answer = %+v, want %+v", got, tc.want)
+			}
+			for _, row := range f.store.recorded[1:] {
+				if row.DecisionAnswer != nil {
+					t.Errorf("the %s row carries a decision answer %+v", row.Kind, row.DecisionAnswer)
+				}
+			}
+		})
+	}
+}
+
 func TestADecisionUnderBudgetPressure(t *testing.T) {
 	t.Run("a degraded band keeps the decision reason and marks the walk degraded", func(t *testing.T) {
 		f := newDecideFixture(t, &scriptedDecider{replies: []decisionReply{answered("parked", 0.5)}}, 90)

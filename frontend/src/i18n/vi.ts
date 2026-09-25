@@ -7836,6 +7836,7 @@ export const vi = {
     "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
   "aicalls.reason.decision_local_only":
     "Tác vụ chỉ chạy cục bộ, mô hình quyết định thì không",
+  "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Các lệnh gọi gần đây",
   "aicalls.filter.all": "Mọi tác vụ",
   "aicalls.loadMore": "Tải thêm",

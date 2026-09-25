@@ -83,6 +83,8 @@ const DECIDED_THEN_FELL_BACK = {
       provider: "jev_compatible",
       model_id: "jev-classify",
       attempt_reason: "",
+      decision_choice: "company",
+      decision_confidence: 0.62,
       tokens_in: 40,
       tokens_out: 0,
       latency_ms: 600,
@@ -413,4 +415,18 @@ it("says why the ladder answered after the decision model, and where it went", a
   const first = screen.getByText("#1").closest("li");
   expect(first?.textContent).toContain("Decision model");
   expect(first?.textContent).toContain("jev_compatible/jev-classify");
+});
+
+// The answer that did not stand is the one a floor is tuned from, so the
+// decision attempt says what it answered even when the ladder answered after.
+it("says what the decision model answered, and at what confidence", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+  await userEvent.click(
+    await screen.findByRole("button", { name: /show attempts/i }),
+  );
+
+  const first = (await screen.findByText("#1")).closest("li");
+  expect(first?.textContent).toContain("answered company at 0.62");
+  const second = screen.getByText("#2").closest("li");
+  expect(second?.textContent).not.toContain("answered");
 });

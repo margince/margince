@@ -7887,6 +7887,7 @@ export const de = {
     "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
   "aicalls.reason.decision_local_only":
     "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
+  "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
   "aicalls.callsLabel": "Letzte Aufrufe",
   "aicalls.filter.all": "Alle Aufgaben",
   "aicalls.loadMore": "Mehr laden",

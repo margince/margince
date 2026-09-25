@@ -15,7 +15,12 @@ import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
+import {
+  formatDateTime,
+  formatDecimal,
+  formatNumber,
+  ordinalNumber,
+} from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { attemptReasonLabel, tierLabel } from "./ai-decision-labels";
@@ -104,6 +109,19 @@ export function CallDetailPanel({
                 {t("aicalls.ms", {
                   value: formatNumber(attempt.latency_ms, locale),
                 })}
+                {/* What the decision model answered, whether or not it stood:
+                    the reason on the NEXT rung says why the walk went on. The
+                    label is a wire value the site owns, shown as sent. */}
+                {attempt.decision_choice !== undefined &&
+                  attempt.decision_confidence !== undefined &&
+                  ` · ${t("aicalls.decisionAnswer", {
+                    choice: attempt.decision_choice,
+                    confidence: formatDecimal(
+                      attempt.decision_confidence,
+                      locale,
+                      2,
+                    ),
+                  })}`}
                 {attempt.error_sentinel && (
                   <Badge tone="danger">{attempt.error_sentinel}</Badge>
                 )}

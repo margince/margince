@@ -134,7 +134,10 @@ type Call struct {
 	SchemaDowngrade string
 	Degraded        bool
 	ErrorSentinel   string
-	AgentRunID      *ids.UUID
+	// DecisionAnswer is what a decision attempt was answered, stood or not;
+	// nil on every other kind and on a decision attempt that got no answer.
+	DecisionAnswer *DecisionAnswer
+	AgentRunID     *ids.UUID
 	// ConfigHash points at the ai_call_config row describing the task
 	// contract, routing config, and prompt version that produced this
 	// attempt. Nil when the serving Router never installed a config
@@ -300,6 +303,13 @@ func aiCallBindings(c Call) []boundColumn {
 		id := c.Subject.Ref.ID
 		subjectType, subjectID = &kind, &id
 	}
+	// Both answer columns or neither, as the schema's shape check holds them.
+	var decisionChoice *string
+	var decisionConfidence *float64
+	if c.DecisionAnswer != nil {
+		choice, confidence := c.DecisionAnswer.Choice, c.DecisionAnswer.Confidence
+		decisionChoice, decisionConfidence = &choice, &confidence
+	}
 	return []boundColumn{
 		{"correlation_id", c.CorrelationID},
 		{"task", string(c.Task)},
@@ -337,6 +347,8 @@ func aiCallBindings(c Call) []boundColumn {
 		{"secret_kinds", secretKinds},
 		{"subject_type", subjectType},
 		{"subject_id", subjectID},
+		{"decision_choice", decisionChoice},
+		{"decision_confidence", decisionConfidence},
 	}
 }
 

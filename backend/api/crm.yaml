@@ -26699,7 +26699,11 @@ components:
         tier: { type: string, description: 'The tier this attempt ran on; decide for the decision lane.' }
         provider: { type: string }
         model_id: { type: string, description: 'The configured binding this attempt ran on.' }
-        error_sentinel: { type: [string, 'null'] }
+        error_sentinel: { type: [string, 'null'], description: 'This attempt''s failure code, as on the call; null when it answered.' }
+        served_model: { type: string, description: 'What the provider reported serving this attempt; absent when it reported nothing.' }
+        served_provider: { type: string, description: 'The upstream a broker routed this attempt to; absent on a direct vendor or when the broker named none.' }
+        decision_choice: { type: string, description: 'The label a decision attempt was answered with, whether or not it stood; absent on every other kind and on a decision attempt that got no answer.' }
+        decision_confidence: { type: number, format: double, description: 'The confidence the decision model gave decision_choice, as it sent it; present exactly when decision_choice is.' }
         tokens_in: { type: integer }
         tokens_out: { type: integer }
         latency_ms: { type: integer }
@@ -26708,8 +26712,9 @@ components:
       allOf:
         - $ref: '#/components/schemas/AiCallSummary'
         - type: object
-          required: [served_identity_source, context_scopes, context_fingerprint, attempts, payload_captured]
+          required: [logical_call_id, served_identity_source, context_scopes, context_fingerprint, attempts, payload_captured]
           properties:
+            logical_call_id: { type: string, format: uuid, description: 'Shared by every attempt of this call: the id that groups them in the trace.' }
             correlation_id: { type: [string, 'null'], format: uuid }
             agent_run_id: { type: [string, 'null'], format: uuid }
             served_identity_source: { type: string, description: 'response | echo | configured.' }

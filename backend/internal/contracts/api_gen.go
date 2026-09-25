@@ -19271,6 +19271,9 @@ type AiCall struct {
 	Kind      string `json:"kind"`
 	LatencyMs int    `json:"latency_ms"`
 
+	// LogicalCallId Shared by every attempt of this call: the id that groups them in the trace.
+	LogicalCallId openapi_types.UUID `json:"logical_call_id"`
+
 	// ModelId The configured binding.
 	ModelId    string    `json:"model_id"`
 	OccurredAt time.Time `json:"occurred_at"`
@@ -19305,7 +19308,15 @@ type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
 	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
-	AttemptReason string  `json:"attempt_reason"`
+	AttemptReason string `json:"attempt_reason"`
+
+	// DecisionChoice The label a decision attempt was answered with, whether or not it stood; absent on every other kind and on a decision attempt that got no answer.
+	DecisionChoice *string `json:"decision_choice,omitempty"`
+
+	// DecisionConfidence The confidence the decision model gave decision_choice, as it sent it; present exactly when decision_choice is.
+	DecisionConfidence *float64 `json:"decision_confidence,omitempty"`
+
+	// ErrorSentinel This attempt's failure code, as on the call; null when it answered.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 	IsTerminal    bool    `json:"is_terminal"`
 
@@ -19317,6 +19328,12 @@ type AiCallAttempt struct {
 	ModelId    *string   `json:"model_id,omitempty"`
 	OccurredAt time.Time `json:"occurred_at"`
 	Provider   *string   `json:"provider,omitempty"`
+
+	// ServedModel What the provider reported serving this attempt; absent when it reported nothing.
+	ServedModel *string `json:"served_model,omitempty"`
+
+	// ServedProvider The upstream a broker routed this attempt to; absent on a direct vendor or when the broker named none.
+	ServedProvider *string `json:"served_provider,omitempty"`
 
 	// Tier The tier this attempt ran on; decide for the decision lane.
 	Tier      *string `json:"tier,omitempty"`

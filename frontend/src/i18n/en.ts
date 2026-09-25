@@ -8052,6 +8052,7 @@ export const en = {
     "Decision model not certified for this task",
   "aicalls.reason.decision_local_only":
     "Task is local-only and the decision model is not",
+  "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
   "aicalls.filter.all": "All tasks",
   "aicalls.loadMore": "Load more",
