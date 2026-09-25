@@ -26,6 +26,8 @@ type providerProbe struct {
 	answer       string
 	outcome      extension.InboundOutcome
 	perIP        int
+	perEndpoint  int
+	noChallenge  bool
 }
 
 func (p *providerProbe) unit() extension.Extension {
@@ -36,6 +38,9 @@ func (p *providerProbe) unit() extension.Extension {
 	if p.perIP > 0 {
 		endpoint.Rate.PerIP = extension.Rate{Limit: p.perIP, Window: time.Minute}
 	}
+	if p.perEndpoint > 0 {
+		endpoint.Rate.PerEndpoint = extension.Rate{Limit: p.perEndpoint, Window: time.Minute}
+	}
 	endpoint.Handle = func(_ context.Context, _ extension.Runtime, req extension.InboundRequest) (extension.InboundOutcome, error) {
 		p.calls++
 		p.saw = req
@@ -45,6 +50,9 @@ func (p *providerProbe) unit() extension.Extension {
 		p.challenges++
 		p.sawChallenge = req
 		return p.answer, p.outcome, nil
+	}
+	if p.noChallenge {
+		endpoint.Challenge = nil
 	}
 	return unitWithInbound(probeUnitName, endpoint)
 }
@@ -77,8 +85,8 @@ func handshakeGet(query string) *http.Request {
 func TestAProviderPostCarriesItsSignatureAndNoClock(t *testing.T) {
 	p := &providerProbe{}
 	w := serve(mountProvider(t, p), providerPost(`{"object":"page"}`, "sha256=abc"))
-	if w.Code != http.StatusAccepted {
-		t.Fatalf("answered %d, want 202", w.Code)
+	if w.Code != http.StatusOK {
+		t.Fatalf("answered %d, want 200 — a provider documents 200 OK, not the Margince scheme's 202", w.Code)
 	}
 	if p.saw.Signature != "sha256=abc" || p.saw.Ref != "ref1" || string(p.saw.Body) != `{"object":"page"}` {
 		t.Fatalf("handler saw %+v", p.saw)
@@ -96,7 +104,11 @@ func TestAProviderPostWithoutItsHeaderIsTheOpaque401(t *testing.T) {
 	marginceOnly.Header.Set(extension.InboundHeaderTimestamp, strconv.FormatInt(time.Now().Unix(), 10))
 	marginceOnly.Header.Set(extension.InboundHeaderNonce, "0f1e2d3c")
 	marginceOnly.Header.Set(extension.InboundHeaderSignature, "sha256=deadbeef")
-	for name, r := range map[string]*http.Request{"no header": bare, "Margince headers only": marginceOnly} {
+	// Present but empty is not the same request as absent, and must be
+	// refused all the same.
+	empty := providerPost(`{}`, "")
+	empty.Header["X-Hub-Signature-256"] = []string{""}
+	for name, r := range map[string]*http.Request{"no header": bare, "an empty header": empty, "Margince headers only": marginceOnly} {
 		w := serve(mux, r)
 		if w.Code != http.StatusUnauthorized || w.Body.Len() != 0 {
 			t.Fatalf("%s: answered %d %q, want an empty 401", name, w.Code, w.Body.String())
@@ -134,6 +146,9 @@ func TestAHandshakeReachesChallengeWithOnlyHubParameters(t *testing.T) {
 	}
 	if got := w.Header().Get("X-Content-Type-Options"); got != "nosniff" {
 		t.Fatalf("X-Content-Type-Options = %q, want nosniff", got)
+	}
+	if got := w.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("Cache-Control = %q, want no-store — a caller-chosen echo must not be cached", got)
 	}
 	want := map[string]string{"hub.mode": "subscribe", "hub.challenge": "1158201444", "hub.verify_token": "t0k"}
 	if len(p.sawChallenge.Query) != len(want) {
@@ -202,5 +217,52 @@ func TestAProviderEndpointRefusesOtherMethods(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPut, "/webhooks/ext/u/messenger/ref1", nil)
 	if got := serve(mountProvider(t, p), r).Code; got != http.StatusMethodNotAllowed {
 		t.Fatalf("PUT answered %d, want 405", got)
+	}
+}
+
+// A provider-signed endpoint that declared no handshake refuses GET exactly as
+// a Margince one does — and before the meter, so a stranger's GETs cannot
+// spend the budget a real delivery needs.
+func TestAGetWithoutAChallengeIs405AndSpendsNoToken(t *testing.T) {
+	p := &providerProbe{noChallenge: true, perIP: 1}
+	mux := mountProvider(t, p)
+	if got := serve(mux, handshakeGet("hub.challenge=1")).Code; got != http.StatusMethodNotAllowed {
+		t.Fatalf("GET with no Challenge answered %d, want 405", got)
+	}
+	if got := serve(mux, providerPost(`{}`, "sha256=abc")).Code; got != http.StatusOK {
+		t.Fatalf("the POST after a refused GET answered %d, want 200 — the GET spent the one-request allowance", got)
+	}
+	if p.challenges != 0 {
+		t.Fatal("a GET reached a unit that declared no handshake")
+	}
+}
+
+func TestTheEndpointBucketMetersAHandshakeToo(t *testing.T) {
+	p := &providerProbe{answer: "1", outcome: extension.InboundAccepted, perEndpoint: 1}
+	mux := mountProvider(t, p)
+	if got := serve(mux, handshakeGet("hub.challenge=1")).Code; got != http.StatusOK {
+		t.Fatalf("first handshake answered %d", got)
+	}
+	other := handshakeGet("hub.challenge=1")
+	other.RemoteAddr = "10.0.0.2:1234"
+	if got := serve(mux, other).Code; got != http.StatusTooManyRequests {
+		t.Fatalf("a second address's handshake over a one-request endpoint allowance answered %d, want 429", got)
+	}
+}
+
+func TestAHandshakesOtherOutcomesAnswerAsAPostsDo(t *testing.T) {
+	cases := map[extension.InboundOutcome]int{
+		extension.InboundTransient:    http.StatusInternalServerError,
+		extension.InboundOverCapacity: http.StatusTooManyRequests,
+	}
+	for outcome, want := range cases {
+		p := &providerProbe{answer: "ignored", outcome: outcome}
+		w := serve(mountProvider(t, p), handshakeGet("hub.challenge=1"))
+		if w.Code != want {
+			t.Fatalf("outcome %d answered %d, want %d", outcome, w.Code, want)
+		}
+		if w.Body.Len() != 0 {
+			t.Fatalf("outcome %d echoed %q — only an accepted handshake answers with a body", outcome, w.Body.String())
+		}
 	}
 }

@@ -231,7 +231,7 @@ func (h *inboundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	outcome, handleErr := h.invoke(r.Context(), ws, u, endpoint, req)
-	h.answer(w, r, unit, slug, outcome, handleErr)
+	h.answer(w, r, unit, slug, endpoint.Scheme, outcome, handleErr)
 }
 
 // invoke mints the request's Runtime and runs the unit's handler, releasing the
@@ -302,7 +302,7 @@ func (h *inboundHandler) serveChallenge(w http.ResponseWriter, r *http.Request, 
 	defer rt.release()
 	answer, outcome, err := endpoint.Challenge(ctx, rt, extension.InboundChallengeRequest{Slug: slug, Ref: ref, Query: query})
 	if outcome != extension.InboundAccepted {
-		h.answer(w, r, string(u.name), slug, outcome, err)
+		h.answer(w, r, string(u.name), slug, endpoint.Scheme, outcome, err)
 		return
 	}
 	if len(answer) > extension.MaxInboundChallengeAnswer {
@@ -313,6 +313,9 @@ func (h *inboundHandler) serveChallenge(w http.ResponseWriter, r *http.Request, 
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	// A caller-chosen echo is never worth caching: an intermediary that kept
+	// one would answer the next handshake with a stale challenge.
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.WriteString(w, answer)
 }
@@ -356,9 +359,18 @@ func inboundPrincipal(ctx context.Context, ws ids.WorkspaceID, unit extension.Na
 }
 
 // answer maps the unit's outcome onto the status a remote sender sees.
-func (h *inboundHandler) answer(w http.ResponseWriter, r *http.Request, unit, slug string, outcome extension.InboundOutcome, err error) {
+//
+// The scheme matters to exactly one mapping. A Margince sender is told 202,
+// because recorded is not acted on; a provider documents the status it expects
+// back (Meta: "200 OK") and may count anything else as a failed delivery, so
+// under SchemeProviderSigned an accepted request answers 200.
+func (h *inboundHandler) answer(w http.ResponseWriter, r *http.Request, unit, slug string, scheme extension.InboundScheme, outcome extension.InboundOutcome, err error) {
 	switch outcome {
 	case extension.InboundAccepted:
+		if scheme == extension.SchemeProviderSigned {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 		w.WriteHeader(http.StatusAccepted)
 	case extension.InboundUnauthenticated:
 		// Deliberately not logged with the reason at warn: the reasons are what

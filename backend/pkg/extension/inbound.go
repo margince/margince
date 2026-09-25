@@ -230,8 +230,10 @@ type InboundOutcome int
 
 const (
 	// InboundAccepted means the request was verified and durably recorded.
-	// The core answers 202: recorded is not the same as acted on, and this
-	// edge deliberately does not do the acting.
+	// The core answers 202 under SchemeMargince: recorded is not the same as
+	// acted on, and this edge deliberately does not do the acting. Under
+	// SchemeProviderSigned it answers 200, the status providers document
+	// (Meta: "200 OK") and may count anything else against the subscription.
 	InboundAccepted InboundOutcome = iota
 
 	// InboundUnauthenticated means the request did not verify. The core
@@ -273,6 +275,9 @@ const (
 	// on a provider-assigned identifier, unique, and must refuse any event
 	// older than its store keeps those identifiers — so a captured request
 	// replayed at any later time lands nothing.
+	//
+	// An accepted request answers 200 rather than the Margince scheme's 202,
+	// because that is what providers document expecting back.
 	SchemeProviderSigned
 )
 
