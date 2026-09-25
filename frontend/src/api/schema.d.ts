@@ -18453,13 +18453,13 @@ export interface components {
             /** @enum {string} */
             impact: "unchanged" | "model_changed" | "fallback_changed" | "budget_blocked" | "unconfigured";
             budget_exempt: boolean;
-            /** @description The decision lane answers this feature first: bound, certified for its site, and reaching no further than its ladder. */
+            /** @description The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider. */
             decision_first: boolean;
             /**
              * @description Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
              * @enum {string}
              */
-            decision_skip_reason?: "unbound" | "uncertified" | "widens_reach";
+            decision_skip_reason?: "unbound" | "uncertified" | "local_only";
             decision_candidate?: components["schemas"]["AiRouteCandidate"];
         };
         AiDeferredWork: {
@@ -18570,7 +18570,7 @@ export interface components {
         AiCallAttempt: {
             attempt: number;
             is_terminal: boolean;
-            /** @description Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_egress_refused — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
+            /** @description Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
             attempt_reason: string;
             /**
              * @description What this attempt asked: a chat completion, an embedding, or a decision model.

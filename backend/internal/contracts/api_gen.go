@@ -19193,7 +19193,7 @@ type AiCall struct {
 type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
-	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_egress_refused — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
+	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
 	AttemptReason string  `json:"attempt_reason"`
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 	IsTerminal    bool    `json:"is_terminal"`
@@ -19322,7 +19322,7 @@ type AiFeatureRoute struct {
 	BudgetExempt      bool              `json:"budget_exempt"`
 	DecisionCandidate *AiRouteCandidate `json:"decision_candidate,omitempty"`
 
-	// DecisionFirst The decision lane answers this feature first: bound, certified for its site, and reaching no further than its ladder.
+	// DecisionFirst The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.
 	DecisionFirst bool `json:"decision_first"`
 
 	// DecisionSkipReason Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.

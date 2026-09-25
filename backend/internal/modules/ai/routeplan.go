@@ -145,11 +145,13 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 			mode = "embedding"
 			leading = "embeddings"
 		}
-		out = append(out, crmcontracts.AiFeatureRoute{
+		row := crmcontracts.AiFeatureRoute{
 			Task: string(task), DisplayName: name, ExecutionMode: mode, LeadingTier: leading,
 			NormalCandidates: wireCandidates(normal), EffectiveCandidates: wireCandidates(effective),
 			Impact: routeImpact(normal, effective, blocked), BudgetExempt: task == TaskEmbeddings,
-		})
+		}
+		decisionRoute(&row, effectiveConfig, task, blocked)
+		out = append(out, row)
 	}
 	return out
 }

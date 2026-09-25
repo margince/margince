@@ -29,7 +29,7 @@ const (
 	attemptReasonDecisionOffEnum       = "decision_off_enum"
 	attemptReasonDecisionStateTooLarge = "decision_state_too_large"
 	attemptReasonDecisionUncertified   = "decision_uncertified"
-	attemptReasonDecisionEgressRefused = "decision_egress_refused"
+	attemptReasonDecisionLocalOnly     = "decision_local_only"
 )
 
 // Why a task that declares a decision form is not answered by the decision
@@ -37,7 +37,7 @@ const (
 const (
 	DecisionSkipUnbound     = "unbound"
 	DecisionSkipUncertified = "uncertified"
-	DecisionSkipWidensReach = "widens_reach"
+	DecisionSkipLocalOnly   = "local_only"
 )
 
 // DecisionVerdict is a site's reading of one decision answer.
