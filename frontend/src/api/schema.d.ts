@@ -16992,6 +16992,36 @@ export interface components {
              *     the adapter already has and can never widen it. Omit for the provider's own answer.
              */
             input?: string[];
+            routing?: components["schemas"]["AiOpenRouterRouting"];
+        };
+        /**
+         * @description Upstream-selection preferences for an openai_compatible binding pointed at
+         *     OpenRouter; refused on any other binding, and on the embeddings lane every
+         *     preference but only, ignore and allow_fallbacks is refused. Absent means the
+         *     product default (reliability over price); an empty object means no preferences
+         *     (the broker's own price-weighted routing). The two are different choices and a
+         *     client must not turn one into the other.
+         */
+        AiOpenRouterRouting: {
+            /** @description Upstream slugs allowed; a hard filter. */
+            only?: string[];
+            /** @description Upstream slugs excluded; a hard filter. */
+            ignore?: string[];
+            /** @description Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter. */
+            quantizations?: string[];
+            /** @description price | throughput | latency. Reorders rather than filters, and disables load balancing. */
+            sort?: string;
+            /** @description Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent. */
+            require_parameters?: boolean;
+            /** @description Override the broker's host fallback. False is a real choice, distinct from absent. */
+            allow_fallbacks?: boolean;
+            /**
+             * Format: double
+             * @description Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
+             */
+            preferred_max_latency_p90?: number;
+            /** @description none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default. */
+            reasoning_effort?: string;
         };
         AiEmbeddingsBinding: components["schemas"]["AiTierBinding"] & {
             /**

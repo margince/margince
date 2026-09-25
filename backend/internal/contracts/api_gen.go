@@ -19267,6 +19267,14 @@ type AiEmbeddingsBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+
+	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
+	// OpenRouter; refused on any other binding, and on the embeddings lane every
+	// preference but only, ignore and allow_fallbacks is refused. Absent means the
+	// product default (reliability over price); an empty object means no preferences
+	// (the broker's own price-weighted routing). The two are different choices and a
+	// client must not turn one into the other.
+	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 }
 
 // AiFeatureRoute defines model for AiFeatureRoute.
@@ -19315,6 +19323,38 @@ type AiModelRateLane string
 // AiModelRateListResponse defines model for AiModelRateListResponse.
 type AiModelRateListResponse struct {
 	Data []AiModelRate `json:"data"`
+}
+
+// AiOpenRouterRouting Upstream-selection preferences for an openai_compatible binding pointed at
+// OpenRouter; refused on any other binding, and on the embeddings lane every
+// preference but only, ignore and allow_fallbacks is refused. Absent means the
+// product default (reliability over price); an empty object means no preferences
+// (the broker's own price-weighted routing). The two are different choices and a
+// client must not turn one into the other.
+type AiOpenRouterRouting struct {
+	// AllowFallbacks Override the broker's host fallback. False is a real choice, distinct from absent.
+	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
+
+	// Ignore Upstream slugs excluded; a hard filter.
+	Ignore *[]string `json:"ignore,omitempty"`
+
+	// Only Upstream slugs allowed; a hard filter.
+	Only *[]string `json:"only,omitempty"`
+
+	// PreferredMaxLatencyP90 Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
+	PreferredMaxLatencyP90 *float64 `json:"preferred_max_latency_p90,omitempty"`
+
+	// Quantizations Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.
+	Quantizations *[]string `json:"quantizations,omitempty"`
+
+	// ReasoningEffort none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.
+	ReasoningEffort *string `json:"reasoning_effort,omitempty"`
+
+	// RequireParameters Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent.
+	RequireParameters *bool `json:"require_parameters,omitempty"`
+
+	// Sort price | throughput | latency. Reorders rather than filters, and disables load balancing.
+	Sort *string `json:"sort,omitempty"`
 }
 
 // AiProfile defines model for AiProfile.
@@ -19501,6 +19541,14 @@ type AiTierBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+
+	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
+	// OpenRouter; refused on any other binding, and on the embeddings lane every
+	// preference but only, ignore and allow_fallbacks is refused. Absent means the
+	// product default (reliability over price); an empty object means no preferences
+	// (the broker's own price-weighted routing). The two are different choices and a
+	// client must not turn one into the other.
+	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 }
 
 // AiUsage AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total.

@@ -24865,6 +24865,28 @@ components:
             What the bound model may be GIVEN, in the accepted-modality vocabulary. On the
             OpenAI-wire providers it IS the carriage; everywhere else it NARROWS the carriage
             the adapter already has and can never widen it. Omit for the provider's own answer.
+        routing:
+          $ref: '#/components/schemas/AiOpenRouterRouting'
+
+    AiOpenRouterRouting:
+      type: object
+      additionalProperties: false
+      description: |
+        Upstream-selection preferences for an openai_compatible binding pointed at
+        OpenRouter; refused on any other binding, and on the embeddings lane every
+        preference but only, ignore and allow_fallbacks is refused. Absent means the
+        product default (reliability over price); an empty object means no preferences
+        (the broker's own price-weighted routing). The two are different choices and a
+        client must not turn one into the other.
+      properties:
+        only: { type: array, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
+        ignore: { type: array, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
+        quantizations: { type: array, items: { type: string }, description: 'Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.' }
+        sort: { type: string, description: 'price | throughput | latency. Reorders rather than filters, and disables load balancing.' }
+        require_parameters: { type: boolean, description: "Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent." }
+        allow_fallbacks: { type: boolean, description: "Override the broker's host fallback. False is a real choice, distinct from absent." }
+        preferred_max_latency_p90: { type: number, format: double, description: "Seconds; hosts above it are deprioritized, never removed. Omit to leave unset." }
+        reasoning_effort: { type: string, description: 'none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.' }
 
     AiEmbeddingsBinding:
       allOf:
