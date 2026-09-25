@@ -4004,6 +4004,19 @@ export const vi = {
   "analytics.share.closedTitle": "Đã đóng liên kết",
   "analytics.share.closedBody":
     "Liên kết không còn mở được. Ai truy cập sẽ bị từ chối.",
+  "analytics.share.listOpen": "Liên kết đã chia sẻ",
+  "analytics.share.listTitle": "Liên kết bạn đã chia sẻ",
+  "analytics.share.listIntro":
+    "Các liên kết bạn đã tạo và vẫn mở được. Đóng một liên kết sẽ dừng nó ngay lập tức.",
+  "analytics.share.listEmpty": "Bạn không có liên kết nào đang mở.",
+  "analytics.share.listIssued": "Tạo ngày {date}",
+  "analytics.share.listExpires": "Hết hạn ngày {date}",
+  "analytics.share.populationCompany": "Toàn tổ chức",
+  "analytics.share.populationTeam": "Nhóm",
+  "analytics.share.populationOwner": "Đồng nghiệp",
+  "analytics.share.closeTitle": "Đóng liên kết này?",
+  "analytics.share.closeBody":
+    "Ai truy cập sau đó sẽ bị từ chối. Liên kết đã đóng không thể mở lại.",
   "analytics.frame": "Tính đến {asOf} · {zone}",
   "review.title": "Cần kiểm tra gì trước khi chốt cam kết?",
   "review.ready": "Sẵn sàng",

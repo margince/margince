@@ -1,12 +1,18 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
+import { useCan, useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { type AnalyticsScope, writableScope } from "./analytics.context";
+import {
+  closeShare,
+  OPEN_SHARES_KEY,
+  SharedLinksButton,
+} from "./analytics.sharelist";
 import { problemMessageOf, throwProblem } from "./common";
 
 // Sharing a forecast view.
@@ -22,6 +28,26 @@ type ShareKind = "live" | "snapshot";
 // once; there is nothing to read it back from, which is why the dialog says
 // what leaving costs before it lets the reader leave. The id is what closes it.
 type IssuedShare = Readonly<{ id: string; token: string; expiresAt: string }>;
+
+// Both verbs need `forecast:create`: the server gates the list on it as well
+// as the issue, so a seat without it is shown neither and asks for nothing.
+// Issuing also needs a seat that may write; listing is a read.
+export function ForecastShareActions({
+  target,
+  scope,
+}: Readonly<{ target: string; scope: AnalyticsScope }>) {
+  const canList = useCan("forecast", "create");
+  const canIssue = useCanWrite("forecast", "create");
+  if (!canList) {
+    return null;
+  }
+  return (
+    <div className="analytics-share-actions">
+      {canIssue && <ShareViewButton target={target} scope={scope} />}
+      <SharedLinksButton />
+    </div>
+  );
+}
 
 export function ShareViewButton({
   target,
@@ -66,6 +92,7 @@ function ShareDialog({
   onClose: () => void;
 }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   const [kind, setKind] = useState<ShareKind>("live");
   const [issued, setIssued] = useState<IssuedShare | null>(null);
 
@@ -97,12 +124,14 @@ function ShareDialog({
       }
       return data;
     },
-    onSuccess: (data) =>
+    onSuccess: (data) => {
       setIssued({
         id: data.id,
         token: data.token,
         expiresAt: data.expires_at,
-      }),
+      });
+      void queryClient.invalidateQueries({ queryKey: OPEN_SHARES_KEY });
+    },
   });
 
   if (issued) {
@@ -150,15 +179,14 @@ function ShareDialog({
 // the caution says in words what leaving costs — the same shape the webhook
 // signing secret settled on, for the same reason.
 //
-// Close link ends it before its expiry, for a link sent to the wrong address.
-// It is offered here because this is the one place the share is still known:
-// no read lists the shares a reader has issued, so once this dialog is gone
-// the link runs until it expires.
+// Close link ends it before its expiry, for a link sent to the wrong address:
+// here while the link is in hand, and later from Shared links.
 function ShareLinkReveal({
   share,
   onClose,
 }: Readonly<{ share: IssuedShare; onClose: () => void }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   const headingId = useId();
   const url = shareUrl(share.token);
   const copy = useClipboardCopy(url, {
@@ -167,14 +195,9 @@ function ShareLinkReveal({
     remedy: t("analytics.share.copyFailed"),
   });
   const revoke = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/forecast/shares/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
+    mutationFn: closeShare,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: OPEN_SHARES_KEY }),
   });
 
   if (revoke.isSuccess) {

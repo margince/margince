@@ -41,6 +41,7 @@ how do I plan my week
 # analytics
 where can I see my forecast
 how do I see my pipeline report
+where can I see the forecast links I shared
 # mail
 how do I send an email to a contact
 how do I schedule an email for later

@@ -4155,6 +4155,19 @@ export const en = {
   "analytics.share.closedTitle": "Link closed",
   "analytics.share.closedBody":
     "The link no longer opens. Anyone who follows it is refused.",
+  "analytics.share.listOpen": "Shared links",
+  "analytics.share.listTitle": "Your shared links",
+  "analytics.share.listIntro":
+    "Links you issued that still open. Closing one stops it at once.",
+  "analytics.share.listEmpty": "You have no open links.",
+  "analytics.share.listIssued": "Issued {date}",
+  "analytics.share.listExpires": "Expires {date}",
+  "analytics.share.populationCompany": "Whole company",
+  "analytics.share.populationTeam": "Team",
+  "analytics.share.populationOwner": "Colleague",
+  "analytics.share.closeTitle": "Close this link?",
+  "analytics.share.closeBody":
+    "Anyone who follows it afterwards is refused. A closed link cannot be reopened.",
   "analytics.frame": "As of {asOf} · {zone}",
   "review.title": "Checks before the call",
   "review.ready": "Ready",

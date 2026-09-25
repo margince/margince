@@ -4040,6 +4040,19 @@ export const de = {
   "analytics.share.closedTitle": "Link geschlossen",
   "analytics.share.closedBody":
     "Der Link öffnet nicht mehr. Wer ihm folgt, wird abgewiesen.",
+  "analytics.share.listOpen": "Geteilte Links",
+  "analytics.share.listTitle": "Deine geteilten Links",
+  "analytics.share.listIntro":
+    "Von dir erstellte Links, die noch funktionieren. Ein geschlossener Link funktioniert sofort nicht mehr.",
+  "analytics.share.listEmpty": "Du hast keine offenen Links.",
+  "analytics.share.listIssued": "Erstellt am {date}",
+  "analytics.share.listExpires": "Läuft ab am {date}",
+  "analytics.share.populationCompany": "Gesamtes Unternehmen",
+  "analytics.share.populationTeam": "Team",
+  "analytics.share.populationOwner": "Teammitglied",
+  "analytics.share.closeTitle": "Diesen Link schließen?",
+  "analytics.share.closeBody":
+    "Wer ihm danach folgt, wird abgewiesen. Ein geschlossener Link lässt sich nicht wieder öffnen.",
   "analytics.frame": "Stand {asOf} · {zone}",
   "review.title": "Prüfungen vor der Einschätzung",
   "review.ready": "Bereit",

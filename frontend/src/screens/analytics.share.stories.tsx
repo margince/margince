@@ -86,8 +86,7 @@ export const ShareDialogLinkShownOnce: Story = {
   },
 };
 
-// The link closed from the dialog that issued it: the one place the share is
-// still known, since no read lists a reader's shares.
+// The link closed from the dialog that issued it, while it is still in hand.
 export const ShareDialogLinkClosed: Story = {
   render: () => <ShareButtonStory />,
   beforeEach: () =>
