@@ -118,11 +118,12 @@ describe("a grounded field's evidence chip", () => {
 });
 
 describe("the origin line", () => {
+  const tail = "Edit any value; unedited values keep their evidence.";
   it.each([
-    [1, "Based on 1 public page."],
-    [14, "Based on 14 public pages."],
-  ])("counts %i page(s) the read was grounded in", (pages, sentence) => {
+    [1, `Based on 1 public page. ${tail}`],
+    [14, `Based on 14 public pages. ${tail}`],
+  ])("counts the pages the read was grounded in (%i)", (pages, sentence) => {
     renderForm("Gradion Co., Ltd.", siteRead(pages));
-    expect(screen.getByText(new RegExp(sentence))).toBeInTheDocument();
+    expect(screen.getByText(sentence, { exact: true })).toBeInTheDocument();
   });
 });

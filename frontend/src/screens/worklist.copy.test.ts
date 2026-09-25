@@ -404,6 +404,14 @@ describe("itemTitle — a group counts in the reader's plural", () => {
     ["duplicates", 3, "3 possible duplicates"],
     ["system_incident", 1, "Recap draft failed 1 time"],
     ["system_incident", 3, "Recap draft failed 3 times"],
+    ["company_match", 1, "1 address at a company you know"],
+    ["company_match", 3, "3 addresses at companies you know"],
+    ["held_draft", 1, "1 draft waiting to send"],
+    ["held_draft", 3, "3 drafts waiting to send"],
+    ["likely_automated", 1, "1 likely automated sender"],
+    ["likely_automated", 3, "3 likely automated senders"],
+    ["uncertain_contact", 1, "1 address to review"],
+    ["uncertain_contact", 3, "3 addresses to review"],
   ] as const)("titles a %s group of %i", (key, count, title) => {
     expect(itemTitle(group(key, count), t, "en")).toBe(title);
   });

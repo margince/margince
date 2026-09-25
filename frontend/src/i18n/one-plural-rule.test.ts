@@ -479,61 +479,46 @@ describe("one count, one key", () => {
     expect(PLURAL_SINGLE_KEY_DEBT.has("ob.conv.activity.steps")).toBe(false);
   });
 
-  // The counts the "Label: {count}" form dodged, each now a pair with no bare
-  // base key left behind and no register line.
-  it("carries the label-form counts as plural pairs", () => {
-    const converted = [
-      "access.downloads",
-      "brief.week.carryPromises",
-      "brief.week.carryTasks",
-      "brief.week.leads",
-      "brief.week.lost",
-      "brief.week.met",
-      "brief.week.moved",
-      "brief.week.responses",
-      "brief.week.won",
-      "co.contacts.board.suggestRefused",
-      "co.contacts.board.suggestWrote",
-      "compose.carriageCarries",
-      "compose.threadStillHeld",
-      "contact.intro.factReceipts",
-      "deal.seats.ours",
-      "heldThreads.attempts",
-      "heldThreads.backlogStalled",
-      "heldThreads.heldByOthers",
-      "history.undo.confirmBody",
-      "jobs.deadBody",
-      "jobs.deadTitle",
-      "leadReasons.inUse",
-      "leadSources.inUse",
-      "ob.confirmWebsite",
-      "ob.corePartial",
-      "ob.coreReady",
-      "ob.deck.clear",
-      "ob.deck.openLeft",
-      "ob.deck.settled",
-      "ob.digest.changed",
-      "rollup.excluded",
-      "search.tag.carriedBy",
-      "settings.companyConfirmed",
-      "teamweekly.agenda.summary",
-      "worklist.batch.company_match",
-      "worklist.batch.duplicates",
-      "worklist.batch.held_draft",
-      "worklist.batch.likely_automated",
-      "worklist.batch.system_incident",
-      "worklist.batch.uncertain_contact",
-      "worklist.coaching.overdue",
-      "worklist.coaching.promises",
-      "worklist.coaching.waiting",
-    ];
-    const unpaired = converted.filter(
+  // Every plural base carries both arms and no bare key: a missing arm leaves one
+  // count without a sentence, and a bare base beside the pair is a second answer.
+  const brokenPluralPairs = (
+    catalog: Readonly<Record<string, unknown>>,
+  ): { bases: string[]; broken: string[] } => {
+    const bases = [
+      ...new Set(
+        Object.keys(catalog)
+          .filter((key) => /_(one|other)$/.test(key))
+          .map((key) => key.replace(/_(one|other)$/, "")),
+      ),
+    ].sort();
+    const broken = bases.filter(
       (base) =>
-        !Object.hasOwn(en, `${base}_one`) ||
-        !Object.hasOwn(en, `${base}_other`) ||
-        Object.hasOwn(en, base) ||
-        PLURAL_SINGLE_KEY_DEBT.has(base),
+        !Object.hasOwn(catalog, `${base}_one`) ||
+        !Object.hasOwn(catalog, `${base}_other`) ||
+        Object.hasOwn(catalog, base),
     );
-    expect(unpaired).toEqual([]);
+    return { bases, broken };
+  };
+
+  it("carries every plural base as a whole pair with no bare key", () => {
+    const { bases, broken } = brokenPluralPairs(en);
+    expect(bases.length).toBeGreaterThan(100);
+    expect(
+      broken,
+      "A plural base is missing an arm or still has its bare key beside the " +
+        "pair. Give it both <base>_one and <base>_other and delete <base>.",
+    ).toEqual([]);
+  });
+
+  it("sees a half pair and a bare base beside a pair", () => {
+    const planted = {
+      "a.half_one": "{count} step",
+      "b.bare": "{count} steps",
+      "b.bare_one": "{count} step",
+      "b.bare_other": "{count} steps",
+      "c.whole_one": "{count} step",
+      "c.whole_other": "{count} steps",
+    };
+    expect(brokenPluralPairs(planted).broken).toEqual(["a.half", "b.bare"]);
   });
 });

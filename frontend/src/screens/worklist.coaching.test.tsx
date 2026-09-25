@@ -99,7 +99,7 @@ describe("what a lead should do about the board", () => {
   it.each([
     [1, "Ben has 1 customer commitment due"],
     [2, "Ben has 2 customer commitments due"],
-  ])("words %i promise(s) due in the reader's plural", (count, line) => {
+  ])("words the promises due in the reader's plural (%i)", (count, line) => {
     draw([member("Ben", { promises_due: count })]);
     expect(screen.getByRole("button", { name: line })).toBeTruthy();
   });

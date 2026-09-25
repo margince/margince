@@ -68,8 +68,11 @@ describe("what a seat has taken out of the room", () => {
   it.each([
     [1, "1 document downloaded"],
     [3, "3 documents downloaded"],
-  ])("counts %i download(s) in the reader's grammar", async (count, said) => {
-    drawWithDownloads(count);
-    expect(await screen.findByText(said)).toBeTruthy();
-  });
+  ])(
+    "counts the downloads in the reader's grammar (%i)",
+    async (count, said) => {
+      drawWithDownloads(count);
+      expect(await screen.findByText(said)).toBeTruthy();
+    },
+  );
 });

@@ -112,7 +112,7 @@ it.each([
   [1, "1 fact added from evidence", "1 unanswered question. The record"],
   [2, "2 facts added from evidence", "2 unanswered questions. The record"],
 ])(
-  "counts %i settled fact(s) and open question(s) in the tray",
+  "counts the settled facts and open questions in the tray (%i)",
   (count, settledLine, openLine) => {
     render(<Deck settled={count} openQuestions={count} />);
     expect(screen.getByText(settledLine)).toBeInTheDocument();
@@ -123,7 +123,7 @@ it.each([
 it.each([
   [1, "Nothing left to decide. 1 fact on record."],
   [2, "Nothing left to decide. 2 facts on record."],
-])("says a cleared deck holds %i fact(s)", (count, line) => {
+])("says how many facts a cleared deck holds (%i)", (count, line) => {
   const answered = Object.fromEntries(FIELDS.map((field) => [field, "set"]));
   render(<Deck prefilled={answered} settled={count} />);
   expect(screen.getByText(line)).toBeInTheDocument();

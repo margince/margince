@@ -99,8 +99,13 @@ describe("the finished read's heading", () => {
     ["ready", 2, "2 cited company details found"],
     ["partial", 1, "1 useful detail found. Some gaps remain."],
     ["partial", 2, "2 useful details found. Some gaps remain."],
-  ] as const)("names a %s read of %i finding(s)", (status, count, heading) => {
-    renderStep(read(status, count));
-    expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
-  });
+  ] as const)(
+    "names a %s read by its finding count (%i)",
+    (status, count, heading) => {
+      renderStep(read(status, count));
+      expect(
+        screen.getByRole("heading", { name: heading }),
+      ).toBeInTheDocument();
+    },
+  );
 });

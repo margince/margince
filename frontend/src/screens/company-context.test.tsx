@@ -672,7 +672,7 @@ describe("CompanyContextCard confirmed count", () => {
     [1, "1 confirmed statement"],
     [2, "2 confirmed statements"],
   ])(
-    "counts %i confirmed statement(s) in the footer",
+    "counts the confirmed statements in the footer (%i)",
     async (count, line) => {
       const company = {
         ...COMPANY,

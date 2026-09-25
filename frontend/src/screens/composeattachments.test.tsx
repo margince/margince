@@ -12,12 +12,15 @@ describe("CarriageNotice", () => {
   it.each([
     [1, "its 1 attachment cannot be sent there"],
     [3, "its 3 attachments cannot be sent there"],
-  ])("counts %i attachment(s) on a channel without files", (count, phrase) => {
-    render(
-      <LocaleProvider initial="en">
-        <CarriageNotice channel="SMS" blocks={[{ kind: "carries", count }]} />
-      </LocaleProvider>,
-    );
-    expect(screen.getByRole("listitem")).toHaveTextContent(phrase);
-  });
+  ])(
+    "counts the attachments on a channel without files (%i)",
+    (count, phrase) => {
+      render(
+        <LocaleProvider initial="en">
+          <CarriageNotice channel="SMS" blocks={[{ kind: "carries", count }]} />
+        </LocaleProvider>,
+      );
+      expect(screen.getByRole("listitem")).toHaveTextContent(phrase);
+    },
+  );
 });

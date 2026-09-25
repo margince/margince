@@ -185,7 +185,7 @@ describe("held threads", () => {
     [1, /1 thread was asked about repeatedly/],
     [2, /2 threads were asked about repeatedly/],
   ])(
-    "counts %i stalled thread(s) in the backlog notice",
+    "counts the stalled threads in the backlog notice (%i)",
     async (count, line) => {
       const rows = Array.from({ length: count }, (_unused, index) => ({
         ...PENDING,
@@ -262,7 +262,7 @@ describe("held threads", () => {
     [1, /1 other mailbox imported this message and has not shared it/],
     [2, /2 other mailboxes imported this message and have not shared it/],
   ])(
-    "reports a release that %i other holder(s) kept closed",
+    "reports a release the other holders kept closed (%i)",
     async (owners, line) => {
       const user = userEvent.setup();
       renderCard([JUDGED], { shared: false, held_by_others: owners });

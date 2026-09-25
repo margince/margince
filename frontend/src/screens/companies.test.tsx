@@ -1009,29 +1009,32 @@ describe("CompanyScreen — hierarchy roll-up in the rail (P-7)", () => {
   it.each([
     [1, "1 hidden company excluded"],
     [2, "2 hidden companies excluded"],
-  ])("discloses %i account(s) the viewer cannot read", async (hidden, said) => {
-    stubFetch(
-      async (url) => {
-        if (url.includes("/activities")) {
-          return jsonResponse({ data: [] });
-        }
-        return jsonResponse(company);
-      },
-      {
-        rollup: {
-          ...rollup,
-          restricted_excluded: Array.from({ length: hidden }, (_, i) => ({
-            id: `o-9${i}`,
-            display_name: "Hidden Subsidiary GmbH",
-          })),
+  ])(
+    "discloses the hidden companies the viewer cannot read (%i)",
+    async (hidden, said) => {
+      stubFetch(
+        async (url) => {
+          if (url.includes("/activities")) {
+            return jsonResponse({ data: [] });
+          }
+          return jsonResponse(company);
         },
-      },
-    );
-    render(<CompanyScreen id="o-1" />);
-    await openProfile();
+        {
+          rollup: {
+            ...rollup,
+            restricted_excluded: Array.from({ length: hidden }, (_, i) => ({
+              id: `o-9${i}`,
+              display_name: "Hidden Subsidiary GmbH",
+            })),
+          },
+        },
+      );
+      render(<CompanyScreen id="o-1" />);
+      await openProfile();
 
-    await waitFor(() => expect(screen.getByText(said)).toBeTruthy());
-  });
+      await waitFor(() => expect(screen.getByText(said)).toBeTruthy());
+    },
+  );
 });
 
 describe("CompanyScreen — the account pulse line (P-4)", () => {
