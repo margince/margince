@@ -225,6 +225,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |
+| `gatelanetrigger_test.go` | H2 | A gate runs in a lane that every path it reads can trigger. |
 | `governedkindseams_test.go` | H2 | The two halves of automatic apply agree about which kinds it covers. |
 | `historyfieldlabels_test.go` | H2 | Every field name the History tab can print has a word for it. |
 | `humanonlytransport_test.go` | H1 | A human-only operation says so at the TRANSPORT, not only in the gate. |
