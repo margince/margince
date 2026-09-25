@@ -39,8 +39,8 @@ const (
 	// a header Go does not strip across hosts (x-api-key, x-goog-api-key), so
 	// an address here is a credential's destination as much as a request's.
 	//
-	// The ZERO value on purpose: a provider added without a considered entry in
-	// providerEgress gets the strict lane rather than the permissive one.
+	// The ZERO value on purpose: a registry row added without a considered
+	// egress field gets the strict lane rather than the permissive one.
 	egressPublicOnly egressClass = iota
 
 	// egressOperatorEndpoint is the lane an operator points at their own
@@ -53,27 +53,11 @@ const (
 	egressOperatorEndpoint
 )
 
-// providerEgress is the one place a provider's reach is decided, read by both
-// the dialer and the write-time rule so they cannot answer differently.
+// providerEgress is each provider's reach, projected from the registry and read
+// by both the dialer and the write-time rule so they cannot answer differently.
 // TestEveryProviderDeclaresAnEgressClass holds it complete.
-var providerEgress = map[string]egressClass{
-	// The fake adapter opens no socket, so its class is inert; it is listed
-	// because a provider missing from this map is the thing the census catches.
-	ProviderFake:      egressPublicOnly,
-	providerAnthropic: egressPublicOnly,
-	providerOpenAI:    egressPublicOnly,
-	providerGemini:    egressPublicOnly,
-	providerOllama:    egressOperatorEndpoint,
-	providerVLLM:      egressOperatorEndpoint,
-	// The one BYOK provider on the operator lane, and the only entry here that
-	// does not follow from ProviderIsLocal. `openai_compatible` is the adapter
-	// for "any vendor on the OpenAI wire", and a self-hosted gateway on the
-	// operator's own network is a documented one — so a private address is a
-	// binding this lane must serve, and the key travelling there travels to the
-	// operator's own infrastructure. TestEveryLocalProviderTakesTheOperatorLane
-	// names it as the sole exception, so a future adapter cannot join it quietly.
-	providerOpenAICompatible: egressOperatorEndpoint,
-}
+var providerEgress = projectProviders(
+	func(d providerDescriptor) egressClass { return d.egress }, everyProvider)
 
 // egressFor answers for a provider name that may not be one this build knows —
 // SelectBrain refuses those, but the write-time rule runs before it, and the

@@ -93,12 +93,9 @@ var carriesImages = []string{mimeAnyImage}
 // with the reason it is not a vendor list. Written down so the census below
 // reads a decision rather than an omission, and so adding a vendor adapter that
 // forgets to narrow has to argue with this list.
-var wildcardWires = map[string]string{
-	ProviderFake:             "stands in for whichever binding named it, so it claims the wire's shape rather than a decoder",
-	providerOllama:           "serves whichever vision model the operator pulled",
-	providerVLLM:             "serves whichever model the operator loaded",
-	providerOpenAICompatible: "serves whichever vendor the operator pointed base_url at",
-}
+var wildcardWires = projectProviders(
+	func(d providerDescriptor) string { return d.wildcardReason },
+	func(d providerDescriptor) bool { return d.wildcardReason != "" })
 
 // DocumentMIMEs is every media type some adapter in this build carries as an
 // input part. It answers "could any binding have been handed this", which is a
@@ -133,21 +130,8 @@ func DocumentMIMEs() []string {
 //
 // Held by: TestTheOpenAICompatibleWireHasNoDocumentPart (backend/internal/modules/ai/carriage_test.go)
 func wireCarriage() map[string][]string {
-	return map[string][]string{
-		ProviderFake:      carriesImagesAndPDF,
-		providerAnthropic: anthropicCarries,
-		providerOllama:    carriesImages,
-		// vllm and openai_compatible are ONE adapter, and it has no document
-		// part: openAICompatMessages builds `image_url` parts and nothing else.
-		// Both rows said `application/pdf` until the claim was checked against a
-		// binding — no client either word selects has ever carried one, in any
-		// configuration. The wire's shape is not the ambition of the wire's
-		// vendor: it is what this adapter can put on it.
-		providerVLLM:             carriesImages,
-		providerOpenAICompatible: carriesImages,
-		providerOpenAI:           openAICarries,
-		providerGemini:           geminiCarries,
-	}
+	return projectProviders(
+		func(d providerDescriptor) []string { return d.carriage }, everyProvider)
 }
 
 // declaresAWildcard reports whether a carriage declaration leaves a media type

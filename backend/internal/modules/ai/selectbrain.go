@@ -100,10 +100,10 @@ const (
 	providerGemini           = "gemini"
 )
 
-// knownProviders is the single source of truth for the provider names
-// SelectBrain accepts — read by the default error below and by the config
-// JSON-schema drift test. Add a provider here when you add its case.
-var knownProviders = []string{ProviderFake, providerAnthropic, providerOllama, providerVLLM, providerOpenAICompatible, providerOpenAI, providerGemini}
+// knownProviders is the provider names SelectBrain accepts: the registry's
+// names, in its order — read by the default error below and by the config
+// JSON-schema drift test.
+var knownProviders = providerNames()
 
 // KnownProviders lists the adapter names knownProviders holds, which is the
 // same slice SelectBrain's switch and the config enum read.
@@ -240,13 +240,10 @@ func defaulted(val, fallback string) string {
 // read from. Secrets live in the environment; the routing file names only the
 // provider (12-factor). The names match the vendor SDK conventions so an
 // operator who already exports OPENAI_API_KEY / GEMINI_API_KEY needs no extra
-// wiring. openai_compatible has no vendor convention, so it gets a namespaced one.
-var cloudKeyEnv = map[string]string{
-	providerAnthropic:        "ANTHROPIC_API_KEY",
-	providerOpenAI:           "OPENAI_API_KEY",
-	providerGemini:           "GEMINI_API_KEY",
-	providerOpenAICompatible: "OPENAI_COMPATIBLE_API_KEY",
-}
+// wiring.
+var cloudKeyEnv = projectProviders(
+	func(d providerDescriptor) string { return d.keyEnv },
+	func(d providerDescriptor) bool { return d.keyEnv != "" })
 
 // cloudKey returns the BYOK key for a cloud provider from its conventional
 // environment variable, or "" when unset (the caller fails closed).

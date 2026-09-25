@@ -266,7 +266,9 @@ func (cfg RoutingConfig) bindingDigest() string {
 }
 
 // localProviders can serve the sovereign zero-egress profile.
-var localProviders = map[string]bool{providerOllama: true, providerVLLM: true, ProviderFake: true}
+var localProviders = projectProviders(
+	func(providerDescriptor) bool { return true },
+	func(d providerDescriptor) bool { return d.local })
 
 // ProviderIsLocal reports whether provider names same-host inference
 // rather than a network-hosted vendor — the one exported spelling of

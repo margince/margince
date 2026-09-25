@@ -38,15 +38,8 @@ const (
 )
 
 // servedSource maps a provider to its served-identity source.
-var servedSource = map[string]string{
-	providerAnthropic:        servedIdentitySourceResponse,
-	providerOllama:           servedIdentitySourceResponse,
-	providerGemini:           servedIdentitySourceResponse,
-	providerOpenAI:           servedIdentitySourceResponse,
-	providerOpenAICompatible: servedIdentitySourceEcho,
-	providerVLLM:             servedIdentitySourceEcho,
-	ProviderFake:             servedIdentitySourceResponse,
-}
+var servedSource = projectProviders(
+	func(d providerDescriptor) string { return d.servedSource }, everyProvider)
 
 // servedIdentity resolves a trace's served-model fields: the response's own
 // reported identity wins, tagged with how trustworthy that report is; an empty

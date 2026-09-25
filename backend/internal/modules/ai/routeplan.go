@@ -115,11 +115,8 @@ func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 	out := make([]crmcontracts.AiRouteCandidate, 0, len(plan))
 	for _, binding := range plan {
 		processing := "configured_endpoint"
-		switch binding.config.Provider {
-		case "anthropic", "openai", "gemini":
-			if binding.config.BaseURL == "" {
-				processing = "cloud_provider"
-			}
+		if providerIsVendorHosted(binding.config.Provider) && binding.config.BaseURL == "" {
+			processing = "cloud_provider"
 		}
 		out = append(out, crmcontracts.AiRouteCandidate{Tier: string(binding.tier), Provider: binding.config.Provider, Model: binding.config.Model, Processing: processing})
 	}
