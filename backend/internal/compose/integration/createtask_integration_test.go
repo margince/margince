@@ -26,7 +26,7 @@ func TestATaskCreatedThroughItsOwnDoorIsATaskOnTheTimeline(t *testing.T) {
 		"subject": "Send the redline",
 		"due_at":  "2026-09-01T09:00:00+02:00",
 		"links":   []AnyMap{{"entity_type": "deal", "entity_id": dealID}},
-		"source":  "ui",
+		"source":  "manual",
 	}, nil, &task); status != http.StatusCreated {
 		t.Fatalf("create task = %d %v", status, task)
 	}
@@ -42,7 +42,7 @@ func TestATaskCreatedThroughItsOwnDoorIsATaskOnTheTimeline(t *testing.T) {
 	if len(rows) != 1 {
 		t.Fatalf("timeline tasks = %v, want the one created", rows)
 	}
-	if status := e.Call(t, "POST", "/v1/tasks", AnyMap{"subject": "", "source": "ui"}, nil, nil); status != http.StatusUnprocessableEntity {
+	if status := e.Call(t, "POST", "/v1/tasks", AnyMap{"subject": "", "source": "manual"}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("empty subject = %d, want 422", status)
 	}
 }

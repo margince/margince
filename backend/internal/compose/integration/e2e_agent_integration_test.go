@@ -84,7 +84,7 @@ func TestEndToEnd_passportBearerSurface(t *testing.T) {
 		Code string `json:"code"`
 	}
 	status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Should not exist", "source": "mcp", "captured_by": "x",
+		"full_name": "Should not exist", "source": "manual", "captured_by": "x",
 	}, bearer, &problem)
 	if status != 403 || problem.Code != "scope_exceeds_grantor" {
 		t.Fatalf("read-scope write → %d %q, want 403 scope_exceeds_grantor", status, problem.Code)
@@ -131,7 +131,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		CapturedBy string `json:"captured_by"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Governed Green Write", "source": "mcp", "captured_by": "human:forged",
+		"full_name": "Governed Green Write", "source": "manual", "captured_by": "human:forged",
 	}, bearer, &created); status != 201 {
 		t.Fatalf("write-scope 🟢 REST mutation → %d, want 201 (ADR-0055 admits governed agent writes)", status)
 	}

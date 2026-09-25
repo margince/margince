@@ -162,7 +162,7 @@ func TestACachedMoveStopsWhenTheSeatLosesActivitiesEntirely(t *testing.T) {
 	seedCachedCard(t, e, readerOf(granted, t), other, crmcontracts.DealStatusCardMove{
 		Action:    "create_task",
 		Reason:    "The last contact was 30 days ago and nothing is booked.",
-		Arguments: &map[string]any{"subject": "Agree the next step", "source": "ui"},
+		Arguments: &map[string]any{"subject": "Agree the next step", "source": "manual"},
 	})
 
 	narrowed, err := svc.CachedMoves(revoked, []ids.UUID{deal, other})
@@ -215,7 +215,7 @@ func TestACachedMoveNamingNoRecordIsUnaffectedByAnAudience(t *testing.T) {
 		Reason: "The last contact was 30 days ago and nothing is booked.",
 		Arguments: &map[string]any{
 			"subject": "Agree the next step on Turbinenbau Renewal",
-			"source":  "ui",
+			"source":  "manual",
 		},
 	})
 

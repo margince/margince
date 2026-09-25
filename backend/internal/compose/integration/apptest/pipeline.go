@@ -8,6 +8,8 @@ package apptest
 import (
 	"net/http"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // SeededStages is the seeded default pipeline's stage vocabulary a scenario
@@ -96,8 +98,10 @@ func CreateOpenDeal(t *testing.T, e *AppEnv, stages SeededStages) string {
 	var company map[string]any
 	status := e.Call(t, "POST", "/v1/companies", map[string]any{
 		"display_name": "Acme GmbH",
-		"source":       "ui",
-		"domains":      []map[string]any{{"domain": "acme.example", "is_primary": true}},
+		//nolint:goconst // kept literal for the reason internal/compose/dealstatus/move.go's
+		// identical waiver states: the Go census reads this key as a string literal.
+		"source":  provenance.RecordSourceManual,
+		"domains": []map[string]any{{"domain": "acme.example", "is_primary": true}},
 	}, nil, &company)
 	if status != http.StatusCreated {
 		t.Fatalf("create company = %d %v", status, company)
@@ -114,7 +118,7 @@ func CreateOpenDeal(t *testing.T, e *AppEnv, stages SeededStages) string {
 		"pipeline_id":  stages.PipelineID,
 		"stage_id":     stages.Open,
 		"company_id":   company["id"],
-		"source":       "ui",
+		"source":       provenance.RecordSourceManual,
 	}, nil, &deal)
 	if status != http.StatusCreated {
 		t.Fatalf("create deal = %d %v", status, deal)

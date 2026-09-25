@@ -36,7 +36,7 @@ func openRoomOnANewDeal(t *testing.T, e *apptest.AppEnv, title string) (dealID, 
 
 	var room AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms", AnyMap{
-		"deal_id": dealID, "title": title, "source": "ui",
+		"deal_id": dealID, "title": title, "source": "manual",
 	}, nil, &room); status != http.StatusCreated {
 		t.Fatalf("open a room = %d %v", status, room)
 	}
@@ -82,7 +82,7 @@ func TestArchivingARoomMovesItsStateAndItsStampTogether(t *testing.T) {
 	// row costs no second company.
 	var reopened AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms", AnyMap{
-		"deal_id": dealID, "title": "Half an archive", "source": "ui",
+		"deal_id": dealID, "title": "Half an archive", "source": "manual",
 	}, nil, &reopened); status != http.StatusCreated {
 		t.Fatalf("reopen after archiving = %d %v", status, reopened)
 	}
@@ -104,7 +104,7 @@ func TestASecondRoomOnALiveDealIsRefusedAsAlreadyOpen(t *testing.T) {
 
 	var problem AnyMap
 	status := e.Call(t, "POST", "/v1/deal-rooms", AnyMap{
-		"deal_id": dealID, "title": "The second room", "source": "ui",
+		"deal_id": dealID, "title": "The second room", "source": "manual",
 	}, nil, &problem)
 	// 409 is what crm.yaml declares for this, and what errRoomAlreadyOpen
 	// unwraps to. It answered 422 until #2269: httperr read the message fault
@@ -125,7 +125,7 @@ func TestASecondRoomOnALiveDealIsRefusedAsAlreadyOpen(t *testing.T) {
 	}
 	var second AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms", AnyMap{
-		"deal_id": dealID, "title": "The second room", "source": "ui",
+		"deal_id": dealID, "title": "The second room", "source": "manual",
 	}, nil, &second); status != http.StatusCreated {
 		t.Errorf("after archiving the first, a second room = %d, want 201 — the refusal tells the "+
 			"caller archiving frees the deal, and it has to be true", status)
@@ -205,7 +205,7 @@ func TestARefusalAboutTheRoomsStateAnswersConflictToo(t *testing.T) {
 
 	var problem AnyMap
 	status := e.Call(t, "POST", "/v1/deal-rooms/"+roomID+"/participants", AnyMap{
-		"full_name": "Late Buyer", "email": "late@buyer.example", "capability": "comment", "source": "ui",
+		"full_name": "Late Buyer", "email": "late@buyer.example", "capability": "comment", "source": "manual",
 	}, nil, &problem)
 	if status != http.StatusConflict {
 		t.Errorf("inviting into a closed room = %d %v, want 409 — the contract declares it and the "+

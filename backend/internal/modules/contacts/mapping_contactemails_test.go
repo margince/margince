@@ -70,7 +70,7 @@ func TestCreateAndUpdateMapAnAddressTheSameWay(t *testing.T) {
 	const body = `{"emails":[{"email":"ada@new.example","email_type":"personal"}]}`
 
 	var create crmcontracts.CreateContactRequest
-	decodeInto(t, `{"full_name":"Ada Lovelace","source":"ui",`+body[1:], &create)
+	decodeInto(t, `{"full_name":"Ada Lovelace","source":"manual",`+body[1:], &create)
 	made, err := contactCreateInput(create)
 	if err != nil {
 		t.Fatalf("mapping the create: %v", err)

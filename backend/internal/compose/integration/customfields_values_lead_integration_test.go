@@ -23,10 +23,10 @@ import (
 
 func TestCustomFieldValues_LeadRoundTrip(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Is Cool", Type: customfields.TypeBoolean, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Is Cool", Type: customfields.TypeBoolean, Source: "manual"})
 
 	created, _, err := f.store.CreateLead(f.ctx, contacts.CreateLeadInput{
-		FullName: strp("Grace Hopper"), Source: "ui",
+		FullName: strp("Grace Hopper"), Source: "manual",
 		CustomFields: map[string]any{col: true},
 	})
 	if err != nil {
@@ -70,7 +70,7 @@ func TestCustomFieldValues_LeadRoundTrip(t *testing.T) {
 // the replay's own cf values are ignored (the original write is authoritative).
 func TestCustomFieldValues_LeadSourceReplayCarriesCustomFields(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Tier", Type: customfields.TypeText, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Tier", Type: customfields.TypeText, Source: "manual"})
 	system, id := "crm", "ext-42"
 
 	created, wasCreated, err := f.store.CreateLead(f.ctx, contacts.CreateLeadInput{
@@ -100,10 +100,10 @@ func TestCustomFieldValues_LeadSourceReplayCarriesCustomFields(t *testing.T) {
 // fields intact — a retire is a status flip, never a value drop.
 func TestCustomFieldValues_LeadDisqualifyPreservesCustomFields(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Is Cool", Type: customfields.TypeBoolean, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Is Cool", Type: customfields.TypeBoolean, Source: "manual"})
 
 	created, _, err := f.store.CreateLead(f.ctx, contacts.CreateLeadInput{
-		FullName: strp("Otto"), Source: "ui",
+		FullName: strp("Otto"), Source: "manual",
 		CustomFields: map[string]any{col: true},
 	})
 	if err != nil {

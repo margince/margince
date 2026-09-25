@@ -93,7 +93,7 @@ func TestHistoricalRequestIsReviewableAndExplicitAcceptanceIsIdempotent(t *testi
 	}
 	actor.Permissions.Objects["activity"] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 	reader := principal.WithActor(e.as(), actor)
-	request := LogActivityInput{Kind: "task", Source: "ui", RequestActivityID: &id}
+	request := LogActivityInput{Kind: "task", Source: "manual", RequestActivityID: &id}
 	task, created, err := store.LogActivity(reader, request)
 	if err != nil {
 		t.Fatal(err)
@@ -165,7 +165,7 @@ func TestArchivingAStaleTaskRefusesRatherThanHidingTheAnswer(t *testing.T) {
 
 	subject := "Chase the retrofit quote"
 	task, _, err := store.LogActivity(reader, LogActivityInput{
-		Kind: "task", Source: "ui", Subject: &subject,
+		Kind: "task", Source: "manual", Subject: &subject,
 	})
 	if err != nil {
 		t.Fatalf("logging the task: %v", err)
@@ -225,7 +225,7 @@ func TestArchivingATaskSomebodyAlreadyArchivedSaysItIsGone(t *testing.T) {
 
 	subject := "Book the retrofit survey"
 	task, _, err := store.LogActivity(reader, LogActivityInput{
-		Kind: "task", Source: "ui", Subject: &subject,
+		Kind: "task", Source: "manual", Subject: &subject,
 	})
 	if err != nil {
 		t.Fatalf("logging the task: %v", err)

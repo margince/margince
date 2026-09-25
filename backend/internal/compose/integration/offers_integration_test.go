@@ -438,7 +438,7 @@ func TestOfferSendIsHumanOnlyButTheHumanPathStillWorks(t *testing.T) {
 	// 🟢 create_record: the agent drafts the offer, provenance is the agent.
 	var offer offerBody
 	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
-		"currency": "EUR", "source": "mcp",
+		"currency": "EUR", "source": "manual",
 		"line_items": []AnyMap{{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0}},
 	}, bearer, &offer); status != http.StatusCreated {
 		t.Fatalf("agent 🟢 offer draft → %d", status)
