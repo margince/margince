@@ -237,8 +237,6 @@ export const OpenDealsPerCompany: Story = {
   play: clickButton("Deals"),
 };
 
-// "Explain this number" open: the report card above, the derivation card below
-// it, both the same titled-card surface.
 // The performance section: closed outcomes beside stage velocity, every
 // duration the server's own, and a withheld percentile rendered as words
 // rather than a zero.
@@ -377,11 +375,34 @@ export const MyOutcomesEmpty: Story = {
   play: clickButton("My outcomes"),
 };
 
+// "Explain this number" open: the report card above, the derivation card below
+// it, both the same titled-card surface.
 export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's action row, and
   // the Forecast section the screen opens on draws no report cards at all.
   play: clickButton("Deals", "Explain this number"),
+};
+
+// The derivation card while its read is still in flight: the definition line,
+// then two skeleton lines where the breakdown will land.
+export const ExplainLoading: Story = {
+  render: () => {
+    installFetchStub({
+      ...routes,
+      "GET /reports/pipeline-current/derivation": () =>
+        new Promise<Response>(() => {}),
+    });
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: async (context) => {
+    await clickButton("Deals", "Explain this number")(context);
+    await within(context.canvasElement).findByText("How this number is built");
+  },
 };
 
 // The four absences a slot has to tell apart, side by side, because they are

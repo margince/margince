@@ -12,6 +12,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
 import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
+import "./common.css";
 import "./imap-connect-form.css";
 
 // The IMAP connect flavor (RC-8/Task 6): the credential providers' first-
@@ -332,12 +333,7 @@ export function ImapConnectForm({
   const headingId = useId();
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
         {t("connectors.imapModalTitle")}
       </Heading>
       {open && (

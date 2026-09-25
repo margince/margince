@@ -7,11 +7,11 @@ import { ShareScreen } from "./share";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // ShareScreen (AS-3/4/5) — record-level manual grants (A52/ADR-0039):
-// empty roster (nothing to grant to yet), a populated who-has-access list,
-// the revoke confirm modal opened, and the four states a subject who ALREADY
-// holds a grant introduced once the picker stopped refusing them — the level
-// on the row, the reduce-access confirm, the honest "nothing changed", and the
-// recipient's seat ceiling refusing a write.
+// empty roster (nothing to grant to yet), a roster that failed to load, a
+// populated who-has-access list, the revoke confirm modal opened, and the four
+// states a subject who ALREADY holds a grant introduced once the picker stopped
+// refusing them — the level on the row, the reduce-access confirm, the honest
+// "nothing changed", and the recipient's seat ceiling refusing a write.
 
 const meta: Meta = {
   title: "Patterns/Share record",
@@ -111,6 +111,34 @@ export const EmptyRoster: Story = {
         <ShareScreen recordType="deal" recordId="d-1" />
       </StoryProviders>
     );
+  },
+};
+
+// The people roster failed and teams loaded: the refusal says which half is
+// missing, Retry sits under it, and the team that did load can still be picked.
+export const RosterFailed: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /users": () =>
+        jsonResponse({ title: "Server error", status: 500 }, 500),
+      "GET /teams": () => jsonResponse(teamsPage),
+      "GET /deals/d-1": deal,
+      "GET /record-grants": () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ShareScreen recordType="deal" recordId="d-1" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("People did not load. Teams are shown below.");
+    await canvas.findByRole("button", { name: "Retry" });
   },
 };
 
