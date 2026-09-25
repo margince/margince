@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
-import { AiCallsCard, CallDetailPanel } from "./aicalls";
+import { AiCallsCard } from "./aicalls";
+import { CallDetailPanel } from "./aicalls-detail";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The card is gated on ai_diagnostics:read, so /me decides which of its two
