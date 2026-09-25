@@ -221,7 +221,7 @@ Also called: remove, hide, deactivate a record.
 ### Can I restore or unarchive an archived record?
 No. Margince has no way to restore an archived contact, company, deal or project: archiving is final from the app, and an archived record takes no edits, merges or undo. You can still open it with **Show archived** and read its history.
 If you archived by mistake, create the record again, or ask an administrator.
-Some other things do have a **Restore**: tags, pipelines and teams. A disqualified lead can be reopened with **Reopen**.
+Tags and pipelines do have a **Restore**; an archived team comes back with **Undo** on its archived notice. A disqualified lead can be reopened with **Reopen**.
 Also called: unarchive, undelete, bring back a record.
 
 ### How do I delete a contact or company?

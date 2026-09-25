@@ -106,10 +106,10 @@ editable.
 
 | What it covers | Kept for | Then |
 |---|---|---|
-| Leads that never converted | 365 days | Anonymise |
+| Leads that never converted | 365 days | Anonymize |
 | All captured activity | 1095 days (3 years) | Archive |
 | Call transcripts | 365 days | Erase |
-| Contacts with no consent and no deal | 730 days (2 years) | Anonymise |
+| Contacts with no consent and no deal | 730 days (2 years) | Anonymize |
 | Lost deals | 1825 days (5 years) | Archive |
 | AI call payloads | 365 days | Erase |
 
@@ -142,7 +142,7 @@ received, not when it was filed. **Deals** count from when the deal was closed.
 ### The three retention actions
 
 The three retention actions are **Archive**, where the record is kept, leaves
-the live lists and still exists; **Anonymise**, where identifying data is
+the live lists and still exists; **Anonymize**, where identifying data is
 destroyed and the record survives; and **Erase**, where the data is destroyed.
 
 The app draws the line for you: "Archive keeps the record. Anonymize and erase

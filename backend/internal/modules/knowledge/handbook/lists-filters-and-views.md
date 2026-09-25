@@ -67,7 +67,7 @@ Also called: reset filters, show everything again, remove filter.
 To see only the records you own in Margince, open **Contacts**, **Companies** or **Leads** and press the **Mine** tab in the header row. On **Deals**, press **Filter** → **My deals** → **My deals**.
 1. Or press **Filter** → **Owner** and pick **Owned by you**, one of your teams, or **Unassigned**.
 2. **Leads** opens on **Mine** for a user who sees only their own leads, and on **All** for one who can see the team's or everyone's.
-**Projects** has no owner filter; use **Filters and views** for that.
+**Projects** has no owner filter anywhere — its only filter is **Phase**, and **Filters and views** does not cover projects.
 Also called: my contacts, my deals, my accounts, assigned to me, owned by me.
 
 ### How do I filter by a colleague's name?
@@ -202,7 +202,7 @@ To build a detailed filter in Margince, open **Filters and views** in the sideba
 2. Choose **Add clause**, pick a field under **Select field**, an operator (**is**, **is not**, **is any of**, **contains**…) and the value.
 3. Add more. **Match mode** is **All (AND)** or **Any (OR)**; **Add group** nests a group.
 4. The count ("12 contacts match") and **Matching records** update live.
-At most 32 conditions and 4 levels of groups.
+Groups nest at most 4 levels deep.
 Also called: advanced search, segment, query builder.
 
 ### What can I filter on in Filters and views?

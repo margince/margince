@@ -18,6 +18,10 @@ To see your forecast in Margince, click **Analytics** in the sidebar (under **In
 3. Read **Current call**, **Evidence** (confirmed close dates), **Already won** and **Landing**, then **Checks before the call** and **Data and evidence checked**.
 A manager records a call with **Update call**. Also called: sales forecast, projected revenue, quarter forecast, landing.
 
+### How do I see my team's pipeline?
+To see your team's pipeline in Margince, open **Analytics** and pick the team in the **Record scope** picker above the numbers. A seat scoped to its teams, such as a team lead's, is offered **My teams**, each of those teams and its own records; a seat that sees everything is also offered **Whole company**. A rep who sees only their own records gets no picker, just "These numbers cover {scope}."
+Also called: team forecast, my team's deals, manager view, team report.
+
 ### How do I see my pipeline report?
 To see your pipeline report in Margince, click **Analytics** in the sidebar and open the **Deals** section.
 1. Click **Analytics**, then the **Deals** tab.

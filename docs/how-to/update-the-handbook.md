@@ -72,7 +72,7 @@ authority; these are where it lives.
 
    ```sh
    API_BASE=http://localhost:<api port> scripts/handbook-ask/probe.sh \
-     scripts/handbook-ask/questions.txt .tmp/before.tsv
+     scripts/handbook-ask/questions.txt .tmp/handbook-before.tsv
    ```
 
    It prints how many questions came back `answered` and lists the rest with
@@ -84,6 +84,10 @@ authority; these are where it lives.
 3. **Read the misses.** Each row carries the writer's summary. "Your handbook
    explains what X is but not how to …" means a missing task section; a summary
    about a different subject means a missing synonym or a buried first sentence.
+   To see what retrieval handed the writer for one question, without a stack,
+   run `make ai-eval Q='how can I create a project'`: it ranks the embedded
+   handbook with the product's own chunker and floor. The probe measures the
+   whole ask, writer included; `ai-eval` isolates the ranking.
 4. **Edit `docs/handbook/`** by the principles above. Check each label in the
    catalog and its screen before you write it.
 5. **Embed and rebuild.** `make -C backend handbook-embed` copies the pages
@@ -93,8 +97,10 @@ authority; these are where it lives.
 6. **Measure again** with the bank and the held-out set. Every question you
    fixed goes into `scripts/handbook-ask/questions.txt` in the words a user
    would use, so the next change cannot quietly lose it.
-7. **Gates, then commit both copies.** `go test -count=1 ./gates/ -run
-   'Vocabulary|Reachab|PublicRef'` from `backend/`, and
+7. **Gates, then commit both copies.** From `backend/`, run
+   `go test -count=1 ./gates/` (the vocabulary, reachability, page-length and
+   public-reference gates live there; `-count=1` because a gate that reads a
+   page is not re-run by Go's test cache when only the page changed) and
    `go test ./internal/modules/knowledge/handbook/`, which fails when the
    embedded copy and `docs/handbook/` differ. Commit `docs/handbook/` and
    `backend/internal/modules/knowledge/handbook/` together.

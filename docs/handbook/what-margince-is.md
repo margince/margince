@@ -157,6 +157,10 @@ The Margince handbook is inside the app. To ask it a question, open the command 
 The answer quotes and cites the handbook. A question it does not cover gets **Not covered by this set**, not a guess.
 Also called: help, FAQ, knowledge base, ask Margince.
 
+### How do I ask Margince a question about a company?
+To ask about one company, open the company and use its **Ask about this company** panel: **Ask Margince** offers fixed questions — **What is open here?**, **Prepare for a meeting** and **What changed recently?** — answered from the records you can access. It takes no free text; for a question in your own words about how Margince works, use **Ask your documents** (⌘K).
+Also called: company summary, meeting prep, what's going on with this account.
+
 ### Where is the Ask box?
 The Margince Ask box is called **Ask your documents**, and it is the first row of the command palette: press ⌘K (Ctrl+K) or click **Search or ask Margince** in the top bar.
 It answers only from one document set: the **Margince handbook** that ships with every installation, or a set your company filed under Settings → **Knowledge**.

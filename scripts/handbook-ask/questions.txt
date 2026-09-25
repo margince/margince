@@ -1,6 +1,6 @@
 # The handbook FAQ regression bank: one question per line, in the words a user types.
 # scripts/handbook-ask/probe.sh asks each against the default corpus. '#' lines are ignored.
-# Add the question behind every miss you fix; never phrase one to match a heading.
+# Add the question behind every miss you fix, in the words the user asked it in.
 
 # getting started
 what is Margince
@@ -185,3 +185,7 @@ can I undo what the AI changed
 how do I find a contact by email address
 how do I add a new organisation record
 how do I upload the signed contract for a customer
+
+# after the final held-out round
+where do I see my team's pipeline
+how do I ask margince a question about a company

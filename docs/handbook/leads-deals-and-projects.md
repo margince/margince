@@ -110,7 +110,7 @@ Also called: reject a lead, close a lead, archive a lead.
 
 Disqualifying archives the lead, records a reason from an administrator-managed
 list, and an optional note. The record stays fetchable. It becomes read-only:
-"This lead is closed and takes no changes."
+"This lead is closed and cannot be changed."
 
 ### How do I reopen a disqualified lead?
 To reopen a disqualified lead in Margince, open the lead and choose **Reopen**, then **Reopen lead** in the **Reopen this lead?** dialog.
@@ -138,7 +138,7 @@ Leads carry a score from 0 to 100. You can override it by hand, but a reason is
 required — an override with no reason is refused, and the override stops the
 score being recomputed until you clear it.
 
-The score decays: the screen shows it as a base "halving every 14 days".
+The score decays: the screen shows it as "{base}, halved every 14 days".
 
 There is an optional first-response target, **off by default**, set between 15
 minutes and 7 days. When it is on, leads show as **On time**, **Due soon** or
