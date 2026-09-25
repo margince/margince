@@ -85,6 +85,18 @@ func TestImportedAsAnswersTheDeclaredNameForAnUnaliasedImport(t *testing.T) {
 			what:   "blank: imported for effect, and not callable through",
 			source: "package p\nimport _ \"" + contractsPath + "\"\n",
 		},
+		{
+			// A file that imports OTHER packages, none of them this one. The
+			// walk has to skip every non-matching spec and answer "not
+			// imported" — a gate handed a qualifier here would hunt calls
+			// through a file that cannot make them.
+			what:   "not imported at all, though the file imports its neighbours",
+			source: "package p\nimport (\n\t\"fmt\"\n\tcrmcontracts \"example.com/other/contracts\"\n)\n",
+		},
+		{
+			what:   "imported by a path that merely shares a prefix",
+			source: "package p\nimport \"" + contractsPath + "/nested\"\n",
+		},
 	} {
 		file, err := parser.ParseFile(token.NewFileSet(), "probe.go", c.source, parser.ImportsOnly)
 		if err != nil {
