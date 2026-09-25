@@ -62,6 +62,13 @@ func (*RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UU
 		`DELETE FROM embedding WHERE entity_type = 'lead' AND entity_id = $1`, id); err != nil {
 		return err
 	}
+	// The duplicate-pair snapshots naming this lead, for the reason the tables
+	// above go: an anonymize fires no cascade, and the evidence holds the name and
+	// address the UPDATE has just nulled off the lead row.
+	if err := scrubDedupeEvidence(ctx, tx, nil, []ids.UUID{id}); err != nil {
+		return err
+	}
+
 	// The lead's communication record, for the same reason as the two tables
 	// above: an anonymize fires no cascade, so each table that names the lead
 	// has to be named here. A basis row carries the thread it was earned on and

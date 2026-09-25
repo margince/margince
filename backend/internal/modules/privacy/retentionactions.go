@@ -302,23 +302,7 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		err = redactCommitmentsNaming(ctx, tx, ids.From[ids.ContactKind](id))
 	}
 	if err == nil {
-		_, err = tx.Exec(ctx,
-			`DELETE FROM embedding WHERE entity_type = 'contact' AND entity_id = $1`, id)
-	}
-	if err == nil {
-		// A provenance row names where a field value came from — its source,
-		// who captured it, the evidence it was read out of — and it points at
-		// the fields the statements above just nulled. There is nothing in it
-		// to anonymize: what identifies the subject IS the record of where they
-		// were found. The eraser deletes it for that reason and so does this.
-		_, err = tx.Exec(ctx,
-			`DELETE FROM field_provenance WHERE object_type = 'contact' AND object_id = $1`, id)
-	}
-	if err == nil {
-		// Feedback rows name this contact as the subject an AI answer was judged
-		// about. The judgement is about them and cannot be held without them.
-		_, err = tx.Exec(ctx,
-			`DELETE FROM ai_feedback WHERE subject_type = 'contact' AND subject_id = $1`, id)
+		err = deleteDerivedContactRows(ctx, tx, id)
 	}
 	if err == nil {
 		// Against the addresses READ AT THE TOP, not a subquery over
@@ -332,6 +316,13 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		// stopped naming.
 		_, err = tx.Exec(ctx, `
 			DELETE FROM capture_pending_counterparty WHERE email = ANY($1)`, subjectEmails)
+	}
+	if err == nil {
+		// The duplicate-pair snapshots naming this record. The SAME statement the
+		// Art. 17 cascade runs: both acts anonymize in place, so neither fires the
+		// candidate table's cascade, and an evidence row left standing holds the
+		// address and phone number this act has just cleared off the contact.
+		err = scrubDedupeEvidence(ctx, tx, []ids.UUID{id}, nil)
 	}
 	if err == nil {
 		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
