@@ -421,7 +421,7 @@ expect_merge() {
 	set +e
 	out="$(env OPEN_TITLES="" GH_TOKEN=stub REPO=owner/repo RUN_URL=https://example.test/run/1 \
 		MERGE_VERDICT_RESULT=failure MERGE_VERDICT_PR="$pr" \
-		MERGE_VERDICT_WHY="$why" \
+		MERGE_VERDICT_WHY="$why" MERGE_VERDICT_LANE="${6:-ci}" \
 		"$root/scripts/scheduled-report.sh" 2>&1)"
 	status=$?
 	set -e
@@ -451,8 +451,13 @@ expect_merge() {
 # title would collect every case under one issue, be closed once, and go stale —
 # which is the dedupe above working exactly as designed against a subject it does
 # not fit.
+#
+# It still LEADS with the state of main and the lane that broke, matching the
+# health check's own titles. Six of these fired for one outage and read as six
+# unrelated merges, because a reader scanning open issues saw the pull request
+# and not the tree.
 expect_merge "a merge over a red check is filed against its pull request" \
-	2516 "A merge landed on main against a failing verdict (#2516)" \
+	2516 "main is red: \`ci\` failed on the tree merged by #2516" \
 	'its required `ci` check then reported `failure`'
 
 # A commit with no pull request has no number to name, and the title must still

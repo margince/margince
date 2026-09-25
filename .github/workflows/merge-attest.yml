@@ -62,6 +62,7 @@ jobs:
     outputs:
       why: ${{ steps.judge.outputs.why }}
       pr: ${{ steps.judge.outputs.pr }}
+      lane: ${{ steps.judge.outputs.lane }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -203,4 +204,7 @@ jobs:
           # is still an issue naming the run, which beats no issue.
           MERGE_VERDICT_PR: ${{ needs.verdict.outputs.pr }}
           MERGE_VERDICT_WHY: ${{ needs.verdict.outputs.why }}
+          # The lane the title names. Empty is survivable: the title falls back
+          # to naming the check generically rather than to naming nothing.
+          MERGE_VERDICT_LANE: ${{ needs.verdict.outputs.lane }}
         run: ./scripts/scheduled-report.sh
