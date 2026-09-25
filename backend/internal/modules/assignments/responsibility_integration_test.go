@@ -7,12 +7,10 @@ package assignments
 
 // Who is responsible for a company, against a real database.
 //
-// Every claim the store makes about authority is a comment beside a probe:
-// out of scope reads as not-found, seeing a record is not leave to staff it,
-// the actor comes from the session. Each of those is a property a client
-// depends on, and until this file none of them was held by a test that ran
-// the SQL. A gate that is only asserted in prose looks exactly like one that
-// passes.
+// The store states its authority beside each probe: out of scope reads as
+// not-found, seeing a record is not leave to staff it, the actor comes from
+// the session. A gate asserted only in prose looks exactly like one that
+// passes, so each of those properties is held here by SQL that runs.
 
 import (
 	"context"
