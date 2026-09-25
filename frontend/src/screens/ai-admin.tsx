@@ -23,7 +23,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { decisionSkipLabel } from "./ai-decision-labels";
+import { decisionSkipLabel, processingLabel } from "./ai-decision-labels";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { settingsHref } from "./settingsrouting";
 
@@ -380,16 +380,6 @@ function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
       <p>{t("aiAdmin.recovery")}</p>
     </Disclosure>
   );
-}
-
-// Where a candidate processes text, in the words the whole page uses for it.
-export function processingLabel(
-  processing: Feature["effective_candidates"][number]["processing"],
-  t: ReturnType<typeof useT>,
-): string {
-  return processing === "cloud_provider"
-    ? t("aiAdmin.cloud")
-    : t("aiAdmin.endpoint");
 }
 
 export function AiFeatureTable({

@@ -60,3 +60,13 @@ export function decisionSkipLabel(reason: SkipReason, t: T): string {
       return t("aiAdmin.decisionSkip.local_only");
   }
 }
+
+// Where a candidate processes text, in the words the whole AI page uses for it.
+export function processingLabel(
+  processing: components["schemas"]["AiRouteCandidate"]["processing"],
+  t: T,
+): string {
+  return processing === "cloud_provider"
+    ? t("aiAdmin.cloud")
+    : t("aiAdmin.endpoint");
+}

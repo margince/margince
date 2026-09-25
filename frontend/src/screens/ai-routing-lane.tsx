@@ -8,7 +8,8 @@ import { Badge, Button } from "../design-system/atoms";
 import { PanelRow } from "../design-system/panel";
 import { formatUsdPerMTok } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import { processingLabel, useAiStatus } from "./ai-admin";
+import { useAiStatus } from "./ai-admin";
+import { processingLabel } from "./ai-decision-labels";
 import {
   inputOnlyLane,
   type ModelCatalogue,
