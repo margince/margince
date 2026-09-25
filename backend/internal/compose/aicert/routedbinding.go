@@ -87,6 +87,9 @@ func validateRoutedBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger)
 			"a record is filed under it, so a run states which one it measured", cfg.Routing.Profile)
 	}
 	warnUnboundDegradeTargets(cfg, log)
+	if err := refuseInvalidDecisionLane(cfg); err != nil {
+		return err
+	}
 	return refuseSelfJudgedTasks(cfg, tasks)
 }
 

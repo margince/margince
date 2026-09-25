@@ -60,8 +60,9 @@ func TestACompletionRecordIsByteIdenticalAfterTheDecisionFields(t *testing.T) {
 	}
 }
 
-// decisionRecordFor is a certified decision record on fxSite's task and site.
-func decisionRecordFor(site string) aicert.Record {
+// fxDecisionRecord is a certified decision record on fxSite's task and site.
+func fxDecisionRecord() aicert.Record {
+	const site = "fx"
 	return aicert.Record{
 		Task: "rate_extract", Kind: aicert.KindDecision, Site: site,
 		Provider: "openrouter_decision", Model: "typesafe/jev-1.13", ServedModel: "typesafe/jev-1.13",
@@ -79,7 +80,7 @@ func decisionRecordFor(site string) aicert.Record {
 func TestADecisionRecordNeverClaimsTheLLMSite(t *testing.T) {
 	perSite := map[string]map[string]string{"rate_extract/fx": {"fx_steady": "d-steady"}}
 	rows, unclaimed := aicert.Readiness(aicert.Census{Sites: []aitasks.Site{fxSite}},
-		map[string]string{"rate_extract": "p-dec"}, perSite, []aicert.Record{decisionRecordFor("fx")})
+		map[string]string{"rate_extract": "p-dec"}, perSite, []aicert.Record{fxDecisionRecord()})
 
 	if row := fxRow(t, rows); row.Certified {
 		t.Errorf("the completion site reads certified by %s; a decision record measured another lane", row.Binding())
@@ -88,7 +89,7 @@ func TestADecisionRecordNeverClaimsTheLLMSite(t *testing.T) {
 		t.Errorf("the decision record is listed as unclaimed: %+v", unclaimed)
 	}
 
-	decisions := aicert.DecisionReadiness(perSite, []aicert.Record{decisionRecordFor("fx")})
+	decisions := aicert.DecisionReadiness(perSite, []aicert.Record{fxDecisionRecord()})
 	if len(decisions) != 1 || decisions[0].Status() != aicert.StatusCurrent {
 		t.Fatalf("decision readiness = %+v, want the one record, current", decisions)
 	}
@@ -98,7 +99,7 @@ func TestADecisionRecordNeverClaimsTheLLMSite(t *testing.T) {
 // measurements, so they need two files and two keys.
 func TestADecisionRecordHasItsOwnPathAndKey(t *testing.T) {
 	dir := t.TempDir()
-	rec := decisionRecordFor("fx")
+	rec := fxDecisionRecord()
 	if err := aicert.WriteRecord(dir, rec); err != nil {
 		t.Fatalf("WriteRecord: %v", err)
 	}
@@ -124,7 +125,7 @@ func TestADecisionRecordHasItsOwnPathAndKey(t *testing.T) {
 // longer ships any of its scenarios measures nothing current.
 func TestADecisionRecordGoesStaleWhenItsScenarioMoves(t *testing.T) {
 	moved := map[string]map[string]string{"rate_extract/fx": {"fx_steady": "d-NEW"}}
-	rows := aicert.DecisionReadiness(moved, []aicert.Record{decisionRecordFor("fx")})
+	rows := aicert.DecisionReadiness(moved, []aicert.Record{fxDecisionRecord()})
 	if len(rows) != 1 || rows[0].Status() != aicert.StatusStale {
 		t.Fatalf("decision readiness = %+v, want the record stale", rows)
 	}
@@ -132,7 +133,7 @@ func TestADecisionRecordGoesStaleWhenItsScenarioMoves(t *testing.T) {
 		t.Errorf("the stale reason %q does not name the scenario that moved", rows[0].Standing.Reason())
 	}
 
-	gone := aicert.DecisionReadiness(map[string]map[string]string{}, []aicert.Record{decisionRecordFor("fx")})
+	gone := aicert.DecisionReadiness(map[string]map[string]string{}, []aicert.Record{fxDecisionRecord()})
 	if len(gone) != 1 || gone[0].Standing.Measured != 0 {
 		t.Fatalf("a record over a site with no decision scenarios reads %+v, want nothing measured", gone)
 	}

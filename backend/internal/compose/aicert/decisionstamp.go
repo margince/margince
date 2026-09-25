@@ -98,6 +98,8 @@ func CurrentDecisionStamps(corpus []Scenario, census *aitasks.Registry) (map[str
 // form. A case whose decision site is not the scenario's own site is refused:
 // its record would be keyed by one site and measured on another, and the
 // certification row would name a site the corpus never ran.
+//
+//nolint:ireturn // the case is the site's own type, reachable only through the optional interface it implements.
 func decisionCaseFor(sc Scenario, census *aitasks.Registry) (aitasks.DecisionCase, bool, error) {
 	factory, bound := census.CaseFor(ai.Task(sc.Task), sc.Site)
 	if !bound {
