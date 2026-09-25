@@ -23,7 +23,12 @@ const READER: GrantSpec = { ai_routing: ["read"] };
 const NO_GRANT: GrantSpec = { automation: ["read"] };
 
 function story(
-  providers: { provider: string; configured: boolean; env_var: string }[],
+  providers: {
+    provider: string;
+    configured: boolean;
+    env_var: string;
+    optional: boolean;
+  }[],
   allow: GrantSpec = MANAGER,
 ) {
   return () => {
@@ -43,11 +48,20 @@ const gemini = {
   provider: "gemini",
   configured: true,
   env_var: "GEMINI_API_KEY",
+  optional: false,
 };
 const anthropic = {
   provider: "anthropic",
   configured: false,
   env_var: "ANTHROPIC_API_KEY",
+  optional: false,
+};
+// A self-hosted decision server needs no key, so this one is sent when held.
+const jevCompatible = {
+  provider: "jev_compatible",
+  configured: false,
+  env_var: "JEV_COMPATIBLE_API_KEY",
+  optional: true,
 };
 
 const meta: Meta<typeof AiProviderKeysCard> = {
@@ -66,6 +80,12 @@ export const Mixed: Story = { render: story([gemini, anthropic]) };
 // "nothing set yet" and not as an error.
 export const NothingConfigured: Story = {
   render: story([anthropic, { ...gemini, configured: false }]),
+};
+
+// An optional key not held reads as optional, not as a gap: the adapter calls
+// without one, so nothing here is wrong and nothing warns.
+export const OptionalKey: Story = {
+  render: story([gemini, anthropic, jevCompatible]),
 };
 
 // A keyed provider on its own. The row says configured and offers removal; the

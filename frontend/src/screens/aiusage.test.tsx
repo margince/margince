@@ -396,7 +396,7 @@ const unboundRouting = {
 };
 const boundRouting = {
   ...unboundRouting,
-  decisions: { provider: "openrouter_decision", model: "typesafe/jev-1.13" },
+  decisions: { provider: "jev_compatible", model: "typesafe/jev-1.13" },
 };
 
 it("shows the decision model's pass and fallback rates when a decision model is bound", async () => {

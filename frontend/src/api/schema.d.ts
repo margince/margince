@@ -16986,7 +16986,7 @@ export interface components {
             /** @description This model's score under the list's `ranked_by`, so a screen can show WHY a model is in a shortened list rather than asking a reader to trust the order. A decimal string for the same reason the prices are: it is displayed, never arithmetic. Absent where the vendor publishes no such measure, which is also when the list cannot be ranked. */
             rank_score?: string;
         };
-        /** @description What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
+        /** @description What may be known about one vendor's credential. Facts about the vendor and whether a key is held, and nothing about the key: it has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
         AiProviderKeyStatus: {
             /** @description The routing name of the vendor, the same string a binding uses. */
             provider: string;
@@ -16994,6 +16994,8 @@ export interface components {
             configured: boolean;
             /** @description The variable the same key may arrive in. Named so an operator can see which export seeded a vendor; the names follow each vendor's own convention, which is why they carry no MARGINCE_ prefix. */
             env_var: string;
+            /** @description Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix. */
+            optional: boolean;
         };
         AiProviderKeyInput: {
             /** @description The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
@@ -17080,11 +17082,11 @@ export interface components {
          *     reaches no further than the task's own bindings.
          */
         AiDecisionsBinding: {
-            /** @description openrouter_decision | laya. */
+            /** @description jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY is sent when held and never required). */
             provider: string;
-            /** @description The decision model id: a Jev slug, or a Laya checkpoint. */
+            /** @description The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter. */
             model: string;
-            /** @description Endpoint root; openrouter_decision requires an OpenRouter host. */
+            /** @description The FULL decision endpoint URL, posted to as written. Optional for jev (default https://api.typesafe.ai/v1/systemone); required for jev_compatible, e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone. */
             base_url?: string;
         };
         /**

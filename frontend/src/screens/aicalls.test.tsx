@@ -80,7 +80,7 @@ const DECIDED_THEN_FELL_BACK = {
       is_terminal: false,
       kind: "decision",
       tier: "decide",
-      provider: "openrouter_decision",
+      provider: "jev_compatible",
       model_id: "jev-classify",
       attempt_reason: "",
       tokens_in: 40,
@@ -108,7 +108,7 @@ const DECIDED = {
     ...summary,
     kind: "decision",
     tier: "decide",
-    provider: "openrouter_decision",
+    provider: "jev_compatible",
     calls_attempted: 1,
     decision_attempted: true,
   },
@@ -365,7 +365,7 @@ it("marks a decision call, and names the tier it ran on", async () => {
   mount(true, true, OPERATOR, DECIDED);
 
   expect(
-    await screen.findByText("Decision model · openrouter_decision/served"),
+    await screen.findByText("Decision model · jev_compatible/served"),
   ).toBeTruthy();
   // The badge on the row is the kind, in words; the tier column above is the
   // same fact spelled as the lane, and both say it rather than "decide".
@@ -412,5 +412,5 @@ it("says why the ladder answered after the decision model, and where it went", a
   // asked: the terminal row's binding is the rung that answered after it.
   const first = screen.getByText("#1").closest("li");
   expect(first?.textContent).toContain("Decision model");
-  expect(first?.textContent).toContain("openrouter_decision/jev-classify");
+  expect(first?.textContent).toContain("jev_compatible/jev-classify");
 });

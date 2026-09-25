@@ -225,9 +225,9 @@ export const AdvancedBindings: Story = {
 // adapters that answer a decision, and says where the bound one processes text
 // from the server's own reading, which the features above repeat per activity.
 const DECISION = {
-  provider: "openrouter_decision",
-  model: "jev-classify",
-  base_url: "https://openrouter.ai/api/v1",
+  provider: "jev_compatible",
+  model: "typesafe/jev-1.13",
+  base_url: "https://openrouter.ai/api/alpha/decisions",
 };
 export const DecisionModel: Story = {
   render: story({ ...BOUND, decisions: DECISION }, MANAGER, VENDOR_LIST, {

@@ -591,13 +591,21 @@ function firstBinding(id: keyof typeof SETUP_PROVIDERS): Routing {
   } as Routing;
 }
 
+// A vendor whose key is optional calls without one, so an absent key there is
+// no warning to draw.
 function unkeyedProviders(
-  providers: readonly { provider: string; configured: boolean }[] | undefined,
+  providers:
+    | readonly { provider: string; configured: boolean; optional: boolean }[]
+    | undefined,
 ): ReadonlySet<string> | null {
   if (!providers) {
     return null;
   }
-  return new Set(providers.filter((p) => !p.configured).map((p) => p.provider));
+  return new Set(
+    providers
+      .filter((p) => !p.configured && !p.optional)
+      .map((p) => p.provider),
+  );
 }
 
 // The day the price sheet was last written, which is the day its model list was
