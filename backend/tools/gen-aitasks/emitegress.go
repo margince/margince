@@ -60,9 +60,10 @@ func emitEgressDoc(c contract) []byte {
 	return b.Bytes()
 }
 
-// decisionCell says how far a task's text can go to a decision model. The
-// lane never widens a task's reach, so the answer is the task's own: its ladder
-// for an ordinary decision task, this machine for a local-only one.
+// decisionCell says which decision model a task's text can reach. A bound
+// decisions lane serves every task that declares a decision form, wherever the
+// lane's provider runs, except that a local-only task takes only a local
+// decision provider.
 func decisionCell(def taskDef) string {
 	switch {
 	case !def.Decision:
@@ -70,7 +71,7 @@ func decisionCell(def taskDef) string {
 	case def.LocalOnly:
 		return "only a local decision model"
 	default:
-		return "no further than its ladder reaches"
+		return "the bound decision model"
 	}
 }
 
@@ -106,10 +107,15 @@ Three different promises, and a task can make any of them without the others:
 
 The **Decision model** column is where else a task's text can go. A task that
 declares a decision form may be answered first by the deployment's decision
-model, and only when that model's endpoint reaches no further than the task's
-own bound ladder: a task already sent to a known cloud may ask a decision model
-in a known cloud, and a local-only task may ask only a local one. A "—" task is
-never sent to a decision model.
+model — the ` + "`" + `decisions:` + "`" + ` lane of the routing config, bound like the embeddings
+lane — once that model is certified for the task's site. The lane's provider may
+be a cloud one, so for an ordinary decision task the text reaches wherever the
+lane is bound, even when the task's own ladder is bound locally. A task that
+also declares ` + "`" + `local_only` + "`" + ` is asked only by a local decision provider; bound to
+a cloud one, the lane skips it and the ladder answers. A "—" task is never sent
+to a decision model. Under ` + "`" + `sovereign` + "`" + ` the lane must be a local provider on an
+endpoint the installation controls, and under ` + "`" + `eu_hosted` + "`" + ` it may not reach
+OpenRouter, whose decisions endpoint cannot be pinned to an EU host.
 
 A task that is none of these sends its text to whichever provider the operator
 bound for its ladder's rungs, and may retain the prompt for debugging. That is

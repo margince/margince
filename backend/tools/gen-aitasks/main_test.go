@@ -676,8 +676,8 @@ func TestTheDecisionTableListsEveryDeclaredTaskInNameOrder(t *testing.T) {
 }
 
 // The egress page answers for the decision lane too: a decision task's text
-// can reach a decision model, never further than its own ladder reaches, and
-// a local-only one only a local model. A task without the declaration says so.
+// can reach the bound decision model, and a local-only one only a local
+// model. A task without the declaration says so.
 func TestTheEgressPageNamesEachTasksDecisionReachAndLocalOnlyDeclaration(t *testing.T) {
 	c, err := parseContract([]byte(decisionContract))
 	if err != nil {
@@ -687,7 +687,7 @@ func TestTheEgressPageNamesEachTasksDecisionReachAndLocalOnlyDeclaration(t *test
 	for task, want := range map[string]string{
 		"abe": "| `abe` | `beta` | no | no | yes | only a local decision model | shipped |",
 		"foo": "| `foo` | `alpha` → `beta` | no | no | no | — | shipped |",
-		"zed": "| `zed` | `alpha` | no | no | no | no further than its ladder reaches | shipped |",
+		"zed": "| `zed` | `alpha` | no | no | no | the bound decision model | shipped |",
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the egress row for %s is not %q:\n%s", task, want, page)
