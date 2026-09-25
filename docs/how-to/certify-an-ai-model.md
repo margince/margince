@@ -145,9 +145,9 @@ the provider/model split cuts at the FIRST colon, so
 `openai_compatible:openai/gpt-oss-20b:free` binds the whole slug.
 
 Other knobs: `RUNS=5` (odd repeat count), `PROFILE=` (environment class),
-`JUDGE_BASE_URL=` for an `openai_compatible` judge you name — the OpenRouter host
-is the default only for the default judge, and unset it falls back to
-`BASE_URL=`, since a judge on the candidate's broker is the common case.
+`JUDGE_BASE_URL=` for an `openai_compatible` judge — unset, it rides the
+candidate's `BASE_URL=` (or `MARGINCE_AICERT_BASE_URL`), and the OpenRouter host
+only when neither is set.
 A broker binding is served under production's upstream default (fp16/bf16 hosts
 only); `UPSTREAM='{}'` and `JUDGE_UPSTREAM='{}'` lift it. Each record names what
 applied and any `thinking_level`, crediting only presets set alike. A pre-flight

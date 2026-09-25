@@ -73,9 +73,9 @@ func WithFakeClient(c *FakeClient) LocalOption {
 }
 
 // WithHarnessClient serves every binding whose provider is provider with the
-// caller's own client, for a provider this package has no adapter for. It
-// exists for a harness transport the product must never ship — the cert lane's
-// CLI judge — and only the DB-less router takes it, so no process role can.
+// caller's own client, for a provider this package has no adapter for: the cert
+// lane's CLI judge. gates/harnesstransport_test.go fails any non-test caller
+// outside internal/compose/aicert, since every binary can reach this router.
 func WithHarnessClient(provider string, c model.Client) LocalOption {
 	return func(o *localOpts) { o.harness = harnessClient{provider: provider, client: c} }
 }

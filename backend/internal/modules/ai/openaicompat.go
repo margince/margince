@@ -392,7 +392,7 @@ func (c *openAICompatClient) sendChat(ctx context.Context, req model.Request, st
 	if err := c.refuseUnsupportedAttachments(req.Attachments); err != nil {
 		return nil, err
 	}
-	payload, _, err := sendablePayload(ctx, c.chatWire(req, stream), req.SecretStripper)
+	payload, _, err := SendablePayload(ctx, c.chatWire(req, stream), req.SecretStripper)
 	if err != nil {
 		return nil, err
 	}

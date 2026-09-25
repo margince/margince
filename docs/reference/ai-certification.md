@@ -162,7 +162,7 @@ Your data goes to: global cloud. 22 of 29 features ready. Preset file: [`gemini_
 | Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet | Right in 24 of 27 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
 | Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready | Right every time (6 of 6) |
 | Record summary <sub>`summarize`</sub> | ⚠️ Usable with care | Right in 24 of 27 tries; answer quality below the bar in 4 test cases |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet | Right every time (36 of 36); answer quality below the bar in 7 test cases |
+| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet | Right every time (36 of 36); answer quality below the bar in 4 test cases |
 | Signal extraction <sub>`signal_extract`</sub> | ✅ Ready | Right every time (12 of 12) |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready | Right every time (27 of 27) |
@@ -172,7 +172,7 @@ Your data goes to: global cloud. 22 of 29 features ready. Preset file: [`gemini_
 | Website deep read <sub>`site_extract`</sub> | ✅ Ready | Right every time (15 of 15) |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready | Right every time (9 of 9) |
 | Website triage <sub>`site_triage`</sub> | ✅ Ready | Right every time (15 of 15) |
-| Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care | Right in 13 of 15 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
+| Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care | Right in 14 of 15 tries; answer quality below the bar in 2 test cases |
 | What last week taught <sub>`weekly_learnings`</sub> | ⚠️ Usable with care | Right every time (9 of 9); answer quality below the bar in one test case |
 
 <details>
@@ -640,11 +640,11 @@ Which model to run each site on, and what that choice rests on.
 | [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.5-flash · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 6 |
 | [`deal_health/deal_status`](#deal_healthdeal_status) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 4 |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.5-flash · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 1 |
-| [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 6 |
+| [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 6 |
 | [`draft_reply/contact`](#draft_replycontact) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `not_supported` | 1.00 | `current` | 1 | 6 |
-| [`draft_reply/first`](#draft_replyfirst) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 6 |
-| [`draft_reply/intro`](#draft_replyintro) | `gemini · gemini-3.5-flash · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 6 |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 6 |
+| [`draft_reply/first`](#draft_replyfirst) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 6 |
+| [`draft_reply/intro`](#draft_replyintro) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 6 |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 3 | 6 |
 | [`draft_reply/reply`](#draft_replyreply) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `not_supported` | 1.00 | `current` | 4 | 7 |
 | [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 6 |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 0.67 | `current` | 2 | 4 |
@@ -671,7 +671,7 @@ Which model to run each site on, and what that choice rests on.
 | [`voice_build/eval_draft`](#voice_buildeval_draft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 5 |
 | [`voice_build/eval_scores`](#voice_buildeval_scores) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 5 |
 | [`weekly_learnings/learn`](#weekly_learningslearn) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 3 | 4 |
-| [`weekly_review/narrative`](#weekly_reviewnarrative) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 0.87 | `current` | 5 | 4 |
+| [`weekly_review/narrative`](#weekly_reviewnarrative) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 0.93 | `current` | 5 | 4 |
 
 **Best model tested** is the strongest result that still describes what ships.
 Only a `current` or `partial` record is eligible; among those the pick is the
@@ -698,7 +698,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 41 | 40 | 0 | 1 | 411 | 400 | 0.97 | 5359ms | 24 | 14 | 3 |
+| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 41 | 40 | 0 | 1 | 411 | 401 | 0.98 | 5359ms | 26 | 12 | 3 |
 | `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
 | `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 13 | 8 | 0 | 5 | 96 | 96 | 1.00 | 11911ms | 9 | 1 | 3 |
 | `ollama` | `gemma4:12b` | `sovereign` | 13 | 0 | 0 | 13 | 111 | 90 | 0.81 | 56477ms | 7 | 1 | 5 |
@@ -1339,7 +1339,7 @@ Records (4):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2169ms | 2669ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2253ms | 2356ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 14129ms | 47100ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 9 | 9 | 1.00 | 6017ms | 8034ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1494ms | 2888ms | 9 | 0 | 0 | 0 |
@@ -1393,7 +1393,7 @@ Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1424ms | 3412ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1562ms | 3847ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 5121ms | 11911ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 2567ms | 237887ms | 3 | 0 | 0 | 0 |
@@ -1419,7 +1419,7 @@ Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1424ms | 3412ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1562ms | 3847ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 5121ms | 11911ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 2567ms | 237887ms | 3 | 0 | 0 | 0 |
@@ -1445,7 +1445,7 @@ Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1424ms | 3412ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1562ms | 3847ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 5121ms | 11911ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 2 | 0.67 | 2567ms | 237887ms | 2 | 0 | 1 | 0 |
@@ -1472,7 +1472,7 @@ Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1424ms | 3412ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 1562ms | 3847ms | 6 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 24063ms | 46554ms | 6 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 5121ms | 11911ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 2567ms | 237887ms | 6 | 0 | 0 | 0 |
@@ -1500,7 +1500,7 @@ Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1424ms | 3412ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 9 | 9 | 1.00 | 1562ms | 3847ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 9 | 1.00 | 24063ms | 46554ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 9 | 1.00 | 5121ms | 11911ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 9 | 9 | 1.00 | 2567ms | 237887ms | 9 | 0 | 0 | 0 |
@@ -1529,7 +1529,7 @@ Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `not_supported` | 12 | 12 | 1.00 | 1424ms | 3412ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `not_supported` | 12 | 12 | 1.00 | 1562ms | 3847ms | 12 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 12 | 1.00 | 24063ms | 46554ms | 12 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 12 | 1.00 | 5121ms | 11911ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 11 | 0.92 | 2567ms | 237887ms | 11 | 0 | 1 | 0 |
@@ -2261,7 +2261,7 @@ Records (4):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 15 | 13 | 0.87 | 1215ms | 1348ms | 13 | 2 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 15 | 14 | 0.93 | 1183ms | 1833ms | 14 | 1 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `not_supported` | 12 | 9 | 0.75 | 2150ms | 3003ms | 9 | 3 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `not_supported` | 12 | 5 | 0.42 | 1764ms | 86185ms | 5 | 5 | 2 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `not_supported` | 12 | 9 | 0.75 | 919ms | 1891ms | 9 | 3 | 0 | 0 |

@@ -224,7 +224,7 @@ func (c *geminiClient) Embed(ctx context.Context, req model.EmbedRequest) (model
 			Content:              geminiContent{Parts: []geminiPart{{Text: input}}},
 			OutputDimensionality: req.Dimensions, // 0 ⇒ omitted ⇒ provider default
 		}
-		payload, _, err := sendablePayload(ctx, wire, nil)
+		payload, _, err := SendablePayload(ctx, wire, nil)
 		if err != nil {
 			return model.Embeddings{}, err
 		}
@@ -296,7 +296,7 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 		method = "streamGenerateContent"
 		query = "?alt=sse"
 	}
-	payload, _, err := sendablePayload(ctx, wire, req.SecretStripper)
+	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
 		return nil, err
 	}

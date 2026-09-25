@@ -344,6 +344,7 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	rec := buildRecord(task, taskVerdict, acc, profile, promptVersion)
 	rec.CandidateUpstream, rec.JudgeUpstream = ai.UpstreamPreferencesFor(binding), ai.UpstreamPreferencesFor(judgeBinding)
 	rec.ThinkingLevel = binding.ThinkingLevel
+	rec.JudgeProvider = judgeBinding.Provider
 	return rec, nil
 }
 

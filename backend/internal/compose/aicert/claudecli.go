@@ -7,7 +7,8 @@ package aicert
 // Claude Code CLI in headless mode, on a subscription token, instead of through
 // a provider adapter. A harness transport, never a product one — the product
 // must not shell out to a CLI — so it lives here and reaches the judge router
-// through ai.WithHarnessClient, which only the DB-less router accepts.
+// through ai.WithHarnessClient, which gates/harnesstransport_test.go confines
+// to this package.
 
 import (
 	"bytes"
@@ -97,6 +98,9 @@ type cliWire struct {
 // Complete runs one `claude -p` from an empty temporary directory, which is
 // also its HOME, so no CLAUDE.md, settings, hooks or memory reach the grader.
 func (j claudeCLIJudge) Complete(ctx context.Context, req model.Request) (resp model.Response, err error) {
+	if strings.HasPrefix(j.model, "-") {
+		return model.Response{}, fmt.Errorf("aicert: JUDGE=claude_cli:%s names a flag, not a model: %w", j.model, model.ErrRequestRejected)
+	}
 	binary, credential, err := cliPrerequisites()
 	if err != nil {
 		return model.Response{}, err
@@ -126,11 +130,15 @@ func (j claudeCLIJudge) Complete(ctx context.Context, req model.Request) (resp m
 	cmd.Env = cliEnv(dir, credential)
 	cmd.Stdin = strings.NewReader(wire.Prompt)
 	cmd.WaitDelay = cliWaitDelay
+	killProcessGroupOnCancel(cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	runErr := cmd.Run()
-	if ctx.Err() != nil {
-		return model.Response{}, fmt.Errorf("aicert: the claude_cli judge did not answer within %s: %w", ai.CallCeiling, ctx.Err())
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		if errors.Is(ctxErr, context.DeadlineExceeded) {
+			return model.Response{}, fmt.Errorf("aicert: the claude_cli judge did not answer before its deadline (the call ceiling is %s): %w", ai.CallCeiling, ctxErr)
+		}
+		return model.Response{}, fmt.Errorf("aicert: the claude_cli judge call was cancelled before it answered: %w", ctxErr)
 	}
 	return parseCLIResult(stdout.Bytes(), stderr.String(), runErr)
 }
@@ -177,12 +185,19 @@ func cliPrerequisites() (binary, credential string, err error) {
 		"`make e2e-ai` reads it from .env.local)", strings.Join(claudeCLICredentials, ", "))
 }
 
+// cliPassthrough is what the CLI inherits beyond HOME, PATH and its credential:
+// where to write temporary files, and how this host reaches the network.
+var cliPassthrough = []string{
+	"TMPDIR", "ANTHROPIC_BASE_URL",
+	"HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "NO_PROXY", "no_proxy",
+}
+
 // cliEnv is the whole environment the CLI runs in. Built rather than inherited:
 // an inherited HOME would load the operator's own CLAUDE.md and memory, and an
 // inherited second credential would let the CLI pick one this lane did not.
 func cliEnv(home, credential string) []string {
 	env := []string{"HOME=" + home, "PATH=" + os.Getenv("PATH"), credential + "=" + os.Getenv(credential)}
-	for _, name := range []string{"TMPDIR", "ANTHROPIC_BASE_URL"} {
+	for _, name := range cliPassthrough {
 		if value := os.Getenv(name); value != "" {
 			env = append(env, name+"="+value)
 		}
@@ -200,16 +215,9 @@ func strippedWire(ctx context.Context, req model.Request) (cliWire, error) {
 		return cliWire{}, err
 	}
 	wire := cliWire{System: req.System, Prompt: prompt}
-	if req.SecretStripper == nil {
-		return wire, nil
-	}
-	payload, err := json.Marshal(wire)
+	stripped, _, err := ai.SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
-		return cliWire{}, fmt.Errorf("aicert: marshalling the claude_cli judge request: %w", err)
-	}
-	stripped, _, err := req.SecretStripper.Strip(ctx, payload)
-	if err != nil {
-		return cliWire{}, fmt.Errorf("aicert: secret stripper: %w", err)
+		return cliWire{}, err
 	}
 	if err := json.Unmarshal(stripped, &wire); err != nil {
 		return cliWire{}, fmt.Errorf("aicert: the stripped claude_cli judge request no longer parses: %w", err)

@@ -5,11 +5,13 @@ package aicert
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -109,11 +111,24 @@ func TestTheCLIJudgeRunsIsolatedFromTheOperatorsSetup(t *testing.T) {
 	withCredential(t)
 	t.Setenv("ANTHROPIC_API_KEY", "a-second-credential")
 	t.Setenv("AICERT_OPERATOR_ONLY", "leaks")
+	proxies := map[string]string{
+		"HTTPS_PROXY": "http://proxy.test:3128", "https_proxy": "http://proxy.test:3129",
+		"HTTP_PROXY": "http://proxy.test:3130", "http_proxy": "http://proxy.test:3131",
+		"NO_PROXY": "localhost", "no_proxy": "127.0.0.1",
+	}
+	for name, value := range proxies {
+		t.Setenv(name, value)
+	}
 	record := stubClaude(t, printing(cliSuccess, "0"))
 	if _, err := (claudeCLIJudge{model: "sonnet"}).Complete(context.Background(), judgeRequest()); err != nil {
 		t.Fatal(err)
 	}
 	env, pwd := recorded(t, record, "env"), recorded(t, record, "pwd")
+	for name, value := range proxies {
+		if !strings.Contains(env, name+"="+value+"\n") {
+			t.Errorf("env = %q: %s did not reach the CLI, so a proxied host could not dial out", env, name)
+		}
+	}
 	if !strings.Contains(pwd, "aicert-claude-judge-") || !strings.Contains(env, "HOME=") ||
 		!strings.Contains(env, "aicert-claude-judge-") {
 		t.Errorf("pwd = %q, env = %q: want the CLI in, and homed at, its own temp dir", pwd, env)
@@ -260,6 +275,8 @@ func TestACLIJudgeRefusesAClaudeCandidate(t *testing.T) {
 		{ai.ProviderConfig{Provider: "anthropic", Model: "claude-haiku-4-5"}, true},
 		{ai.ProviderConfig{Provider: "openai_compatible", Model: "anthropic/claude-haiku-4.5"}, true},
 		{ai.ProviderConfig{Provider: providerClaudeCLI, Model: "opus"}, true},
+		{ai.ProviderConfig{Provider: "openai_compatible", Model: "us.anthropic.claude-haiku-4-5-20251001-v1:0"}, true},
+		{ai.ProviderConfig{Provider: "openai_compatible", Model: "anthropic.claude-3-5-sonnet-20240620-v1:0"}, true},
 		{ai.ProviderConfig{Provider: "gemini", Model: "gemini-3.5-flash"}, false},
 		{ai.ProviderConfig{Provider: "openai_compatible", Model: "openai/gpt-oss-120b"}, false},
 	} {
@@ -268,5 +285,70 @@ func TestACLIJudgeRefusesAClaudeCandidate(t *testing.T) {
 		if got := errors.Is(err, errSelfJudged); got != refused {
 			t.Errorf("%s:%s graded by claude_cli: refused = %v, want %v", candidate.Provider, candidate.Model, got, refused)
 		}
+	}
+}
+
+// A --model value is the operator's, and one shaped like a flag would be read
+// by the CLI as one, so it is refused before anything runs.
+func TestTheCLIJudgeRefusesAModelShapedLikeAFlag(t *testing.T) {
+	withCredential(t)
+	record := stubClaude(t, printing(cliSuccess, "0"))
+	_, err := claudeCLIJudge{model: "--dangerously-skip-permissions"}.Complete(context.Background(), judgeRequest())
+	if err == nil || !strings.Contains(err.Error(), "--dangerously-skip-permissions") {
+		t.Fatalf("err = %v, want the flag-shaped model refused by name", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(record, "args")); !os.IsNotExist(statErr) {
+		t.Error("the CLI was run with a flag-shaped model")
+	}
+}
+
+// A call the caller cancelled and a call that ran out of time are different
+// failures, and the error says which.
+func TestTheCLIJudgeTellsACancelledCallFromALateOne(t *testing.T) {
+	withCredential(t)
+	stubClaude(t, printing(cliSuccess, "0"))
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	late, stop := context.WithDeadline(context.Background(), time.Unix(0, 0))
+	defer stop()
+	for name, tc := range map[string]struct {
+		ctx       context.Context
+		want      string
+		wantCause error
+	}{
+		"cancelled": {cancelled, "was cancelled before it answered", context.Canceled},
+		"late":      {late, "did not answer before its deadline", context.DeadlineExceeded},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := claudeCLIJudge{model: "sonnet"}.Complete(tc.ctx, judgeRequest())
+			if !errors.Is(err, tc.wantCause) || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("err = %v, want %q wrapping %v", err, tc.want, tc.wantCause)
+			}
+		})
+	}
+}
+
+// A record names the judge's transport, so a sweep graded through the CLI is
+// told apart from one graded over a broker by the files alone.
+func TestARecordNamesTheJudgesTransport(t *testing.T) {
+	withCredential(t)
+	stubClaude(t, printing(cliSuccess, "0"))
+	candidateFake := ai.NewFakeClient().Script("the widget is blue", "the widget is blue", "the widget is blue")
+	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		ai.ProviderConfig{Provider: providerClaudeCLI, Model: "sonnet"}, ai.ProfileCloudFrontier, 3, quietLogger(),
+		&certifyHooks{candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)}})
+	if err != nil {
+		t.Fatalf("certifyTask: %v", err)
+	}
+	if rec.JudgeProvider != providerClaudeCLI {
+		t.Errorf("judge_provider = %q, want %q", rec.JudgeProvider, providerClaudeCLI)
+	}
+	raw, err := json.Marshal(Record{})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if strings.Contains(string(raw), "judge_provider") {
+		t.Errorf("a record with no judge transport names one, so every committed record would change: %s", raw)
 	}
 }

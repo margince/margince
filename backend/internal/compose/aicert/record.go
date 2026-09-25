@@ -114,6 +114,9 @@ type Record struct {
 	MeanCacheWriteTokens int    `json:"mean_cache_write_tokens"`
 	EstCostMicroUSD      int64  `json:"est_cost_microusd"`
 	JudgeServedModel     string `json:"judge_served_model"`
+	// JudgeProvider is the judge binding's transport — claude_cli, or the
+	// provider adapter it graded through — absent on records that predate it.
+	JudgeProvider string `json:"judge_provider,omitempty"`
 	// SelfJudged is true when selfJudged's family rule matched a graded run.
 	SelfJudged           bool   `json:"self_judged"`
 	ServedIdentitySource string `json:"served_identity_source"`

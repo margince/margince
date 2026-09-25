@@ -278,16 +278,16 @@ e2e-siteread: composition ## Deep-read quality floor vs the real gradion.com (pa
 # costs nothing per run; a run certifying a Claude candidate names another judge.
 # The defaults sit on the exported names, so an operator's environment wins;
 # JUDGE* default to those and override both, and `?=` keeps an explicit empty one
-# empty. BASE_URL carries a broker host — openai_compatible fails closed without
-# one — so the OpenRouter host is set only for an openai_compatible judge; a
-# native vendor judge, and a claude_cli one (the CLI dials its own host), leaves
-# it empty.
+# empty. An openai_compatible judge fails closed without a broker host: it gets
+# the OpenRouter host only when neither BASE_URL nor MARGINCE_AICERT_BASE_URL is
+# set, and otherwise the lane hands it the candidate's broker. A native vendor
+# judge, and a claude_cli one (the CLI dials its own host), leaves it empty.
 AICERT_DEFAULT_JUDGE           := claude_cli:claude-sonnet-4-6
 MARGINCE_AICERT_ROUTING        ?=
 MARGINCE_AICERT_MODEL          ?=
 MARGINCE_AICERT_BASE_URL       ?=
 MARGINCE_AICERT_JUDGE_MODEL    ?= $(AICERT_DEFAULT_JUDGE)
-MARGINCE_AICERT_JUDGE_BASE_URL ?= $(if $(filter openai_compatible:%,$(JUDGE)),https://openrouter.ai/api)
+MARGINCE_AICERT_JUDGE_BASE_URL ?= $(if $(filter openai_compatible:%,$(JUDGE)),$(if $(BASE_URL)$(MARGINCE_AICERT_BASE_URL),,https://openrouter.ai/api))
 JUDGE                          ?= $(MARGINCE_AICERT_JUDGE_MODEL)
 JUDGE_BASE_URL                 ?= $(MARGINCE_AICERT_JUDGE_BASE_URL)
 MARGINCE_AICERT_PROFILE        ?= cloud_frontier

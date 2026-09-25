@@ -318,7 +318,7 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, schema js
 			Format: &anthropicResponseFormat{Type: jsonSchemaFormatType, Schema: schema},
 		}
 	}
-	payload, _, err := sendablePayload(ctx, wire, req.SecretStripper)
+	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
 		return nil, err
 	}

@@ -267,6 +267,10 @@ func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sce
 // is a vendor marking its own homework. An empty identity on either side never
 // counts — that is a missing trace, not a match. The pre-run refusal (sameModel)
 // stays exact on purpose: a same-family judge is allowed, and flagged here.
+// bedrockClaude marks a Bedrock model id serving Claude, whatever region prefix
+// precedes it.
+const bedrockClaude = "anthropic.claude"
+
 func selfJudged(candidateServedModel, judgeServedModel string) bool {
 	if candidateServedModel == "" || judgeServedModel == "" {
 		return false
@@ -290,11 +294,16 @@ func publishesLine(publisher, line string) bool {
 // modelLineage splits a served identity into the publisher a broker prefixes it
 // with ("mistralai" in mistralai/ministral-8b-2512, empty for a bare name) and
 // the model line, the leading letters of the name ("gemini", "gpt" in
-// gpt-oss:20b). Two identities agreeing on either are one family.
+// gpt-oss:20b). Two identities agreeing on either are one family. A Bedrock id
+// spells the publisher with a dot and a region before it
+// (us.anthropic.claude-…), so its Claude is read as anthropic's claude.
 func modelLineage(servedModel string) (publisher, line string) {
 	name := servedModel
 	if slash := strings.LastIndex(servedModel, "/"); slash >= 0 {
 		publisher, name = strings.ToLower(servedModel[:slash]), servedModel[slash+1:]
+	}
+	if at := strings.Index(strings.ToLower(name), bedrockClaude); at >= 0 {
+		publisher, name = "anthropic", name[at+len("anthropic."):]
 	}
 	end := strings.IndexFunc(name, func(r rune) bool { return !unicode.IsLetter(r) })
 	if end < 0 {

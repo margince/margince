@@ -23,10 +23,12 @@ carries its own copy — that file is the dev posture and has to stand alone.
 
 **A thinking-level experiment is not a preset.** A `gemini` tier can name
 `thinking_level:` ([configuration.md](../../docs/reference/configuration.md)),
-but the certification page credits every preset here with the records of the
-models it binds, and a record is filed by provider, model and profile — so a
-sibling preset binding the same Flash-Lite at `low` would be shown
-`gemini_cloud.yaml`'s numbers. Run it from an uncommitted copy instead:
+and every record carries the level it ran at; the certification page credits a
+preset only with records at its own rung's level. A sibling preset binding the
+same Flash-Lite at `low` would therefore read absent until measured. Measuring
+it is the catch: a record is filed by task, provider, model and profile, not
+level, so the run writes over `gemini_cloud.yaml`'s default-level Flash-Lite
+records. Run it from an uncommitted copy instead:
 
 ```sh
 mkdir -p .tmp/aicert
@@ -35,9 +37,9 @@ sed 's/model: gemini-3.1-flash-lite }/model: gemini-3.1-flash-lite, thinking_lev
 make e2e-ai ROUTING=.tmp/aicert/gemini_cloud_thinking_low.yaml
 ```
 
-The run writes over `gemini_cloud.yaml`'s Flash-Lite records, and nothing in a
-record names the level. Commit them only together with the same
-`thinking_level:` in `gemini_cloud.yaml`; otherwise discard them.
+Commit the records only together with the same `thinking_level:` in
+`gemini_cloud.yaml`; otherwise discard them with
+`git restore backend/internal/compose/aicert/records`.
 
 `openrouter_cloud_eu.yaml` fixes the HOST first and takes whatever Mistral
 weights that host serves, which is a different question from

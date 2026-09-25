@@ -401,6 +401,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `fxconversioncallers_test.go` | H2 | Converting money to the base currency happens in ONE place, and this fails when a second appears. |
 | `googleconnectorregistration_test.go` | H2 | The Google connectors are built for the registry in ONE function, because putting one INTO the registry is a decision about REACHABILITY and that decision has been wrong once. |
 | `guardedversion_test.go` | H2 | A nil version is the request's answer, never the call site's. |
+| `harnesstransport_test.go` | H2 | A harness transport stays in the harness: only the cert lane hands the router a client of its own, and only an allowlisted directory shells out. |
 | `integrationmigrateonce_test.go` | H2 | Migrate-once discipline for everything the integration lane compiles, as a fitness function. |
 | `jobargscontent_test.go` | H2 | Job args carry REFERENCES, never content. |
 | `jobfleetscan_test.go` | H2 | The fleet enumeration lives at ratified sites only. |

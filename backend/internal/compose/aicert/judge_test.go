@@ -24,6 +24,8 @@ func TestSelfJudgedFlagsTheCandidatesOwnFamily(t *testing.T) {
 		{"same publisher, different line", "mistralai/ministral-14b-2512", "mistralai/mistral-large-2512", true},
 		{"a direct line under its broker's publisher", "mistral-large-2512", "mistralai/ministral-8b-2512", true},
 		{"same line under a local tag", "openai/gpt-oss-120b", "gpt-oss:20b", true},
+		{"a Bedrock id against Claude's broker identity", "us.anthropic.claude-sonnet-4-5-20250929-v1:0", "anthropic/claude", true},
+		{"a Bedrock id against a bare Claude", "anthropic.claude-3-haiku-20240307-v1:0", "claude-sonnet-4-6", true},
 		{"different vendors", "gemini-3.1-flash-lite", "mistralai/mistral-large-2512", false},
 		{"different vendors, both brokered", "openai/gpt-oss-120b", "z-ai/glm-5.2", false},
 		{"empty candidate never counts as a match", "", "", false},

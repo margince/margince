@@ -319,7 +319,7 @@ func (c *ollamaClient) Embed(ctx context.Context, req model.EmbedRequest) (model
 			"model", embedModel, "estimated_tokens", estimatedTokens,
 			"window_tokens", window, "inputs", len(req.Inputs))
 	}
-	payload, _, err := sendablePayload(ctx,
+	payload, _, err := SendablePayload(ctx,
 		ollamaEmbedWire{Model: embedModel, Input: req.Inputs, Options: &ollamaEmbedOptions{NumCtx: window}}, nil)
 	if err != nil {
 		return model.Embeddings{}, err
@@ -415,7 +415,7 @@ func (c *ollamaClient) sendChat(ctx context.Context, req model.Request, stream b
 	// Sized last: the window has to account for the messages, tools and schema
 	// just assembled, so this cannot move above them.
 	wire.Options = &ollamaOptions{NumPredict: maxTokens, NumCtx: wire.contextWindow(maxTokens)}
-	payload, _, err := sendablePayload(ctx, wire, req.SecretStripper)
+	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
 		return nil, err
 	}
