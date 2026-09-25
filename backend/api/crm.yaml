@@ -37470,6 +37470,31 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        resolution:
+          allOf: [{ $ref: '#/components/schemas/SignalResolution' }]
+          description: |
+            How a human resolved this signal, and who. Null while `status` is
+            `open` or `acknowledged` — only a human outcome appends one.
+
+            The latest, not the history: a signal reopened and resolved again
+            says how it stands now. Every append is kept, and an audit reader
+            is where the earlier ones belong.
+
+    SignalResolution:
+      type: object
+      description: |
+        A human's answer on one signal. `outcome` is the status they set,
+        `note` is what they wrote, `resolved_by` is who they are.
+
+        Written on every human resolution since the table existed and read
+        nowhere until this projection: the note explaining WHY a signal was
+        dismissed was recorded and then invisible to the next reader of it.
+      required: [outcome, resolved_at]
+      properties:
+        outcome: { type: string, enum: [resolved, dismissed], description: 'The status the human set.' }
+        note: { type: [string, 'null'], description: 'What they wrote about it, if anything.' }
+        resolved_by: { type: [string, 'null'], format: uuid, description: 'The colleague who answered; null once their account is deleted.' }
+        resolved_at: { type: string, format: date-time }
 
     SignalEvidence:
       type: object

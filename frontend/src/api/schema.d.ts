@@ -27549,6 +27549,39 @@ export interface components {
             updated_at: string;
             /** Format: date-time */
             archived_at?: string | null;
+            /**
+             * @description How a human resolved this signal, and who. Null while `status` is
+             *     `open` or `acknowledged` — only a human outcome appends one.
+             *
+             *     The latest, not the history: a signal reopened and resolved again
+             *     says how it stands now. Every append is kept, and an audit reader
+             *     is where the earlier ones belong.
+             */
+            resolution?: components["schemas"]["SignalResolution"];
+        };
+        /**
+         * @description A human's answer on one signal. `outcome` is the status they set,
+         *     `note` is what they wrote, `resolved_by` is who they are.
+         *
+         *     Written on every human resolution since the table existed and read
+         *     nowhere until this projection: the note explaining WHY a signal was
+         *     dismissed was recorded and then invisible to the next reader of it.
+         */
+        SignalResolution: {
+            /**
+             * @description The status the human set.
+             * @enum {string}
+             */
+            outcome: "resolved" | "dismissed";
+            /** @description What they wrote about it, if anything. */
+            note?: string | null;
+            /**
+             * Format: uuid
+             * @description The colleague who answered; null once their account is deleted.
+             */
+            resolved_by?: string | null;
+            /** Format: date-time */
+            resolved_at: string;
         };
         SignalEvidence: {
             snippet: string;
