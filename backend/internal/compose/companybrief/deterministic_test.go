@@ -9,6 +9,8 @@ package companybrief
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func briefLines(sentences []Sentence) string {
@@ -23,7 +25,7 @@ func briefLines(sentences []Sentence) string {
 func TestDeterministicOpensWithWhatTheAccountIs(t *testing.T) {
 	text := briefLines(Deterministic(briefCompanyID, Input{
 		Name: "Brandt Automotive GmbH", Industry: "Automotive", SizeBand: "201-500",
-	}))
+	}, "en"))
 	for _, want := range []string{"Brandt Automotive GmbH", "Automotive", "201-500"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the identity line omits %q: %q", want, text)
@@ -39,7 +41,7 @@ func TestDeterministicOpensWithWhatTheAccountIs(t *testing.T) {
 // A field the account does not carry is absent, never guessed — the same
 // evidence-or-omit rule the record page follows.
 func TestDeterministicOmitsWhatTheAccountDoesNotCarry(t *testing.T) {
-	text := briefLines(Deterministic(briefCompanyID, Input{Name: "Acme"}))
+	text := briefLines(Deterministic(briefCompanyID, Input{Name: "Acme"}, "en"))
 	if strings.TrimSpace(text) != "Acme." {
 		t.Errorf("an account with only a name produced %q", text)
 	}
@@ -54,7 +56,7 @@ func TestDeterministicNamesEveryStalledDeal(t *testing.T) {
 			{ID: "d-3", Name: "Spare parts", AmountMinor: 25_000, Currency: "EUR", Stalled: true},
 		},
 	}
-	sentences := Deterministic(briefCompanyID, in)
+	sentences := Deterministic(briefCompanyID, in, "en")
 	text := briefLines(sentences)
 	for _, want := range []string{"Fleet retrofit", "Spare parts"} {
 		if !strings.Contains(text, want) {
@@ -99,7 +101,7 @@ func TestDeterministicPipelineCitesTheLeadingOpenDeal(t *testing.T) {
 		WonLifetime: 1_200_000,
 		WonCurrency: "EUR",
 		LostCount:   3,
-	})
+	}, "en")
 	var pipeline *Sentence
 	for i := range sentences {
 		if strings.Contains(sentences[i].Text, "open deal") {
@@ -126,7 +128,7 @@ func TestDeterministicLastTouchSurvivesAMissingSubject(t *testing.T) {
 	withSubject := briefLines(Deterministic(briefCompanyID, Input{
 		Name:   "Acme",
 		Recent: []ActIn{{ID: "a-1", Kind: "call", Subject: "Pricing", At: "2026-07-10T09:00:00Z"}},
-	}))
+	}, "en"))
 	if !strings.Contains(withSubject, `"Pricing"`) {
 		t.Errorf("the subject is not quoted as theirs: %q", withSubject)
 	}
@@ -134,7 +136,7 @@ func TestDeterministicLastTouchSurvivesAMissingSubject(t *testing.T) {
 	without := briefLines(Deterministic(briefCompanyID, Input{
 		Name:   "Acme",
 		Recent: []ActIn{{ID: "a-1", Kind: "call", At: "2026-07-10T09:00:00Z"}},
-	}))
+	}, "en"))
 	if !strings.Contains(without, "call") {
 		t.Errorf("a subjectless activity lost its kind: %q", without)
 	}
@@ -150,7 +152,7 @@ func TestDeterministicReportsOpenTasks(t *testing.T) {
 			{ID: "t-1", Name: "Send the paperwork"},
 			{ID: "t-2", Name: "Book the walkthrough"},
 		},
-	}))
+	}, "en"))
 	if !strings.Contains(text, "2 open task") {
 		t.Errorf("the task count is missing: %q", text)
 	}
@@ -169,7 +171,7 @@ func TestDeterministicRefusesToTotalAcrossCurrencies(t *testing.T) {
 			{ID: "d-1", Name: "EU deal", AmountMinor: 400_000, Currency: "EUR"},
 			{ID: "d-2", Name: "US deal", AmountMinor: 100_000, Currency: "USD"},
 		},
-	}))
+	}, "en"))
 	if !strings.Contains(text, "2 open deal") {
 		t.Errorf("the deal count is missing: %q", text)
 	}
@@ -192,7 +194,7 @@ func TestDeterministicTotalsPastAnAmountlessDeal(t *testing.T) {
 			{ID: "d-1", Name: "Priced", AmountMinor: 400_000, Currency: "EUR"},
 			{ID: "d-2", Name: "Not priced yet"},
 		},
-	}))
+	}, "en"))
 	if !strings.Contains(text, "4000.00 EUR") {
 		t.Errorf("the priced deal's total is missing: %q", text)
 	}
@@ -207,7 +209,7 @@ func TestDeterministicRefusesATotalWithAnUnknownCurrency(t *testing.T) {
 			{ID: "d-1", Name: "Currency missing", AmountMinor: 100_000},
 			{ID: "d-2", Name: "EU deal", AmountMinor: 400_000, Currency: "EUR"},
 		},
-	}))
+	}, "en"))
 	if strings.Contains(text, "EUR") {
 		t.Errorf("reported an unknown-currency amount as EUR: %q", text)
 	}
@@ -226,7 +228,7 @@ func TestDeterministicLabelsTheWonTotalWithItsOwnCurrency(t *testing.T) {
 		OpenDeals:   []DealIn{{ID: "d-1", Name: "US deal", AmountMinor: 100_000, Currency: "USD"}},
 		WonLifetime: 1_200_000,
 		WonCurrency: "EUR",
-	}))
+	}, "en"))
 	if !strings.Contains(text, "12000.00 EUR won") {
 		t.Errorf("the won total is not in its own currency: %q", text)
 	}
@@ -242,7 +244,7 @@ func TestDeterministicOmitsAWonTotalWithNoCurrency(t *testing.T) {
 		Name:        "Acme",
 		OpenDeals:   []DealIn{{ID: "d-1", Name: "A", AmountMinor: 100_000, Currency: "EUR"}},
 		WonLifetime: 1_200_000,
-	}))
+	}, "en"))
 	if strings.Contains(text, "won to date") {
 		t.Errorf("reported a won total with no currency: %q", text)
 	}
@@ -259,7 +261,7 @@ func TestTheLastContactLineAgreesWithItsArticle(t *testing.T) {
 		"meeting": "Last contact was a meeting",
 		"note":    "Last contact was a note",
 	} {
-		got := lastTouchLine(ActIn{Kind: kind})
+		got := lastTouchLine(ActIn{Kind: kind}, companyCopy[textlang.English])
 		if !strings.HasPrefix(got, want) {
 			t.Errorf("a %q renders %q, want it to start %q", kind, got, want)
 		}
@@ -276,7 +278,7 @@ func TestProfileLinesSkipAStatementThatIsOnlyPunctuation(t *testing.T) {
 			{Field: "icp", Value: "Mittelstand"},
 		},
 	}
-	lines := profileLines(in, accountEvidence("company-1"))
+	lines := profileLines(in, accountEvidence("company-1"), companyCopy[textlang.English])
 	if len(lines) != 1 {
 		t.Fatalf("lines = %+v, want the one statement that says something", lines)
 	}

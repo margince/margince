@@ -134,7 +134,7 @@ func encodeInput(in Input) string {
 func Write(
 	ctx context.Context, lane Completer, contactID string, in Input, lang string,
 ) ([]Sentence, crmcontracts.WrittenBy, error) {
-	floor := Deterministic(contactID, in)
+	floor := Deterministic(contactID, in, lang)
 	if lane == nil {
 		return floor, crmcontracts.WrittenByDeterministic, nil
 	}

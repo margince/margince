@@ -83,10 +83,11 @@ var sectionOrder = []string{
 // Deterministic writes the dossier without a model. Every sentence cites the
 // row it came from, exactly as the model path's must, so a sentence is
 // checkable whichever wrote it.
-func Deterministic(in Input) []Section {
+func Deterministic(in Input, lang string) []Section {
+	labels := labelsFor(lang)
 	bySection := map[string][]claims.Sentence{}
 	for _, field := range in.ProfileFields {
-		sentence, ok := fieldSentence(field)
+		sentence, ok := fieldSentence(field, labels)
 		if !ok {
 			continue
 		}
@@ -113,7 +114,7 @@ func Deterministic(in Input) []Section {
 // page's own heading, and "display name: Acme." restates it under a label
 // nobody wrote for a reader, six lines below where it is already the
 // biggest text on the page.
-func fieldSentence(field crmcontracts.CompanyProfileField) (claims.Sentence, bool) {
+func fieldSentence(field crmcontracts.CompanyProfileField, labels map[crmcontracts.CompanyProfileFieldField]string) (claims.Sentence, bool) {
 	value := strings.TrimSpace(field.Value)
 	if value == "" || field.Id == nil {
 		return claims.Sentence{}, false
@@ -124,7 +125,7 @@ func fieldSentence(field crmcontracts.CompanyProfileField) (claims.Sentence, boo
 	if value == "" {
 		return claims.Sentence{}, false
 	}
-	label, ok := fieldLabels[field.Field]
+	label, ok := labels[field.Field]
 	if !ok {
 		return claims.Sentence{}, false
 	}
@@ -138,32 +139,14 @@ func fieldSentence(field crmcontracts.CompanyProfileField) (claims.Sentence, boo
 	}, true
 }
 
-var fieldLabels = map[crmcontracts.CompanyProfileFieldField]string{
-	crmcontracts.CompanyProfileFieldFieldIcp:               "Ideal customer",
-	crmcontracts.CompanyProfileFieldFieldIndustry:          "Industry",
-	crmcontracts.CompanyProfileFieldFieldCustomerPains:     "Customer pains",
-	crmcontracts.CompanyProfileFieldFieldDesiredOutcomes:   "Desired outcomes",
-	crmcontracts.CompanyProfileFieldFieldOfferSummary:      "What they offer",
-	crmcontracts.CompanyProfileFieldFieldBuyingCenter:      "Buying centre",
-	crmcontracts.CompanyProfileFieldFieldBuyingIntents:     "Buying intents",
-	crmcontracts.CompanyProfileFieldFieldSalesMotion:       "How they sell",
-	crmcontracts.CompanyProfileFieldFieldCommonObjections:  "Common objections",
-	crmcontracts.CompanyProfileFieldFieldUsp:               "What sets them apart",
-	crmcontracts.CompanyProfileFieldFieldValueProposition:  "Value proposition",
-	crmcontracts.CompanyProfileFieldFieldLegalName:         "Legal name",
-	crmcontracts.CompanyProfileFieldFieldRegisterVat:       "Registration",
-	crmcontracts.CompanyProfileFieldFieldRegisteredAddress: "Registered address",
-	crmcontracts.CompanyProfileFieldFieldHistory:           "History",
-}
-
 // fieldLabel turns a column name into something a reader reads, for the
 // RECEIPT a reader opens deliberately having already clicked a citation —
 // unlike a sentence's own label (fieldSentence, above, which skips a field
 // with none rather than guess), a receipt already open needs SOME label for
 // whatever field it names, so an unmapped one falls back to its own column
 // name with the underscores opened out.
-func fieldLabel(field crmcontracts.CompanyProfileFieldField) string {
-	if label, ok := fieldLabels[field]; ok {
+func fieldLabel(field crmcontracts.CompanyProfileFieldField, lang string) string {
+	if label, ok := labelsFor(lang)[field]; ok {
 		return label
 	}
 	return strings.ReplaceAll(string(field), "_", " ")

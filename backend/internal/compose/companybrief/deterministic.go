@@ -23,63 +23,43 @@ import (
 // Deterministic writes the brief without a model. Every sentence cites the
 // record it came from, exactly as the model path's do, so the card renders
 // and behaves identically whichever wrote it.
-func Deterministic(companyID string, in Input) []Sentence {
+func Deterministic(companyID string, in Input, lang string) []Sentence {
+	say := companyPhrasesFor(lang)
 	account := accountEvidence(companyID)
 	sentences := make([]Sentence, 0, 4)
 
-	sentences = append(sentences, Sentence{Text: identityLine(in), Evidence: account})
+	sentences = append(sentences, Sentence{Text: identityLine(in, say), Evidence: account})
 
 	if len(in.OpenDeals) > 0 {
 		sentences = append(sentences, Sentence{
-			Text:     pipelineLine(in),
+			Text:     pipelineLine(in, say),
 			Evidence: leadDealEvidence(in),
 		})
 	}
 	// One sentence per stalled deal, so the reader opens the one they mean
 	// instead of picking between chips hanging off a joined list.
 	sentences = append(sentences,
-		perRecordSentences(stalledDeals(in), citeDeal, dealID, stalledLine)...)
+		perRecordSentences(stalledDeals(in), citeDeal, dealID,
+			func(deal DealIn) string { return stalledLine(deal, say) })...)
 	if len(in.Recent) > 0 {
 		last := in.Recent[0]
 		sentences = append(sentences, Sentence{
-			Text:     lastTouchLine(last),
+			Text:     lastTouchLine(last, say),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: last.ID}},
 		})
 	}
 	if len(in.OpenTasks) > 0 {
 		sentences = append(sentences, Sentence{
-			Text: fmt.Sprintf("%s, starting with %q.",
-				plural(len(in.OpenTasks), "open task"), in.OpenTasks[0].Name),
+			Text: fmt.Sprintf(say.TasksStarting,
+				countPhrase(len(in.OpenTasks), say.OpenTaskOne, say.OpenTaskMany), in.OpenTasks[0].Name),
 			// Cites the task itself, so the reader can open the one named.
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: in.OpenTasks[0].ID}},
 		})
 	}
 	// Then what the company IS. Same two-part shape the model lane is asked
 	// for, so the card reads the same whichever wrote it.
-	sentences = append(sentences, profileLines(in, account)...)
+	sentences = append(sentences, profileLines(in, account, say)...)
 	return claims.Dedupe(sentences)
-}
-
-// profileLabels turn a stored field name into the question it answers.
-//
-// Label and value are joined with a colon, never grammatically. These values
-// are whatever a human accepted off a site read: some are noun phrases and
-// some are whole sentences in the company's own language, and a lead-in that
-// reads as a sentence stem produced "They sell Als unabhängige Beratung helfen
-// wir…" on a real account. A colon is true of both shapes.
-//
-// The floor states the statement verbatim behind that label — it paraphrases
-// nothing, because a paraphrase nobody can check is worth less than the
-// sentence a human already accepted.
-var profileLabels = map[string]string{
-	"offer_summary":     "What they sell",
-	"icp":               "Who they sell to",
-	"value_proposition": "What they promise",
-	"usp":               "How they differentiate",
-	"customer_pains":    "What they solve",
-	"desired_outcomes":  "What their customers want",
-	"buying_center":     "Who decides there",
-	"sales_motion":      "How they sell",
 }
 
 // deterministicProfileLines bounds the company half of the floor. Two
@@ -87,13 +67,13 @@ var profileLabels = map[string]string{
 // reader can open underneath.
 const deterministicProfileLines = 2
 
-func profileLines(in Input, account []Evidence) []Sentence {
+func profileLines(in Input, account []Evidence, say companyPhrases) []Sentence {
 	out := make([]Sentence, 0, deterministicProfileLines)
 	for _, entry := range in.Profile {
 		if len(out) == deterministicProfileLines {
 			break
 		}
-		label, ok := profileLabels[entry.Field]
+		label, ok := say.ProfileLabels[entry.Field]
 		if !ok {
 			continue
 		}
@@ -111,39 +91,38 @@ func profileLines(in Input, account []Evidence) []Sentence {
 	return out
 }
 
-func identityLine(in Input) string {
+func identityLine(in Input, say companyPhrases) string {
 	parts := []string{in.Name}
 	if in.Industry != "" {
 		parts = append(parts, in.Industry)
 	}
 	if in.SizeBand != "" {
-		parts = append(parts, in.SizeBand+" contacts")
+		parts = append(parts, fmt.Sprintf(say.ContactsSuffix, in.SizeBand))
 	}
 	line := strings.Join(parts, ", ") + "."
 	if in.ContactCount > 0 {
 		// The score is reported with the contact count it was taken over, so
 		// a strong number from one contact never reads like a broad
 		// relationship.
-		line += fmt.Sprintf(" Relationship strength %d across %d known contact(s).",
-			in.Strength, in.ContactCount)
+		line += fmt.Sprintf(say.StrengthClause, in.Strength, in.ContactCount)
 	}
 	return line
 }
 
-func pipelineLine(in Input) string {
-	line := plural(len(in.OpenDeals), "open deal")
+func pipelineLine(in Input, say companyPhrases) string {
+	line := countPhrase(len(in.OpenDeals), say.OpenDealOne, say.OpenDealMany)
 	total, currency, ok := oneCurrencyTotal(in.OpenDeals)
 	if ok && total > 0 {
 		// Minor units are rendered as a plain major-unit figure; the card
 		// formats money properly, and this text is the fallback.
-		line += " worth about " + values.MajorUnits(total, currency) + " " + currency
+		line += fmt.Sprintf(say.WorthAbout, values.MajorUnits(total, currency), currency)
 	}
 	// The won total carries its OWN currency: the 360 converts it to the
 	// workspace base at each deal's frozen close-time rate, which has no
 	// relation to whatever the open deals are priced in. Labelling it with
 	// the open currency reported a real figure under the wrong unit.
 	if in.WonLifetime > 0 && in.WonCurrency != "" {
-		line += "; " + values.MajorUnits(in.WonLifetime, in.WonCurrency) + " " + in.WonCurrency + " won to date"
+		line += fmt.Sprintf(say.WonToDate, values.MajorUnits(in.WonLifetime, in.WonCurrency), in.WonCurrency)
 	}
 	return line + "."
 }
@@ -201,46 +180,54 @@ func leadDealEvidence(in Input) []Evidence {
 	return []Evidence{{EntityType: citeDeal, EntityID: in.OpenDeals[0].ID}}
 }
 
-func stalledLine(deal DealIn) string {
-	return fmt.Sprintf("%s is stalled with no recent activity.", deal.Name)
+func stalledLine(deal DealIn, say companyPhrases) string {
+	return fmt.Sprintf(say.StalledDeal, deal.Name)
 }
 
-// article is "an" before a vowel sound and "a" otherwise. The activity kinds
-// this reaches are a closed, ASCII, lower-case set (email, call, meeting,
-// note, task…), so first-letter agreement is exact for all of them rather
-// than approximately right — and "a email" in a sentence written for a
-// salesperson is the register this whole surface is leaving behind.
-func article(noun string) string {
-	if noun == "" {
-		return "a"
+// kindNoun names an activity kind as a whole noun phrase in the reader's
+// language — article and all where the language has one.
+//
+// English chose the article from the first letter, which is English grammar and
+// nothing else: German picks by gender (eine E-Mail, ein Anruf) and Vietnamese
+// uses no article at all. A kind the table does not name renders as its stored
+// key, which says only that something happened — the honest reading of a row
+// this build has no word for.
+func kindNoun(kind string, say companyPhrases) string {
+	if noun, ok := say.KindNouns[kind]; ok {
+		return noun
 	}
-	if strings.ContainsRune("aeiou", rune(noun[0])) {
-		return "an"
-	}
-	return "a"
+	return kind
 }
 
-func lastTouchLine(last ActIn) string {
-	line := "Last contact was " + article(last.Kind) + " " + last.Kind
-	if when := shortDate(last.At); when != "" {
-		line += " on " + when
+func lastTouchLine(last ActIn, say companyPhrases) string {
+	noun := kindNoun(last.Kind, say)
+	when := shortDate(last.At, say)
+	switch {
+	case when != "" && last.Subject != "":
+		// The subject is quoted rather than woven into the sentence: it is text
+		// from outside the workspace, and it must read as theirs, not ours.
+		return fmt.Sprintf(say.LastContactFull, noun, when, last.Subject)
+	case when != "":
+		return fmt.Sprintf(say.LastContactDated, noun, when)
+	case last.Subject != "":
+		return fmt.Sprintf(say.LastContactSubject, noun, last.Subject)
+	default:
+		return fmt.Sprintf(say.LastContactPlain, noun)
 	}
-	if last.Subject == "" {
-		return line + "."
-	}
-	// The subject is quoted rather than woven into the sentence: it is text
-	// from outside the workspace, and it must read as theirs, not ours.
-	return fmt.Sprintf("%s: %q.", line, last.Subject)
 }
 
-// plural renders a count with the noun it counts. "3 open task(s)" is a
-// developer's shorthand printed at a salesperson, which is the register this
-// whole surface is trying to leave behind.
-func plural(count int, noun string) string {
+// countPhrase renders a count with the noun it counts, from the singular and
+// plural its language supplies.
+//
+// English formed the plural by appending "s", which is wrong in the two other
+// languages the product ships: German inflects irregularly (Aufgabe/Aufgaben)
+// and Vietnamese does not inflect at all. So the sentence comes from the table
+// rather than from a rule.
+func countPhrase(count int, one, many string) string {
 	if count == 1 {
-		return "1 " + noun
+		return one
 	}
-	return fmt.Sprintf("%d %ss", count, noun)
+	return fmt.Sprintf(many, count)
 }
 
 // shortDate renders an RFC3339 instant the way a reader writes a date, and
@@ -250,9 +237,8 @@ func plural(count int, noun string) string {
 // printing a machine timestamp at the reader. The instants are formatted by
 // this package's own folds, so an unreadable one is a defect upstream of here
 // rather than a fact about the account — and the sentence around it is still
-// true without the date. The year is always named because these writers hold
-// no clock, and "21 Jul" on a task from last year reads as this year.
-func shortDate(at string) string {
+// true without the date. The layout is the language's own.
+func shortDate(at string, say companyPhrases) string {
 	if at == "" {
 		return ""
 	}
@@ -260,7 +246,7 @@ func shortDate(at string) string {
 	if err != nil {
 		return ""
 	}
-	return parsed.UTC().Format("2 Jan 2006")
+	return parsed.UTC().Format(say.DateLayout)
 }
 
 // DeterministicSections is the floor in the shape the card renders: the same
@@ -270,21 +256,23 @@ func shortDate(at string) string {
 // judgment about what this account is worth to US, and a judgment is exactly
 // what a floor with no model cannot make. A heading over a restated fact would
 // claim an assessment nobody performed.
-func DeterministicSections(companyID string, in Input) []Section {
+func DeterministicSections(companyID string, in Input, lang string) []Section {
+	say := companyPhrasesFor(lang)
 	account := accountEvidence(companyID)
 	sections := make([]Section, 0, 4)
 
 	// What the company IS: its identity, then the curated statements a human
 	// already accepted, quoted rather than paraphrased.
-	snapshot := append([]Sentence{{Text: identityLine(in), Evidence: account}},
-		profileLines(in, account)...)
+	snapshot := append([]Sentence{{Text: identityLine(in, say), Evidence: account}},
+		profileLines(in, account, say)...)
 	sections = append(sections, Section{Kind: sectionSnapshot, Sentences: snapshot})
 
 	var health []Sentence
 	if len(in.OpenDeals) > 0 {
-		health = append(health, Sentence{Text: pipelineLine(in), Evidence: leadDealEvidence(in)})
+		health = append(health, Sentence{Text: pipelineLine(in, say), Evidence: leadDealEvidence(in)})
 	}
-	health = append(health, perRecordSentences(stalledDeals(in), citeDeal, dealID, stalledLine)...)
+	health = append(health, perRecordSentences(stalledDeals(in), citeDeal, dealID,
+		func(deal DealIn) string { return stalledLine(deal, say) })...)
 	if len(health) > 0 {
 		sections = append(sections, Section{Kind: sectionHealth, Sentences: claims.Dedupe(health)})
 	}
@@ -293,7 +281,7 @@ func DeterministicSections(companyID string, in Input) []Section {
 	if len(in.Recent) > 0 {
 		last := in.Recent[0]
 		activity = append(activity, Sentence{
-			Text:     lastTouchLine(last),
+			Text:     lastTouchLine(last, say),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: last.ID}},
 		})
 	}
@@ -303,8 +291,8 @@ func DeterministicSections(companyID string, in Input) []Section {
 
 	if len(in.OpenTasks) > 0 {
 		sections = append(sections, Section{Kind: sectionNextStep, Sentences: []Sentence{{
-			Text: fmt.Sprintf("%s, starting with %q.",
-				plural(len(in.OpenTasks), "open task"), in.OpenTasks[0].Name),
+			Text: fmt.Sprintf(say.TasksStarting,
+				countPhrase(len(in.OpenTasks), say.OpenTaskOne, say.OpenTaskMany), in.OpenTasks[0].Name),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: in.OpenTasks[0].ID}},
 		}}})
 	}
