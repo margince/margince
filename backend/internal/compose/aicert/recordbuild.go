@@ -27,9 +27,8 @@ import (
 
 // buildRecord folds one task's pooled runs (across every scenario, every
 // repeat) and its already-folded taskVerdict into the on-disk Record
-// shape. Score/latency percentiles are computed directly here (not via
-// Verdict, which is scoped to one scenario's odd-N run set and would
-// panic on a multi-scenario task's pooled, possibly-even count).
+// shape. Score/latency percentiles are computed directly here: Verdict answers
+// a grade, not the pooled percentiles a record reports beside it.
 //
 // The run set arrives as the accumulation certifyTask folded it into, rather
 // than as one parameter per number: the record IS that accumulation written

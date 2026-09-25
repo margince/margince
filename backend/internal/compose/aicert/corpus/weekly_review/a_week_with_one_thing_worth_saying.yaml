@@ -29,7 +29,8 @@ expect:
   answer:
     # The won deal is the week's headline: a colleague says that first, not
     # "you completed five of six tasks".
-    must_mention: ["Weber", "won"]
+    # Any form of the win: "won", "winning" and "closed" say one fact.
+    must_mention: ["Weber", ["won", "win", "closed", "closing"]]
     # Nothing the summary does not carry. These are the shapes a model reaches
     # for when it has run out of facts: a company it was never given, and a
     # comparison to a week it cannot see.

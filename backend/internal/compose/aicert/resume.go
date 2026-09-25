@@ -378,19 +378,35 @@ func (j *runJournal) replaysEverything(ctx context.Context, cfg RunnerConfig, by
 		if err != nil {
 			return false
 		}
-		view := j.forTask(task, candidate, judge)
-		for _, sc := range scenarios {
-			for run := 1; run <= repeats; run++ {
-				if _, ok := view.lookup(sc, stamps[sc.Name], run); !ok {
-					return false
-				}
-			}
+		if !j.forTask(task, candidate, judge).replaysRounds(scenarios, stamps, repeats) {
+			return false
 		}
 	}
 	return true
 }
 
-// taskJournal is one task's view of the journal, so runScenario carries a
+// errNotJournaled stops replaysRounds at the first run the journal lacks.
+var errNotJournaled = errors.New("aicert: run not journaled")
+
+// replaysRounds reports whether every run this task's adaptive rounds would
+// make is journaled — the extensions included, which the replayed outcomes
+// decide exactly as the live ones did.
+func (t taskJournal) replaysRounds(scenarios []Scenario, stamps map[string]string, repeats int) bool {
+	bands := make([]Bands, len(scenarios))
+	for i, sc := range scenarios {
+		bands[i] = sc.Expect.Bands
+	}
+	_, err := runRounds(bands, repeats, adaptiveMaxRuns, func(i, run int) (RunResult, error) {
+		out, ok := t.lookup(scenarios[i], stamps[scenarios[i].Name], run)
+		if !ok {
+			return RunResult{}, errNotJournaled
+		}
+		return out.RunResult, nil
+	})
+	return err == nil
+}
+
+// taskJournal is one task's view of the journal, so a taskDriver carries a
 // single value instead of a file, two bindings and a task name.
 type taskJournal struct {
 	j                *runJournal

@@ -25,6 +25,10 @@ Analyze only how the author writes and thinks.
 The supplied deterministic statistics are ground truth. Do not invent quotations or examples.
 Describe concrete, repeatable behavior rather than flattering adjectives. The thinking_pattern is the headline: the repeated cognitive move as ordered steps, because reproducing the thinking matters more than reproducing the words.
 register_notes says how the writing changes between the registers the samples are labelled with — for a customer against a colleague, spoken against written — because every draft is written in one of them; keep them distinct rather than averaging them into one voice. Avoid topic facts, names, customers, secrets and opinions that do not describe style.
+Three lists are the easiest place to break that rule, because each reads like content:
+observed_obsessions: what the author's reasoning keeps returning to (what they check, weigh or refuse), never a subject they write about.
+vocabulary: words the author reaches for whatever the topic, never a term of their trade, a product or a figure.
+closings: how a message ends, described as a move, never a sign-off or its wording.
 Every signature move must quote a short verbatim fragment from a supplied sample and cite that sample's id.
 The universal anti-AI baseline always forbids parenthetical em dashes, abstract not-X-but-Y reframes, canned engagement openers, balanced consultant tricolons, generic calls to action and corporate filler.
 Return only the requested JSON object.`

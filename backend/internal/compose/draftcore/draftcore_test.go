@@ -102,22 +102,25 @@ func TestTheModelIsNeverAskedMoreThanTwice(t *testing.T) {
 	}
 }
 
-// A retry that makes things WORSE is discarded. Strictly worse: a TIE goes to
-// the retry, because both attempts carry one finding often enough to matter —
-// the model swaps "circling back" for "checking in" — and the retried one was
-// at least written with the correction in hand.
-func TestOnlyAStrictlyWorseRetryIsDiscarded(t *testing.T) {
+// Only a strictly better retry is served. A TIE goes to the first attempt: the
+// retry was told what to fix and did not fix it, and the first is what the
+// prompt alone produced — the correction's cost is the part the check cannot see.
+func TestOnlyAStrictlyBetterRetryIsServed(t *testing.T) {
 	tied := &scripted{bodies: []string{
 		"Hi Priya, just circling back on this.",
 		"Hi Priya, just checking in on this.",
 	}}
+	seen := &recorder{}
 	got, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, tied.write, bodyOf, nil, nil)
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, tied.write, bodyOf, nil, seen)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.body != tied.bodies[1] {
-		t.Errorf("a tie should go to the corrected attempt, got %q", got.body)
+	if got.body != tied.bodies[0] {
+		t.Errorf("a tie should go to the first attempt, got %q", got.body)
+	}
+	if len(seen.servedRetry) != 1 || seen.servedRetry[0] {
+		t.Errorf("the log should say the first attempt was served, got %v", seen.servedRetry)
 	}
 
 	lane := &scripted{bodies: []string{
@@ -178,13 +181,15 @@ func (f *failOnRetry) write(context.Context, string) (draft, error) {
 // recorder captures what the loop reported, so the observability the loop took
 // over from its callers is proven rather than assumed.
 type recorder struct {
-	failed     int
-	notCleared []string
+	failed      int
+	notCleared  []string
+	servedRetry []bool
 }
 
 func (r *recorder) RetryFailed(context.Context, int, error) { r.failed++ }
-func (r *recorder) RetryDidNotClear(_ context.Context, _ draftcheck.Rule, phrase string, _ int) {
+func (r *recorder) RetryDidNotClear(_ context.Context, _ draftcheck.Rule, phrase string, _ int, served bool) {
 	r.notCleared = append(r.notCleared, phrase)
+	r.servedRetry = append(r.servedRetry, served)
 }
 
 // A retry that does not help is invisible from the outside — the caller gets a
@@ -287,7 +292,7 @@ func TestTheUnclearedRetryIsReportedWithItsSeverity(t *testing.T) {
 type severityRecorder struct{ rules []draftcheck.Rule }
 
 func (severityRecorder) RetryFailed(context.Context, int, error) {}
-func (r *severityRecorder) RetryDidNotClear(_ context.Context, rule draftcheck.Rule, _ string, _ int) {
+func (r *severityRecorder) RetryDidNotClear(_ context.Context, rule draftcheck.Rule, _ string, _ int, _ bool) {
 	r.rules = append(r.rules, rule)
 }
 

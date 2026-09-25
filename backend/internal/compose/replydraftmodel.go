@@ -212,14 +212,22 @@ func (l draftRetryLog) RetryFailed(ctx context.Context, findings int, err error)
 		"findings", findings, "err", err)
 }
 
-func (l draftRetryLog) RetryDidNotClear(ctx context.Context, rule draftcheck.Rule, phrase string, remaining int) {
+func (l draftRetryLog) RetryDidNotClear(ctx context.Context, rule draftcheck.Rule, phrase string, remaining int, servedRetry bool) {
 	// The SEVERITY is logged beside the rule, because "the retry did not clear"
 	// is a different event for a false claim than for a phrasing tic, and an
 	// operator scanning these lines should not have to know every rule by name
 	// to tell them apart.
 	l.log.WarnContext(ctx, "draft still carries a rejected phrase after one retry",
 		"rule", rule.Name(), "severity", severityName(rule.Severity()),
-		"phrase", phrase, "remaining_rules", remaining)
+		"phrase", phrase, "remaining_rules", remaining, "served", servedAttempt(servedRetry))
+}
+
+// servedAttempt names which draft the loop served, for the same log line.
+func servedAttempt(retry bool) string {
+	if retry {
+		return "retry"
+	}
+	return "first"
 }
 
 // severityName renders a severity for a log line. A word rather than the

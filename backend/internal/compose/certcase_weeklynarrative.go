@@ -17,6 +17,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -39,10 +40,42 @@ type weeklyNarrativeExpectation struct {
 	// MustMention are substrings the sentence has to carry — a deal that was
 	// won, a number that is the week's headline. Matched case-insensitively,
 	// because the sentence is prose and its capitalisation is the model's.
-	MustMention []string `json:"must_mention"`
+	MustMention []mentionForms `json:"must_mention"`
 	// MustNotMention are the words that would mean the model reached past the
 	// summary: a company nobody gave it, a judgement nobody asked for.
 	MustNotMention []string `json:"must_not_mention"`
+}
+
+// mentionForms is one thing the sentence must say, in any of the forms that say
+// it: "won" and "winning" are one fact, and prose picks its own inflection. A
+// scenario writes a bare string for a thing with one form.
+type mentionForms []string
+
+func (m *mentionForms) UnmarshalJSON(raw []byte) error {
+	var single string
+	if err := json.Unmarshal(raw, &single); err == nil {
+		*m = mentionForms{single}
+		return nil
+	}
+	var forms []string
+	if err := json.Unmarshal(raw, &forms); err != nil {
+		return fmt.Errorf("a must_mention entry is a string or a list of its forms: %w", err)
+	}
+	if len(forms) == 0 {
+		return errors.New("a must_mention entry lists no form, so no sentence could carry it")
+	}
+	*m = forms
+	return nil
+}
+
+// foundIn reports whether the lower-cased sentence carries any of the forms.
+func (m mentionForms) foundIn(lower string) bool {
+	for _, form := range m {
+		if strings.Contains(lower, strings.ToLower(form)) {
+			return true
+		}
+	}
+	return false
 }
 
 // weeklyNarrativeCases serves the one site that writes a week's sentence.
@@ -130,10 +163,10 @@ func (c *weeklyNarrativeCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	}
 	lower := strings.ToLower(sentence)
 	for _, must := range c.want.MustMention {
-		if !strings.Contains(lower, strings.ToLower(must)) {
+		if !must.foundIn(lower) {
 			return aitasks.Outcome{
 				Result: aitasks.OutcomeWrongAnswer,
-				Detail: fmt.Sprintf("the sentence does not mention %q: %q", must, sentence),
+				Detail: fmt.Sprintf("the sentence does not mention %s: %q", strings.Join(must, " or "), sentence),
 			}
 		}
 	}

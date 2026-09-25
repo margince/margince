@@ -24,9 +24,9 @@ func TestRepeatsOrDefault(t *testing.T) {
 		wantErr bool
 	}{
 		{"zero defaults to three", 0, 3, false},
-		{"valid odd", 5, 5, false},
+		{"odd is valid", 5, 5, false},
 		{"one is valid", 1, 1, false},
-		{"even is refused", 4, 0, true},
+		{"even is valid", 4, 4, false},
 		{"negative is refused", -1, 0, true},
 	}
 	for _, c := range cases {

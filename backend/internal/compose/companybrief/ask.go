@@ -76,8 +76,8 @@ State only what the summary states. Never infer a cause, a mood, an intent or a 
 Cite the ids the summary gave you; a sentence about the account itself cites the company.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
 Write one claim per sentence, and cite the ONE record that sentence is about. Three records worth naming are three sentences.
-If the summary does not answer the question, return an empty sentences array rather than a sentence that talks around it.
-If the summary names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
+If the summary names sections_omitted, leave those subjects out of the answer and say nothing about them at all — the reader is not allowed to see them. A withheld section does not make the question unanswerable: answer from what remains.
+If what remains does not answer the question, return an empty sentences array rather than a sentence that talks around it.`
 
 // The answer is filed against the account and read by whoever asks the same
 // question next, so it takes the installation's language like the brief above.

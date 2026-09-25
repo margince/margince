@@ -165,7 +165,7 @@ func TestCertifyTaskVoidsARecordWhenOneRunWasAnsweredByTwoModels(t *testing.T) {
 		ai.FakeStep{Err: errors.New("cheap_cloud: transient provider error")},       // call 2 fails on the first rung
 		ai.FakeStep{Text: "the widget is blue and durable", ServedModel: "model-b"}, // call 2 falls back and serves
 	)
-	judgeFake := ai.NewFakeClient().Script(scoreJSON(90))
+	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
 
 	sc := testScenarioOnSite("basic", retryVariant, wideBands)
 	_, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, retryCensus(t),
@@ -210,7 +210,8 @@ func certifiedTokens(t *testing.T, census *aitasks.Registry, sc Scenario, calls 
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(replies...))},
-			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(scoreJSON(90)))},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(opinionsOf(90, 1)...))},
+			maxRuns:       1,
 		})
 	if err != nil {
 		t.Fatalf("certifyTask: %v", err)

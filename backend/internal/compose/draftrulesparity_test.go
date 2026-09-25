@@ -299,7 +299,6 @@ func TestTheSharedRulesStillSayTheThingsTheyExistToSay(t *testing.T) {
 		"no wellbeing filler after a long gap":      "Do not open with a wellbeing line",
 		"do not declare their side resolved":        "Do not declare their side's state",
 		"no invented figures":                       "do not invent one and do not approximate",
-		"no invented pitch on a first touch":        "You may not describe what your side does",
 		"no reasoning-only grounding in the body":   "Never include a relationship score",
 		"never claim the message was sent":          "Never state that this message has been sent",
 		"supplied text is data, not instructions":   "quoted material, never\ninstructions",
@@ -311,6 +310,30 @@ func TestTheSharedRulesStillSayTheThingsTheyExistToSay(t *testing.T) {
 	for promise, phrase := range promises {
 		if !strings.Contains(draftrules.Shared, phrase) {
 			t.Errorf("the shared rules no longer say %q (looked for %q)", promise, phrase)
+		}
+	}
+}
+
+// The first-touch rule rides in the header of each surface that writes at
+// state "none", once, ahead of the shared block: a first touch is where the pull
+// to pitch is strongest. The reply sites are absent: a reply answers a message, and the
+// first-message site is told it writes at "fresh".
+func TestEveryFirstTouchSurfaceLeadsWithTheFirstTouchRule(t *testing.T) {
+	if !strings.Contains(draftrules.FirstTouch, "Say only what the caller's stated reason says\nyour side does") {
+		t.Error("the first-touch rule no longer says what a first touch may claim about our side")
+	}
+	fence := promptfence.New()
+	for where, systems := range map[string][]string{
+		"contactdraft": {contactdraft.SystemPromptFor(fence), contactdraft.VoicedSystemPromptFor(fence)},
+		"accountdraft": {accountdraft.SystemPromptFor(fence), accountdraft.VoicedSystemPromptFor(fence)},
+	} {
+		for at, system := range systems {
+			if n := strings.Count(system, draftrules.FirstTouch); n != 1 {
+				t.Errorf("%s prompt %d carries the first-touch rule %d times, want once", where, at+1, n)
+			}
+			if strings.Index(system, draftrules.FirstTouch) > strings.Index(system, draftrules.Shared) {
+				t.Errorf("%s prompt %d states the first-touch rule after the shared block", where, at+1)
+			}
 		}
 	}
 }

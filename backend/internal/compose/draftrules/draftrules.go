@@ -21,6 +21,23 @@
 // what keeps a counterparty's own text from redefining who the sender is.
 package draftrules
 
+// FirstTouch is what a draft opening a conversation may say about our side.
+//
+// Not in Shared: it binds only the surfaces that write at state "none", and it
+// goes first in their header, because a first touch is where invention is most
+// tempting and a rule's weight falls with its depth in the prompt.
+const FirstTouch = `FIRST TOUCH
+At conversation state "none" the recipient has never heard from your side, and
+you have the least to write from. Say only what the caller's stated reason says
+your side does, in its terms: if it says you build quoting software for machine
+builders, say exactly that. Add no benefit, no product name or "solution", no
+claim to have followed their company and no problem they have — none of that
+was given to you. Write from who they are, where they work, and the stated
+reason, including what it says about who is writing, then ask for one
+conversation. That short honest opener is the correct output; a longer one that
+invents a pitch is worse, because the rep has to notice the invention before
+sending.`
+
 // Shared is the rules block. One string, imported by all three drafting
 // surfaces, asserted identical by TestEveryDraftingSurfaceCarriesTheSharedRules.
 //
@@ -93,16 +110,6 @@ since either side wrote.
 - At state "none" there is no prior contact with this recipient. Do not follow up,
   do not check in, do not refer to an earlier message, a previous conversation
   or anything "we discussed". Give a reason for writing instead.
-  A first touch is also where invention is most tempting, because you have the
-  least to work with. You may not describe what your side does, sells, offers or
-  specializes in beyond what the caller's stated reason says, name a product or
-  a "solution", claim to have followed the recipient's company, or assert a
-  problem they have — none of that was given to you. Write from what you WERE
-  given: who they are, where they work, and the caller's stated reason for
-  writing, including what it says about who is writing. A short honest opener
-  that asks for a conversation is the correct output, and a longer one that
-  invents a pitch is worse than useless, because the rep has to notice the
-  invention before sending.
 - At state "fresh" the exchange is live. Write as a normal next turn.
 - At state "weeks" or "months" the recipient has been doing other things and does
   NOT have the earlier exchange in mind. Say in one plain clause that time has

@@ -89,12 +89,13 @@ func certifyOnce(t *testing.T, dir string, sc Scenario, candidate, judge *ai.Fak
 	return rec, err
 }
 
-// answeringFakes are a candidate and judge that certify every run.
+// answeringFakes are a candidate and judge that certify every run a case can
+// reach, its adaptive extensions included.
 func answeringFakes() (*ai.FakeClient, *ai.FakeClient) {
 	candidate, judge := ai.NewFakeClient(), ai.NewFakeClient()
-	for range testRepeats {
+	for range adaptiveMaxRuns {
 		candidate.Script(containsWidget)
-		judge.Script(scoreJSON(90))
+		judge.Script(opinionsOf(90, 1)...)
 	}
 	return candidate, judge
 }
@@ -105,7 +106,7 @@ func answeringFakes() (*ai.FakeClient, *ai.FakeClient) {
 func refusingFakes(t *testing.T) (*ai.FakeClient, *ai.FakeClient) {
 	t.Helper()
 	var steps []ai.FakeStep
-	for range ladderRungs(t) * runAttempts * testRepeats {
+	for range ladderRungs(t) * runAttempts * adaptiveMaxRuns {
 		steps = append(steps, ai.FakeStep{Err: errDroppedConnection})
 	}
 	return ai.NewFakeClient().ScriptSteps(steps...), ai.NewFakeClient().ScriptSteps(steps...)
@@ -119,6 +120,10 @@ func TestAJournaledRunIsReplayedInsteadOfPaidForAgain(t *testing.T) {
 	first, err := certifyOnce(t, dir, sc, candidate, judge)
 	if err != nil {
 		t.Fatalf("first certification: %v", err)
+	}
+	if first.Runs != adaptiveMaxRuns {
+		t.Fatalf("the first certification made %d runs, want its case extended to %d — the replay below must cover the extensions too",
+			first.Runs, adaptiveMaxRuns)
 	}
 
 	// Nothing here can answer. Every run of this record must come off the

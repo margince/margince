@@ -216,11 +216,11 @@ func TestAMeetingTheIntentNamesGroundsNoCall(t *testing.T) {
 	}
 }
 
-// A chip labelled with the rep's own purpose trips the introduction stem, and
-// the correction has to say the fault was in the LABEL: told only "do not write
-// vorstell", the retry strips the sender's self-introduction from a good body.
+// A chip claiming an introduction is corrected as a label: told only "do not
+// write introduced by", the retry strips the sender's self-introduction from a
+// good body.
 func TestALabelFindingIsCorrectedAsALabel(t *testing.T) {
-	findings := Reasoning([]string{"Mich kurz vorstellen"}, textlang.German, convstate.BandNone)
+	findings := Reasoning([]string{"Folgekontakt nach Intro"}, textlang.German, convstate.BandNone)
 	if len(findings) == 0 || !findings[0].InLabel {
 		t.Fatalf("the chip finding should be marked as a label finding, got %+v", findings)
 	}

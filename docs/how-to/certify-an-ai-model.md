@@ -82,9 +82,9 @@ make e2e-ai TASK=cold_start MODEL=gemini:gemini-3.1-flash-lite
 ```
 
 This certifies **the model you name**, not any binding this installation holds.
-It runs every scenario in the task's corpus `N` times (an odd number, with
-response caching off so every run is a fresh model call), judges each answer, and
-prints the verdict:
+It runs every scenario in the task's corpus `N` times (response caching off, so
+every run is a fresh model call), runs a borderline scenario more (see below),
+judges each answer, and prints the verdict:
 
 ```text
 cold_start: certified (reliability=1.00 judge_score_p50=100 self_judged=false)
@@ -144,7 +144,7 @@ A broker slug may carry its own variant suffix (`:free`, `:batch`, `:thinking`);
 the provider/model split cuts at the FIRST colon, so
 `openai_compatible:openai/gpt-oss-20b:free` binds the whole slug.
 
-Other knobs: `RUNS=5` (odd repeat count), `PROFILE=` (environment class),
+Other knobs: `RUNS=5` (first round; 9+ turns extension off), `PROFILE=` (environment class),
 `JUDGE_BASE_URL=` for an `openai_compatible` judge — unset, it rides the
 candidate's `BASE_URL=` (or `MARGINCE_AICERT_BASE_URL`), and the OpenRouter host
 only when neither is set.
@@ -315,19 +315,19 @@ every whole run before the cut. One run owns a directory at a time — parallel
 
 ## How the verdict is decided
 
-Each run either **HardPasses** — the site's own production validator accepted
-the reply, the reply is the answer the scenario expects, and the run stayed
-inside its token/latency caps — or fails. The judge scores the answer 0–100
-against the rubric. `certified` takes a pooled pass **rate** (so the bar does not
-rise with the corpus), a majority of every scenario's own runs (so one case that
-always fails cannot hide in the pool), and every scenario's median and minimum
-score at its bands; `supported_degraded` a pooled majority and medians at
-`degraded_min`; anything else, including a scenario no judge scored, is
-`not_supported`. The numbers are in [The exact rule](../reference/ai-certification.md#how-the-scoring-works),
-and every one lives in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go):
-edit it there, bump `gradingRule`, and regenerate the page. **reliability** is the
-fraction of runs that HardPassed (0–1), the number to trend. A run whose served
-model is not uniform (a fallback, between runs or calls) **voids** the record: you cannot certify a moving target.
+A run **HardPasses** when the site's own validator accepted the reply, it is the
+answer the scenario expects, and it stayed inside its caps. The judge scores it
+0–100 three times on every run (re-asking only low scores biased it upward) and
+the run takes the median. [The exact rule](../reference/ai-certification.md#how-the-scoring-works)
+pools the task's scenarios: `certified` needs 90% passing with a one-sided 90%
+Wilson bound of 80%, half of each scenario's runs, and the runs' margins over
+their own `certified_min` averaging ≥ 0 at a t lower bound; `supported_degraded`
+two thirds, and the margin over `degraded_min`. A **veto** keeps a broken
+scenario from being averaged away; one no judge scored is `not_supported`. A
+borderline scenario runs 3 more times, up to 9 (a lone one always does), and a
+resume replays the same extensions. Every number is in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go)
+(edit, bump `gradingRule`, regenerate). **reliability** is the HardPass fraction,
+the number to trend. A served model not uniform across runs or calls **voids** the record: you cannot certify a moving target.
 
 A run is not always one model call — a site may retry, fall back, or turn a tool
 loop — and everything the run is judged and charged for is pooled across all of

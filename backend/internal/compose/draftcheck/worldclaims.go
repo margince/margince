@@ -296,3 +296,28 @@ var scheduledArrangement = map[textlang.Lang][]string{
 		"cuộc họp ngày mai", "buổi demo ngày mai", "đã lên lịch ngày mai",
 	},
 }
+
+// directedIntroduction are the ways a draft says who introduced, referred or
+// put in touch whom — the RELATIONSHIPS rule every drafting prompt states.
+//
+// Every band and every thread, because no record makes one true: the product
+// holds no contact-to-contact referral, so the fact was read out of quoted text,
+// where "Dass Romina den Kontakt hergestellt hat" came back with the direction
+// reversed. Directed forms only; "I would like to introduce myself" is the
+// sender's own act, which the prompt asks for.
+var directedIntroduction = map[textlang.Lang][]string{
+	textlang.English: {
+		"introduced us", "introduced me to", "introduced you to", "introduced by",
+		"introduction by", "introduction from", "introduction via",
+		"put us in touch", "put me in touch", "connected us",
+		"referred us", "referred me", "referred you", "referred by", "referral from",
+	},
+	textlang.German: {
+		"kontakt hergestellt", "in kontakt gebracht", "kontakt vermittelt",
+		"uns vermittelt", "vorgestellt von", "vorgestellt durch", "vorstellung durch",
+		"empfohlen von", "empfehlung von", "empfehlung durch",
+	},
+	textlang.Vietnamese: {
+		"được giới thiệu bởi", "giới thiệu bởi",
+	},
+}

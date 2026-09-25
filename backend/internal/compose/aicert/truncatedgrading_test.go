@@ -103,11 +103,10 @@ func TestAnUngradedRunIsLeftOutOfTheJudgesNumbers(t *testing.T) {
 
 // An even graded set takes the AVERAGE of its two middles, never the upper one.
 //
-// This is the direction a certification number must not err in. RunnerConfig
-// repeats an odd number of times, so the run set is odd and a median looked
-// safe; an ungraded run leaves the SCORE set even, and upper-middle selection
-// then reports a pair {10, 80} as 80. That clears a DegradedMin of 60 on a set
-// half of whose grades are a 10.
+// This is the direction a certification number must not err in. An ungraded
+// run, or an extended case's six runs, leaves the SCORE set even, and
+// upper-middle selection then reports a pair {10, 80} as 80. That clears a
+// DegradedMin of 60 on a set half of whose grades are a 10.
 func TestAnEvenGradedSetTakesTheAverageOfItsMiddles(t *testing.T) {
 	t.Parallel()
 	graded := func(score int) RunResult { return RunResult{HardPass: true, Score: score} }

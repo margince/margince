@@ -168,6 +168,11 @@ type ScenarioRecord struct {
 	JudgeBand string `json:"judge_band,omitempty"`
 	Runs      int    `json:"runs"`
 	Passed    int    `json:"passed"`
+	// JudgeScores and Bands are what the verdict rule reads of this case beyond
+	// its counts, so a site's verdict is recomputed from its rows exactly. Both
+	// are absent on a row graded before the pooled rule.
+	JudgeScores []int     `json:"judge_scores,omitempty"`
+	Bands       *RowBands `json:"bands,omitempty"`
 	// The same reported-outcome counts the task carries, on this scenario's own
 	// runs: they say what came back, never whether it was what was asked for.
 	ReportedAccepted    int `json:"reported_accepted"`
@@ -206,26 +211,34 @@ func (t SiteTally) Reliability() float64 {
 	return float64(t.Passed) / float64(t.Runs)
 }
 
+// RowBands is a scenario row's copy of the quality bands its case was graded
+// against, as the record file spells them.
+type RowBands struct {
+	CertifiedMin int `json:"certified_min"`
+	DegradedMin  int `json:"degraded_min"`
+	Floor        int `json:"floor"`
+}
+
 // ForSite folds every scenario row this record kept for one site's variant.
 // False means this record measured that site not at all — a different thing
 // from measuring it and finding nothing, which is why it is not a zero tally.
 //
 // The verdict is Verdict's rule over the site's scenario rows, the same rule
-// the task's own verdict is.
+// the task's own verdict is. A row graded before the rule kept its judge scores
+// cannot be re-graded, so a site holding one reads the verdict it was graded
+// under: the record's own when the site holds every row, else its worst row's.
 func (r Record) ForSite(variant string) (SiteTally, bool) {
 	var tally SiteTally
-	var rows []scenarioTally
+	var cases []caseStats
+	legacy := false
+	worst := VerdictCertified
 	for _, sc := range r.Scenarios {
 		if sc.Site != variant {
 			continue
 		}
-		// A row written before JudgeBand existed: its own verdict is the most its
-		// scores are known to reach, which reproduces the worst-scenario fold.
-		band := sc.JudgeBand
-		if band == "" {
-			band = sc.Verdict
-		}
-		rows = append(rows, scenarioTally{runs: sc.Runs, passed: sc.Passed, judgeBand: band})
+		legacy = legacy || sc.Bands == nil
+		worst = lowerVerdict(worst, sc.Verdict)
+		cases = append(cases, rowCase(sc))
 		tally.Runs += sc.Runs
 		tally.Passed += sc.Passed
 		tally.ReportedAccepted += sc.ReportedAccepted
@@ -233,10 +246,16 @@ func (r Record) ForSite(variant string) (SiteTally, bool) {
 		tally.ReportedInvalid += sc.ReportedInvalid
 		tally.ReportedAbstained += sc.ReportedAbstained
 	}
-	if len(rows) == 0 {
+	switch {
+	case len(cases) == 0:
 		return SiteTally{}, false
+	case legacy && len(cases) == len(r.Scenarios):
+		tally.Verdict = r.Verdict
+	case legacy:
+		tally.Verdict = worst
+	default:
+		tally.Verdict, _ = verdictOver(cases)
 	}
-	tally.Verdict, _ = verdictOver(rows)
 	return tally, true
 }
 

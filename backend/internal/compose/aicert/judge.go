@@ -141,19 +141,16 @@ type judgement struct {
 // otherwise-healthy certification run: a reply that will not parse is an
 // absent opinion, not an error and not a zero.
 //
-// A graded score below the scenario's certified_min is not taken on one
-// judge's word. One judge scoring a correct answer 0, 100 and 20 across three
-// runs decided a grade on its own, so a low score is re-asked rejudgeOpinions
-// times and the run is scored at the median of the opinions that parsed. A
-// score at or above the bar costs one call: the re-ask protects the candidate
-// from one judge's low outlier, and a passing score has none to be protected
-// from. That one-sided re-ask biases toward the candidate by design; an ungraded
-// first reply is not re-asked.
+// No run is scored on one judge's word. One judge scored a single correct
+// answer 0, 100 and 20 across three runs, so every run is graded judgeOpinions
+// times and scored at the median of the opinions that parsed. Every run, not
+// only a low one: re-asking only below the bar lifted a low outlier and never
+// lowered a high one: a point of measured bias toward the candidate, on average.
 //
 // The served model is read back from rec's own terminal trace (never
 // resp.ServedModel directly) so it carries the same resolved identity the
 // candidate side reports, and names the last opinion that was graded. The
-// degrade is folded across EVERY call this run made, re-judges and retries
+// degrade is folded across EVERY call this run made, every opinion and retry
 // included: a demotion any of them recovered from still means this run was
 // graded on a budget that had run out, which must never be certified silently.
 //
@@ -166,19 +163,13 @@ func judgeScore(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc Sc
 		return judgement{}, err
 	}
 	mark := rec.mark()
-	first, err := judgeVerdict(ctx, judge, rec, sc.Name, in, log)
-	if err != nil {
-		return judgement{}, err
-	}
-	opinions := []opinion{first}
-	if first.graded && first.score < sc.Expect.Bands.CertifiedMin {
-		for range rejudgeOpinions {
-			next, err := judgeVerdict(ctx, judge, rec, sc.Name, in, log)
-			if err != nil {
-				return judgement{}, err
-			}
-			opinions = append(opinions, next)
+	opinions := make([]opinion, 0, judgeOpinions)
+	for range judgeOpinions {
+		next, err := judgeVerdict(ctx, judge, rec, sc.Name, in, log)
+		if err != nil {
+			return judgement{}, err
 		}
+		opinions = append(opinions, next)
 	}
 	calls, err := rec.terminalsSince(mark)
 	if err != nil {

@@ -85,8 +85,9 @@ func TestRunWritesOneRecordPerTaskAndItLoadsBackIdentically(t *testing.T) {
 	if rec.Task != "summarize" || rec.Provider != "fake" || rec.ServedModel != "fake" {
 		t.Fatalf("record identity wrong: %+v", rec)
 	}
-	if rec.Runs != 3 || rec.Reliability != 1 {
-		t.Fatalf("every run's output contains the required substring — want runs=3 reliability=1, got %+v", rec)
+	// One case right three of three is borderline, so it runs to its cap.
+	if rec.Runs != aicert.AdaptiveMaxRuns || rec.Reliability != 1 {
+		t.Fatalf("every run's output contains the required substring — want runs=%d reliability=1, got %+v", aicert.AdaptiveMaxRuns, rec)
 	}
 	if rec.PromptVersion == "" || rec.CorpusVersion == "" {
 		t.Fatalf("prompt/corpus version must be stamped, got %+v", rec)
@@ -148,7 +149,7 @@ func TestRunUnknownTaskFilterFailsLoudly(t *testing.T) {
 	}
 }
 
-func TestRunRejectsAnEvenRepeatsBeforeTouchingAnything(t *testing.T) {
+func TestRunRejectsANegativeRepeatsBeforeTouchingAnything(t *testing.T) {
 	dir := t.TempDir()
 	corpusDir := filepath.Join(dir, "corpus")
 	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
@@ -160,10 +161,10 @@ func TestRunRejectsAnEvenRepeatsBeforeTouchingAnything(t *testing.T) {
 		Profile:      ai.ProfileEUHosted,
 		CorpusDir:    corpusDir,
 		RecordDir:    filepath.Join(dir, "records"),
-		Repeats:      4,
+		Repeats:      -1,
 	}, quietTestLogger())
-	if err == nil || !strings.Contains(err.Error(), "odd") {
-		t.Fatalf("want an odd-repeats complaint, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "positive") {
+		t.Fatalf("want a non-positive-repeats complaint, got %v", err)
 	}
 }
 

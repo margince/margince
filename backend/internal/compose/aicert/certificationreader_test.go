@@ -86,14 +86,16 @@ func loadAICertVerdictRule(t *testing.T) string {
 		t.Fatalf("%s has no indented rule block in Verdict's doc comment; the page quotes it", aiCertVerdictSource)
 	}
 	joined := strings.Join(rule, "\n")
-	if percent := fmt.Sprintf("%d%%", aicert.CertifiedPassPercent); !strings.Contains(joined, percent) {
-		t.Fatalf("Verdict's documented rule does not state the %s pass rate the code applies:\n%s", percent, joined)
-	}
-	for _, majority := range []struct{ of, runs string }{{"n", "case"}, {"N", "degraded pooled"}} {
-		want := fmt.Sprintf("⌈%d%s/%d⌉", aicert.MajorityNumerator, majority.of, aicert.MajorityDenominator)
-		if !strings.Contains(joined, want) {
-			t.Fatalf("Verdict's documented rule does not state the %s %s majority the code applies:\n%s", want, majority.runs, joined)
+	for _, percent := range []int{aicert.CertifiedPassPercent, aicert.CertifiedPassBoundPercent, aicert.CasePassPercent, aicert.VetoPassPercent} {
+		if want := fmt.Sprintf("%d%%", percent); !strings.Contains(joined, want) {
+			t.Fatalf("Verdict's documented rule does not state the %s the code applies:\n%s", want, joined)
 		}
+	}
+	if want := fmt.Sprintf("⌈%dN/%d⌉", aicert.MajorityNumerator, aicert.MajorityDenominator); !strings.Contains(joined, want) {
+		t.Fatalf("Verdict's documented rule does not state the %s degraded pooled majority the code applies:\n%s", want, joined)
+	}
+	if want := fmt.Sprintf("z = %v", aicert.ConfidenceZ); !strings.Contains(joined, want) {
+		t.Fatalf("Verdict's documented rule does not state the %s its bounds are drawn at:\n%s", want, joined)
 	}
 	return joined
 }
@@ -180,7 +182,7 @@ func writeAICertPresetSummary(page *strings.Builder, presets []aiCertPreset) {
 func writeAICertLegend(page *strings.Builder, anyOff bool) {
 	page.WriteString("**What the grades mean**\n\n")
 	page.WriteString("| Grade | What we measured | What to do |\n|---|---|---|\n")
-	fmt.Fprintf(page, "| %s | Right in at least %d of every 100 tries, no test case failing again and again, and good answers. | Turn it on and rely on it. |\n",
+	fmt.Fprintf(page, "| %s | Right in at least %d of every 100 tries, no test case clearly broken, and good answers. | Turn it on and rely on it. |\n",
 		aiCertReady, aicert.CertifiedPassPercent)
 	fmt.Fprintf(page, "| %s | Right in at least %s of tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |\n",
 		aiCertCare, aiCertMajorityWords())
@@ -350,15 +352,17 @@ func aiCertCases(n int) string {
 
 // writeAICertGrading explains the grades in words, then states the exact rule
 // for whoever needs to argue with one. The numbers in the words are the rule's
-// own: the pass rate is its constant, the try count the runner's default.
+// own: every threshold is its constant, the try counts the runner's.
 func writeAICertGrading(page *strings.Builder, rule string, selfJudged int, bars []aiCertQualityBar) {
 	page.WriteString("## How the scoring works\n\n")
 	page.WriteString("1. **Real test cases.** Every feature has a set of test cases: a realistic\n")
 	page.WriteString("   situation (an email, an account, a web page) and the answer we expect. The\n")
 	page.WriteString("   model receives exactly the prompt the product sends in real use.\n")
-	fmt.Fprintf(page, "2. **Several tries.** Each test case is run %d times (our standard setting; `RUNS=`\n"+
-		"   can change it for one run), because a model can answer the same question\n"+
-		"   differently each time.\n", aicert.DefaultRepeats)
+	fmt.Fprintf(page, "2. **Several tries.** Each test case is run %d times at first (`RUNS=` can change\n"+
+		"   that for one run), because a model can answer the same question differently\n"+
+		"   each time. A test case whose result sits close to a line gets %d more tries at a\n"+
+		"   time, up to %d, so a close call is settled by more evidence rather than by luck.\n",
+		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns)
 	page.WriteString("3. **Two checks on every try.**\n")
 	page.WriteString("   - *Is it right?* The answer is checked mechanically against what we expect: the\n")
 	page.WriteString("     right label, the right record, no invented facts, fast enough.\n")
@@ -368,27 +372,44 @@ func writeAICertGrading(page *strings.Builder, rule string, selfJudged int, bars
 		fmt.Fprintf(page, "     %d older results were scored by the model they tested or one of its family; the\n"+
 			"     next re-check replaces them.\n", selfJudged)
 	}
-	page.WriteString("4. **A low score is double-checked.** When the quality score is below the bar, the\n")
-	fmt.Fprintf(page, "   scoring model is asked %d more times and the middle of the %d scores counts, so\n"+
-		"   one bad reading cannot fail a good answer.\n", aicert.RejudgeOpinions, aicert.RejudgeOpinions+1)
-	page.WriteString("5. **The grade.** All the tries of a feature are then added up:\n\n")
+	fmt.Fprintf(page, "4. **Every score is checked %d times.** The scoring model grades every try %d times\n"+
+		"   and the middle score counts, so one odd reading can neither fail a good answer\n"+
+		"   nor pass a poor one.\n", aicert.JudgeOpinions, aicert.JudgeOpinions)
+	page.WriteString("5. **The grade.** All the tries of a feature are then read together:\n\n")
 	page.WriteString("| Grade | Right answers | Every test case | Quality |\n|---|---|---|---|\n")
-	fmt.Fprintf(page, "| %s | at least %d of every 100 tries | right in at least %d of its %d tries | good in every case, no very poor answer |\n",
-		aiCertReady, aicert.CertifiedPassPercent, aicert.CaseMajority(aicert.DefaultRepeats), aicert.DefaultRepeats)
-	fmt.Fprintf(page, "| %s | at least %s of all tries | — | acceptable in every case |\n", aiCertCare, aiCertMajorityWords())
-	fmt.Fprintf(page, "| %s | anything less | | |\n\n", aiCertNotYet)
-	page.WriteString("A feature does not have to be perfect to be ready: a stray miss among many tries\n")
-	page.WriteString("is allowed. A test case that fails again and again is not — that is a real\n")
-	page.WriteString("weakness, not bad luck — and it holds the whole feature back.\n\n")
+	fmt.Fprintf(page, "| %s | at least %d of every 100 tries, and enough tries to be sure of at least %d | right in at least half its tries, and not clearly broken | good on average across all tries, even allowing for doubt |\n",
+		aiCertReady, aicert.CertifiedPassPercent, aicert.CertifiedPassBoundPercent)
+	fmt.Fprintf(page, "| %s | at least %s of all tries | not failing nearly every try, and not clearly very poor | acceptable on average, even allowing for doubt |\n",
+		aiCertCare, aiCertMajorityWords())
+	fmt.Fprintf(page, "| %s | anything less, or a test case the scoring model never scored | | |\n\n", aiCertNotYet)
+	page.WriteString("A feature does not have to be perfect to be ready: a stray miss or a low score\n")
+	page.WriteString("among many tries is allowed, because the grade weighs all of them together. A\n")
+	page.WriteString("test case that is clearly broken is not — one that fails nearly every try, or\n")
+	page.WriteString("scores below its acceptable bar on every try — and it holds the whole feature\n")
+	page.WriteString("back however well the others do.\n\n")
 	writeAICertThresholds(page, bars)
+	writeAICertExactRule(page, rule, selfJudged)
+}
+
+// writeAICertExactRule quotes Verdict's rule block and says what its terms mean.
+func writeAICertExactRule(page *strings.Builder, rule string, selfJudged int) {
 	page.WriteString("<details>\n<summary>The exact rule</summary>\n\n")
 	page.WriteString("From `Verdict` in [`" + aiCertVerdictSource + "`](" + corpusLinkPrefix + aiCertCorpusDocs +
 		aiCertVerdictSource + "), applied to every case of a task at once:\n\n")
 	page.WriteString("```text\n" + rule + "\n```\n\n")
-	page.WriteString("Each case sets its own quality bands (`certified_min`, `degraded_min`, `floor`).\n")
-	fmt.Fprintf(page, "A judge score below `certified_min` is asked for %d more times, and the run is\n"+
-		"scored at the median of the %d. The grades map to the record's words as\n", aicert.RejudgeOpinions, aicert.RejudgeOpinions+1)
-	fmt.Fprintf(page, "%s = `%s`, %s = `%s`, %s = `%s`, and %s = no record for that model.\n",
+	page.WriteString("Each case sets its own quality bands (`certified_min`, `degraded_min`, `floor`), so\n")
+	page.WriteString("the pooled judge criterion averages every run's distance from its own case's bar.\n")
+	fmt.Fprintf(page, "Every run is graded %d times and scored at the median of the opinions that parsed.\n", aicert.JudgeOpinions)
+	fmt.Fprintf(page, "A case runs %d times, then %d more at a time up to %d while it is borderline: its pass\n"+
+		"count k of n satisfies (2k − n)² ≤ n, or its median score is within one standard\n"+
+		"error of `certified_min` or `degraded_min`. Every case extends while the pool is\n"+
+		"undecided: the pooled pass rate is at least %d%% but its Wilson bound is under %d%%, or\n"+
+		"the pooled `certified_min` margin averages at least 0 but its bound is under 0. The\n"+
+		"decision reads only scored runs, so a resumed run replays the same extensions.\n",
+		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns,
+		aicert.CertifiedPassPercent, aicert.CertifiedPassBoundPercent)
+	fmt.Fprintf(page, "The grades map to the record's words as %s = `%s`, %s = `%s`, %s = `%s`, and\n"+
+		"%s = no record for that model.\n",
 		aiCertReady, aicert.VerdictCertified, aiCertCare, aicert.VerdictSupportedDegraded,
 		aiCertNotYet, aicert.VerdictNotSupported, aiCertUnproven)
 	if selfJudged > 0 {
@@ -442,17 +463,22 @@ func writeAICertThresholds(page *strings.Builder, bars []aiCertQualityBar) {
 	page.WriteString("| What | Threshold |\n|---|---|\n")
 	fmt.Fprintf(page, "| Right answers needed for %s | at least %d of every 100 tries, counted over all of the feature's test cases |\n",
 		aiCertReady, aicert.CertifiedPassPercent)
-	fmt.Fprintf(page, "| Each test case, for %s | right in at least %d of its %d tries |\n",
-		aiCertReady, aicert.CaseMajority(aicert.DefaultRepeats), aicert.DefaultRepeats)
+	fmt.Fprintf(page, "| How sure that must be, for %s | the pass rate's lower bound at least %d of every 100 |\n",
+		aiCertReady, aicert.CertifiedPassBoundPercent)
+	fmt.Fprintf(page, "| Each test case, for %s | right in at least %d of every 100 of its own tries |\n",
+		aiCertReady, aicert.CasePassPercent)
 	fmt.Fprintf(page, "| Right answers needed for %s | at least %s of all tries |\n", aiCertCare, aiCertMajorityWords())
-	fmt.Fprintf(page, "| Tries per test case | %d (`RUNS=` changes it for one run) |\n", aicert.DefaultRepeats)
-	fmt.Fprintf(page, "| Extra quality opinions on a low score | %d more, and the middle of the %d scores counts |\n",
-		aicert.RejudgeOpinions, aicert.RejudgeOpinions+1)
+	fmt.Fprintf(page, "| A test case is clearly broken | its pass rate's upper bound is under %d of every 100 (blocks %s and %s), or its quality score's upper bound is under its acceptable bar (blocks %s) |\n",
+		aicert.VetoPassPercent, aiCertReady, aiCertCare, aiCertReady)
+	fmt.Fprintf(page, "| Tries per test case | %d at first (`RUNS=` changes it for one run); a borderline case gets %d more at a time, up to %d |\n",
+		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns)
+	fmt.Fprintf(page, "| Quality opinions per try | %d, and the middle one counts |\n", aicert.JudgeOpinions)
+	fmt.Fprintf(page, "| How sure every bound is | one-sided 90%% (z = %v for a pass rate, Student's t for an average score) |\n", aicert.ConfidenceZ)
 	for _, bar := range bars {
 		b := bar.Bands
-		fmt.Fprintf(page, "| Quality bar %d / %d / %d — %s | %s needs a quality score of at least %d (and no single answer below %d); %s needs at least %d |\n",
+		fmt.Fprintf(page, "| Quality bar %d / %d / %d — %s | %s needs scores averaging at least %d, allowing for doubt, and no case whose best-case average is under %d; %s needs at least %d, and none under %d |\n",
 			b.CertifiedMin, b.DegradedMin, b.Floor, aiCertCases(bar.Cases),
-			aiCertReady, b.CertifiedMin, b.Floor, aiCertCare, b.DegradedMin)
+			aiCertReady, b.CertifiedMin, b.DegradedMin, aiCertCare, b.DegradedMin, b.Floor)
 	}
 	page.WriteString("\nAll of these live in [`backend/internal/compose/aicert/thresholds.go`](" + corpusLinkPrefix + aiCertCorpusDocs +
 		"thresholds.go) (quality bars: in each test case's file); change them there and regenerate this page.\n\n")

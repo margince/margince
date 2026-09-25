@@ -5,20 +5,31 @@ package aicert
 
 // The verdict rule's thresholds, reached by the certification page so its
 // plain-words grading summary quotes the rule rather than restating it.
-const CertifiedPassPercent = certifiedPassPercent
+const (
+	CertifiedPassPercent      = certifiedPassPercent
+	CertifiedPassBoundPercent = certifiedPassBoundPercent
+	CasePassPercent           = casePassPercent
+	VetoPassPercent           = vetoPassPercent
+	ConfidenceZ               = confidenceZ
+)
 
-// DefaultRepeats is how many times a run tries each case unless told otherwise.
-const DefaultRepeats = defaultRepeats
+// DefaultRepeats is each case's first round unless told otherwise, and
+// AdaptiveRound/AdaptiveMaxRuns how a borderline case is extended.
+const (
+	DefaultRepeats  = defaultRepeats
+	AdaptiveRound   = adaptiveRound
+	AdaptiveMaxRuns = adaptiveMaxRuns
+)
 
-// RejudgeOpinions is how many more opinions a low judge score is weighed against.
-const RejudgeOpinions = rejudgeOpinions
+// JudgeOpinions is how many times every run is graded.
+const JudgeOpinions = judgeOpinions
 
-// CaseMajority is the majority a scenario's own runs must reach; the page counts
-// the cases that miss it.
-func CaseMajority(n int) int { return majorityOf(n) }
+// CaseFallsShort says a case passed fewer than casePassPercent of its runs;
+// the page counts the cases that do.
+func CaseFallsShort(passed, runs int) bool { return passed*100 < casePassPercent*runs }
 
-// MajorityNumerator and MajorityDenominator are the majority as a fraction, which
-// the page says in words.
+// MajorityNumerator and MajorityDenominator are the degraded pooled majority as
+// a fraction, which the page says in words.
 const (
 	MajorityNumerator   = majorityNumerator
 	MajorityDenominator = majorityDenominator

@@ -200,6 +200,11 @@ func Body(body string, lang textlang.Lang, band convstate.Band, on Grounds) []Fi
 				"name the topic instead of attributing it to the recipient")...)
 	}
 
+	findings = append(findings, firstMatch(lowered, directedIntroduction[lang],
+		RuleInventedRelationship,
+		"nothing in the input records who introduced whom, and reading it out of a quoted "+
+			"thread gets the direction backwards — leave the introduction out")...)
+
 	// A settled appointment, with nothing booked. Gated on the booking rather
 	// than on the thread: neither a reply nor an opener can source an
 	// arrangement the record does not carry. A draft PROPOSING one is
@@ -305,7 +310,7 @@ func bandGated(lowered string, lang textlang.Lang, band convstate.Band) []Findin
 
 	if band == convstate.BandWeeks || band == convstate.BandMonths {
 		for _, phrase := range assumedMemory[lang] {
-			if contains(lowered, phrase) {
+			if gestures(lowered, phrase, lang) {
 				findings = append(findings, Finding{
 					Rule:   RuleAssumedMemory,
 					Phrase: phrase,
@@ -354,33 +359,6 @@ func wordIndex(text, phrase string) int {
 		offset = start + 1
 		if offset >= len(text) {
 			return -1
-		}
-	}
-}
-
-// startsWord reports whether text holds phrase beginning at a word boundary,
-// with no requirement about where it ENDS.
-//
-// A stem match: "introduc" has to start a word, so it catches introduction,
-// introduced and introductory alike, and does not fire inside an unrelated word
-// that merely contains those letters.
-//
-// A hyphen counts as a boundary, which German needs: the model wrote
-// "Intro-Thema" and "Folgekontakt nach Intro" on a live stack, and a stem
-// requiring a trailing space saw neither.
-func startsWord(text, phrase string) bool {
-	for offset := 0; ; {
-		i := strings.Index(text[offset:], phrase)
-		if i < 0 {
-			return false
-		}
-		start := offset + i
-		if boundary(text, start-1) {
-			return true
-		}
-		offset = start + 1
-		if offset >= len(text) {
-			return false
 		}
 	}
 }

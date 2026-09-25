@@ -247,7 +247,7 @@ func aiCertTaskVerdicts(doc aiCertDoc, records []aicert.Record) map[string]aiCer
 // nothing else to reflect; otherwise its quality is unknown and not counted.
 func aiCertCasesHoldingDown(rec aicert.Record) (failingOften, belowQuality int) {
 	for _, sc := range rec.Scenarios {
-		if sc.Passed < aicert.CaseMajority(sc.Runs) {
+		if aicert.CaseFallsShort(sc.Passed, sc.Runs) {
 			failingOften++
 		}
 		band := sc.JudgeBand

@@ -51,11 +51,11 @@ func judged(t *testing.T, fake *ai.FakeClient, extra ...ai.LocalOption) judgemen
 	return got
 }
 
-// One judge's word decides nothing below the bar: it scored one correct answer
-// 0, 100 and 20 across three runs. A low score is weighed against two fresh
-// opinions, a reply that never parsed is no opinion at all, and a score at the
-// bar costs exactly the one call it always did. wideBands' certified_min is 70.
-func TestALowScoreIsWeighedAgainstFreshOpinions(t *testing.T) {
+// No run is scored on one judge's word: one judge scored a single correct answer
+// 0, 100 and 20 across three runs. Every run — a high first score included — is
+// graded three times and scored at the median of what parsed; a reply that
+// never parsed is no opinion at all.
+func TestEveryRunIsGradedThreeTimesAndScoredAtTheMedian(t *testing.T) {
 	scored := func(score int, servedBy string) ai.FakeStep {
 		return ai.FakeStep{Text: scoreJSON(score), ServedModel: servedBy}
 	}
@@ -70,24 +70,24 @@ func TestALowScoreIsWeighedAgainstFreshOpinions(t *testing.T) {
 		wantUngraded bool
 		wantServedBy string
 	}{
-		"a score at certified_min is one opinion": {
-			replies: []ai.FakeStep{scored(70, "judge-a")}, wantCalls: 1,
-			wantScore: 70, wantScores: []int{70}, wantServedBy: "judge-a",
+		"a high first score is weighed against two more": {
+			replies:   []ai.FakeStep{scored(95, "judge-a"), scored(60, "judge-b"), scored(70, "judge-c")},
+			wantCalls: 3, wantScore: 70, wantScores: []int{95, 60, 70}, wantServedBy: "judge-c",
 		},
-		"a low score is scored at the median of three": {
+		"a low first score is weighed against two more": {
 			replies:   []ai.FakeStep{scored(10, "judge-a"), scored(80, "judge-b"), scored(30, "judge-c")},
 			wantCalls: 3, wantScore: 30, wantScores: []int{10, 80, 30}, wantServedBy: "judge-c",
 		},
-		"an unparseable re-judge drops out of the median": {
+		"an unparseable opinion drops out of the median": {
 			replies:   slices.Concat([]ai.FakeStep{scored(10, "judge-a"), scored(20, "judge-b")}, junk),
 			wantCalls: 5, wantScore: 15, wantScores: []int{10, 20}, wantServedBy: "judge-b",
 		},
-		"two unparseable re-judges leave the first opinion standing": {
+		"two unparseable opinions leave the one that parsed": {
 			replies:   slices.Concat([]ai.FakeStep{scored(10, "judge-a")}, junk, junk),
 			wantCalls: 7, wantScore: 10, wantScores: []int{10}, wantServedBy: "judge-a",
 		},
-		"a first reply that never parses leaves the run ungraded, not 0": {
-			replies: junk, wantCalls: 3, wantUngraded: true,
+		"no opinion that parses leaves the run ungraded, not 0": {
+			replies: slices.Concat(junk, junk, junk), wantCalls: 9, wantUngraded: true,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -114,11 +114,11 @@ func TestOpinionsNoneOfWhichParsedLeaveTheRunUngraded(t *testing.T) {
 	}
 }
 
-// The degrade is folded over every call the run's grading made, so a re-judge
-// demoted onto a cheaper tier voids the run exactly as a demoted first call
-// would. The budget puts two calls at ~90% utilisation, inside the soft-degrade
-// band, so only the last re-judge is demoted and no call is deferred.
-func TestADemotedRejudgeMarksTheRunJudgeDegraded(t *testing.T) {
+// The degrade is folded over every call the run's grading made, so a demoted
+// third opinion voids the run exactly as a demoted first one would. The tight
+// budget puts two calls at ~90% utilisation, inside the soft-degrade band, so
+// only the third opinion is demoted and no call is deferred.
+func TestADemotedOpinionMarksTheRunJudgeDegraded(t *testing.T) {
 	sc := testScenario("basic", wideBands)
 	probeIn, err := graderInput(sc, widgetAskTrace(), gradedOutput)
 	if err != nil {
@@ -129,18 +129,18 @@ func TestADemotedRejudgeMarksTheRunJudgeDegraded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("probing the judge's first-call token cost: %v", err)
 	}
-	budget := 2 * int64(probe.InputTokens+probe.OutputTokens) * 10 / 9
+	perCall := int64(probe.InputTokens + probe.OutputTokens)
 
 	for name, tc := range map[string]struct {
-		first        int
+		budget       int64
 		wantDegraded bool
 	}{
-		"a score at the bar makes no second call to be demoted": {first: 90, wantDegraded: false},
-		"a low score's re-judge is demoted":                     {first: 10, wantDegraded: true},
+		"a budget every opinion fits in demotes nothing": {budget: 100 * perCall, wantDegraded: false},
+		"a third opinion past the soft line is demoted":  {budget: 2 * perCall * 10 / 9, wantDegraded: true},
 	} {
 		t.Run(name, func(t *testing.T) {
-			fake := ai.NewFakeClient().Script(scoreJSON(tc.first), scoreJSON(10), scoreJSON(10))
-			if got := judged(t, fake, ai.WithMonthlyBudget(budget)); got.degraded != tc.wantDegraded {
+			fake := ai.NewFakeClient().Script(scoreJSON(90), scoreJSON(10), scoreJSON(10))
+			if got := judged(t, fake, ai.WithMonthlyBudget(tc.budget)); got.degraded != tc.wantDegraded {
 				t.Fatalf("judge degraded = %v, want %v", got.degraded, tc.wantDegraded)
 			}
 		})
@@ -152,8 +152,11 @@ func TestADemotedRejudgeMarksTheRunJudgeDegraded(t *testing.T) {
 func TestTheJournalKeepsEveryOpinionARunWasScoredFrom(t *testing.T) {
 	dir := t.TempDir()
 	sc := testScenario("basic", wideBands)
-	candidate := ai.NewFakeClient().Script(slices.Repeat([]string{containsWidget}, testRepeats)...)
-	judge := ai.NewFakeClient().Script(scoreJSON(10), scoreJSON(80), scoreJSON(30), unparseable, unparseable, unparseable, scoreJSON(90))
+	candidate := ai.NewFakeClient().Script(slices.Repeat([]string{containsWidget}, adaptiveMaxRuns)...)
+	judge := ai.NewFakeClient().Script(slices.Concat(
+		[]string{scoreJSON(10), scoreJSON(80), scoreJSON(30)},
+		slices.Repeat([]string{unparseable}, 3*judgeOpinions),
+		opinionsOf(90, adaptiveMaxRuns-2))...)
 	if _, err := certifyOnce(t, dir, sc, candidate, judge); err != nil {
 		t.Fatalf("certifying: %v", err)
 	}
@@ -161,7 +164,7 @@ func TestTheJournalKeepsEveryOpinionARunWasScoredFrom(t *testing.T) {
 	want := map[int]RunResult{
 		1: {Score: 30, JudgeScores: []int{10, 80, 30}},
 		2: {Ungraded: true},
-		3: {Score: 90, JudgeScores: []int{90}},
+		3: {Score: 90, JudgeScores: []int{90, 90, 90}},
 	}
 	withJournal(t, dir, fixedResumeNow, func(j *runJournal) {
 		for run, w := range want {
@@ -184,19 +187,24 @@ func TestAWithheldJudgementLeavesTheRunUngraded(t *testing.T) {
 	waited := recordSleeps(t)
 	withheld := ai.FakeStep{Err: fmt.Errorf("%w: SAFETY", model.ErrOutputWithheld)}
 	candidate := ai.NewFakeClient().Script(containsWidget, containsWidget, containsWidget)
-	judge := ai.NewFakeClient().ScriptSteps(slices.Repeat([]ai.FakeStep{withheld}, 2)...).Script(scoreJSON(90), scoreJSON(90))
+	// A withheld opinion walks the whole ladder before it is given up on.
+	judge := ai.NewFakeClient().ScriptSteps(slices.Repeat([]ai.FakeStep{withheld}, ladderRungs(t)*judgeOpinions)...).Script(opinionsOf(90, 2)...)
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
 		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
+			maxRuns:       3,
 		})
 	if err != nil {
 		t.Fatalf("a judge that declined to grade one run aborted the task: %v", err)
 	}
 	if rec.Runs != 3 || rec.Reliability != 1 {
 		t.Errorf("runs=%d reliability=%v, want 3 passing runs — the candidate answered every one", rec.Runs, rec.Reliability)
+	}
+	if got := rec.Scenarios[0].JudgeScores; !slices.Equal(got, []int{90, 90}) {
+		t.Errorf("graded scores = %v, want the two runs a judge answered and none for the withheld one", got)
 	}
 	if len(*waited) != 0 {
 		t.Errorf("waited %v — a withheld judgement is not an outage", *waited)

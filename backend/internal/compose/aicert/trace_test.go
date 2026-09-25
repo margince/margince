@@ -69,13 +69,14 @@ func TestCertifyTaskWithTraceWritesCandidateAndJudgePayloads(t *testing.T) {
 	}
 
 	candidateFake := ai.NewFakeClient().Script("the widget is blue and durable")
-	judgeFake := ai.NewFakeClient().Script(scoreJSON(90))
+	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
 	sc := testScenario("basic", wideBands)
 
 	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		trace:         trace,
+		maxRuns:       1,
 	}); err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}
@@ -84,8 +85,8 @@ func TestCertifyTaskWithTraceWritesCandidateAndJudgePayloads(t *testing.T) {
 	}
 
 	lines := readTrace(t, trace.Path)
-	if len(lines) != 2 {
-		t.Fatalf("trace lines = %d, want 2 (candidate + judge): %+v", len(lines), lines)
+	if len(lines) != 1+judgeOpinions {
+		t.Fatalf("trace lines = %d, want %d (the candidate + every opinion): %+v", len(lines), 1+judgeOpinions, lines)
 	}
 	byRole := map[string]tracedCall{}
 	for _, l := range lines {
@@ -200,7 +201,7 @@ func TestCertifyTaskWithTraceWritesEveryCallARunMade(t *testing.T) {
 	}
 
 	candidateFake := ai.NewFakeClient().Script("first attempt, discarded", "the widget is blue and durable")
-	judgeFake := ai.NewFakeClient().Script(scoreJSON(90))
+	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
 	sc := testScenarioOnSite("basic", retryVariant, wideBands)
 
 	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, retryCensus(t),
@@ -208,6 +209,7 @@ func TestCertifyTaskWithTraceWritesEveryCallARunMade(t *testing.T) {
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 			trace:         trace,
+			maxRuns:       1,
 		}); err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}

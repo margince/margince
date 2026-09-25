@@ -98,7 +98,7 @@ func (mintingCase) Evaluate(aitasks.Trace) aitasks.Outcome {
 // which reads as invention on every correct reply.
 func TestTheJudgeIsShownTheTurnTheCandidateWasGiven(t *testing.T) {
 	candidateFake := ai.NewFakeClient().Script("the widget is blue and durable")
-	judgeFake := ai.NewFakeClient().Script(scoreJSON(90))
+	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
 
 	factory := &mintingCases{}
 	census := aitasks.NewRegistry()
@@ -111,13 +111,14 @@ func TestTheJudgeIsShownTheTurnTheCandidateWasGiven(t *testing.T) {
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
+			maxRuns:       1,
 		}); err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}
 
 	judgeCalls := judgeFake.Calls()
-	if len(judgeCalls) != 1 {
-		t.Fatalf("the judge was called %d times, want the one call this single run scores", len(judgeCalls))
+	if len(judgeCalls) != judgeOpinions {
+		t.Fatalf("the judge was called %d times, want the %d opinions this single run is scored from", len(judgeCalls), judgeOpinions)
 	}
 	minted := factory.lastMinted(t)
 	if !strings.Contains(string(judgeCalls[0].Payload), minted) {
@@ -181,7 +182,7 @@ func TestCandidateAskRefusesATraceThatAskedNothing(t *testing.T) {
 func TestTheJudgeIsShownTheProductRulesAndTheExpectedAnswer(t *testing.T) {
 	const expected = "a durable blue widget"
 	candidateFake := ai.NewFakeClient().Script("the widget is " + expected)
-	judgeFake := ai.NewFakeClient().Script(scoreJSON(90))
+	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
 
 	sc := testScenario("basic", wideBands)
 	sc.Expect.Answer = JSONValue(`"` + expected + `"`)
@@ -190,13 +191,14 @@ func TestTheJudgeIsShownTheProductRulesAndTheExpectedAnswer(t *testing.T) {
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
+			maxRuns:       1,
 		}); err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}
 
 	judgeCalls := judgeFake.Calls()
-	if len(judgeCalls) != 1 {
-		t.Fatalf("the judge was called %d times, want the one call this single run scores", len(judgeCalls))
+	if len(judgeCalls) != judgeOpinions {
+		t.Fatalf("the judge was called %d times, want the %d opinions this single run is scored from", len(judgeCalls), judgeOpinions)
 	}
 	payload := string(judgeCalls[0].Payload)
 	for what, want := range map[string]string{
@@ -222,7 +224,7 @@ func (checkerSpecCases) ExpectsCheckerSpec() bool { return true }
 func TestACheckerSpecNeverReachesTheGrader(t *testing.T) {
 	const banned = "a close personal friend of yours"
 	candidateFake := ai.NewFakeClient().Script("the widget is " + banned)
-	judgeFake := ai.NewFakeClient().Script(scoreJSON(90))
+	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
 	census := aitasks.NewRegistry()
 	census.Register(widgetSite())
 	census.BindCase(widgetSite(), checkerSpecCases{widgetCases{site: widgetSite()}})
@@ -234,13 +236,14 @@ func TestACheckerSpecNeverReachesTheGrader(t *testing.T) {
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
+			maxRuns:       1,
 		}); err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}
 
 	judgeCalls := judgeFake.Calls()
-	if len(judgeCalls) != 1 {
-		t.Fatalf("the judge was called %d times, want the one call this single run scores", len(judgeCalls))
+	if len(judgeCalls) != judgeOpinions {
+		t.Fatalf("the judge was called %d times, want the %d opinions this single run is scored from", len(judgeCalls), judgeOpinions)
 	}
 	payload := string(judgeCalls[0].Payload)
 	if strings.Contains(payload, "Expected answer") {

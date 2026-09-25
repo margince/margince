@@ -6,21 +6,53 @@ package aicert
 // Every threshold a grade is reached by, so changing what a grade means is an
 // edit here; a case's quality bands live in its own corpus file.
 
-// certifiedPassPercent is the pooled pass rate a set must reach to certify: a
+// certifiedPassPercent is the pooled pass rate a task must reach to certify: a
 // rate rather than every run, so a large pool absorbs a stray miss.
 const certifiedPassPercent = 90
 
-// A case must pass majorityNumerator/majorityDenominator of its own runs to
-// certify, and a set that pooled fraction to reach supported_degraded.
+// certifiedPassBoundPercent is how low the pooled pass rate's Wilson lower
+// bound may sit, so a pool too small to tell 90% from 70% cannot certify.
+const certifiedPassBoundPercent = 80
+
+// casePassPercent is the share of its own runs every case must pass for the
+// task to certify, so one case failing systematically cannot hide in a pool.
+const casePassPercent = 50
+
+// vetoPassPercent is the pass rate a case's Wilson upper bound must reach: a
+// case below it is clearly broken, and blocks both upper grades on its own.
+const vetoPassPercent = 50
+
+// A task reaches supported_degraded with majorityNumerator/majorityDenominator
+// of its pooled runs passing.
 const (
 	majorityNumerator   = 2
 	majorityDenominator = 3
 )
 
-// defaultRepeats is how many times each case runs unless RUNS= says otherwise;
-// odd, per Verdict's run-count requirement.
+// confidenceZ is the standard normal quantile of every one-sided 90% bound the
+// rule draws; one level for every bound keeps the rule sayable in one sentence.
+const confidenceZ = 1.2816
+
+// tQuantile90 is Student's t one-sided 90% quantile by degrees of freedom
+// 1..30, the small-n correction on a mean's bound. Past 30 the last entry
+// stands: it is wider than the true quantile, so it can only withhold a grade.
+var tQuantile90 = [...]float64{
+	3.078, 1.886, 1.638, 1.533, 1.476, 1.440, 1.415, 1.397, 1.383, 1.372,
+	1.363, 1.356, 1.350, 1.345, 1.341, 1.337, 1.333, 1.330, 1.328, 1.325,
+	1.323, 1.321, 1.319, 1.318, 1.316, 1.315, 1.314, 1.313, 1.311, 1.310,
+}
+
+// defaultRepeats is each case's first round of runs unless RUNS= says otherwise.
 const defaultRepeats = 3
 
-// rejudgeOpinions is how many further opinions a score below certified_min is
-// weighed against: three in all is the fewest whose median outvotes one outlier.
-const rejudgeOpinions = 2
+// adaptiveRound is how many runs a borderline case gains per extension, and
+// adaptiveMaxRuns the most any case reaches: extension stops there, so a
+// task's cost is bounded at adaptiveMaxRuns/defaultRepeats times a plain run.
+const (
+	adaptiveRound   = 3
+	adaptiveMaxRuns = 9
+)
+
+// judgeOpinions is how many times the judge grades every run; the run scores
+// at their median. Three is the fewest whose median outvotes one outlier.
+const judgeOpinions = 3

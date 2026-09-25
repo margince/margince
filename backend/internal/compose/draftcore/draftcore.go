@@ -50,8 +50,9 @@ type Observer interface {
 	// something different for a false claim than for a phrasing tic, and an
 	// operator reading the line needs to be able to tell which without knowing
 	// every rule by heart. `remaining` counts the DISTINCT rules still broken,
-	// which is the number the serve decision was made on.
-	RetryDidNotClear(ctx context.Context, rule draftcheck.Rule, phrase string, remaining int)
+	// which is the number the serve decision was made on, and servedRetry says
+	// which attempt that decision chose.
+	RetryDidNotClear(ctx context.Context, rule draftcheck.Rule, phrase string, remaining int, servedRetry bool)
 }
 
 // TextOf reads the two channels of a draft a check has to judge.
@@ -85,8 +86,8 @@ type SubjectOf[D any] func(D) (subject string, threaded bool)
 // prompt sentence cannot do — and the reason this loop exists at all is that
 // three separate prompt rules lost to model reflexes before it did.
 //
-// When the retry does not clear the findings, the attempt carrying FEWER of them
-// is served. A second attempt is not automatically better, and the count is the
+// When the retry does not clear the findings, servesRetry picks the attempt to
+// serve. A second attempt is not automatically better, and the findings are the
 // only evidence available without asking a model to judge its own output.
 func CorrectOnce[D any](
 	ctx context.Context, lang textlang.Lang, band convstate.Band, record draftcheck.Grounds,
@@ -121,10 +122,11 @@ func CorrectOnce[D any](
 	if len(remaining) == 0 {
 		return retried, nil
 	}
+	serveRetry := servesRetry(findings, remaining)
 	if observe != nil {
-		observe.RetryDidNotClear(ctx, remaining[0].Rule, remaining[0].Phrase, draftcheck.Rules(remaining))
+		observe.RetryDidNotClear(ctx, remaining[0].Rule, remaining[0].Phrase, draftcheck.Rules(remaining), serveRetry)
 	}
-	if servesRetry(findings, remaining) {
+	if serveRetry {
 		return retried, nil
 	}
 	return draft, nil
@@ -184,11 +186,12 @@ func Findings[D any](
 // have used first: a rep sends what the product wrote, and an invented call
 // reaches the recipient as the company's own word.
 //
-// A TIE goes to the retry, unchanged. Both attempts carry one finding often
-// enough to matter — the model swaps "circling back" for "checking in" — and
-// the retried one was at least written with the correction in hand, so it is
-// the better bet on everything the check does not measure. Only a retry that is
-// strictly worse is discarded.
+// A TIE goes to the first attempt. The retry was asked to clear a finding and
+// did not, so the correction bought nothing the check can see, while a retry
+// written under a list of things not to say drops what the check does not
+// measure — on a first touch, the sender's own name.
+// The first attempt is what the prompt alone produced. Only a retry that is
+// strictly better is served.
 func servesRetry(first, retried []draftcheck.Finding) bool {
 	firstWorst, _ := draftcheck.Worst(first)
 	retriedWorst, _ := draftcheck.Worst(retried)
@@ -204,5 +207,5 @@ func servesRetry(first, retried []draftcheck.Finding) bool {
 	// phrase and another reports once however many matched; by this point both
 	// drafts break the same number of rules, and a draft saying the same wrong
 	// thing three ways is more of it than a draft saying it once.
-	return len(retried) <= len(first)
+	return len(retried) < len(first)
 }

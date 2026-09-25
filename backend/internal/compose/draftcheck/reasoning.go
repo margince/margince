@@ -6,39 +6,38 @@ package draftcheck
 // The reasoning channel: the chips a draft shows the rep as its provenance.
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// directedRelationship are the ways a draft claims who introduced, referred or
-// first contacted whom.
+// introductionEvent are the chip labels that say an introduction HAPPENED,
+// beyond the directed claims a body is also refused (directedIntroduction).
 //
 // The product holds no contact-to-contact referral record — referred_by is
-// constrained company-to-company — so a directed introduction fact in a draft is
-// necessarily read out of quoted correspondence, which is how the reported
-// defect got the direction backwards. Silence about introductions is the
-// correct behaviour, which makes this list a flat refusal rather than a
-// judgement about which direction is right.
-// The NOUN, not the preposition: "introduction by" misses "introduction to".
-// There is no honest use of these words in a chip while the product holds no
-// referral record, so the word itself is the refusal and the grammar around it
-// does not have to be predicted.
-var directedRelationship = map[textlang.Lang][]string{
+// constrained company-to-company — so an introduction named as an event was
+// read out of quoted correspondence, which is how the reported defect got the
+// direction backwards.
+//
+// Every entry names the event, never the act of writing. A bare stem refuses
+// "Mich kurz vorstellen" and "introduce company and offer call" — the rep's own
+// purpose, which the prompt asks the body to state — and a retry spent on that
+// drops the sender's name from a good body.
+var introductionEvent = map[textlang.Lang][]string{
 	textlang.English: {
-		// Stems, matched as a word PREFIX, because the word form is not
-		// predictable: "introduc" covers introduction/introduced/introducing/
-		// introductory; "refer" covers referral/referred/referring.
-		"introduc", "intro", "refer",
-		"put us in touch", "connected us",
+		"introduction to", "introduced to", "introducing us", "introducing me to",
+		"introductory connection", "previous introduction", "earlier introduction",
+		"prior introduction", "contact introduction", "introduction made",
+		"intro by", "intro from", "intro via", "intro to", "intro made",
+		"referral", "referrals", "referred",
 	},
 	textlang.German: {
-		"vorstell", "vorgestellt", "empfehl", "empfohlen",
-		"vermittl", "vermittelt", "in kontakt gebracht",
+		"vermittelt", "vermittlung", "nach intro", "nach dem intro",
 	},
 	textlang.Vietnamese: {
-		"giới thiệu", "được giới thiệu",
+		"được giới thiệu",
 	},
 }
 
@@ -46,7 +45,7 @@ var directedRelationship = map[textlang.Lang][]string{
 //
 // A chip is the product explaining itself, and a rep reads it less critically
 // than the body they are about to send — so a wrong one is worse there. It gets
-// the same phrase lists as the body, plus the directed-relationship refusal,
+// the same phrase lists as the body, plus the introduction-event refusal,
 // which caught "Follow-up to previous introduction by Romina Medici" on a
 // thread where the other party made the introduction.
 //
@@ -71,8 +70,8 @@ func labelFindings(label string, lang textlang.Lang, band convstate.Band) []Find
 	// rather than the recipient, and the model reaches for English there even
 	// on a German draft ("shared contact introduction" under German prose),
 	// which a German-only list does not see.
-	for _, phrase := range allDirectedRelationshipPhrases() {
-		if startsWord(lowered, phrase) {
+	for _, phrase := range allIntroductionPhrases() {
+		if contains(lowered, phrase) {
 			findings = append(findings, Finding{
 				Rule:   RuleInventedRelationship,
 				Phrase: phrase,
@@ -84,16 +83,21 @@ func labelFindings(label string, lang textlang.Lang, band convstate.Band) []Find
 	// A chip is checked as an unthreaded body with nothing booked or met,
 	// whatever the draft beside it is: it is the product's own claim about what
 	// it wrote from, so a call or a date named there is asserted by us rather
-	// than echoed from the counterparty or the caller.
-	return append(findings, Body(label, lang, band, Grounds{})...)
+	// than echoed from the counterparty or the caller. The body's own
+	// introduction rule is the draft language's subset of the pass above.
+	return append(findings, slices.DeleteFunc(Body(label, lang, band, Grounds{}), func(f Finding) bool {
+		return f.Rule == RuleInventedRelationship
+	})...)
 }
 
-// allDirectedRelationshipPhrases joins the lists of all languages, for the
-// reasoning channel. A chip's own language is not the draft's.
-func allDirectedRelationshipPhrases() []string {
+// allIntroductionPhrases joins every language's directed and event lists, for
+// the reasoning channel. A chip's own language is not the draft's.
+func allIntroductionPhrases() []string {
 	var out []string
-	for _, phrases := range directedRelationship {
-		out = append(out, phrases...)
+	for _, lists := range []map[textlang.Lang][]string{directedIntroduction, introductionEvent} {
+		for _, phrases := range lists {
+			out = append(out, phrases...)
+		}
 	}
 	return out
 }
