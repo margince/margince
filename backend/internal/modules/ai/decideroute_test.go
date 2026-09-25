@@ -73,9 +73,17 @@ type decideFixture struct {
 
 func newDecideFixture(t *testing.T, decider decision.Client, spent int64) decideFixture {
 	t.Helper()
+	ladder := stubClient{resp: model.Response{Text: "ladder answer", InputTokens: 30, OutputTokens: 5}}
+	return newDecideFixtureOver(t, decider, spent, ladder)
+}
+
+// newDecideFixtureOver is newDecideFixture with the cheap rung answered by
+// cheap, for a case whose walk must fail over to premium.
+func newDecideFixtureOver(t *testing.T, decider decision.Client, spent int64, cheap model.Client) decideFixture {
+	t.Helper()
 	store, meter := &fakeCallStore{}, &memMeter{spent: spent}
 	ladder := stubClient{resp: model.Response{Text: "ladder answer", InputTokens: 30, OutputTokens: 5}}
-	r := assembleRouter(map[Tier]model.Client{TierCheapCloud: ladder, TierPremium: ladder}, NewFakeClient(),
+	r := assembleRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: ladder}, NewFakeClient(),
 		ProfileCloudFrontier, meter, StaticBudget(100), store,
 		map[Tier]routeMeta{TierCheapCloud: {provider: "gemini", model: "cheap"}, TierPremium: {provider: "gemini", model: "premium"}},
 		false, nil)
@@ -248,6 +256,25 @@ func TestEveryDecisionRowKeepsTheAnswerItRead(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// The decision reason says why the ladder walked at all, so it sits on the
+// walk's first rung; a rung above it ran because that one failed.
+func TestADecisionFallbackWhoseFirstRungFailsKeepsTheReasonOnThatRung(t *testing.T) {
+	decider := &scriptedDecider{replies: []decisionReply{answered("parked", 0.5)}}
+	f := newDecideFixtureOver(t, decider, 0, stubClient{err: errors.New("cheap down")})
+	if _, _, err := f.decide(t, triageQuestion); err != nil {
+		t.Fatal(err)
+	}
+	assertOneLogicalCall(t, f.store.recorded)
+	want := []rowShape{
+		{kind: callKindDecision, tier: TierDecideLane},
+		{kind: callKindCompletion, tier: TierCheapCloud, reason: attemptReasonDecisionBelowFloor},
+		{kind: callKindCompletion, tier: TierPremium, reason: attemptReasonProviderError},
+	}
+	if got := shapes(f.store.recorded); !reflect.DeepEqual(got, want) {
+		t.Fatalf("rows = %+v, want %+v", got, want)
 	}
 }
 

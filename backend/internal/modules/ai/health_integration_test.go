@@ -89,12 +89,12 @@ func TestRungHealthCountsASchemaRetryAsAnotherAnsweredCall(t *testing.T) {
 
 // Every attempt of one logical call is written in one transaction, so they
 // share occurred_at. The tier's latest outcome is then its highest attempt:
-// here it answered first and failed on the retry, and it is down now.
+// here it answered first and failed on the schema retry, and it is down now.
 func TestRungHealthReadsATiersLatestAttemptWithinOneCall(t *testing.T) {
 	logical := ids.NewV7()
 	rungs := rungHealthAfter(t, []Call{
 		ladderRow(logical, 1, false, TierLocalSmall, "", ""),
-		ladderRow(logical, 2, false, TierLocalSmall, attemptReasonProviderError, "provider_unavailable"),
+		ladderRow(logical, 2, false, TierLocalSmall, attemptReasonSchemaInvalid, "provider_unavailable"),
 		ladderRow(logical, 3, true, TierCheapCloud, attemptReasonProviderError, ""),
 	})
 
