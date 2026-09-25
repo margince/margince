@@ -52,7 +52,7 @@ func companyReadAnswerRequest(message string, history []model.Message, evidence 
 	return model.Request{
 		System: companyReadMessageSystem + "\n" + promptvoice.Rule + "\n" +
 			fence.Rule("dossier evidence and application state"),
-		Messages:  messages,
+		Messages:  alternatingTurns(messages),
 		MaxTokens: ai.ReasoningOutputMaxTokens, ResponseSchema: companyReadMessageSchema,
 		SecretStripper: ai.NewSecretStripper(),
 	}, nil

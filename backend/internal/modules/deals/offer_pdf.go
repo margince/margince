@@ -2,24 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The offer PDF renderer: a branded A4 document — title/buyer/line-items/
-// totals, plus the selected template's layout text (header/footer/terms,
-// when the template's layout carries them) — built purely from already-
-// resolved, already-persisted inputs (offer_render.go's PrepareRender
-// gathers them). The offer's Net/Tax/GrossMinor fields are the totals
-// engine's already-persisted output (offer_totals.go, recomputed inside
-// every mutating transaction); this file reads them off the Offer struct
-// as-is and performs no money arithmetic of its own, so the rendered
-// document can never disagree with what the API already shows.
+// totals, the offer's own intro and terms, and the selected template's
+// header and footer — built purely from already-resolved, already-persisted
+// inputs (offer_render.go's PrepareRender gathers them). The offer's
+// Net/Tax/GrossMinor fields are the totals engine's already-persisted output
+// (offer_totals.go, recomputed inside every mutating transaction); this file
+// reads them off the Offer struct as-is and performs no money arithmetic of
+// its own, so the rendered document can never disagree with what the API
+// already shows.
 //
-// layout is a workspace-authored, loosely-typed jsonb bag (logo/header/
-// footer/terms-block refs — crm.yaml's OfferTemplate.layout). This
-// renderer honors exactly three string keys — header_text, footer_text,
-// terms_text — printing each verbatim when present and omitting the
-// section entirely when absent; every other key (including a logo
-// reference) is a decorative ref this offline, network-free renderer
-// does not fetch or embed. That is the bounded, honest slice of "branded
-// layout" V1 ships; a richer template engine is future scope, not a
-// build-side invention of new keys.
+// layout is a workspace-authored, loosely-typed jsonb bag (crm.yaml's
+// OfferTemplate.layout). This renderer honors exactly the string keys in
+// OfferTemplateLayoutTextKeys, printing each verbatim when present and
+// omitting the section entirely when absent; every other key (including a
+// logo reference) is a decorative ref this offline, network-free renderer
+// does not fetch or embed.
 
 package deals
 
@@ -33,6 +30,20 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
+
+// The template layout keys the renderer prints, spelled as the offer-template
+// form (frontend/src/screens/offertemplates.tsx) stores them;
+// backend/gates/offertemplatelayout_test.go holds the two sides to one set.
+const (
+	offerLayoutHeader = "header"
+	offerLayoutFooter = "footer"
+)
+
+// OfferTemplateLayoutTextKeys lists the layout keys RenderOfferPDF prints, for
+// the gate that holds the template form's spelling to them.
+func OfferTemplateLayoutTextKeys() []string {
+	return []string{offerLayoutHeader, offerLayoutFooter}
+}
 
 // pdfLabels holds one locale's label set for the rendered PDF.
 type pdfLabels struct {
@@ -99,6 +110,15 @@ func pdfFormatQuantity(quantity float64) string {
 	return strconv.FormatFloat(quantity, 'f', -1, 64)
 }
 
+// pdfOfferText reads one of the offer's own optional texts; null and an
+// emptied field both answer "", the caller's cue to draw nothing.
+func pdfOfferText(text *string) string {
+	if text == nil {
+		return ""
+	}
+	return *text
+}
+
 func pdfBuyerBlockString(buyerBlock map[string]any, key string) string {
 	v, _ := buyerBlock[key].(string)
 	return v
@@ -122,7 +142,7 @@ func pdfLayoutString(layout map[string]any, key string) string {
 type pdfTranslator func(string) string
 
 // writeOfferPDFHeader writes the title/revision/issuer block, the
-// template layout's header_text (when the layout carries one), and the buyer
+// template layout's header (when the layout carries one), and the buyer
 // legal block underneath it. A block that NAMES no buyer — nil, as an unsent
 // draft with no buyer company is, or one carrying neither display_name nor
 // legal_name — omits the section entirely rather than printing an empty
@@ -146,7 +166,7 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	pdf.Cell(0, 6, tr(labels.issuer+": "+issuerName))
 	pdf.Ln(10)
 
-	if headerText := pdfLayoutString(layout, "header_text"); headerText != "" {
+	if headerText := pdfLayoutString(layout, offerLayoutHeader); headerText != "" {
 		pdf.SetFont("Helvetica", "", 10)
 		pdf.MultiCell(0, 5, tr(headerText), "", "L", false)
 		pdf.Ln(4)
@@ -186,6 +206,18 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 		pdf.Cell(0, 6, tr(legalName))
 		pdf.Ln(6)
 	}
+	pdf.Ln(4)
+}
+
+// writeOfferPDFIntro writes the offer's own intro text ahead of the lines it
+// introduces, when the offer carries one.
+func writeOfferPDFIntro(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer) {
+	text := pdfOfferText(o.IntroText)
+	if text == "" {
+		return
+	}
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.MultiCell(0, 5, tr(text), "", "L", false)
 	pdf.Ln(4)
 }
 
@@ -232,11 +264,14 @@ func writeOfferPDFTotals(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	pdf.Ln(6)
 }
 
-// writeOfferPDFTerms writes the template layout's terms_text as a
-// dedicated section, when the layout carries one — omitted entirely
-// otherwise, never an empty heading.
-func writeOfferPDFTerms(pdf *fpdf.Fpdf, tr pdfTranslator, layout map[string]any, labels pdfLabels) {
-	text := pdfLayoutString(layout, "terms_text")
+// writeOfferPDFTerms writes the offer's own terms text as a dedicated
+// section, when it carries one — omitted entirely otherwise, never an empty
+// heading. Terms come from the offer and never from its template: they are
+// edited per offer under Edit header, the template form has no terms field,
+// and a template default beneath them would be a second answer nobody can
+// author.
+func writeOfferPDFTerms(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer, labels pdfLabels) {
+	text := pdfOfferText(o.TermsText)
 	if text == "" {
 		return
 	}
@@ -248,10 +283,10 @@ func writeOfferPDFTerms(pdf *fpdf.Fpdf, tr pdfTranslator, layout map[string]any,
 	pdf.MultiCell(0, 5, tr(text), "", "L", false)
 }
 
-// writeOfferPDFFooter writes the template layout's footer_text at the
+// writeOfferPDFFooter writes the template layout's footer at the
 // bottom of the rendered content, when the layout carries one.
 func writeOfferPDFFooter(pdf *fpdf.Fpdf, tr pdfTranslator, layout map[string]any) {
-	text := pdfLayoutString(layout, "footer_text")
+	text := pdfLayoutString(layout, offerLayoutFooter)
 	if text == "" {
 		return
 	}
@@ -262,7 +297,7 @@ func writeOfferPDFFooter(pdf *fpdf.Fpdf, tr pdfTranslator, layout map[string]any
 
 // RenderOfferPDF builds the branded offer PDF from already-resolved
 // inputs (see offer_render.go's PrepareRender): o carries the offer
-// header and its server-computed totals, lines are its accepted line
+// header (intro and terms included) and its server-computed totals, lines are its accepted line
 // items, buyerBlock is the frozen buyer_snapshot once sent or the live
 // buyer company while still draft (nil when the offer has none),
 // issuerName is the seller's display name, locale drives the DE/EN label
@@ -299,9 +334,10 @@ func RenderOfferPDF(o crmcontracts.Offer, lines []crmcontracts.OfferLineItem, bu
 	pdf.AddPage()
 
 	writeOfferPDFHeader(pdf, tr, o, buyerBlock, issuerName, layout, labels)
+	writeOfferPDFIntro(pdf, tr, o)
 	writeOfferPDFLineItems(pdf, tr, lines, o.Currency, labels)
 	writeOfferPDFTotals(pdf, tr, o, labels)
-	writeOfferPDFTerms(pdf, tr, layout, labels)
+	writeOfferPDFTerms(pdf, tr, o, labels)
 	writeOfferPDFFooter(pdf, tr, layout)
 
 	var buf bytes.Buffer

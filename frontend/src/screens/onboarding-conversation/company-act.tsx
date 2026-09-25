@@ -6,7 +6,7 @@ import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
   problemCodeOf,
@@ -155,6 +155,7 @@ export function CompanyAct({
   adoptedRead = null,
 }: CompanyActProps) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   // The gate greets by name, and uses the whole display_name rather than a
@@ -1005,10 +1006,9 @@ export function CompanyAct({
           <Button variant="ghost" onClick={() => setArtifactMode("record")}>
             {t("ob.digest.pickFacts")}
           </Button>
-          {/* One Save for every line corrected in place, and only once one
-              has been: the deck's own Confirm is the way onward for a reader
-              who changed nothing, and a second button saying the same thing
-              beside an untouched record would be a choice with no difference. */}
+          {/* One Save for every corrected line, shown only once one is: an
+              untouched record already has the deck's Confirm, and a second
+              button saying the same would be a choice with no difference. */}
           {draft.edited.size > 0 && (
             <WayOnward
               label={t("ob.digest.saveChanges")}
@@ -1021,7 +1021,7 @@ export function CompanyAct({
               }
               note={
                 <p className="ob-stage-hint">
-                  {t("ob.digest.changed", {
+                  {plural("ob.digest.changed", draft.edited.size, {
                     count: formatNumber(draft.edited.size, locale),
                   })}
                 </p>

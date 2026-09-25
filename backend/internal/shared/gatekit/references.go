@@ -5,8 +5,14 @@ package gatekit
 
 import (
 	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
 	"path"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"sync"
 )
 
 // References reports whether a parsed file reaches symbol in the package at
@@ -89,7 +95,11 @@ func ImportedAs(file *ast.File, importPath string) (qualifier string, dotImporte
 		}
 		switch {
 		case spec.Name == nil:
-			return path.Base(importPath), false
+			// The package's OWN name, not its directory's: Go binds the
+			// package clause, and for backend/internal/contracts those differ
+			// (it declares crmcontracts). A gate resolving the directory hunts
+			// a qualifier no file spells and reports a clean sweep.
+			return DeclaredPackageName(importPath), false
 		case spec.Name.Name == ".":
 			return "", true
 		case spec.Name.Name == "_":
@@ -100,4 +110,136 @@ func ImportedAs(file *ast.File, importPath string) (qualifier string, dotImporte
 		}
 	}
 	return "", false
+}
+
+// declaredNames caches the package clause found for an import path, so a gate
+// sweeping a tree resolves each imported package once rather than per file.
+var declaredNames sync.Map // importPath -> string
+
+// DeclaredPackageName answers the identifier Go binds for an UNALIASED import
+// of importPath: the package's own `package` clause, not the last segment of
+// its directory.
+//
+// The two differ, and they differ for the path most gates care about:
+//
+//	directory   backend/internal/contracts
+//	package     crmcontracts
+//
+// A gate resolving the directory hunts `contracts.Foo` through a file that
+// says `crmcontracts.Foo`, finds nothing, and reports a clean package — which
+// is the under-recognition a census may not have, arriving through a helper
+// rather than through the gate's own reader.
+//
+// A path this cannot resolve falls back to the directory name, which is the
+// right answer for the standard library and for any module whose sources are
+// not beside this one: `net/http` declares `http`, `go/ast` declares `ast`.
+// Falling back is safe in a way guessing is not — the name is only wrong when
+// a package renames itself, and that is exactly the case the module-local read
+// below covers.
+func DeclaredPackageName(importPath string) string {
+	if cached, ok := declaredNames.Load(importPath); ok {
+		// Checked rather than forced: this map is written only below, so a
+		// non-string cannot be in it — and a gate that panicked here would
+		// take down a census over a cache, which is the wrong trade for a
+		// value it can simply re-derive.
+		if name, isString := cached.(string); isString {
+			return name
+		}
+	}
+	name := path.Base(importPath)
+	if dir, ok := moduleLocalDir(importPath); ok {
+		if declared, found := packageClauseIn(dir); found {
+			name = declared
+		}
+	}
+	declaredNames.Store(importPath, name)
+	return name
+}
+
+// moduleLocalDir maps an import path inside THIS module onto the directory
+// holding it, or reports that the path belongs to somebody else.
+func moduleLocalDir(importPath string) (string, bool) {
+	root, modPath, ok := moduleRootAndPath()
+	if !ok || modPath == "" {
+		return "", false
+	}
+	if importPath == modPath {
+		return root, true
+	}
+	rel, inside := strings.CutPrefix(importPath, modPath+"/")
+	if !inside {
+		return "", false
+	}
+	return filepath.Join(root, filepath.FromSlash(rel)), true
+}
+
+// packageClauseIn reads the package clause of the production sources in dir.
+//
+// `_test.go` files are skipped because one may declare the EXTERNAL test
+// package — `crmcontracts_test` — and a directory listing is ordered by name,
+// so one sorting first would hand back a package no production file imports.
+// That is the same fail-short direction this helper exists to close, and a
+// wrong name is not an absent one.
+func packageClauseIn(dir string) (string, bool) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", false
+	}
+	fset := token.NewFileSet()
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		file, perr := parser.ParseFile(fset, filepath.Join(dir, name), nil, parser.PackageClauseOnly)
+		if perr != nil || file.Name == nil {
+			continue
+		}
+		return file.Name.Name, true
+	}
+	return "", false
+}
+
+// moduleRootAndPath walks up from the working directory for the go.mod that
+// bounds this module, and answers its directory and its declared module path.
+//
+// Cached because every gate in a sweep asks, and the answer cannot change
+// during a run.
+var (
+	moduleOnce sync.Once
+	moduleDir  string
+	modulePath string
+	moduleOK   bool
+)
+
+func moduleRootAndPath() (dir, modPath string, ok bool) {
+	moduleOnce.Do(func() {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return
+		}
+		for dir := cwd; ; {
+			candidate := filepath.Join(dir, "go.mod")
+			// The path is this process's own working directory with "go.mod"
+			// appended, walked upward — no caller supplies any part of it, and
+			// a gate that could not read its own module root would be a census
+			// resolving nothing.
+			//nolint:gosec // G304: the path is Getwd plus a fixed filename, never an input
+			if body, readErr := os.ReadFile(candidate); readErr == nil {
+				for _, line := range strings.Split(string(body), "\n") {
+					if rest, found := strings.CutPrefix(strings.TrimSpace(line), "module "); found {
+						moduleDir, modulePath, moduleOK = dir, strings.TrimSpace(rest), true
+						return
+					}
+				}
+				return
+			}
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				return
+			}
+			dir = parent
+		}
+	})
+	return moduleDir, modulePath, moduleOK
 }

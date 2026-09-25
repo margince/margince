@@ -518,20 +518,20 @@ function suggestedCoverage(): Partial<Coverage> {
   } as Partial<Coverage>;
 }
 
+const UTE_BUYS: components["schemas"]["DealRoleProposalWritten"] = {
+  contact_id: "p-1",
+  full_name: "Ute Sommer",
+  role: "economic_buyer",
+  evidence_snippet: "I sign off the budget for this, so send",
+  source_activity_id: "a-1",
+  confidence: 0.9,
+};
+
 test("reads the roles from the deal, and refreshes the board after", async () => {
   const writes: Writes = {
     calls: [],
     proposals: {
-      written: [
-        {
-          contact_id: "p-1",
-          full_name: "Ute Sommer",
-          role: "economic_buyer",
-          evidence_snippet: "I sign off the budget for this, so send",
-          source_activity_id: "a-1",
-          confidence: 0.9,
-        },
-      ],
+      written: [UTE_BUYS],
       skipped: 0,
       generated_by: "model",
     },
@@ -549,7 +549,7 @@ test("reads the roles from the deal, and refreshes the board after", async () =>
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
   );
-  await screen.findByText(/Roles assigned from their messages: 1/);
+  await screen.findByText("1 role assigned from their messages");
   // The POST goes to the DEAL; the refresh reads the ACCOUNT. A component that
   // refreshed the deal instead would show the board as it was before the write.
   expect(
@@ -597,8 +597,32 @@ test("tells nothing-proposed apart from everything-refused", async () => {
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
   );
-  await screen.findByText(/Suggestions dropped for weak evidence: 3/);
+  await screen.findByText(/3 suggestions were dropped for weak evidence/);
 });
+
+test.each([
+  [[UTE_BUYS, { ...UTE_BUYS, contact_id: "p-2" }], 0, "2 roles assigned"],
+  [[], 1, "1 suggestion was dropped"],
+])(
+  "counts what the reading wrote or dropped (%#)",
+  async (written, skipped, said) => {
+    stub(suggestedCoverage(), {
+      calls: [],
+      proposals: { written, skipped, generated_by: "model" },
+    });
+    render(
+      <CoverageBand
+        companyId="o-1"
+        accountName="Brandt GmbH"
+        onNarrow={() => {}}
+      />,
+    );
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: /Suggest roles/i }));
+    expect(await screen.findByText(new RegExp(said))).toBeTruthy();
+  },
+);
 
 // A role is recorded on a deal. Hidden, the button teaches nothing; disabled
 // with the reason, it says what the account is missing.

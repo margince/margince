@@ -66,11 +66,8 @@ func publicConfiguredModels(cfg RoutingConfig) []crmcontracts.AssistantConfigure
 			continue
 		}
 		modelID := binding.Model
-		switch binding.Provider {
-		case providerOllama:
-			modelID = defaulted(modelID, defaultOllamaModel)
-		case providerVLLM:
-			modelID = defaulted(modelID, defaultVLLMModel)
+		if fallback := providerDefaultModel(binding.Provider); fallback != "" {
+			modelID = defaulted(modelID, fallback)
 		}
 		models = append(models, crmcontracts.AssistantConfiguredModel{
 			Tier:     crmcontracts.AssistantConfiguredModelTier(tier),
@@ -100,22 +97,11 @@ func publicProviders(cfg RoutingConfig) []crmcontracts.AssistantProfileProviders
 }
 
 func publicProvider(provider string) (crmcontracts.AssistantProfileProviders, bool) {
-	switch provider {
-	case providerAnthropic:
-		return crmcontracts.AssistantProfileProviders(providerAnthropic), true
-	case providerGemini:
-		return crmcontracts.AssistantProfileProviders(providerGemini), true
-	case providerOllama:
-		return crmcontracts.AssistantProfileProviders(providerOllama), true
-	case providerOpenAI:
-		return crmcontracts.AssistantProfileProviders(providerOpenAI), true
-	case providerOpenAICompatible:
-		return crmcontracts.AssistantProfileProviders(providerOpenAICompatible), true
-	case providerVLLM:
-		return crmcontracts.AssistantProfileProviders(providerVLLM), true
-	default:
+	d, ok := providerByName(provider)
+	if !ok || !d.public {
 		return "", false
 	}
+	return crmcontracts.AssistantProfileProviders(d.name), true
 }
 
 func publicInferenceMode(providers []crmcontracts.AssistantProfileProviders) crmcontracts.AssistantProfileInferenceMode {

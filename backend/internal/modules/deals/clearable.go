@@ -122,12 +122,32 @@ func splitDealClears(p *storekit.Patch, fields []string, current crmcontracts.De
 			rest = append(rest, field)
 			continue
 		}
-		clearedPartner = true
+		// Which pair, not merely that there was one. This map holds the ARR
+		// clear as well, and a flag raised by any pair told the partner writer
+		// to forget a partner the request never mentioned — it clears both
+		// columns unconditionally, so blanking a deal's recurring figure
+		// destroyed the attribution a commission accrues on.
+		//
+		// Derived from the columns the pair actually writes rather than from
+		// its key, so a pair added later is classified by what it does.
+		if writesPartner(pair) {
+			clearedPartner = true
+		}
 		for _, half := range pair {
 			p.Set(half.Column, half.Current, nil)
 		}
 	}
 	return rest, clearedPartner
+}
+
+// writesPartner reports whether this pair is the one the partner writer owns.
+func writesPartner(pair []storekit.Clearable) bool {
+	for _, half := range pair {
+		if half.Column == filterPartnerCompanyID || half.Column == partnerAttributionField {
+			return true
+		}
+	}
+	return false
 }
 
 // ensureClearedLinksVisible refuses to forget a link to a record the caller

@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/ports/decision"
 )
 
 func fixtureJSON[T any](t *testing.T, v T) json.RawMessage {
@@ -74,5 +76,37 @@ func TestSiteTriageCaseSiteMatchesTheContract(t *testing.T) {
 	site := (siteTriageCases{}).Site()
 	if site.Variant != "triage" || string(site.Task) != "site_triage" {
 		t.Errorf("Site() = %+v, want the site_triage/triage site the census registers", site)
+	}
+}
+
+func TestSiteTriageCaseGradesADecisionByExactLabel(t *testing.T) {
+	page := fixtureJSON(t, siteTriageFixture{URL: "https://acme.example", Text: "We build robots."})
+	prepared, err := (siteTriageCases{}).Prepare(page, fixtureJSON(t, siteKindCompany))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dc, ok := prepared.(aitasks.DecisionCase)
+	if !ok {
+		t.Fatal("the triage case has no decision form")
+	}
+	if got := dc.EvaluateDecision(decision.Answer{Choice: siteKindCompany, Confidence: 0.9}); got.Result != aitasks.OutcomeAccepted {
+		t.Errorf("the expected label = %q (%s), want accepted", got.Result, got.Detail)
+	}
+	if got := dc.EvaluateDecision(decision.Answer{Choice: siteKindPersonal, Confidence: 0.9}); got.Result != aitasks.OutcomeWrongAnswer || got.Detail == "" {
+		t.Errorf("a different label = %q (%q), want a wrong answer that says why", got.Result, got.Detail)
+	}
+	// The floors are folded into the decision stamp, so they must be the gate's
+	// own: a floor the gate does not apply would stamp a record for a judgment
+	// the worker never makes.
+	for kind, floor := range dc.Floors() {
+		if dc.GateDecision(decision.Answer{Choice: kind, Confidence: floor}) != ai.DecisionAccepted {
+			t.Errorf("%s at its stated floor %.2f is not accepted by the gate", kind, floor)
+		}
+		if dc.GateDecision(decision.Answer{Choice: kind, Confidence: floor - 0.01}) != ai.DecisionBelowFloor {
+			t.Errorf("%s just under its stated floor %.2f is accepted by the gate", kind, floor)
+		}
+	}
+	if len(dc.Floors()) != len(siteTriageKinds) {
+		t.Errorf("%d floors, want one per triage kind", len(dc.Floors()))
 	}
 }

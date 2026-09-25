@@ -52,6 +52,9 @@ type CreateProjectInput struct {
 	StartedAt     *time.Time
 	TargetEndDate *time.Time
 	Source        string
+	// SourceSystem names the system an import took this project from; nil
+	// for one created here, which is what makes it unattributable.
+	SourceSystem *string
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (storekit customcolumns).

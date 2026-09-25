@@ -110,7 +110,7 @@ func TestSeedModelRatesEveryEntryIsNonNegativeAndUnique(t *testing.T) {
 // no silent 0 for a REAL call, but locals are a real 0 by construction).
 func TestSeedModelRatesLocalsAreZero(t *testing.T) {
 	rates := SeedModelRates(seedRatesTestDay)
-	locals := map[string]bool{ProviderFake: false, providerOllama: false, providerVLLM: false}
+	locals := map[string]bool{ProviderFake: false, providerOllama: false, providerVLLM: false, providerLaya: false}
 	for _, r := range rates {
 		if _, ok := locals[r.Provider]; !ok {
 			continue
@@ -249,8 +249,8 @@ func seedRoutingIn(t *testing.T, path string) (RoutingConfig, bool) {
 // that a chat model priced at 0 (every local row) gets wrong.
 func TestSeedModelRatesEveryRowDeclaresItsLane(t *testing.T) {
 	for _, r := range SeedModelRates(seedRatesTestDay) {
-		if r.Lane != LaneChat && r.Lane != LaneEmbeddings {
-			t.Errorf("%s/%s: lane %q is neither %q nor %q", r.Provider, r.ModelID, r.Lane, LaneChat, LaneEmbeddings)
+		if r.Lane != LaneChat && r.Lane != LaneEmbeddings && r.Lane != LaneDecisions {
+			t.Errorf("%s/%s: lane %q is none of %q, %q, %q", r.Provider, r.ModelID, r.Lane, LaneChat, LaneEmbeddings, LaneDecisions)
 		}
 	}
 }
@@ -286,5 +286,28 @@ func TestSeedModelRatesFilesTheEmbeddersAsEmbedders(t *testing.T) {
 		if !seen {
 			t.Errorf("no seed row for embedding model %s — the embeddings picker lost an option", key)
 		}
+	}
+}
+
+// A decision model is filed under the decisions lane and a decision provider
+// has no other kind of row, so the routing form offers it only where the
+// decisions lane binds. Jev bills its input alone, at the rate its own
+// usage.cost showed.
+func TestTheSeedSheetFilesJevUnderTheDecisionsLane(t *testing.T) {
+	jevPriced := false
+	for _, r := range SeedModelRates(seedRatesTestDay) {
+		d, _ := providerByName(r.Provider)
+		if d.caps.has(capDecision) != (r.Lane == LaneDecisions) {
+			t.Errorf("%s/%s: lane %q on a provider whose decision capability is %v", r.Provider, r.ModelID, r.Lane, d.caps.has(capDecision))
+		}
+		if r.Lane == LaneDecisions && (r.OutputPerMTokMicroUSD != 0 || r.CacheReadPerMTokMicroUSD != 0 || r.CacheWritePerMTokMicroUSD != 0) {
+			t.Errorf("%s/%s: a decision row prices a bucket the lane never records", r.Provider, r.ModelID)
+		}
+		if r.Provider == providerOpenRouterDecision && r.ModelID == "typesafe/jev-1.13" {
+			jevPriced = r.InputPerMTokMicroUSD == 42_000
+		}
+	}
+	if !jevPriced {
+		t.Error("no seed row prices typesafe/jev-1.13 at 42,000 micro-USD per million input tokens")
 	}
 }

@@ -155,14 +155,16 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 
 // keepingStoredUpstream carries each stored lane's upstream preferences and
 // thinking level onto the same lane of next when next declares none and binds
-// the same provider, host and model.
+// the same provider, host and model. A value next declares always wins.
 //
-// The HTTP contract has no field for either, so every write through it arrives
-// with neither: without this, reading the binding and writing it straight back
-// would drop an `only:` residency pin, and the broker would go back to serving
-// that lane from any region. Keyed on the model as well as the host because a
-// pin names hosts that serve ONE model — carried onto another, it would fail
-// every call for want of a host, with nothing in the form able to lift it.
+// A write that omits them — a client that predates the contract's `routing` or
+// `thinking_level` field, or a settings seed — would otherwise drop an `only:`
+// residency pin, and the broker would go back to serving that lane from any
+// region. The routing editor applies the same rule from its side (rebind in
+// frontend/src/screens/ai-routing-fields.tsx). Keyed on the model as well as
+// the host because a pin names hosts that serve ONE model, and a level is
+// refused on a model that predates it — carried onto another, either would
+// fail the lane with nothing in the form able to lift it.
 func (next RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingConfig {
 	carry := func(lane, kept ProviderConfig) ProviderConfig {
 		if lane.Provider != kept.Provider || !sameEndpoint(lane.BaseURL, kept.BaseURL) || lane.Model != kept.Model {

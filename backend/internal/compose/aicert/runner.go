@@ -225,36 +225,62 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		}
 	}()
 
-	// After the journal, because a restart replaying every run sends nothing and
-	// the pre-flight would be its one paid call.
-	if journal.replaysEverything(ctx, cfg, byTask, repeats) {
-		log.InfoContext(ctx, "aicert: pre-flight skipped — every run replays from the resume journal")
-	} else if err := preflight(ctx, cfg, sortedTasks(byTask), nil, log); err != nil {
+	if err := runPreflights(ctx, cfg, journal, byTask, repeats, log); err != nil {
 		return nil, fmt.Errorf("aicert: runner: %w", err)
 	}
 
 	var records []Record
 	var runErrs []error
 	for _, task := range sortedTasks(byTask) {
-		binding, judge, err := taskBindings(ctx, cfg, task, log)
+		written, err := certifyAndWrite(ctx, cfg, task, byTask[task], repeats, trace, journal, log)
+		records = append(records, written...)
 		if err != nil {
 			runErrs = append(runErrs, err)
-			continue
 		}
-		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, binding, judge, cfg.recordProfile(), repeats, log,
-			&certifyHooks{trace: trace, journal: journal.forTask(task, binding, judge)})
-		if err != nil {
-			log.ErrorContext(ctx, "aicert: task certification failed — no record written", "task", string(task), "err", err)
-			runErrs = append(runErrs, fmt.Errorf("task %s: %w", task, err))
-			continue
-		}
-		if err := WriteRecord(cfg.RecordDir, rec); err != nil {
-			runErrs = append(runErrs, fmt.Errorf("task %s: writing record: %w", task, err))
-			continue
-		}
-		records = append(records, rec)
 	}
 	return records, errors.Join(runErrs...)
+}
+
+// certifyAndWrite certifies one task and writes its records: the LLM record,
+// then — when the run binds a decisions lane — each decision site's beside it.
+// It returns what it wrote even when a later step failed, so a decision leg
+// that fails never costs the task the LLM record already on disk.
+func certifyAndWrite(ctx context.Context, cfg RunnerConfig, task ai.Task, scenarios []Scenario, repeats int,
+	trace *payloadTrace, journal *runJournal, log *slog.Logger,
+) ([]Record, error) {
+	binding, judge, err := taskBindings(ctx, cfg, task, log)
+	if err != nil {
+		return nil, err
+	}
+	hooks := &certifyHooks{trace: trace, journal: journal.forTask(task, binding, judge)}
+	rec, err := certifyTask(ctx, task, scenarios, cfg.Census, binding, judge, cfg.recordProfile(), repeats, log, hooks)
+	if err != nil {
+		log.ErrorContext(ctx, "aicert: task certification failed — no record written", "task", string(task), "err", err)
+		return nil, fmt.Errorf("task %s: %w", task, err)
+	}
+	if err := WriteRecord(cfg.RecordDir, rec); err != nil {
+		return nil, fmt.Errorf("task %s: writing record: %w", task, err)
+	}
+	decisions, err := certifyDecisionsFor(ctx, cfg, task, scenarios, binding, rec, repeats, hooks, log)
+	if err != nil {
+		log.ErrorContext(ctx, "aicert: decision leg failed — no decision record written", "task", string(task), "err", err)
+		return []Record{rec}, fmt.Errorf("task %s: %w", task, err)
+	}
+	return append([]Record{rec}, decisions...), nil
+}
+
+// runPreflights asks every binding the run will use one question before the
+// corpus. After the journal is opened, because a restart replaying every run
+// sends no LLM call and the chat pre-flight would be its one paid call. The
+// decision pre-flight runs regardless: no decision run is journaled, so the
+// leg is paid for on every run and its pre-flight is always worth the call.
+func runPreflights(ctx context.Context, cfg RunnerConfig, journal *runJournal, byTask map[ai.Task][]Scenario, repeats int, log *slog.Logger) error {
+	if journal.replaysEverything(ctx, cfg, byTask, repeats) {
+		log.InfoContext(ctx, "aicert: pre-flight skipped — every run replays from the resume journal")
+	} else if err := preflight(ctx, cfg, sortedTasks(byTask), nil, log); err != nil {
+		return err
+	}
+	return preflightDecisions(ctx, cfg, byTask, nil, log)
 }
 
 // certifyHooks is the injection seam for certifyTask's two router
@@ -269,7 +295,10 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 type certifyHooks struct {
 	candidateOpts []ai.LocalOption
 	judgeOpts     []ai.LocalOption
-	trace         *payloadTrace
+	// decisionOpts reach the decision leg's router alone — a scripted
+	// decision model via ai.WithFakeDecider.
+	decisionOpts []ai.LocalOption
+	trace        *payloadTrace
 	// journal is this task's view of the resume journal. Its zero value is the
 	// disabled one, so a caller that resumes nothing leaves it alone.
 	journal taskJournal
@@ -281,7 +310,7 @@ type certifyHooks struct {
 // certifyTask runs every scenario for one task over a fresh
 // candidate/judge router pair and folds the outcome into one Record.
 func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census *aitasks.Registry, binding, judgeBinding ai.ProviderConfig, profile ai.Profile, repeats int, log *slog.Logger, hooks *certifyHooks) (Record, error) {
-	candidateCfg, err := ladderForTask("candidate (MARGINCE_AICERT_MODEL, or the rung MARGINCE_AICERT_ROUTING resolved)", binding, profile, task)
+	candidateCfg, err := ladderForTask("candidate (MARGINCE_AICERT_MODEL, or the rung MARGINCE_AICERT_ROUTING resolved)", binding, candidateRole.profileFor(profile), task)
 	if err != nil {
 		return Record{}, err
 	}
@@ -325,7 +354,7 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	// The judge NEVER rides the candidate's binding — a model grading itself is
 	// certified by construction, which defeats the whole point of a second
 	// router. Run refuses the two being equal before a single call is paid for.
-	judgeCfg, err := ladderForTask("judge (MARGINCE_AICERT_JUDGE_MODEL / _JUDGE_BASE_URL)", judgeBinding, profile, task)
+	judgeCfg, err := ladderForTask("judge (MARGINCE_AICERT_JUDGE_MODEL / _JUDGE_BASE_URL)", judgeBinding, judgeRole.profileFor(profile), task)
 	if err != nil {
 		return Record{}, err
 	}

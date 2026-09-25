@@ -40,6 +40,9 @@ type Registry struct {
 	db        *database.DB
 	sink      *Sink
 	authority authz.Resolver
+	// maxBackfillMonths is the installation's ceiling on how far back a
+	// mailbox import may reach, or 0 for none. See backfillcap.go.
+	maxBackfillMonths int
 	// vault seals and resolves a connection's credential bundle. The row
 	// carries an opaque credential_ref, never the credential bytes; the vault
 	// is the custodian. May be nil for a role composed before WithKeyvault

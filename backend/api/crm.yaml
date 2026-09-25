@@ -8402,7 +8402,7 @@ paths:
           A deal attaches to a contact by ADR-0008 §5, and un-contacting it would strand the
           deal's counterparty.
         - Original outcome `created` ⇒ `unwind='reversed'`: the lead un-archives to
-          `status=working` and the created contact is archived. **Activities captured after
+          `status=engaged` and the created contact is archived. **Activities captured after
           promotion stay on the contact's timeline** — they are real history, not something
           to rewrite backwards.
         - Original outcome `merged` ⇒ `unwind='merge_lineage_only'`: the pre-existing contact
@@ -12462,6 +12462,47 @@ paths:
               schema: { $ref: '#/components/schemas/HiddenBacklog' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /worklist/hidden/{rule}:
+    get:
+      tags: [Brief]
+      operationId: getHiddenBacklogRows
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Which threads one hiding rule is keeping off the queue.
+      description: |
+        `GET /worklist/hidden` answers how MANY each rule holds back. This answers WHICH —
+        the question a reader has the moment a figure surprises them, and the one the
+        guardrail could not answer while it carried counts alone.
+
+        A SECOND read rather than ids carried on the summary. The summary is read on every
+        worklist load, and four id arrays would ride every one of them; this is asked only
+        when somebody clicks a figure.
+
+        The rows are the DIFFERENCE the figure reports: what the queue finds with this one
+        rule relaxed and the others still in force, minus what it finds with none relaxed.
+        A plain relaxed read would return the whole queue plus the hidden few, so a reader
+        clicking "3 set aside" would receive three hundred rows.
+
+        Every visibility gate the queue applies rides along, because both halves are the
+        same eligibility statement: a thread the reader may not read produces no row in
+        either, so it cannot appear in the difference.
+      x-agent-access: human-only
+      parameters:
+        - name: rule
+          in: path
+          required: true
+          description: Which hiding rule to open. The same five `GET /worklist/hidden` counts.
+          schema:
+            type: string
+            enum: [set_aside, not_sales, past_horizon, unlinked, colleagues]
+      responses:
+        '200':
+          description: The threads that rule is holding back.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HiddenBacklogRows' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /worklist/response:
     get:
       tags: [Brief]
@@ -13447,8 +13488,8 @@ paths:
       x-agent-access: human-only
       summary: Whether the model lanes are answering.
       description: |
-        One row per model tier for the last hour: how many terminal attempts it made, how many
-        failed, the most recent error it reported, and its median latency.
+        One row per model tier for the last hour: how many attempts it made, how many failed, the
+        most recent error it reported, and its median latency.
 
         This exists because an outage is otherwise invisible. Under the capture posture a thread
         stays held whether the classifier judged it confidential or never answered at all, so a
@@ -13457,14 +13498,18 @@ paths:
 
         Read from `ai_call`, which already records every attempt. Nothing is written for this: a
         health surface with its own bookkeeping would be a second account of what happened, free
-        to disagree with the first. Terminal attempts only, so a failure a retry rescued does not
-        report a lane as failing while every caller of it got an answer.
+        to disagree with the first. A chat tier counts its terminal attempts only, so a failure a
+        retry rescued does not report a lane as failing while every caller of it got an answer.
+        The `decide` tier counts every decision attempt: it is asked once per call and never
+        retried on its own tier, so its attempt is its final outcome even when the ladder answers
+        after it — counting terminal attempts alone would call a decision endpoint that fails
+        every call healthy.
 
         An hour, because the question is whether it is answering NOW — a day-long window would
         call a lane that died forty minutes ago healthy on the strength of this morning.
       responses:
         '200':
-          description: One row per tier that made a terminal attempt in the window.
+          description: One row per tier that made a counted attempt in the window.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AiHealth' }
@@ -23733,12 +23778,13 @@ components:
         model_id: { type: string }
         lane:
           type: string
-          enum: [chat, embeddings]
+          enum: [chat, embeddings, decisions]
           description: |
             What the model is FOR. A property of the model rather than of this dated row: the
-            routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-            where the embeddings lane binds, and a zero output price cannot tell them apart —
-            every local chat row carries one too.
+            routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+            where the embeddings lane binds and a `decisions` one where the decision lane
+            binds, and a zero output price cannot tell them apart — every local chat row
+            carries one too.
         input_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         output_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         cache_read_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
@@ -23757,7 +23803,7 @@ components:
         model_id: { type: string }
         lane:
           type: string
-          enum: [chat, embeddings]
+          enum: [chat, embeddings, decisions]
           description: |
             What the model is for. OMIT to keep what the sheet already files this model as —
             a re-price must never re-file an embedder as a chat model, and a refresh knows
@@ -24764,7 +24810,7 @@ components:
           description: The vendor's own human label, absent where it publishes none.
         lane:
           type: string
-          enum: [chat, embeddings]
+          enum: [chat, embeddings, decisions]
           description: >-
             What the vendor says the model is FOR, absent where it does not say. Absent means
             UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
@@ -24846,6 +24892,8 @@ components:
           description: Tier name to the model bound on it. Empty means no models are bound.
         embeddings:
           $ref: '#/components/schemas/AiEmbeddingsBinding'
+        decisions:
+          $ref: '#/components/schemas/AiDecisionsBinding'
 
     AiTierBinding:
       type: object
@@ -24865,6 +24913,37 @@ components:
             What the bound model may be GIVEN, in the accepted-modality vocabulary. On the
             OpenAI-wire providers it IS the carriage; everywhere else it NARROWS the carriage
             the adapter already has and can never widen it. Omit for the provider's own answer.
+        routing:
+          $ref: '#/components/schemas/AiOpenRouterRouting'
+        thinking_level:
+          type: string
+          enum: [minimal, low, medium, high]
+          description: |
+            How deeply a gemini tier thinks when the request names no level of its own.
+            Gemini 3 or later only; refused on any other provider, on a model that predates
+            the field, and on the embeddings lane. Absent means the adapter's default, and a
+            save that omits it keeps the stored level while provider, host and model are
+            unchanged.
+
+    AiOpenRouterRouting:
+      type: object
+      additionalProperties: false
+      description: |
+        Upstream-selection preferences for an openai_compatible binding pointed at
+        OpenRouter; refused on any other binding, and on the embeddings lane every
+        preference but only, ignore and allow_fallbacks is refused. Absent means the
+        product default (reliability over price); an empty object means no preferences
+        (the broker's own price-weighted routing). The two are different choices and a
+        client must not turn one into the other.
+      properties:
+        only: { type: array, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
+        ignore: { type: array, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
+        quantizations: { type: array, items: { type: string }, description: 'Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.' }
+        sort: { type: string, description: 'price | throughput | latency. Reorders rather than filters, and disables load balancing.' }
+        require_parameters: { type: boolean, description: "Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent." }
+        allow_fallbacks: { type: boolean, description: "Override the broker's host fallback. False is a real choice, distinct from absent." }
+        preferred_max_latency_p90: { type: number, format: double, description: "Seconds; hosts above it are deprioritized, never removed. Omit to leave unset." }
+        reasoning_effort: { type: string, description: 'none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.' }
 
     AiEmbeddingsBinding:
       allOf:
@@ -24876,6 +24955,20 @@ components:
               description: |
                 The vector width the provider is asked to emit. Omit (or 0) for the compiled
                 default; a value outside [1,2000] is refused.
+
+    AiDecisionsBinding:
+      type: object
+      additionalProperties: false
+      required: [provider, model]
+      description: |
+        The decision-model lane: a model that answers a typed question with calibrated
+        probabilities, asked before a decision site's ladder. Absent means no task uses
+        one. It serves a task only when certified for that site and when its endpoint
+        reaches no further than the task's own bindings.
+      properties:
+        provider: { type: string, description: 'openrouter_decision | laya.' }
+        model: { type: string, description: 'The decision model id: a Jev slug, or a Laya checkpoint.' }
+        base_url: { type: string, description: 'Endpoint root; openrouter_decision requires an OpenRouter host.' }
 
     IntegrationsSettings:
       type: object
@@ -25476,6 +25569,11 @@ components:
             Which system the record came from (`hubspot`), so a surface can say
             where the attribution comes from rather than presenting it as
             something typed here. Null when the origin was not recorded.
+
+            An import writes its rows inside a reserved `mirror:` namespace, which
+            is machinery for the replay key and is never what a reader should see.
+            The prefix is stripped here: a row stored as `mirror:hubspot` reads
+            `hubspot`.
 
     EmailSummary:
       type: object
@@ -26134,6 +26232,15 @@ components:
         state: { type: string, enum: [none, queued, running, done, error, cancelled] }
         backfill_id: { type: [string, 'null'], format: uuid }
         window: { type: [string, 'null'], enum: [3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m, null] }
+        offered_windows:
+          type: array
+          items: { type: string, enum: [3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m] }
+          description: >-
+            The windows THIS installation admits, in reach order — the product's supported set
+            narrowed by `capture.max_backfill_months` where an operator set one. A picker offers
+            these and no others: the preview and the start both refuse a window above the cap, so
+            offering one is offering a choice that 422s. Absent or empty means the client should
+            fall back to the full supported set rather than render an empty picker.
         estimated_messages: { type: [integer, 'null'], description: 'The previewed count the user consented to — the progress fraction''s denominator.' }
         estimate_is_floor: { type: boolean, description: 'True when `estimated_messages` is a floor (see BackfillPreview): the denominator can be passed, so a client shows counts rather than a percentage instead of drawing a bar past its end. Persisted with the run, because the preview that produced the number is long gone by the time progress is read.' }
         counts:
@@ -26345,7 +26452,7 @@ components:
             not.
         calls:
           type: integer
-          description: Terminal attempts in the window.
+          description: Attempts in the window — terminal ones for a chat tier, every one for `decide`.
         failures:
           type: integer
           description: How many of them carried an error.
@@ -26401,7 +26508,7 @@ components:
         processing: { type: string, enum: [cloud_provider, configured_endpoint], x-go-type: string }
     AiFeatureRoute:
       type: object
-      required: [task, display_name, execution_mode, normal_candidates, effective_candidates, impact, budget_exempt, leading_tier]
+      required: [task, display_name, execution_mode, normal_candidates, effective_candidates, impact, budget_exempt, leading_tier, decision_first]
       properties:
         task: { type: string }
         display_name: { type: string }
@@ -26409,8 +26516,16 @@ components:
         leading_tier: { type: string }
         normal_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
         effective_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
-        impact: { type: string, enum: [unchanged, model_changed, fallback_changed, budget_blocked, unconfigured], x-go-type: string }
+        impact: { type: string, enum: [unchanged, model_changed, decision_changed, fallback_changed, budget_blocked, unconfigured], x-go-type: string, description: 'How the proposed routing changes what answers this feature. decision_changed — only the decision model that answers it first moved (added, removed or rebound) while every tier binding stayed put; model_changed wins when the lead tier binding moved as well.' }
         budget_exempt: { type: boolean }
+        decision_first: { type: boolean, description: 'The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.' }
+        decision_skip_reason:
+          type: string
+          enum: [unbound, uncertified, local_only]
+          x-go-type: string
+          description: 'Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.'
+        decision_candidate:
+          $ref: '#/components/schemas/AiRouteCandidate'
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]
@@ -26466,7 +26581,7 @@ components:
                   properties:
                     task: { type: string, description: 'capture_classify, enrich, summarize, …' }
                     task_display_name: { type: string }
-                    tier: { type: string, description: 'local_small, cheap_cloud, premium, frontier, local_large.' }
+                    tier: { type: string, description: 'local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane).' }
                     calls: { type: integer }
                     cached_hits: { type: integer }
                     tokens_in: { type: integer }
@@ -26490,13 +26605,37 @@ components:
             band: { type: string, enum: [normal, degraded, queued], description: '< 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).' }
             band_since: { type: [string, 'null'], format: date-time }
             currency: { type: string, description: 'ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067).' }
+        decisions:
+          type: array
+          description: >-
+            Per task, how often the decision model was consulted over the same window and how
+            often its answer stood. Read from the ai_call trace, one logical call counted once,
+            because the metered calls above count attempts and cannot give a rate. Empty when no
+            call in the window consulted a decision model.
+          items: { $ref: '#/components/schemas/AiDecisionSummary' }
+    AiDecisionSummary:
+      type: object
+      description: One task's decision-model pass and fallback counts over the usage window.
+      required: [task, asked, decided, fallbacks]
+      properties:
+        task: { type: string }
+        asked: { type: integer, minimum: 0, description: 'Logical calls that consulted the decision model, including those refused before any call was sent.' }
+        decided: { type: integer, minimum: 0, description: 'Logical calls the decision model answered: its answer stood and no LLM ran.' }
+        fallbacks:
+          type: object
+          description: >-
+            Logical calls handed to the LLM ladder, keyed by the attempt reason the ladder's first
+            attempt carries (decision_below_floor, decision_error, …). A reason with no calls is
+            absent. Read an unrecognized key as "some reason" rather than refusing it.
+          additionalProperties: { type: integer, minimum: 0 }
     AiCallSummary:
       type: object
       description: One terminal model call from the ai_call trace (AIRT-SCHEMA-2).
-      required: [id, occurred_at, task, tier, provider, model_id, served_model, calls_attempted, tokens_in, tokens_out, reasoning_tokens, cached_tokens, latency_ms, cache_hit, degraded, has_payload]
+      required: [id, occurred_at, kind, task, tier, provider, model_id, served_model, calls_attempted, tokens_in, tokens_out, reasoning_tokens, cached_tokens, latency_ms, cache_hit, degraded, has_payload, decision_attempted]
       properties:
         id: { type: string, format: uuid }
         occurred_at: { type: string, format: date-time }
+        kind: { type: string, enum: [completion, embedding, decision], x-go-type: string, description: 'What the call asked: a chat completion, an embedding, or a decision model.' }
         task: { type: string }
         tier: { type: string, description: 'Empty when the call failed before routing.' }
         provider: { type: string }
@@ -26533,14 +26672,34 @@ components:
             model answered badly, so it says the provider failed and nothing about how far the
             request got.
         has_payload: { type: boolean, description: 'A captured payload row exists for this call.' }
+        decision_attempted: { type: boolean, description: 'Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which.' }
+    AiCallConfig:
+      type: object
+      description: |
+        The configuration an AI call ran under, resolved from its `config_hash`.
+
+        Written on every call since the table existed and joined by nothing: a
+        reader could see that two calls shared a configuration and never what
+        changed between two that did not.
+      required: [task_contract_hash, routing_config_hash, prompt_version]
+      properties:
+        task_contract_hash: { type: string }
+        routing_config_hash: { type: string }
+        prompt_version: { type: string }
+        provider_params: { type: object, additionalProperties: true, description: 'The provider parameters this configuration pinned.' }
+
     AiCallAttempt:
       type: object
       description: One attempt (terminal or not) within a logical call.
-      required: [attempt, is_terminal, attempt_reason, tokens_in, tokens_out, latency_ms, occurred_at]
+      required: [attempt, is_terminal, attempt_reason, kind, tokens_in, tokens_out, latency_ms, occurred_at]
       properties:
         attempt: { type: integer }
         is_terminal: { type: boolean }
-        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder.' }
+        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
+        kind: { type: string, enum: [completion, embedding, decision], x-go-type: string, description: 'What this attempt asked: a chat completion, an embedding, or a decision model.' }
+        tier: { type: string, description: 'The tier this attempt ran on; decide for the decision lane.' }
+        provider: { type: string }
+        model_id: { type: string, description: 'The configured binding this attempt ran on.' }
         error_sentinel: { type: [string, 'null'] }
         tokens_in: { type: integer }
         tokens_out: { type: integer }
@@ -26556,6 +26715,17 @@ components:
             agent_run_id: { type: [string, 'null'], format: uuid }
             served_identity_source: { type: string, description: 'response | echo | configured.' }
             config_hash: { type: [string, 'null'], description: 'Routing/prompt config identity of this call.' }
+            config:
+              allOf: [{ $ref: '#/components/schemas/AiCallConfig' }]
+              description: |
+                What that identity resolves to. OMITTED — not null — on a call
+                that names no configuration, which is the only case it is absent
+                for: `ai_call_config_fk` binds a hash that IS set to a row, so a
+                call carrying one always resolves.
+
+                The hash alone tells a reader that two calls shared a
+                configuration, and nothing about what it was — which is the
+                question a diagnostics reader is actually asking.
             context_scopes: { type: array, items: { type: string }, description: 'Company-context scopes injected into the request.' }
             context_fingerprint: { type: string }
             attempts:
@@ -26568,7 +26738,7 @@ components:
               description: 'Present only when payload_captured. Post-secret-stripper content (AIRT-AC-4); rune-capped with a visible truncation marker.'
               required: [request, response]
               properties:
-                request: { description: 'The captured request: {"system": string, "messages": [{role, content}]}.' }
+                request: { description: 'The captured request: {"system": string, "messages": [{role, content}]}, or, for a decision call, {"state": string, "questions": {…}}.' }
                 response: { description: 'The captured response text (JSON string).' }
     AiCallListResponse:
       type: object
@@ -27941,6 +28111,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ContactPhoneInput' }
         source: { type: string }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
       additionalProperties: true
       x-extension: true
 
@@ -28402,6 +28573,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/CompanyDomainInput' }
         source: { type: string }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
       additionalProperties: true
       x-extension: true
 
@@ -33142,6 +33314,7 @@ components:
         owner_id: { type: [string, 'null'], format: uuid }
         expected_close_date: { type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).' }
         source: { type: string }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
       additionalProperties: true
       x-extension: true
 
@@ -33938,6 +34111,7 @@ components:
         started_at: { type: [string, 'null'], format: date }
         target_end_date: { type: [string, 'null'], format: date }
         source: { type: string }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
       additionalProperties: true
       x-extension: true
 
@@ -36735,7 +36909,7 @@ components:
           x-enum-varnames: [DemoteUnwindReversed, DemoteUnwindMergeLineageOnly]
           description: |
             `reversed` — the promotion had created a contact, which is now archived and the
-            lead restored to `working`. `merge_lineage_only` — the promotion had merged into
+            lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
             a pre-existing contact, which is left untouched; only the lineage pointers are
             nulled (formulas §26).
         contact_id:
@@ -37331,6 +37505,31 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        resolution:
+          allOf: [{ $ref: '#/components/schemas/SignalResolution' }]
+          description: |
+            How a human resolved this signal, and who. Null while `status` is
+            `open` or `acknowledged` — only a human outcome appends one.
+
+            The latest, not the history: a signal reopened and resolved again
+            says how it stands now. Every append is kept, and an audit reader
+            is where the earlier ones belong.
+
+    SignalResolution:
+      type: object
+      description: |
+        A human's answer on one signal. `outcome` is the status they set,
+        `note` is what they wrote, `resolved_by` is who they are.
+
+        Written on every human resolution since the table existed and read
+        nowhere until this projection: the note explaining WHY a signal was
+        dismissed was recorded and then invisible to the next reader of it.
+      required: [outcome, resolved_at]
+      properties:
+        outcome: { type: string, enum: [resolved, dismissed], description: 'The status the human set.' }
+        note: { type: [string, 'null'], description: 'What they wrote about it, if anything.' }
+        resolved_by: { type: [string, 'null'], format: uuid, description: 'The colleague who answered; null once their account is deleted.' }
+        resolved_at: { type: string, format: date-time }
 
     SignalEvidence:
       type: object
@@ -47312,6 +47511,42 @@ components:
             the four are read as one row, and a reader who cannot trust one of them cannot
             trust the row.
 
+    HiddenBacklogRow:
+      type: object
+      description: |
+        One thread a hiding rule is keeping off the queue — enough to say what it is and
+        to open it, which is what the figure it sits behind could not do.
+      required: [activity_id, subject, since]
+      properties:
+        activity_id: { type: string, format: uuid, description: 'The message itself — what a reply would be drafted to.' }
+        subject: { type: string }
+        since: { type: string, format: date-time, description: 'When they wrote. The wait is measured from it.' }
+        email_summary:
+          allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
+          description: |
+            Present exactly when this wait is an EMAIL the reader may read. The lane spans
+            email and channel messages, and only an email has an email's shape.
+        contact_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The record the thread is filed under, when it names one. Absent rather than a
+            zero uuid: a zero on the wire is an id a client could try to open.
+        company_id: { type: [string, 'null'], format: uuid }
+        deal_id: { type: [string, 'null'], format: uuid }
+    HiddenBacklogRows:
+      type: object
+      description: The threads one hiding rule is holding back, at one instant.
+      required: [as_of, rule, rows]
+      properties:
+        as_of: { type: string, format: date-time, description: 'The instant the difference was read at.' }
+        rule:
+          type: string
+          enum: [set_aside, not_sales, past_horizon, unlinked, colleagues]
+          description: Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/HiddenBacklogRow' }
     HiddenBacklog:
       type: object
       description: |
@@ -47856,7 +48091,15 @@ components:
       required: [id, occurred_at, summary, actor, lane]
       properties:
         id: { type: string, format: uuid, description: "The underlying row's id — an audit entry, an approval." }
-        occurred_at: { type: string, format: date-time }
+        occurred_at:
+          type: string
+          format: date-time
+          description: >-
+            When the thing happened. On a `watching` line it is when the condition was
+            OBSERVED instead, uniformly: a source that is off rather than failing has no
+            beginning to report, and dating the observation as the outage would tell a
+            reader a long-dead mailbox broke just now. Where a condition does have a
+            start, it travels as the `failing_since` value on the summary.
         lane:
           type: string
           enum: [done, needs_you, could_not_complete, watching]

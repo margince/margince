@@ -1,0 +1,65 @@
+{
+  "task": "growth_fit",
+  "provider": "vllm",
+  "served_model": "mlx-community/Qwen3-14B-4bit",
+  "env_class": "sovereign",
+  "prompt_version": "p5b1e9cc8858fe3a9bf4918f5308b631f",
+  "corpus_version": "v1",
+  "verdict": "not_supported",
+  "runs": 3,
+  "passed": 0,
+  "reliability": 0,
+  "reported_accepted": 0,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 3,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": [
+    "offer",
+    "positioning",
+    "proof"
+  ],
+  "judge_score_p50": 96,
+  "judge_score_min": 95,
+  "latency_p50": 88050,
+  "latency_p95": 105742,
+  "mean_tokens": 2488,
+  "mean_tokens_in": 1599,
+  "mean_tokens_out": 888,
+  "mean_cached_tokens": 608,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 0,
+  "judge_served_model": "openai/gpt-oss-120b",
+  "self_judged": false,
+  "served_identity_source": "echo",
+  "judge_upstream": {
+    "only": null,
+    "ignore": null,
+    "quantizations": [
+      "fp16",
+      "bf16"
+    ],
+    "sort": "throughput",
+    "require_parameters": true,
+    "allow_fallbacks": null,
+    "preferred_max_latency_p90": 0,
+    "reasoning_effort": ""
+  },
+  "ran_at": "2026-09-25T03:24:13Z",
+  "scenarios": [
+    {
+      "scenario": "growth_fit_reads_their_facts_against_our_offering",
+      "site": "growth_fit",
+      "stamp": "5e39f42a684fbcab8873cc77be0a5a7a438f6af94f13f1a7f0ec8214a58e8dcdf563491b60bbaae66b91e69b2b6c855e8bfdf06416c96d81b44c95d9cb4fe553947065a32fdcacecabedd573b788fed88c9f8a8497974681db9498359f0048d4",
+      "verdict": "not_supported",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 0,
+      "reported_accepted": 0,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 3
+    }
+  ]
+}

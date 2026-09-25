@@ -180,18 +180,13 @@ func TestOnboardingActCaseReplaysTheConversationItWasGiven(t *testing.T) {
 		t.Fatalf("the trace carries %d requests, want the one call this site sends", len(trace.Requests))
 	}
 	messages := trace.Requests[0].Messages
-	if len(messages) != len(fixture.History)+2 {
-		t.Fatalf("the request carries %d turns, want the context block, %d replayed turns and the current message",
-			len(messages), len(fixture.History))
+	want := make([]model.Message, 0, len(fixture.History)+1)
+	for _, turn := range fixture.History {
+		want = append(want, model.Message{Role: string(turn.Role), Content: turn.Message})
 	}
-	for i, turn := range fixture.History {
-		replayed := messages[i+1]
-		if replayed.Role != string(turn.Role) || replayed.Content != turn.Message {
-			t.Errorf("replayed turn %d = %+v, want role %q and %q", i+1, replayed, turn.Role, turn.Message)
-		}
-	}
-	if last := messages[len(messages)-1]; last.Content != fixture.Message {
-		t.Errorf("the current message is not the last turn: %+v", last)
+	requireTurnsInOrder(t, messages, append(want, model.Message{Role: chatRoleUser, Content: fixture.Message}))
+	if last := messages[len(messages)-1]; !strings.HasSuffix(last.Content, fixture.Message) {
+		t.Errorf("the current message does not end the conversation: %+v", last)
 	}
 }
 

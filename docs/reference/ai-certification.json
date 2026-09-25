@@ -6,8 +6,8 @@
     "sites_best_stale": 47,
     "sites_absent": 0,
     "scenarios": 154,
-    "records": 144,
-    "bindings": 16,
+    "records": 173,
+    "bindings": 17,
     "self_judged_records": 4
   },
   "presets": [
@@ -1898,10 +1898,10 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
+          "band": "certified",
           "state": "stale",
           "runs": 15,
-          "passed": 14,
+          "passed": 15,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -2003,8 +2003,8 @@
         }
       ],
       "bands": {
-        "certified": 6,
-        "supported_degraded": 4,
+        "certified": 7,
+        "supported_degraded": 3,
         "not_supported": 13
       },
       "untested": 6,
@@ -2510,6 +2510,506 @@
       "untested": 2,
       "unbound": 0,
       "unrecognised": 0
+    },
+    {
+      "file": "qwen3_local_vllm.yaml",
+      "profile": "sovereign",
+      "tiers": [
+        {
+          "tier": "local_small",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit"
+        },
+        {
+          "tier": "cheap_cloud",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit"
+        },
+        {
+          "tier": "premium",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit"
+        },
+        {
+          "tier": "frontier",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit"
+        }
+      ],
+      "tasks": [
+        {
+          "task": "account_scan",
+          "label": "Reading what an account needs",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "agent_loop",
+          "label": "Agent reasoning loop",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 18,
+          "passed": 18,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "brief_ranking",
+          "label": "Morning brief ranking",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "capture_classify",
+          "label": "Message classification",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 15,
+          "passed": 12,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "capture_confidentiality_verdict",
+          "label": "Thread confidentiality check",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 42,
+          "passed": 36,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "capture_counterparty_verdict",
+          "label": "First-time sender check",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 57,
+          "passed": 46,
+          "cases_failing_often": 4,
+          "cases_below_quality_bar": 4
+        },
+        {
+          "task": "cert_judge",
+          "label": "Certification judging",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "cold_start",
+          "label": "Onboarding read",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 27,
+          "passed": 23,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "corpus_ask",
+          "label": "Document corpus question",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 15,
+          "passed": 13,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "deal_health",
+          "label": "Deal status card",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 9,
+          "passed": 8,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "document_extract",
+          "label": "Document extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "draft_reply",
+          "label": "Reply drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 36,
+          "passed": 33,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 6
+        },
+        {
+          "task": "enrich",
+          "label": "Signature enrichment",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "growth_fit",
+          "label": "Company fit assessment",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 3,
+          "passed": 0,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "offer_draft",
+          "label": "Offer drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 15,
+          "passed": 9,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 3
+        },
+        {
+          "task": "owed_verdict",
+          "label": "Unanswered-message triage",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 12,
+          "passed": 6,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "propose_roles",
+          "label": "Buying-role reading",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 9,
+          "passed": 5,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "rate_extract",
+          "label": "Model pricing extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "request_settlement",
+          "label": "Did our reply settle it",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 12,
+          "passed": 6,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "signal_extract",
+          "label": "Signal extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 12,
+          "passed": 6,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "site_extract",
+          "label": "Website deep read",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 15,
+          "passed": 9,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "site_fact_extract",
+          "label": "Website fact extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 9,
+          "passed": 6,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "site_triage",
+          "label": "Website triage",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 15,
+          "passed": 13,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "stage_evidence_extract",
+          "label": "Stage evidence extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 27,
+          "passed": 9,
+          "cases_failing_often": 6,
+          "cases_below_quality_bar": 5
+        },
+        {
+          "task": "summarize",
+          "label": "Record summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 27,
+          "passed": 13,
+          "cases_failing_often": 4,
+          "cases_below_quality_bar": 3
+        },
+        {
+          "task": "transcript_propose",
+          "label": "Meeting follow-up extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "voice_build",
+          "label": "Voice DNA build",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 12,
+          "passed": 9,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "weekly_learnings",
+          "label": "What last week taught",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 9,
+          "passed": 2,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "weekly_review",
+          "label": "Weekly review narrative",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 12,
+          "passed": 11,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1
+        }
+      ],
+      "bands": {
+        "certified": 6,
+        "supported_degraded": 2,
+        "not_supported": 20
+      },
+      "untested": 1,
+      "unbound": 0,
+      "unrecognised": 0
     }
   ],
   "bindings": [
@@ -2804,12 +3304,12 @@
       "sites_partial": 0,
       "sites_stale": 39,
       "runs": 384,
-      "passed": 310,
-      "reliability": 0.8072916666666666,
+      "passed": 311,
+      "reliability": 0.8098958333333334,
       "slowest_p95_ms": 140306,
       "bands": {
-        "certified": 13,
-        "supported_degraded": 7,
+        "certified": 14,
+        "supported_degraded": 6,
         "not_supported": 19
       }
     },
@@ -2831,6 +3331,26 @@
         "certified": 4,
         "supported_degraded": 0,
         "not_supported": 1
+      }
+    },
+    {
+      "binding": {
+        "provider": "vllm",
+        "model": "mlx-community/Qwen3-14B-4bit",
+        "env": "sovereign"
+      },
+      "sites": 46,
+      "sites_current": 0,
+      "sites_partial": 0,
+      "sites_stale": 46,
+      "runs": 444,
+      "passed": 329,
+      "reliability": 0.740990990990991,
+      "slowest_p95_ms": 105742,
+      "bands": {
+        "certified": 11,
+        "supported_degraded": 7,
+        "not_supported": 28
       }
     }
   ],
@@ -3030,6 +3550,42 @@
               "scan_finds_the_question_nobody_answered"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 18680,
+          "latency_p95_ms": 27365,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
+          "stale_cause": {
+            "case_changed": [
+              "scan_finds_the_promise_we_did_not_keep"
+            ],
+            "prompt_changed": [
+              "scan_finds_the_promise_we_did_not_keep",
+              "scan_finds_the_question_nobody_answered"
+            ],
+            "grader_changed": [
+              "scan_finds_the_promise_we_did_not_keep",
+              "scan_finds_the_question_nobody_answered"
+            ]
+          }
         }
       ]
     },
@@ -3085,8 +3641,48 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
           "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ],
+            "grader_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 6138,
+          "latency_p95_ms": 29452,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ],
             "grader_changed": [
               "morning_brief_a_retrieved_deal_is_not_the_queue",
               "morning_brief_reads_its_queue_first",
@@ -3148,8 +3744,48 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
           "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ],
+            "grader_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 6138,
+          "latency_p95_ms": 29452,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ],
             "grader_changed": [
               "overnight_sweep_one_quiet_deal_is_not_the_book",
               "overnight_sweep_reads_what_is_slipping_before_it_logs",
@@ -3337,6 +3973,34 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 9438,
+          "latency_p95_ms": 9862,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it",
+          "stale_cause": {
+            "grader_changed": [
+              "reorder_two_candidates_by_momentum"
+            ]
+          }
         }
       ]
     },
@@ -3397,8 +4061,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
           "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
             "grader_changed": [
               "a_message_that_is_both_is_labelled_commitment",
               "a_mixed_batch_keeps_every_label_on_its_own_message",
@@ -3586,6 +4257,45 @@
               "meeting_request_from_reply"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "supported_degraded",
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 12,
+          "reliability": 0.8,
+          "latency_p50_ms": 10491,
+          "latency_p95_ms": 25590,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
         }
       ]
     },
@@ -3691,8 +4401,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "14 scenarios it scored have changed since (how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_reason": "14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
             "grader_changed": [
               "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
               "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
@@ -3881,6 +4607,63 @@
               "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 14,
+          "runs": 42,
+          "passed": 36,
+          "reliability": 0.8571428571428571,
+          "latency_p50_ms": 10804,
+          "latency_p95_ms": 13773,
+          "reported": {
+            "accepted": 36,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
+            "grader_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ]
+          }
         }
       ]
     },
@@ -4011,8 +4794,29 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
+          "stale_reason": "19 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_chased_cold_pitch_is_still_spam",
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_fluent_machine_written_pitch_is_still_spam",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "courteous_cold_pitch_is_spam",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
             "grader_changed": [
               "a_chased_cold_pitch_is_still_spam",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
@@ -4218,6 +5022,76 @@
             "accepted": 49,
             "wrong_answer": 7,
             "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": "19 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
+          "stale_cause": {
+            "case_changed": [
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact"
+            ],
+            "prompt_changed": [
+              "a_chased_cold_pitch_is_still_spam",
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_fluent_machine_written_pitch_is_still_spam",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "courteous_cold_pitch_is_spam",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "grader_changed": [
+              "a_chased_cold_pitch_is_still_spam",
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_fluent_machine_written_pitch_is_still_spam",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "courteous_cold_pitch_is_spam",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 19,
+          "runs": 57,
+          "passed": 46,
+          "reliability": 0.8070175438596491,
+          "latency_p50_ms": 10835,
+          "latency_p95_ms": 14980,
+          "reported": {
+            "accepted": 46,
+            "wrong_answer": 11,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": "19 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
@@ -4528,6 +5402,43 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 6676,
+          "latency_p95_ms": 7122,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_cause": {
+            "case_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
+            "prompt_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
+            "grader_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ]
+          }
         }
       ]
     },
@@ -4588,8 +5499,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
           "stale_cause": {
+            "prompt_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ],
             "grader_changed": [
               "a_factual_question_about_connecting_is_answered",
               "a_progress_question_is_answered_as_status",
@@ -4747,6 +5665,48 @@
               "results_act_keeps_an_off_topic_request_in_scope"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 9804,
+          "latency_p95_ms": 44039,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
+          "stale_cause": {
+            "case_changed": [
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ],
+            "prompt_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ],
+            "grader_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ]
+          }
         }
       ]
     },
@@ -4787,8 +5747,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
             "grader_changed": [
               "bare_answer_corrects_the_field_the_wizard_asked_for"
             ]
@@ -4894,6 +5857,37 @@
           "reliability": 0.6666666666666666,
           "latency_p50_ms": 859,
           "latency_p95_ms": 1704,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 0,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "supported_degraded",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 9804,
+          "latency_p95_ms": 44039,
           "reported": {
             "accepted": 2,
             "wrong_answer": 0,
@@ -5062,6 +6056,34 @@
               "onboarding_readback_from_landing_page"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 9804,
+          "latency_p95_ms": 44039,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "how a run is graded changed under scenario onboarding_readback_from_landing_page since the record scored it",
+          "stale_cause": {
+            "grader_changed": [
+              "onboarding_readback_from_landing_page"
+            ]
+          }
         }
       ]
     },
@@ -5107,8 +6129,12 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
           "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_confirms_and_changes_nothing_further",
+              "dossier_correction_the_administrator_asked_for"
+            ],
             "grader_changed": [
               "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
@@ -5223,6 +6249,39 @@
             "accepted": 6,
             "wrong_answer": 0,
             "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
+          "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_confirms_and_changes_nothing_further",
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "an_administrator_agreeing_confirms_and_changes_nothing_further",
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 3,
+          "reliability": 0.5,
+          "latency_p50_ms": 9804,
+          "latency_p95_ms": 44039,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 3,
             "abstained": 0
           },
           "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
@@ -5502,6 +6561,45 @@
               "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 13,
+          "reliability": 0.8666666666666667,
+          "latency_p50_ms": 19094,
+          "latency_p95_ms": 50205,
+          "reported": {
+            "accepted": 13,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_cause": {
+            "prompt_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "grader_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ]
+          }
         }
       ]
     },
@@ -5657,6 +6755,45 @@
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
+          "stale_cause": {
+            "case_changed": [
+              "deal_status_an_overdue_task_is_not_done_work",
+              "deal_status_offer_left_hanging"
+            ],
+            "prompt_changed": [
+              "deal_status_an_overdue_task_is_not_done_work",
+              "deal_status_offer_left_hanging",
+              "deal_status_says_nothing_is_wrong_when_nothing_is"
+            ],
+            "grader_changed": [
+              "deal_status_an_overdue_task_is_not_done_work",
+              "deal_status_offer_left_hanging",
+              "deal_status_says_nothing_is_wrong_when_nothing_is"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 41429,
+          "latency_p95_ms": 52661,
+          "reported": {
+            "accepted": 8,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
@@ -5968,6 +7105,40 @@
               "account_first_touch_with_a_deal_in_flight"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "account_first_touch_with_a_deal_in_flight"
+            ],
+            "prompt_changed": [
+              "account_first_touch_with_a_deal_in_flight"
+            ],
+            "grader_changed": [
+              "account_first_touch_with_a_deal_in_flight"
+            ]
+          }
         }
       ]
     },
@@ -6177,6 +7348,40 @@
           "reliability": 1,
           "latency_p50_ms": 1955,
           "latency_p95_ms": 7443,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "contact_first_touch_in_german"
+            ],
+            "prompt_changed": [
+              "contact_first_touch_in_german"
+            ],
+            "grader_changed": [
+              "contact_first_touch_in_german"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "supported_degraded",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -6419,6 +7624,40 @@
               "first_message_from_an_intent_alone"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "first_message_from_an_intent_alone"
+            ],
+            "prompt_changed": [
+              "first_message_from_an_intent_alone"
+            ],
+            "grader_changed": [
+              "first_message_from_an_intent_alone"
+            ]
+          }
         }
       ]
     },
@@ -6630,6 +7869,42 @@
           "reliability": 1,
           "latency_p50_ms": 1955,
           "latency_p95_ms": 7443,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
+          "stale_cause": {
+            "case_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming"
+            ],
+            "prompt_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming",
+              "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "grader_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming",
+              "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -6887,6 +8162,44 @@
             "accepted": 8,
             "wrong_answer": 0,
             "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
+          "stale_cause": {
+            "case_changed": [
+              "intro_note_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "prompt_changed": [
+              "an_instruction_inside_the_stated_reason_is_data_not_a_command",
+              "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ],
+            "grader_changed": [
+              "an_instruction_inside_the_stated_reason_is_data_not_a_command",
+              "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 6,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
@@ -7219,6 +8532,49 @@
               "rich_german_thread_with_a_long_ask"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "supported_degraded",
+          "scenarios_measured": 0,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
+          "stale_cause": {
+            "case_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask"
+            ],
+            "prompt_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask"
+            ],
+            "grader_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask"
+            ]
+          }
         }
       ]
     },
@@ -7400,6 +8756,34 @@
               "contact_fields_from_a_mail_signature"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 25172,
+          "latency_p95_ms": 26648,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_cause": {
+            "grader_changed": [
+              "contact_fields_from_a_mail_signature"
+            ]
+          }
         }
       ]
     },
@@ -7549,6 +8933,40 @@
             "wrong_answer": 2,
             "invalid": 0,
             "abstained": 1
+          },
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "prompt_changed": [
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 88050,
+          "latency_p95_ms": 105742,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 3
           },
           "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
           "stale_cause": {
@@ -7779,6 +9197,46 @@
               "two_sources_disagree_on_price"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 9,
+          "reliability": 0.6,
+          "latency_p50_ms": 12366,
+          "latency_p95_ms": 45908,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 3,
+            "abstained": 3
+          },
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, two_sources_disagree_on_price (it also scored rich_context_under_a_tight_token_cap, which the corpus no longer holds)",
+          "stale_cause": {
+            "case_changed": [
+              "injected_instruction_inside_evidence_is_ignored"
+            ],
+            "prompt_changed": [
+              "grounded_draft_from_a_conversation_price",
+              "injected_instruction_inside_evidence_is_ignored",
+              "no_captured_context_yields_no_lines",
+              "two_sources_disagree_on_price"
+            ],
+            "grader_changed": [
+              "grounded_draft_from_a_conversation_price",
+              "injected_instruction_inside_evidence_is_ignored",
+              "no_captured_context_yields_no_lines",
+              "two_sources_disagree_on_price"
+            ]
+          }
         }
       ]
     },
@@ -7834,8 +9292,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
           "stale_cause": {
+            "prompt_changed": [
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ],
             "grader_changed": [
               "a_direct_question_asks_us_and_a_report_does_not",
               "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
@@ -7974,6 +9438,43 @@
             "accepted": 9,
             "wrong_answer": 3,
             "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ],
+            "grader_changed": [
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 6,
+          "reliability": 0.5,
+          "latency_p50_ms": 16315,
+          "latency_p95_ms": 26476,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 3,
             "abstained": 0
           },
           "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
@@ -8158,6 +9659,36 @@
           "reported": {
             "accepted": 7,
             "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title",
+          "stale_cause": {
+            "grader_changed": [
+              "a_committee_where_four_contacts_state_their_own_roles",
+              "propose_roles_reads_a_buyer_out_of_their_own_words",
+              "propose_roles_reads_no_role_out_of_a_title"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 5,
+          "reliability": 0.5555555555555556,
+          "latency_p50_ms": 20778,
+          "latency_p95_ms": 50079,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 4,
             "invalid": 0,
             "abstained": 0
           },
@@ -8360,6 +9891,35 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 10304,
+          "latency_p95_ms": 22876,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "grader_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         }
       ]
     },
@@ -8541,6 +10101,34 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 10304,
+          "latency_p95_ms": 22876,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it",
+          "stale_cause": {
+            "grader_changed": [
+              "pricing_table_two_models_grounded"
+            ]
+          }
         }
       ]
     },
@@ -8596,8 +10184,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ],
             "grader_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_settles_a_request_and_an_acknowledgement_does_not",
@@ -8627,8 +10221,14 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ],
             "grader_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_settles_a_request_and_an_acknowledgement_does_not",
@@ -8740,6 +10340,37 @@
               "answering_one_of_two_asks_leaves_the_other_owed",
               "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
             ],
+            "grader_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 6,
+          "reliability": 0.5,
+          "latency_p50_ms": 21212,
+          "latency_p95_ms": 24529,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_cause": {
             "grader_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_settles_a_request_and_an_acknowledgement_does_not",
@@ -8941,6 +10572,43 @@
           "reported": {
             "accepted": 8,
             "wrong_answer": 4,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "grader_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 6,
+          "reliability": 0.5,
+          "latency_p50_ms": 12093,
+          "latency_p95_ms": 16464,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 6,
             "invalid": 0,
             "abstained": 0
           },
@@ -9230,6 +10898,50 @@
             "abstained": 6
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 9,
+          "reliability": 0.6,
+          "latency_p50_ms": 27450,
+          "latency_p95_ms": 35197,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
+          "stale_cause": {
+            "case_changed": [
+              "home_page_profile_fields_grounded",
+              "one_legal_page_naming_two_entities",
+              "services_page_profile_fields_grounded"
+            ],
+            "prompt_changed": [
+              "an_impressum_grounds_the_legal_trio",
+              "home_page_profile_fields_grounded",
+              "js_only_page_yields_no_fabrication",
+              "one_legal_page_naming_two_entities",
+              "services_page_profile_fields_grounded"
+            ],
+            "grader_changed": [
+              "an_impressum_grounds_the_legal_trio",
+              "home_page_profile_fields_grounded",
+              "js_only_page_yields_no_fabrication",
+              "one_legal_page_naming_two_entities",
+              "services_page_profile_fields_grounded"
+            ]
+          }
         }
       ]
     },
@@ -9390,6 +11102,36 @@
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts",
+          "stale_cause": {
+            "grader_changed": [
+              "customer_story_credits_the_customer_not_the_reader",
+              "impressum_page_company_facts_and_entities",
+              "services_page_offering_facts"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 6,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 20545,
+          "latency_p95_ms": 32672,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
             "invalid": 0,
             "abstained": 0
           },
@@ -9596,17 +11338,56 @@
             "env": "cloud_frontier"
           },
           "state": "stale",
-          "band": "supported_degraded",
+          "band": "certified",
           "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
-          "passed": 14,
-          "reliability": 0.9333333333333333,
-          "latency_p50_ms": 672,
-          "latency_p95_ms": 1758,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 533,
+          "latency_p95_ms": 1227,
           "reported": {
-            "accepted": 14,
-            "wrong_answer": 1,
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_contact_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
+            ],
+            "grader_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_contact_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 13,
+          "reliability": 0.8666666666666667,
+          "latency_p50_ms": 6242,
+          "latency_p95_ms": 10552,
+          "reported": {
+            "accepted": 13,
+            "wrong_answer": 2,
             "invalid": 0,
             "abstained": 0
           },
@@ -9877,6 +11658,58 @@
               "warmth_with_no_facts_in_it"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 9,
+          "runs": 27,
+          "passed": 9,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 17502,
+          "latency_p95_ms": 34198,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 18,
+            "invalid": 0,
+            "abstained": 6
+          },
+          "stale_reason": "9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
+          "stale_cause": {
+            "case_changed": [
+              "a_date_floated_is_not_a_date_agreed",
+              "a_settled_fact_no_criterion_asks_about",
+              "the_buyer_states_the_problem_in_their_own_words"
+            ],
+            "prompt_changed": [
+              "a_conversation_about_something_else",
+              "a_correspondent_tries_to_settle_their_own_criteria",
+              "a_date_floated_is_not_a_date_agreed",
+              "a_settled_fact_no_criterion_asks_about",
+              "talking_about_signing_is_not_signing",
+              "the_buyer_names_who_signs",
+              "the_buyer_states_the_problem_in_their_own_words",
+              "the_rep_says_the_buyer_confirmed_it",
+              "warmth_with_no_facts_in_it"
+            ],
+            "grader_changed": [
+              "a_conversation_about_something_else",
+              "a_correspondent_tries_to_settle_their_own_criteria",
+              "a_date_floated_is_not_a_date_agreed",
+              "a_settled_fact_no_criterion_asks_about",
+              "talking_about_signing_is_not_signing",
+              "the_buyer_names_who_signs",
+              "the_buyer_states_the_problem_in_their_own_words",
+              "the_rep_says_the_buyer_confirmed_it",
+              "warmth_with_no_facts_in_it"
+            ]
+          }
         }
       ]
     },
@@ -10022,6 +11855,39 @@
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 2
+          },
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
+          "stale_cause": {
+            "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
+              "ask_whats_open_answers_the_pipeline_not_the_history"
+            ],
+            "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
+              "ask_whats_open_answers_the_pipeline_not_the_history"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
           },
           "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
@@ -10203,6 +12069,43 @@
               "brief_stays_silent_about_a_withheld_section"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
+            "prompt_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
+            "grader_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ]
+          }
         }
       ]
     },
@@ -10334,6 +12237,37 @@
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
+          },
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ],
+            "grader_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 3
           },
           "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
           "stale_cause": {
@@ -10497,6 +12431,39 @@
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 6
+          },
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
+            "grader_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ]
+          }
         }
       ]
     },
@@ -10647,6 +12614,40 @@
               "meeting_brief_reads_the_thread_that_matters"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "meeting_brief_reads_the_thread_that_matters"
+            ],
+            "prompt_changed": [
+              "meeting_brief_reads_the_thread_that_matters"
+            ],
+            "grader_changed": [
+              "meeting_brief_reads_the_thread_that_matters"
+            ]
+          }
         }
       ]
     },
@@ -10777,6 +12778,37 @@
             "accepted": 2,
             "wrong_answer": 1,
             "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "meeting_plan_reads_the_thread_that_matters"
+            ],
+            "grader_changed": [
+              "meeting_plan_reads_the_thread_that_matters"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "supported_degraded",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 0,
+            "invalid": 1,
             "abstained": 0
           },
           "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
@@ -10986,6 +13018,41 @@
               "one_side_promises_revised_pricing"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 9845,
+          "latency_p95_ms": 16396,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ],
+            "grader_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ]
+          }
         }
       ]
     },
@@ -11120,6 +13187,40 @@
             "accepted": 0,
             "wrong_answer": 0,
             "invalid": 3,
+            "abstained": 0
+          },
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "the_card_shows_a_line_in_the_built_voice"
+            ],
+            "prompt_changed": [
+              "the_card_shows_a_line_in_the_built_voice"
+            ],
+            "grader_changed": [
+              "the_card_shows_a_line_in_the_built_voice"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 14869,
+          "latency_p95_ms": 92153,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it",
@@ -11294,6 +13395,40 @@
             "accepted": 1,
             "wrong_answer": 0,
             "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "owner_voice_candidate_from_authored_messages"
+            ],
+            "prompt_changed": [
+              "owner_voice_candidate_from_authored_messages"
+            ],
+            "grader_changed": [
+              "owner_voice_candidate_from_authored_messages"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 14869,
+          "latency_p95_ms": 92153,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 2,
+            "invalid": 1,
             "abstained": 0
           },
           "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
@@ -11485,6 +13620,40 @@
               "held_out_draft_sits_close_to_the_author"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "supported_degraded",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 14869,
+          "latency_p95_ms": 92153,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "held_out_draft_sits_close_to_the_author"
+            ],
+            "prompt_changed": [
+              "held_out_draft_sits_close_to_the_author"
+            ],
+            "grader_changed": [
+              "held_out_draft_sits_close_to_the_author"
+            ]
+          }
         }
       ]
     },
@@ -11643,6 +13812,34 @@
             "prompt_changed": [
               "judge_ranks_the_author_rhythm_above_generic_ai_prose"
             ],
+            "grader_changed": [
+              "judge_ranks_the_author_rhythm_above_generic_ai_prose"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 14869,
+          "latency_p95_ms": 92153,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it",
+          "stale_cause": {
             "grader_changed": [
               "judge_ranks_the_author_rhythm_above_generic_ai_prose"
             ]
@@ -11809,6 +14006,45 @@
             "accepted": 4,
             "wrong_answer": 5,
             "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
+          "stale_cause": {
+            "case_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson",
+              "a_pattern_across_three_deals_is_drawn_and_cited"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson",
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
+            ],
+            "grader_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson",
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 2,
+          "reliability": 0.2222222222222222,
+          "latency_p50_ms": 33931,
+          "latency_p95_ms": 44694,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 6,
+            "invalid": 1,
             "abstained": 0
           },
           "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
@@ -12034,6 +14270,48 @@
               "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "stale",
+          "band": "supported_degraded",
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
+          "runs": 12,
+          "passed": 11,
+          "reliability": 0.9166666666666666,
+          "latency_p50_ms": 6698,
+          "latency_p95_ms": 11567,
+          "reported": {
+            "accepted": 11,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
+          "stale_cause": {
+            "case_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
+              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
+              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
+            ],
+            "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
+              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
+            ]
+          }
         }
       ]
     }
@@ -12074,6 +14352,27 @@
         "env": "cloud_frontier"
       },
       "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    }
+  ],
+  "decisions": [
+    {
+      "task": "site_triage",
+      "site": "triage",
+      "binding": {
+        "provider": "openrouter_decision",
+        "model": "typesafe/jev-1.13",
+        "env": "cloud_frontier"
+      },
+      "state": "current",
+      "verdict": "certified",
+      "serves": true,
+      "runs": 15,
+      "kept": 15,
+      "kept_wrong": 0,
+      "fallback_rate": 0,
+      "fallback_by_reason": {},
+      "served_pass_rate": 1,
+      "stale_reason": ""
     }
   ]
 }

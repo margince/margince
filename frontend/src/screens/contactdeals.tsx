@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
+import { useCan, useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Avatar } from "../design-system/atoms";
@@ -12,6 +12,7 @@ import { useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
 import "./contact360.css";
 import { readableRole } from "./contactcards";
+import { ContactDealRooms } from "./contactdealrooms";
 import { AddRelationshipAction } from "./relationships";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -237,6 +238,19 @@ export function ContactDealsTab({
           </SurfaceState>
         </PanelBody>
       </Panel>
+      <ContactRooms view={view} />
     </div>
   );
+}
+
+// The rooms this contact holds a seat in, under the deals the rooms belong to.
+// Withheld without the room grant, whose list read would only be refused, and
+// for a contact with no address, since a seat is held by address.
+function ContactRooms({ view }: Readonly<{ view?: Contact360 }>) {
+  const mayRead = useCan("deal_room", "read");
+  const emails = (view?.contact.emails ?? []).map((e) => e.email);
+  if (!mayRead || emails.length === 0) {
+    return null;
+  }
+  return <ContactDealRooms emails={emails} />;
 }

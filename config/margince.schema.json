@@ -302,6 +302,13 @@
             "boolean",
             "null"
           ]
+        },
+        "max_backfill_months": {
+          "description": "MaxBackfillMonths caps how far back a mailbox import may reach, for the whole installation. Absent means no cap, which is what every deployment has today — the offered ceiling was widened deliberately, and a default here would take that back from operators who chose it.",
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       }
     },
@@ -408,6 +415,10 @@
         "embeddings": {
           "description": "The embedding lane, bound separately from chat (retrieval must survive a chat-budget exhaustion). Required.",
           "$ref": "#/$defs/embeddingsBinding"
+        },
+        "decisions": {
+          "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, on a certified site, and falls back to its ladder whenever the answer does not stand.",
+          "$ref": "#/$defs/decisionsBinding"
         }
       }
     },
@@ -657,6 +668,49 @@
         },
         {
           "$ref": "#/$defs/routingNeedsOpenRouter"
+        }
+      ]
+    },
+    "decisionsBinding": {
+      "description": "The decisions-lane binding: a provider that answers the decision wire, its model and its endpoint. No input and no routing: the lane sends no attachments and the decisions endpoint takes no broker preferences.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "model"
+      ],
+      "properties": {
+        "provider": {
+          "description": "openrouter_decision (OpenRouter's decisions endpoint, reached with the openai_compatible key; base_url must be an OpenRouter host) | laya (a same-host decision encoder; keyless, sovereign-eligible, defaults to http://127.0.0.1:8765).",
+          "enum": [
+            "openrouter_decision",
+            "laya"
+          ]
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The decision model id, e.g. typesafe/jev-1.13, or a Laya checkpoint name."
+        },
+        "base_url": {
+          "type": "string",
+          "description": "Endpoint root. REQUIRED for openrouter_decision (e.g. https://openrouter.ai/api). Empty ⇒ provider default."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "openrouter_decision"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "base_url"
+            ]
+          }
         }
       ]
     },

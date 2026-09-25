@@ -59,7 +59,7 @@ func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQ
 // cap, so the number stops being exact only once it is already large enough to
 // mean the same thing to a reader.
 func (a attentionApprovals) CountPending(ctx context.Context) (int, error) {
-	status := "pending"
+	status := stagedAndUndecided
 	rows, _, err := a.svc.ListWire(ctx, approvals.ListInput{
 		Status: &status,
 		Limit:  approvals.PendingScanCap,
@@ -207,11 +207,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// refuses everyone else and the lane renders that as withheld.
 		attentionDSRs{store: consent.NewStore(db)},
 		// The reader's own mailbox connections, through the capture module's
-		// registry over the same rows the settings screen lists. Built bare —
-		// no sink, no authority, no vault — so the lane lives on every role
-		// that serves the feed; HealthConcerns' own doc states the reach this
-		// construction depends on.
-		attentionCaptureHealth{registry: capture.NewRegistry(db, nil, nil, nil)},
+		// registry over the same rows the settings screen lists. Bare, so the
+		// lane lives on every role that serves the feed — captureHealthRegistry
+		// carries what that construction depends on.
+		attentionCaptureHealth{registry: captureHealthRegistry(db)},
 		// The reader's own troubled AI runs, from the same projection the
 		// activity rail reads.
 		attentionAIWork{store: aiactivity.NewStore(db)},

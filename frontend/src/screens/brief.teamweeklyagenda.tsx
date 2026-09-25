@@ -6,7 +6,7 @@ import { Badge, Button } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { TeamPlanReview } from "./brief.teamplan";
 import type {
@@ -91,7 +91,7 @@ export function agendaText(
 export function AgendaSummary({
   review,
 }: Readonly<{ review: TeamWeeklyReview }>) {
-  const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const rows = agendaRows(review);
   if (rows.length === 0) {
@@ -102,7 +102,7 @@ export function AgendaSummary({
       className="teamweekly-agenda-summary"
       data-testid="teamweekly-agenda-summary"
     >
-      {t("teamweekly.agenda.summary", {
+      {plural("teamweekly.agenda.summary", rows.length, {
         count: formatNumber(rows.length, locale),
         first: rows[0].display_name,
       })}

@@ -15,6 +15,7 @@ import (
 	"log/slog"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -39,6 +40,21 @@ var (
 		upstreamVar: "JUDGE_UPSTREAM", upstreamEnv: "MARGINCE_AICERT_JUDGE_UPSTREAM",
 	}
 )
+
+// profileFor is the profile this role's binding is validated under, in a run
+// that files its records under record.
+//
+// The candidate is held to the record's profile, because that profile is the
+// record's claim about where the certified deployment sends its text. The
+// judge is not part of that deployment. It is the lane's own grader, it is sent
+// only the hand-authored corpus and the candidate's answer to it — never an
+// installation's data — and the record names it (judge_served_model).
+func (r bindingRole) profileFor(record ai.Profile) ai.Profile {
+	if r == judgeRole {
+		return ai.ProfileCloudFrontier
+	}
+	return record
+}
 
 // refuseUnreachableUpstream refuses preferences on a binding they cannot reach:
 // accepted, they would be applied to nothing and the record would name them.
@@ -93,7 +109,7 @@ func preflight(ctx context.Context, cfg RunnerConfig, tasks []ai.Task, hooks *ce
 	for _, p := range preflightProbes(cfg, tasks, hooks) {
 		// A binding that cannot be set up is certifyTask's to report, per task,
 		// where it costs that task's record alone; the pre-flight only notes it.
-		routing, err := ladderForTask(p.role.name, p.binding, cfg.recordProfile(), p.ladderTask)
+		routing, err := ladderForTask(p.role.name, p.binding, p.role.profileFor(cfg.recordProfile()), p.ladderTask)
 		if err != nil {
 			log.DebugContext(ctx, "aicert: pre-flight skipped a binding it could not route", "role", p.role.name, "err", err)
 			continue
@@ -150,4 +166,78 @@ func preflightProbes(cfg RunnerConfig, tasks []ai.Task, hooks *certifyHooks) []p
 		probes = append(probes, preflightProbe{judgeRole, cfg.JudgeBinding, tasks[0], ai.TaskCertJudge, judgeOpts})
 	}
 	return probes
+}
+
+// preflightDecisions asks the decisions lane one question — the first decision
+// scenario of the first task it may answer — before the corpus: a key, slug or
+// endpoint the lane cannot serve fails here rather than after every LLM run
+// ahead of it was paid for. A task the lane may not be asked (local-only data)
+// makes no call, so the probe moves on to the next task.
+func preflightDecisions(ctx context.Context, cfg RunnerConfig, byTask map[ai.Task][]Scenario, hooks *certifyHooks, log *slog.Logger) error {
+	lane := cfg.decisionLane()
+	if lane == nil {
+		return nil
+	}
+	for _, task := range sortedTasks(byTask) {
+		candidate, _, bound := resolveBinding(*cfg.Routing, task)
+		if !bound {
+			continue // taskBindings reports it, per task
+		}
+		sc, found := firstDecisionScenario(byTask[task], cfg.Census)
+		if !found {
+			continue
+		}
+		leg := decisionLeg{task: task, census: cfg.Census, candidate: candidate, lane: *lane, profile: cfg.recordProfile(), hooks: hooks}
+		asked, err := leg.preflight(ctx, sc)
+		if err != nil {
+			return fmt.Errorf("pre-flight: the decisions lane %s:%s could not be served, so no scenario was run: %w",
+				lane.Provider, lane.Model, err)
+		}
+		if asked {
+			log.InfoContext(ctx, "aicert: pre-flight served", "role", "decision", "model", lane.Model)
+			return nil
+		}
+	}
+	log.InfoContext(ctx, "aicert: no task this run certifies may ask the decisions lane anything; its pre-flight made no call")
+	return nil
+}
+
+// firstDecisionScenario is the first of scenarios whose case has a decision
+// form. A case that cannot be prepared is passed over: the task's own run
+// reports it, where it costs that task alone.
+func firstDecisionScenario(scenarios []Scenario, census *aitasks.Registry) (Scenario, bool) {
+	for _, sc := range scenarios {
+		if _, ok, err := decisionCaseFor(sc, census); err == nil && ok {
+			return sc, true
+		}
+	}
+	return Scenario{}, false
+}
+
+// preflight asks sc's decision question once and reports whether the lane was
+// called; a call that failed is the error.
+func (leg decisionLeg) preflight(ctx context.Context, sc Scenario) (bool, error) {
+	dc, _, err := decisionCaseFor(sc, leg.census)
+	if err != nil {
+		return false, err
+	}
+	router, rec, err := leg.decisionRouter()
+	if err != nil {
+		return false, err
+	}
+	mark := rec.mark()
+	probe, err := router.DecideProbe(ctx, leg.task, dc.DecisionSite(), dc.DecisionRequest(), dc.GateDecision)
+	if err != nil {
+		return false, err
+	}
+	calls, err := rec.terminalsSince(mark)
+	if err != nil {
+		return false, err
+	}
+	for _, c := range calls {
+		if c.ErrorSentinel != "" {
+			return true, fmt.Errorf("the probe on %s scenario %s failed with %s", leg.task, sc.Name, c.ErrorSentinel)
+		}
+	}
+	return probe.Asked, nil
 }

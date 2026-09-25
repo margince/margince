@@ -167,6 +167,32 @@ type MeetingCanceller interface {
 	CancelMeeting(ctx context.Context, key NaturalKey, at time.Time) error
 }
 
+// MessageRemover is the mail connectors' equivalent: the provider reports that
+// a message this workspace captured is gone from the mailbox it came from.
+//
+// Separate from Sink for MeetingCanceller's reason — only the mail connectors
+// have anything to say through it, and a calendar or channel connector should
+// not have to answer a question it is never asked.
+//
+// What the removal MEANS is not this seam's to decide. A connector reports that
+// the provider said a message is gone; whether the captured copy follows is a
+// question about colleagues' claims and statutory duties that the implementor
+// answers. A connector that decided it would be deciding for mailboxes it
+// cannot see.
+type MessageRemover interface {
+	// RemoveMessage reports that the message captured under this natural key
+	// was deleted at the provider, by the owner of the mailbox it arrived in.
+	//
+	// Whose mailbox comes from the principal on ctx, the way every other write
+	// a sync makes resolves its seat — a connector that passed an owner would
+	// be naming a seat it learned from an address, which is the thing capture
+	// spends its whole identity spine not doing.
+	//
+	// Idempotent and forgiving: a key naming nothing this workspace captured is
+	// the ordinary case, not an error — most deleted mail was never captured.
+	RemoveMessage(ctx context.Context, key NaturalKey) error
+}
+
 // NormalizedRecord — a provider record mapped onto the clean relational
 // core with provenance. Fields holds the typed domain struct for
 // EntityType so a wrong mapping fails to compile, not at runtime.

@@ -200,6 +200,22 @@ func (e *ConfidentialityVerdictEngine) judgeClaimed(
 // confidence to hold would publish exactly the threads the model found hardest.
 func (e *ConfidentialityVerdictEngine) judgeOne(ctx context.Context, row capture.PendingThread) (int, error) {
 	results, err := e.ask(ctx, row)
+	if errors.Is(err, ai.ErrLocalOnlyUnservable) {
+		// A model is composed and the router will not send this task to it: the
+		// verdict is local-only and no rung of its ladder binds a local
+		// provider. The thread holds, which is where every other unanswered
+		// outcome here lands and what a deployment with no model at all gets.
+		//
+		// Deferred rather than failed, because this is a standing property of
+		// the binding rather than a fault: failing would error every thread on
+		// every pass until somebody rebinds a rung, and the sweep's log would
+		// carry an alarm about a configuration somebody chose.
+		if deferErr := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
+			"no local provider is bound for a local-only verdict", true); deferErr != nil {
+			return 0, deferErr
+		}
+		return 0, nil
+	}
 	if err != nil {
 		return 0, err
 	}

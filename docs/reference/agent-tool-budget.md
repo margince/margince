@@ -53,16 +53,16 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 76 | 1677 | 1219 | 3344 | 10% | 19866 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 76 | 2515 | 1737 | 4701 | 14% | 18509 | 7 | 6 |
-| _whole served catalog's listing, for scale — no run is offered it_ | 76 | — | 24502 | — | — | 74% | — | — | — |
+| `morning_brief` | 5 | 5 of 76 | 1746 | 1288 | 3483 | 10% | 19727 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 76 | 2585 | 1807 | 4840 | 14% | 18370 | 7 | 6 |
+| _whole served catalog's listing, for scale — no run is offered it_ | 76 | — | 24624 | — | — | 75% | — | — | — |
 
 ### `morning_brief`
 
 > Prepare the existing Morning Brief of the user this run acts for. First call read_brief. Its items are the queue already ranked for them; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
 
-Attaches 5 tools and pays 3344 tokens on every step (1677 listing, 1219 step schema), leaving
-19866 of its budget and 29424 tokens of the
+Attaches 5 tools and pays 3483 tokens on every step (1746 listing, 1288 step schema), leaving
+19727 of its budget and 29285 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -75,8 +75,8 @@ window for the goal, the grounding and everything it reads.
 
 > Sweep this workspace's open deals for risk: deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. First call whats_slipping_this_week: it returns the at-risk deals across the whole workspace. A deal the retrieved context mentions is one example, not the sweep, so do not read or log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools and pays 4701 tokens on every step (2515 listing, 1737 step schema), leaving
-18509 of its budget and 28067 tokens of the
+Attaches 7 tools and pays 4840 tokens on every step (2585 listing, 1807 step schema), leaving
+18370 of its budget and 27928 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -129,7 +129,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 272 tokens, mean 322, across 76 served tools.
+Median 272 tokens, mean 323, across 76 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -158,21 +158,21 @@ a term in an addition.
 | `book_meeting` | 423 | — |
 | `annotate_brief` | 417 | 2 scenarios |
 | `review_commitments` | 401 | — |
+| `prep_for_meeting` | 394 | — |
 | `enrich` | 390 | — |
 | `search_records` | 383 | — |
 | `check_availability` | 366 | — |
 | `describe_report_vocabulary` | 349 | — |
+| `catch_me_up_on` | 348 | 2 scenarios |
 | `describe_record_fields` | 345 | — |
 | `search_context` | 344 | — |
 | `advance_project_phase` | 340 | — |
 | `forecast_input_checks` | 324 | — |
-| `prep_for_meeting` | 324 | — |
 | `demote_lead` | 317 | — |
 | `promote_lead` | 304 | — |
 | `merge_records` | 293 | — |
 | `archive_record` | 289 | — |
 | `describe_analytics_vocabulary` | 286 | — |
-| `catch_me_up_on` | 279 | 2 scenarios |
 | `draft_email` | 278 | — |
 | `relink_activity` | 276 | — |
 | `draft_follow_ups_for` | 273 | — |
@@ -194,13 +194,13 @@ a term in an addition.
 | `read_brief` | 205 | — |
 | `relink_activities` | 205 | — |
 | `update_tag` | 205 | — |
-| `commit_import` | 203 | — |
 | `merge_tags` | 198 | — |
 | `who_knows` | 197 | — |
 | `relink_thread` | 196 | — |
 | `data_coverage` | 195 | — |
 | `list_colleagues` | 193 | — |
 | `list_pipelines` | 191 | — |
+| `commit_import` | 187 | — |
 | `intro_path_to` | 187 | — |
 | `create_tag` | 183 | — |
 | `list_channel_providers` | 174 | — |

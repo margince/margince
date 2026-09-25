@@ -15,7 +15,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // Profile is the §4 location ladder — the privacy choice is WHERE the
@@ -63,6 +62,9 @@ type RoutingConfig struct {
 	Tiers      map[Tier]ProviderConfig `yaml:"tiers" json:"tiers"`
 	Embeddings EmbeddingsConfig        `yaml:"embeddings" json:"embeddings"`
 	Profile    Profile                 `yaml:"profile" json:"profile"`
+	// Decisions is the optional decision-model lane (decisionlane.go). Last and
+	// omitempty, so a config binding none encodes and digests as it always did.
+	Decisions *DecisionsConfig `yaml:"decisions" json:"decisions,omitempty"`
 	// sourceHash is the sha256 digest of the raw yaml bytes this config was
 	// parsed from (spec §4) — the routing half of the ai_call_config
 	// dimension key, alongside the generated TaskContractHash. Set by
@@ -120,6 +122,9 @@ func (cfg RoutingConfig) BoundModelIDsByProvider() map[string]map[string]bool {
 		add(tier.Provider, tier.Model)
 	}
 	add(cfg.Embeddings.Provider, cfg.Embeddings.Model)
+	if cfg.Decisions != nil {
+		add(cfg.Decisions.Provider, cfg.Decisions.Model)
+	}
 	return bound
 }
 
@@ -266,7 +271,12 @@ func (cfg RoutingConfig) bindingDigest() string {
 }
 
 // localProviders can serve the sovereign zero-egress profile.
-var localProviders = map[string]bool{providerOllama: true, providerVLLM: true, ProviderFake: true}
+// It is a set of CHAT providers: the decisions lane asks its descriptor's
+// local flag directly, since a decision adapter is never a tier's answer.
+var localProviders = projectProviders(
+	func(providerDescriptor) bool { return true },
+	func(d providerDescriptor) bool { return d.local && speaksChat(d) },
+)
 
 // ProviderIsLocal reports whether provider names same-host inference
 // rather than a network-hosted vendor — the one exported spelling of
@@ -320,6 +330,9 @@ func (cfg RoutingConfig) validate() error {
 	if cfg.Embeddings.Provider == "" {
 		return fmt.Errorf("ai: routing config: embeddings lane has no provider")
 	}
+	if err := refuseDecisionOnlyProvider("the embeddings lane", cfg.Embeddings.Provider); err != nil {
+		return err
+	}
 	if err := validateEmbeddingsRouting(cfg.Embeddings.ProviderConfig); err != nil {
 		return err
 	}
@@ -363,7 +376,7 @@ func (cfg RoutingConfig) validate() error {
 			"give it the vendor host root, with no version segment (the adapter adds /v1), " +
 			"e.g. https://openrouter.ai/api")
 	}
-	return nil
+	return cfg.validateDecisionsLane()
 }
 
 // AllTiers lists the tier names knownTiers admits, sorted for determinism.
@@ -397,6 +410,9 @@ func AllTiers() []Tier {
 func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) error {
 	if binding.Provider == "" {
 		return fmt.Errorf("ai: routing config: tier %s has no provider", tier)
+	}
+	if err := refuseDecisionOnlyProvider(fmt.Sprintf("tier %s", tier), binding.Provider); err != nil {
+		return err
 	}
 	// Sovereign means zero egress BY CONSTRUCTION, which takes both halves:
 	// a cloud provider in any chat tier is a config error, and so is a local
@@ -474,23 +490,4 @@ func (cfg RoutingConfig) UnboundLadderWarnings() []string {
 // own table.
 func TaskLadder(task Task) []Tier {
 	return append([]Tier(nil), taskLadders[task]...)
-}
-
-// buildClients turns validated bindings into live Clients via
-// SelectBrain. Construction errors (missing BYOK key, unknown provider)
-// surface here — still startup, still loud.
-func (cfg RoutingConfig) buildClients() (map[Tier]model.Client, model.Client, error) {
-	clients := make(map[Tier]model.Client, len(cfg.Tiers))
-	for tier, binding := range cfg.Tiers {
-		client, err := SelectBrain(binding, cfg.keys)
-		if err != nil {
-			return nil, nil, fmt.Errorf("ai: tier %s: %w", tier, err)
-		}
-		clients[tier] = client
-	}
-	embedder, err := SelectBrain(cfg.Embeddings.ProviderConfig, cfg.keys)
-	if err != nil {
-		return nil, nil, fmt.Errorf("ai: embeddings lane: %w", err)
-	}
-	return clients, embedder, nil
 }

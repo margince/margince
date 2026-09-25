@@ -5,12 +5,14 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -31,6 +33,7 @@ type CallSummary struct {
 	ID              ids.UUID
 	OccurredAt      time.Time
 	Task            string
+	Kind            string
 	Tier            string
 	Provider        string
 	ModelID         string
@@ -45,12 +48,22 @@ type CallSummary struct {
 	Degraded        bool
 	ErrorSentinel   *string
 	HasPayload      bool
+	// DecisionAttempted is read across the whole logical call because a
+	// fallback's terminal row is the completion, not the decision it replaced.
+	DecisionAttempted bool
 }
 
 // CallAttempt is one rung in a logical call's oldest-first attempt ladder.
+// Kind, tier and binding are carried per attempt because one logical call may
+// ask a decision model and then a chat tier, and a reader must see which
+// answered and which fell back.
 type CallAttempt struct {
 	Attempt       int
 	IsTerminal    bool
+	Kind          string
+	Tier          string
+	Provider      string
+	ModelID       string
 	AttemptReason string
 	ErrorSentinel *string
 	TokensIn      int64
@@ -67,10 +80,13 @@ type CallDetail struct {
 	AgentRunID           *ids.UUID
 	ServedIdentitySource string
 	ConfigHash           *string
-	ContextScopes        []string
-	ContextFingerprint   string
-	Attempts             []CallAttempt
-	Payload              *Payload
+	// Config is what ConfigHash resolves to, nil for a call whose hash is
+	// absent or whose configuration row was never planted.
+	Config             *crmcontracts.AiCallConfig
+	ContextScopes      []string
+	ContextFingerprint string
+	Attempts           []CallAttempt
+	Payload            *Payload
 }
 
 // CallPage is one keyset-paginated window of terminal call summaries.
@@ -86,11 +102,15 @@ type CallPage struct {
 }
 
 // The payload existence check keeps list reads independent of captured
-// content size. Its alias stays distinct from the detail join alias.
-const callSummaryColumns = `c.id, c.occurred_at, c.task, c.tier, c.provider, c.model_id,
+// content size. Its alias stays distinct from the detail join alias. The
+// decision probe is a correlated aggregate over ai_call_logical_idx, so a page
+// costs one statement however many rows it carries.
+const callSummaryColumns = `c.id, c.occurred_at, c.task, c.kind, c.tier, c.provider, c.model_id,
 	c.served_model, c.attempt, c.tokens_in, c.tokens_out, c.reasoning_tokens,
 	c.cached_tokens, c.latency_ms, c.cache_hit, c.degraded, c.error_sentinel,
-	EXISTS (SELECT 1 FROM ai_call_payload pp WHERE pp.ai_call_id = c.id)`
+	EXISTS (SELECT 1 FROM ai_call_payload pp WHERE pp.ai_call_id = c.id),
+	(SELECT COALESCE(bool_or(la.kind = 'decision'), false) FROM ai_call la
+	 WHERE la.logical_call_id = c.logical_call_id)`
 
 type rowScanner interface {
 	Scan(dest ...any) error
@@ -98,11 +118,11 @@ type rowScanner interface {
 
 func scanCallSummary(row rowScanner) (CallSummary, error) {
 	var summary CallSummary
-	err := row.Scan(&summary.ID, &summary.OccurredAt, &summary.Task, &summary.Tier,
+	err := row.Scan(&summary.ID, &summary.OccurredAt, &summary.Task, &summary.Kind, &summary.Tier,
 		&summary.Provider, &summary.ModelID, &summary.ServedModel, &summary.Attempt,
 		&summary.TokensIn, &summary.TokensOut, &summary.ReasoningTokens,
 		&summary.CachedTokens, &summary.LatencyMS, &summary.CacheHit, &summary.Degraded,
-		&summary.ErrorSentinel, &summary.HasPayload)
+		&summary.ErrorSentinel, &summary.HasPayload, &summary.DecisionAttempted)
 	return summary, err
 }
 
@@ -200,19 +220,33 @@ func scanCallDetail(row rowScanner) (CallDetail, ids.UUID, error) {
 	var detail CallDetail
 	var logicalID ids.UUID
 	var requestPayload, responsePayload []byte
-	err := row.Scan(&detail.ID, &detail.OccurredAt, &detail.Task, &detail.Tier,
+	// All four arrive NULL together when the join found no configuration.
+	var taskContractHash, routingConfigHash, promptVersion *string
+	var providerParams []byte
+	err := row.Scan(&detail.ID, &detail.OccurredAt, &detail.Task, &detail.Kind, &detail.Tier,
 		&detail.Provider, &detail.ModelID, &detail.ServedModel, &detail.Attempt,
 		&detail.TokensIn, &detail.TokensOut, &detail.ReasoningTokens,
 		&detail.CachedTokens, &detail.LatencyMS, &detail.CacheHit, &detail.Degraded,
-		&detail.ErrorSentinel, &detail.HasPayload, &detail.CorrelationID,
+		&detail.ErrorSentinel, &detail.HasPayload, &detail.DecisionAttempted, &detail.CorrelationID,
 		&detail.AgentRunID, &detail.ServedIdentitySource, &detail.ConfigHash,
 		&detail.ContextScopes, &detail.ContextFingerprint, &logicalID,
-		&requestPayload, &responsePayload)
+		&requestPayload, &responsePayload,
+		&taskContractHash, &routingConfigHash, &promptVersion, &providerParams)
 	if err != nil {
 		return CallDetail{}, ids.UUID{}, err
 	}
 	if requestPayload != nil && responsePayload != nil {
 		detail.Payload = &Payload{Request: requestPayload, Response: responsePayload}
+	}
+	// The three hashes are NOT NULL on the dimension row, so all of them
+	// arriving nil means the call named no configuration — the only way the
+	// join misses, since ai_call_config_fk binds any hash that IS set to a row.
+	if taskContractHash != nil && routingConfigHash != nil && promptVersion != nil {
+		config, err := resolvedConfig(*taskContractHash, *routingConfigHash, *promptVersion, providerParams)
+		if err != nil {
+			return CallDetail{}, ids.UUID{}, err
+		}
+		detail.Config = config
 	}
 	return detail, logicalID, nil
 }
@@ -228,9 +262,14 @@ func (s *CallReadStore) GetCall(ctx context.Context, id ids.UUID) (CallDetail, e
 		row := tx.QueryRow(ctx, storekit.SQLf(
 			`SELECT %s, c.correlation_id, c.agent_run_id, c.served_identity_source,
 				c.config_hash, c.context_scopes, c.context_fingerprint, c.logical_call_id,
-				p.request_payload, p.response_payload
+				p.request_payload, p.response_payload,
+				cfg.task_contract_hash, cfg.routing_config_hash, cfg.prompt_version, cfg.provider_params
 			 FROM ai_call c
 			 LEFT JOIN ai_call_payload p ON p.ai_call_id = c.id
+			 -- The dimension the call's hash names. LEFT because the hash is
+			 -- NULLABLE, not because a row might be missing: ai_call_config_fk
+			 -- makes a hash that IS set always have one behind it.
+			 LEFT JOIN ai_call_config cfg ON cfg.hash = c.config_hash
 			 WHERE c.is_terminal AND c.id = $1`, callSummaryColumns,
 		), id)
 		var logicalID ids.UUID
@@ -243,8 +282,8 @@ func (s *CallReadStore) GetCall(ctx context.Context, id ids.UUID) (CallDetail, e
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			SELECT attempt, is_terminal, attempt_reason, error_sentinel,
-				tokens_in, tokens_out, latency_ms, occurred_at
+			SELECT attempt, is_terminal, kind, tier, provider, model_id, attempt_reason,
+				error_sentinel, tokens_in, tokens_out, latency_ms, occurred_at
 			FROM ai_call WHERE logical_call_id = $1 ORDER BY attempt ASC`, logicalID)
 		if err != nil {
 			return err
@@ -252,7 +291,8 @@ func (s *CallReadStore) GetCall(ctx context.Context, id ids.UUID) (CallDetail, e
 		defer rows.Close()
 		for rows.Next() {
 			var attempt CallAttempt
-			if err := rows.Scan(&attempt.Attempt, &attempt.IsTerminal, &attempt.AttemptReason,
+			if err := rows.Scan(&attempt.Attempt, &attempt.IsTerminal, &attempt.Kind, &attempt.Tier,
+				&attempt.Provider, &attempt.ModelID, &attempt.AttemptReason,
 				&attempt.ErrorSentinel, &attempt.TokensIn, &attempt.TokensOut,
 				&attempt.LatencyMS, &attempt.OccurredAt); err != nil {
 				return err
@@ -265,4 +305,29 @@ func (s *CallReadStore) GetCall(ctx context.Context, id ids.UUID) (CallDetail, e
 		return CallDetail{}, err
 	}
 	return detail, nil
+}
+
+// resolvedConfig assembles what a call's config_hash points at. The caller has
+// already established there is one; an object of empty strings would read as a
+// configuration that pinned nothing.
+func resolvedConfig(taskContract, routing, prompt string, params []byte) (*crmcontracts.AiCallConfig, error) {
+	config := &crmcontracts.AiCallConfig{
+		TaskContractHash:  taskContract,
+		RoutingConfigHash: routing,
+		PromptVersion:     prompt,
+	}
+	if len(params) > 0 {
+		var decoded map[string]any
+		if err := json.Unmarshal(params, &decoded); err != nil {
+			return nil, fmt.Errorf("ai call config provider_params is not an object: %w", err)
+		}
+		// `jsonb NOT NULL` admits the JSON value `null`, which unmarshals into a
+		// nil map without error. Assigning it would hand a reader a non-nil
+		// pointer to nothing — a configuration that pinned an empty object,
+		// rather than one that pinned none.
+		if decoded != nil {
+			config.ProviderParams = &decoded
+		}
+	}
+	return config, nil
 }

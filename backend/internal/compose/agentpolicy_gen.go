@@ -354,6 +354,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/worklist/exceptions":                                           {Op: "getTeamExceptions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/worklist/handled":                                              {Op: "getHandledForYou", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/worklist/hidden":                                               {Op: "getHiddenBacklog", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/worklist/hidden/{rule}":                                        {Op: "getHiddenBacklogRows", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/worklist/response":                                             {Op: "getResponseMetrics", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/worklist/team":                                                 {Op: "getTeamBoard", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/acquisition-sources/{id}":                                    {Op: "updateAcquisitionSource", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

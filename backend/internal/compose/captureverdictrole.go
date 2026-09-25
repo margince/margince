@@ -182,11 +182,17 @@ func (e *CounterpartyVerdictEngine) askAHumanInstead(
 // Below its floor the answer is not refused, it is re-asked once and then made a
 // question for a contact — an `unsure` sender is escalated rather than dismissed.
 func clearsItsFloor(answer verdictResult) bool {
-	floor := verdictConfidenceFloor
-	if createsARecord(answer.Verdict) {
-		floor = verdictCreateFloor
+	return float64(answer.Confidence) >= verdictFloorFor(answer.Verdict)
+}
+
+// verdictFloorFor is the floor one kind's answer has to clear. The decision
+// certification reads it per label, so a certified decision is measured at the
+// floor this engine applies rather than at a restatement of it.
+func verdictFloorFor(kind string) float64 {
+	if createsARecord(kind) {
+		return verdictCreateFloor
 	}
-	return float64(answer.Confidence) >= floor
+	return verdictConfidenceFloor
 }
 
 // createsARecord reports whether this kind puts a contact in the CRM.

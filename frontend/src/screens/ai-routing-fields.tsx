@@ -6,6 +6,7 @@ import { Field, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import {
   type AvailableModels,
   type ModelCatalogue,
@@ -17,7 +18,9 @@ import {
 type Routing = components["schemas"]["AiRouting"];
 // The adapters a tier may name. Written out because the wire carries a free
 // string — the server refuses an unknown one, and a reader choosing from a list
-// should not have to discover that by being refused.
+// should not have to discover that by being refused. A declared mirror of the
+// server's provider registry, held in both directions by
+// backend/gates/frontendproviders_test.go, which reads this `[…] as const` form.
 const PROVIDERS = [
   "gemini",
   "anthropic",
@@ -28,9 +31,84 @@ const PROVIDERS = [
   "fake",
 ] as const;
 
-// The one adapter with no host of its own: every OpenAI-wire vendor is reached
-// through it, so the endpoint is the binding rather than a tweak to it.
-const OPENAI_WIRE = "openai_compatible";
+// The adapters the decision lane may name. A decision model answers a typed
+// question with calibrated probabilities rather than text, so no chat adapter
+// can serve it and none is offered. The same `[…] as const` mirror as
+// PROVIDERS, held against the server's decision registry by
+// backend/gates/frontendproviders_test.go.
+export const DECISION_PROVIDERS = ["openrouter_decision", "laya"] as const;
+
+// The adapters whose host this form asks for, and what each does with it.
+//
+// Two have no host of their own, so the endpoint is the binding rather than a
+// tweak to it: every OpenAI-wire vendor is reached through openai_compatible,
+// and openrouter_decision promises OpenRouter's decisions endpoint, which the
+// server holds to an OpenRouter host it has to be told. laya has a default,
+// but it is loopback, which is right only where the decision server runs
+// beside the API — so its host is offered, blank meaning that default.
+//
+// The help differs because the path each appends differs: a sentence written
+// for one told the others the wrong thing. The paths are the server's
+// provider registry's (providerregistry.go), spelled here as copy.
+type HostField = Readonly<{
+  help: MessageKey;
+  placeholder: MessageKey;
+}>;
+const HOST_FIELDS: ReadonlyMap<string, HostField> = new Map([
+  [
+    "openai_compatible",
+    {
+      help: "aiRouting.baseUrl.help",
+      placeholder: "aiRouting.baseUrl.placeholder",
+    },
+  ],
+  [
+    "openrouter_decision",
+    {
+      help: "aiRouting.baseUrl.help.openrouterDecision",
+      placeholder: "aiRouting.baseUrl.placeholder",
+    },
+  ],
+  [
+    "laya",
+    {
+      help: "aiRouting.baseUrl.help.laya",
+      placeholder: "aiRouting.baseUrl.placeholder.laya",
+    },
+  ],
+]);
+
+type TierBindingLike = {
+  provider: string;
+  model: string;
+  base_url?: string;
+  routing?: unknown;
+  thinking_level?: string;
+};
+
+// Broker preferences and a thinking level were written for one provider at one
+// address and one model: the server refuses preferences on a binding that is not
+// OpenRouter and a level on one that is not a Gemini 3, and an `only:` pin names
+// hosts that serve ONE model. Changing any of the three therefore takes both
+// off, the same rule the server applies when it carries a stored lane's values
+// onto a write that omits them. Which hosts ARE OpenRouter is the server's rule;
+// the editor keeps no second copy of it, so it drops on any move instead of
+// guessing.
+export function rebind<B extends TierBindingLike>(
+  binding: B,
+  patch: Partial<Pick<TierBindingLike, "provider" | "model" | "base_url">>,
+): B {
+  const next: B = { ...binding, ...patch };
+  const moved =
+    next.provider !== binding.provider ||
+    next.model !== binding.model ||
+    (next.base_url ?? "") !== (binding.base_url ?? "");
+  if (moved) {
+    delete next.routing;
+    delete next.thinking_level;
+  }
+  return next;
+}
 
 // The three controls that name an adapter: which vendor, which model on it,
 // and -- only where the vendor has no address of its own -- where to reach it.
@@ -42,9 +120,7 @@ const OPENAI_WIRE = "openai_compatible";
 // embedding row names itself -- and the LANE, which decides whether this field
 // offers chat models or embedders. An embedder on a chat tier cannot serve a
 // call, so offering one would be worse than offering nothing.
-export function AdapterFields<
-  B extends { provider: string; model: string; base_url?: string },
->({
+export function AdapterFields<B extends TierBindingLike>({
   label,
   lane,
   laneName,
@@ -52,9 +128,14 @@ export function AdapterFields<
   catalogue,
   disabled,
   onChange,
+  providers = PROVIDERS,
 }: Readonly<{
   label: string;
   lane: ModelLane;
+  // The adapters this lane may name. Every chat tier and the embedder share
+  // one list; the decision lane has its own, because no chat adapter answers a
+  // decision question.
+  providers?: readonly string[];
   // Which lane of the routing document this is, in the document's own words.
   // `lane` above says chat-or-embeddings, which is what a model is FOR; this
   // says which binding, which is what the host is read from.
@@ -71,6 +152,7 @@ export function AdapterFields<
   // travels with it so an installation binding one vendor at two hosts is asked
   // at the one THIS lane points at.
   const available = useAvailableModels(binding.provider, laneName, true);
+  const host = HOST_FIELDS.get(binding.provider);
   return (
     <>
       <Field label={label}>
@@ -79,8 +161,8 @@ export function AdapterFields<
             {...control}
             value={binding.provider}
             disabled={disabled}
-            options={PROVIDERS.map((p) => ({ value: p, label: p }))}
-            onChange={(provider) => onChange({ ...binding, provider })}
+            options={providers.map((p) => ({ value: p, label: p }))}
+            onChange={(provider) => onChange(rebind(binding, { provider }))}
           />
         )}
       </Field>
@@ -113,29 +195,26 @@ export function AdapterFields<
               locale,
             )}
             disabled={disabled}
-            onChange={(model) => onChange({ ...binding, model })}
+            onChange={(model) => onChange(rebind(binding, { model }))}
           />
         )}
       </Field>
-      {/* Only where it is load-bearing. openai_compatible has no default host
-          and the server refuses a binding without one, so leaving this off the
-          form made every broker unbindable from here: the write was accepted
-          and the running role then declined to adopt it. A native vendor
-          addresses its own API, and an empty box beside it invites somebody to
-          fill it in with something that overrides a working default. */}
-      {binding.provider === OPENAI_WIRE && (
-        <Field
-          label={t("aiRouting.baseUrl.label")}
-          hint={t("aiRouting.baseUrl.help")}
-        >
+      {/* Only where it is load-bearing. An adapter with no default host is
+          refused a binding without one, so leaving this off the form made
+          every broker unbindable from here: the write was accepted and the
+          running role then declined to adopt it. A native vendor addresses
+          its own API, and an empty box beside it invites somebody to fill it
+          in with something that overrides a working default. */}
+      {host && (
+        <Field label={t("aiRouting.baseUrl.label")} hint={t(host.help)}>
           {(control) => (
             <TextInput
               {...control}
               value={binding.base_url ?? ""}
               disabled={disabled}
-              placeholder={t("aiRouting.baseUrl.placeholder")}
+              placeholder={t(host.placeholder)}
               onChange={(e) =>
-                onChange({ ...binding, base_url: e.target.value })
+                onChange(rebind(binding, { base_url: e.target.value }))
               }
             />
           )}

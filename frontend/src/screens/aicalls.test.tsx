@@ -10,6 +10,7 @@ import { AiCallsCard, useLastCallAt } from "./aicalls";
 const summary = {
   id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
   occurred_at: "2026-07-20T10:00:00Z",
+  kind: "completion",
   task: "capture_classify",
   tier: "cheap_cloud",
   provider: "gemini",
@@ -25,6 +26,7 @@ const summary = {
   degraded: true,
   error_sentinel: "provider_unavailable",
   has_payload: true,
+  decision_attempted: false,
 };
 
 // The trace is gated on `ai_diagnostics:read`, which is what `GET /ai/calls`
@@ -36,10 +38,91 @@ const summary = {
 // the server would have served.
 const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 
+const RETRIED = {
+  call: summary,
+  attempts: [
+    {
+      attempt: 1,
+      is_terminal: false,
+      kind: "completion",
+      attempt_reason: "",
+      tokens_in: 100,
+      tokens_out: 0,
+      latency_ms: 400,
+      occurred_at: summary.occurred_at,
+    },
+    {
+      attempt: 2,
+      is_terminal: true,
+      kind: "completion",
+      attempt_reason: "retry_on_5xx",
+      tokens_in: 100,
+      tokens_out: 20,
+      latency_ms: 900,
+      occurred_at: summary.occurred_at,
+    },
+  ],
+};
+
+// A decision model that answered below its floor, and the ladder rung that
+// answered instead. The terminal call is the completion; the decision is an
+// attempt before it, and the reason on the rung says why the walk went on.
+const DECIDED_THEN_FELL_BACK = {
+  call: {
+    ...summary,
+    degraded: false,
+    error_sentinel: null,
+    decision_attempted: true,
+  },
+  attempts: [
+    {
+      attempt: 1,
+      is_terminal: false,
+      kind: "decision",
+      tier: "decide",
+      provider: "openrouter_decision",
+      model_id: "jev-classify",
+      attempt_reason: "",
+      tokens_in: 40,
+      tokens_out: 0,
+      latency_ms: 600,
+      occurred_at: summary.occurred_at,
+    },
+    {
+      attempt: 2,
+      is_terminal: true,
+      kind: "completion",
+      tier: "cheap_cloud",
+      attempt_reason: "decision_below_floor",
+      tokens_in: 100,
+      tokens_out: 20,
+      latency_ms: 900,
+      occurred_at: summary.occurred_at,
+    },
+  ],
+};
+
+// A call the decision model answered itself: the terminal row is the decision.
+const DECIDED = {
+  call: {
+    ...summary,
+    kind: "decision",
+    tier: "decide",
+    provider: "openrouter_decision",
+    calls_attempted: 1,
+    decision_attempted: true,
+  },
+  attempts: [DECIDED_THEN_FELL_BACK.attempts[0]],
+};
+
 function mount(
   captureEnabled = true,
   withPayload = true,
   allow: GrantSpec = OPERATOR,
+  trace: {
+    call: Record<string, unknown>;
+    attempts: unknown[];
+  } = RETRIED,
 ) {
   const seen: string[] = [];
   vi.stubGlobal(
@@ -57,37 +140,18 @@ function mount(
       }
       const body = path.endsWith(summary.id)
         ? {
-            ...summary,
+            ...trace.call,
             served_identity_source: "response",
             context_scopes: [],
             context_fingerprint: "",
-            attempts: [
-              {
-                attempt: 1,
-                is_terminal: false,
-                attempt_reason: "",
-                tokens_in: 100,
-                tokens_out: 0,
-                latency_ms: 400,
-                occurred_at: summary.occurred_at,
-              },
-              {
-                attempt: 2,
-                is_terminal: true,
-                attempt_reason: "retry_on_5xx",
-                tokens_in: 100,
-                tokens_out: 20,
-                latency_ms: 900,
-                occurred_at: summary.occurred_at,
-              },
-            ],
+            attempts: trace.attempts,
             payload_captured: withPayload,
             payload: withPayload
               ? { request: { system: "safe", messages: [] }, response: "ok" }
               : null,
           }
         : {
-            data: [summary],
+            data: [trace.call],
             page: { has_more: false },
             payload_capture_enabled: captureEnabled,
             tasks: [summary.task],
@@ -295,4 +359,58 @@ it("withholds the trace from a principal without the diagnostics read, and asks 
   ).toBeTruthy();
   expect(screen.getByText("AI call trace")).toBeTruthy();
   expect(seen.some((path) => path.includes("/ai/calls"))).toBe(false);
+});
+
+it("marks a decision call, and names the tier it ran on", async () => {
+  mount(true, true, OPERATOR, DECIDED);
+
+  expect(
+    await screen.findByText("Decision model · openrouter_decision/served"),
+  ).toBeTruthy();
+  // The badge on the row is the kind, in words; the tier column above is the
+  // same fact spelled as the lane, and both say it rather than "decide".
+  expect(screen.getAllByText("Decision model").length).toBeGreaterThan(0);
+  expect(screen.queryByText(/\bdecide\b/)).toBeNull();
+});
+
+// The terminal row of a fallback is the completion, so the row reads the
+// logical call's flag rather than its own kind — otherwise a decision model
+// that was asked and overruled is visible only after expanding the call.
+it("marks a call the decision model fell back from on its row, before it is opened", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).toContain("Decision model");
+});
+
+it("leaves the decision mark off a call that never asked a decision model", async () => {
+  mount();
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).not.toContain("Decision model");
+});
+
+it("says why the ladder answered after the decision model, and where it went", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+  await userEvent.click(
+    await screen.findByRole("button", { name: /show attempts/i }),
+  );
+
+  // The fallback rung reads its tier, then the reason in words rather than the
+  // wire code, and no number: the floor is not stored on the call.
+  expect(
+    await screen.findByText(
+      /cheap_cloud · Decision model below its confidence floor/,
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/decision_below_floor/)).toBeNull();
+  // And the decision attempt itself carries the badge, and names the model it
+  // asked: the terminal row's binding is the rung that answered after it.
+  const first = screen.getByText("#1").closest("li");
+  expect(first?.textContent).toContain("Decision model");
+  expect(first?.textContent).toContain("openrouter_decision/jev-classify");
 });

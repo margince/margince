@@ -12,8 +12,9 @@
 #     make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml \
 #       JUDGE=ollama:gpt-oss:20b
 #
-# The judge is local because the profile is: `sovereign` refuses a cloud
-# provider on ANY binding the run validates, the judge's included. It is also
+# The committed records were judged locally, because the lane then held the
+# judge to this file's `sovereign` profile; it now holds only the candidate, so
+# omitting JUDGE= (the default cloud judge) is allowed too. The judge is also
 # NOT resolved from this file — every tier below is Gemma 4, and a judge equal
 # to the candidate grades itself. gpt-oss:20b is a different family that fits
 # beside a 12b on a 24GB machine only by unloading it between calls, so the

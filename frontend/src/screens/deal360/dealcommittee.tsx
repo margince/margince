@@ -23,7 +23,7 @@
 import type { components } from "../../api/schema";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import "./dealcommittee.css";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
@@ -80,6 +80,7 @@ export function CommitteeReading({
   pending: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const seats = coverage?.stakeholders ?? [];
   const ours = coverage?.our_side ?? [];
@@ -163,7 +164,9 @@ export function CommitteeReading({
         // so the count is said here — it came from the rail panel this card
         // replaced, and dropping it would lose the fact rather than move it.
         <p className="t-caption">
-          {t("deal.seats.ours", { count: formatNumber(ours.length, locale) })}
+          {plural("deal.seats.ours", ours.length, {
+            count: formatNumber(ours.length, locale),
+          })}
         </p>
       )}
     </SurfaceState>

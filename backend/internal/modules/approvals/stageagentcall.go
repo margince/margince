@@ -128,15 +128,25 @@ func (s *Service) liveApprovalForCallInTx(ctx context.Context, tx pgx.Tx, in Sta
 	// redemption landing on it are ordered rather than interleaved. The identity
 	// lock above covers what a row lock cannot: an empty result locks nothing, and
 	// two attempts that both read before either writes would both stage.
+	//
+	// The CASE is sameAgent asked in SQL: a connected caller matches what its
+	// CONNECTION staged, because its passport id changes every time its client
+	// refreshes and it would otherwise stage a second card for the call it is
+	// already holding one for. A directly minted passport has no connection and
+	// matches on its own id.
 	rows, err := tx.Query(ctx, `SELECT id, status FROM approval
 		 WHERE kind = $1 AND diff_hash = $2
 		   AND target_entity_id IS NOT DISTINCT FROM $3
 		   AND target_entity_type IS NOT DISTINCT FROM $4
-		   AND passport_id IS NOT DISTINCT FROM $5
-		   AND ((status = $6 AND expires_at > now()) OR (status = $7 AND consumed_at IS NULL))
+		   AND CASE WHEN $5::uuid IS NULL
+		            THEN passport_id IS NOT DISTINCT FROM $6
+		            ELSE staged_by_connection = $5
+		       END
+		   AND ((status = $7 AND expires_at > now()) OR (status = $8 AND consumed_at IS NULL))
 		 `+lockOrder+`
 		 FOR UPDATE`,
-		in.Kind, in.DiffHash, nullUUID(in.TargetID), nullStr(in.TargetType), nullUUID(p.PassportID),
+		in.Kind, in.DiffHash, nullUUID(in.TargetID), nullStr(in.TargetType),
+		nullUUID(p.ConnectionID), nullUUID(p.PassportID),
 		statusPending, approvalStatusApproved)
 	if err != nil {
 		return liveAuthority{}, false, fmt.Errorf("lock the live approvals for this call: %w", err)

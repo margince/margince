@@ -16,6 +16,7 @@ because the choice decides where this installation's text goes.
 | [`consumer_class_brokered.yaml`](consumer_class_brokered.yaml) | every tier to a Gemma 4 an operator could self-host, brokered at fp8 | `OPENAI_COMPATIBLE_API_KEY` |
 | [`openrouter_cloud_eu.yaml`](openrouter_cloud_eu.yaml) | every lane, embeddings included, to Mistral's EU-region endpoint (`only: [mistral/eu]`) | `OPENAI_COMPATIBLE_API_KEY` |
 | [`gemma4_local_ollama.yaml`](gemma4_local_ollama.yaml) | every tier to `gemma4:12b` on loopback Ollama, embeddings to `bge-m3` — zero egress | Ollama with both models pulled, nothing else |
+| [`qwen3_local_vllm.yaml`](qwen3_local_vllm.yaml) | every tier to Qwen3-14B (MLX 4-bit) on loopback vLLM, embeddings to `bge-m3` on a second vLLM — zero egress | two vLLM servers started with the flags in the file's header |
 
 `gemini_cloud.yaml` is the binding a dev stack bootstraps with today, lifted out
 of `margince.dev.yaml` so it can be named and reused. The dev overlay still
@@ -66,13 +67,14 @@ GPU — the sovereign Ollama binding of the same weights
 measurement under a different profile, and the two must not share a record
 filename. It cannot serve `document_extract` either, for the reason below.
 
-`gemma4_local_ollama.yaml` is `sovereign`, and that profile is validated against
-every binding a certification run makes, the judge's included: a cloud `JUDGE=` is
-refused. Certify it with a local judge from a different family
-(`JUDGE=ollama:gpt-oss:20b`), or run a copy declared under another profile to use a
-cloud judge and do not commit the records it writes, since they would name a
-profile the run did not have. The weights are 12b on every tier because that is what
-a 24GB machine serves entirely on the GPU; the header of the file has the numbers.
+`gemma4_local_ollama.yaml` and `qwen3_local_vllm.yaml` are `sovereign`. A
+certification run holds the candidate to that profile and not the judge, which is
+the lane's own grader and is sent only the corpus and the candidate's answer, so
+either may be certified with the default cloud judge. The Gemma records were
+taken with a local one (`JUDGE=ollama:gpt-oss:20b`) before that was allowed, and
+their latency includes the two models taking turns in one Ollama's memory. The
+Gemma weights are 12b on every tier because that is what a 24GB machine serves
+entirely on the GPU; the header of the file has the numbers.
 
 On the OpenRouter preset's `routing:` block, and the measurements behind its
 defaults: [docs/reference/openrouter.md](../../docs/reference/openrouter.md).

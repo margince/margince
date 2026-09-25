@@ -13,7 +13,7 @@ import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import {
@@ -181,6 +181,7 @@ function LeadSourceRow({
   onRemove: () => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const count = source.lead_count ?? 0;
   const builtIn = source.system === true;
@@ -232,7 +233,7 @@ function LeadSourceRow({
               title={
                 builtIn
                   ? t("leadSources.builtInKept")
-                  : t("leadSources.inUse", {
+                  : plural("leadSources.inUse", count, {
                       count: formatNumber(count, locale),
                     })
               }
@@ -586,6 +587,7 @@ function useReasonMutations() {
 
 export function LeadDisqualifyReasonsCard() {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const canCreate = useCanWrite("custom_field", "create");
   const canEdit = useCanWrite("custom_field", "update");
@@ -669,7 +671,7 @@ export function LeadDisqualifyReasonsCard() {
                                   title={
                                     builtIn
                                       ? t("leadSources.builtInKept")
-                                      : t("leadReasons.inUse", {
+                                      : plural("leadReasons.inUse", count, {
                                           count: formatNumber(count, locale),
                                         })
                                   }

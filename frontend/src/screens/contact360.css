@@ -774,12 +774,6 @@
   margin-bottom: var(--space-5);
 }
 
-/* The pulse card's facts sit under the relationship line, which is prose —
- * the gap is what separates a reading from the sentence explaining it. */
-.contact-pulse-facts {
-  margin-top: var(--space-3);
-}
-
 /* The one move the thin-record surface offers, spaced off the sentence that
    explains why it is the move. It carried an inline `marginTop` before, which
    is a spacing decision hidden where no stylesheet can see it. */
@@ -947,28 +941,10 @@
   margin: var(--space-1) 0 0;
 }
 
-/* What happened to the relationship, under the line that says who is warmest. */
-.pe-changes {
-  margin: var(--space-2) 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--space-1);
-}
-
 .pe-career {
   margin: 0;
   padding-left: var(--space-4);
 }
 .pe-career-item {
   margin-top: var(--space-1);
-}
-
-.pe-network {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.pe-network-item {
-  padding: var(--space-2) 0;
 }

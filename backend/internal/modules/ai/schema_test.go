@@ -8,6 +8,8 @@ import (
 	"os"
 	"sort"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // The editor schema's enums must equal the parser's authorities, or the schema
@@ -60,6 +62,12 @@ func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
 			EmbeddingsBinding struct {
 				Properties map[string]any `json:"properties"`
 			} `json:"embeddingsBinding"`
+			//nolint:tagliatelle // "$defs" member names are this schema's own, matching the file
+			DecisionsBinding struct {
+				Properties struct {
+					Provider struct{ Enum []string } `json:"provider"`
+				} `json:"properties"`
+			} `json:"decisionsBinding"`
 		} `json:"$defs"`
 	}
 	// $defs/binding and $defs/embeddingsBinding sit at the document root, so
@@ -80,6 +88,7 @@ func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
 	}
 	assertSetEqual(t, "tiers", schema.Properties.Tiers.PropertyNames.Enum, tierNames)
 	assertSetEqual(t, "providers", schema.Defs.Binding.Properties.Provider.Enum, knownProviders)
+	assertSetEqual(t, "decision providers", schema.Defs.DecisionsBinding.Properties.Provider.Enum, DecisionProviders())
 	assertSetEqual(t, "input modalities", schema.Defs.Binding.Properties.Input.Items.Enum, acceptedModalities)
 	assertSetEqual(t, "thinking levels", schema.Defs.Binding.Properties.ThinkingLevel.Enum, geminiThinkingLevels)
 
@@ -101,6 +110,34 @@ func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
 	if _, offered := schema.Defs.EmbeddingsBinding.Properties["input"]; offered {
 		t.Error("embeddingsBinding must not offer `input`")
 	}
+}
+
+// The HTTP contract offers a routing save the same levels the parser takes. A
+// level the contract lists and the parser refuses is a 422 an admin was invited
+// to cause; one the parser takes and the contract omits cannot be saved at all.
+func TestTheContractOffersTheThinkingLevelsTheParserTakes(t *testing.T) {
+	raw, err := os.ReadFile("../../../api/crm.yaml")
+	if err != nil {
+		t.Fatalf("read contract: %v", err)
+	}
+	var contract struct {
+		Components struct {
+			Schemas struct {
+				//nolint:tagliatelle // a schema name in crm.yaml, PascalCase as the contract spells it
+				Binding struct {
+					Properties struct {
+						ThinkingLevel struct {
+							Enum []string `yaml:"enum"`
+						} `yaml:"thinking_level"`
+					} `yaml:"properties"`
+				} `yaml:"AiTierBinding"`
+			} `yaml:"schemas"`
+		} `yaml:"components"`
+	}
+	if err := yaml.Unmarshal(raw, &contract); err != nil {
+		t.Fatalf("parse contract: %v", err)
+	}
+	assertSetEqual(t, "contract thinking levels", contract.Components.Schemas.Binding.Properties.ThinkingLevel.Enum, geminiThinkingLevels)
 }
 
 func assertSetEqual(t *testing.T, label string, got, want []string) {

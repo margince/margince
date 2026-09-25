@@ -9,6 +9,7 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { tierLabel } from "./ai-decision-labels";
 import { QueryGate, throwProblem, useMe } from "./common";
 
 // Whether the model lanes are answering.
@@ -114,7 +115,7 @@ function RungTable({
         {
           key: "tier",
           header: t("aiHealth.colTier"),
-          render: (row) => row.tier,
+          render: (row) => tierLabel(row.tier, t),
         },
         {
           key: "state",

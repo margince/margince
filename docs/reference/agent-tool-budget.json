@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 76,
     "system_frame_tokens": 448,
-    "tokens": 24502,
+    "tokens": 24624,
     "median_tool_tokens": 272,
-    "mean_tool_tokens": 322
+    "mean_tool_tokens": 323
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 76,
-      "tokens": 3344,
-      "listing_tokens": 1677,
-      "step_schema_tokens": 1219,
+      "tokens": 3483,
+      "listing_tokens": 1746,
+      "step_schema_tokens": 1288,
       "percent_of_ceiling": 10,
-      "headroom_tokens": 19866,
+      "headroom_tokens": 19727,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 76,
-      "tokens": 4701,
-      "listing_tokens": 2515,
-      "step_schema_tokens": 1737,
+      "tokens": 4840,
+      "listing_tokens": 2585,
+      "step_schema_tokens": 1807,
       "percent_of_ceiling": 14,
-      "headroom_tokens": 18509,
+      "headroom_tokens": 18370,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
@@ -167,6 +167,10 @@
       "tokens": 401
     },
     {
+      "name": "prep_for_meeting",
+      "tokens": 394
+    },
+    {
       "name": "enrich",
       "tokens": 390
     },
@@ -183,6 +187,10 @@
       "tokens": 349
     },
     {
+      "name": "catch_me_up_on",
+      "tokens": 348
+    },
+    {
       "name": "describe_record_fields",
       "tokens": 345
     },
@@ -196,10 +204,6 @@
     },
     {
       "name": "forecast_input_checks",
-      "tokens": 324
-    },
-    {
-      "name": "prep_for_meeting",
       "tokens": 324
     },
     {
@@ -221,10 +225,6 @@
     {
       "name": "describe_analytics_vocabulary",
       "tokens": 286
-    },
-    {
-      "name": "catch_me_up_on",
-      "tokens": 279
     },
     {
       "name": "draft_email",
@@ -311,10 +311,6 @@
       "tokens": 205
     },
     {
-      "name": "commit_import",
-      "tokens": 203
-    },
-    {
       "name": "merge_tags",
       "tokens": 198
     },
@@ -337,6 +333,10 @@
     {
       "name": "list_pipelines",
       "tokens": 191
+    },
+    {
+      "name": "commit_import",
+      "tokens": 187
     },
     {
       "name": "intro_path_to",

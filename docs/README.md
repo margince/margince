@@ -1,11 +1,11 @@
 # Margince documentation
 
-**Using the product rather than changing it?** The end-to-end walkthroughs for a
-rep or a delivery lead live in [`user-guide/`](../user-guide/README.md). This tree
-is mostly for the contact changing the code — with one deliberate exception:
-`how-to/` carries product how-tos (working your deals, setting up projects,
-partner programs) beside the engineering ones, because a how-to is a thing you
-return to for one answer whichever audience you are in.
+**Using the product rather than changing it?** The [handbook](handbook/README.md)
+is the one answer to "how do I…" in the app — it is also the corpus behind the
+in-app ask — and the end-to-end walkthroughs for a rep or a delivery lead live in
+[`user-guide/`](../user-guide/README.md). The rest of this tree is for the
+contact changing or operating the code, so a product task belongs in the
+handbook, not in `how-to/`.
 
 Documentation for building and operating **Margince** — a governed, single-tenant CRM (a Go `/v1` API
 backend; the Vite/React web UI ships separately). One installation serves one company, and boot
@@ -39,9 +39,12 @@ maps the codebase and links everything below.
 The only tree here written for the contact using Margince rather than building it:
 no code, no API, just the app.
 
-- [handbook/README.md](handbook/README.md) — eleven pages covering records, the
-  pipeline, capture, what the AI does and does not do, approvals, documents,
-  retention, seats and settings.
+- [handbook/README.md](handbook/README.md) — twenty-five pages covering records,
+  the pipeline, partners, capture, mail, what the AI does and does not do, approvals,
+  offers, documents, retention, seats and settings. It is also the default
+  document set behind **Ask your documents** on a new installation, so
+  [how-to/update-the-handbook.md](how-to/update-the-handbook.md) says how to
+  write a page that can answer a question, and how to measure it.
 
 ### Compliance — the German pack a customer signs
 
@@ -78,7 +81,6 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [getting-started.md](tutorials/getting-started.md) — clone → running instance with a bootstrapped workspace.
 
 ### How-to — accomplish a task
-- [write-an-email.md](how-to/write-an-email.md) — start a contextual email, select an exact reply target, and read the conversation while writing.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md) — add or change an API operation (contract → gen → handler).
 - [add-a-module.md](how-to/add-a-module.md) — add a new capability (module) or a cross-module edge, wired into compose.
 - [add-a-job.md](how-to/add-a-job.md) — declare a background job kind in the job contract, then write and register its worker.
@@ -99,17 +101,15 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md) — bring a CSV of companies in: the column mapping, what the preview counts, and how a row names the company it corrects.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md) — bind the AI lanes to a BYOK cloud key (Anthropic / OpenAI / Gemini / any OpenAI-compatible vendor).
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md) — certify a model against a task's fixture corpus and benchmark a candidate swap (`make e2e-ai`).
+- [certify-a-decision-site.md](how-to/certify-a-decision-site.md) — certify a decision model for a site, so the `decisions:` lane may answer it, and re-certify or drop it when the site changes.
 - [re-certify-the-whole-corpus.md](how-to/re-certify-the-whole-corpus.md) — the sweep loop after a tree-wide change stales every record: run both preset bindings, tell a moved question from a model regression before calling anything a drop, fix or flag, re-run one task, regenerate both generated pages.
 - [add-an-ai-task.md](how-to/add-an-ai-task.md) — add a new AI task or invocation site: declare it in the contract, wire the lane, register the site, certify it.
 - [write-a-certification-case.md](how-to/write-a-certification-case.md) — bind a site to the production request builder and validator that certify it: the test-first loop, the case interface, the three site kinds, scenario and rubric authoring, scope.
 - [register-a-webhook.md](how-to/register-a-webhook.md) — register an HTTPS endpoint for Standard-Webhooks-signed, retried outbound delivery of contract-generated event payloads (curl or Settings → Integrations), and verify/inspect/replay a delivery.
 - [add-an-extension.md](how-to/add-an-extension.md) — ship a stable-tier extension unit (a jurisdiction pack) under `extensions/`, composed and verified.
-- [work-your-pipeline.md](how-to/work-your-pipeline.md) — sell with Margince: move a deal, close it (and what winning one requires), stalled deals, saved views, bulk actions, and how to read the deal numbers; no code.
-- [set-up-a-partner-program.md](how-to/set-up-a-partner-program.md) — the partner reference: what every field and every value means, and how to work the deals.
-- [set-up-projects.md](how-to/set-up-projects.md) — who can create, edit, archive and share a project; key conventions; when to create one (deal creation vs close-won); the fixed phase and stakeholder vocabularies; no code.
-- [run-a-project.md](how-to/run-a-project.md) — the project page section by section, phase moves, and every rule by which an email finds its project — including what filing does to retention; no code.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md) — run ONE production AI invocation site against input you supply (`make ai-probe`), and read every boundary between that input and the verdict as numbers.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md) — build the self-contained folder that runs the whole stack with no Docker, on macOS (`make desktop`) or Windows (`make desktop-win`), then run, configure and update an installation.
+- [update-the-handbook.md](how-to/update-the-handbook.md) — change the operator handbook so the in-app ask can answer from it: how a page is cut and read, the task-section rules, the probe (`scripts/handbook-ask/probe.sh`) to run before and after, and the checklist.
 - [cut-a-release.md](how-to/cut-a-release.md) — push a `v*` tag and get a GitHub release with both desktop bundles attached: what the tag's shelf decides, what a failed or re-run lane leaves behind, and why this is not the constellation dist release.
 
 ### Reference — look it up
@@ -140,6 +140,7 @@ budget rather than keeping its own list of which pages are generated.
 - [gate-inventory.md](reference/gate-inventory.md) — every gate in `backend/`, grouped by shape, with what it holds. Generated from the `//gate:kind` line each gate declares in its own file, never hand-edited.
 - [configuration.md](reference/configuration.md) — every binary flag and environment variable.
 - [ollama-self-hosting.md](reference/ollama-self-hosting.md) — what we measured running Gemma 4, gpt-oss, Qwen3 and others on a 24GB Mac mini M4 through Ollama: the machine, each model's speed and fit, a pass rate and latency for every task, and the traps (default thinking, `think:false` on gpt-oss, long-id copying). Read it before re-testing a local model.
+- [vllm-self-hosting.md](reference/vllm-self-hosting.md) — the same 24GB Mac mini M4 serving Qwen3, gpt-oss, Gemma 3 and two Mistral models through vLLM (vllm-metal): the server flags that change answers (thinking, window, sampling, the JSON whitespace loop), what did not start or answered gibberish, and a pass rate and latency per model on seven tasks.
 - [openrouter.md](reference/openrouter.md) — the broker's upstream selection: why a model id served by 21 hosts makes latency and answer quality a per-request lottery, the `routing:` default this product ships against that (reliability over price, the inverse of the broker's own), which preferences are hard filters and which only reorder, and the 2026-09-02 measurements behind each choice — including the one that was 17× faster and would have cost a fifth of the certification score.
 - [make-targets.md](reference/make-targets.md) — every `make` target.
 - [system-requirements.md](reference/system-requirements.md) — what an installation needs, for both deployment shapes: one node, or the api / worker / web / database on separate nodes.

@@ -125,7 +125,7 @@ func briefSystemFor(fence promptfence.Fence, lang string) string {
 // it is the deployment saying this role runs no model, and the
 // deterministic floor is the answer.
 func Write(ctx context.Context, lane Completer, companyID string, in Input, lang string) ([]Section, crmcontracts.WrittenBy, error) {
-	deterministic := DeterministicSections(companyID, in)
+	deterministic := DeterministicSections(companyID, in, lang)
 	if lane == nil {
 		return deterministic, crmcontracts.WrittenByDeterministic, nil
 	}

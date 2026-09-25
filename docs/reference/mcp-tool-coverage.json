@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 39,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 12861,
+    "tokens_served_but_never_driven": 13000,
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
     "tools_added_by_shipped_units": 0,
@@ -1341,6 +1341,21 @@
       "measured_by_model": {}
     },
     {
+      "name": "prep_for_meeting",
+      "tokens": 394,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case23_find_us_a_slot",
+        "case5_before_the_meeting"
+      ],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
       "name": "enrich",
       "tokens": 390,
       "agents": [],
@@ -1367,6 +1382,31 @@
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
+      "name": "catch_me_up_on",
+      "tokens": 348,
+      "agents": [
+        "morning_brief",
+        "overnight_at_risk_sweep"
+      ],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case23_find_us_a_slot",
+        "case33_two_cards_for_one_company",
+        "case40_sort_the_queue",
+        "case41_close_the_project",
+        "case5_before_the_meeting",
+        "case6_ask_the_company",
+        "case9_filed_in_the_wrong_place"
+      ],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
       "measured_by_model": {}
     },
     {
@@ -1397,21 +1437,6 @@
       "measured_by_model": {}
     },
     {
-      "name": "prep_for_meeting",
-      "tokens": 324,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case23_find_us_a_slot",
-        "case5_before_the_meeting"
-      ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
       "name": "demote_lead",
       "tokens": 317,
       "agents": [],
@@ -1435,31 +1460,6 @@
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
-      "name": "catch_me_up_on",
-      "tokens": 279,
-      "agents": [
-        "morning_brief",
-        "overnight_at_risk_sweep"
-      ],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case23_find_us_a_slot",
-        "case33_two_cards_for_one_company",
-        "case40_sort_the_queue",
-        "case41_close_the_project",
-        "case5_before_the_meeting",
-        "case6_ask_the_company",
-        "case9_filed_in_the_wrong_place"
-      ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
       "measured_by_model": {}
     },
     {
@@ -2648,43 +2648,6 @@
       }
     },
     {
-      "name": "commit_import",
-      "tokens": 203,
-      "agents": [],
-      "required_by_cases": [
-        "case10_finish_the_import"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
-        }
-      }
-    },
-    {
       "name": "merge_tags",
       "tokens": 198,
       "agents": [],
@@ -2788,6 +2751,43 @@
           "passed": 3,
           "reliability": 1,
           "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "commit_import",
+      "tokens": 187,
+      "agents": [],
+      "required_by_cases": [
+        "case10_finish_the_import"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
         }
       }
     },

@@ -291,8 +291,8 @@ function ClauseRow({
   const chosen = fields.find((f) => f.name === field);
   const { core, custom } = groupFields(fields);
   const fieldOptions: SelectOption[] = [
-    ...core.map((f) => ({ value: f.name, label: fieldLabel(f) })),
-    ...custom.map((f) => ({ value: f.name, label: fieldLabel(f) })),
+    ...core.map((f) => ({ value: f.name, label: fieldLabel(f, t) })),
+    ...custom.map((f) => ({ value: f.name, label: fieldLabel(f, t) })),
   ];
   const operatorOptions: SelectOption[] = (chosen?.operators ?? []).map(
     (candidate) => ({
@@ -375,6 +375,7 @@ function ClauseRow({
               operators: [],
               custom: false,
             },
+            t,
           ),
         })}
         onClick={() => onChange(removeNode(tree, leafID))}

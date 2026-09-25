@@ -12,6 +12,7 @@ import { contactCreateFields, mapContactBody } from "./contactformfields";
 import { CreateAction, type CreateField, type FormRows } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 import { EntityRef } from "./entityref";
+import { searchCompanies } from "./filterreference";
 import {
   type ListPage,
   type ListQuery,
@@ -93,15 +94,23 @@ async function createContact(
 // trimmed — the repeatable email and phone rows are two clicks each before a
 // value can be typed, which is the cost this path exists to remove.
 //
-// The company is one box. A picker would be the better control for attaching
-// an EXISTING company, and it is what the full form should grow; here it would
-// put a search-and-wait between two keystrokes, so the name creates a company
-// and the reader merges later if they typed a company that already exists.
+// The company is one box that also offers the companies already carrying a
+// name like the one typed: picking one attaches it by id, and a name nobody
+// picked creates a company, so a reader never has to merge one away later.
 function quickCaptureFields(): CreateField[] {
   return [
     { key: "full_name", label: "create.fullName", required: true },
     { key: "title", label: "create.contactTitle" },
-    { key: "company_name", label: "create.companyName" },
+    {
+      key: "company_name",
+      label: "create.companyName",
+      offers: {
+        search: searchCompanies,
+        pickedKey: "company_id",
+        pickedHint: "create.companyPicked",
+        newHint: "create.companyNew",
+      },
+    },
     { key: "profile_url", label: "create.linkedin" },
     { key: "email", label: "create.email", type: "email" },
     { key: "phone", label: "create.phone" },
@@ -124,7 +133,9 @@ async function quickCaptureContact(
     body: {
       full_name: values.full_name?.trim() ?? "",
       title: statedValue(values, "title"),
-      company_name: statedValue(values, "company_name"),
+      // The contract lets an id win over a name; sending only one of them
+      // keeps the request saying exactly what the reader chose.
+      ...companyChoice(values),
       // Normalized here rather than server-side for the same reason the contact
       // rail normalizes on save: a bare `linkedin.com/in/jdoe` is an address
       // somebody typed, and storing it unusable makes the row permanently
@@ -138,6 +149,13 @@ async function quickCaptureContact(
     throwProblem(error, t);
   }
   return data.contact;
+}
+
+function companyChoice(values: Record<string, string>) {
+  const companyId = statedValue(values, "company_id");
+  return companyId
+    ? { company_id: companyId }
+    : { company_name: statedValue(values, "company_name") };
 }
 
 function profileUrlOrUndefined(raw: string | undefined) {

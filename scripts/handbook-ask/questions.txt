@@ -1,0 +1,209 @@
+# The handbook FAQ regression bank: one question per line, in the words a user types.
+# scripts/handbook-ask/probe.sh asks each against the default corpus. '#' lines are ignored.
+# Add the question behind every miss you fix, in the words the user asked it in.
+
+# getting started
+what is Margince
+how do I get around the app
+how do I search for something
+what is the command palette
+# records
+how can i create a deal
+how can I create a project
+how do I add a new contact
+how do I add a company
+how do I create a lead
+how do I convert a lead into a deal
+what is the difference between a lead and a deal
+how do I link a contact to a company
+how do I add a custom field
+how do I undo a change on a record
+how do I archive a contact
+how do I delete a company
+how do I merge duplicate contacts
+# pipeline
+how do I move a deal to the next stage
+how do I mark a deal as won
+how do I mark a deal as lost
+how do I reopen a closed deal
+what does stalled mean
+what are the pipeline stages
+how is the weighted pipeline value calculated
+# capture
+how do I connect my gmail
+how does email get into the CRM
+why was my email not linked to a deal
+how do I connect my calendar
+# day
+what is the worklist
+how do I snooze something on my worklist
+how do I plan my week
+# analytics
+where can I see my forecast
+how do I see my pipeline report
+# mail
+how do I send an email to a contact
+how do I schedule an email for later
+why can't I send an email to this contact
+how do I add an email signature
+# AI and agents
+what does the AI do
+can the AI send email on my behalf
+what is an agent passport
+how do I give an agent access
+# approvals
+how do I approve an action
+where are my approvals
+what happens if an approval expires
+# offers
+how do I create an offer
+how do I add a product to an offer
+how do I send a quote to a customer
+how do I change the rate card
+# contracts
+how do I create a contract
+how do I renew a contract
+how do I create an invoice
+how do I connect my accounting system
+# deal rooms
+what is a deal room
+how do I share a deal room with a buyer
+# documents
+how do I upload a document
+what is the maximum file size
+how do I create a knowledge base I can ask questions
+# retention
+how do I export my data
+how do I delete a contact permanently
+what is kept after I delete something
+how do I handle a GDPR erasure request
+# seats and access
+how do I invite a colleague
+how do I change someone's role
+what roles are there
+how do I create a team
+why can't I see a record
+how do I remove a user
+# relationships
+how do I ask for a warm introduction
+who in my company knows this person
+# settings
+where are the settings
+how do I change my password
+how do I change the language
+how do I set up my writing voice
+how do I import contacts from a spreadsheet
+
+# paraphrases and synonyms
+where do I make a new opportunity
+start a new project for a client
+add a person to the CRM
+new organisation record
+close deal as won
+the deal went cold, how do I bring it back
+set up Outlook sync
+link my inbox
+write a proposal for a customer
+invite my teammate to margince
+make someone an admin
+upload a pdf to a deal
+get my data out of margince
+who approves agent actions
+what is the difference between full seat and read seat
+i want to add a new customer
+how to register a new sales opportunity
+set up a project after we won the deal
+where do I type in a new prospect
+the client said no, how do I record that
+move my deal to negotiation
+how do I send a price quote
+put a product on the quote
+add my colleague as a user
+give read only access to someone
+remove an employee who left
+hook up my google mail
+my emails are not showing up
+send the mail tomorrow morning
+where do I see what my AI agent is waiting for me to approve
+bulk upload companies from excel
+download all my contacts
+forget a customer completely
+where is the handbook
+change my theme to dark mode
+how do I tag a record
+what is quick capture
+can I undo an import
+how do I see archived deals
+where can I see what the AI changed
+
+# everyday list, edit and follow-up work
+how do I log a phone call with a client
+set a reminder to follow up with a customer
+how can I see all deals I own
+change the owner of a deal
+how do I filter contacts by company
+save a filter as a view
+what happens when a deal has been quiet for a long time
+how do I connect Microsoft 365
+my gmail connection stopped working
+where do I write a new email
+I want margince to write the email for me
+can a customer see my deal room without logging in
+how to revoke a buyer's access
+attach a file to a contact
+what file types can I upload to knowledge
+how do I see who changed a field
+turn off AI for my company
+how do I let Claude access my CRM
+why is my approval gone
+make a contact private
+how do I add a new pipeline stage
+what is a read seat
+how many users can I have
+change the currency of a deal
+where do I set my working hours
+show me only my leads
+how do I sort deals by value
+reassign a company to another rep
+how do I update a contact's phone number
+where do I find deals closing this month
+edit the value of a deal
+put several contacts on one tag
+how do I change the stage of many deals at once
+upload a contract document for a customer
+outlook stopped syncing
+what does Needs reconnect mean
+can two users edit the same record at the same time
+how do I print an offer
+where is the audit log
+who can see my notes
+# history, handover and follow-up
+where can I see everything that happened with a customer
+a colleague left, who gets their deals
+how do I send a follow-up email
+how do I see emails I sent from Outlook in Margince
+can I undo what the AI changed
+how do I find a contact by email address
+how do I add a new organisation record
+how do I upload the signed contract for a customer
+
+# after the final held-out round
+where do I see my team's pipeline
+how do I ask margince a question about a company
+
+# partners, projects and replies
+how do I make a company a partner
+how do I pay a partner their commission
+how do I see all our partners
+how do I start delivery after we won the deal
+what is on a project page
+how do I tag an email with a project
+how do I reply to an older email in the thread
+can I merge two duplicate deals
+
+# entry points that had no way in from the app
+how do I start a project from a company page
+how do I rename a saved view
+how do I delete a saved view
+how do I claim a company nobody owns
+how do I revoke a forecast share link

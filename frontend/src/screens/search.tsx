@@ -20,7 +20,7 @@ import { FilterPills } from "../design-system/filterpills";
 import { Heading } from "../design-system/heading";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { formatDateTime, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
 import { useOpenEmail } from "./openemail";
 import "./search.css";
@@ -202,6 +202,7 @@ function SearchHit({
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const zone = useRecordZone();
   // An email hit IS the canonical row — the same one the timeline draws, from
@@ -276,7 +277,7 @@ function SearchHit({
           no number: a count it could not take is not a count of none. */}
       {isTag && hit.carried_by != null && (
         <p>
-          {t("search.tag.carriedBy", {
+          {plural("search.tag.carriedBy", hit.carried_by, {
             count: formatNumber(hit.carried_by, locale),
           })}
         </p>

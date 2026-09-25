@@ -9,6 +9,7 @@ package ai
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -200,6 +201,20 @@ func TestCloudProvidersBoundNamesEveryCloudVendorAndOnlyThose(t *testing.T) {
 		}
 		if got := cfg.CloudProvidersBound(); len(got) != 0 {
 			t.Errorf("a fully local binding reports %v, want nothing", got)
+		}
+	})
+
+	// The decisions lane binds apart from the tiers and sends its key owner's
+	// credential, so an installation on Gemini tiers whose ONLY OpenRouter
+	// binding is the lane still needs the OpenRouter key.
+	t.Run("the decisions lane names its key owner", func(t *testing.T) {
+		cfg := RoutingConfig{
+			Tiers:      map[Tier]ProviderConfig{"fast": {Provider: providerGemini}, "deep": {Provider: providerGemini}},
+			Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerGemini}},
+			Decisions:  &DecisionsConfig{Provider: providerOpenRouterDecision, Model: "typesafe/jev"},
+		}
+		if got := cfg.CloudProvidersBound(); !slices.Contains(got, providerOpenAICompatible) || !slices.Contains(got, providerGemini) {
+			t.Errorf("a Gemini binding with an OpenRouter decisions lane reports %v, want %s and %s", got, providerGemini, providerOpenAICompatible)
 		}
 	})
 

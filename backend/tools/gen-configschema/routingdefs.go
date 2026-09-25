@@ -22,7 +22,9 @@ import (
 // generator uses: these descriptions are hand-tuned and the key order is
 // deliberate, and round-tripping them would churn the file on every
 // regeneration for no reader's benefit. What is NOT literal is the tier enum,
-// which comes from the task contract through ai.AllTiers.
+// which comes from the task contract through ai.AllTiers, and the decisions
+// provider enum, which comes from the provider registry through
+// ai.DecisionProviders.
 const routingDefsTemplate = `{
   "aiRouting": {
     "description": "The tier-to-model binding a fresh installation is bootstrapped with. Consumed ONCE, at bootstrap: a running installation is rebound through Settings -> AI, and editing this afterwards changes nothing until the database is rebuilt.",
@@ -45,6 +47,10 @@ const routingDefsTemplate = `{
   "embeddings": {
     "description": "The embedding lane, bound separately from chat (retrieval must survive a chat-budget exhaustion). Required.",
     "$ref": "#/$defs/embeddingsBinding"
+  },
+  "decisions": {
+    "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, on a certified site, and falls back to its ladder whenever the answer does not stand.",
+    "$ref": "#/$defs/decisionsBinding"
   }
 }
   },
@@ -169,6 +175,26 @@ const routingDefsTemplate = `{
       { "$ref": "#/$defs/routingNeedsOpenRouter" }
     ]
   },
+  "decisionsBinding": {
+    "description": "The decisions-lane binding: a provider that answers the decision wire, its model and its endpoint. No input and no routing: the lane sends no attachments and the decisions endpoint takes no broker preferences.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["provider", "model"],
+    "properties": {
+      "provider": {
+        "description": "openrouter_decision (OpenRouter's decisions endpoint, reached with the openai_compatible key; base_url must be an OpenRouter host) | laya (a same-host decision encoder; keyless, sovereign-eligible, defaults to http://127.0.0.1:8765).",
+        "enum": [__DECISION_PROVIDERS__]
+      },
+      "model":    { "type": "string", "minLength": 1, "description": "The decision model id, e.g. typesafe/jev-1.13, or a Laya checkpoint name." },
+      "base_url": { "type": "string", "description": "Endpoint root. REQUIRED for openrouter_decision (e.g. https://openrouter.ai/api). Empty ⇒ provider default." }
+    },
+    "allOf": [
+      {
+        "if":   { "properties": { "provider": { "const": "openrouter_decision" } } },
+        "then": { "required": ["base_url"] }
+      }
+    ]
+  },
   "embeddingsRouting": {
     "description": "Which of a broker's upstream hosts may read the text this lane embeds. Only the host-selection fields: the lane embeds the same text the chat tiers send, so a residency pin must reach it too, and the other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to leave the broker's own choice of host.",
     "type": "object",
@@ -181,14 +207,16 @@ const routingDefsTemplate = `{
   }
 }`
 
-// routingDefs renders the $defs block with the tier names the contract declares.
+// routingDefs renders the $defs block with the tier names the contract declares
+// and the decision providers the registry holds.
 func routingDefs() json.RawMessage {
 	tiers := ai.AllTiers()
-	quoted := make([]string, len(tiers))
+	names := make([]string, len(tiers))
 	for i, t := range tiers {
-		quoted[i] = fmt.Sprintf("%q", string(t))
+		names[i] = string(t)
 	}
-	raw := strings.Replace(routingDefsTemplate, "__TIERS__", strings.Join(quoted, ", "), 1)
+	raw := strings.Replace(routingDefsTemplate, "__TIERS__", quotedList(names), 1)
+	raw = strings.Replace(raw, "__DECISION_PROVIDERS__", quotedList(ai.DecisionProviders()), 1)
 	// Validated here so a substitution bug fails generation rather than shipping
 	// a schema no editor can load.
 	var probe any
@@ -196,4 +224,14 @@ func routingDefs() json.RawMessage {
 		fail(fmt.Errorf("gen-configschema: the routing $defs are not valid JSON: %w", err))
 	}
 	return json.RawMessage(raw)
+}
+
+// quotedList is names as JSON string literals, comma-separated, for an enum
+// the template leaves a placeholder for.
+func quotedList(names []string) string {
+	quoted := make([]string, len(names))
+	for i, name := range names {
+		quoted[i] = fmt.Sprintf("%q", name)
+	}
+	return strings.Join(quoted, ", ")
 }

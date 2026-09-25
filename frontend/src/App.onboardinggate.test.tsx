@@ -35,6 +35,11 @@ import { memoryStorage } from "./testing/appharness";
 type InstallShape = Readonly<{
   /** GET /company; null answers 404 — the profile the gate looks for is absent. */
   companySaved: boolean;
+  /**
+   * GET /onboarding/state; false answers 404 — no wizard row has been written
+   * at all, which is what a first deployment has before anyone touches it.
+   */
+  wizardStarted?: boolean;
 }>;
 
 function json(body: unknown, status = 200): Response {
@@ -79,6 +84,9 @@ function completedWizardFetch(shape: InstallShape) {
         : json({ detail: "no company yet" }, 404);
     }
     if (path === "/onboarding/state" && method === "GET") {
+      if (shape.wizardStarted === false) {
+        return json({ detail: "no onboarding state yet" }, 404);
+      }
       return json({
         path: "creator",
         step: "complete",
@@ -216,6 +224,29 @@ describe("the onboarding gate and the wizard's restore", () => {
 
     // The company act reopens rather than reporting a completion the profile
     // does not support, so the gate's destination is where the reader stays.
+    expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.hash).toBe(GATE_TARGET);
+    });
+    expect(moves.filter((hash) => hash === GATE_TARGET)).toHaveLength(1);
+    expect(moves.at(-1)).toBe(GATE_TARGET);
+  });
+
+  it("agree on onboarding when no wizard row exists at all", async () => {
+    // The state a real first deployment is in, and the one the other two cases
+    // cannot reach: both stub a "complete" wizard row, so they exercise a
+    // completion the profile does not support. Here nothing has been written —
+    // no company, no wizard row — which is what an installation looks like
+    // before anyone has touched it.
+    //
+    // It is asserted separately because the two sides agree here for a
+    // different reason. Above, the restore REFUSES a completion it cannot back;
+    // here there is no completion to refuse, and what has to hold is that an
+    // absent row reads as "not started" rather than as an unknown the restore
+    // resolves by leaving. A dev seed now writes a completed row, so this case
+    // is no longer reachable from a seeded stack either way.
+    const moves = mount({ companySaved: false, wizardStarted: false }, BRIEF);
+
     expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
     await waitFor(() => {
       expect(window.location.hash).toBe(GATE_TARGET);

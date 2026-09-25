@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"errors"
 	"fmt"
 
 	"gopkg.in/yaml.v3"
@@ -20,6 +21,16 @@ import (
 // so a reader that unwrapped differently from the boot path could call a file
 // unparseable that an operator's deployment starts on — and a preset the gate
 // refuses while production accepts it is worse than no preset.
+// ErrNoRoutingBlock reports a config that declares no seeds.ai_routing at all,
+// as distinct from one that declares a broken binding.
+//
+// A sentinel rather than prose because the two are opposite findings and a
+// caller that cannot separate them has to treat both as "skip". config/
+// margince.example.yaml is the honest first case — a commented-out template —
+// and a gate that skipped an unparseable file just as quietly would read a
+// smaller corpus and still report PASS.
+var ErrNoRoutingBlock = errors.New("ai: preset: carries no seeds.ai_routing — a preset with no binding binds nothing")
+
 func ParsePreset(raw []byte) (RoutingConfig, error) {
 	var shell struct {
 		Seeds struct {
@@ -30,7 +41,7 @@ func ParsePreset(raw []byte) (RoutingConfig, error) {
 		return RoutingConfig{}, fmt.Errorf("ai: preset: not a deploy config: %w", err)
 	}
 	if shell.Seeds.AIRouting.IsZero() {
-		return RoutingConfig{}, fmt.Errorf("ai: preset: carries no seeds.ai_routing — a preset with no binding binds nothing")
+		return RoutingConfig{}, ErrNoRoutingBlock
 	}
 	inner, err := deployconfig.SeedSubtreeBytes(shell.Seeds.AIRouting)
 	if err != nil {

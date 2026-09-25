@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -165,6 +166,17 @@ func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 // cannot be refused here while an export of the same list accepts it.
 func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 	return collections.NewHandlers(NewCollectionsStore(pool))
+}
+
+// wireStagedSurfaces binds the two surfaces that read the staged queue. They
+// share ONE approvals engine, so the day's card and the receipt's line are one
+// queue rather than two readings of it; a second engine here is how the two
+// would come to disagree.
+func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
+	staged := approvalsServiceWithEffects(pool)
+	s.attentionHandlers = newAttentionHandlers(pool, staged)
+	s.magicService = newMagicService(pool, staged, time.Now)
+	s.magicHandlers = magic.NewHandlers(s.magicService)
 }
 
 // wireCaptureSettingsSurface binds the workspace's own capture posture

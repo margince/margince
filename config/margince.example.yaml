@@ -238,8 +238,21 @@ bootstrap_admin:
 #
 # The hourly sweep deletes payloads with the rows that carry them, and an
 # erasure request reaches them inside the window.
+# max_backfill_months caps how far back a mailbox import may reach, for the whole
+# installation. Absent means no cap, which is the shipped behaviour: whoever
+# connects a mailbox picks from 3 months to 10 years, and picks again next time.
+#
+# Set one when the answer should be the installation's rather than each
+# colleague's. A ten-year import is not a bigger version of a one-year import —
+# it predates every notice, policy and exclusion rule you have handed out, and it
+# is the input to the raw_capture growth your retention rule then ages back out.
+#
+# The number is matched against the offered windows (3, 6, 12, 24, 36, 60, 84,
+# 120), so the connect dialog offers only what it admits and a start above it is
+# refused at the door as well as at the preview.
 # capture:
 #   trace_payloads: false
+#   max_backfill_months: 24
 
 # Rates & costs "Refresh from sources" (worker role): an admin triggers an async
 # refresh that stages confirm-first proposals into the approvals inbox; a human

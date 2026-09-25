@@ -34,8 +34,8 @@ import "./dealroompage.css";
 
 // The seller's Deal Room page: the room's own identity, its lifecycle verbs
 // and the buyer preview, around the same reading its Deal Room tab draws on
-// the deal record (deal360/dealroomtab.tsx). Reached from a mailed link or a
-// bookmark, since the tab is not the only door to a room already open.
+// the deal record (deal360/dealroomtab.tsx). Reached from that tab's Manage
+// room, from a contact's Deal Rooms panel, or from a mailed link or bookmark.
 //
 // Everything on this page is live. A document added is shared, a title changed
 // is read: the invitation is the only gate, and the seller does not press a

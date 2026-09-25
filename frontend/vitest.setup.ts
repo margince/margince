@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, vi } from "vitest";
 import { restoreClipboardStubs } from "./src/design-system/clipboard-testing";
+import { disarmHoverIntent } from "./src/design-system/hoverintent-testing";
 import { takeUnroutedSessionProbes } from "./src/screens/unrouted-session";
 
 // Node ≥23 ships its own global Web Storage: a `localStorage` getter that
@@ -66,6 +67,22 @@ for (const key of ["localStorage", "sessionStorage"] as const) {
     configurable: true,
   });
 }
+
+// A pointer arriving on a hover-intent trigger opens NOTHING in this suite.
+//
+// The hook settles on a real-millisecond timer and a test DOM's silent pointer
+// reads as a resting hand, so an armed hook opens under any click at a moment
+// machine load decides. Focus opens without the hook and is untouched. A case
+// whose subject IS hover calls `armHoverIntent()`; hoverintent.inert.test.tsx
+// fails if this stops.
+vi.mock(import("./src/design-system/hoverintent"), async (importOriginal) => {
+  const actual = await importOriginal();
+  const { inertUnlessArmed } = await import(
+    "./src/design-system/hoverintent-testing"
+  );
+  return { ...actual, useHoverIntent: inertUnlessArmed(actual.useHoverIntent) };
+});
+afterEach(disarmHoverIntent);
 
 // The two DOM stubs below are guarded on there BEING a DOM: this setup file runs
 // for every suite, and most of them are node-environment (jsdom is opted into
@@ -245,7 +262,9 @@ if (skewRequest !== "") {
   const skewMs = days * 24 * 60 * 60 * 1000;
   const RealDate = globalThis.Date;
   class SkewedDate extends RealDate {
-    constructor(...args: ConstructorParameters<typeof Date>) {
+    // ConstructorParameters names only Date's last overload, which never has
+    // zero arguments; the no-argument form is the one this lane moves.
+    constructor(...args: [] | ConstructorParameters<typeof Date>) {
       if (args.length === 0) {
         super(RealDate.now() + skewMs);
         return;

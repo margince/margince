@@ -1,20 +1,29 @@
 # Relationships, introductions and research
 
-Three related questions: who here already knows somebody, how you get a warm
-introduction to somebody you do not know, and what Margince can read about a
+Three related questions: who here already knows a contact, how you get a warm
+introduction to someone you do not know, and what Margince can read about a
 company from its own website.
 
-## Who here knows them
+### Who here knows this contact?
+To see who in your company knows a contact in Margince, open the contact's page and choose the **Network** tab: **Routes** lists the colleagues who correspond with them, best route first.
+1. Open the contact.
+2. Choose the **Network** tab.
+3. Read the lead route, such as "Ask {name}. They already correspond with this contact.", with its **Evidence**: exchanges in 90 days and **Last contact**.
+4. **Other routes** lists the rest, "Ranked by two-way correspondence."
+When nobody does: "No one in the company has corresponded with this contact."
+Also called: who knows this client, warm path, relationship map, colleague connections, who has talked to them.
 
-A contact's page shows which colleagues have corresponded with them, strongest
-first, with the number of exchanges behind each. When nobody has: "Nobody here
-has corresponded with them."
+## Who here knows a contact
+
+A contact's **Network** tab shows which colleagues have corresponded with them,
+strongest first, with the number of exchanges behind each. When nobody has: "No
+one in the company has corresponded with this contact."
 
 The order is the answer, and it is never re-sorted on screen.
 
 ### How strength is worked out
-
-One formula, from captured cadence, **computed at read and never stored**:
+Relationship strength in Margince is one formula, from captured cadence,
+**computed at read and never stored**:
 
 **Recency × Frequency × Reciprocity**, scored out of 100.
 
@@ -31,43 +40,53 @@ Two states that look alike and are kept apart: a contact you have **never**
 spoken to carries no score at all, while one you spoke to and let go cold carries
 a low one. Rendering both as zero would lose the distinction that matters.
 
-The record also shows the direction split — how much came in against how much
-went out — so "six two-way exchanges" never reads the same as "six unanswered
-sends".
+The route also shows the direction split — "{total} two-way exchanges in 90
+days" against "{total} interactions in 90 days, one-sided" — so six real
+exchanges never read the same as six unanswered sends.
 
 ### A caution about the bands
 
-The product uses more than one vocabulary for relationship warmth, on purpose,
+Margince uses more than one vocabulary for relationship warmth, on purpose,
 because the things being measured are not comparable: one colleague's contact
-with somebody is a different question from the company's contact with them.
+with someone is a different question from the company's contact with them.
 
 So do not read "Weak" on one screen as the same claim as "barely in contact" on
 another. Each band belongs to the surface it is drawn on.
 
 ### The network map
 
-A contact's **Network** tab draws who can reach them, in four lanes: our team,
-their company, who they talk to, and the target.
+The contact's **Network** tab also draws who can reach them, in four lanes:
+**Your team**, **Their company**, **Their contacts**, and **Target**.
 
 It counts and never quotes: "{total} interactions in 90 days · {inbound} in,
-{outbound} out", with "Counts only — the messages themselves stay on the
-timeline."
+{outbound} out", with "Counts only. The messages stay on the timeline."
 
 Where the map is incomplete it says so rather than drawing a smaller truth —
-"{count} more not shown", "Some colleagues are not shown."
+"{count} more not shown.", "Some colleagues are not shown."
+
+### How do I ask for a warm introduction?
+To ask a colleague for a warm introduction in Margince, open the contact's **Network** tab, press **Ask {name} to introduce you** (or **Use this route** on the map), fill in the request, and press **Request introduction**.
+1. Open the contact and choose **Network**.
+2. Press **Ask {name} to introduce you** on the route you want.
+3. Fill **Reason for request** (required), **Value for the contact** and **Forwardable note**.
+4. Optionally tick **Ask permission to mention their name**, and choose **If they say no**.
+5. Press **Request introduction**.
+Your colleague sees it in their Worklist. It lapses after 7 days.
+Also called: intro request, referral, ask a colleague to connect me.
 
 ## Asking for an introduction
 
-**Ways in** ranks the routes to somebody, best first, and explains the ranking
-rather than asserting it: "Pick the one you can actually use — the second is here
-because the first is not always available."
+**Routes** ranks the ways to reach a contact, best first, and explains the
+ranking rather than asserting it: "Best route first. Alternatives apply when the
+first is unavailable."
 
 **A direct route beats an indirect one however warm the indirect looks.** After
 that, two-way beats one-sided, then volume.
 
-Each route carries its verdict and its evidence — "Ask {name} — they already
-write to each other", with the exchanges and the date behind it. Where there is
-nothing in 90 days it says so rather than leaving a blank.
+Each route carries its verdict and its evidence — "Ask {name}. They already
+correspond with this contact.", with the exchanges and the date behind it. Where
+there is nothing in 90 days it says so ("None in 90 days") rather than leaving a
+blank.
 
 Only a **colleague** can carry an introduction. The map draws contact-to-contact
 edges, but they are never offered as routes.
@@ -78,82 +97,114 @@ never offered.
 
 ### Making the ask
 
-Three things, and the form is explicit about who reads which:
+The introduction request has three parts, and the form is explicit about who
+reads which:
 
-- **Why you are asking** — required. "Your colleague reads this, not the contact.
-  Say what makes the introduction worth making."
-- **What is in it for them** — the reason the contact would want the
-  conversation.
-- **A note your colleague can forward** — "The only part the reader reads. Write
-  it so it can be pasted as it stands."
+- **Reason for request** — required. "Your colleague reads this, not the
+  contact. State why the introduction is worth making."
+- **Value for the contact** — "Why the contact would want this introduction."
+- **Forwardable note** — "The only part the contact reads. Write it so it can be
+  pasted as is."
 
-You can also ask permission to mention their name instead, and say what should
-happen **if they say no**: nothing further, ask to use their name, or try the
-next route.
+You can also **Ask permission to mention their name**, and say what should
+happen **If they say no**: **Nothing further**, **Ask to use their name
+instead**, or **Try the next route**.
 
-Nothing here drafts for you.
+Nothing on the contact's Network tab drafts the ask for you.
+
+A company's **Contacts** tab has a separate, lighter path: **Request
+introduction** on its contact map opens a dialog whose **Draft message** writes a
+note to your colleague, which you **Copy** or **Open in mail app** and send
+yourself. That draft is not recorded as an ask, and nothing tracks its answer.
+
+### How do I answer an introduction request?
+To answer an introduction request in Margince, open it from your Worklist or from the contact's **Network** tab, press **Answer**, choose your answer, and press **Record answer**.
+1. Open the request ("Introduction requested by colleague" in your Worklist, or under **Introductions** on the contact's Network tab).
+2. Press **Answer**.
+3. Choose **Make introduction**, **Let them mention you**, **Suggest someone else** or **Decline**, and add a **Comment** if useful.
+4. Press **Record answer**.
+Your colleague sees your comment as written.
+Also called: respond to an intro, accept or decline an introduction.
 
 ### What your colleague sees, and the four answers
-
-The ask reaches them two ways: on that contact's Network tab, and as an item in
-their own daily queue. The second exists because an ask nobody happened to look
-for simply expired.
+The ask reaches your colleague two ways: on that contact's Network tab, and as an
+item in their own Worklist. The second exists because an ask nobody happened to
+look for simply expired.
 
 Four answers, and no others:
 
 | Answer | What it means |
 |---|---|
-| **I will introduce you** | They make the introduction |
-| **You may use my name** | You reach out yourself and mention them |
-| **Ask someone else** | They name a colleague better placed |
-| **Not this time** | The ask closes |
+| **Make introduction** | They make the introduction |
+| **Let them mention you** | You reach out yourself and mention them |
+| **Suggest someone else** | They name a colleague better placed |
+| **Decline** | The ask closes |
 
-**"You may use my name" is not a weaker yes.** Nothing in the product turns lent
-permission into a handshake that happened, and the two are counted apart all the
-way through.
+**"Let them mention you" is not a weaker yes.** "This is not recorded as an
+introduction." Nothing in the product turns lent permission into a handshake that
+happened, and the two are counted apart all the way through.
 
-A suggestion of somebody else does not become an ask on its own — you make a new
+A suggestion of someone else does not become an ask on its own — you make a new
 one, so nobody is asked without agreeing to be.
 
 ### After the answer
 
-You mark the introduction made, or the name used — and which of the two gets
-recorded comes from the state of the ask, never from a choice you make.
+You mark the introduction made (**Mark introduced**), or the name used (**Mark
+name used**) — and which of the two gets recorded comes from the state of the
+ask, never from a choice you make.
 
 **Whether they replied is never something you tick.** It is observed from
 captured mail: an inbound message, from that contact themselves, after the
 handshake. A checkbox would make the product's best number the one claim nobody
 had evidence for.
 
-An ask waits **7 days** and then lapses on its own, which frees the route.
+An ask waits **7 days** and then lapses on its own (**Expired**), which frees the
+route.
 
-You can withdraw your own ask; your colleague declines rather than withdrawing.
-Either way the row stays, because an ask that was made is a thing that happened.
+You can **Withdraw** your own ask; your colleague declines rather than
+withdrawing. Either way the row stays, because an ask that was made is a thing
+that happened.
 
 ### Who can see an ask
-
-The two parties, and nobody else. A third colleague sees an empty list rather
-than a refusal — whether somebody was asked about a contact is exactly the fact
-the row protects.
+An introduction request is visible to the two parties, and nobody else. A third
+colleague sees an empty list rather than a refusal — whether someone was asked
+about a contact is exactly the fact the row protects.
 
 **An agent may not ask, answer, complete or withdraw an introduction.** The
 product states why: asking a colleague for a favour is a human's act, and an
 agent holding a human's credential is not that human deciding to spend their
 goodwill. An agent may read who knows whom.
 
+### How do I research a company's website?
+To have Margince read a customer company's website, open the company's page and press **Start company research**, or **Read website again** once it has been read.
+1. Open the company.
+2. With nothing on file, **Research this company** leads the **Overview**; otherwise **Website research** sits on the **Profile** tab.
+3. Press **Start company research** or **Read website again**.
+4. Review the findings in your approvals; nothing is written until you accept.
+If you see "Website research is not configured on this server.", your installation has no crawler.
+Also called: enrich a company, company lookup, scrape a website, read a company.
+
+### What does Read a company in the command palette do?
+The **Read a company** action in the command palette opens the setup step that reads **your own company's** website, "Which website should Margince read?", to fill in your company profile; it does not research a customer.
+1. Press ⌘K (Mac) or Ctrl+K and choose **Read a company**.
+2. Enter your company's website and press **Read website**, or **Enter manually**.
+3. Check the values in **Review company details** and confirm.
+To research a customer or prospect, use **Start company research** on that company's page instead.
+Also called: set up my company profile, company onboarding.
+
 ## Researching a company
 
-From a company: **Start company research**, or **Read the website again** once
-there is a read.
+Company research starts from a company's page: **Start company research**, or
+**Read website again** once there is a read.
 
-> It reads the company's website for the domain, industry, size, locations and
-> likely decision-makers, then suggests a first move. Findings are staged for
-> your review — nothing is written until you accept.
+> Reads the company's website for domain, industry, size, locations and likely
+> decision-makers, then suggests a first step. Findings stay staged until you
+> accept.
 
 ### What it reads, and what it will not
-
-It walks the company's **own** site: the home page, the imprint, about, team,
-services, products and contact pages, plus what it finds linked from those.
+Company research walks the company's **own** site: the home page, the imprint,
+about, team, services, products and contact pages, plus what it finds linked
+from those.
 
 **Which pages to read is decided by the product, never by the model.** Page
 content can influence at most which same-site links exist — it can never talk the
@@ -170,9 +221,10 @@ own `robots.txt` is honoured.
 | **Read up to the page limit** | 60 pages, or fewer where an operator set a lower ceiling |
 | **Read up to the size limit** | 32 MB across the whole crawl |
 | **Read up to the time limit** | Four minutes |
-| **Waiting for AI budget** | The company's allowance is spent. "Resumes automatically {when}" |
+| **Waiting for AI budget** | The company's allowance is spent. "Resumes automatically {when}." |
+| **Stopped early** | With the reason, such as the model budget |
 | **Failed** | With a plain cause, and another attempt scheduled where one would help |
-| **Cancelled** | Withdrawn before it ran |
+| **Canceled** | Withdrawn before it ran |
 
 A failure names the cause in ordinary words — the site asked this crawler not to
 read the page; bot protection refused it; the certificate could not be verified;
@@ -184,8 +236,8 @@ rather than 60.
 
 ### Nothing is written until you accept
 
-Every finding arrives as a **staged proposal** in your approval inbox — one for
-the company's facts, and one per contact found on a team page.
+Every company-research finding arrives as a **staged proposal** in your approval
+inbox — one for the company's facts, and one per contact found on a team page.
 
 **Every field carries the verbatim passage it was read from, or it is left out.**
 There is no guessing: a value the page does not clearly state is omitted rather
@@ -211,6 +263,6 @@ any of them, because each is built from one reader's own view.
 
 ### When it is not available
 
-Where the deployment has wired no crawler, the panel says "Site reading is not
-configured on this server." The button stays visible, so if you press it and get
-that sentence, it is your installation rather than the company's website.
+Where the deployment has wired no crawler, the panel says "Website research is
+not configured on this server." The button stays visible, so if you press it and
+get that sentence, it is your installation rather than the company's website.

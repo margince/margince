@@ -237,7 +237,7 @@ func refuseUnpreparableBrief(f contactBriefFixture, want contactBriefExpectation
 	// case is one the floor prints, and a refusal that missed it would let a
 	// capitalisation difference hide exactly the silent pass it exists to catch.
 	in, _ := contactBriefInput(f)
-	floor := contactbrief.Prose(contactbrief.Deterministic(ids.NewV7().String(), in))
+	floor := contactbrief.Prose(contactbrief.Deterministic(ids.NewV7().String(), in, "en"))
 	if strings.Contains(strings.ToLower(floor), token) {
 		return fmt.Errorf(
 			"summarize/contact_brief: the token %q is already in the deterministic floor's own prose, so a reply saying nothing would satisfy this scenario",

@@ -138,7 +138,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "7ff168a36f9d4cfee0be283a90c84c9dc4f5e43158ed8b5f35430fc78226c8be"
+const TaskContractHash = "9f2d22df73bed850af561b252d646ae245c48b083ae7fe0d57ee94b4bbecbd1e"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -485,6 +485,53 @@ var noPayloadTasks = map[Task]bool{
 
 // NoPayload reports the contract's payload prohibition for a task.
 func NoPayload(t Task) bool { return noPayloadTasks[t] }
+
+// localOnlyTasks are the tasks whose prompt must never leave this
+// machine, whatever an operator binds the rungs of their ladder to.
+//
+// DECLARED, never inferred from a tier NAME. `local_small` is a rung and
+// which provider serves it is the operator's to set, so a guarantee
+// resting on the name holds only until somebody rebinds it — and the
+// rebinding is legal under every profile but sovereign.
+var localOnlyTasks = map[Task]bool{
+	TaskCaptureConfidentialityVerdict: true,
+	TaskCaptureCounterpartyVerdict:    true,
+}
+
+// LocalOnly reports the contract's egress prohibition for a task: its
+// prompt may be served only by a provider running on this machine.
+func LocalOnly(t Task) bool { return localOnlyTasks[t] }
+
+// localOnlyTaskList is the same set in contract order.
+var localOnlyTaskList = []Task{
+	TaskCaptureConfidentialityVerdict,
+	TaskCaptureCounterpartyVerdict,
+}
+
+// LocalOnlyTasks returns the local-only tasks in contract order.
+func LocalOnlyTasks() []Task { return localOnlyTaskList }
+
+// taskDecisions are the tasks that declare a decision form. DECLARED,
+// because a decision site needs an adapter that builds the typed question
+// from the same inputs its prompt reads, and the census holds the two in step.
+var taskDecisions = map[Task]bool{
+	TaskCaptureConfidentialityVerdict: true,
+	TaskCaptureCounterpartyVerdict:    true,
+	TaskSiteTriage:                    true,
+}
+
+// TaskDecides reports whether a task declares a decision form.
+func TaskDecides(t Task) bool { return taskDecisions[t] }
+
+// decisionTaskList is the same set in sorted name order.
+var decisionTaskList = []Task{
+	TaskCaptureConfidentialityVerdict,
+	TaskCaptureCounterpartyVerdict,
+	TaskSiteTriage,
+}
+
+// DecisionTasks returns the decision tasks in sorted name order.
+func DecisionTasks() []Task { return decisionTaskList }
 
 // CompanyContextPolicy is the ADR-0065 anchor-company policy: which
 // scopes ride the prompt, under what character budget, and whether the

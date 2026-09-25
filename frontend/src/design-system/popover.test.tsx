@@ -5,10 +5,10 @@ import {
   fireEvent,
   render,
   screen,
-  waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import { Popover } from "./popover";
 
 afterEach(() => {
@@ -125,11 +125,21 @@ it("puts focus on the panel's first control, and leaves prose alone", async () =
 // A receipt under a reading is read on the way past. It opens when the pointer
 // settles and closes when it leaves — and it still answers a click, because a
 // touch screen and a keyboard have no hover to give it.
-it("opens on a settled pointer only when the caller asks for it", async () => {
+it("opens on a settled pointer only when the caller asks for it", () => {
+  // On a clock this case owns, so the absence below is asked past the hook's
+  // ceiling rather than before it could have fired.
+  takeHoverClock();
+  armHoverIntent();
+  const restOn = (trigger: HTMLElement) => {
+    fireEvent.pointerEnter(trigger);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+  };
   const { unmount } = render(
     <Popover label="How it stands">Two of three invoices are late.</Popover>,
   );
-  fireEvent.pointerEnter(screen.getByRole("button"));
+  restOn(screen.getByRole("button"));
   expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
   unmount();
 
@@ -138,10 +148,8 @@ it("opens on a settled pointer only when the caller asks for it", async () => {
       Two of three invoices are late.
     </Popover>,
   );
-  fireEvent.pointerEnter(screen.getByRole("button"));
-  await waitFor(() =>
-    expect(screen.getByText("Two of three invoices are late.")).toBeTruthy(),
-  );
+  restOn(screen.getByRole("button"));
+  expect(screen.getByText("Two of three invoices are late.")).toBeTruthy();
 });
 
 it("still opens on a click when it opens on hover", async () => {
@@ -222,15 +230,8 @@ it("does not open on a settled pointer when the trigger is refused", async () =>
   // the timers. Left running, the poll measures a real elapsed time against a
   // simulated one, the settle never fires, and this case would pass without
   // the guard it exists to hold (hoverintent.ts says so in its own header).
-  vi.useFakeTimers({
-    toFake: [
-      "setTimeout",
-      "clearTimeout",
-      "setInterval",
-      "clearInterval",
-      "performance",
-    ],
-  });
+  takeHoverClock();
+  armHoverIntent();
   render(
     <Popover label="How it stands" onHover disabled>
       Two of three invoices are late.

@@ -14,6 +14,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -21,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -141,8 +143,21 @@ func TestRepointingAPinnedLaneAtAnotherModelDoesNotCarryItsPin(t *testing.T) {
 		t.Fatalf("storing the planted binding: %v", err)
 	}
 
+	// The editor re-points a lane the way rebind does: the new model, and no
+	// preferences written for the old one.
 	put := getThenPut(ctx, t, aiRoutingHandlers{store: store}, func(body string) string {
-		return strings.Replace(body, "mistralai/mistral-small-2603", "openai/gpt-oss-120b", 1)
+		var doc crmcontracts.AiRouting
+		if err := json.Unmarshal([]byte(body), &doc); err != nil {
+			t.Fatalf("the GET body does not decode: %v", err)
+		}
+		premium := doc.Tiers[string(ai.TierPremium)]
+		premium.Model, premium.Routing = "openai/gpt-oss-120b", nil
+		doc.Tiers[string(ai.TierPremium)] = premium
+		edited, err := json.Marshal(doc)
+		if err != nil {
+			t.Fatalf("re-encoding the edited document: %v", err)
+		}
+		return string(edited)
 	})
 	if put.Code != http.StatusUnprocessableEntity || !strings.Contains(put.Body.String(), "under profile eu_hosted") {
 		t.Fatalf("PUT = %d %s, want 422 naming the eu_hosted residency rule", put.Code, put.Body)

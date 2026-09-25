@@ -52,14 +52,13 @@ vi.mock("@composition/extensions", () => ({
 // B-EP09.4 acceptance, for the SIDEBAR — the left-hand panel and nothing else.
 //
 // It is destinations only: the canonical nav in order (AC-shell-1b —
-// Automations left it for Settings → AI while the dedupe queue and the filter
-// builder took rows, which is a UI divergence on the founder's back-fill list),
-// at most one active
-// item tracking the route (AC-shell-2), badges only on the attention screens and
-// only from live counts (AC-shell-1e), collapsed rows on the expanded rows' own
-// geometry with a dismissible tooltip (AC-shell-1d), and the phone bar with its
-// More sheet. It carries no search row, no collapse control, no Settings door
-// and no account block any more — each of those moved to the top bar
+// Automations left it for Settings → AI while the filter builder took a row and
+// the duplicate queue is a lane inside Today, a UI divergence on the founder's
+// back-fill list), at most one active item tracking the route (AC-shell-2),
+// badges only on the attention screens and only from live counts (AC-shell-1e),
+// collapsed rows on the expanded rows' own geometry with a dismissible tooltip
+// (AC-shell-1d), and the phone bar with its More sheet. It carries no search
+// row, no collapse control, no Settings door and no account block any more — each of those moved to the top bar
 // (topbar.test.tsx).
 //
 // The second suite is the panel's own DEPTH: a section route replaces the
@@ -277,16 +276,15 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   // and containment is what this asserts. A sibling tooltip would vanish under
   // the cursor and no assertion on its text would notice.
   //
-  // The hover itself is deliberately NOT simulated: user-event dispatches
-  // `mouseleave` on the row when the pointer moves to a child of it, which a
-  // browser does not do, so a pass there would measure the simulator and a
-  // failure would report a defect that is not in the product.
+  // Raised by focus, and the hover itself is deliberately NOT simulated:
+  // user-event dispatches `mouseleave` on the row when the pointer moves to a
+  // child of it, which a browser does not do, so a pass there would measure the
+  // simulator. Focus and pointer raise the same tip in the same place.
   it("nests the collapsed tooltip inside its own row so hovering it cannot dismiss it", async () => {
-    const user = userEvent.setup();
     render(<WorkspaceRail route={{ screen: "home" }} collapsed />);
     const deals = screen.getByRole("link", { name: "Deals" });
 
-    await user.hover(deals);
+    deals.focus();
     const tip = await screen.findByRole("tooltip");
     expect(deals.contains(tip)).toBe(true);
     expect(tip.parentElement).toBe(deals);

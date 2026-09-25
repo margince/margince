@@ -335,14 +335,20 @@ func passportRevokedPayload(passportID ids.PassportID, by ids.UserID) crmcontrac
 // AgentIdentity is the resolved principal of a passport call: the
 // passport's grants layered over the granting human's live RBAC.
 type AgentIdentity struct {
-	PassportID  ids.PassportID
-	WorkspaceID ids.WorkspaceID
-	OnBehalfOf  ids.UserID
-	SeatType    string
-	Scopes      principal.ScopeSet
-	Roles       []string
-	Teams       []ids.TeamID
-	Permissions principal.Permissions
+	PassportID ids.PassportID
+	// ConnectionID is the OAuth grant this passport was minted under, zero for
+	// a passport a human minted directly. It is the agent's identity ACROSS
+	// rotation: refreshing spends the token and mints a replacement row
+	// (oauth_refresh.go), so the passport id changes while the connection does
+	// not, and a rule that binds one connected agent has to bind this.
+	ConnectionID ids.UUID
+	WorkspaceID  ids.WorkspaceID
+	OnBehalfOf   ids.UserID
+	SeatType     string
+	Scopes       principal.ScopeSet
+	Roles        []string
+	Teams        []ids.TeamID
+	Permissions  principal.Permissions
 }
 
 // Principal renders the principal shape every store entry point enforces. The
@@ -350,15 +356,16 @@ type AgentIdentity struct {
 // acting for a read seat inherits that read-only ceiling at the auth.
 func (a AgentIdentity) Principal() principal.Principal {
 	return principal.Principal{
-		Type:        principal.PrincipalAgent,
-		ID:          "agent:" + a.PassportID.String(),
-		UserID:      a.OnBehalfOf.UUID,
-		PassportID:  a.PassportID.UUID,
-		OnBehalfOf:  a.OnBehalfOf.UUID,
-		TeamIDs:     rawTeamIDs(a.Teams),
-		SeatType:    principal.SeatType(a.SeatType),
-		Scopes:      a.Scopes,
-		Permissions: a.Permissions,
+		Type:         principal.PrincipalAgent,
+		ID:           "agent:" + a.PassportID.String(),
+		UserID:       a.OnBehalfOf.UUID,
+		PassportID:   a.PassportID.UUID,
+		ConnectionID: a.ConnectionID,
+		OnBehalfOf:   a.OnBehalfOf.UUID,
+		TeamIDs:      rawTeamIDs(a.Teams),
+		SeatType:     principal.SeatType(a.SeatType),
+		Scopes:       a.Scopes,
+		Permissions:  a.Permissions,
 	}
 }
 
@@ -389,13 +396,19 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	}
 	a := AgentIdentity{WorkspaceID: wsID}
 	var scopes []string
+	// oauth_grant_id is NULL for a locally minted passport, which the principal
+	// spells as a zero connection rather than a pointer nobody else carries.
+	var connection *ids.UUID
 	err = tx.QueryRow(ctx, agentAuthQuery(predicate), arg).
-		Scan(&a.PassportID, &a.OnBehalfOf, &scopes, &a.SeatType)
+		Scan(&a.PassportID, &a.OnBehalfOf, &scopes, &a.SeatType, &connection)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return AgentIdentity{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return AgentIdentity{}, err
+	}
+	if connection != nil {
+		a.ConnectionID = *connection
 	}
 	a.Scopes = principal.NewScopeSet()
 	for _, sc := range scopes {

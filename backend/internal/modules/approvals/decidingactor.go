@@ -132,11 +132,15 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	// able to take its own request off somebody's desk rather than leave it
 	// there.
 	//
-	// It binds the CREDENTIAL and not the human, which is what makes it a rule
-	// rather than an obstacle: the same human answers this in the app, or on a
+	// It binds the AGENT and not the human, which is what makes it a rule rather
+	// than an obstacle: the same human answers this in the app, or on a
 	// credential they had to be present to mint. What it stops is the loop that
 	// needs nobody at all.
-	if approve && a.PassportID != nil && p.PassportID != ids.Nil && a.PassportID.UUID == p.PassportID {
+	//
+	// sameAgent, not passport equality: a credential that rotates its token is
+	// the same agent afterwards, and the loop this refuses is one an agent can
+	// otherwise walk by waiting for its own access token to expire.
+	if approve && sameAgent(a, p) {
 		return fmt.Errorf("this credential proposed the action, so it does not also release it — "+
 			"the contact it acts for answers it in the CRM: %w", apperrors.ErrPermissionDenied)
 	}

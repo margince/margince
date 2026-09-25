@@ -34,6 +34,11 @@ import {
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ProblemError, problemExistingId, problemMessageOf } from "./common";
+import {
+  type NameOffers,
+  OfferedNameControl,
+  offeredHint,
+} from "./create.offered";
 import { RepeatableRowsField } from "./repeatablerowsfield";
 import "./create.css";
 import "./common.css";
@@ -65,6 +70,8 @@ export type SubField = {
 
 export type CreateField = {
   searchTargets?: (q: string) => Promise<RecordPickerCandidate[]>;
+  // A text field that offers existing records by name. See NameOffers.
+  offers?: NameOffers;
   key: string;
   // Static fields carry an i18n `label` key; dynamic fields (custom fields,
   // whose labels are workspace data, not translated) carry a literal
@@ -569,10 +576,18 @@ function MultiselectField({
   );
 }
 
+// A submit button's resting and busy labels travel as one pair, so an edit
+// can never announce "Creating…" while it saves.
+export const SUBMIT_COPY = {
+  create: { label: "create.save", busy: "create.saving" },
+  save: { label: "record.save", busy: "common.saving" },
+} as const satisfies Record<string, { label: MessageKey; busy: MessageKey }>;
+export type SubmitIntent = keyof typeof SUBMIT_COPY;
+
 // The shared modal form body: fields → controls, the error paragraph, and
 // the Cancel/Save row. Both create and edit render this identically — only
 // the values' origin (empty defaults vs. a prefilled record) and the submit
-// label differ, and those stay with each modal's owner.
+// intent differ, and those stay with each modal's owner.
 export function RecordFormBody({
   fields,
   values,
@@ -585,7 +600,7 @@ export function RecordFormBody({
   resolveExisting,
   onSubmit,
   onClose,
-  submitLabelKey,
+  intent,
 }: Readonly<{
   fields: CreateField[];
   values: Record<string, string>;
@@ -601,7 +616,7 @@ export function RecordFormBody({
   resolveExisting?: (code: string, id: string) => Route;
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
   onClose: () => void;
-  submitLabelKey: MessageKey;
+  intent: SubmitIntent;
 }>) {
   const t = useT();
   const formId = useId();
@@ -674,17 +689,31 @@ export function RecordFormBody({
             key={field.key}
             label={fieldLabel(field, t)}
             required={field.required}
-            hint={field.hint}
+            hint={
+              field.offers
+                ? offeredHint(field.offers, field.key, values, t)
+                : field.hint
+            }
             error={refusals.get(field.key)}
           >
             {(control) =>
-              fieldControl(
-                field,
-                control,
-                values[field.key] ?? "",
-                (next) => setVisibleValues({ ...values, [field.key]: next }),
-                t,
-                values,
+              field.offers ? (
+                <OfferedNameControl
+                  fieldKey={field.key}
+                  offers={field.offers}
+                  control={control}
+                  values={values}
+                  setValues={setVisibleValues}
+                />
+              ) : (
+                fieldControl(
+                  field,
+                  control,
+                  values[field.key] ?? "",
+                  (next) => setVisibleValues({ ...values, [field.key]: next }),
+                  t,
+                  values,
+                )
               )
             }
           </Field>
@@ -715,9 +744,9 @@ export function RecordFormBody({
           type="submit"
           disabled={!pending && (requiredMissing || refusals.size > 0)}
           pending={pending}
-          busyLabel={t("create.saving")}
+          busyLabel={t(SUBMIT_COPY[intent].busy)}
         >
-          {t(submitLabelKey)}
+          {t(SUBMIT_COPY[intent].label)}
         </Button>
       </div>
     </form>
@@ -819,7 +848,7 @@ export function CreateRecordModal({
           onSubmit(sent, sentRows);
         }}
         onClose={onClose}
-        submitLabelKey="create.save"
+        intent="create"
       />
     </Modal>
   );

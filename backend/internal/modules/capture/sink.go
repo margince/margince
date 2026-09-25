@@ -42,6 +42,9 @@ type Sink struct {
 	// a ladder that files without classifying is the one outcome this must
 	// never reach.
 	stampProject StampProjectCorrespondence
+	// purgeRemoved acts on a message the provider says the owner deleted. Nil
+	// captures mail and acts on no deletions.
+	purgeRemoved MessagePurger
 	// tracePayloads is the deployment's capture.trace_payloads posture: with it
 	// on, the 24-hour trace keeps each message's sender and subject. Off is the
 	// default and the only value a member can cause.
@@ -163,6 +166,7 @@ var _ connector.Sink = (*Sink)(nil)
 //
 // This line is what makes that a compile error instead.
 var _ connector.MeetingCanceller = (*Sink)(nil)
+var _ connector.MessageRemover = (*Sink)(nil)
 
 // Upsert lands one normalized record: raw original + domain row +
 // audit + captured event, one transaction, idempotent on the natural

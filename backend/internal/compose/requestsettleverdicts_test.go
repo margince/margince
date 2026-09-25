@@ -50,7 +50,7 @@ func TestEveryVerdictTheSiteAcceptsIsDefinedInItsPrompt(t *testing.T) {
 // and is refused as an unknown word after the call is paid for.
 func TestTheSchemasVerdictsAreTheOnesTheValidatorAdmits(t *testing.T) {
 	t.Parallel()
-	declared := string(settleSchema())
+	declared := string(settleSchema([]string{"r1"}))
 	for verdict := range settleVerdicts {
 		if !strings.Contains(declared, `"`+verdict+`"`) {
 			t.Errorf("the validator admits %q and the response schema does not offer it", verdict)
@@ -122,11 +122,11 @@ func TestAStillOwedVerdictMustNameWhatIsOwed(t *testing.T) {
 func TestAReplyMissingRemainingViolatesTheSchema(t *testing.T) {
 	t.Parallel()
 	missing := `{"results":[{"id":"r1","verdict":"still_owed","due_at":"","confidence":0.9}]}`
-	if err := schema.ValidateJSON(settleSchema(), missing); err == nil {
+	if err := schema.ValidateJSON(settleSchema([]string{"r1"}), missing); err == nil {
 		t.Error("the response schema admits a verdict with no remaining key, which the validator then refuses on still_owed")
 	}
 	present := `{"results":[{"id":"r1","verdict":"settled","remaining":"","due_at":"","confidence":0.9}]}`
-	if err := schema.ValidateJSON(settleSchema(), present); err != nil {
+	if err := schema.ValidateJSON(settleSchema([]string{"r1"}), present); err != nil {
 		t.Errorf("a settled verdict with an empty remaining violates the schema: %v", err)
 	}
 }

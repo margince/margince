@@ -99,7 +99,7 @@ function withDeclaredEmpties(
  *
  * Only when the whole day is loaded. The queue arrives band-sorted, so a band
  * missing from page one may hold rows on page three — telling a reader
- * "nothing needs you now" while a Show more button sits below the fold would be
+ * "nothing needs you now" while a Load more button sits below the fold would be
  * the page claiming to have looked at work it has not fetched.
  */
 export function canReportEmptyBands(hasMore: boolean): boolean {

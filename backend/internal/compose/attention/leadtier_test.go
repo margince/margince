@@ -40,6 +40,10 @@ func leadReadings() []struct {
 			_, err := s.HiddenBacklog(ctx)
 			return err
 		}},
+		{"the hidden-backlog rows", func(s *Service, ctx context.Context) error {
+			_, err := s.HiddenBacklogRows(ctx, "set_aside")
+			return err
+		}},
 		{"the response metrics", func(s *Service, ctx context.Context) error {
 			_, err := s.ResponseMetrics(ctx, 0)
 			return err

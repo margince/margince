@@ -39,6 +39,7 @@ export const feature: components["schemas"]["AiFeatureRoute"] = {
   ],
   impact: "unchanged",
   budget_exempt: false,
+  decision_first: false,
 };
 export const status: components["schemas"]["AiStatus"] = {
   budget: allowance,

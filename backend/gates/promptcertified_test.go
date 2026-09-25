@@ -20,14 +20,17 @@ package gates
 //
 // So this gate derives its corpus from the tree rather than from a list. A
 // prompt-minting site is recognisable without being registered anywhere: it
-// builds a model.Request composite literal carrying a System field.
+// builds a model.Request composite literal carrying a System field, or a
+// decision.Question carrying Instructions — the prompt a decision model reads.
 //
 // What it can and cannot see, stated rather than assumed (AGENTS.md rule 8 —
 // ask what shape of the defect it cannot see, then plant that case):
 //
-//   - It reads the model package under any ALIAS, because the local name comes
-//     from the file's own imports. A dot import it cannot read at all, and says
-//     so rather than passing.
+//   - It reads the model and decision packages under any ALIAS, because the
+//     local name comes from the file's own imports. A dot import it cannot read
+//     at all, and says so rather than passing.
+//   - It reads a literal whose type is ELIDED inside a map, slice or array of
+//     the prompt type, which is how a decision request spells its questions.
 //   - It follows a CONDUIT — a builder handed its prompt as a parameter, like
 //     companybrief.groundedRequest — up to the callers that chose the prompt, so
 //     one literal serving four sites is four sites.
@@ -58,6 +61,7 @@ import (
 	"io/fs"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -146,6 +150,17 @@ func TestEveryPromptIsCertified(t *testing.T) {
 		t.Errorf("%s dot-imports the model package, so this scan cannot see the requests it builds", dir)
 	}
 	propagateConduits(&g)
+	for _, orphan := range unreachedSites(g) {
+		t.Errorf(
+			"%s builds a prompt no certification case reaches, so what the model answers it is graded by nothing",
+			orphan,
+		)
+	}
+}
+
+// unreachedSites names, sorted, every minting site no certification root
+// reaches. The graph's conduits must already be propagated.
+func unreachedSites(g promptGraph) []string {
 	reached := reachableFrom(g)
 	var orphans []string
 	for site := range g.minting {
@@ -154,11 +169,7 @@ func TestEveryPromptIsCertified(t *testing.T) {
 		}
 	}
 	sort.Strings(orphans)
-	for _, orphan := range orphans {
-		t.Errorf(
-			"%s builds a prompt no certification case reaches, so what the model answers it is graded by nothing",
-			orphan)
-	}
+	return orphans
 }
 
 // walkPromptTree parses every non-test Go file under root once, collecting the
@@ -230,22 +241,30 @@ func isCertificationFile(p string) bool {
 // collectFile records one file's functions, their edges and whether they mint.
 func collectFile(g *promptGraph, file *ast.File, dir string, isCert bool) {
 	imports := importsOf(file, dir)
-	// What THIS file calls the model package. An alias — or no import at all —
-	// is the difference between seeing a site and silently not seeing one, so
-	// the name is read from the file rather than assumed to be "model". The
+	// What THIS file calls the model and decision packages. An alias — or no
+	// import at all — is the difference between seeing a site and silently not
+	// seeing one, so the names are read from the file rather than assumed. The
 	// helper is promptlanguage_test.go's, which already had this problem.
-	modelPkg, importsModel := localNameFor(file, "shared/ports/model")
-	if importsModel && modelPkg == "." {
-		// A dot import spells the literal as a bare Request{}, which this scan
-		// cannot tell from any other type's. Rather than not see the site, the
-		// walk stops and says so — under-recognition is the one failure this
-		// gate must not have.
-		g.dotImported = append(g.dotImported, dir)
+	var pkgs promptPackages
+	for _, port := range []struct {
+		suffix string
+		name   *string
+	}{{"shared/ports/model", &pkgs.model}, {"shared/ports/decision", &pkgs.decision}} {
+		local, imported := localNameFor(file, port.suffix)
+		if !imported {
+			continue
+		}
+		if local == "." {
+			// A dot import spells the literal as a bare Request{} or
+			// Question{}, which this scan cannot tell from any other type's.
+			// Rather than not see the site, the walk stops and says so —
+			// under-recognition is the one failure this gate must not have.
+			g.dotImported = append(g.dotImported, dir)
+			continue
+		}
+		*port.name = local
 	}
-	facts := fileFacts{
-		dir: dir, imports: imports, modelPkg: modelPkg,
-		modelImported: importsModel, certification: isCert,
-	}
+	facts := fileFacts{dir: dir, imports: imports, prompts: pkgs, certification: isCert}
 	for _, decl := range file.Decls {
 		if fn, isFn := decl.(*ast.FuncDecl); isFn && fn.Body != nil {
 			collectFunc(g, fn, facts)
@@ -253,11 +272,8 @@ func collectFile(g *promptGraph, file *ast.File, dir string, isCert bool) {
 		}
 		// Anything that is not a function body: a var, a const, an init-time
 		// composite. A prompt minted here has no enclosing function to name.
-		if !importsModel {
-			continue
-		}
 		ast.Inspect(decl, func(n ast.Node) bool {
-			if mintsSystemPrompt(n, modelPkg) {
+			if _, mints := mintedPrompt(n, pkgs); mints {
 				g.looseLiterals = append(g.looseLiterals, dir)
 			}
 			return true
@@ -266,15 +282,14 @@ func collectFile(g *promptGraph, file *ast.File, dir string, isCert bool) {
 }
 
 // fileFacts is what one file's header tells every function in it: where it
-// sits, what it calls the model package, and whether it is part of the
+// sits, what it calls the prompt packages, and whether it is part of the
 // certification layer.
 type fileFacts struct {
-	dir      string
-	imports  map[string]string
-	modelPkg string
-	// modelImported is false when the file never imports the model package, in
-	// which case no literal in it can be a request.
-	modelImported bool
+	dir     string
+	imports map[string]string
+	// prompts is what the file calls the packages a prompt is minted from; a
+	// package it never imports is empty, so no literal in it can match.
+	prompts       promptPackages
 	certification bool
 }
 
@@ -294,9 +309,9 @@ func collectFunc(g *promptGraph, fn *ast.FuncDecl, f fileFacts) {
 	// name.
 	locals := localReceiverTypes(fn, self.recv, f.dir, f.imports, g.returns)
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		if f.modelImported && mintsSystemPrompt(n, f.modelPkg) {
+		if prompt, mints := mintedPrompt(n, f.prompts); mints {
 			g.minting[self] = true
-			if at, fromParam := systemParameterIndex(n, fn); fromParam {
+			if at, fromParam := systemParameterIndex(prompt, fn); fromParam {
 				g.promptArg[self] = at
 				// The prompt is the CALLER's. One literal, many sites — so
 				// mintness propagates up to whoever supplies it.
@@ -318,35 +333,6 @@ func collectFunc(g *promptGraph, fn *ast.FuncDecl, f fileFacts) {
 		}
 		return true
 	})
-}
-
-// mintsSystemPrompt reports whether a node is a model.Request literal carrying
-// a System field. That pairing is what makes a function a SITE: a request
-// without a system prompt is a continuation of somebody else's, and a system
-// string on its own is prompt text nobody has sent yet.
-func mintsSystemPrompt(n ast.Node, modelPkg string) bool {
-	lit, ok := n.(*ast.CompositeLit)
-	if !ok {
-		return false
-	}
-	sel, ok := lit.Type.(*ast.SelectorExpr)
-	if !ok || sel.Sel.Name != "Request" {
-		return false
-	}
-	pkg, ok := sel.X.(*ast.Ident)
-	if !ok || pkg.Name != modelPkg {
-		return false
-	}
-	for _, elt := range lit.Elts {
-		kv, isKV := elt.(*ast.KeyValueExpr)
-		if !isKV {
-			continue
-		}
-		if key, isIdent := kv.Key.(*ast.Ident); isIdent && key.Name == "System" {
-			return true
-		}
-	}
-	return false
 }
 
 // promptCalleeOf resolves one call expression to the function it names, in the
@@ -643,6 +629,36 @@ func TestTheCensusCannotBeFooled(t *testing.T) {
 			src:      `package p; import "x/shared/ports/model"; func f() model.Request { return model.Request{MaxTokens: 1} }`,
 			wantMint: false,
 		},
+		{
+			name:     "the decision package under an alias is still the decision package",
+			src:      `package p; import d "x/shared/ports/decision"; func f() d.Question { return d.Question{Instructions: "s"} }`,
+			wantMint: true,
+		},
+		{
+			name:     "a question with no instructions asks nothing of its own",
+			src:      `package p; import "x/shared/ports/decision"; func f() decision.Question { return decision.Question{Type: "choice"} }`,
+			wantMint: false,
+		},
+		{
+			name:     "a question whose type is elided inside the request's map is still a question",
+			src:      `package p; import "x/shared/ports/decision"; func f() decision.Request { return decision.Request{Questions: map[string]decision.Question{"kind": {Instructions: "s"}}} }`,
+			wantMint: true,
+		},
+		{
+			name:     "an unkeyed question carries its instructions by position",
+			src:      `package p; import "x/shared/ports/decision"; func f() decision.Question { return decision.Question{decision.Choice, "s", nil} }`,
+			wantMint: true,
+		},
+		{
+			name:     "a request elided inside a slice of requests is still a request",
+			src:      `package p; import "x/shared/ports/model"; func f() []model.Request { return []model.Request{{System: "s"}} }`,
+			wantMint: true,
+		},
+		{
+			name:     "another package's Question with instructions is not a decision",
+			src:      `package p; import "x/shared/ports/model"; type Question struct{ Instructions string }; func f() Question { return Question{Instructions: "s"} }`,
+			wantMint: false,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -701,143 +717,6 @@ func selfCertifying() model.Request { return model.Request{System: "s"} }`
 	}
 	if g.roots[self] {
 		t.Error("a prompt builder inside a certification file was rooted, so it certifies itself")
-	}
-}
-
-// constructedType reads the type a constructor call yields, from the
-// constructor's own declared result rather than from its name.
-func constructedType(expr ast.Expr, dir string, imports map[string]string, returns map[funcKey]string) string {
-	call, ok := expr.(*ast.CallExpr)
-	if !ok {
-		return ""
-	}
-	switch fn := call.Fun.(type) {
-	case *ast.Ident:
-		return returns[funcKey{dir: dir, name: fn.Name}]
-	case *ast.SelectorExpr:
-		pkg, isIdent := fn.X.(*ast.Ident)
-		if !isIdent {
-			return ""
-		}
-		if target, known := imports[pkg.Name]; known {
-			return returns[funcKey{dir: target, name: fn.Sel.Name}]
-		}
-	}
-	return ""
-}
-
-// systemParameterIndex reports which of the enclosing function's parameters
-// supplies a request literal's system prompt, by position. Such a function is a
-// conduit: companybrief.groundedRequest holds ONE literal and serves every
-// caller that hands it a prompt builder, so counting literals would count one
-// site where there are several, and a new caller would add no literal at all.
-//
-// The prompt must BE a parameter or be built by CALLING one. A parameter merely
-// mentioned in the expression — a language code, a name — is data the site chose
-// for itself, not a prompt handed in from outside.
-func systemParameterIndex(n ast.Node, fn *ast.FuncDecl) (int, bool) {
-	lit, ok := n.(*ast.CompositeLit)
-	if !ok || fn.Type.Params == nil {
-		return 0, false
-	}
-	at := map[string]int{}
-	position := 0
-	for _, field := range fn.Type.Params.List {
-		for _, name := range field.Names {
-			at[name.Name] = position
-			position++
-		}
-	}
-	for _, elt := range lit.Elts {
-		kv, isKV := elt.(*ast.KeyValueExpr)
-		if !isKV {
-			continue
-		}
-		key, isIdent := kv.Key.(*ast.Ident)
-		if !isIdent || key.Name != "System" {
-			continue
-		}
-		switch value := kv.Value.(type) {
-		case *ast.Ident:
-			index, fromParam := at[value.Name]
-			return index, fromParam
-		case *ast.CallExpr:
-			called, isIdent := value.Fun.(*ast.Ident)
-			if !isIdent {
-				return 0, false
-			}
-			index, fromParam := at[called.Name]
-			return index, fromParam
-		}
-		return 0, false
-	}
-	return 0, false
-}
-
-// forwardedParameterPositions answers which argument positions of one call the
-// caller fills with its own parameters — the shape that makes a wrapper stand
-// in for whoever supplied the value.
-func forwardedParameterPositions(n ast.Node, fn *ast.FuncDecl) map[int]bool {
-	call, ok := n.(*ast.CallExpr)
-	if !ok || fn.Type.Params == nil {
-		return nil
-	}
-	params := map[string]bool{}
-	for _, field := range fn.Type.Params.List {
-		for _, name := range field.Names {
-			params[name.Name] = true
-		}
-	}
-	out := map[int]bool{}
-	for position, arg := range call.Args {
-		if ident, isIdent := arg.(*ast.Ident); isIdent && params[ident.Name] {
-			out[position] = true
-		}
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
-}
-
-// propagateConduits makes every caller of a conduit a site in its own right,
-// to a fixed point so a conduit reached through another still lands on the
-// function that actually chose the prompt.
-func propagateConduits(g *promptGraph) {
-	callers := map[funcKey][]funcKey{}
-	for from, tos := range g.calls {
-		for _, to := range tos {
-			callers[to] = append(callers[to], from)
-		}
-	}
-	queue := make([]funcKey, 0, len(g.conduits))
-	for c := range g.conduits {
-		queue = append(queue, c)
-	}
-	for len(queue) > 0 {
-		cur := queue[0]
-		queue = queue[1:]
-		for _, caller := range callers[cur] {
-			if g.minting[caller] {
-				continue
-			}
-			g.minting[caller] = true
-			// A wrapper that FORWARDS its own parameter into a conduit is a
-			// conduit too. Without this the walk stops at the wrapper and the
-			// function that actually chose the prompt is never counted.
-			if at, known := g.promptArg[cur]; known && g.forwards[caller][cur][at] {
-				g.conduits[caller] = true
-			}
-			// A site is never its own certification, whether the literal is its
-			// own or a conduit's. collectFunc refuses that for a direct minter;
-			// a conduit's caller is a site by the same reasoning and has to be
-			// refused by the same rule, or a builder written into a
-			// certification file certifies itself through the conduit.
-			delete(g.roots, caller)
-			if g.conduits[caller] {
-				queue = append(queue, caller)
-			}
-		}
 	}
 }
 
@@ -923,26 +802,6 @@ var loose = model.Request{System: "nobody's prompt"}`
 	}
 }
 
-// graphOf parses one source string into a graph, for the cases above.
-func graphOf(t *testing.T, src, name, dir string, isCert bool) promptGraph {
-	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), name, src, 0)
-	if err != nil {
-		t.Fatalf("parsing the case source: %v", err)
-	}
-	g := promptGraph{
-		minting:   map[funcKey]bool{},
-		calls:     map[funcKey][]funcKey{},
-		roots:     map[funcKey]bool{},
-		conduits:  map[funcKey]bool{},
-		returns:   map[funcKey]string{},
-		promptArg: map[funcKey]int{},
-		forwards:  map[funcKey]map[funcKey]map[int]bool{},
-	}
-	collectFile(&g, file, dir, isCert)
-	return g
-}
-
 // A conduit's caller is a site, so it cannot be its own certification either —
 // the same refusal collectFunc applies to a direct minter, which propagation
 // has to carry or a builder written into a certification file certifies itself
@@ -985,5 +844,47 @@ func passesDataOnly(lang string) model.Request { return wrap(func() string { ret
 	}
 	if !g.conduits[funcKey{dir: "p", name: "wrap"}] {
 		t.Error("the wrapper was not promoted to a conduit, so propagation stops at it")
+	}
+}
+
+// A decision site is a prompt like any other: a question built through the
+// choiceQuestion conduit and reached by no certification case is refused,
+// while its certified sibling is not. The two differ only in who calls them,
+// so this pins the reach, not the recognition.
+func TestARogueDecisionSiteIsRefused(t *testing.T) {
+	t.Parallel()
+	src := `package p
+import "x/shared/ports/decision"
+func choice(instructions string) decision.Question { return decision.Question{Type: decision.Choice, Instructions: instructions} }
+func certified() decision.Request { return decision.Request{Questions: map[string]decision.Question{"kind": choice("certified")}} }
+func rogue() decision.Request { return decision.Request{Questions: map[string]decision.Question{"kind": choice("rogue")}} }`
+	g := graphOf(t, src, "p.go", "p", false)
+	certCase, err := parser.ParseFile(token.NewFileSet(), "certcase_p.go", `package p
+import "x/shared/ports/decision"
+type someCase struct{}
+func (someCase) DecisionRequest() decision.Request { return certified() }`, 0)
+	if err != nil {
+		t.Fatalf("parsing the case source: %v", err)
+	}
+	collectFile(&g, certCase, "p", true)
+	propagateConduits(&g)
+	orphans := unreachedSites(g)
+	if !slices.Contains(orphans, "p.rogue") {
+		t.Errorf("unreached sites = %v, want the rogue decision site among them", orphans)
+	}
+	if slices.Contains(orphans, "p.certified") {
+		t.Errorf("unreached sites = %v, and the certified decision site is among them", orphans)
+	}
+}
+
+// A dot import spells a question as a bare Question{}, which the scan cannot
+// tell from any other type's, so it refuses the file rather than not seeing it.
+func TestADotImportedDecisionPackageIsRefused(t *testing.T) {
+	t.Parallel()
+	src := `package p
+import . "x/shared/ports/decision"
+func f() Question { return Question{Instructions: "s"} }`
+	if g := graphOf(t, src, "p.go", "p", false); len(g.dotImported) == 0 {
+		t.Error("a dot-imported decision package was neither read nor refused")
 	}
 }

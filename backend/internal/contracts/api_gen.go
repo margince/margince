@@ -748,9 +748,34 @@ func (e AiActivityKind) Valid() bool {
 	}
 }
 
+// Defines values for AiEmbeddingsBindingThinkingLevel.
+const (
+	AiEmbeddingsBindingThinkingLevelHigh    AiEmbeddingsBindingThinkingLevel = "high"
+	AiEmbeddingsBindingThinkingLevelLow     AiEmbeddingsBindingThinkingLevel = "low"
+	AiEmbeddingsBindingThinkingLevelMedium  AiEmbeddingsBindingThinkingLevel = "medium"
+	AiEmbeddingsBindingThinkingLevelMinimal AiEmbeddingsBindingThinkingLevel = "minimal"
+)
+
+// Valid indicates whether the value is a known member of the AiEmbeddingsBindingThinkingLevel enum.
+func (e AiEmbeddingsBindingThinkingLevel) Valid() bool {
+	switch e {
+	case AiEmbeddingsBindingThinkingLevelHigh:
+		return true
+	case AiEmbeddingsBindingThinkingLevelLow:
+		return true
+	case AiEmbeddingsBindingThinkingLevelMedium:
+		return true
+	case AiEmbeddingsBindingThinkingLevelMinimal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiModelRateLane.
 const (
 	AiModelRateLaneChat       AiModelRateLane = "chat"
+	AiModelRateLaneDecisions  AiModelRateLane = "decisions"
 	AiModelRateLaneEmbeddings AiModelRateLane = "embeddings"
 )
 
@@ -758,6 +783,8 @@ const (
 func (e AiModelRateLane) Valid() bool {
 	switch e {
 	case AiModelRateLaneChat:
+		return true
+	case AiModelRateLaneDecisions:
 		return true
 	case AiModelRateLaneEmbeddings:
 		return true
@@ -904,6 +931,30 @@ const (
 func (e AiRunSummaryCurrency) Valid() bool {
 	switch e {
 	case AiRunSummaryCurrencyUSD:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiTierBindingThinkingLevel.
+const (
+	AiTierBindingThinkingLevelHigh    AiTierBindingThinkingLevel = "high"
+	AiTierBindingThinkingLevelLow     AiTierBindingThinkingLevel = "low"
+	AiTierBindingThinkingLevelMedium  AiTierBindingThinkingLevel = "medium"
+	AiTierBindingThinkingLevelMinimal AiTierBindingThinkingLevel = "minimal"
+)
+
+// Valid indicates whether the value is a known member of the AiTierBindingThinkingLevel enum.
+func (e AiTierBindingThinkingLevel) Valid() bool {
+	switch e {
+	case AiTierBindingThinkingLevelHigh:
+		return true
+	case AiTierBindingThinkingLevelLow:
+		return true
+	case AiTierBindingThinkingLevelMedium:
+		return true
+	case AiTierBindingThinkingLevelMinimal:
 		return true
 	default:
 		return false
@@ -2275,6 +2326,7 @@ func (e AutomationRunTier) Valid() bool {
 // Defines values for AvailableModelLane.
 const (
 	AvailableModelLaneChat       AvailableModelLane = "chat"
+	AvailableModelLaneDecisions  AvailableModelLane = "decisions"
 	AvailableModelLaneEmbeddings AvailableModelLane = "embeddings"
 )
 
@@ -2282,6 +2334,8 @@ const (
 func (e AvailableModelLane) Valid() bool {
 	switch e {
 	case AvailableModelLaneChat:
+		return true
+	case AvailableModelLaneDecisions:
 		return true
 	case AvailableModelLaneEmbeddings:
 		return true
@@ -2407,6 +2461,42 @@ func (e BackfillPreviewRequestWindow) Valid() bool {
 	case BackfillPreviewRequestWindowN84m:
 		return true
 	case BackfillPreviewRequestWindowNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BackfillStatusOfferedWindows.
+const (
+	BackfillStatusOfferedWindowsN120m BackfillStatusOfferedWindows = "120m"
+	BackfillStatusOfferedWindowsN12m  BackfillStatusOfferedWindows = "12m"
+	BackfillStatusOfferedWindowsN24m  BackfillStatusOfferedWindows = "24m"
+	BackfillStatusOfferedWindowsN36m  BackfillStatusOfferedWindows = "36m"
+	BackfillStatusOfferedWindowsN3m   BackfillStatusOfferedWindows = "3m"
+	BackfillStatusOfferedWindowsN60m  BackfillStatusOfferedWindows = "60m"
+	BackfillStatusOfferedWindowsN6m   BackfillStatusOfferedWindows = "6m"
+	BackfillStatusOfferedWindowsN84m  BackfillStatusOfferedWindows = "84m"
+)
+
+// Valid indicates whether the value is a known member of the BackfillStatusOfferedWindows enum.
+func (e BackfillStatusOfferedWindows) Valid() bool {
+	switch e {
+	case BackfillStatusOfferedWindowsN120m:
+		return true
+	case BackfillStatusOfferedWindowsN12m:
+		return true
+	case BackfillStatusOfferedWindowsN24m:
+		return true
+	case BackfillStatusOfferedWindowsN36m:
+		return true
+	case BackfillStatusOfferedWindowsN3m:
+		return true
+	case BackfillStatusOfferedWindowsN60m:
+		return true
+	case BackfillStatusOfferedWindowsN6m:
+		return true
+	case BackfillStatusOfferedWindowsN84m:
 		return true
 	default:
 		return false
@@ -8992,6 +9082,33 @@ func (e HeldEntityType) Valid() bool {
 	}
 }
 
+// Defines values for HiddenBacklogRowsRule.
+const (
+	HiddenBacklogRowsRuleColleagues  HiddenBacklogRowsRule = "colleagues"
+	HiddenBacklogRowsRuleNotSales    HiddenBacklogRowsRule = "not_sales"
+	HiddenBacklogRowsRulePastHorizon HiddenBacklogRowsRule = "past_horizon"
+	HiddenBacklogRowsRuleSetAside    HiddenBacklogRowsRule = "set_aside"
+	HiddenBacklogRowsRuleUnlinked    HiddenBacklogRowsRule = "unlinked"
+)
+
+// Valid indicates whether the value is a known member of the HiddenBacklogRowsRule enum.
+func (e HiddenBacklogRowsRule) Valid() bool {
+	switch e {
+	case HiddenBacklogRowsRuleColleagues:
+		return true
+	case HiddenBacklogRowsRuleNotSales:
+		return true
+	case HiddenBacklogRowsRulePastHorizon:
+		return true
+	case HiddenBacklogRowsRuleSetAside:
+		return true
+	case HiddenBacklogRowsRuleUnlinked:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HistoryEdgeOtherEntityType.
 const (
 	HistoryEdgeOtherEntityTypeCompany HistoryEdgeOtherEntityType = "company"
@@ -12613,6 +12730,7 @@ func (e SetActivityDispositionRequestDisposition) Valid() bool {
 // Defines values for SetAiModelRateRequestLane.
 const (
 	SetAiModelRateRequestLaneChat       SetAiModelRateRequestLane = "chat"
+	SetAiModelRateRequestLaneDecisions  SetAiModelRateRequestLane = "decisions"
 	SetAiModelRateRequestLaneEmbeddings SetAiModelRateRequestLane = "embeddings"
 )
 
@@ -12620,6 +12738,8 @@ const (
 func (e SetAiModelRateRequestLane) Valid() bool {
 	switch e {
 	case SetAiModelRateRequestLaneChat:
+		return true
+	case SetAiModelRateRequestLaneDecisions:
 		return true
 	case SetAiModelRateRequestLaneEmbeddings:
 		return true
@@ -13003,6 +13123,24 @@ func (e SignalIntroPathNextMoveKind) Valid() bool {
 	case SignalIntroPathNextMoveKindDraftToContact:
 		return true
 	case SignalIntroPathNextMoveKindIntroRequest:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalResolutionOutcome.
+const (
+	SignalResolutionOutcomeDismissed SignalResolutionOutcome = "dismissed"
+	SignalResolutionOutcomeResolved  SignalResolutionOutcome = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the SignalResolutionOutcome enum.
+func (e SignalResolutionOutcome) Valid() bool {
+	switch e {
+	case SignalResolutionOutcomeDismissed:
+		return true
+	case SignalResolutionOutcomeResolved:
 		return true
 	default:
 		return false
@@ -18448,6 +18586,33 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	}
 }
 
+// Defines values for GetHiddenBacklogRowsParamsRule.
+const (
+	GetHiddenBacklogRowsParamsRuleColleagues  GetHiddenBacklogRowsParamsRule = "colleagues"
+	GetHiddenBacklogRowsParamsRuleNotSales    GetHiddenBacklogRowsParamsRule = "not_sales"
+	GetHiddenBacklogRowsParamsRulePastHorizon GetHiddenBacklogRowsParamsRule = "past_horizon"
+	GetHiddenBacklogRowsParamsRuleSetAside    GetHiddenBacklogRowsParamsRule = "set_aside"
+	GetHiddenBacklogRowsParamsRuleUnlinked    GetHiddenBacklogRowsParamsRule = "unlinked"
+)
+
+// Valid indicates whether the value is a known member of the GetHiddenBacklogRowsParamsRule enum.
+func (e GetHiddenBacklogRowsParamsRule) Valid() bool {
+	switch e {
+	case GetHiddenBacklogRowsParamsRuleColleagues:
+		return true
+	case GetHiddenBacklogRowsParamsRuleNotSales:
+		return true
+	case GetHiddenBacklogRowsParamsRulePastHorizon:
+		return true
+	case GetHiddenBacklogRowsParamsRuleSetAside:
+		return true
+	case GetHiddenBacklogRowsParamsRuleUnlinked:
+		return true
+	default:
+		return false
+	}
+}
+
 // AIFeedbackInput A human's verdict on one derived claim.
 type AIFeedbackInput struct {
 	ClaimKind AIFeedbackInputClaimKind `json:"claim_kind"`
@@ -19128,6 +19293,16 @@ type AiCall struct {
 	// CallsAttempted The attempt number of this terminal attempt: 1 = first try succeeded/failed terminally, >1 = retries happened.
 	CallsAttempted int `json:"calls_attempted"`
 
+	// Config What that identity resolves to. OMITTED — not null — on a call
+	// that names no configuration, which is the only case it is absent
+	// for: `ai_call_config_fk` binds a hash that IS set to a row, so a
+	// call carrying one always resolves.
+	//
+	// The hash alone tells a reader that two calls shared a
+	// configuration, and nothing about what it was — which is the
+	// question a diagnostics reader is actually asking.
+	Config *AiCallConfig `json:"config,omitempty"`
+
 	// ConfigHash Routing/prompt config identity of this call.
 	ConfigHash         *string `json:"config_hash,omitempty"`
 	ContextFingerprint string  `json:"context_fingerprint"`
@@ -19135,7 +19310,10 @@ type AiCall struct {
 	// ContextScopes Company-context scopes injected into the request.
 	ContextScopes []string            `json:"context_scopes"`
 	CorrelationId *openapi_types.UUID `json:"correlation_id,omitempty"`
-	Degraded      bool                `json:"degraded"`
+
+	// DecisionAttempted Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which.
+	DecisionAttempted bool `json:"decision_attempted"`
+	Degraded          bool `json:"degraded"`
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
@@ -19146,7 +19324,10 @@ type AiCall struct {
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
 	Id         openapi_types.UUID `json:"id"`
-	LatencyMs  int                `json:"latency_ms"`
+
+	// Kind What the call asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
 
 	// ModelId The configured binding.
 	ModelId    string    `json:"model_id"`
@@ -19154,7 +19335,7 @@ type AiCall struct {
 
 	// Payload Present only when payload_captured. Post-secret-stripper content (AIRT-AC-4); rune-capped with a visible truncation marker.
 	Payload *struct {
-		// Request The captured request: {"system": string, "messages": [{role, content}]}.
+		// Request The captured request: {"system": string, "messages": [{role, content}]}, or, for a decision call, {"state": string, "questions": {…}}.
 		Request interface{} `json:"request"`
 
 		// Response The captured response text (JSON string).
@@ -19181,14 +19362,38 @@ type AiCall struct {
 type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
-	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder.
-	AttemptReason string    `json:"attempt_reason"`
-	ErrorSentinel *string   `json:"error_sentinel,omitempty"`
-	IsTerminal    bool      `json:"is_terminal"`
-	LatencyMs     int       `json:"latency_ms"`
-	OccurredAt    time.Time `json:"occurred_at"`
-	TokensIn      int       `json:"tokens_in"`
-	TokensOut     int       `json:"tokens_out"`
+	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
+	AttemptReason string  `json:"attempt_reason"`
+	ErrorSentinel *string `json:"error_sentinel,omitempty"`
+	IsTerminal    bool    `json:"is_terminal"`
+
+	// Kind What this attempt asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
+
+	// ModelId The configured binding this attempt ran on.
+	ModelId    *string   `json:"model_id,omitempty"`
+	OccurredAt time.Time `json:"occurred_at"`
+	Provider   *string   `json:"provider,omitempty"`
+
+	// Tier The tier this attempt ran on; decide for the decision lane.
+	Tier      *string `json:"tier,omitempty"`
+	TokensIn  int     `json:"tokens_in"`
+	TokensOut int     `json:"tokens_out"`
+}
+
+// AiCallConfig The configuration an AI call ran under, resolved from its `config_hash`.
+//
+// Written on every call since the table existed and joined by nothing: a
+// reader could see that two calls shared a configuration and never what
+// changed between two that did not.
+type AiCallConfig struct {
+	PromptVersion string `json:"prompt_version"`
+
+	// ProviderParams The provider parameters this configuration pinned.
+	ProviderParams    *map[string]interface{} `json:"provider_params,omitempty"`
+	RoutingConfigHash string                  `json:"routing_config_hash"`
+	TaskContractHash  string                  `json:"task_contract_hash"`
 }
 
 // AiCallListResponse defines model for AiCallListResponse.
@@ -19209,8 +19414,11 @@ type AiCallSummary struct {
 	CachedTokens int  `json:"cached_tokens"`
 
 	// CallsAttempted The attempt number of this terminal attempt: 1 = first try succeeded/failed terminally, >1 = retries happened.
-	CallsAttempted int  `json:"calls_attempted"`
-	Degraded       bool `json:"degraded"`
+	CallsAttempted int `json:"calls_attempted"`
+
+	// DecisionAttempted Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which.
+	DecisionAttempted bool `json:"decision_attempted"`
+	Degraded          bool `json:"degraded"`
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
@@ -19221,7 +19429,10 @@ type AiCallSummary struct {
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
 	Id         openapi_types.UUID `json:"id"`
-	LatencyMs  int                `json:"latency_ms"`
+
+	// Kind What the call asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
 
 	// ModelId The configured binding.
 	ModelId         string    `json:"model_id"`
@@ -19237,6 +19448,34 @@ type AiCallSummary struct {
 	Tier      string `json:"tier"`
 	TokensIn  int    `json:"tokens_in"`
 	TokensOut int    `json:"tokens_out"`
+}
+
+// AiDecisionSummary One task's decision-model pass and fallback counts over the usage window.
+type AiDecisionSummary struct {
+	// Asked Logical calls that consulted the decision model, including those refused before any call was sent.
+	Asked int `json:"asked"`
+
+	// Decided Logical calls the decision model answered: its answer stood and no LLM ran.
+	Decided int `json:"decided"`
+
+	// Fallbacks Logical calls handed to the LLM ladder, keyed by the attempt reason the ladder's first attempt carries (decision_below_floor, decision_error, …). A reason with no calls is absent. Read an unrecognized key as "some reason" rather than refusing it.
+	Fallbacks map[string]int `json:"fallbacks"`
+	Task      string         `json:"task"`
+}
+
+// AiDecisionsBinding The decision-model lane: a model that answers a typed question with calibrated
+// probabilities, asked before a decision site's ladder. Absent means no task uses
+// one. It serves a task only when certified for that site and when its endpoint
+// reaches no further than the task's own bindings.
+type AiDecisionsBinding struct {
+	// BaseUrl Endpoint root; openrouter_decision requires an OpenRouter host.
+	BaseUrl *string `json:"base_url,omitempty"`
+
+	// Model The decision model id: a Jev slug, or a Laya checkpoint.
+	Model string `json:"model"`
+
+	// Provider openrouter_decision | laya.
+	Provider string `json:"provider"`
 }
 
 // AiDeferredWork defines model for AiDeferredWork.
@@ -19267,18 +19506,49 @@ type AiEmbeddingsBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+
+	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
+	// OpenRouter; refused on any other binding, and on the embeddings lane every
+	// preference but only, ignore and allow_fallbacks is refused. Absent means the
+	// product default (reliability over price); an empty object means no preferences
+	// (the broker's own price-weighted routing). The two are different choices and a
+	// client must not turn one into the other.
+	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
+
+	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
+	// Gemini 3 or later only; refused on any other provider, on a model that predates
+	// the field, and on the embeddings lane. Absent means the adapter's default, and a
+	// save that omits it keeps the stored level while provider, host and model are
+	// unchanged.
+	ThinkingLevel *AiEmbeddingsBindingThinkingLevel `json:"thinking_level,omitempty"`
 }
+
+// AiEmbeddingsBindingThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
+// Gemini 3 or later only; refused on any other provider, on a model that predates
+// the field, and on the embeddings lane. Absent means the adapter's default, and a
+// save that omits it keeps the stored level while provider, host and model are
+// unchanged.
+type AiEmbeddingsBindingThinkingLevel string
 
 // AiFeatureRoute defines model for AiFeatureRoute.
 type AiFeatureRoute struct {
-	BudgetExempt        bool               `json:"budget_exempt"`
+	BudgetExempt      bool              `json:"budget_exempt"`
+	DecisionCandidate *AiRouteCandidate `json:"decision_candidate,omitempty"`
+
+	// DecisionFirst The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.
+	DecisionFirst bool `json:"decision_first"`
+
+	// DecisionSkipReason Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
+	DecisionSkipReason  *string            `json:"decision_skip_reason,omitempty"`
 	DisplayName         string             `json:"display_name"`
 	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
 	ExecutionMode       string             `json:"execution_mode"`
-	Impact              string             `json:"impact"`
-	LeadingTier         string             `json:"leading_tier"`
-	NormalCandidates    []AiRouteCandidate `json:"normal_candidates"`
-	Task                string             `json:"task"`
+
+	// Impact How the proposed routing changes what answers this feature. decision_changed — only the decision model that answers it first moved (added, removed or rebound) while every tier binding stayed put; model_changed wins when the lead tier binding moved as well.
+	Impact           string             `json:"impact"`
+	LeadingTier      string             `json:"leading_tier"`
+	NormalCandidates []AiRouteCandidate `json:"normal_candidates"`
+	Task             string             `json:"task"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -19297,9 +19567,10 @@ type AiModelRate struct {
 	InputPerMtok      string             `json:"input_per_mtok"`
 
 	// Lane What the model is FOR. A property of the model rather than of this dated row: the
-	// routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-	// where the embeddings lane binds, and a zero output price cannot tell them apart —
-	// every local chat row carries one too.
+	// routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+	// where the embeddings lane binds and a `decisions` one where the decision lane
+	// binds, and a zero output price cannot tell them apart — every local chat row
+	// carries one too.
 	Lane          AiModelRateLane `json:"lane"`
 	ModelId       string          `json:"model_id"`
 	OutputPerMtok string          `json:"output_per_mtok"`
@@ -19307,14 +19578,47 @@ type AiModelRate struct {
 }
 
 // AiModelRateLane What the model is FOR. A property of the model rather than of this dated row: the
-// routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-// where the embeddings lane binds, and a zero output price cannot tell them apart —
-// every local chat row carries one too.
+// routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+// where the embeddings lane binds and a `decisions` one where the decision lane
+// binds, and a zero output price cannot tell them apart — every local chat row
+// carries one too.
 type AiModelRateLane string
 
 // AiModelRateListResponse defines model for AiModelRateListResponse.
 type AiModelRateListResponse struct {
 	Data []AiModelRate `json:"data"`
+}
+
+// AiOpenRouterRouting Upstream-selection preferences for an openai_compatible binding pointed at
+// OpenRouter; refused on any other binding, and on the embeddings lane every
+// preference but only, ignore and allow_fallbacks is refused. Absent means the
+// product default (reliability over price); an empty object means no preferences
+// (the broker's own price-weighted routing). The two are different choices and a
+// client must not turn one into the other.
+type AiOpenRouterRouting struct {
+	// AllowFallbacks Override the broker's host fallback. False is a real choice, distinct from absent.
+	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
+
+	// Ignore Upstream slugs excluded; a hard filter.
+	Ignore *[]string `json:"ignore,omitempty"`
+
+	// Only Upstream slugs allowed; a hard filter.
+	Only *[]string `json:"only,omitempty"`
+
+	// PreferredMaxLatencyP90 Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
+	PreferredMaxLatencyP90 *float64 `json:"preferred_max_latency_p90,omitempty"`
+
+	// Quantizations Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.
+	Quantizations *[]string `json:"quantizations,omitempty"`
+
+	// ReasoningEffort none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.
+	ReasoningEffort *string `json:"reasoning_effort,omitempty"`
+
+	// RequireParameters Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent.
+	RequireParameters *bool `json:"require_parameters,omitempty"`
+
+	// Sort price | throughput | latency. Reorders rather than filters, and disables load balancing.
+	Sort *string `json:"sort,omitempty"`
 }
 
 // AiProfile defines model for AiProfile.
@@ -19381,6 +19685,11 @@ type AiRouteCandidate struct {
 // refuses an unknown key with a 422 naming it — restating the set here would be a second
 // copy free to drift from the generated one.
 type AiRouting struct {
+	// Decisions The decision-model lane: a model that answers a typed question with calibrated
+	// probabilities, asked before a decision site's ladder. Absent means no task uses
+	// one. It serves a task only when certified for that site and when its endpoint
+	// reaches no further than the task's own bindings.
+	Decisions  *AiDecisionsBinding `json:"decisions,omitempty"`
 	Embeddings AiEmbeddingsBinding `json:"embeddings"`
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
@@ -19446,7 +19755,7 @@ type AiRunSummaryCurrency string
 
 // AiRungHealth One model tier and what it has been doing.
 type AiRungHealth struct {
-	// Calls Terminal attempts in the window.
+	// Calls Attempts in the window — terminal ones for a chat tier, every one for `decide`.
 	Calls int `json:"calls"`
 
 	// Failures How many of them carried an error.
@@ -19501,7 +19810,29 @@ type AiTierBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+
+	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
+	// OpenRouter; refused on any other binding, and on the embeddings lane every
+	// preference but only, ignore and allow_fallbacks is refused. Absent means the
+	// product default (reliability over price); an empty object means no preferences
+	// (the broker's own price-weighted routing). The two are different choices and a
+	// client must not turn one into the other.
+	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
+
+	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
+	// Gemini 3 or later only; refused on any other provider, on a model that predates
+	// the field, and on the embeddings lane. Absent means the adapter's default, and a
+	// save that omits it keeps the stored level while provider, host and model are
+	// unchanged.
+	ThinkingLevel *AiTierBindingThinkingLevel `json:"thinking_level,omitempty"`
 }
+
+// AiTierBindingThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
+// Gemini 3 or later only; refused on any other provider, on a model that predates
+// the field, and on the embeddings lane. Absent means the adapter's default, and a
+// save that omits it keeps the stored level while provider, host and model are
+// unchanged.
+type AiTierBindingThinkingLevel string
 
 // AiUsage AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total.
 type AiUsage struct {
@@ -19532,7 +19863,7 @@ type AiUsage struct {
 			Task            string  `json:"task"`
 			TaskDisplayName *string `json:"task_display_name,omitempty"`
 
-			// Tier local_small, cheap_cloud, premium, frontier, local_large.
+			// Tier local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane).
 			Tier      string `json:"tier"`
 			TokensIn  int    `json:"tokens_in"`
 			TokensOut int    `json:"tokens_out"`
@@ -19541,6 +19872,9 @@ type AiUsage struct {
 			UnpricedCalls *int `json:"unpriced_calls,omitempty"`
 		} `json:"tasks"`
 	} `json:"days"`
+
+	// Decisions Per task, how often the decision model was consulted over the same window and how often its answer stood. Read from the ai_call trace, one logical call counted once, because the metered calls above count attempts and cannot give a rate. Empty when no call in the window consulted a decision model.
+	Decisions *[]AiDecisionSummary `json:"decisions,omitempty"`
 }
 
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
@@ -21421,14 +21755,20 @@ type BackfillStatus struct {
 	EstimatedMessages *int `json:"estimated_messages,omitempty"`
 
 	// LastErrorClass Error class only; detail lives in system_log (0078 rationale).
-	LastErrorClass *string             `json:"last_error_class,omitempty"`
-	StartedAt      *time.Time          `json:"started_at,omitempty"`
-	State          BackfillStatusState `json:"state"`
+	LastErrorClass *string `json:"last_error_class,omitempty"`
+
+	// OfferedWindows The windows THIS installation admits, in reach order — the product's supported set narrowed by `capture.max_backfill_months` where an operator set one. A picker offers these and no others: the preview and the start both refuse a window above the cap, so offering one is offering a choice that 422s. Absent or empty means the client should fall back to the full supported set rather than render an empty picker.
+	OfferedWindows *[]BackfillStatusOfferedWindows `json:"offered_windows,omitempty"`
+	StartedAt      *time.Time                      `json:"started_at,omitempty"`
+	State          BackfillStatusState             `json:"state"`
 
 	// UpdatedAt Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").
 	UpdatedAt *time.Time            `json:"updated_at,omitempty"`
 	Window    *BackfillStatusWindow `json:"window,omitempty"`
 }
+
+// BackfillStatusOfferedWindows defines model for BackfillStatus.OfferedWindows.
+type BackfillStatusOfferedWindows string
 
 // BackfillStatusState defines model for BackfillStatus.State.
 type BackfillStatusState string
@@ -27005,16 +27345,19 @@ type CreateCompanyRequest struct {
 	Address *Address `json:"address,omitempty"`
 
 	// Description One human-written line saying what the company does.
-	Description          *string                       `json:"description,omitempty"`
-	DisplayName          string                        `json:"display_name"`
-	Domains              *[]CompanyDomainInput         `json:"domains,omitempty"`
-	Industry             *string                       `json:"industry,omitempty"`
-	LegalName            *string                       `json:"legal_name,omitempty"`
-	OwnerId              *openapi_types.UUID           `json:"owner_id,omitempty"`
-	ParentCompanyId      *openapi_types.UUID           `json:"parent_company_id,omitempty"`
-	SizeBand             *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
-	Source               string                        `json:"source"`
-	AdditionalProperties map[string]interface{}        `json:"-"`
+	Description     *string                       `json:"description,omitempty"`
+	DisplayName     string                        `json:"display_name"`
+	Domains         *[]CompanyDomainInput         `json:"domains,omitempty"`
+	Industry        *string                       `json:"industry,omitempty"`
+	LegalName       *string                       `json:"legal_name,omitempty"`
+	OwnerId         *openapi_types.UUID           `json:"owner_id,omitempty"`
+	ParentCompanyId *openapi_types.UUID           `json:"parent_company_id,omitempty"`
+	SizeBand        *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
+	Source          string                        `json:"source"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	SourceSystem         *string                `json:"source_system,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // CreateCompanyRequestSizeBand defines model for CreateCompanyRequest.SizeBand.
@@ -27045,17 +27388,20 @@ type CreateContactEnrichmentRunRequest struct {
 // CreateContactRequest defines model for CreateContactRequest.
 type CreateContactRequest struct {
 	// Address Structured postal address.
-	Address              *Address                `json:"address,omitempty"`
-	Emails               *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName            *string                 `json:"first_name,omitempty"`
-	FullName             string                  `json:"full_name"`
-	LastName             *string                 `json:"last_name,omitempty"`
-	OwnerId              *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones               *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social               *map[string]interface{} `json:"social,omitempty"`
-	Source               string                  `json:"source"`
-	Title                *string                 `json:"title,omitempty"`
-	AdditionalProperties map[string]interface{}  `json:"-"`
+	Address   *Address                `json:"address,omitempty"`
+	Emails    *[]ContactEmailInput    `json:"emails,omitempty"`
+	FirstName *string                 `json:"first_name,omitempty"`
+	FullName  string                  `json:"full_name"`
+	LastName  *string                 `json:"last_name,omitempty"`
+	OwnerId   *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones    *[]ContactPhoneInput    `json:"phones,omitempty"`
+	Social    *map[string]interface{} `json:"social,omitempty"`
+	Source    string                  `json:"source"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	SourceSystem         *string                `json:"source_system,omitempty"`
+	Title                *string                `json:"title,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // CreateContractRequest defines model for CreateContractRequest.
@@ -27148,8 +27494,11 @@ type CreateDealRequest struct {
 	Priority *CreateDealRequestPriority `json:"priority,omitempty"`
 
 	// ProjectId The body of work this deal belongs to; must name the same company as the deal.
-	ProjectId            *openapi_types.UUID    `json:"project_id,omitempty"`
-	Source               string                 `json:"source"`
+	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+	Source    string              `json:"source"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	SourceSystem         *string                `json:"source_system,omitempty"`
 	StageId              openapi_types.UUID     `json:"stage_id"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -27453,11 +27802,14 @@ type CreateProjectHealthCorrectionRequest struct {
 
 // CreateProjectRequest defines model for CreateProjectRequest.
 type CreateProjectRequest struct {
-	CompanyId            openapi_types.UUID     `json:"company_id"`
-	Description          *string                `json:"description,omitempty"`
-	Name                 string                 `json:"name"`
-	OwnerId              *openapi_types.UUID    `json:"owner_id,omitempty"`
-	Source               string                 `json:"source"`
+	CompanyId   openapi_types.UUID  `json:"company_id"`
+	Description *string             `json:"description,omitempty"`
+	Name        string              `json:"name"`
+	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
+	Source      string              `json:"source"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	SourceSystem         *string                `json:"source_system,omitempty"`
 	StartedAt            *openapi_types.Date    `json:"started_at,omitempty"`
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -28623,14 +28975,14 @@ type DemoteLeadResponse struct {
 	Lead Lead `json:"lead"`
 
 	// Unwind `reversed` — the promotion had created a contact, which is now archived and the
-	// lead restored to `working`. `merge_lineage_only` — the promotion had merged into
+	// lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
 	// a pre-existing contact, which is left untouched; only the lineage pointers are
 	// nulled (formulas §26).
 	Unwind DemoteLeadResponseUnwind `json:"unwind"`
 }
 
 // DemoteLeadResponseUnwind `reversed` — the promotion had created a contact, which is now archived and the
-// lead restored to `working`. `merge_lineage_only` — the promotion had merged into
+// lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
 // a pre-existing contact, which is left untouched; only the lineage pointers are
 // nulled (formulas §26).
 type DemoteLeadResponseUnwind string
@@ -30038,6 +30390,40 @@ type HiddenBacklog struct {
 	// that reason rather than folded into a total.
 	Unlinked int `json:"unlinked"`
 }
+
+// HiddenBacklogRow One thread a hiding rule is keeping off the queue — enough to say what it is and
+// to open it, which is what the figure it sits behind could not do.
+type HiddenBacklogRow struct {
+	// ActivityId The message itself — what a reply would be drafted to.
+	ActivityId openapi_types.UUID  `json:"activity_id"`
+	CompanyId  *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// ContactId The record the thread is filed under, when it names one. Absent rather than a
+	// zero uuid: a zero on the wire is an id a client could try to open.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+	DealId    *openapi_types.UUID `json:"deal_id,omitempty"`
+
+	// EmailSummary Present exactly when this wait is an EMAIL the reader may read. The lane spans
+	// email and channel messages, and only an email has an email's shape.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
+
+	// Since When they wrote. The wait is measured from it.
+	Since   time.Time `json:"since"`
+	Subject string    `json:"subject"`
+}
+
+// HiddenBacklogRows The threads one hiding rule is holding back, at one instant.
+type HiddenBacklogRows struct {
+	// AsOf The instant the difference was read at.
+	AsOf time.Time          `json:"as_of"`
+	Rows []HiddenBacklogRow `json:"rows"`
+
+	// Rule Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
+	Rule HiddenBacklogRowsRule `json:"rule"`
+}
+
+// HiddenBacklogRowsRule Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
+type HiddenBacklogRowsRule string
 
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
 // of this one, and null on every ordinary row.
@@ -31724,8 +32110,10 @@ type MagicLine struct {
 	Id openapi_types.UUID `json:"id"`
 
 	// Lane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
-	Lane       MagicLineLane `json:"lane"`
-	OccurredAt time.Time     `json:"occurred_at"`
+	Lane MagicLineLane `json:"lane"`
+
+	// OccurredAt When the thing happened. On a `watching` line it is when the condition was OBSERVED instead, uniformly: a source that is off rather than failing has no beginning to report, and dating the observation as the outage would tell a reader a long-dead mailbox broke just now. Where a condition does have a start, it travels as the `failing_since` value on the summary.
+	OccurredAt time.Time `json:"occurred_at"`
 
 	// Summary What happened, as a key and the values to fill it with.
 	//
@@ -36642,8 +37030,16 @@ type Signal struct {
 	Kind SignalKind `json:"kind"`
 
 	// RawRef Pointer to the raw source payload the resolver works from: an email address/handle, a domain, a URL, or a company mention.
-	RawRef               *string  `json:"raw_ref,omitempty"`
-	ResolutionConfidence *float32 `json:"resolution_confidence,omitempty"`
+	RawRef *string `json:"raw_ref,omitempty"`
+
+	// Resolution How a human resolved this signal, and who. Null while `status` is
+	// `open` or `acknowledged` — only a human outcome appends one.
+	//
+	// The latest, not the history: a signal reopened and resolved again
+	// says how it stands now. Every append is kept, and an audit reader
+	// is where the earlier ones belong.
+	Resolution           *SignalResolution `json:"resolution,omitempty"`
+	ResolutionConfidence *float32          `json:"resolution_confidence,omitempty"`
 
 	// ResolutionState The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.
 	ResolutionState SignalResolutionState `json:"resolution_state"`
@@ -36745,6 +37141,27 @@ type SignalListResponse struct {
 	Data []Signal `json:"data"`
 	Page PageInfo `json:"page"`
 }
+
+// SignalResolution A human's answer on one signal. `outcome` is the status they set,
+// `note` is what they wrote, `resolved_by` is who they are.
+//
+// Written on every human resolution since the table existed and read
+// nowhere until this projection: the note explaining WHY a signal was
+// dismissed was recorded and then invisible to the next reader of it.
+type SignalResolution struct {
+	// Note What they wrote about it, if anything.
+	Note *string `json:"note,omitempty"`
+
+	// Outcome The status the human set.
+	Outcome    SignalResolutionOutcome `json:"outcome"`
+	ResolvedAt time.Time               `json:"resolved_at"`
+
+	// ResolvedBy The colleague who answered; null once their account is deleted.
+	ResolvedBy *openapi_types.UUID `json:"resolved_by,omitempty"`
+}
+
+// SignalResolutionOutcome The status the human set.
+type SignalResolutionOutcome string
 
 // SignalWarmContact One contact edge in our own graph that makes the signal warm — evidence, with its explainable §4 strength.
 type SignalWarmContact struct {
@@ -36957,6 +37374,7 @@ type SourceAuthor struct {
 	UserId *openapi_types.UUID `json:"user_id,omitempty"`
 
 	// Via Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
+	// An import writes its rows inside a reserved `mirror:` namespace, which is machinery for the replay key and is never what a reader should see. The prefix is stripped here: a row stored as `mirror:hubspot` reads `hubspot`.
 	Via *string `json:"via,omitempty"`
 }
 
@@ -46341,6 +46759,9 @@ type GetWorklistParamsScope string
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
 
+// GetHiddenBacklogRowsParamsRule defines parameters for GetHiddenBacklogRows.
+type GetHiddenBacklogRowsParamsRule string
+
 // UnpinWorklistRowParams defines parameters for UnpinWorklistRow.
 type UnpinWorklistRowParams struct {
 	// Source The lane the row came from, paired with `row_id` to name it.
@@ -49105,6 +49526,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -49188,6 +49617,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	for fieldName, field := range a.AdditionalProperties {
@@ -49296,6 +49732,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["title"]; found {
 		err = json.Unmarshal(raw, &a.Title)
 		if err != nil {
@@ -49380,6 +49824,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	if a.Title != nil {
@@ -49840,6 +50291,14 @@ func (a *CreateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["stage_id"]; found {
 		err = json.Unmarshal(raw, &a.StageId)
 		if err != nil {
@@ -49971,6 +50430,13 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	object["stage_id"], err = json.Marshal(a.StageId)
@@ -50799,6 +51265,14 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["started_at"]; found {
 		err = json.Unmarshal(raw, &a.StartedAt)
 		if err != nil {
@@ -50861,6 +51335,13 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	if a.StartedAt != nil {
@@ -59017,6 +59498,9 @@ type ServerInterface interface {
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
+	// Which threads one hiding rule is keeping off the queue.
+	// (GET /worklist/hidden/{rule})
+	GetHiddenBacklogRows(w http.ResponseWriter, r *http.Request, rule GetHiddenBacklogRowsParamsRule)
 	// Let the ranking have the row back — the undo behind the pin.
 	// (DELETE /worklist/pins)
 	UnpinWorklistRow(w http.ResponseWriter, r *http.Request, params UnpinWorklistRowParams)
@@ -63010,6 +63494,12 @@ func (_ Unimplemented) GetHandledForYou(w http.ResponseWriter, r *http.Request) 
 // What the queue is not showing, and which rule is holding it back.
 // (GET /worklist/hidden)
 func (_ Unimplemented) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which threads one hiding rule is keeping off the queue.
+// (GET /worklist/hidden/{rule})
+func (_ Unimplemented) GetHiddenBacklogRows(w http.ResponseWriter, r *http.Request, rule GetHiddenBacklogRowsParamsRule) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -91037,6 +91527,38 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetHiddenBacklogRows operation middleware
+func (siw *ServerInterfaceWrapper) GetHiddenBacklogRows(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "rule" -------------
+	var rule GetHiddenBacklogRowsParamsRule
+
+	err = runtime.BindStyledParameterWithOptions("simple", "rule", chi.URLParam(r, "rule"), &rule, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rule", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHiddenBacklogRows(w, r, rule)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UnpinWorklistRow operation middleware
 func (siw *ServerInterfaceWrapper) UnpinWorklistRow(w http.ResponseWriter, r *http.Request) {
 
@@ -93288,6 +93810,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/hidden/{rule}", wrapper.GetHiddenBacklogRows)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/worklist/pins", wrapper.UnpinWorklistRow)

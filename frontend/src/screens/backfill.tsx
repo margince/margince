@@ -118,6 +118,7 @@ export function BackfillPanel({
         narrowing={narrowing}
         previewPending={preview.isPending}
         previewData={preview.data}
+        offeredWindows={run?.offered_windows}
         previewErrorMessage={
           preview.isError ? problemMessageOf(preview.error, t) : null
         }
@@ -154,6 +155,7 @@ function BackfillSetup({
   narrowing,
   previewPending,
   previewData,
+  offeredWindows,
   previewErrorMessage,
   startPending,
   startErrorMessage,
@@ -166,6 +168,8 @@ function BackfillSetup({
   narrowing: boolean;
   previewPending: boolean;
   previewData: components["schemas"]["BackfillPreview"] | undefined;
+  /** The windows this installation admits; absent means the whole set. */
+  offeredWindows: readonly ImportWindow[] | undefined;
   previewErrorMessage: string | null;
   startPending: boolean;
   startErrorMessage: string | null;
@@ -198,6 +202,7 @@ function BackfillSetup({
         value={window}
         onChange={onWindowChange}
         preview={previewData}
+        offered={offeredWindows}
       />
       <p className="t-caption">{t("backfill.extendNote")}</p>
       {previewErrorMessage && <ErrorLine>{previewErrorMessage}</ErrorLine>}

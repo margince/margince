@@ -33,6 +33,8 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 		Tasks map[string]struct {
 			Ladder    []string `yaml:"ladder"`
 			NoPayload bool     `yaml:"no_payload"`
+			LocalOnly bool     `yaml:"local_only"`
+			Decision  bool     `yaml:"decision"`
 		} `yaml:"tasks"`
 	}
 	if err := yaml.Unmarshal(raw, &contract); err != nil {
@@ -72,6 +74,14 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 			t.Errorf("the egress page says prompt-not-retained=%v for %q; the contract says %v. "+
 				"Run make gen", got, name, def.NoPayload)
 		}
+		if got := cellSaysYes(row, 5); got != def.LocalOnly {
+			t.Errorf("the egress page says local-only-enforced=%v for %q; the contract says %v. "+
+				"Run make gen", got, name, def.LocalOnly)
+		}
+		if got := egressCell(row, 6) != "—"; got != def.Decision {
+			t.Errorf("the egress page says a decision model may read %q's text=%v; the contract "+
+				"declares decision=%v. Run make gen", name, got, def.Decision)
+		}
 	}
 }
 
@@ -89,9 +99,15 @@ func rowFor(page, task string) (string, bool) {
 // cellSaysYes reads one cell of a markdown table row, 1-indexed past the
 // leading pipe.
 func cellSaysYes(row string, n int) bool {
+	return egressCell(row, n) == "yes"
+}
+
+// egressCell returns one cell of a markdown table row, 1-indexed past the
+// leading pipe, or "" when the row is shorter.
+func egressCell(row string, n int) string {
 	cells := strings.Split(strings.Trim(row, "| "), "|")
 	if n-1 >= len(cells) {
-		return false
+		return ""
 	}
-	return strings.TrimSpace(cells[n-1]) == "yes"
+	return strings.TrimSpace(cells[n-1])
 }

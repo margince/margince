@@ -67,7 +67,7 @@ func requireEURegionPin(profile Profile, lane string, binding ProviderConfig) er
 }
 
 // ResidencyGap refuses a config whose profile is eu_hosted while a broker lane,
-// the embeddings lane included, may be served outside the EU.
+// the embeddings and decisions lanes included, may be served outside the EU.
 //
 // It is held at every place a binding is WRITTEN — the routing file, a preset,
 // a settings write — and deliberately not by finalize(), which a stored binding
@@ -81,5 +81,8 @@ func (cfg RoutingConfig) ResidencyGap() error {
 			return err
 		}
 	}
-	return requireEURegionPin(cfg.Profile, "the embeddings lane", cfg.Embeddings.ProviderConfig)
+	if err := requireEURegionPin(cfg.Profile, "the embeddings lane", cfg.Embeddings.ProviderConfig); err != nil {
+		return err
+	}
+	return cfg.decisionsResidencyGap()
 }

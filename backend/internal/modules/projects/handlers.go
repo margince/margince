@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // ListProjects serves the cursor-paginated project list.
@@ -190,12 +191,20 @@ func projectCreateInput(req crmcontracts.CreateProjectRequest) (CreateProjectInp
 	if err := refuseCallerChosenKey(req.AdditionalProperties); err != nil {
 		return CreateProjectInput{}, err
 	}
+	// The other three record wires have refused a forged provenance since the
+	// namespace existed; this one never did, so a caller could spell the
+	// importer's namespace on a project and have the trust ladder read it back
+	// as captured history.
+	if err := provenance.RefuseWire(req.Source, req.SourceSystem); err != nil {
+		return CreateProjectInput{}, err
+	}
 	in := CreateProjectInput{
 		Name:         name,
 		CompanyID:    pathID[ids.CompanyKind](req.CompanyId),
 		OwnerID:      idArg[ids.UserKind](req.OwnerId),
 		Description:  req.Description,
 		Source:       req.Source,
+		SourceSystem: req.SourceSystem,
 		CustomFields: req.AdditionalProperties,
 	}
 	if req.StartedAt != nil {

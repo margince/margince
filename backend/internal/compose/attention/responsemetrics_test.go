@@ -25,6 +25,13 @@ func (a *answering) Hidden(context.Context, time.Time) (HiddenWork, error) {
 	return HiddenWork{}, nil
 }
 
+// HiddenRows answers nothing: these fixtures drive the counts and the queue,
+// and a double that returned rows would be asserting about a read the test
+// never makes.
+func (a *answering) HiddenRows(context.Context, time.Time, string) ([]WaitingCustomer, error) {
+	return nil, nil
+}
+
 func (a *answering) Answered(
 	_ context.Context, from, to time.Time,
 ) (AnsweredWork, error) {

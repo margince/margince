@@ -60,7 +60,12 @@ type Call = { url: string; method: string; body: unknown };
 // while the target is off, so a case about the NUMBER has to start from an
 // installation that tracks one. The stub answers the same body every read, so
 // flipping the switch inside a test would not enable the box.
-function backend(allow: GrantSpec, calls: Call[] = [], slaOn = false) {
+function backend(
+  allow: GrantSpec,
+  calls: Call[] = [],
+  slaOn = false,
+  rows?: ReturnType<typeof source>[],
+) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
@@ -73,7 +78,7 @@ function backend(allow: GrantSpec, calls: Call[] = [], slaOn = false) {
       body = meFixture({ allow });
     } else if (url.includes("/lead-sources") && method === "GET") {
       body = {
-        data: [
+        data: rows ?? [
           source("manual", "Created manually", { system: true, lead_count: 3 }),
           source("trade_show", "Trade show", { intent: "high" }),
         ],
@@ -86,7 +91,7 @@ function backend(allow: GrantSpec, calls: Call[] = [], slaOn = false) {
       body = source("trade_show", "Messe");
     } else if (url.includes("/lead-disqualify-reasons") && method === "GET") {
       body = {
-        data: [
+        data: rows ?? [
           { ...source("r1", "Bad timing", { system: true, lead_count: 2 }) },
           { ...source("r2", "Went quiet") },
         ],
@@ -287,6 +292,31 @@ describe("LeadDisqualifyReasonsCard", () => {
       }),
     ).toBeTruthy();
   });
+});
+
+// A custom entry still in use explains itself in the reader's grammar.
+const IN_USE = [
+  source("webinar", "Webinar", { lead_count: 1 }),
+  source("referral", "Referral", { lead_count: 2 }),
+];
+
+it.each([
+  [LeadSourcesCard, "1 lead uses this source.", "2 leads use this source."],
+  [
+    LeadDisqualifyReasonsCard,
+    "1 lead has this reason.",
+    "2 leads have this reason.",
+  ],
+])("counts the leads holding an entry (%#)", async (Card, one, many) => {
+  vi.stubGlobal("fetch", backend(ADMIN, [], false, IN_USE));
+  render(
+    <Providers>
+      <Card />
+    </Providers>,
+  );
+  const suffix = " Deactivate it instead.";
+  expect(await screen.findByTitle(one + suffix)).toBeTruthy();
+  expect(screen.getByTitle(many + suffix)).toBeTruthy();
 });
 
 describe("LeadHandlingCard", () => {

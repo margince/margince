@@ -86,4 +86,105 @@ func TestEveryProvenanceWireRefusesTheImporterNamespace(t *testing.T) {
 	}
 }
 
+// contact and company gained a source_system wire of their own, and it is
+// guarded like every other provenance field. Separate from the test above on
+// purpose: that one reuses ONE `refused` var across its probes and asserts the
+// field is "source", so a source_system probe added there would flip that
+// assertion and pass for the wrong reason.
+func TestTheRecordWiresRefuseTheImporterNamespaceOnSourceSystem(t *testing.T) {
+	reserved := "mirror:legacy_crm"
+
+	var contactRefused *provenance.ReservedError
+	if _, err := contactCreateInput(crmcontracts.CreateContactRequest{
+		FullName: "Planted", Source: "legacy_crm", SourceSystem: &reserved,
+	}); !errors.As(err, &contactRefused) {
+		t.Fatalf("contact: err = %v, want the namespace refused", err)
+	} else if contactRefused.Field != "source_system" {
+		t.Errorf("contact: refusal names %q, want source_system — the field the caller has to change", contactRefused.Field)
+	}
+
+	var companyRefused *provenance.ReservedError
+	if _, err := companyCreateInput(crmcontracts.CreateCompanyRequest{
+		DisplayName: "Planted", Source: "legacy_crm", SourceSystem: &reserved,
+	}); !errors.As(err, &companyRefused) {
+		t.Fatalf("company: err = %v, want the namespace refused", err)
+	} else if companyRefused.Field != "source_system" {
+		t.Errorf("company: refusal names %q, want source_system", companyRefused.Field)
+	}
+
+	// The positive control. Without it this test would still pass if the
+	// mapper refused every source_system, which would break every ordinary
+	// import rather than only the forged one.
+	ordinary := "legacy_crm"
+	contactIn, err := contactCreateInput(crmcontracts.CreateContactRequest{
+		FullName: "Real", Source: "legacy_crm", SourceSystem: &ordinary,
+	})
+	if err != nil {
+		t.Fatalf("contact: an ordinary source system must stay writable: %v", err)
+	}
+	if contactIn.SourceSystem == nil || *contactIn.SourceSystem != ordinary {
+		t.Errorf("contact: SourceSystem = %v, want it carried to the store", contactIn.SourceSystem)
+	}
+	companyIn, err := companyCreateInput(crmcontracts.CreateCompanyRequest{
+		DisplayName: "Real", Source: "legacy_crm", SourceSystem: &ordinary,
+	})
+	if err != nil {
+		t.Fatalf("company: an ordinary source system must stay writable: %v", err)
+	}
+	if companyIn.SourceSystem == nil || *companyIn.SourceSystem != ordinary {
+		t.Errorf("company: SourceSystem = %v, want it carried to the store", companyIn.SourceSystem)
+	}
+}
+
 func ptr(s string) *string { return &s }
+
+// The lead importer door admits its own namespace and nothing else — the same
+// boundary the activity door holds, asserted the same way, because the lead
+// store keys the same replay on (source_system, source_id).
+func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
+	namespaced := "mirror:hubspot"
+	in, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
+		FullName: ptr("Imported"), SourceSystem: &namespaced, SourceId: ptr("501"),
+	})
+	if err != nil {
+		t.Fatalf("the importer must be able to stamp its own namespace: %v", err)
+	}
+	if in.SourceSystem == nil || *in.SourceSystem != namespaced {
+		t.Fatalf("SourceSystem = %v, want it carried through — it is half the replay key", in.SourceSystem)
+	}
+
+	// The automation engine's identities are a different writer's.
+	for _, engine := range []string{
+		provenance.EmailRequestSource,
+		provenance.NoActivityReminderSource,
+		provenance.CheckInCadenceSource,
+	} {
+		planted := engine
+		_, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
+			FullName: ptr("Planted"), SourceSystem: &planted, SourceId: ptr("planted"),
+		})
+		var refused *provenance.ReservedError
+		if !errors.As(err, &refused) {
+			t.Errorf("%q: err = %v, want it refused — the importer is not the automation engine", engine, err)
+		}
+	}
+
+	// `source` is guarded independently of the admission.
+	var sourceRefused *provenance.ReservedError
+	if _, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
+		FullName: ptr("Planted"), Source: "mirror:hubspot",
+	}); !errors.As(err, &sourceRefused) {
+		t.Errorf("source: err = %v, want the namespace refused on source", err)
+	} else if sourceRefused.Field != "source" {
+		t.Errorf("refusal names %q, want source", sourceRefused.Field)
+	}
+
+	// And the CLIENT door is unchanged: the same body through leadCreateInput
+	// is still refused, or the admission would have leaked to every caller.
+	var clientRefused *provenance.ReservedError
+	if _, err := leadCreateInput(crmcontracts.CreateLeadRequest{
+		FullName: ptr("Planted"), SourceSystem: &namespaced, SourceId: ptr("501"),
+	}); !errors.As(err, &clientRefused) {
+		t.Errorf("the client door admitted the importer namespace: %v", err)
+	}
+}

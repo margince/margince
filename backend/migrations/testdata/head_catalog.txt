@@ -639,7 +639,7 @@ public.ai_call.ai_call_context_bytes_check CHECK ((context_bytes >= 0))
 public.ai_call.ai_call_context_fingerprint_check CHECK (((context_fingerprint = ''::text) OR (context_fingerprint ~ '^[0-9a-f]{64}$'::text)))
 public.ai_call.ai_call_context_scopes_check CHECK ((context_scopes <@ ARRAY['identity'::text, 'positioning'::text, 'sales'::text, 'offer'::text, 'market'::text, 'proof'::text, 'administrative'::text]))
 public.ai_call.ai_call_context_tokens_estimate_check CHECK ((context_tokens_estimate >= 0))
-public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 'embedding'::text])))
+public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 'embedding'::text, 'decision'::text])))
 public.ai_call.ai_call_pkey PRIMARY KEY (id)
 public.ai_call.ai_call_schema_downgrade_check CHECK ((schema_downgrade = ANY (ARRAY[''::text, 'relaxed'::text, 'unenforced'::text, 'dropped'::text])))
 public.ai_call.ai_call_secrets_removed_check CHECK ((secrets_removed >= 0))
@@ -736,7 +736,7 @@ public.ai_model_rate.ai_model_rate_cache_read_per_mtok_microusd_check CHECK ((ca
 public.ai_model_rate.ai_model_rate_cache_write_per_mtok_microusd_check CHECK ((cache_write_per_mtok_microusd >= 0))
 public.ai_model_rate.ai_model_rate_input_per_mtok_microusd_check CHECK ((input_per_mtok_microusd >= 0))
 public.ai_model_rate.ai_model_rate_key UNIQUE (provider, model_id, effective_date)
-public.ai_model_rate.ai_model_rate_lane_check CHECK ((lane = ANY (ARRAY['chat'::text, 'embeddings'::text])))
+public.ai_model_rate.ai_model_rate_lane_check CHECK ((lane = ANY (ARRAY['chat'::text, 'embeddings'::text, 'decisions'::text])))
 public.ai_model_rate.ai_model_rate_output_per_mtok_microusd_check CHECK ((output_per_mtok_microusd >= 0))
 public.ai_model_rate.ai_model_rate_pkey PRIMARY KEY (id)
 public.ai_model_rate.cache_read_per_mtok_microusd bigint NOT NULL gen=- def=0
@@ -893,6 +893,7 @@ public.approval.approval_effect_failure_is_stated CHECK (((effect_failed_at IS N
 public.approval.approval_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE SET NULL (on_behalf_of)
 public.approval.approval_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE SET NULL (passport_id)
 public.approval.approval_pkey PRIMARY KEY (id)
+public.approval.approval_staged_by_connection_fkey FOREIGN KEY (staged_by_connection) REFERENCES oauth_grant(id) ON DELETE SET NULL
 public.approval.approval_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text])))
 public.approval.bundle_id uuid gen=- def=-
 public.approval.co_target_entity_id uuid gen=- def=-
@@ -915,6 +916,7 @@ public.approval.on_behalf_of uuid gen=- def=-
 public.approval.passport_id uuid gen=- def=-
 public.approval.proposed_by text NOT NULL gen=- def=-
 public.approval.proposed_change jsonb NOT NULL gen=- def=-
+public.approval.staged_by_connection uuid gen=- def=-
 public.approval.status text NOT NULL gen=- def='pending'::text
 public.approval.summary text gen=- def=-
 public.approval.target_entity_id uuid gen=- def=-
@@ -1218,6 +1220,7 @@ public.automation.trigger jsonb NOT NULL gen=- def=-
 public.automation.updated_at timestamp with time zone gen=- def=-
 public.automation.version bigint NOT NULL gen=- def=1
 public.automation_effect_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.automation_effect_claim.applied_at timestamp with time zone gen=- def=-
 public.automation_effect_claim.automation_effect_claim_pkey PRIMARY KEY (id)
 public.automation_effect_claim.automation_effect_claim_unique UNIQUE (handler, occurrence_key, effect_fingerprint)
 public.automation_effect_claim.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1226,6 +1229,7 @@ public.automation_effect_claim.handler text NOT NULL gen=- def=-
 public.automation_effect_claim.id uuid NOT NULL gen=- def=uuidv7()
 public.automation_effect_claim.occurrence_key text NOT NULL gen=- def=-
 public.automation_effect_claim_pkey CREATE UNIQUE INDEX automation_effect_claim_pkey ON public.automation_effect_claim USING btree (id)
+public.automation_effect_claim_unapplied CREATE INDEX automation_effect_claim_unapplied ON public.automation_effect_claim USING btree (created_at) WHERE (applied_at IS NULL)
 public.automation_effect_claim_unique CREATE UNIQUE INDEX automation_effect_claim_unique ON public.automation_effect_claim USING btree (handler, occurrence_key, effect_fingerprint)
 public.automation_pkey CREATE UNIQUE INDEX automation_pkey ON public.automation USING btree (id)
 public.booking_page acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

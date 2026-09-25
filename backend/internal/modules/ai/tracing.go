@@ -38,15 +38,9 @@ const (
 )
 
 // servedSource maps a provider to its served-identity source.
-var servedSource = map[string]string{
-	providerAnthropic:        servedIdentitySourceResponse,
-	providerOllama:           servedIdentitySourceResponse,
-	providerGemini:           servedIdentitySourceResponse,
-	providerOpenAI:           servedIdentitySourceResponse,
-	providerOpenAICompatible: servedIdentitySourceEcho,
-	providerVLLM:             servedIdentitySourceEcho,
-	ProviderFake:             servedIdentitySourceResponse,
-}
+var servedSource = projectProviders(
+	func(d providerDescriptor) string { return d.servedSource }, everyProvider,
+)
 
 // servedIdentity resolves a trace's served-model fields: the response's own
 // reported identity wins, tagged with how trustworthy that report is; an empty
@@ -74,6 +68,15 @@ func (r *Router) newAttemptTrace(ctx context.Context, task Task, key, reason str
 		ContextBytes: req.ContextBytes, ContextTokensEstimate: req.ContextTokensEstimate,
 		AttemptReason: reason, CacheOff: r.cacheOff,
 	}
+	withAmbientIdentity(ctx, &trace)
+	return trace
+}
+
+// withAmbientIdentity stamps the ids a trace row is joined on from the call's
+// context: the correlation id, the agent run and the subject. Every attempt
+// trace — a completion's and a decision's — reads them here, so one logical
+// call cannot file its rows under two correlations.
+func withAmbientIdentity(ctx context.Context, trace *Call) {
 	if cid, ok := principal.CorrelationID(ctx); ok {
 		trace.CorrelationID = &cid
 	}
@@ -83,7 +86,6 @@ func (r *Router) newAttemptTrace(ctx context.Context, task Task, key, reason str
 	if subject, ok := SubjectOf(ctx); ok {
 		trace.Subject = subject
 	}
-	return trace
 }
 
 // finalizeAttempt completes trace from this attempt's outcome — latency,

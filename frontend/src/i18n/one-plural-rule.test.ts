@@ -478,4 +478,47 @@ describe("one count, one key", () => {
     expect(Object.hasOwn(en, "ob.conv.activity.steps_one")).toBe(true);
     expect(PLURAL_SINGLE_KEY_DEBT.has("ob.conv.activity.steps")).toBe(false);
   });
+
+  // Every plural base carries both arms and no bare key: a missing arm leaves one
+  // count without a sentence, and a bare base beside the pair is a second answer.
+  const brokenPluralPairs = (
+    catalog: Readonly<Record<string, unknown>>,
+  ): { bases: string[]; broken: string[] } => {
+    const bases = [
+      ...new Set(
+        Object.keys(catalog)
+          .filter((key) => /_(one|other)$/.test(key))
+          .map((key) => key.replace(/_(one|other)$/, "")),
+      ),
+    ].sort();
+    const broken = bases.filter(
+      (base) =>
+        !Object.hasOwn(catalog, `${base}_one`) ||
+        !Object.hasOwn(catalog, `${base}_other`) ||
+        Object.hasOwn(catalog, base),
+    );
+    return { bases, broken };
+  };
+
+  it("carries every plural base as a whole pair with no bare key", () => {
+    const { bases, broken } = brokenPluralPairs(en);
+    expect(bases.length).toBeGreaterThan(100);
+    expect(
+      broken,
+      "A plural base is missing an arm or still has its bare key beside the " +
+        "pair. Give it both <base>_one and <base>_other and delete <base>.",
+    ).toEqual([]);
+  });
+
+  it("sees a half pair and a bare base beside a pair", () => {
+    const planted = {
+      "a.half_one": "{count} step",
+      "b.bare": "{count} steps",
+      "b.bare_one": "{count} step",
+      "b.bare_other": "{count} steps",
+      "c.whole_one": "{count} step",
+      "c.whole_other": "{count} steps",
+    };
+    expect(brokenPluralPairs(planted).broken).toEqual(["a.half", "b.bare"]);
+  });
 });

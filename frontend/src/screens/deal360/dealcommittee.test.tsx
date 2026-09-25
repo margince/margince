@@ -85,7 +85,12 @@ describe("the buying committee, drawn", () => {
 
   it("says how many of ours carry the deal, which the picture can only size", () => {
     draw({ coverage: coverage(), withheld: false, pending: false });
-    expect(screen.getByText("Colleagues on this deal: 1")).toBeTruthy();
+    expect(screen.getByText("1 colleague on this deal")).toBeTruthy();
+    cleanup();
+    const [lena] = coverage().our_side;
+    const twoOfUs = coverage({ our_side: [lena, { ...lena, user_id: "u2" }] });
+    draw({ coverage: twoOfUs, withheld: false, pending: false });
+    expect(screen.getByText("2 colleagues on this deal")).toBeTruthy();
   });
 
   // Each of the three no-seat states asserts ITS OWN sentence, not merely the

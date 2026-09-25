@@ -130,8 +130,9 @@ func directionOf(class string) string {
 const (
 	// maxRouteSeries caps how many distinct label sets the AI families hold.
 	// Sized well above the live product of the closed dimensions — 31 tasks by
-	// 5 tiers by the one model a binding holds at a time is ~300 — so an
-	// ordinary fleet never reaches it and a provider minting identities does.
+	// 5 tiers by the one model a binding holds at a time is ~300, and the
+	// decide tier adds one series per decision task — so an ordinary fleet
+	// never reaches it and a provider minting identities does.
 	maxRouteSeries = 500
 	// maxLabelLen bounds one wire-supplied label value in runes. A model
 	// identity a human would recognise is far shorter; this is the ceiling on

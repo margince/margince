@@ -452,6 +452,42 @@ export const automationCatalog = [
 // say" on screen for a reason the test is not about — and an assertion looking
 // for those words then passes whatever stage-age does.
 export const reportFixtures: Record<string, unknown> = {
+  // The Analytics stage table's own request: one CONVERTED row per stage, under
+  // the aliases REPORT_AGGREGATES asks for, and a handle naming those same
+  // aggregates. The measured stage carries it; the second does not.
+  "pipeline-current": {
+    report: "pipeline-current",
+    plan: { group_by: ["stage_id"] },
+    columns: [
+      "stage_id",
+      "raw_minor",
+      "weighted_minor",
+      "deal_count",
+      "priced_deals",
+    ],
+    rows: [
+      {
+        stage_id: "s1",
+        raw_minor: 1_250_000,
+        weighted_minor: 250_000,
+        deal_count: 1,
+        priced_deals: 1,
+        derivation_url:
+          "/v1/reports/pipeline-current/derivation?by=stage_id&agg=sum:amount_base_minor:raw_minor&agg=sum:weighted_base_minor:weighted_minor&agg=count::deal_count&agg=count:amount_base_minor:priced_deals&stage_id=s1",
+      },
+      {
+        stage_id: "s2",
+        raw_minor: 4_800_000,
+        weighted_minor: 1_920_000,
+        deal_count: 2,
+        priced_deals: 2,
+      },
+    ],
+    total_rows: 2,
+    as_of: "2026-03-04T09:00:00Z",
+    timezone: "Europe/Berlin",
+    base_currency: "EUR",
+  },
   // Stage ids are the SHARED pipeline's, not invented ones: StageAgeTable joins
   // them to `stages` for the name, and an id matching nothing renders every row
   // as "unknown stage" — a table that looks populated and names no stage.
@@ -460,11 +496,15 @@ export const reportFixtures: Record<string, unknown> = {
     plan: { group_by: ["stage_id"] },
     columns: ["stage_id", "deal_count", "median_days", "p75_days"],
     rows: [
+      // The measured stage carries its own drill-through handle, the unmeasured
+      // one none: a row the server sent without one draws no trigger.
       {
         stage_id: "s1",
         deal_count: 6,
         median_days: 12,
         p75_days: 21,
+        derivation_url:
+          "/v1/reports/stage-age/derivation?by=stage_id&agg=count::deal_count&stage_id=s1",
       },
       // Under the sample floor: the server answers null and the card must say
       // so in words rather than drawing a zero.
@@ -567,6 +607,27 @@ export const reportFixtures: Record<string, unknown> = {
     timezone: "Europe/Berlin",
     base_currency: "EUR",
   },
+};
+
+// What any drill-through handle resolves to: a definition, the source rows and
+// the frame they were cut in. One record is masked out, so the notice that says
+// so is on screen wherever the drawer is swept.
+export const derivationFixture = {
+  report: "stage-age",
+  definition: "Anzahl offener Deals in der Phase Qualify",
+  plan: { group_by: ["stage_id"] },
+  columns: ["label", "amount_base_minor"],
+  rows: [
+    {
+      label: "Brandt Automotive, Flottenumrüstung",
+      amount_base_minor: 1_250_000,
+    },
+    { label: "BÄR Pharma, Verpackungsprüfung", amount_base_minor: 480_000 },
+  ],
+  total_rows: 2,
+  excluded_by_permission: 1,
+  as_of: "2026-03-04T09:00:00Z",
+  as_of_pinned: true,
 };
 
 export const seededAutomation = {
@@ -793,6 +854,7 @@ export const aiCalls = {
     {
       id: "0d9f8c2e-6b41-4d2a-9a77-1f3c5b8e0a11",
       occurred_at: "2026-07-05T06:14:00Z",
+      kind: "completion",
       task: "capture_classify",
       tier: "cheap_cloud",
       provider: "deepseek",
@@ -812,6 +874,7 @@ export const aiCalls = {
     {
       id: "b71c4a55-2f08-4c93-8d61-77aa9e4c2b30",
       occurred_at: "2026-07-05T05:58:00Z",
+      kind: "completion",
       task: "enrich",
       tier: "premium",
       provider: "anthropic",
@@ -1097,6 +1160,56 @@ export async function mockApi(
   const brief = {
     ...briefRun,
     items: briefRun.items.map((item) => ({ ...item })),
+  };
+
+  // One line per lane, so the sweep meets the panel drawing rather than the
+  // panel reporting four empty lanes — an all-clear page exercises none of the
+  // rows, the counts or the way-back column.
+  const magicReceipt = {
+    as_of: "2026-09-13T08:00:00Z",
+    since: "2026-09-12T08:00:00Z",
+    done: [
+      {
+        id: "00000000-0000-7000-8000-00000000ma01",
+        occurred_at: "2026-09-13T07:30:00Z",
+        lane: "done",
+        summary: { key: "magic.action.advance_stage" },
+        actor: { type: "agent", id: "auto-apply" },
+        undo: { undoable: false, reason: "not_a_replayable_verb" },
+      },
+    ],
+    needs_you: [
+      {
+        id: "00000000-0000-7000-8000-00000000ma02",
+        occurred_at: "2026-09-13T06:10:00Z",
+        lane: "needs_you",
+        summary: {
+          key: "magic.action.approval_send_email",
+          values: { kind: "send_email" },
+        },
+        consequence: "magic.consequence.awaits_your_decision",
+        actor: { type: "agent", id: "overnight" },
+        undo: { undoable: false, reason: "no_completed_change" },
+      },
+    ],
+    could_not_complete: [],
+    watching: [
+      {
+        id: "00000000-0000-7000-8000-00000000ma03",
+        occurred_at: "2026-09-13T08:00:00Z",
+        lane: "watching",
+        summary: {
+          key: "magic.action.capture_reauth_required",
+          values: { provider: "Gmail" },
+        },
+        consequence: "magic.consequence.capture_not_collecting",
+        actor: { type: "system", id: "system:capture" },
+        undo: { undoable: false, reason: "no_completed_change" },
+      },
+    ],
+    totals: { done: 1, needs_you: 1, could_not_complete: 0, watching: 1 },
+    not_shown: [],
+    sources_unavailable: [],
   };
   // The mailbox-privacy fixtures, per page for the same reason as the rest:
   // a posture change, a sender overrule and a hold all have to be readable
@@ -1998,6 +2111,13 @@ export async function mockApi(
       const base = deals.find((deal) => path.endsWith(deal.id)) ?? deals[0];
       return json({ ...base, ...dealPatches[base.id] });
     }
+    // The receipt Home draws last. Mocked rather than left to the fallback,
+    // which answers every unknown path with a page shape: the panel would then
+    // read a receipt that has no lanes and no totals, which is the version-skew
+    // case its own unit suite covers and not what this sweep is for.
+    if (path === "/magic" && method === "GET") {
+      return json(magicReceipt);
+    }
     if (path === "/brief" && method === "GET") {
       return json(brief);
     }
@@ -2426,6 +2546,17 @@ export async function mockApi(
     // read: a stage-age card looking for `median_days` on a row carrying
     // `raw_minor` renders its empty state, and a sweep over those tabs proves
     // the fixture rather than the screen.
+    // Refused the way the server refuses it: a grouping dimension the request
+    // names without binding, as a value or as `isnull`, explains no one cell.
+    if (path.startsWith("/reports/") && path.endsWith("/derivation")) {
+      const unset = url.searchParams.getAll("isnull");
+      const unbound = url.searchParams
+        .getAll("by")
+        .filter((dim) => !url.searchParams.has(dim) && !unset.includes(dim));
+      return unbound.length > 0
+        ? json({ code: "report_field_not_allowed", status: 422 }, 422)
+        : json(derivationFixture);
+    }
     if (path.startsWith("/reports/") && !path.includes("/derivation")) {
       const key = path.slice("/reports/".length);
       const shaped = reportFixtures[key];

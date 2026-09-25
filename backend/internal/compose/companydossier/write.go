@@ -74,7 +74,7 @@ func DossierRequest(in Input, lang string) model.Request {
 // company from the same fields, just plainly. So a deployment with no lane is
 // not missing the surface, and `generated_by` says which of the two wrote it.
 func WriteDossier(ctx context.Context, lane Completer, in Input, lang string) ([]Section, crmcontracts.WrittenBy, bool) {
-	floor := keepGrounded(Deterministic(in), in)
+	floor := keepGrounded(Deterministic(in, lang), in)
 	if lane == nil {
 		return floor, crmcontracts.WrittenByDeterministic, false
 	}

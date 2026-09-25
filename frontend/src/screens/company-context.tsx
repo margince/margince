@@ -29,7 +29,7 @@ import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { confidenceLevel, FieldDiff } from "../design-system/trust";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   coldFieldLabel,
@@ -641,7 +641,9 @@ function CompanyFactsCard({
   onEdit: (field: keyof CompanyInput) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
+  const confirmed = company.data?.fields?.length ?? 0;
   return (
     <Panel
       tone="accent"
@@ -661,10 +663,9 @@ function CompanyFactsCard({
         company.data ? (
           <>
             <span className="company-context-count">
-              <strong>
-                {formatNumber(company.data.fields?.length ?? 0, locale)}
-              </strong>{" "}
-              {t("settings.companyConfirmed")}
+              {plural("settings.companyConfirmed", confirmed, {
+                count: formatNumber(confirmed, locale),
+              })}
             </span>
             {rollout && <Badge>{rollout}</Badge>}
           </>

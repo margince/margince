@@ -18,7 +18,7 @@ developer/CI tool, never part of a request path.
 > spend — it tells you whether the run you are about to pay for is the missing one.
 
 See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md),
-[add-an-ai-task.md](add-an-ai-task.md) (adding one rather than certifying it), and
+[add-an-ai-task.md](add-an-ai-task.md) (adding one rather than certifying it), [certify-a-decision-site.md](certify-a-decision-site.md) (the decisions lane), and
 [reference/ai-certification.md](../reference/ai-certification.md) — the committed page these records render to.
 
 ## Prerequisites
@@ -63,8 +63,8 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
 
    `PROFILE=` names the environment class a record is filed under
    (`cloud_frontier`, the default, `eu_hosted` or `sovereign`). It is enforced:
-   `sovereign` refuses a cloud vendor, and `eu_hosted` a broker candidate that
-   `UPSTREAM=` does not pin to EU-region hosts (`{"only":["mistral/eu"]}`).
+   `sovereign` refuses a cloud candidate (not the judge), and `eu_hosted` a broker
+   candidate that `UPSTREAM=` does not pin to EU hosts (`{"only":["mistral/eu"]}`).
    Under `ROUTING=` it is **ignored**: a record's profile is part of its
    identity, so it comes from the file that named the models.
 
