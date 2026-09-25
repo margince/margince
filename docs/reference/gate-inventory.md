@@ -258,6 +258,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `onevoiceversionwriter_test.go` | H2 | voice\_profile\_version and voice\_profile\_delta each have ONE writer. |
 | `operationiduniqueness_test.go` | H2 | No two operations share an operationId. |
 | `outboundanonymity_test.go` | H2 | Every outbound HTTP request either says who is calling, or is registered as deliberately anonymous with the reason. |
+| `outbounddisclosures_test.go` | H2 | Every outbound identity says what it discloses. |
 | `outboundidentityusers_test.go` | H3 | Every outbound identity has a request behind it. |
 | `ownerprivatepairing_test.go` | H2 | A table whose visibility admits 'owner' names the owner, or the record it marks most-private is the one nobody can read. |
 | `parallelgates_test.go` | H3 | Every gate here runs in parallel with the others, and this is what keeps that true as gates are added. |
