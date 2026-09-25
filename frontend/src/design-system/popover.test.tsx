@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { armHoverIntent } from "./hoverintent-testing";
 import { Popover } from "./popover";
 
 afterEach(() => {
@@ -126,6 +127,7 @@ it("puts focus on the panel's first control, and leaves prose alone", async () =
 // settles and closes when it leaves — and it still answers a click, because a
 // touch screen and a keyboard have no hover to give it.
 it("opens on a settled pointer only when the caller asks for it", async () => {
+  armHoverIntent();
   const { unmount } = render(
     <Popover label="How it stands">Two of three invoices are late.</Popover>,
   );
@@ -231,6 +233,7 @@ it("does not open on a settled pointer when the trigger is refused", async () =>
       "performance",
     ],
   });
+  armHoverIntent();
   render(
     <Popover label="How it stands" onHover disabled>
       Two of three invoices are late.

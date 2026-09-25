@@ -276,16 +276,15 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   // and containment is what this asserts. A sibling tooltip would vanish under
   // the cursor and no assertion on its text would notice.
   //
-  // The hover itself is deliberately NOT simulated: user-event dispatches
-  // `mouseleave` on the row when the pointer moves to a child of it, which a
-  // browser does not do, so a pass there would measure the simulator and a
-  // failure would report a defect that is not in the product.
+  // Raised by focus, and the hover itself is deliberately NOT simulated:
+  // user-event dispatches `mouseleave` on the row when the pointer moves to a
+  // child of it, which a browser does not do, so a pass there would measure the
+  // simulator. Focus and pointer raise the same tip in the same place.
   it("nests the collapsed tooltip inside its own row so hovering it cannot dismiss it", async () => {
-    const user = userEvent.setup();
     render(<WorkspaceRail route={{ screen: "home" }} collapsed />);
     const deals = screen.getByRole("link", { name: "Deals" });
 
-    await user.hover(deals);
+    deals.focus();
     const tip = await screen.findByRole("tooltip");
     expect(deals.contains(tip)).toBe(true);
     expect(tip.parentElement).toBe(deals);

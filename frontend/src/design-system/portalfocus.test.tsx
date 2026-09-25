@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { EvidenceMark } from "./evidencemark";
+import { armHoverIntent } from "./hoverintent-testing";
 import { Popover } from "./popover";
 
 // A PORTALLED PANEL BEHAVES, FOR FOCUS, AS THOUGH IT SAT BY ITS TRIGGER.
@@ -158,6 +159,7 @@ describe.each(PANELS)(
           "performance",
         ],
       });
+      armHoverIntent();
       mount();
       const trigger = screen.getByRole("button", { name: triggerName });
       act(() => {

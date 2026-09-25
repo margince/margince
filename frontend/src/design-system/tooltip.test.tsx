@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { armHoverIntent } from "./hoverintent-testing";
 import { useTruncationTooltip } from "./tooltip";
 
 // The specs for the tip that reveals a string its row could not fit. The
@@ -46,6 +47,7 @@ function Row({ text }: Readonly<{ text: string }>) {
 
 describe("a string too long for its row", () => {
   it("reveals the whole of it once the pointer has settled", async () => {
+    armHoverIntent();
     stubWidths({ scroll: 480, client: 220 });
     render(<Row text={LONG} />);
     expect(screen.queryByRole("tooltip")).toBeNull();
@@ -58,6 +60,7 @@ describe("a string too long for its row", () => {
   });
 
   it("takes the tip away again when the pointer leaves", async () => {
+    armHoverIntent();
     stubWidths({ scroll: 480, client: 220 });
     render(<Row text={LONG} />);
     const row = screen.getByText(LONG);
@@ -72,6 +75,7 @@ describe("a string too long for its row", () => {
   });
 
   it("describes the row it belongs to, so a screen reader reads the two as one", async () => {
+    armHoverIntent();
     stubWidths({ scroll: 480, client: 220 });
     render(<Row text={LONG} />);
     const row = screen.getByText(LONG);
@@ -111,6 +115,7 @@ describe("a string too long for its row", () => {
 
 describe("a string its row can already show in full", () => {
   it("gets no tip on hover, having nothing left to reveal", async () => {
+    armHoverIntent();
     stubWidths({ scroll: 220, client: 220 });
     render(<Row text="Sontana" />);
 

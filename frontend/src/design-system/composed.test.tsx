@@ -18,6 +18,7 @@ import {
   DealCard,
   PipelineBoard,
 } from "./composed";
+import { armHoverIntent } from "./hoverintent-testing";
 import { RecordView } from "./recordview";
 
 // B-EP09.3b acceptance: the composed surfaces consume the 3a primitives and
@@ -173,6 +174,7 @@ describe("DealCard + PipelineBoard", () => {
   // the timeline opens under a settled pointer and closes when it leaves. The
   // content is the caller's — this tier fetches nothing.
   it("opens the caller's mail aside when the pointer settles on the line", async () => {
+    armHoverIntent();
     render(
       <DealCard
         deal={{

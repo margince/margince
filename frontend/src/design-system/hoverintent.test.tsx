@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useHoverIntent } from "./hoverintent";
+import { armHoverIntent } from "./hoverintent-testing";
 
 // The whole point of the hook is what it does NOT do, and none of that is
 // visible by eye — a popover that fires on a passing pointer looks identical
@@ -76,6 +77,7 @@ beforeEach(() => {
   });
   opened = 0;
   closed = 0;
+  armHoverIntent();
   render(
     <Trigger
       onOpen={() => {
