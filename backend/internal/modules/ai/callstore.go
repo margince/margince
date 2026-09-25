@@ -404,6 +404,7 @@ var errMeteringFailed = errors.New("ai: metering failed")
 
 // The sentinels of an attempt a model answered. The health read keys on them to
 // tell a tier that responds from one that does not, so they are spelled once.
+// Held by: TestTheAnsweredErrorsClassifyToExactlyTheAnsweredSentinels (backend/internal/modules/ai/callstore_test.go)
 const (
 	sentinelMeteringFailed  = "metering_failed"
 	sentinelOutputWithheld  = "output_withheld"
