@@ -151,6 +151,12 @@ type Call struct {
 	Payload *Payload
 }
 
+// ReportsItsServedModel reports whether the provider named the model that
+// served this call, rather than the trace echoing or assuming the configured one.
+func (c Call) ReportsItsServedModel() bool {
+	return c.ServedIdentitySource == servedIdentitySourceResponse
+}
+
 // Payload is the Layer-3 opt-in content: the post-SecretStripper request
 // (system + messages) and the model's response text. Special-category-
 // adjacent — retention-aged and erasure-cascaded, never in audit_log.
