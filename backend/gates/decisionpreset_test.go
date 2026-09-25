@@ -18,6 +18,7 @@ package gates
 import (
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -29,7 +30,11 @@ var (
 	decisionPresetBlock = regexp.MustCompile(`(?s)export const OPENROUTER_DECISION_PRESET = \{(.*?)\} as const`)
 	presetField         = regexp.MustCompile(`(?m)^\s*(provider|base_url|model): "([^"]+)",?$`)
 	commentedLaneStart  = regexp.MustCompile(`^\s*# decisions:\s*$`)
-	commentedLaneField  = regexp.MustCompile(`^\s*#   (provider|model|base_url): (\S+)\s*$`)
+	commentedLaneField  = regexp.MustCompile(`^\s*#\s+(provider|model|base_url):\s*(\S+)\s*$`)
+	// commentedLaneCensus is deliberately looser than commentedLaneStart: it
+	// counts every line that means to open a block, so a block the reader
+	// cannot parse is a count short rather than silently absent.
+	commentedLaneCensus = regexp.MustCompile(`(?m)#\s*decisions:`)
 )
 
 // readDecisionPreset returns the form's OpenRouter preset as a lane. A
@@ -94,7 +99,17 @@ func TestTheOpenRouterDecisionPresetIsTheCommentedPresetLane(t *testing.T) {
 			t.Fatalf("%s: %v", path, err)
 		}
 		profile := routingFromPreset(t, path).Profile
-		for _, lane := range commentedDecisionLanes(string(raw)) {
+		lanes := commentedDecisionLanes(string(raw))
+		seen := 0
+		for _, lane := range lanes {
+			if lane.Provider != "" {
+				seen++
+			}
+		}
+		if want := len(commentedLaneCensus.FindAllString(string(raw), -1)); seen != want {
+			t.Errorf("%s: %d lines open a commented decisions block but the reader parsed %d — a block it cannot read is one this gate never checks", path, want, seen)
+		}
+		for _, lane := range lanes {
 			if err := ai.ValidateDecisionsLane(profile, lane); err != nil {
 				t.Errorf("%s: the commented decisions lane %+v, uncommented, is refused: %v", path, lane, err)
 			}
@@ -130,13 +145,15 @@ func TestTheOpenRouterDecisionPresetIsPriced(t *testing.T) {
 func TestTheCommentedLaneReaderSeesEachBlock(t *testing.T) {
 	t.Parallel()
 	src := "    # decisions:\n    #   provider: jev_compatible\n    #   model: m\n    #   base_url: https://h/x\n" +
-		"    # Or another:\n    # decisions:\n    #   provider: jev\n    #   model: jev-1.13.0\n    embeddings:\n"
+		"    # Or another:\n    # decisions:\n    #   provider: jev\n    #   model: jev-1.13.0\n" +
+		"    # decisions:\n    #    provider: jev\n    #\tmodel: deeper\n    embeddings:\n"
 	got := commentedDecisionLanes(src)
 	want := []ai.DecisionsConfig{
 		{Provider: "jev_compatible", Model: "m", BaseURL: "https://h/x"},
 		{Provider: "jev", Model: "jev-1.13.0"},
+		{Provider: "jev", Model: "deeper"},
 	}
-	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+	if !slices.Equal(got, want) {
 		t.Fatalf("commentedDecisionLanes = %+v, want %+v", got, want)
 	}
 }
