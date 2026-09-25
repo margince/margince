@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// seatRoutes are the two ways a seat comes into existence over HTTP.
 var seatRoutes = []struct{ path, email string }{
 	{"/v1/users", "invitee@undescribed.test"},
 	{"/v1/users/former", "departed@undescribed.test"},
