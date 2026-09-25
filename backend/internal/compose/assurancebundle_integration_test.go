@@ -22,10 +22,13 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -494,4 +497,143 @@ func (e *assuranceJobEnv) bundledTasks(t *testing.T) []bundledTask {
 		t.Fatalf("walking the bundled tasks: %v", err)
 	}
 	return out
+}
+
+// The task is HELD while the findings are filed, so a rep completing it cannot
+// land between the read that found it open and the write that files onto it.
+//
+// Deterministic rather than timed: a transaction takes the same share lock and
+// holds it open, and the probe asks whether a completion could take the row —
+// so this fails when the hold is absent rather than when a machine is slow.
+func TestTheBundlingHoldsTheTaskItFilesOnto(t *testing.T) {
+	e := setupAssuranceJob(t)
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the first check: %v", err)
+	}
+	tasks := e.bundledTasks(t)
+	if len(tasks) != 1 {
+		t.Fatalf("the pass minted %d task(s), want 1", len(tasks))
+	}
+
+	held := make(chan struct{})
+	release := make(chan struct{})
+	done := make(chan error, 1)
+
+	// Released even when an assertion below fails: a holding transaction left
+	// open outlives this test and blocks every case after it on the same row.
+	var releasedOnce bool
+	releaseHold := func() {
+		if !releasedOnce {
+			releasedOnce = true
+			close(release)
+		}
+	}
+	t.Cleanup(releaseHold)
+	go func() {
+		done <- database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			open, err := taskStillOpenTx(e.Admin(), tx, tasks[0].id)
+			if err != nil {
+				return err
+			}
+			if !open {
+				return errors.New("the task the pass just minted reads as closed")
+			}
+			close(held)
+			<-release
+			return nil
+		})
+	}()
+	// Either the lock is taken or the transaction gave up. Waiting on `held`
+	// alone would hang the whole suite out to its timeout on any failure before
+	// the lock, and a timeout says nothing about which line gave way.
+	select {
+	case <-held:
+	case err := <-done:
+		t.Fatalf("taking the hold: %v", err)
+	}
+
+	// A completion is an UPDATE, which conflicts with the share lock. Asked
+	// with NOWAIT so the assertion is "the row is held", not "this was slow" —
+	// and the refusal is returned rather than swallowed, because NOWAIT aborts
+	// the transaction it was asked in.
+	probe := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.Admin(),
+			`SELECT id FROM activity WHERE id = $1 FOR UPDATE NOWAIT`, tasks[0].id)
+		return err
+	})
+	// The lock conflict specifically (55P03), not any failure: a probe that
+	// errored for some other reason would otherwise read as proof of a hold
+	// that was never taken.
+	var pgErr *pgconn.PgError
+	blocked := errors.As(probe, &pgErr) && pgErr.Code == pgerrcode.LockNotAvailable
+	if probe != nil && !blocked {
+		t.Fatalf("probing the task's lock: %v", probe)
+	}
+	if !blocked {
+		t.Error("a completion could take the task while the bundling held it — the rep's " +
+			"answer can still land between the read that found it open and the write that " +
+			"files tonight's findings onto it")
+	}
+
+	releaseHold()
+	if err := <-done; err != nil {
+		t.Fatalf("the holding transaction: %v", err)
+	}
+}
+
+// taskStillOpenTx's own answer, which is the read side of the window.
+//
+// The hold above stops a completion landing AFTER the check; this is what the
+// check itself says when one landed before the transaction opened. Asked of the
+// function rather than through a pass, because the pass cannot reach it — the
+// adoption already skips a task it read as done, so a case driving the whole
+// night would be asserting that older behaviour and would pass with this branch
+// deleted. It was written that way first and said nothing.
+func TestTheHeldTaskReadsAsClosedOnceSomebodyAnswersIt(t *testing.T) {
+	e := setupAssuranceJob(t)
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the first check: %v", err)
+	}
+	tasks := e.bundledTasks(t)
+	if len(tasks) != 1 {
+		t.Fatalf("the pass minted %d task(s), want 1", len(tasks))
+	}
+
+	open := func() bool {
+		t.Helper()
+		var answer bool
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			var err error
+			answer, err = taskStillOpenTx(e.Admin(), tx, tasks[0].id)
+			return err
+		}); err != nil {
+			t.Fatalf("reading whether the task is open: %v", err)
+		}
+		return answer
+	}
+
+	if !open() {
+		t.Fatal("the task the pass just minted reads as closed — every case here would then " +
+			"pass for the wrong reason")
+	}
+	if _, err := e.Pool.Exec(context.Background(),
+		`UPDATE activity SET is_done = true, done_at = now() WHERE id = $1`, tasks[0].id); err != nil {
+		t.Fatalf("marking the task done: %v", err)
+	}
+	if open() {
+		t.Error("a task the rep has completed still reads as open, so tonight's findings " +
+			"would be filed onto a row nobody will open again")
+	}
+
+	// Archived is the other way it stops being a task to file onto, and it
+	// takes a different arm — no row rather than a row saying done.
+	if _, err := e.Pool.Exec(context.Background(),
+		`UPDATE activity SET archived_at = now() WHERE id = $1`, tasks[0].id); err != nil {
+		t.Fatalf("archiving the task: %v", err)
+	}
+	if open() {
+		t.Error("an archived task still reads as open")
+	}
 }
