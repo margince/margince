@@ -6,8 +6,11 @@ package imap
 import (
 	"context"
 	"errors"
+	"net"
 	"strings"
 	"testing"
+
+	"github.com/emersion/go-imap/v2/imapclient"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -279,5 +282,25 @@ func TestBoundedWindowClamps(t *testing.T) {
 		if got := boundedWindow(in); got != want {
 			t.Errorf("boundedWindow(%d) = %d, want %d", in, got, want)
 		}
+	}
+}
+
+// A malformed auth bundle is a fault the caller must see, and it is answered
+// BEFORE any dial: an empty list would read as "this account has no folders",
+// which is a different and wrong answer, and dialing on a bundle we could not
+// parse would spend a connection to learn nothing.
+func TestListContainersRefusesMalformedAuthWithoutDialing(t *testing.T) {
+	t.Parallel()
+	dialed := false
+	c := NewStanding().withDialer(func(context.Context, Credentials) (*imapclient.Client, net.Conn, error) {
+		dialed = true
+		return nil, nil, errors.New("the test's dialer must not be reached")
+	})
+
+	if _, err := c.ListContainers(context.Background(), []byte("not json")); err == nil {
+		t.Fatal("a malformed auth bundle listed containers instead of failing")
+	}
+	if dialed {
+		t.Error("the connector dialed on a bundle it could not parse")
 	}
 }

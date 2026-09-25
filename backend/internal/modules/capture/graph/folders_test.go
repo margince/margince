@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // A mailbox with many folders answers in pages, and stopping at the first would
@@ -77,5 +79,29 @@ func TestListFoldersNamesWhatItCanAndDropsWhatItCannot(t *testing.T) {
 	}
 	if len(got) != 1 || got[0].Name != "f1" {
 		t.Fatalf("got %+v, want the id standing in for the missing name and the id-less folder gone", got)
+	}
+}
+
+// The connector's own verb: it opens the auth state, refreshes, and asks.
+func TestListContainersReadsTheMailboxsFolders(t *testing.T) {
+	api := &fakeAPI{folders: []connector.NamedContainer{{ID: "f1", Name: "Privat"}}}
+	c := pinnedConn(api)
+
+	got, err := c.ListContainers(context.Background(), authBytes(t))
+	if err != nil {
+		t.Fatalf("ListContainers: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "Privat" {
+		t.Fatalf("got %+v, want the mailbox's own folder", got)
+	}
+}
+
+// Malformed auth is a fault the caller must see rather than an empty list: an
+// empty picker reads as "this mailbox has no folders", a different and wrong
+// answer.
+func TestListContainersRefusesMalformedAuth(t *testing.T) {
+	c := pinnedConn(&fakeAPI{})
+	if _, err := c.ListContainers(context.Background(), []byte("not json")); err == nil {
+		t.Fatal("a malformed auth bundle listed containers instead of failing")
 	}
 }
