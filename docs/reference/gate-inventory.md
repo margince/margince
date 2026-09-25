@@ -104,6 +104,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `modulecatalogtables_test.go` | H2 | The module catalog's Owns-tables column is the ownership map. |
 | `momentactionvocabulary_test.go` | H3 | Every moment-card verb is classified by whether pressing it writes. |
 | `netguardparity_test.go` | H3 | The egress SSRF denylist exists twice, and this is where the two are held equal. |
+| `offertemplatelayout_test.go` | H2 | The offer-template form and the PDF renderer must spell a layout key the same way, or what an administrator types is stored and never printed. |
 | `onboardinglocales_test.go` | H2 | The onboarding conversation speaks every language the product does. |
 | `onesendauthority_test.go` | H2 | The composer's preview and the send's door are one authority. |
 | `openchannelinboundschema_test.go` | H3 | The published OpenAPI body schema and the `arrival` struct it documents are ONE invariant spelled on both sides of a wire. |
