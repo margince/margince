@@ -138,7 +138,13 @@ func TestAnAmbiguousNameIsRefusedWithItsCandidates(t *testing.T) {
 func TestANameMatchingNothingIsRefused(t *testing.T) {
 	p := &searchingProvider{}
 
-	refuseAnchor(t, p, anchorArgs{RecordType: "company", RecordName: "Nobody"})
+	err := refuseAnchor(t, p, anchorArgs{RecordType: "company", RecordName: "Nobody"})
+
+	// It quotes the name that found nothing, because the caller's next move is
+	// to try a different one and they need to know which was tried.
+	if !strings.Contains(err.Error(), "Nobody") {
+		t.Errorf("the refusal does not name what was searched for: %v", err)
+	}
 }
 
 // The candidate list carries ids and nothing else. The refusal travels to an
