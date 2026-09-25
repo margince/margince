@@ -45,6 +45,17 @@ export const TwoFailedSources: Story = {
     },
   },
 };
+// A grant withheld the source: it is named, and there is no retry, because
+// pressing one would never return it.
+export const WithheldSource: Story = {
+  args: {
+    day: {
+      ...readingsDay(),
+      sources_unavailable: [{ source: "dsr", reason: "withheld" }],
+    },
+    onRetry: () => {},
+  },
+};
 // A grant withheld the factor, so there is nothing to ask for again and no
 // retry beside the line. The failed-source arm below is what shows the two
 // absences sharing one list without the button following the wrong one.

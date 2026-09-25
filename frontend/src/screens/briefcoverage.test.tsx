@@ -12,14 +12,22 @@ it("renders nothing for a complete read", () => {
   const { container } = render(<BriefCoverage day={readingsDay({}, [])} />);
   expect(container.innerHTML).toBe("");
 });
-it("does not turn a bounded scan or withheld source into a generic alarm", () => {
+it("does not turn a bounded scan into a missing source", () => {
   const day = readingsDay({}, []);
   day.reach = [
     { source: "notice", considered: 8, shown: 8, more_available: true },
   ];
-  day.sources_unavailable = [{ source: "dsr", reason: "withheld" }];
   const { container } = render(<BriefCoverage day={day} />);
   expect(container.innerHTML).toBe("");
+});
+it("names a withheld source without dressing it as a fault", () => {
+  const day = readingsDay({}, []);
+  day.sources_unavailable = [{ source: "dsr", reason: "withheld" }];
+  render(<BriefCoverage day={day} onRetry={vi.fn()} />);
+  expect(document.body.textContent).toContain("Privacy requests");
+  expect(
+    screen.queryByRole("button", { name: en["brief.coverage.retry"] }),
+  ).toBeNull();
 });
 it("offers refresh for a failed source and names it", async () => {
   const day = readingsDay({}, []);
