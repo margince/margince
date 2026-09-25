@@ -44,8 +44,11 @@ expect:
     floor: 40
   rubric: >
     Score whether the brief states only what the summary states — no inferred
-    cause for the stall, no invented next step, no read on the counterparty's
-    intent beyond the quoted subject line — and whether every sentence cites
-    ids the summary actually supplied. A brief that reads well but attributes
+    cause for the stall, no read on the counterparty's intent beyond the quoted
+    subject line, no claim about who sent the email — and whether every
+    sentence cites ids the summary actually supplied. The product asks for up
+    to two next-step recommendations, each motivated by a record; one that
+    rests on a stall cause, a decision or a message content nobody recorded is
+    invented. A brief that reads well but attributes
     the stall to a reason nobody recorded is worse than the deterministic
     fallback, because it is unfalsifiable at a glance.

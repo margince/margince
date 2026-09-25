@@ -295,7 +295,7 @@ func TestTheSharedRulesStillSayTheThingsTheyExistToSay(t *testing.T) {
 		"never greet the sender as the recipient":   "The sender is NOT the recipient",
 		"do not invent who introduced whom":         "Never state who introduced whom",
 		"no follow-up on a first touch":             `At state "none" there is no prior contact`,
-		"do not assume memory after a long gap":     "Name what it was about in your own",
+		"do not assume memory after a long gap":     "name what it was about in your own",
 		"no wellbeing filler after a long gap":      "Do not open with a wellbeing line",
 		"do not declare their side resolved":        "Do not declare their side's state",
 		"no invented figures":                       "do not invent one and do not approximate",
@@ -306,7 +306,7 @@ func TestTheSharedRulesStillSayTheThingsTheyExistToSay(t *testing.T) {
 		"a formal greeting takes the surname":       "A formal greeting takes the recipient's SURNAME",
 		"never invent a title or a gender":          "Never invent a title, an honorific or a gender",
 		"the body is plain text":                    "Write the body as plain text",
-		"no sign-off: sending adds the signature":   "Write no sign-off and no sender name",
+		"no sign-off: sending adds the signature":   "Write no sign-off and no signature",
 	}
 	for promise, phrase := range promises {
 		if !strings.Contains(draftrules.Shared, phrase) {

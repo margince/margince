@@ -47,7 +47,8 @@ expect:
     days" alone scores low, because elapsed time is not something a reader can
     act on. "buyer" must read what Nordwind is after from their own words —
     the two extra depots, the revised pricing — and score low if it invents a
-    motive the summary never states. "verdict" should be blocked or drifting
-    with reasoning naming the unsent offer; live scores low. "move_reason"
+    motive the summary never states. "verdict" must be blocked, with reasoning
+    naming the unsent offer: the card's own rule makes a named blocker a
+    blocked deal, so drifting costs marks and live scores low. "move_reason"
     must explain the given move rather than proposing a different one. Any
     invented contact, meeting, discount or figure fails the scenario.

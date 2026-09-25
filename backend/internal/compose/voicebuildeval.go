@@ -48,9 +48,15 @@ Length: two or three short paragraphs, roughly 80 to 140 words — enough for th
 The profile controls expression, never facts; invent no names, numbers, or commitments.
 Return ONLY a JSON object: {"subject":"...","body":"..."}.`
 
+// voiceEvalHeldOutRule is what only the evaluation's call needs: its message is
+// evalSampleOpening's cut of a real mail, and the reply is graded on answering it.
+const voiceEvalHeldOutRule = "The message may be only its opening, cut mid-sentence. Answer each question you can read, in the author's way: " +
+	"where an answer needs a fact you were not given, take the position the author would take or say plainly what has to be checked, rather than inventing the fact. " +
+	"Leave a cut-off sentence unanswered rather than guessing its end."
+
 // voiceEvalDraftSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func voiceEvalDraftSystemFor(fence promptfence.Fence) string {
-	return voiceEvalDraftSystem + "\n" + fence.Rule("profile and sample")
+	return voiceEvalDraftSystem + "\n" + voiceEvalHeldOutRule + "\n" + fence.Rule("profile and sample")
 }
 
 const voiceEvalJudgeSystem = `You compare drafts against a writing sample by the same author.

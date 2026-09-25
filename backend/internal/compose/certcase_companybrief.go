@@ -27,10 +27,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/companybrief"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -137,6 +139,11 @@ func companyBriefInput(f companyBriefFixture) (companybrief.Input, map[string]st
 		Name: f.Name, Industry: f.Industry,
 		Strength: f.Strength, ContactCount: f.Contacts,
 		SectionsOmitted: f.SectionsOmitted,
+	}
+	// A reader who can see deals is sent the 360's lost count, as foldDeals
+	// sends it; none of these accounts has lost one.
+	if !slices.Contains(f.SectionsOmitted, string(crmcontracts.Company360SectionsOmittedDeals)) {
+		in.LostCount = new(0)
 	}
 	// label maps a corpus label to the id minted for it, so Evaluate can ask
 	// "did the brief cite the stalled deal" without the corpus ever naming

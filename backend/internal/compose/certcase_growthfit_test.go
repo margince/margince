@@ -32,7 +32,10 @@ const growthFitFixtureJSON = `{
 	],
 	"facts": [
 		{"label":"their_stack","field":"technology","value":"SAP S/4HANA"}
-	]
+	],
+	"our_offering": {
+		"offer": [{"key":"offer_summary","value":"SAP integration services for software vendors"}]
+	}
 }`
 
 func prepareGrowthFit(t *testing.T, expected string) aitasks.PreparedCase {
@@ -56,7 +59,7 @@ type citingLane struct {
 var promptFieldID = regexp.MustCompile(`"[iI]d":"([0-9a-fA-F-]{36})"`)
 
 func (l citingLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
-	found := promptFieldID.FindStringSubmatch(req.Messages[0].Content)
+	found := promptFieldID.FindStringSubmatch(req.Messages[len(req.Messages)-1].Content)
 	if found == nil {
 		return model.Response{}, errors.New("the request carried no record id to cite")
 	}
@@ -122,6 +125,36 @@ func TestTheGrowthFitCaseGradesTheReplyAgainstIdsItMinted(t *testing.T) {
 
 	if got := prepared.Evaluate(trace); got.Result != aitasks.OutcomeAccepted {
 		t.Errorf("outcome = %v (%s), want accepted", got.Result, got.Detail)
+	}
+}
+
+// A fit is judged against what WE sell, and production serves that as the
+// company context; a case that sent only their records would grade a model
+// asked to compare one company with nothing.
+func TestTheGrowthFitCaseServesOurOfferingAsTheCompanyContext(t *testing.T) {
+	prepared := prepareGrowthFit(t, `{"cites":["their_offer"],"bands":["strong","moderate"]}`)
+	trace, err := prepared.Run(context.Background(), citingLane{band: "strong"})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	req := trace.Requests[0]
+	if req.ContextFingerprint == "" || !strings.Contains(req.Messages[0].Content, "SAP integration services") {
+		t.Fatalf("the request was not served our offering as company context: %+v", req.Messages)
+	}
+}
+
+func TestAGrowthFitFixtureWithoutAUsableOfferingIsRefused(t *testing.T) {
+	base := `"profile_fields":[{"label":"their_offer","field":"offer_summary","value":"x"}]`
+	for name, fixture := range map[string]string{
+		"no offering at all":             `{` + base + `}`,
+		"a scope growth_fit never reads": `{` + base + `,"our_offering":{"administrative":[{"key":"legal_name","value":"Us GmbH"}]}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := (growthFitCases{}).Prepare(json.RawMessage(fixture),
+				json.RawMessage(`{"cites":["their_offer"],"bands":["strong"]}`)); err == nil {
+				t.Error("a fit with nothing of ours to judge against was accepted into the corpus")
+			}
+		})
 	}
 }
 

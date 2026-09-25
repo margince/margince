@@ -24,6 +24,18 @@ fixture:
     - label: their_stack
       field: technology
       value: SAP S/4HANA
+  # What WE sell, as the confirmed company context production prepends. It is
+  # written to fit them — a software vendor selling to energy-heavy industry,
+  # running SAP — so a weak band means their records were not read against it.
+  our_offering:
+    offer:
+      - key: offer_summary
+        value: SAP S/4HANA integration and data-pipeline services for industrial software vendors
+    positioning:
+      - key: icp
+        value: B2B software companies of 50-500 employees selling into manufacturing and energy
+      - key: value_proposition
+        value: Their product reads plant and ERP data without a custom integration project
 expect:
   outcome: accepted
   answer:
@@ -47,6 +59,12 @@ expect:
     degraded_min: 55
     floor: 45
   rubric: >
+    The company summary describes THEM: a vendor of load-shifting software for
+    manufacturers with their own substations, 51-200 staff, running SAP
+    S/4HANA. The confirmed company context describes US: SAP integration
+    services for industrial software vendors. A reply that reads their
+    offer_summary or icp as ours has judged the wrong company and scores at the
+    floor; citing THEIR offer_summary and icp records is correct evidence.
     Score whether every claim rests on something the company summary actually
     says, and whether claims drawn from OUR offering are labelled assessments
     rather than facts about them. Our own offering must never be cited as

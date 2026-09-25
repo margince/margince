@@ -82,10 +82,12 @@ type Input struct {
 	// the 360 converts to at each deal's frozen close-time rate. It has no
 	// relation to whatever the open deals are priced in, so it must never be
 	// labelled with theirs.
-	WonCurrency string   `json:"won_currency,omitempty"`
-	LostCount   int      `json:"lost_count"`
-	OpenTasks   []TaskIn `json:"open_tasks,omitempty"`
-	Recent      []ActIn  `json:"recent,omitempty"`
+	WonCurrency string `json:"won_currency,omitempty"`
+	// LostCount is nil when the reader cannot see deals: a zero there would
+	// tell the writer a fact about the section it was told to stay silent on.
+	LostCount *int     `json:"lost_count,omitempty"`
+	OpenTasks []TaskIn `json:"open_tasks,omitempty"`
+	Recent    []ActIn  `json:"recent,omitempty"`
 	// SectionsOmitted names what the reader could NOT see. It rides the
 	// fingerprint so two readers with different grants never share a cached
 	// brief, and it tells the writer to stay silent about those sections
@@ -291,7 +293,8 @@ func foldDeals(view crmcontracts.Company360, in *Input) {
 	if view.Deals == nil {
 		return
 	}
-	in.LostCount = view.Deals.LostCount
+	lost := view.Deals.LostCount
+	in.LostCount = &lost
 	if view.Deals.WonLifetime.AmountMinor != nil && view.Deals.WonLifetime.Currency != nil {
 		in.WonCurrency = *view.Deals.WonLifetime.Currency
 		in.WonLifetime = *view.Deals.WonLifetime.AmountMinor

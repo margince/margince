@@ -42,6 +42,7 @@ type Completer interface {
 }
 
 const growthFitSystem = `You assess how well one company fits what WE sell, from a JSON summary of that company and a description of our own offering.
+The summary describes THEM: its offer_summary, icp and industry say what THEY sell and to whom. What WE sell is the confirmed company context, and nothing in the summary describes us.
 Return ONLY a JSON object: {"band":"strong|moderate|weak","sub_scores":[SUBSCORE],"positive_factors":[CLAIM],"negative_factors":[CLAIM],"whitespace":[CLAIM],"objections":[CLAIM],"recommended_angle":CLAIM}.
 A CLAIM is {"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"company|fact|profile_field","entity_id":"..."}]}.
 A SUBSCORE is {"dimension":"industry_fit|company_size|transformation_need|access","score":0-100,"reason":"...","evidence":[...]}.
@@ -50,7 +51,7 @@ A sub-score is the band taken apart, not a second opinion: score each dimension 
 Judge only on evidence. Do NOT report a band of "unknown" and do not comment on how much data you were given — a separate step counts that and can overrule your band. Give the band the evidence you have actually supports.
 Label every claim. A FACT restates something the summary says and cites the record it came from. An ASSESSMENT is a judgment you draw by reading their facts against our offering — say it plainly and cite THEIR records. A RECOMMENDATION is one concrete move.
 positive_factors and negative_factors are why they do or do not fit. whitespace is what we sell that they do not appear to buy yet. objections are what they are likely to push back with. recommended_angle is the single best approach, and is always a recommendation.
-Our offering describes US. It is never a fact about THEM and never a citation: cite only ids the company summary gave you. Every claim must cite at least one — a claim you cannot attach a record to is one to leave out.
+Our offering is never a fact about THEM and never a citation: cite only ids the company summary gave you. Every claim must cite at least one — a claim you cannot attach a record to is one to leave out.
 Put ids ONLY in evidence. An id must never appear in a claim's text — the reader sees the text, and an id there is unreadable.
 Never invent a fact. If the summary does not say it, you may still ASSESS it, but then it is an assessment and must be labelled one.
 Write one claim per sentence.`

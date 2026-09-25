@@ -215,7 +215,8 @@ func scenarioRow(sc Scenario, stamp string, results []RunResult) ScenarioRecord 
 // both before ever trusting an outcome.
 // CertifiedScope is read off the CASE rather than the scenario's name for the
 // site, because the case is what drives the invocation and so what knows how
-// much of it a run reaches.
+// much of it a run reaches. ContextApplied says the case served the company
+// context production prepends, read off the request it built.
 //
 // The json tags are the resume journal's on-disk shape — see RunResult, which
 // this embeds.
@@ -227,6 +228,7 @@ type runOutcome struct {
 	JudgeServedModel     string `json:"judge_served_model"`
 	CertifiedScope       string `json:"certified_scope"`
 	JudgeDegraded        bool   `json:"judge_degraded"`
+	ContextApplied       bool   `json:"context_applied"`
 }
 
 // runOnce drives exactly one prepared case and its judge score, cache off, so
@@ -277,6 +279,7 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 		output: validated.output, outcome: entry.outcome, passed: entry.passed,
 		scope: aitasks.ScopeOf(factory), pooled: pooled,
 	})
+	outcome.ContextApplied = len(caseTrace.Requests) > 0 && caseTrace.Requests[0].ContextFingerprint != ""
 	if !entry.graded {
 		log.WarnContext(ctx, "aicert: this run has no whole answer, so it fails and is not sent to the judge",
 			"task", string(task), "scenario", sc.Name, "site", sc.Site, "withheld", pooled.Withheld, "truncated", pooled.Truncated)

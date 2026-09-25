@@ -210,6 +210,26 @@ func TestTheQuietWeekExemplarIsOfferedOnlyToAQuietWeek(t *testing.T) {
 	}
 }
 
+// A week that did something while no deal moved may say no deal moved: the
+// validator accepts that sentence, so the prompt must not forbid it, and the
+// prompt forbids it again the moment a deal did move.
+func TestTheDealClaimIsForbiddenOnlyWhereADealMoved(t *testing.T) {
+	noDeals := Input{Counts: Counts{ProposalsAccepted: 1}}
+	dealMoved := Input{Counts: Counts{DealsMoved: 1}}
+	const forbidsDealClaim = "nothing closed, moved or slipped"
+
+	if system := Request(noDeals, "en").System; strings.Contains(system, forbidsDealClaim) ||
+		strings.Contains(system, "nothing moved") {
+		t.Error("a week in which no deal moved is forbidden from saying so")
+	}
+	if _, err := Parse(`{"narrative":"One proposal accepted, and no deal moved."}`, noDeals); err != nil {
+		t.Errorf("the lane refused a true sentence about a week with no deal movement: %v", err)
+	}
+	if !strings.Contains(Request(dealMoved, "en").System, forbidsDealClaim) {
+		t.Error("a week in which a deal moved is not told that nothing-moved is false")
+	}
+}
+
 // A week of leads and meetings is not a quiet week.
 //
 // The narrative's counts held tasks, deals, proposals and brief interactions —

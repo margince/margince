@@ -67,10 +67,10 @@ type Record struct {
 	// both, something the product does is supplied or skipped rather than
 	// exercised, and a record silent about it claims more than it tested.
 	CertifiedScope string `json:"certified_scope"`
-	// ContextApplied says whether the runs were served the company context
-	// production prepends. It is recorded rather than implied because the
-	// answer is no: assembling that context reads the database, and the cert
-	// lane runs without one. A record that omitted the field would leave a
+	// ContextApplied says whether every run was served the company context
+	// production prepends. The lane has no database to assemble it from, so it
+	// is true only where a case supplies that context from its fixture through
+	// the production provider; a record that omitted the field would leave a
 	// reader to assume parity nobody checked.
 	ContextApplied bool `json:"context_applied"`
 	// ContextScopes is what THIS task's contract has production prepend, and it

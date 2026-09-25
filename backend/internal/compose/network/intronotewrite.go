@@ -21,7 +21,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftreply"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
-	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -80,7 +79,7 @@ const noteSystem = `You write one short note that its sender will FORWARD to the
 The reader is the recipient — a customer or a prospect, not a teammate. You are writing in the voice of that sender, passing along an introduction.
 
 Rules you must not break:
-- Write TO the recipient, and address them by name: open with their first name. Never mention that anybody was asked to make this introduction, and never refer to an internal request.
+- Write TO the recipient: open with a greeting line naming them by first name, then a blank line, then the note. Never mention that anybody was asked to make this introduction, and never refer to an internal request.
 - Say who is being introduced, naming them in full, in one sentence.
 - Say why the recipient might care ONLY when "why_it_matters" carries a reason, in one sentence, and say nothing beyond what it states. When it is empty, ask for the conversation without giving a reason: an introduction is a complete request on its own, and a reason nobody wrote is one you invented.
 - When "through_contact" names somebody, you may say they suggested the introduction. Say nothing else about them, and never say they asked for it.
@@ -95,6 +94,8 @@ Rules you must not break:
 // and a colleague's were both typed by a human, and the rep's own
 // value_for_target is free text straight off a request body — the most obvious
 // injection surface on this call.
+//
+//promptvoice:exempt the note is forwarded under the sender's own name to a customer; Margince's register ("no greetings", "say I for what you did") would contradict the greeting it opens with.
 func noteRequest(facts noteFacts) model.Request {
 	fence := promptfence.New()
 	payload, err := json.Marshal(map[string]string{
@@ -113,7 +114,7 @@ func noteRequest(facts noteFacts) model.Request {
 		payload = []byte("{}")
 	}
 	return model.Request{
-		System: noteSystem + "\n" + promptvoice.Rule + "\n" +
+		System: noteSystem + "\n" +
 			promptlang.Rule(string(noteLang(facts.lang))) + "\n\n" +
 			fence.Rule("the facts of the introduction"),
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(string(payload))}},

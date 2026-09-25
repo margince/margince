@@ -28,8 +28,13 @@ expect:
     must_not_mention:
       ["won", "lost", "closed", "breakthrough", "momentum", "Weber"]
   bands: { certified_min: 70, degraded_min: 50, floor: 40 }
+  # The counts are not all zero, so the product forbids calling this week
+  # "quiet" and its validator refuses the phrase; the rubric grades the same.
   rubric: >
-    One sentence is enough. It must say the week was quiet, or say what little
-    happened, without inventing significance. Claiming a deal moved, closed or
-    was won is wrong: the summary carries none. Saying the two promised tasks
-    were both kept is correct and welcome.
+    One sentence is enough. It must say what little happened — one proposal
+    accepted, both promised tasks kept — without inventing significance.
+    Saying no deal moved is true and allowed. Claiming a deal moved, closed or
+    was won is wrong: the summary carries none. Calling the week quiet or
+    saying nothing happened contradicts the counts the reader sees beside it,
+    and congratulating the rep breaks the product's "state it" rule; either
+    caps the score at degraded.

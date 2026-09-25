@@ -28,6 +28,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -36,15 +38,26 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// growthFitFixture is one company as the assessment reads it.
+// growthFitFixture is one company as the assessment reads it, and our own
+// offering it is read against.
 type growthFitFixture struct {
 	ProfileFields []growthFitFieldFixture `json:"profile_fields"`
 	Facts         []growthFitFactFixture  `json:"facts"`
+	// OurOffering is this workspace's confirmed company context, by scope. The
+	// lane has no database to assemble it from, and a fit judged without it is
+	// a description of one company, so the fixture supplies it.
+	OurOffering map[string][]growthFitContextItem `json:"our_offering"`
+}
+
+type growthFitContextItem struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 type growthFitFieldFixture struct {
@@ -92,9 +105,54 @@ func (growthFitCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 	if err := refuseUngroundableFit(want, label); err != nil {
 		return nil, fmt.Errorf("growth_fit: %w", err)
 	}
+	offering, err := ourOfferingContext(f.OurOffering)
+	if err != nil {
+		return nil, fmt.Errorf("growth_fit: %w", err)
+	}
 	return &growthFitCase{
-		in: in, label: label, expected: want,
+		in: in, label: label, expected: want, offering: offering,
 	}, nil
+}
+
+// ourOfferingContext builds the company context production would read, in the
+// task's own scope order. A scope the task does not declare is refused: no
+// production call could carry it.
+func ourOfferingContext(byScope map[string][]growthFitContextItem) (contacts.CompanyContext, error) {
+	scopes, err := companyContextScopesFor(ai.TaskGrowthFit)
+	if err != nil {
+		return contacts.CompanyContext{}, err
+	}
+	declared := map[string]bool{}
+	offering := contacts.CompanyContext{Fingerprint: "certification-fixture"}
+	items := 0
+	for _, scope := range scopes {
+		declared[string(scope)] = true
+		section := contacts.CompanyContextSection{Scope: scope, Items: []contacts.CompanyContextItem{}}
+		for _, item := range byScope[string(scope)] {
+			section.Items = append(section.Items, contacts.CompanyContextItem{
+				Key: item.Key, Value: item.Value, Source: "human",
+			})
+		}
+		items += len(section.Items)
+		offering.Scopes = append(offering.Scopes, section)
+	}
+	for _, name := range slices.Sorted(maps.Keys(byScope)) {
+		if !declared[name] {
+			return contacts.CompanyContext{}, fmt.Errorf("our_offering names scope %q, which growth_fit never reads", name)
+		}
+	}
+	if items == 0 {
+		return contacts.CompanyContext{}, errors.New("the fixture gives no offering of ours, so no fit can be judged")
+	}
+	return offering, nil
+}
+
+// fixtureCompanyContext serves one fixed company context to the production
+// provider, standing where the database read stands in production.
+type fixtureCompanyContext struct{ served contacts.CompanyContext }
+
+func (f fixtureCompanyContext) GetCompanyContext(context.Context, []contacts.CompanyContextScope) (contacts.CompanyContext, error) {
+	return f.served, nil
 }
 
 // growthFitInput builds the production input, minting one id per labelled
@@ -168,6 +226,7 @@ type growthFitCase struct {
 	in       companydossier.Input
 	label    map[string]string
 	expected growthFitExpectation
+	offering contacts.CompanyContext
 }
 
 // Run issues the one request this site sends, through the production writer's
@@ -177,7 +236,11 @@ func (c *growthFitCase) Run(ctx context.Context, completer aitasks.Completer) (a
 	// certification record grades a fixed corpus, and a score that moved with a
 	// settings row would not be comparable between two installations. The rule
 	// is PRESENT for the same reason — production sends one.
-	req := companydossier.GrowthFitRequest(c.in, string(textlang.English))
+	req, err := newCompanyContextProvider(fixtureCompanyContext{c.offering}).
+		Prepare(ctx, ai.TaskGrowthFit, companydossier.GrowthFitRequest(c.in, string(textlang.English)))
+	if err != nil {
+		return aitasks.Trace{}, fmt.Errorf("growth_fit: %w", err)
+	}
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

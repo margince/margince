@@ -24,6 +24,9 @@ fixture:
     id: 2f1c9d84-6b3a-4e17-9d52-8a4f1c0e7b93
     name: Marek Janetzke
     first_name: Marek
+    # Production's fold always sends the surname (contactdraft.surname), and
+    # the default "Sie" register needs it for the formal greeting.
+    last_name: Janetzke
     title: Leiter IT
     employer: Beispiel Maschinenbau GmbH
     email: m.janetzke@example.com

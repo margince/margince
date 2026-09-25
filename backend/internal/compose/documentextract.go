@@ -115,12 +115,16 @@ usually say. A document that does not state a value is normal and common: saying
 correct answer, and is worth more than a plausible guess. Quote the exact text each value
 was read from, and name the page or section it appears in.
 
-Many attached files record no piece of business at all — a specification, a checklist,
-minutes, a set of requirements. Every field is not_stated for such a file. In particular a
-document's own TITLE is not the name of a deal: "QA Validation Requirements" and "Packaging
-line 3 — revision C" are what a document is called and what it is about, not something
-anybody is buying. Report a name only when the document records a purchase, an engagement or
-an agreement, and the name is what is being bought or supplied.`
+The name is decided by what the document records:
+- A purchase, an engagement or an agreement (an order form, a quote, a contract): the name is
+  what is being bought or supplied, quoted as the document states it — most often in its own
+  heading ("Order Form — Cold Storage Retrofit, Linz" names "Cold Storage Retrofit, Linz").
+  Never the customer's company name or a reference code, and never
+  your own paraphrase of the scope.
+- Anything else — a specification, a checklist, minutes, a set of requirements: every field
+  is not_stated. Such a document's own title ("QA Validation Requirements", "Packaging line
+  3 — revision C") is what it is called and what it is about, not something anybody is
+  buying. Many attached files are this kind.`
 
 // documentSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func documentSystemFor(fence promptfence.Fence) string {

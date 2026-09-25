@@ -340,7 +340,7 @@ func TestANoteObeyingThePromptIsAccepted(t *testing.T) {
 func TestTheNotePromptAsksForWhatTheParseRequires(t *testing.T) {
 	t.Parallel()
 	for _, required := range []string{
-		"address them by name: open with their first name",
+		"open with a greeting line naming them by first name",
 		"naming them in full",
 		`Write a short subject line in the "subject" field`,
 	} {

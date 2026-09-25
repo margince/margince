@@ -36,7 +36,8 @@ func voiceDemoDraftSystemFor(fence promptfence.Fence) string {
 // what comes back a sample, and inventing a counterparty's actual words to
 // reply to is the one thing every prompt on this path already refuses.
 const voiceDemoTask = "Write a short reply to a colleague who asked how a piece of work is going and when they can expect it. " +
-	"Invent no names, dates, figures or commitments — write only what could be said without them."
+	"You know nothing about the work, so answer as this author would without particulars: no names, dates, figures, commitments, " +
+	"and no detail of what the work is — the card shows this as the author's own writing, and a made-up detail reads as their claim."
 
 // voiceDemoDraftRequest builds the one request this site sends. Named, rather
 // than inline, for the reason every other site's builder is: the certification

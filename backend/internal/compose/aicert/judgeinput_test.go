@@ -141,18 +141,19 @@ func TestCandidateAskIsTheFirstRequestsUserTurns(t *testing.T) {
 		}
 	})
 
-	t.Run("every user turn of it, and no assistant turn", func(t *testing.T) {
+	t.Run("every turn of it, a seeded assistant turn labelled as history", func(t *testing.T) {
 		trace := aitasks.Trace{Requests: []model.Request{{Messages: []model.Message{
-			{Role: roleUser, Content: "context block"},
-			{Role: "assistant", Content: "a turn the model itself wrote"},
+			{Role: roleUser, Content: "Where are we with onboarding?"},
+			{Role: "assistant", Content: "The profile is confirmed."},
 			{Role: roleUser, Content: "the question"},
 		}}}}
 		ask, err := candidateAsk(trace)
 		if err != nil {
 			t.Fatalf("candidateAsk: %v", err)
 		}
-		if ask != "context block\n\nthe question" {
-			t.Fatalf("candidateAsk = %q, want both user turns and neither the assistant's", ask)
+		want := "Where are we with onboarding?\n\n" + seededAssistantLabel + "The profile is confirmed.\n\nthe question"
+		if ask != want {
+			t.Fatalf("candidateAsk = %q, want %q", ask, want)
 		}
 	})
 }

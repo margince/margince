@@ -89,7 +89,7 @@ are not the place to save tokens.
 **6. Name the correct empty answer, and say what to do rather than only what not to.**
 Where silence is right, write the literal empty reply: `return {"learnings":[]} —
 that is a correct answer`. A ban with no alternative leaves the model to invent
-one; an instruction with its positive form ("open without a name") does not.
+one; an instruction with its positive form ("a greeting with no name") does not.
 *Checked by* abstention scenarios in the corpus; review for the wording.
 
 **7. Enforce the shape with a schema and still state it in the prompt.**

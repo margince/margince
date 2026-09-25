@@ -26,7 +26,9 @@ expect:
     many were proposed with the right citing passage id and a value drawn from
     that passage's own words, and penalize any field this page does not state
     (history, the legal trio, or a USP, pain or buying intent this page never
-    mentions).
+    mentions). The expected answer pins only display_name, the one value with a
+    single right wording; it is not the whole answer, and proposing the other
+    grounded fields is what earns the score.
   bands:
     certified_min: 70
     degraded_min: 50

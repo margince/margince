@@ -39,6 +39,10 @@ import (
 // constant for either.
 const roleUser = "user"
 
+// seededAssistantLabel marks an earlier assistant turn in the grader's copy of
+// the ask, so the grader reads it as history rather than as the output.
+const seededAssistantLabel = "[Earlier assistant turn, history only, not graded] "
+
 // candidateAsk is the input the grader is shown: the turn the candidate was
 // actually handed, read off the first request the case issued.
 //
@@ -54,22 +58,27 @@ const roleUser = "user"
 // later request is built around a reply that already exists, which is the answer
 // under grading rather than the question that produced it.
 //
-// Every user turn of that request, joined, because a site may split one ask
-// across several messages (a delimited context block, then the question), and a
-// grader shown only the first would be missing what was actually asked. Any
-// assistant turn stays out — it is the candidate's own prior words — and the
-// system prompt travels separately, as graderInput's product rules.
+// Every turn of that request, joined, because a site may split one ask across
+// several messages (a delimited context block, then the question). An assistant
+// turn there is the conversation the scenario seeded, and it is labelled: a
+// grader shown only the user turns read "Where are we?" as a question the reply
+// ignored when the history had already answered it. The system prompt travels
+// separately, as graderInput's product rules.
 func candidateAsk(trace aitasks.Trace) (string, error) {
 	if len(trace.Requests) == 0 {
 		return "", errors.New("the case recorded no request, so there is no input to grade its answer against")
 	}
 	var turns []string
+	asked := false
 	for _, m := range trace.Requests[0].Messages {
 		if m.Role == roleUser {
+			asked = true
 			turns = append(turns, m.Content)
+			continue
 		}
+		turns = append(turns, seededAssistantLabel+m.Content)
 	}
-	if len(turns) == 0 {
+	if !asked {
 		return "", errors.New("the case's first request carries no user turn, so there is no input to grade its answer against")
 	}
 	return strings.Join(turns, "\n\n"), nil
