@@ -114,7 +114,7 @@ export const EmptyRoster: Story = {
   },
 };
 
-// The people roster failed and teams loaded: the refusal says which half is
+// The colleague roster failed and teams loaded: the refusal says which half is
 // missing, Retry sits under it, and the team that did load can still be picked.
 export const RosterFailed: Story = {
   render: () => {
