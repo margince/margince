@@ -919,7 +919,7 @@ export const vi = {
   "views.saveTitle": "Lưu bộ lọc này",
   "views.name": "Tên",
   "views.rail": "Chế độ xem đã lưu",
-  "views.manage": "Quản lý bộ lọc",
+  "views.manage": "Quản lý chế độ xem",
   "views.none": "Chưa có bộ lọc đã lưu",
   "views.rename": "Đổi tên",
   "views.renameNamed": "Đổi tên {name}",
@@ -6720,9 +6720,7 @@ export const vi = {
   "strength.inout": "{in} vào · {out} ra (90 ngày)",
   "strength.computedFrom": "Tính từ {count} hoạt động",
 
-  // The relationship-graph cards (ADR-0078). The colleague bands are PO-F-3b's
-  // own vocabulary and deliberately differ from the workspace-wide card's:
-  // the two measure different things and must not read as comparable.
+  // The relationship-graph coverage card (ADR-0078).
   "coverage.engaged": "Đang trao đổi",
   "coverage.quiet": "Chưa có trao đổi hai chiều",
   "coverage.seatWithheld": "Một liên hệ bạn không thể xem",
@@ -9035,7 +9033,7 @@ export const vi = {
   "filters.field.mail_provider": "Hệ thống thư",
   "filters.field.operated_service": "Dịch vụ vận hành",
   "filters.field.owner_team_id": "Nhóm sở hữu",
-  "filters.field.phase": "Giai đoạn",
+  "filters.field.phase": "Giai đoạn dự án",
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Loại quan hệ",
   "filters.field.stage_id": "Giai đoạn",

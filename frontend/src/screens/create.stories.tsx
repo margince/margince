@@ -184,7 +184,7 @@ export const OfferedCompanyPicked: Story = {
           error={null}
           onSubmit={() => undefined}
           onClose={() => undefined}
-          submitLabelKey="create.save"
+          intent="create"
         />
       );
     }

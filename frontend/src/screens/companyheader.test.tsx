@@ -215,13 +215,18 @@ describe("who owns this record", () => {
   });
 });
 
-// An UNOWNED account is writable by nobody, so the header's owner cell is the
-// only door out of that state: picking yourself there is the claim, not a patch
-// the server would refuse on a row nobody owns.
+// An UNOWNED account is writable only by an unbounded seat, so for everyone
+// else the header's owner cell is the one door out of that state: picking
+// yourself there is the claim, not a patch the server would refuse.
 describe("claiming an unowned account", () => {
   const UNOWNED: Company = { ...COMPANY, owner_id: undefined, writable: false };
 
-  function stubClaim(reader: typeof READER = READER) {
+  function stubClaim(
+    reader: typeof READER = READER,
+    roster: ReadonlyArray<{ id: string; display_name: string }> = [
+      { id: "u-reader", display_name: "The Reader" },
+    ],
+  ) {
     const calls: Array<{
       method: string;
       path: string;
@@ -240,10 +245,7 @@ describe("claiming an unowned account", () => {
           ? { user: { id: "u-reader", display_name: "The Reader" }, ...reader }
           : pathname.endsWith("/claim")
             ? { ...UNOWNED, owner_id: "u-reader", writable: true, version: 2 }
-            : {
-                data: [{ id: "u-reader", display_name: "The Reader" }],
-                page: { has_more: false, next_cursor: null },
-              };
+            : { data: roster, page: { has_more: false, next_cursor: null } };
         return new Response(JSON.stringify(body), {
           status: 200,
           headers: { "content-type": "application/json" },
@@ -272,6 +274,40 @@ describe("claiming an unowned account", () => {
     );
     // The claim door, never a PATCH: an ownerless row is nobody's to patch.
     expect(calls.some((call) => call.method === "PATCH")).toBe(false);
+  });
+
+  const TEAM = [
+    { id: "u-reader", display_name: "The Reader" },
+    { id: "u-colleague", display_name: "A Colleague" },
+  ];
+
+  it("offers a reader who cannot write the row only themselves", async () => {
+    stubClaim(READER, TEAM);
+    const user = userEvent.setup();
+    renderInApp(<CompanyIdentityFacts company={UNOWNED} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Change Owner" }),
+    );
+    await screen.findByRole("option", { name: "The Reader" });
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual([en["co.pulse.unowned"], "The Reader"]);
+  });
+
+  it("offers every colleague to a reader who can write the unowned row", async () => {
+    stubClaim(READER, TEAM);
+    const user = userEvent.setup();
+    renderInApp(
+      <CompanyIdentityFacts company={{ ...UNOWNED, writable: true }} />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Change Owner" }),
+    );
+    expect(
+      await screen.findByRole("option", { name: "A Colleague" }),
+    ).toBeTruthy();
   });
 
   it("offers no claim to a reader without the grant to take accounts", async () => {

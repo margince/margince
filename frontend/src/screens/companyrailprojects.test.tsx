@@ -7,7 +7,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { ProjectsSection } from "./companyrailprojects";
 
@@ -41,14 +41,13 @@ function noProjects(company: Company): Company360 {
   };
 }
 
-function stubMe() {
+function stubMe(project: GrantSpec["project"] = ["create", "read"]) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () =>
       Response.json({
         user: { id: "u-1", display_name: "Mira Voss" },
-        authorization: meFixture({ allow: { project: ["create", "read"] } })
-          .authorization,
+        authorization: meFixture({ allow: { project } }).authorization,
       }),
     ),
   );
@@ -68,8 +67,9 @@ function draw(view: Company360, onTab = vi.fn()) {
   return onTab;
 }
 
-// An account with no projects offers its one verb under the empty line. It
-// used to be "Add", which only switched tabs and created nothing.
+// An account with no projects offers exactly one verb under the empty line:
+// "New project" creates one where the reader may, and "Add" leads to the tab
+// that lists them everywhere else.
 describe("the rail's empty projects section", () => {
   it("starts a project on the account when the reader may write it", async () => {
     stubMe();
@@ -90,6 +90,17 @@ describe("the rail's empty projects section", () => {
     const onTab = draw(
       noProjects({ ...COMPANY, archived_at: "2026-07-01T00:00:00Z" }),
     );
+
+    await user.click(await screen.findByRole("button", { name: "Add" }));
+
+    expect(onTab).toHaveBeenCalledWith("deals");
+    expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
+  });
+
+  it("points to the tab on a writable account when the reader may not create projects", async () => {
+    stubMe(["read"]);
+    const user = userEvent.setup();
+    const onTab = draw(noProjects(COMPANY));
 
     await user.click(await screen.findByRole("button", { name: "Add" }));
 

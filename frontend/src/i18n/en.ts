@@ -6964,9 +6964,7 @@ export const en = {
   "strength.inout": "{in} in · {out} out (90 days)",
   "strength.computedFrom": "Computed from {count} activities",
 
-  // The relationship-graph cards (ADR-0078). The colleague bands are PO-F-3b's
-  // own vocabulary and deliberately differ from the workspace-wide card's:
-  // the two measure different things and must not read as comparable.
+  // The relationship-graph coverage card (ADR-0078).
   "coverage.engaged": "Engaged",
   "coverage.quiet": "No two-way contact",
   "coverage.seatWithheld": "A contact you cannot read",

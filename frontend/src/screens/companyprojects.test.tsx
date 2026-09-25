@@ -112,8 +112,26 @@ const ANSWERED: Company360 = {
   projects_page: { has_more: false, next_cursor: null },
 };
 
-// /me with exactly `allow`, and a POST /projects that records its body.
-function stubServer(allow: GrantSpec) {
+// A workspace's own project column, as the custom-field catalog answers it.
+const PROJECT_CODE: components["schemas"]["CustomField"] = {
+  id: "cf-code",
+  object: "project",
+  label: "Cost centre",
+  slug: "cost_centre",
+  type: "text",
+  status: "active",
+  column_name: "cf_cost_centre",
+  created_by: "human:u-1",
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+};
+
+// /me with exactly `allow`, a POST /projects that records its body, and a
+// project custom-field catalog carrying `custom`.
+function stubServer(
+  allow: GrantSpec,
+  custom: ReadonlyArray<components["schemas"]["CustomField"]> = [],
+) {
   const created: unknown[] = [];
   vi.stubGlobal(
     "fetch",
@@ -134,7 +152,8 @@ function stubServer(allow: GrantSpec) {
           },
         );
       }
-      return Response.json({ data: [], page: { has_more: false } });
+      const data = pathname.endsWith("/custom-fields") ? custom : [];
+      return Response.json({ data, page: { has_more: false } });
     }),
   );
   return created;
@@ -159,6 +178,31 @@ describe("starting a project from the account", () => {
     await waitFor(() =>
       expect(created).toEqual([
         expect.objectContaining({ name: "Depot fit-out", company_id: "o-1" }),
+      ]),
+    );
+  });
+
+  // The projects screen's form and this one are one form, so a column the
+  // workspace added to projects is asked here too.
+  it("asks the workspace's project custom fields and sends them", async () => {
+    const created = stubServer({ project: ["create", "read"] }, [PROJECT_CODE]);
+    const user = userEvent.setup();
+    draw(ANSWERED);
+
+    await user.click(
+      await screen.findByRole("button", { name: "New project" }),
+    );
+    await user.type(screen.getByLabelText(/Project name/), "Depot fit-out");
+    await user.type(await screen.findByLabelText(/Cost centre/), "CC-7");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() =>
+      expect(created).toEqual([
+        expect.objectContaining({
+          name: "Depot fit-out",
+          company_id: "o-1",
+          cf_cost_centre: "CC-7",
+        }),
       ]),
     );
   });

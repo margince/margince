@@ -23,14 +23,14 @@ export type NameOffers = Readonly<{
 /** What the box beneath the field says the save will do with its name. */
 export function offeredHint(
   offers: NameOffers,
-  name: string,
+  fieldKey: string,
   values: Record<string, string>,
   t: (key: MessageKey) => string,
 ): string | undefined {
   if (values[offers.pickedKey]) {
     return t(offers.pickedHint);
   }
-  return name.trim() ? t(offers.newHint) : undefined;
+  return values[fieldKey]?.trim() ? t(offers.newHint) : undefined;
 }
 
 export function OfferedNameControl({

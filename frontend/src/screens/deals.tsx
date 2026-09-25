@@ -1597,9 +1597,9 @@ function narrowsTheDealList(query: ListQuery): boolean {
 
 // The stage and company filters. The stage list is loaded whole already (a
 // pipeline has few stages), so it stays a fixed chip; the company filter
-// searches rather than listing (see searchCompanies in filterreference.ts). Both are still
-// filters, so they read as the same chip as every other one instead of as a
-// native select sitting among them.
+// searches rather than listing (see searchCompanies in filterreference.ts).
+// Both are still filters, so they read as the same chip as every other one
+// instead of as a native select sitting among them.
 function dealFilterChips(
   stages: Stage[],
   t: ReturnType<typeof useT>,

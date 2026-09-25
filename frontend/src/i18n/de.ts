@@ -6764,9 +6764,7 @@ export const de = {
   "strength.inout": "{in} eingehend · {out} ausgehend (90 Tage)",
   "strength.computedFrom": "Berechnet aus Aktivitäten: {count}",
 
-  // Die Beziehungsgraph-Karten (ADR-0078). Die Kollegen-Stufen sind die von
-  // PO-F-3b und unterscheiden sich bewusst von denen der arbeitsbereichsweiten
-  // Karte: beide messen Verschiedenes und dürfen nicht vergleichbar wirken.
+  // Die Abdeckungskarte des Beziehungsgraphen (ADR-0078).
   "coverage.engaged": "Im Austausch",
   "coverage.quiet": "Kein beidseitiger Kontakt",
   "coverage.seatWithheld": "Ein Kontakt, den du nicht lesen kannst",
@@ -9116,7 +9114,7 @@ export const de = {
   "filters.field.mail_provider": "E-Mail-System",
   "filters.field.operated_service": "Betriebener Dienst",
   "filters.field.owner_team_id": "Zuständiges Team",
-  "filters.field.phase": "Phase",
+  "filters.field.phase": "Projektphase",
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Beziehungstyp",
   "filters.field.stage_id": "Phase",

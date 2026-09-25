@@ -6,7 +6,7 @@ import { toMinorUnits } from "../format/minorunits";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
 import { CreateAction, type CreateField } from "./create";
-import { mapProjectCreate } from "./projects.form";
+import { useProjectCreateForm } from "./projects.create";
 
 // What a rep can START from the company page.
 //
@@ -155,30 +155,22 @@ export function NewProjectAction({
   companyId,
   companyName,
 }: Readonly<{ companyId: string; companyName: string }>) {
-  const t = useT();
   // The project grant and the seat, not the company's own writability: the
   // write lands on a new project, and the company is only named on it.
   const canCreate = useCanWrite("project", "create");
-  if (!canCreate) {
-    return null;
-  }
-  const fields: CreateField[] = [
-    { key: "name", label: "project.name", required: true },
-    { key: "description", label: "project.description", type: "textarea" },
-    { key: "target_end_date", label: "project.targetEnd", type: "date" },
-  ];
-  const createProject = async (values: Record<string, string>) => {
-    const { data, error } = await api.POST("/projects", {
-      // Through the shared mapper, never a body written here: the projects
-      // screen creates the same record, and two spellings of one request are
-      // how the two come to disagree about an empty date.
-      body: mapProjectCreate({ ...values, company_id: companyId }),
-    });
-    if (error) {
-      throwProblem(error, t);
-    }
-    return data;
-  };
+  return canCreate ? (
+    <NewProjectDialog companyId={companyId} companyName={companyName} />
+  ) : null;
+}
+
+// Mounted only behind the grant, so a reader who may not create a project
+// never reads the project custom-field catalog the form carries.
+function NewProjectDialog({
+  companyId,
+  companyName,
+}: Readonly<{ companyId: string; companyName: string }>) {
+  const t = useT();
+  const form = useProjectCreateForm({ pinned: companyId });
   return (
     <CreateAction
       label={t("co.project.new", { name: companyName })}
@@ -186,8 +178,8 @@ export function NewProjectAction({
       // project.
       invalidate="company360"
       screen="projects"
-      create={createProject}
-      fields={fields}
+      create={form.create}
+      fields={form.fields}
       aboutId={companyId}
     />
   );

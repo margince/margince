@@ -423,7 +423,7 @@ see [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
 | The tables | `activity_participant` (`migrations/core/0157_*`), `graph_interaction_edge` (`0158_*`), `linkedin_connection` (`0159_*`), `linkedin_account` (`0160_*`) |
 | The REST contract | `backend/api/crm.yaml` (`getContactNetwork`, `getDealCoverage`) |
 | The job contract (cadence, fan-out, batch sizes) | `backend/api/jobs.yaml` (`graph_edge_reconcile`, `participant_backfill`, `linkedin_rematch`) |
-| The contact's **Network** tab | `frontend/src/screens/contactnetwork/`, reading `getContactGraph` through `contactgraph.tsx`; `getContactNetwork` has no screen of its own |
+| The contact's **Network** tab | `frontend/src/screens/contactnetwork/`, reading `getContactGraph` through `frontend/src/screens/contactgraph.tsx`; `getContactNetwork` has no screen of its own |
 
 ## Where to go next
 

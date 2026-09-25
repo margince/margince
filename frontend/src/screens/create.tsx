@@ -691,7 +691,7 @@ export function RecordFormBody({
             required={field.required}
             hint={
               field.offers
-                ? offeredHint(field.offers, values[field.key] ?? "", values, t)
+                ? offeredHint(field.offers, field.key, values, t)
                 : field.hint
             }
             error={refusals.get(field.key)}

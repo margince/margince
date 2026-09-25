@@ -1,4 +1,5 @@
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import { routeHash } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
@@ -114,17 +115,20 @@ export function ProjectsSection({
 }
 
 // The ONE verb an empty projects section carries: the create verb when the
-// reader may write the account, the way to the tab that lists its projects
-// when not. The same split DealsEmptyVerb draws, gated the same way.
+// reader may write the account and create a project, the way to the tab that
+// lists its projects when either is missing. Asking only the account would
+// leave an empty action row, because NewProjectAction draws nothing without
+// the project grant.
 function ProjectsEmptyVerb({
   company,
   onTab,
 }: Readonly<{ company: Company; onTab: (tab: "deals") => void }>) {
   const t = useT();
   const readOnlyReason = useCompanyReadOnlyReason(company);
+  const canCreate = useCanWrite("project", "create");
   return (
     <div className="card-actions">
-      {readOnlyReason ? (
+      {readOnlyReason || !canCreate ? (
         <Button variant="ghost" onClick={() => onTab("deals")}>
           {t("co.rail.add")}
         </Button>
