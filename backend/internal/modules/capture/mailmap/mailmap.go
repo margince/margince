@@ -66,7 +66,7 @@ type Message struct {
 	sentByOwner     bool // the PROVIDER attested the owner sent this — set by AttestSentByOwner, never parsed
 	// participants are everyone on To, Cc and Bcc who is neither the mailbox
 	// owner nor the counterparty — the two ends already have their own rows.
-	participants []connector.MessageParticipant
+	participants connector.Parties
 	// addresses is every address the message names, the two ends included. The
 	// internal-vs-external rule is about the whole message, so it needs the
 	// full set rather than the derived ends (ADR-0082 §3).
@@ -207,10 +207,10 @@ func (m Message) Addresses() []string { return m.addresses }
 // To names, and giving it Parse's whole Message would invite it to re-derive
 // direction or subject from headers the activity row already settled at
 // capture time.
-func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, error) {
+func ParticipantsOf(raw []byte, owner string) (connector.Parties, error) {
 	msg, err := Parse(raw, owner)
 	if err != nil {
-		return nil, err
+		return connector.Parties{}, err
 	}
 	return msg.participants, nil
 }
@@ -227,7 +227,7 @@ func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, e
 // To wins over Cc when an address appears on both, which is a real thing
 // senders do: a direct recipient who is also copied was addressed directly,
 // and that is the stronger claim about their part in the conversation.
-func otherParties(toList, ccList, bccList []*mail.Address, ownerLower, counterparty string) []connector.MessageParticipant {
+func otherParties(toList, ccList, bccList []*mail.Address, ownerLower, counterparty string) connector.Parties {
 	counterpartyLower := strings.ToLower(strings.TrimSpace(counterparty))
 	seen := map[string]bool{ownerLower: true, counterpartyLower: true}
 	delete(seen, "")
@@ -349,7 +349,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 		DeliveredTo:  m.deliveredTo,
 		Counterparty: m.recordCounterparty(),
 		ThreadKey:    m.threadKey,
-		Participants: m.participants,
+		Participants: m.participants.Participants,
 		Addresses:    m.addresses,
 		Parts:        m.recordParts(),
 		PartDrops:    m.recordDrops(),

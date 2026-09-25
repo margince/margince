@@ -112,7 +112,7 @@ type Meeting struct {
 	ownerDeclined bool
 	hasExternal   bool // any party outside the OWNER's own domain — the floor, see Settle
 	addresses     []string
-	participants  []connector.MessageParticipant
+	participants  connector.Parties
 }
 
 // Classify applies the meeting rules to one decoded event against the account
@@ -144,9 +144,11 @@ func Classify(ev Event, owner string) Meeting {
 	}
 }
 
-// Participants are the organizer and attendees as structured rows — read by the
-// replay pass that recovers meetings captured before participants were recorded.
-func (m Meeting) Participants() []connector.MessageParticipant { return m.participants }
+// Participants are the organizer and attendees as structured rows, with the
+// count the cap was applied to — read by the replay pass that recovers meetings
+// captured before participants were recorded. A pass that sees none of them
+// still has to know whether the event named two hundred.
+func (m Meeting) Participants() connector.Parties { return m.participants }
 
 // meetingParties returns the organizer and attendees as participant rows,
 // excluding the account owner.
@@ -159,7 +161,7 @@ func (m Meeting) Participants() []connector.MessageParticipant { return m.partic
 // Organizer wins over attendee when the same address holds both, which is the
 // common case for a meeting somebody scheduled and then attended: organizing is
 // the stronger statement about their part in it.
-func meetingParties(ev Event, ownerLower string) []connector.MessageParticipant {
+func meetingParties(ev Event, ownerLower string) connector.Parties {
 	seen := map[string]bool{}
 	if ownerLower != "" {
 		seen[ownerLower] = true
@@ -226,7 +228,7 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		// Empty when the provider stated no UID, and then the meeting dedupes on
 		// the natural key alone exactly as it did before.
 		CrossDoorIdentity: connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt},
-		Participants:      m.participants,
+		Participants:      m.participants.Participants,
 		Addresses:         m.addresses,
 	}.WithProviderAttestedParticipants(true)
 }
@@ -445,10 +447,10 @@ func NormalizeOne(raw []byte, owner, connectorName string, decode Decode) ([]con
 // ParticipantsOf reads the organizer and attendees out of one stored event
 // resource — the calendar twin of mailmap.ParticipantsOf, for the replay pass
 // that recovers meetings captured before participants were recorded.
-func ParticipantsOf(raw []byte, owner string, decode Decode) ([]connector.MessageParticipant, error) {
+func ParticipantsOf(raw []byte, owner string, decode Decode) (connector.Parties, error) {
 	ev, err := decode(raw, owner)
 	if err != nil {
-		return nil, err
+		return connector.Parties{}, err
 	}
 	return Classify(ev, owner).Participants(), nil
 }

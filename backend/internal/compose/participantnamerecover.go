@@ -139,7 +139,7 @@ func namedPartiesOf(c nameRecoveryCandidate) []connector.MessageParticipant {
 	if err != nil {
 		return nil
 	}
-	var parties []connector.MessageParticipant
+	var parties connector.Parties
 	switch c.source {
 	case sourceGCal:
 		parties, err = gcal.ParticipantsOf(raw, "")
@@ -151,8 +151,8 @@ func namedPartiesOf(c nameRecoveryCandidate) []connector.MessageParticipant {
 	if err != nil {
 		return nil
 	}
-	named := make([]connector.MessageParticipant, 0, len(parties))
-	for _, party := range parties {
+	named := make([]connector.MessageParticipant, 0, len(parties.Participants))
+	for _, party := range parties.Participants {
 		if party.DisplayName == "" || party.Email == "" {
 			continue
 		}

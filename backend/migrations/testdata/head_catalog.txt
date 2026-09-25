@@ -205,7 +205,7 @@ END;
 public.activity_meeting_attendee_repair acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_meeting_attendee_repair.activity_id uuid NOT NULL gen=- def=-
 public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_outcome_check CHECK ((outcome = ANY (ARRAY['attendees'::text, 'none'::text, 'unreadable'::text])))
+public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_outcome_check CHECK ((outcome = ANY (ARRAY['attendees'::text, 'none'::text, 'capped'::text, 'unreadable'::text])))
 public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_pkey PRIMARY KEY (activity_id)
 public.activity_meeting_attendee_repair.outcome text NOT NULL gen=- def=-
 public.activity_meeting_attendee_repair.repaired_at timestamp with time zone NOT NULL gen=- def=now()
@@ -258,7 +258,7 @@ public.activity_participant_pkey CREATE UNIQUE INDEX activity_participant_pkey O
 public.activity_participant_replay acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_participant_replay.activity_id uuid NOT NULL gen=- def=-
 public.activity_participant_replay.activity_participant_replay_activity_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.activity_participant_replay.activity_participant_replay_outcome_check CHECK ((outcome = ANY (ARRAY['participants'::text, 'none'::text, 'unreadable'::text, 'no_owner'::text])))
+public.activity_participant_replay.activity_participant_replay_outcome_check CHECK ((outcome = ANY (ARRAY['participants'::text, 'none'::text, 'capped'::text, 'unreadable'::text, 'no_owner'::text])))
 public.activity_participant_replay.activity_participant_replay_pkey PRIMARY KEY (activity_id)
 public.activity_participant_replay.outcome text NOT NULL gen=- def=-
 public.activity_participant_replay.replayed_at timestamp with time zone NOT NULL gen=- def=now()

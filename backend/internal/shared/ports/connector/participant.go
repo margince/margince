@@ -71,15 +71,36 @@ const (
 // report a relationship with everybody who received the same newsletter.
 const MaxParticipants = 50
 
-// CapParticipants returns the parties, or nothing at all past the cap.
+// Parties is what one message named, and how many it named before the cap.
+//
+// The count travels because withholding the names loses the difference between
+// two facts a caller has to act on differently: a message that named nobody, and
+// one that named two hundred. Both arrive as no participants, and a caller that
+// could not tell them apart recorded "found none" over a meeting whose real
+// attendees it had refused — reporting success for work it had not done.
+type Parties struct {
+	// Participants are the parties to record: what the message named, or
+	// nothing at all once it named more than MaxParticipants.
+	Participants []MessageParticipant
+	// Named is how many further parties the message named, counted BEFORE the
+	// cap. It is the number itself rather than a bool so a caller can say how
+	// large the list was that it refused.
+	Named int
+}
+
+// Capped reports whether the cap withheld the names.
+func (p Parties) Capped() bool { return p.Named > MaxParticipants }
+
+// CapParticipants returns the parties, or nothing at all past the cap, with the
+// count either way.
 //
 // Nothing rather than a truncation: half a distribution list is no more
 // meaningful than all of it, and a truncated one would look like a small
 // meeting. It lives here so mail and calendar cannot drift apart — the same
 // sixty-contact invite must be recorded, or not, whichever parser saw it.
-func CapParticipants(parties []MessageParticipant) []MessageParticipant {
+func CapParticipants(parties []MessageParticipant) Parties {
 	if len(parties) > MaxParticipants {
-		return nil
+		return Parties{Named: len(parties)}
 	}
-	return parties
+	return Parties{Participants: parties, Named: len(parties)}
 }
