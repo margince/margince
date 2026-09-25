@@ -21,6 +21,14 @@ type localOpts struct {
 	monthlyBudget   int64
 	fakeClient      *FakeClient
 	capturePayloads bool
+	harness         harnessClient
+}
+
+// harnessClient is WithHarnessClient's pairing: the provider name a binding
+// carries, and the caller's client that serves it.
+type harnessClient struct {
+	provider string
+	client   model.Client
 }
 
 // LocalOption configures the DB-less router NewLocalRouter builds — the
@@ -64,6 +72,14 @@ func WithFakeClient(c *FakeClient) LocalOption {
 	return func(o *localOpts) { o.fakeClient = c }
 }
 
+// WithHarnessClient serves every binding whose provider is provider with the
+// caller's own client, for a provider this package has no adapter for. It
+// exists for a harness transport the product must never ship — the cert lane's
+// CLI judge — and only the DB-less router takes it, so no process role can.
+func WithHarnessClient(provider string, c model.Client) LocalOption {
+	return func(o *localOpts) { o.harness = harnessClient{provider: provider, client: c} }
+}
+
 // WithPayloadCapture turns on the Layer-3 content capture (the same
 // post-SecretStripper request+response the production router writes to
 // ai_call_payload) on this DB-less router, so a caller that installed a
@@ -101,13 +117,13 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 	// the upstream preferences production would send for the same binding.
 	cfg.Tiers = maps.Clone(cfg.Tiers)
 	cfg.applyUpstreamDefaults()
-	clients, embedder, err := cfg.buildClients()
-	if err != nil {
-		return nil, err
-	}
 	o := localOpts{monthlyBudget: int64(DefaultMonthlyTokens)}
 	for _, opt := range opts {
 		opt(&o)
+	}
+	clients, embedder, err := o.harness.clientsFor(cfg)
+	if err != nil {
+		return nil, err
 	}
 	if o.fakeClient != nil {
 		// Swap in the caller's fake for every slot cfg.buildClients would
@@ -150,6 +166,40 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 	router.cacheOff = o.cacheOff
 	router.install(router.binding().withConfigSnapshot(cfg))
 	return router, nil
+}
+
+// clientsFor is cfg.buildClients with every binding on h's provider served by
+// h's client. SelectBrain has no adapter for that provider, so those slots are
+// built as fakes and then swapped, the way WithFakeClient swaps its own.
+//
+//nolint:ireturn // the embed lane's client is whichever adapter or harness client the binding names
+func (h harnessClient) clientsFor(cfg RoutingConfig) (map[Tier]model.Client, model.Client, error) {
+	if h.client == nil {
+		return cfg.buildClients()
+	}
+	buildable := cfg
+	buildable.Tiers = maps.Clone(cfg.Tiers)
+	for tier, binding := range buildable.Tiers {
+		if binding.Provider == h.provider {
+			buildable.Tiers[tier] = ProviderConfig{Provider: ProviderFake}
+		}
+	}
+	if cfg.Embeddings.Provider == h.provider {
+		buildable.Embeddings = EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}}
+	}
+	clients, embedder, err := buildable.buildClients()
+	if err != nil {
+		return nil, nil, err
+	}
+	for tier, binding := range cfg.Tiers {
+		if binding.Provider == h.provider {
+			clients[tier] = h.client
+		}
+	}
+	if cfg.Embeddings.Provider == h.provider {
+		embedder = h.client
+	}
+	return clients, embedder, nil
 }
 
 // memoryMeter accumulates spend for the life of one process: enough for

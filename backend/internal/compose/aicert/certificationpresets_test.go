@@ -57,9 +57,10 @@ type aiCertPreset struct {
 }
 
 type aiCertPresetTier struct {
-	Tier     string `json:"tier"`
-	Provider string `json:"provider"`
-	Model    string `json:"model"`
+	Tier          string `json:"tier"`
+	Provider      string `json:"provider"`
+	Model         string `json:"model"`
+	ThinkingLevel string `json:"thinking_level,omitempty"`
 }
 
 // aiCertPresetTask is one task as this preset serves it: the first ladder rung
@@ -132,6 +133,7 @@ func tiersOfPreset(cfg ai.RoutingConfig) []aiCertPresetTier {
 		}
 		tiers = append(tiers, aiCertPresetTier{
 			Tier: string(tier), Provider: string(binding.Provider), Model: binding.Model,
+			ThinkingLevel: binding.ThinkingLevel,
 		})
 	}
 	return tiers
@@ -174,7 +176,9 @@ func presetTaskRow(task string, preset aiCertPreset,
 			continue
 		}
 		row.Tier = rung.Tier
-		row.Model = aiCertBindingRef{Provider: rung.Provider, Model: rung.Model, Env: preset.Profile}
+		row.Model = aiCertBindingRef{
+			Provider: rung.Provider, Model: rung.Model, Env: preset.Profile, ThinkingLevel: rung.ThinkingLevel,
+		}
 		if seen, ok := measured[task+"\x00"+row.Model.label()]; ok {
 			row.Band, row.State, row.Runs, row.Passed = seen.Band, seen.State, seen.Runs, seen.Passed
 			row.CasesFailingOften, row.CasesBelowQualityBar = seen.CasesFailingOften, seen.CasesBelowQualityBar
@@ -331,5 +335,40 @@ func assertAICertPresetsReadTheRecords(t *testing.T, presets []aiCertPreset, rec
 					p.File, row.Task, row.Band, row.Passed, row.Runs, rec.Verdict, rec.Passed, rec.Runs)
 			}
 		}
+	}
+}
+
+// A thinking level changes how a model answers, so a record run at one level
+// grades only the preset whose rung sets the same level — in both directions.
+func TestAPresetIsCreditedOnlyByARecordAtItsOwnThinkingLevel(t *testing.T) {
+	const flashLite = "gemini-3.1-flash-lite-preview"
+	cases := []struct {
+		name, recordLevel, presetLevel, wantBand string
+	}{
+		{"a record at low does not grade a preset at the default", "low", "", ""},
+		{"a record at the default does not grade a preset at low", "", "low", ""},
+		{"a record at low grades a preset at low", "low", "low", aicert.VerdictCertified},
+		{"a record at the default grades a preset at the default", "", "", aicert.VerdictCertified},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := aicert.Record{
+				Task: string(ai.TaskSummarize), Provider: "gemini", ServedModel: flashLite,
+				EnvClass: string(ai.ProfileEUHosted), ThinkingLevel: tc.recordLevel,
+				Verdict: aicert.VerdictCertified, Runs: 3, Passed: 3,
+			}
+			doc := aiCertDoc{Sites: []aiCertSite{{
+				Task:    rec.Task,
+				Records: []aiCertRecord{{Binding: bindingRefOf(rec), State: aicert.StatusCurrent}},
+			}}}
+			preset := aiCertPreset{File: "flash-lite.yaml", Profile: rec.EnvClass, Tiers: []aiCertPresetTier{{
+				Tier: string(ai.TierCheapCloud), Provider: "gemini", Model: flashLite, ThinkingLevel: tc.presetLevel,
+			}}}
+			got := attributeAICertPresets([]aiCertPreset{preset}, doc, []aicert.Record{rec})[0].Tasks[0]
+			if got.Band != tc.wantBand {
+				t.Errorf("preset at %q reads band %q from a record at %q, want %q",
+					tc.presetLevel, got.Band, tc.recordLevel, tc.wantBand)
+			}
+		})
 	}
 }

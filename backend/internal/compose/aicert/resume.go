@@ -130,9 +130,10 @@ func binaryIdentity() (string, error) {
 }
 
 // bindingKey renders a binding as the string two runs are compared on. Input is
-// folded in with the rest because it changes what the model may be GIVEN, and
-// the upstream preferences because they choose the host, and with it the
-// precision, that serves the model: both are part of what a run measured.
+// folded in with the rest because it changes what the model may be GIVEN, the
+// upstream preferences because they choose the host, and with it the
+// precision, that serves the model, and the thinking level because it changes
+// how the model answers: all three are part of what a run measured.
 //
 // The preferences are the EFFECTIVE ones, so an inherited default and the same
 // block spelled out are one key. Each component is QUOTED rather than joined on
@@ -145,7 +146,7 @@ func bindingKey(c ai.ProviderConfig) string {
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprintf("%q|%q|%q|%q|%q", c.Provider, c.Model, c.BaseURL, strings.Join(c.Input, ","), upstream)
+	return fmt.Sprintf("%q|%q|%q|%q|%q|%q", c.Provider, c.Model, c.BaseURL, strings.Join(c.Input, ","), upstream, c.ThinkingLevel)
 }
 
 // runJournal is the whole run's journal file: the live runs it loaded, and the

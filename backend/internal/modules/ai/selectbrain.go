@@ -52,6 +52,11 @@ type ProviderConfig struct {
 	// written `{}` are different JSON, so the round trip preserves the operator's
 	// choice instead of quietly re-defaulting an opt-out on the next read.
 	Routing *OpenRouterRouting `yaml:"routing" json:"routing,omitempty"`
+	// ThinkingLevel is how deeply a gemini tier thinks when the request names no
+	// level of its own; the request's ProviderOptions["gemini"].thinking_level
+	// still wins. Empty keeps the adapter's default (geminithinking.go). The
+	// parser refuses it on any other provider and on the embeddings lane.
+	ThinkingLevel string `yaml:"thinking_level" json:"thinking_level,omitempty"`
 }
 
 // Provider defaults. The Anthropic URL is the vendor's public API; a
@@ -219,6 +224,7 @@ func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (
 			apiKey:          key,
 			defaultModel:    cfg.Model,
 			attachmentMIMEs: narrowedCarriage(geminiCarries, cfg.Input),
+			thinkingLevel:   cfg.ThinkingLevel,
 		}, nil
 	case "":
 		return nil, fmt.Errorf("ai: binding has no provider")

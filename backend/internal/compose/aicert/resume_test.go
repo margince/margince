@@ -588,3 +588,15 @@ func TestAJournaledRunIsNotReplayedUnderOtherUpstreamPreferences(t *testing.T) {
 		t.Error("the product default spelled out keys apart from the same default inherited — one upstream, two keys")
 	}
 }
+
+// A thinking level changes how a model answers, so a run at one level is never
+// replayed as a run at another, nor as the adapter's default.
+func TestAJournaledRunIsNotReplayedAtAnotherThinkingLevel(t *testing.T) {
+	lite := ai.ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
+	low, high := lite, lite
+	low.ThinkingLevel, high.ThinkingLevel = "low", "high"
+	keys := map[string]string{bindingKey(lite): "default", bindingKey(low): "low", bindingKey(high): "high"}
+	if len(keys) != 3 {
+		t.Errorf("three thinking levels rendered %d journal keys: %v", len(keys), keys)
+	}
+}

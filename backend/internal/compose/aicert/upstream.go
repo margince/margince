@@ -146,7 +146,8 @@ func preflightProbes(cfg RunnerConfig, tasks []ai.Task, hooks *certifyHooks) []p
 		}
 	}
 	if len(tasks) > 0 {
-		probes = append(probes, preflightProbe{judgeRole, cfg.JudgeBinding, tasks[0], ai.TaskCertJudge, hooks.judgeOpts})
+		judgeOpts := append(judgeTransport(cfg.JudgeBinding), hooks.judgeOpts...)
+		probes = append(probes, preflightProbe{judgeRole, cfg.JudgeBinding, tasks[0], ai.TaskCertJudge, judgeOpts})
 	}
 	return probes
 }

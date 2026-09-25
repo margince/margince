@@ -243,3 +243,52 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 		})
 	}
 }
+
+// The `thinking_level` acceptance matrix, editor and runtime together. Its
+// legality depends on the provider, so like `routing:` it is a conditional that
+// can be inverted while its enum still matches.
+//
+// The parser also refuses it on a model that predates the field, which a schema
+// cannot see from a model id; that refusal is the ai package's own test.
+//
+// Held by: TestTheSchemaAndTheParserAgreeOnEveryThinkingLevel (backend/gates/airoutingschema_test.go) — this test.
+func TestTheSchemaAndTheParserAgreeOnEveryThinkingLevel(t *testing.T) {
+	t.Parallel()
+	sch := compiledRoutingSchema(t)
+
+	tiered := func(binding string) string {
+		return "profile: cloud_frontier\ntiers:\n  cheap_cloud: {" + binding + "}\nembeddings: {provider: gemini, model: e}\n"
+	}
+	for name, tc := range map[string]struct {
+		yaml  string
+		legal bool
+	}{
+		"omitted":                       {tiered("provider: gemini, model: gemini-3.1-flash-lite"), true},
+		"low on a flash-lite":           {tiered("provider: gemini, model: gemini-3.1-flash-lite, thinking_level: low"), true},
+		"minimal":                       {tiered("provider: gemini, model: gemini-3.5-flash, thinking_level: minimal"), true},
+		"high":                          {tiered("provider: gemini, model: gemini-3.5-flash, thinking_level: high"), true},
+		"an unknown level":              {tiered("provider: gemini, model: gemini-3.5-flash, thinking_level: lots"), false},
+		"an effort word Gemini lacks":   {tiered("provider: gemini, model: gemini-3.5-flash, thinking_level: none"), false},
+		"on a provider without it":      {tiered("provider: anthropic, model: m, thinking_level: low"), false},
+		"on the OpenAI-compatible wire": {tiered("provider: openai_compatible, base_url: https://x, model: m, thinking_level: low"), false},
+		"on the embeddings lane": {
+			"profile: cloud_frontier\ntiers:\n  cheap_cloud: {provider: gemini, model: m}\n" +
+				"embeddings: {provider: gemini, model: e, thinking_level: low}\n", false,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var doc any
+			if err := yaml.Unmarshal([]byte(tc.yaml), &doc); err != nil {
+				t.Fatalf("test yaml is not yaml: %v", err)
+			}
+			schemaAccepts := sch.Validate(doc) == nil
+			_, parseErr := ai.ParseRouting([]byte(tc.yaml))
+			if schemaAccepts != tc.legal {
+				t.Errorf("the EDITOR accepts=%v, want %v", schemaAccepts, tc.legal)
+			}
+			if parserAccepts := parseErr == nil; parserAccepts != tc.legal {
+				t.Errorf("the PARSER accepts=%v, want %v (err: %v)", parserAccepts, tc.legal, parseErr)
+			}
+		})
+	}
+}

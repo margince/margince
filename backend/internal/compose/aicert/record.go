@@ -124,7 +124,11 @@ type Record struct {
 	// record without them predates the product default being applied here.
 	CandidateUpstream *ai.OpenRouterRouting `json:"candidate_upstream,omitempty"`
 	JudgeUpstream     *ai.OpenRouterRouting `json:"judge_upstream,omitempty"`
-	RanAt             string                `json:"ran_at"`
+	// ThinkingLevel is the candidate binding's own `thinking_level`, absent where
+	// it names none. It changes how the model answers, so a record carrying one
+	// speaks only for a preset whose rung sets the same level.
+	ThinkingLevel string `json:"thinking_level,omitempty"`
+	RanAt         string `json:"ran_at"`
 	// Scenarios is every scenario this record pooled, with its own verdict and
 	// its own counts. A record is written per TASK and a task is not one
 	// scenario or even one site — cold_start ships four sites — so the pooled

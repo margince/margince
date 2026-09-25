@@ -7,6 +7,8 @@ package ai
 // request defaults to, and which models may be named a level at all.
 
 import (
+	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -73,4 +75,32 @@ func geminiTakesThinkingLevel(model string) bool {
 
 type geminiThinking struct {
 	ThinkingLevel string `json:"thinkingLevel"` //nolint:tagliatelle // Google's wire format (camelCase)
+}
+
+// geminiThinkingLevels is the thinkingLevel vocabulary generateContent takes,
+// shallowest first. Which of them one model accepts is the vendor's to say —
+// gemini-3.1-pro-preview refuses minimal — so the parser checks the word and
+// leaves the pairing to the vendor's 400.
+var geminiThinkingLevels = []string{"minimal", "low", "medium", "high"} //nolint:goconst // Google's vocabulary; the same words in the broker's and Ollama's lists belong to other vendors and must not move with it
+
+// validateThinkingLevel refuses a binding's `thinking_level` that no request
+// could carry: on a provider other than gemini, outside the vocabulary, or on a
+// model that predates the field. Refused at load rather than sent, because the
+// last two fail every call and the first would be ignored in silence.
+func validateThinkingLevel(lane string, binding ProviderConfig) error {
+	level := binding.ThinkingLevel
+	switch {
+	case level == "":
+		return nil
+	case binding.Provider != providerGemini:
+		return fmt.Errorf("ai: routing config: %s: `thinking_level` is Gemini's thinkingConfig and provider %s has no such field; remove it",
+			lane, binding.Provider)
+	case !slices.Contains(geminiThinkingLevels, level):
+		return fmt.Errorf("ai: routing config: %s: thinking_level %q is not one of %s",
+			lane, level, strings.Join(geminiThinkingLevels, " | "))
+	case !geminiTakesThinkingLevel(binding.Model):
+		return fmt.Errorf("ai: routing config: %s: model %s predates thinkingLevel and answers it with a 400; remove thinking_level or bind a Gemini 3 model",
+			lane, binding.Model)
+	}
+	return nil
 }

@@ -1476,6 +1476,31 @@ curl -s https://openrouter.ai/api/v1/models \
   | jq '.data[] | select(.id=="<slug>") | .architecture.input_modalities'
 ```
 
+#### `thinking_level:` — how deeply a Gemini tier thinks
+
+A `gemini` tier may name the thinking level its requests are sent when the
+request names none of its own:
+
+```yaml
+cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite, thinking_level: low }
+```
+
+- **Omitted, the adapter decides**: a structured request thinks at `low`, and a
+  Flash-Lite keeps its own shallower default (`minimal`), so it is sent no level
+  at all. Naming `low` on a Flash-Lite therefore *raises* its thinking.
+- **A request's own level still wins** (`ProviderOptions["gemini"].thinking_level`).
+- **Accepted values are `minimal`, `low`, `medium` and `high`.** Anything else, the
+  field on a provider other than `gemini`, on the `embeddings:` lane, or on a
+  Gemini 2.5 model (which answers the field with a 400) is a startup error.
+  Which levels one Gemini 3 model takes is the vendor's to say:
+  `gemini-3.1-pro-preview` refuses `minimal`.
+- **Thinking is output.** Gemini charges it to the same `maxOutputTokens` as the
+  answer; the adapter reports it as reasoning tokens inside the output count, so
+  it is metered and priced, and a structured answer whose thinking ate the
+  ceiling is retried with more room.
+- Settings → AI has no field for it; re-saving a tier bound to the same model
+  keeps the stored level, and re-pointing the tier drops it.
+
 A cloud binding is refused at startup under `profile: sovereign` (zero
 egress by construction) — and so is a **local provider pointed at somebody
 else's host**, because the provider name alone would let a deployment declare

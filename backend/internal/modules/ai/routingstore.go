@@ -153,21 +153,26 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 	return next, nil
 }
 
-// keepingStoredUpstream carries each stored lane's upstream preferences onto
-// the same lane of next when next declares none and binds the same provider,
-// host and model.
+// keepingStoredUpstream carries each stored lane's upstream preferences and
+// thinking level onto the same lane of next when next declares none and binds
+// the same provider, host and model.
 //
-// The HTTP contract has no field for them, so every write through it arrives
-// with none: without this, reading the binding and writing it straight back
+// The HTTP contract has no field for either, so every write through it arrives
+// with neither: without this, reading the binding and writing it straight back
 // would drop an `only:` residency pin, and the broker would go back to serving
 // that lane from any region. Keyed on the model as well as the host because a
 // pin names hosts that serve ONE model — carried onto another, it would fail
 // every call for want of a host, with nothing in the form able to lift it.
 func (next RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingConfig {
 	carry := func(lane, kept ProviderConfig) ProviderConfig {
-		if lane.Routing == nil && kept.Routing != nil &&
-			lane.Provider == kept.Provider && sameEndpoint(lane.BaseURL, kept.BaseURL) && lane.Model == kept.Model {
+		if lane.Provider != kept.Provider || !sameEndpoint(lane.BaseURL, kept.BaseURL) || lane.Model != kept.Model {
+			return lane
+		}
+		if lane.Routing == nil {
 			lane.Routing = kept.Routing
+		}
+		if lane.ThinkingLevel == "" {
+			lane.ThinkingLevel = kept.ThinkingLevel
 		}
 		return lane
 	}

@@ -45,6 +45,7 @@ func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
 					Input    struct {
 						Items struct{ Enum []string } `json:"items"`
 					} `json:"input"`
+					ThinkingLevel struct{ Enum []string } `json:"thinking_level"`
 				} `json:"properties"`
 				AllOf []struct {
 					If struct {
@@ -80,6 +81,7 @@ func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
 	assertSetEqual(t, "tiers", schema.Properties.Tiers.PropertyNames.Enum, tierNames)
 	assertSetEqual(t, "providers", schema.Defs.Binding.Properties.Provider.Enum, knownProviders)
 	assertSetEqual(t, "input modalities", schema.Defs.Binding.Properties.Input.Items.Enum, acceptedModalities)
+	assertSetEqual(t, "thinking levels", schema.Defs.Binding.Properties.ThinkingLevel.Enum, geminiThinkingLevels)
 
 	// `input:` is accepted on every provider — as the whole answer on the
 	// OpenAI-compatible wire, as a narrowing everywhere else — so the schema must

@@ -68,14 +68,22 @@ const routingDefsTemplate = `{
         "contains": { "const": "text" },
         "items": { "enum": ["text", "image"] }
       },
-      "routing": { "$ref": "#/$defs/upstreamRouting" }
+      "routing": { "$ref": "#/$defs/upstreamRouting" },
+      "thinking_level": {
+        "description": "How deeply a gemini tier thinks when the request names no level of its own. Omit it for the adapter's default: a structured request thinks at low, and a Flash-Lite keeps its own shallower default (minimal), which low RAISES. Gemini charges thinking to the same output ceiling as the answer. Gemini 3 or later only — a Gemini 2.5 answers the field with a 400, and gemini-3.1-pro-preview refuses minimal.",
+        "enum": ["minimal", "low", "medium", "high"]
+      }
     },
     "allOf": [
       {
         "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
         "then": { "required": ["base_url"] }
       },
-      { "$ref": "#/$defs/routingNeedsOpenRouter" }
+      { "$ref": "#/$defs/routingNeedsOpenRouter" },
+      {
+        "if":   { "required": ["thinking_level"] },
+        "then": { "properties": { "provider": { "const": "gemini" } } }
+      }
     ]
   },
   "routingNeedsOpenRouter": {

@@ -323,7 +323,8 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 		return Record{}, err
 	}
 	judgeRec := newTraceRecorder()
-	judgeOpts := append([]ai.LocalOption{ai.WithoutResultCache(), ai.WithCallStore(judgeRec)}, judgeExtra...)
+	judgeOpts := append([]ai.LocalOption{ai.WithoutResultCache(), ai.WithCallStore(judgeRec)}, judgeTransport(judgeBinding)...)
+	judgeOpts = append(judgeOpts, judgeExtra...)
 	judgeRouter, err := compose.NewLocalRouterForCert(judgeCfg, judgeOpts...)
 	if err != nil {
 		return Record{}, fmt.Errorf("aicert: task %s: judge router: %w", task, err)
@@ -342,6 +343,7 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 
 	rec := buildRecord(task, taskVerdict, acc, profile, promptVersion)
 	rec.CandidateUpstream, rec.JudgeUpstream = ai.UpstreamPreferencesFor(binding), ai.UpstreamPreferencesFor(judgeBinding)
+	rec.ThinkingLevel = binding.ThinkingLevel
 	return rec, nil
 }
 

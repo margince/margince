@@ -117,11 +117,9 @@ build rather than from a copy here: `make ai-probe ARGS='list'` prints every
 shipped site from the same census the report enumerates. Omit `TASK=` to run the
 whole corpus.
 
-A `planned` task — one the contract declares but nothing implements
-(`nl_search`, `transcript`) — owns no scenarios, and naming it fails the run with
-`task "…" has no scenarios under corpus`. That is the point: a scenario for a
-prompt nobody ships would score a hand-written copy and report the task covered,
-so a fitness test (`aicert/corpus_test.go`) holds the corpus to that both ways.
+A `planned` task (`nl_search`, `transcript`) owns no scenarios, so naming it fails
+with `task "…" has no scenarios under corpus`: a scenario for a prompt nobody
+ships would score a copy (`aicert/corpus_test.go` holds that both ways).
 
 A task is not one prompt. `cold_start` ships four invocation **sites** and
 `voice_build` three, each with its own scenarios; `TASK=` selects the task, so
@@ -151,9 +149,21 @@ Other knobs: `RUNS=5` (odd repeat count), `PROFILE=` (environment class),
 is the default only for the default judge, and unset it falls back to
 `BASE_URL=`, since a judge on the candidate's broker is the common case.
 A broker binding is served under production's upstream default (fp16/bf16 hosts
-only); `UPSTREAM='{}'` and `JUDGE_UPSTREAM='{}'` lift it, and each record names
-what applied. One small pre-flight call per binding runs before the corpus, so a
-key, slug or preference no host can serve fails in seconds, not mid-corpus.
+only); `UPSTREAM='{}'` and `JUDGE_UPSTREAM='{}'` lift it. Each record names what
+applied and any `thinking_level`, crediting only presets set alike. A pre-flight
+call per binding makes a key, slug or preference no host serves fail in seconds.
+
+## Choosing a judge transport
+
+`JUDGE=provider:model` grades through a provider adapter, billed per token;
+`JUDGE=claude_cli:<model>` (`sonnet`, or an id like `claude-sonnet-4-6`) grades
+through `claude -p` on a Claude Code subscription. It needs the CLI on `PATH`
+and `CLAUDE_CODE_OAUTH_TOKEN` (`claude setup-token`, read from `.env.local`;
+`ANTHROPIC_API_KEY` works too). Each call runs from an empty directory with no
+tools, no settings and the judge's system prompt in place of the CLI's, and the
+record names the model the CLI reports serving. Use it when a subscription beats
+per-token grading: it costs 2–5 s of start-up a call, counts against the plan's
+limits, has no temperature or max-token control, and refuses Claude candidates.
 
 ## 3. Read the readiness report
 
@@ -207,16 +217,10 @@ corpus ships today — which is what makes a `partial` actionable, since `9/10` 
 `1/10` are the same word and very different bills. A scenario the corpus has
 since **dropped** counts in neither half: nobody can re-run it.
 
-**Per-scenario stamps are what make re-certification affordable.** A record
-carries each scenario's own stamp (`ScenarioRecord.Stamp`) beside the task-level
-`PromptVersion`, which is the fold of them (`aicert.ScenarioStamps` /
-`FoldScenarioStamps`), so adding one scenario to a ten-scenario task reads
-`partial 9/10` and costs one re-run rather than invalidating nine measurements
-that are still true. The guarantee is finer rather than weaker: a scenario's
-stamp still covers the scenario whole plus both requests this build constructs
-from it. A record written before those stamps existed carries none, is judged by
-its task stamp — `current` or `stale`, never `partial` — and reads `-` under
-`SCENARIOS`.
+**Per-scenario stamps make re-certification affordable.** A record carries each
+scenario's own stamp beside the task-level `PromptVersion` (their fold), so a new
+scenario in a ten-scenario task reads `partial 9/10` and costs one re-run. A
+record older than those stamps is judged by its task stamp and reads `-` there.
 
 `SCOPE` is how much of the site a run covers, from the most to the least:
 
@@ -289,10 +293,9 @@ Two things now stand in the way.
 **The run is re-driven** when the router comes back having failed on every bound
 tier — three attempts, waiting 2s then 8s. Only an exhausted ladder is retried: a
 validator failure or a caps miss is a *measurement*, and an exhausted account is
-a human's to fix. A withheld answer is a measurement too — the run fails,
-ungraded, and the record names the filter — while a rejected request stops the
-task with no record, because it measures the binding, not the model. It is re-driven whole, because a site may turn a multi-turn
-conversation or a tool loop and there is no resuming one mid-way.
+a human's to fix. A withheld answer fails the run ungraded, naming the filter; a
+rejected request stops the task with no record. A run is re-driven whole, since a
+conversation or tool loop cannot resume mid-way.
 
 **Every scored run is journaled** to `.tmp/aicert/resume/` as it is scored, so a
 restart replays what it can (`… run(s) replayable`) instead of paying again. A
@@ -337,14 +340,11 @@ are the run's totals.
   output tokens on internal thinking that counts against `maxOutputTokens`; the
   lane gives both candidate and judge headroom so a thinking burst doesn't starve
   the answer into `MAX_TOKENS`. Leave room for it in a tight `caps.max_tokens`.
-- **Markdown-fenced JSON** is tolerated: the lane unfences as production does.
-- Records are committed artifacts — the proof travels with the code.
+- **Markdown-fenced JSON** is tolerated, and records are committed artifacts.
 
 ## When certification passes but the field does not
 
-A record measures a model against the CORPUS fixture. A site can be certified at
-reliability 1.00 and still fail on the input production actually hands it — the
-model-cost refresh did exactly that against a 530 KB provider catalog while
-`rate_extract/pricing` was certified on a two-line fixture. To run a site against
-real input through the same code, use [debug an AI task](debug-an-ai-task.md)
-(`make ai-probe`).
+A record measures a model against the CORPUS fixture, so a site certified at 1.00
+can still fail on production input (`rate_extract/pricing`, certified on a
+two-line fixture, failed on a 530 KB catalog). Run a site against real input with
+[debug an AI task](debug-an-ai-task.md) (`make ai-probe`).

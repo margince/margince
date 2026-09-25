@@ -64,10 +64,20 @@ type aiCertBindingRef struct {
 	Provider string `json:"provider"`
 	Model    string `json:"model"`
 	Env      string `json:"env"`
+	// ThinkingLevel is part of the binding because it changes how the model
+	// answers: a record run at one level is no measurement of another.
+	ThinkingLevel string `json:"thinking_level,omitempty"`
 }
 
-// label is the binding as the page spells it.
-func (b aiCertBindingRef) label() string { return b.Provider + " · " + b.Model + " · " + b.Env }
+// label is the binding as the page spells it, and the key a preset's rung is
+// matched to a record on, so the two agree on the thinking level or not at all.
+func (b aiCertBindingRef) label() string {
+	label := b.Provider + " · " + b.Model + " · " + b.Env
+	if b.ThinkingLevel != "" {
+		label += " · thinking " + b.ThinkingLevel
+	}
+	return label
+}
 
 // aiCertBinding is one binding folded over every site it measured.
 type aiCertBinding struct {
@@ -418,7 +428,7 @@ func countAICertSiteInto(fold *aiCertBinding, row aicert.ReadinessRow) {
 }
 
 func bindingRefOf(rec aicert.Record) aiCertBindingRef {
-	return aiCertBindingRef{Provider: rec.Provider, Model: rec.ServedModel, Env: rec.EnvClass}
+	return aiCertBindingRef{Provider: rec.Provider, Model: rec.ServedModel, Env: rec.EnvClass, ThinkingLevel: rec.ThinkingLevel}
 }
 
 // repoPathOf names a scenario file from the repository root. The loader reads

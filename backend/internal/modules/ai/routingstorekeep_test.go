@@ -83,3 +83,24 @@ func TestAWriteKeepsTheStoredUpstreamAcrossSpellingsOfOneEndpoint(t *testing.T) 
 		}
 	}
 }
+
+// A thinking level is carried the way a pin is: kept on the same binding written
+// back without one, dropped on a re-pointed lane, never over one the write states.
+func TestAWriteKeepsTheStoredThinkingLevelOfTheSameBindingOnly(t *testing.T) {
+	t.Parallel()
+	lite := ProviderConfig{Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: "low"}
+	stored := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierCheapCloud: lite, TierLocalSmall: lite, TierPremium: lite}}
+	next := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: providerGemini, Model: "gemini-3.1-flash-lite"},
+		TierLocalSmall: {Provider: providerGemini, Model: "gemini-3.5-flash"},
+		TierPremium:    {Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: "medium"},
+	}}
+
+	got := next.keepingStoredUpstream(stored)
+
+	for tier, want := range map[Tier]string{TierCheapCloud: "low", TierLocalSmall: "", TierPremium: "medium"} {
+		if level := got.Tiers[tier].ThinkingLevel; level != want {
+			t.Errorf("%s: thinking_level = %q, want %q", tier, level, want)
+		}
+	}
+}

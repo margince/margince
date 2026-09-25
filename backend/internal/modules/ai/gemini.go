@@ -33,6 +33,8 @@ type geminiClient struct {
 	// attachmentMIMEs is what THIS binding carries: the wire's own carriage,
 	// narrowed by any `input:` the operator declared (inputmodality.go).
 	attachmentMIMEs []string
+	// thinkingLevel is the binding's own level, sent when a request names none.
+	thinkingLevel string
 }
 
 // geminiEmbedModel is Gemini's dedicated embedding model; the chat model id
@@ -278,6 +280,9 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 	opts, err := geminiReadOptions(req.ProviderOptions)
 	if err != nil {
 		return nil, err
+	}
+	if opts.ThinkingLevel == "" {
+		opts.ThinkingLevel = c.thinkingLevel
 	}
 	wire := geminiWire{Contents: geminiContents(req.Messages, req.Attachments, opts.ThoughtSignatures)}
 	if req.System != "" {
