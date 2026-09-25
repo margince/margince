@@ -70,20 +70,31 @@ func refuseAnchor(t *testing.T, p datasource.SystemOfRecordProvider, args anchor
 	return err
 }
 
+// resolvesTo resolves and requires the id it should have found, answering the
+// provider so a caller can go on to ask what it was asked.
+//
+// The mirror of refuseAnchor: the two outcomes this function has are "the id"
+// and "a refusal", and each is asserted one way here rather than spelled out
+// per test.
+func resolvesTo(t *testing.T, p *searchingProvider, args anchorArgs, want ids.UUID) {
+	t.Helper()
+	got, err := resolveAnchor(context.Background(), p, args)
+	if err != nil {
+		t.Fatalf("resolveAnchor: %v", err)
+	}
+	if got != want {
+		t.Fatalf("resolved to %s, want %s", got, want)
+	}
+}
+
 // An id given outright is used as given: naming the record precisely must not
 // cost a search.
 func TestAnAnchorGivenAnIDDoesNotSearch(t *testing.T) {
 	p := &searchingProvider{}
 	want := ids.NewV7()
 
-	got, err := resolveAnchor(context.Background(), p,
-		anchorArgs{RecordType: "company", RecordID: want})
-	if err != nil {
-		t.Fatalf("resolveAnchor: %v", err)
-	}
-	if got != want {
-		t.Errorf("resolved to %s, want the id the caller gave (%s)", got, want)
-	}
+	resolvesTo(t, p, anchorArgs{RecordType: "company", RecordID: want}, want)
+
 	if p.asked.Text != "" {
 		t.Errorf("searched for %q when the caller had already named the record", p.asked.Text)
 	}
@@ -95,14 +106,8 @@ func TestAnAnchorNamedInWordsResolvesToItsOneMatch(t *testing.T) {
 	hit := aCompany()
 	p := &searchingProvider{hits: []datasource.Record{hit}}
 
-	got, err := resolveAnchor(context.Background(), p,
-		anchorArgs{RecordType: "company", RecordName: "Contoso"})
-	if err != nil {
-		t.Fatalf("resolveAnchor: %v", err)
-	}
-	if got != hit.Ref.ID {
-		t.Errorf("resolved to %s, want the single match %s", got, hit.Ref.ID)
-	}
+	resolvesTo(t, p, anchorArgs{RecordType: "company", RecordName: "Contoso"}, hit.Ref.ID)
+
 	if p.asked.Text != "Contoso" {
 		t.Errorf("searched for %q, want the caller's own words", p.asked.Text)
 	}
