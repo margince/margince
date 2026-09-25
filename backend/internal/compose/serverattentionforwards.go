@@ -41,6 +41,13 @@ func (s Server) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 	s.attentionHandlers.GetHiddenBacklog(w, r)
 }
 
+// GetHiddenBacklogRows forwards the rows behind one of those rules.
+func (s Server) GetHiddenBacklogRows(
+	w http.ResponseWriter, r *http.Request, rule crmcontracts.GetHiddenBacklogRowsParamsRule,
+) {
+	s.attentionHandlers.GetHiddenBacklogRows(w, r, rule)
+}
+
 // GetHandledForYou forwards the reader's own receipt of what was done.
 func (s Server) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
 	s.attentionHandlers.GetHandledForYou(w, r)

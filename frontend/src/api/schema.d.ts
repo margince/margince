@@ -8406,6 +8406,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/hidden/{rule}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which threads one hiding rule is keeping off the queue.
+         * @description `GET /worklist/hidden` answers how MANY each rule holds back. This answers WHICH —
+         *     the question a reader has the moment a figure surprises them, and the one the
+         *     guardrail could not answer while it carried counts alone.
+         *
+         *     A SECOND read rather than ids carried on the summary. The summary is read on every
+         *     worklist load, and four id arrays would ride every one of them; this is asked only
+         *     when somebody clicks a figure.
+         *
+         *     The rows are the DIFFERENCE the figure reports: what the queue finds with this one
+         *     rule relaxed and the others still in force, minus what it finds with none relaxed.
+         *     A plain relaxed read would return the whole queue plus the hidden few, so a reader
+         *     clicking "3 set aside" would receive three hundred rows.
+         *
+         *     Every visibility gate the queue applies rides along, because both halves are the
+         *     same eligibility statement: a thread the reader may not read produces no row in
+         *     either, so it cannot appear in the difference.
+         */
+        get: operations["getHiddenBacklogRows"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist/response": {
         parameters: {
             query?: never;
@@ -35840,6 +35875,52 @@ export interface components {
             more_available: boolean;
         };
         /**
+         * @description One thread a hiding rule is keeping off the queue — enough to say what it is and
+         *     to open it, which is what the figure it sits behind could not do.
+         */
+        HiddenBacklogRow: {
+            /**
+             * Format: uuid
+             * @description The message itself — what a reply would be drafted to.
+             */
+            activity_id: string;
+            subject: string;
+            /**
+             * Format: date-time
+             * @description When they wrote. The wait is measured from it.
+             */
+            since: string;
+            /**
+             * @description Present exactly when this wait is an EMAIL the reader may read. The lane spans
+             *     email and channel messages, and only an email has an email's shape.
+             */
+            email_summary?: components["schemas"]["EmailSummary"];
+            /**
+             * Format: uuid
+             * @description The record the thread is filed under, when it names one. Absent rather than a
+             *     zero uuid: a zero on the wire is an id a client could try to open.
+             */
+            contact_id?: string | null;
+            /** Format: uuid */
+            company_id?: string | null;
+            /** Format: uuid */
+            deal_id?: string | null;
+        };
+        /** @description The threads one hiding rule is holding back, at one instant. */
+        HiddenBacklogRows: {
+            /**
+             * Format: date-time
+             * @description The instant the difference was read at.
+             */
+            as_of: string;
+            /**
+             * @description Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
+             * @enum {string}
+             */
+            rule: "set_aside" | "not_sales" | "past_horizon" | "unlinked" | "colleagues";
+            rows: components["schemas"]["HiddenBacklogRow"][];
+        };
+        /**
          * @description How much waiting work each hiding rule is keeping off one reader's queue, at one
          *     instant. Every count is of THREADS, matching what the queue counts: a customer who
          *     wrote three times is waiting once.
@@ -50389,6 +50470,32 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getHiddenBacklogRows: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Which hiding rule to open. The same five `GET /worklist/hidden` counts. */
+                rule: "set_aside" | "not_sales" | "past_horizon" | "unlinked" | "colleagues";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The threads that rule is holding back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HiddenBacklogRows"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getResponseMetrics: {

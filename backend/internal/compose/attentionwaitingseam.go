@@ -84,6 +84,19 @@ func (w attentionWaiting) Unanswered(
 	if err != nil {
 		return nil, false, err
 	}
+	return w.asWaitingCustomers(kept, summaries), cut, nil
+}
+
+// asWaitingCustomers carries the module's rows across in the queue's
+// vocabulary.
+//
+// Shared by Unanswered and HiddenRows rather than written twice: both answer
+// with the same card, and the translation below — which verdict word changes a
+// ranking, when a summary is withheld — is the part that would go quietly
+// wrong in a second copy.
+func (w attentionWaiting) asWaitingCustomers(
+	kept []activities.WaitingReply, summaries map[ids.UUID]crmcontracts.EmailSummary,
+) []attention.WaitingCustomer {
 	out := make([]attention.WaitingCustomer, 0, len(kept))
 	for _, row := range kept {
 		// Nil when this wait is not an email, or is one whose content the
@@ -116,7 +129,26 @@ func (w attentionWaiting) Unanswered(
 			OwnerID:           row.OwnerID,
 		})
 	}
-	return out, cut, nil
+	return out
+}
+
+// HiddenRows names the threads one hiding rule is keeping off this reader's
+// page.
+//
+// A pass-through like Hidden: the difference between the relaxed and strict
+// reads is the module's arithmetic, and belongs beside the query it differences.
+func (w attentionWaiting) HiddenRows(
+	ctx context.Context, asOf time.Time, rule string,
+) ([]attention.WaitingCustomer, error) {
+	kept, err := w.store.HiddenWaitingRows(ctx, asOf, activities.HiddenRule(rule))
+	if err != nil {
+		return nil, err
+	}
+	summaries, err := w.emailRows(ctx, kept)
+	if err != nil {
+		return nil, err
+	}
+	return w.asWaitingCustomers(kept, summaries), nil
 }
 
 // waitingRefillRounds bounds how many pages one assembly will read.
