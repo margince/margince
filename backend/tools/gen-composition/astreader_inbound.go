@@ -106,6 +106,16 @@ func (r *unitReader) readInboundEndpoint(elt ast.Expr, ext, timePkg string) (inb
 			endpoint.SkewSeconds, err = r.durationSeconds(kv.Value, ext, timePkg, "InboundEndpoint.Skew")
 		case "Rate":
 			endpoint.Rate, err = r.readInboundRate(kv.Value, ext, timePkg)
+		case "Scheme":
+			endpoint.Scheme, err = r.inboundScheme(kv.Value, ext)
+		case "SignatureHeader":
+			endpoint.SignatureHeader, err = r.stringLit(kv.Value, "InboundEndpoint.SignatureHeader")
+		case "Challenge":
+			if r.isStaticallyNilHandler(kv.Value, ext, "InboundChallenge") {
+				err = r.errAt(kv, "inbound endpoint declares Challenge: nil — omit the field for an endpoint with no handshake")
+			} else {
+				endpoint.Challenge = true
+			}
 		case "Handle":
 			// A nil spelling is caught HERE rather than left to be merely
 			// "present": unlike a Tool's or a Job's, an InboundEndpoint has
@@ -137,6 +147,21 @@ func (r *unitReader) readInboundEndpoint(elt ast.Expr, ext, timePkg string) (inb
 		return inboundEndpoint{}, r.errPos(lit, "%v", err)
 	}
 	return endpoint, nil
+}
+
+// schemeProviderSigned is how the manifest spells SchemeProviderSigned.
+const schemeProviderSigned = "provider_signed"
+
+// inboundScheme reads the Scheme field, which must name one of the published
+// constants: an integer literal would be a meaning the generator cannot check.
+func (r *unitReader) inboundScheme(expr ast.Expr, ext string) (string, error) {
+	switch {
+	case isSelector(expr, ext, "SchemeMargince"):
+		return "", nil
+	case isSelector(expr, ext, "SchemeProviderSigned"):
+		return schemeProviderSigned, nil
+	}
+	return "", r.errAt(expr, "InboundEndpoint.Scheme must be extension.SchemeMargince or extension.SchemeProviderSigned")
 }
 
 // readInboundRate reads the two metering buckets.
@@ -370,11 +395,12 @@ func (r *unitReader) timeUnitOrNil(expr ast.Expr, timePkg string) (time.Duration
 // deliberately does not read the function value — the presence check above is
 // what stands in for it.
 func declaredInboundEndpoint(e inboundEndpoint) extension.InboundEndpoint {
-	return extension.InboundEndpoint{
-		Slug:    e.Slug,
-		Secret:  e.Secret,
-		MaxBody: e.MaxBody,
-		Skew:    time.Duration(e.SkewSeconds) * time.Second,
+	declared := extension.InboundEndpoint{
+		Slug:            e.Slug,
+		Secret:          e.Secret,
+		MaxBody:         e.MaxBody,
+		Skew:            time.Duration(e.SkewSeconds) * time.Second,
+		SignatureHeader: e.SignatureHeader,
 		Rate: extension.InboundRate{
 			PerIP:       extension.Rate{Limit: e.Rate.PerIP.Limit, Window: time.Duration(e.Rate.PerIP.WindowSeconds) * time.Second},
 			PerEndpoint: extension.Rate{Limit: e.Rate.PerEndpoint.Limit, Window: time.Duration(e.Rate.PerEndpoint.WindowSeconds) * time.Second},
@@ -383,4 +409,13 @@ func declaredInboundEndpoint(e inboundEndpoint) extension.InboundEndpoint {
 			return extension.InboundAccepted, nil
 		},
 	}
+	if e.Scheme == schemeProviderSigned {
+		declared.Scheme = extension.SchemeProviderSigned
+	}
+	if e.Challenge {
+		declared.Challenge = func(context.Context, extension.Runtime, extension.InboundChallengeRequest) (string, extension.InboundOutcome, error) {
+			return "", extension.InboundAccepted, nil
+		}
+	}
+	return declared
 }

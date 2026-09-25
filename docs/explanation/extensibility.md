@@ -394,6 +394,22 @@ validated to the full identifier budget, so a name chosen today stays valid for 
   import gate (`frontend/scripts/ext-imports.test.ts`) holds a unit screen to the published surface,
   the same way the Go marker gate holds its handlers.
 
+#### Provider-signed endpoints
+
+A third-party provider cannot send the `X-Margince-*` headers. An endpoint
+declaring `Scheme: extension.SchemeProviderSigned` names the one header the
+provider signs in (`SignatureHeader`, e.g. Meta's `X-Hub-Signature-256`); the
+core bounds and passes that header's single value and the raw body, and skips
+the timestamp and nonce checks the provider cannot satisfy.
+
+**Replay becomes the unit's.** A unit declaring this scheme keys every event it
+keeps on a provider-assigned identifier, unique, and refuses any event older
+than its store keeps those identifiers.
+
+An optional `Challenge` answers the provider's GET subscription handshake. It
+receives only the `hub.*` query parameters (at most 8, 256 bytes each), and its
+answer — at most 256 bytes — is served as `text/plain` with `nosniff`.
+
 **The one upstream-owned file a unit may edit: `pnpm-lock.yaml`.** A unit frontend that declares npm
 dependencies changes the root lockfile, so the rule stated at the top of this page — *a unit edits no
 upstream-owned file* — holds for every unit except a frontend-bearing one with dependencies of its own,

@@ -105,6 +105,13 @@ type unitManifest struct {
 type inboundEndpoint struct {
 	Slug   string `json:"slug"`
 	Secret string `json:"secret"`
+	// Scheme is "provider_signed" for an endpoint a third party signs in its
+	// own header, and absent for the Margince scheme — so every manifest
+	// written before schemes existed is unchanged.
+	Scheme          string `json:"scheme,omitempty"`
+	SignatureHeader string `json:"signature_header,omitempty"`
+	// Challenge reports that the endpoint answers a GET handshake.
+	Challenge bool `json:"challenge,omitempty"`
 	// MaxBody is the byte cap the endpoint asked for. It is the number that
 	// decides how much one unauthenticated request costs before its signature
 	// has even been checked.
