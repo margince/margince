@@ -142,7 +142,7 @@ deriving it the first time.
 | `migrate-up` / `migrate-down` | Alias for `migrate` / roll back the last migration(s) (`STEPS=n`) |
 | `migrate-create` | `make migrate-create NAME=add_renewal_risk` — scaffold a core `.up.sql`/`.down.sql` pair named for the current unix second. The clock, not the next number in a sequence: two branches open at once pick the same number and `main` stops loading once both merge. The four-digit `0001`–`0292` sequence is closed; ten-digit stamps sort above it |
 | `run` | `go run ./cmd/api` on `:8080` — no db-up/migrate first |
-| `seed-reset` / `seed-dev-db` | Clear the demo records, keeping the installation / apply the API-less dev SQL seed |
+| `seed-reset` / `seed-dev-db` | Clear the demo records, keeping the installation / apply the API-less dev SQL seed. **`seed-reset` is also the weekly-review rebuild.** A weekly review is a frozen reading of one week, written once under `uq_weekly_review_user_week` with `ON CONFLICT DO NOTHING`, and the generator skips a seat that already has one — so a review the dispatcher made at boot against the empty installation survives `make seed-dev` and reads as a week in which nothing happened. `seed-dev` cannot correct it; clearing the records is what rebuilds it. `audit_log` is preserved either way |
 | `psql` / `redis-cli` | Open a shell on the dev database (owner role) / dev Redis |
 | `test-v` / `test-cover` | Verbose unit tests / unit tests with a coverage summary |
 | `db-wait` / `infra-logs` / `infra-reset` | Block until Postgres answers / tail the dev-stack logs / wipe volumes and restart the stack |
