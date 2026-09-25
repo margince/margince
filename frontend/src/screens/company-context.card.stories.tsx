@@ -146,7 +146,7 @@ export const EditingEssentials: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Edit What do you sell?" }),
+      await canvas.findByRole("button", { name: "Edit Products and services" }),
     );
   },
 };

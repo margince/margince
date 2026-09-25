@@ -676,25 +676,11 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     // "automation_run:01a0…-… failed 12 times" at a rep, which names nothing
     // they can act on and cannot be told from a bug. A group whose lane minted
     // no name falls back to the generic phrase rather than to the identity.
-    if (item.batch.key === "system_incident") {
-      return translatePlural(
-        locale,
-        "worklist.batch.system_incident",
-        item.batch.count,
-        {
-          count,
-          cause: item.batch.label ?? t("worklist.batch.unnamedCause"),
-        },
-      );
-    }
     // Typed as a plural base, so a batch kind the catalog carries no pair for
-    // fails the build rather than rendering its key.
-    return translatePlural(
-      locale,
-      `worklist.batch.${item.batch.key}` as const,
-      item.batch.count,
-      { count },
-    );
+    // fails the build; only the incident sentence reads `cause`.
+    const base = `worklist.batch.${item.batch.key}` as const;
+    const cause = item.batch.label ?? t("worklist.batch.unnamedCause");
+    return translatePlural(locale, base, item.batch.count, { count, cause });
   }
   if (item.title) {
     // A title that names no record, on a row that HAS one, gets the record's

@@ -1006,10 +1006,9 @@ export function CompanyAct({
           <Button variant="ghost" onClick={() => setArtifactMode("record")}>
             {t("ob.digest.pickFacts")}
           </Button>
-          {/* One Save for every line corrected in place, and only once one
-              has been: the deck's own Confirm is the way onward for a reader
-              who changed nothing, and a second button saying the same thing
-              beside an untouched record would be a choice with no difference. */}
+          {/* One Save for every corrected line, shown only once one is: an
+              untouched record already has the deck's Confirm, and a second
+              button saying the same would be a choice with no difference. */}
           {draft.edited.size > 0 && (
             <WayOnward
               label={t("ob.digest.saveChanges")}
