@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 47,
-    "sites_best_current": 13,
+    "sites_best_current": 0,
     "sites_best_partial": 0,
-    "sites_best_stale": 34,
+    "sites_best_stale": 47,
     "sites_absent": 0,
     "scenarios": 152,
     "records": 144,
@@ -563,7 +563,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 18,
           "passed": 18,
           "cases_failing_often": 0,
@@ -1047,7 +1047,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 6,
           "passed": 3,
           "cases_failing_often": 1,
@@ -1079,7 +1079,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 3,
           "passed": 3,
           "cases_failing_often": 0,
@@ -1143,7 +1143,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 6,
           "passed": 6,
           "cases_failing_often": 0,
@@ -1239,7 +1239,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 3,
           "passed": 3,
           "cases_failing_often": 0,
@@ -1287,7 +1287,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 7,
           "cases_failing_often": 2,
@@ -1303,7 +1303,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "cases_failing_often": 0,
@@ -1319,7 +1319,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "cases_failing_often": 0,
@@ -1335,7 +1335,7 @@
             "env": "sovereign"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 9,
           "cases_failing_often": 1,
@@ -1351,7 +1351,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 6,
           "cases_failing_often": 2,
@@ -1399,7 +1399,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 15,
           "passed": 12,
           "cases_failing_often": 1,
@@ -2520,9 +2520,9 @@
         "env": "cloud_frontier"
       },
       "sites": 41,
-      "sites_current": 2,
+      "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 39,
+      "sites_stale": 41,
       "runs": 405,
       "passed": 367,
       "reliability": 0.9061728395061729,
@@ -2580,9 +2580,9 @@
         "env": "sovereign"
       },
       "sites": 13,
-      "sites_current": 11,
+      "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 13,
       "runs": 111,
       "passed": 90,
       "reliability": 0.8108108108108109,
@@ -2843,17 +2843,8 @@
       "missing_context_scopes": [
         "identity"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
-          "env": "sovereign"
-        },
-        "band": "not_supported",
-        "reliability": 0.5,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "scan_finds_the_promise_we_did_not_keep",
@@ -2888,8 +2879,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
           "stale_cause": {
+            "case_changed": [
+              "scan_finds_the_promise_we_did_not_keep"
+            ],
+            "prompt_changed": [
+              "scan_finds_the_promise_we_did_not_keep",
+              "scan_finds_the_question_nobody_answered"
+            ],
             "grader_changed": [
               "scan_finds_the_promise_we_did_not_keep",
               "scan_finds_the_question_nobody_answered"
@@ -2902,9 +2900,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 3,
@@ -2917,7 +2915,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
+          "stale_cause": {
+            "case_changed": [
+              "scan_finds_the_promise_we_did_not_keep"
+            ],
+            "prompt_changed": [
+              "scan_finds_the_promise_we_did_not_keep",
+              "scan_finds_the_question_nobody_answered"
+            ],
+            "grader_changed": [
+              "scan_finds_the_promise_we_did_not_keep",
+              "scan_finds_the_question_nobody_answered"
+            ]
+          }
         },
         {
           "binding": {
@@ -2940,8 +2951,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
           "stale_cause": {
+            "case_changed": [
+              "scan_finds_the_promise_we_did_not_keep"
+            ],
+            "prompt_changed": [
+              "scan_finds_the_promise_we_did_not_keep",
+              "scan_finds_the_question_nobody_answered"
+            ],
             "grader_changed": [
               "scan_finds_the_promise_we_did_not_keep",
               "scan_finds_the_question_nobody_answered"
@@ -2969,8 +2987,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
           "stale_cause": {
+            "case_changed": [
+              "scan_finds_the_promise_we_did_not_keep"
+            ],
+            "prompt_changed": [
+              "scan_finds_the_promise_we_did_not_keep",
+              "scan_finds_the_question_nobody_answered"
+            ],
             "grader_changed": [
               "scan_finds_the_promise_we_did_not_keep",
               "scan_finds_the_question_nobody_answered"
@@ -2998,8 +3023,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
           "stale_cause": {
+            "case_changed": [
+              "scan_finds_the_promise_we_did_not_keep"
+            ],
+            "prompt_changed": [
+              "scan_finds_the_promise_we_did_not_keep",
+              "scan_finds_the_question_nobody_answered"
+            ],
             "grader_changed": [
               "scan_finds_the_promise_we_did_not_keep",
               "scan_finds_the_question_nobody_answered"
@@ -3019,17 +3051,8 @@
         "sales",
         "offer"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "morning_brief_a_retrieved_deal_is_not_the_queue",
@@ -3054,9 +3077,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -3069,7 +3092,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ],
+            "grader_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         }
       ]
     },
@@ -3084,17 +3119,8 @@
         "sales",
         "offer"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "overnight_sweep_one_quiet_deal_is_not_the_book",
@@ -3119,9 +3145,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -3134,7 +3160,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ],
+            "grader_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         }
       ]
     },
@@ -3144,17 +3182,8 @@
       "key": "brief_ranking/rank",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
-          "env": "sovereign"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "reorder_two_candidates_by_momentum",
@@ -3197,9 +3226,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -3212,7 +3241,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it",
+          "stale_cause": {
+            "grader_changed": [
+              "reorder_two_candidates_by_momentum"
+            ]
+          }
         },
         {
           "binding": {
@@ -3419,9 +3453,16 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
           "stale_cause": {
             "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
               "a_message_that_is_both_is_labelled_commitment",
               "a_mixed_batch_keeps_every_label_on_its_own_message",
               "a_stated_promise_is_a_commitment",
@@ -3674,8 +3715,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "14 scenarios it scored have changed since (how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_reason": "14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
             "grader_changed": [
               "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
               "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
@@ -3715,8 +3772,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "14 scenarios it scored have changed since (how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_reason": "14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
             "grader_changed": [
               "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
               "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
@@ -3756,8 +3829,24 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "14 scenarios it scored have changed since (how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_reason": "14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
             "grader_changed": [
               "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
               "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
@@ -3797,8 +3886,24 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "14 scenarios it scored have changed since (how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_reason": "14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
             "grader_changed": [
               "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
               "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
@@ -3946,8 +4051,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
+          "stale_reason": "19 scenarios it scored have changed since (the case and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
           "stale_cause": {
+            "case_changed": [
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact"
+            ],
             "grader_changed": [
               "a_chased_cold_pitch_is_still_spam",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
@@ -3992,8 +4100,11 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
+          "stale_reason": "19 scenarios it scored have changed since (the case and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
           "stale_cause": {
+            "case_changed": [
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact"
+            ],
             "grader_changed": [
               "a_chased_cold_pitch_is_still_spam",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
@@ -4061,8 +4172,11 @@
             "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
+          "stale_reason": "19 scenarios it scored have changed since (the case and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
           "stale_cause": {
+            "case_changed": [
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact"
+            ],
             "grader_changed": [
               "a_chased_cold_pitch_is_still_spam",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
@@ -4107,8 +4221,11 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
+          "stale_reason": "19 scenarios it scored have changed since (the case and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
           "stale_cause": {
+            "case_changed": [
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact"
+            ],
             "grader_changed": [
               "a_chased_cold_pitch_is_still_spam",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
@@ -4140,17 +4257,8 @@
       "key": "cert_judge/judge",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
-          "env": "sovereign"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "grades_a_fabricated_answer_poorly",
@@ -4185,8 +4293,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
           "stale_cause": {
+            "prompt_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
             "grader_changed": [
               "grades_a_fabricated_answer_poorly",
               "grades_a_well_grounded_answer_highly"
@@ -4199,9 +4311,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -4214,7 +4326,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_cause": {
+            "prompt_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
+            "grader_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ]
+          }
         },
         {
           "binding": {
@@ -4237,8 +4359,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
           "stale_cause": {
+            "prompt_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
             "grader_changed": [
               "grades_a_fabricated_answer_poorly",
               "grades_a_well_grounded_answer_highly"
@@ -4266,8 +4392,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
           "stale_cause": {
+            "prompt_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
             "grader_changed": [
               "grades_a_fabricated_answer_poorly",
               "grades_a_well_grounded_answer_highly"
@@ -4295,8 +4425,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
           "stale_cause": {
+            "prompt_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
             "grader_changed": [
               "grades_a_fabricated_answer_poorly",
               "grades_a_well_grounded_answer_highly"
@@ -4324,8 +4458,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly",
           "stale_cause": {
+            "prompt_changed": [
+              "grades_a_fabricated_answer_poorly",
+              "grades_a_well_grounded_answer_highly"
+            ],
             "grader_changed": [
               "grades_a_fabricated_answer_poorly",
               "grades_a_well_grounded_answer_highly"
@@ -5167,8 +5305,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
+            "prompt_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
             "grader_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
@@ -5199,8 +5344,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
+            "prompt_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
             "grader_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
@@ -5270,8 +5422,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
+            "prompt_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
             "grader_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
@@ -5302,8 +5461,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
+            "prompt_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
             "grader_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
@@ -5362,8 +5528,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
           "stale_cause": {
+            "prompt_changed": [
+              "deal_status_an_overdue_task_is_not_done_work",
+              "deal_status_offer_left_hanging",
+              "deal_status_says_nothing_is_wrong_when_nothing_is"
+            ],
             "grader_changed": [
               "deal_status_an_overdue_task_is_not_done_work",
               "deal_status_offer_left_hanging",
@@ -5392,8 +5563,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
           "stale_cause": {
+            "prompt_changed": [
+              "deal_status_an_overdue_task_is_not_done_work",
+              "deal_status_offer_left_hanging",
+              "deal_status_says_nothing_is_wrong_when_nothing_is"
+            ],
             "grader_changed": [
               "deal_status_an_overdue_task_is_not_done_work",
               "deal_status_offer_left_hanging",
@@ -5422,8 +5598,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
           "stale_cause": {
+            "prompt_changed": [
+              "deal_status_an_overdue_task_is_not_done_work",
+              "deal_status_offer_left_hanging",
+              "deal_status_says_nothing_is_wrong_when_nothing_is"
+            ],
             "grader_changed": [
               "deal_status_an_overdue_task_is_not_done_work",
               "deal_status_offer_left_hanging",
@@ -5452,8 +5633,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
           "stale_cause": {
+            "prompt_changed": [
+              "deal_status_an_overdue_task_is_not_done_work",
+              "deal_status_offer_left_hanging",
+              "deal_status_says_nothing_is_wrong_when_nothing_is"
+            ],
             "grader_changed": [
               "deal_status_an_overdue_task_is_not_done_work",
               "deal_status_offer_left_hanging",
@@ -5784,8 +5970,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it",
           "stale_cause": {
+            "case_changed": [
+              "contact_first_touch_in_german"
+            ],
             "prompt_changed": [
               "contact_first_touch_in_german"
             ],
@@ -5883,8 +6072,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it",
           "stale_cause": {
+            "case_changed": [
+              "contact_first_touch_in_german"
+            ],
             "prompt_changed": [
               "contact_first_touch_in_german"
             ],
@@ -5914,8 +6106,11 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it",
           "stale_cause": {
+            "case_changed": [
+              "contact_first_touch_in_german"
+            ],
             "prompt_changed": [
               "contact_first_touch_in_german"
             ],
@@ -5945,8 +6140,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it",
           "stale_cause": {
+            "case_changed": [
+              "contact_first_touch_in_german"
+            ],
             "prompt_changed": [
               "contact_first_touch_in_german"
             ],
@@ -6219,8 +6417,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
           "stale_cause": {
+            "prompt_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming",
+              "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
             "grader_changed": [
               "intro_request_asks_a_colleague_without_overclaiming",
               "intro_request_claims_no_more_warmth_than_the_record_holds"
@@ -6322,8 +6524,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
           "stale_cause": {
+            "prompt_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming",
+              "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
             "grader_changed": [
               "intro_request_asks_a_colleague_without_overclaiming",
               "intro_request_claims_no_more_warmth_than_the_record_holds"
@@ -6351,8 +6557,12 @@
             "invalid": 6,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
           "stale_cause": {
+            "prompt_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming",
+              "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
             "grader_changed": [
               "intro_request_asks_a_colleague_without_overclaiming",
               "intro_request_claims_no_more_warmth_than_the_record_holds"
@@ -6380,8 +6590,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
           "stale_cause": {
+            "prompt_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming",
+              "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
             "grader_changed": [
               "intro_request_asks_a_colleague_without_overclaiming",
               "intro_request_claims_no_more_warmth_than_the_record_holds"
@@ -6442,8 +6656,16 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
           "stale_cause": {
+            "case_changed": [
+              "intro_note_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "prompt_changed": [
+              "an_instruction_inside_the_stated_reason_is_data_not_a_command",
+              "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ],
             "grader_changed": [
               "an_instruction_inside_the_stated_reason_is_data_not_a_command",
               "intro_note_claims_no_more_warmth_than_the_record_holds",
@@ -6552,8 +6774,16 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
           "stale_cause": {
+            "case_changed": [
+              "intro_note_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "prompt_changed": [
+              "an_instruction_inside_the_stated_reason_is_data_not_a_command",
+              "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ],
             "grader_changed": [
               "an_instruction_inside_the_stated_reason_is_data_not_a_command",
               "intro_note_claims_no_more_warmth_than_the_record_holds",
@@ -6582,8 +6812,16 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
           "stale_cause": {
+            "case_changed": [
+              "intro_note_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "prompt_changed": [
+              "an_instruction_inside_the_stated_reason_is_data_not_a_command",
+              "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ],
             "grader_changed": [
               "an_instruction_inside_the_stated_reason_is_data_not_a_command",
               "intro_note_claims_no_more_warmth_than_the_record_holds",
@@ -6612,8 +6850,16 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
           "stale_cause": {
+            "case_changed": [
+              "intro_note_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "prompt_changed": [
+              "an_instruction_inside_the_stated_reason_is_data_not_a_command",
+              "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ],
             "grader_changed": [
               "an_instruction_inside_the_stated_reason_is_data_not_a_command",
               "intro_note_claims_no_more_warmth_than_the_record_holds",
@@ -6680,8 +6926,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
           "stale_cause": {
+            "case_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question"
+            ],
             "prompt_changed": [
               "german_thread_with_an_introduction_in_it",
               "reply_to_pricing_question",
@@ -6803,8 +7053,12 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
           "stale_cause": {
+            "case_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question"
+            ],
             "prompt_changed": [
               "german_thread_with_an_introduction_in_it",
               "reply_to_pricing_question",
@@ -6863,8 +7117,12 @@
             "invalid": 10,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
           "stale_cause": {
+            "case_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question"
+            ],
             "prompt_changed": [
               "german_thread_with_an_introduction_in_it",
               "reply_to_pricing_question",
@@ -6900,8 +7158,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
           "stale_cause": {
+            "case_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question"
+            ],
             "prompt_changed": [
               "german_thread_with_an_introduction_in_it",
               "reply_to_pricing_question",
@@ -6924,17 +7186,8 @@
       "key": "enrich/signature",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
-          "env": "sovereign"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "contact_fields_from_a_mail_signature",
@@ -6977,9 +7230,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -6992,7 +7245,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_cause": {
+            "grader_changed": [
+              "contact_fields_from_a_mail_signature"
+            ]
+          }
         },
         {
           "binding": {
@@ -7144,8 +7402,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
             "grader_changed": [
               "growth_fit_reads_their_facts_against_our_offering"
             ]
@@ -7172,8 +7433,11 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": "how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
             "grader_changed": [
               "growth_fit_reads_their_facts_against_our_offering"
             ]
@@ -7200,8 +7464,11 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": "how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
             "grader_changed": [
               "growth_fit_reads_their_facts_against_our_offering"
             ]
@@ -7228,8 +7495,11 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": "how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
             "grader_changed": [
               "growth_fit_reads_their_facts_against_our_offering"
             ]
@@ -7266,9 +7536,9 @@
           "file": "backend/internal/compose/aicert/corpus/offer_draft/empty_evidence_abstention.yaml"
         },
         {
-          "name": "rich_context_under_a_tight_token_cap",
+          "name": "rich_context_prices_every_line_from_its_own_evidence",
           "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/offer_draft/token_cap.yaml"
+          "file": "backend/internal/compose/aicert/corpus/offer_draft/rich_context.yaml"
         },
         {
           "name": "two_sources_disagree_on_price",
@@ -7298,13 +7568,18 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, two_sources_disagree_on_price (it also scored rich_context_under_a_tight_token_cap, which the corpus no longer holds)",
           "stale_cause": {
+            "prompt_changed": [
+              "grounded_draft_from_a_conversation_price",
+              "injected_instruction_inside_evidence_is_ignored",
+              "no_captured_context_yields_no_lines",
+              "two_sources_disagree_on_price"
+            ],
             "grader_changed": [
               "grounded_draft_from_a_conversation_price",
               "injected_instruction_inside_evidence_is_ignored",
               "no_captured_context_yields_no_lines",
-              "rich_context_under_a_tight_token_cap",
               "two_sources_disagree_on_price"
             ]
           }
@@ -7330,13 +7605,18 @@
             "invalid": 0,
             "abstained": 4
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, two_sources_disagree_on_price (it also scored rich_context_under_a_tight_token_cap, which the corpus no longer holds)",
           "stale_cause": {
+            "prompt_changed": [
+              "grounded_draft_from_a_conversation_price",
+              "injected_instruction_inside_evidence_is_ignored",
+              "no_captured_context_yields_no_lines",
+              "two_sources_disagree_on_price"
+            ],
             "grader_changed": [
               "grounded_draft_from_a_conversation_price",
               "injected_instruction_inside_evidence_is_ignored",
               "no_captured_context_yields_no_lines",
-              "rich_context_under_a_tight_token_cap",
               "two_sources_disagree_on_price"
             ]
           }
@@ -7385,13 +7665,18 @@
             "invalid": 2,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, two_sources_disagree_on_price (it also scored rich_context_under_a_tight_token_cap, which the corpus no longer holds)",
           "stale_cause": {
+            "prompt_changed": [
+              "grounded_draft_from_a_conversation_price",
+              "injected_instruction_inside_evidence_is_ignored",
+              "no_captured_context_yields_no_lines",
+              "two_sources_disagree_on_price"
+            ],
             "grader_changed": [
               "grounded_draft_from_a_conversation_price",
               "injected_instruction_inside_evidence_is_ignored",
               "no_captured_context_yields_no_lines",
-              "rich_context_under_a_tight_token_cap",
               "two_sources_disagree_on_price"
             ]
           }
@@ -7417,13 +7702,18 @@
             "invalid": 3,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, two_sources_disagree_on_price (it also scored rich_context_under_a_tight_token_cap, which the corpus no longer holds)",
           "stale_cause": {
+            "prompt_changed": [
+              "grounded_draft_from_a_conversation_price",
+              "injected_instruction_inside_evidence_is_ignored",
+              "no_captured_context_yields_no_lines",
+              "two_sources_disagree_on_price"
+            ],
             "grader_changed": [
               "grounded_draft_from_a_conversation_price",
               "injected_instruction_inside_evidence_is_ignored",
               "no_captured_context_yields_no_lines",
-              "rich_context_under_a_tight_token_cap",
               "two_sources_disagree_on_price"
             ]
           }
@@ -7436,17 +7726,8 @@
       "key": "owed_verdict/owed",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
-          "env": "sovereign"
-        },
-        "band": "not_supported",
-        "reliability": 0.5833333333333334,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_direct_question_asks_us_and_a_report_does_not",
@@ -7507,9 +7788,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 7,
@@ -7522,7 +7803,15 @@
             "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
+          "stale_cause": {
+            "grader_changed": [
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ]
+          }
         },
         {
           "binding": {
@@ -7625,17 +7914,8 @@
       "key": "propose_roles/committee",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
-          "env": "sovereign"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_committee_where_four_contacts_state_their_own_roles",
@@ -7690,9 +7970,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -7705,7 +7985,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title",
+          "stale_cause": {
+            "grader_changed": [
+              "a_committee_where_four_contacts_state_their_own_roles",
+              "propose_roles_reads_a_buyer_out_of_their_own_words",
+              "propose_roles_reads_no_role_out_of_a_title"
+            ]
+          }
         },
         {
           "binding": {
@@ -7805,17 +8092,8 @@
       "key": "rate_extract/fx",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
-          "env": "sovereign"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "fx_rates_json_api_grounded",
@@ -7864,9 +8142,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -7879,7 +8157,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "grader_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         },
         {
           "binding": {
@@ -7999,17 +8283,8 @@
       "key": "rate_extract/pricing",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
-          "env": "sovereign"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "pricing_table_two_models_grounded",
@@ -8052,9 +8327,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -8067,7 +8342,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it",
+          "stale_cause": {
+            "grader_changed": [
+              "pricing_table_two_models_grounded"
+            ]
+          }
         },
         {
           "binding": {
@@ -8184,17 +8464,8 @@
       "key": "request_settlement/request_settle",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
-          "env": "sovereign"
-        },
-        "band": "supported_degraded",
-        "reliability": 0.75,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_reply_that_says_nothing_either_way_is_answered_unsure",
@@ -8261,9 +8532,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 9,
@@ -8276,7 +8547,15 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_cause": {
+            "grader_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ]
+          }
         },
         {
           "binding": {
@@ -8397,17 +8676,8 @@
       "key": "signal_extract/thread_events",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
-          "env": "sovereign"
-        },
-        "band": "not_supported",
-        "reliability": 0.5,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "both_sides_promise_something",
@@ -8452,8 +8722,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
           "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
             "grader_changed": [
               "both_sides_promise_something",
               "nothing_material_was_said",
@@ -8468,9 +8744,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 6,
@@ -8483,7 +8759,21 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "grader_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ]
+          }
         },
         {
           "binding": {
@@ -8506,8 +8796,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
           "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
             "grader_changed": [
               "both_sides_promise_something",
               "nothing_material_was_said",
@@ -8537,8 +8833,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
           "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
             "grader_changed": [
               "both_sides_promise_something",
               "nothing_material_was_said",
@@ -8568,8 +8870,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
           "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
             "grader_changed": [
               "both_sides_promise_something",
               "nothing_material_was_said",
@@ -8606,7 +8914,7 @@
         },
         {
           "name": "one_legal_page_naming_two_entities",
-          "expects": "abstained",
+          "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/site_extract/legal_abstention.yaml"
         },
         {
@@ -8637,8 +8945,12 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
+          "stale_reason": "5 scenarios it scored have changed since (the case and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
           "stale_cause": {
+            "case_changed": [
+              "one_legal_page_naming_two_entities",
+              "services_page_profile_fields_grounded"
+            ],
             "grader_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -8708,8 +9020,12 @@
             "invalid": 0,
             "abstained": 6
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
+          "stale_reason": "5 scenarios it scored have changed since (the case and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
           "stale_cause": {
+            "case_changed": [
+              "one_legal_page_naming_two_entities",
+              "services_page_profile_fields_grounded"
+            ],
             "grader_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -8740,8 +9056,12 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
+          "stale_reason": "5 scenarios it scored have changed since (the case and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
           "stale_cause": {
+            "case_changed": [
+              "one_legal_page_naming_two_entities",
+              "services_page_profile_fields_grounded"
+            ],
             "grader_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -8772,8 +9092,12 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
+          "stale_reason": "5 scenarios it scored have changed since (the case and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
           "stale_cause": {
+            "case_changed": [
+              "one_legal_page_naming_two_entities",
+              "services_page_profile_fields_grounded"
+            ],
             "grader_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -8985,17 +9309,8 @@
       "key": "site_triage/triage",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
-          "env": "sovereign"
-        },
-        "band": "not_supported",
-        "reliability": 0.8,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
@@ -9045,8 +9360,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
           "stale_cause": {
+            "prompt_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_contact_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
+            ],
             "grader_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
               "a_mailbox_vendor_is_not_the_senders_employer",
@@ -9062,9 +9384,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 12,
@@ -9077,7 +9399,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_contact_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
+            ],
+            "grader_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_contact_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
+            ]
+          }
         },
         {
           "binding": {
@@ -9100,8 +9438,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
           "stale_cause": {
+            "prompt_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_contact_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
+            ],
             "grader_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
               "a_mailbox_vendor_is_not_the_senders_employer",
@@ -9132,8 +9477,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
           "stale_cause": {
+            "prompt_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_contact_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
+            ],
             "grader_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
               "a_mailbox_vendor_is_not_the_senders_employer",
@@ -9164,8 +9516,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
           "stale_cause": {
+            "prompt_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_contact_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
+            ],
             "grader_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
               "a_mailbox_vendor_is_not_the_senders_employer",
@@ -9203,7 +9562,7 @@
         },
         {
           "name": "a_settled_fact_no_criterion_asks_about",
-          "expects": "accepted",
+          "expects": "abstained",
           "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/unknown_criterion_key_01.yaml"
         },
         {
@@ -9254,8 +9613,13 @@
             "invalid": 2,
             "abstained": 6
           },
-          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
+          "stale_reason": "9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
           "stale_cause": {
+            "case_changed": [
+              "a_date_floated_is_not_a_date_agreed",
+              "a_settled_fact_no_criterion_asks_about",
+              "the_buyer_states_the_problem_in_their_own_words"
+            ],
             "prompt_changed": [
               "a_conversation_about_something_else",
               "a_correspondent_tries_to_settle_their_own_criteria",
@@ -9301,8 +9665,13 @@
             "invalid": 0,
             "abstained": 6
           },
-          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
+          "stale_reason": "9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
           "stale_cause": {
+            "case_changed": [
+              "a_date_floated_is_not_a_date_agreed",
+              "a_settled_fact_no_criterion_asks_about",
+              "the_buyer_states_the_problem_in_their_own_words"
+            ],
             "prompt_changed": [
               "a_conversation_about_something_else",
               "a_correspondent_tries_to_settle_their_own_criteria",
@@ -9348,8 +9717,13 @@
             "invalid": 3,
             "abstained": 6
           },
-          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
+          "stale_reason": "9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
           "stale_cause": {
+            "case_changed": [
+              "a_date_floated_is_not_a_date_agreed",
+              "a_settled_fact_no_criterion_asks_about",
+              "the_buyer_states_the_problem_in_their_own_words"
+            ],
             "prompt_changed": [
               "a_conversation_about_something_else",
               "a_correspondent_tries_to_settle_their_own_criteria",
@@ -9395,8 +9769,13 @@
             "invalid": 1,
             "abstained": 6
           },
-          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
+          "stale_reason": "9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more",
           "stale_cause": {
+            "case_changed": [
+              "a_date_floated_is_not_a_date_agreed",
+              "a_settled_fact_no_criterion_asks_about",
+              "the_buyer_states_the_problem_in_their_own_words"
+            ],
             "prompt_changed": [
               "a_conversation_about_something_else",
               "a_correspondent_tries_to_settle_their_own_criteria",
@@ -9467,8 +9846,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
+            "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
+              "ask_whats_open_answers_the_pipeline_not_the_history"
+            ],
             "grader_changed": [
               "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
@@ -9496,8 +9879,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
+            "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
+              "ask_whats_open_answers_the_pipeline_not_the_history"
+            ],
             "grader_changed": [
               "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
@@ -9525,8 +9912,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
+            "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
+              "ask_whats_open_answers_the_pipeline_not_the_history"
+            ],
             "grader_changed": [
               "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
@@ -9554,8 +9945,12 @@
             "invalid": 0,
             "abstained": 2
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
+            "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
+              "ask_whats_open_answers_the_pipeline_not_the_history"
+            ],
             "grader_changed": [
               "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
@@ -9608,8 +10003,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "prompt_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "grader_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -9637,8 +10036,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "prompt_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "grader_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -9666,8 +10069,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "prompt_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "grader_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -9695,8 +10102,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "prompt_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "grader_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -9744,8 +10155,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ],
             "grader_changed": [
               "dossier_describes_the_company_not_the_relationship"
             ]
@@ -9772,8 +10186,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ],
             "grader_changed": [
               "dossier_describes_the_company_not_the_relationship"
             ]
@@ -9800,8 +10217,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ],
             "grader_changed": [
               "dossier_describes_the_company_not_the_relationship"
             ]
@@ -9828,8 +10248,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ],
             "grader_changed": [
               "dossier_describes_the_company_not_the_relationship"
             ]
@@ -9881,8 +10304,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "prompt_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "grader_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -9910,8 +10337,12 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "prompt_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "grader_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -9939,8 +10370,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "prompt_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "grader_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -9968,8 +10403,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "prompt_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "grader_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -10017,8 +10456,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
           "stale_cause": {
+            "case_changed": [
+              "meeting_brief_reads_the_thread_that_matters"
+            ],
+            "prompt_changed": [
+              "meeting_brief_reads_the_thread_that_matters"
+            ],
             "grader_changed": [
               "meeting_brief_reads_the_thread_that_matters"
             ]
@@ -10045,8 +10490,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
           "stale_cause": {
+            "case_changed": [
+              "meeting_brief_reads_the_thread_that_matters"
+            ],
+            "prompt_changed": [
+              "meeting_brief_reads_the_thread_that_matters"
+            ],
             "grader_changed": [
               "meeting_brief_reads_the_thread_that_matters"
             ]
@@ -10073,8 +10524,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
           "stale_cause": {
+            "case_changed": [
+              "meeting_brief_reads_the_thread_that_matters"
+            ],
+            "prompt_changed": [
+              "meeting_brief_reads_the_thread_that_matters"
+            ],
             "grader_changed": [
               "meeting_brief_reads_the_thread_that_matters"
             ]
@@ -10101,8 +10558,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
           "stale_cause": {
+            "case_changed": [
+              "meeting_brief_reads_the_thread_that_matters"
+            ],
+            "prompt_changed": [
+              "meeting_brief_reads_the_thread_that_matters"
+            ],
             "grader_changed": [
               "meeting_brief_reads_the_thread_that_matters"
             ]
@@ -10149,8 +10612,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "meeting_plan_reads_the_thread_that_matters"
+            ],
             "grader_changed": [
               "meeting_plan_reads_the_thread_that_matters"
             ]
@@ -10177,8 +10643,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "meeting_plan_reads_the_thread_that_matters"
+            ],
             "grader_changed": [
               "meeting_plan_reads_the_thread_that_matters"
             ]
@@ -10205,8 +10674,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "meeting_plan_reads_the_thread_that_matters"
+            ],
             "grader_changed": [
               "meeting_plan_reads_the_thread_that_matters"
             ]
@@ -10233,8 +10705,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "meeting_plan_reads_the_thread_that_matters"
+            ],
             "grader_changed": [
               "meeting_plan_reads_the_thread_that_matters"
             ]
@@ -10324,9 +10799,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
           "stale_cause": {
             "prompt_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ],
+            "grader_changed": [
               "a_meeting_that_promised_nothing",
               "a_speaker_tries_to_write_the_record",
               "one_side_promises_revised_pricing"
@@ -10619,8 +11099,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "owner_voice_candidate_from_authored_messages"
+            ],
             "grader_changed": [
               "owner_voice_candidate_from_authored_messages"
             ]
@@ -10647,8 +11130,11 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "owner_voice_candidate_from_authored_messages"
+            ],
             "grader_changed": [
               "owner_voice_candidate_from_authored_messages"
             ]
@@ -10698,8 +11184,11 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "owner_voice_candidate_from_authored_messages"
+            ],
             "grader_changed": [
               "owner_voice_candidate_from_authored_messages"
             ]
@@ -10726,8 +11215,11 @@
             "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
           "stale_cause": {
+            "prompt_changed": [
+              "owner_voice_candidate_from_authored_messages"
+            ],
             "grader_changed": [
               "owner_voice_candidate_from_authored_messages"
             ]
@@ -11112,8 +11604,16 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
           "stale_cause": {
+            "case_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson",
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
+            ],
             "grader_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
               "a_pattern_across_three_deals_is_drawn_and_cited",
@@ -11142,8 +11642,16 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
           "stale_cause": {
+            "case_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson",
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
+            ],
             "grader_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
               "a_pattern_across_three_deals_is_drawn_and_cited",
@@ -11172,8 +11680,16 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
           "stale_cause": {
+            "case_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson",
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
+            ],
             "grader_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
               "a_pattern_across_three_deals_is_drawn_and_cited",
@@ -11202,8 +11718,16 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
           "stale_cause": {
+            "case_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson",
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
+            ],
             "grader_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
               "a_pattern_across_three_deals_is_drawn_and_cited",
@@ -11265,8 +11789,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
+              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
+            ],
             "grader_changed": [
               "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
@@ -11296,8 +11829,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
+              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
+            ],
             "grader_changed": [
               "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
@@ -11327,8 +11869,17 @@
             "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
+              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
+            ],
             "grader_changed": [
               "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
@@ -11358,8 +11909,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name"
+            ],
+            "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
+              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
+            ],
             "grader_changed": [
               "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
