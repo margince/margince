@@ -2957,7 +2957,7 @@ export const de = {
   "brief.sentence.many": "Zuerst: {lead}. Danach {rest}.",
   "brief.sentence.rest": "{count} weitere",
   "brief.order.withheld":
-    "Diese Reihenfolge berücksichtigt {factors} nicht, für deine Rolle ausgeblendet.",
+    "Diese Reihenfolge berücksichtigt {factors} nicht, weil deine Rolle das nicht lesen darf.",
   "brief.factor.warmth": "die Beziehungsnähe",
   "brief.factor.unknown": "einen Faktor, den diese Version nicht benennen kann",
 

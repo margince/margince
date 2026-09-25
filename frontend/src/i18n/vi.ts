@@ -2941,7 +2941,7 @@ export const vi = {
   "brief.sentence.many": "Trước tiên: {lead}. Rồi {rest}.",
   "brief.sentence.rest": "{count} mục nữa",
   "brief.order.withheld":
-    "Thứ tự này chưa tính đến {factors}, bị ẩn với vai trò của bạn.",
+    "Thứ tự này chưa tính đến {factors} vì vai trò của bạn không đọc được.",
   "brief.factor.warmth": "mức độ thân thiết của mối quan hệ",
   "brief.factor.unknown": "một yếu tố mà phiên bản này chưa gọi tên được",
 
