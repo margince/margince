@@ -178,15 +178,23 @@ func (h *inboundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	key := unit + "/" + slug
 
-	// Both budgets, both spent, before any work: everything below costs the
-	// installation a body read, a secret decrypt and an HMAC. A handshake
-	// spends them too — it is a request a stranger can send as often as a POST.
+	// Both budgets, before any work: everything below costs the installation a
+	// body read, a secret decrypt and an HMAC. A handshake is metered too — it
+	// is a request a stranger can send as often as a POST.
+	//
+	// The per-IP bucket is asked FIRST, and a request it refuses never touches
+	// the per-endpoint bucket. Spending both unconditionally would let one
+	// flooding address drain the shared endpoint budget with requests that were
+	// refused anyway, locking out every other sender — the per-IP bucket exists
+	// precisely so one source cannot do that.
 	admitted := true
 	if limiter := h.perIP[key]; limiter != nil && !limiter.Allow(httpserver.ClientIP(r)) {
 		admitted = false
 	}
-	if limiter := h.perSlug[key]; limiter != nil && !limiter.Allow(key) {
-		admitted = false
+	if admitted {
+		if limiter := h.perSlug[key]; limiter != nil && !limiter.Allow(key) {
+			admitted = false
+		}
 	}
 	if !admitted {
 		h.log.WarnContext(r.Context(), "inbound: over the metered rate", "unit", unit, "slug", slug)

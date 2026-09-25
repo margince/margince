@@ -266,3 +266,30 @@ func TestAHandshakesOtherOutcomesAnswerAsAPostsDo(t *testing.T) {
 		}
 	}
 }
+
+// One address over its own allowance must not spend the endpoint's: a request
+// the per-IP bucket refused costs the shared bucket nothing, so another sender
+// is still admitted.
+func TestAnAddressOverItsLimitDoesNotDrainTheEndpointBudget(t *testing.T) {
+	p := &providerProbe{perIP: 1, perEndpoint: 2}
+	mux := mountProvider(t, p)
+	admitted, refused := 0, 0
+	for range 3 {
+		switch got := serve(mux, providerPost(`{}`, "sha256=abc")).Code; got {
+		case http.StatusOK:
+			admitted++
+		case http.StatusTooManyRequests:
+			refused++
+		default:
+			t.Fatalf("address A answered %d", got)
+		}
+	}
+	if admitted != 1 || refused != 2 {
+		t.Fatalf("address A: %d admitted, %d refused; want 1 and 2", admitted, refused)
+	}
+	other := providerPost(`{}`, "sha256=abc")
+	other.RemoteAddr = "10.0.0.2:1234"
+	if got := serve(mux, other).Code; got != http.StatusOK {
+		t.Fatalf("address B answered %d, want 200 — A's refused requests drained the endpoint bucket", got)
+	}
+}
