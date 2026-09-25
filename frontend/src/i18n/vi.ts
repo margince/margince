@@ -7786,6 +7786,14 @@ export const vi = {
   "aiusage.empty": "Không có lượt gọi AI nào trong khoảng này.",
   "aiusage.prevMonth": "Tháng trước",
   "aiusage.nextMonth": "Tháng sau",
+  "aiusage.decisions.note":
+    "Mỗi con số đếm một yêu cầu, dù yêu cầu đó đã qua bao nhiêu mô hình. Đạt nghĩa là câu trả lời của mô hình quyết định được giữ; chuyển tiếp nghĩa là một mô hình ngôn ngữ đã tiếp nhận.",
+  "aiusage.decisions.empty":
+    "Tháng này chưa có tác vụ nào hỏi mô hình quyết định.",
+  "aiusage.decisions.col.asked": "Đã hỏi",
+  "aiusage.decisions.col.passRate": "Tỷ lệ đạt",
+  "aiusage.decisions.col.fallbackRate": "Tỷ lệ chuyển tiếp",
+  "aiusage.decisions.col.reasons": "Chuyển tiếp theo lý do",
 
   "aibanner.degraded": "Đã đạt ngưỡng 80% hạn mức AI — xem tác động",
   "aibanner.queued": "Đã hết hạn mức AI — xem công việc bị hoãn",

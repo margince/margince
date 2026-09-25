@@ -8003,6 +8003,13 @@ export const en = {
   "aiusage.empty": "No AI calls this month.",
   "aiusage.prevMonth": "Previous month",
   "aiusage.nextMonth": "Next month",
+  "aiusage.decisions.note":
+    "Each figure counts one request, however many models it reached. Pass means the decision model’s answer stood; a fallback went on to a language model.",
+  "aiusage.decisions.empty": "No task asked the decision model this month.",
+  "aiusage.decisions.col.asked": "Asked",
+  "aiusage.decisions.col.passRate": "Pass rate",
+  "aiusage.decisions.col.fallbackRate": "Fallback rate",
+  "aiusage.decisions.col.reasons": "Fallbacks by reason",
 
   "aibanner.degraded": "80% of AI allowance reached. Review affected features.",
   "aibanner.queued": "AI allowance reached. Review deferred work.",

@@ -1,6 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
@@ -29,7 +35,12 @@ const budget = { monthly_tokens: 1000, spent_tokens: 850, band: "degraded" };
 // its own: a write verb guarding a GET.
 const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 
-function mount(body: unknown, status = 200, allow: GrantSpec = OPERATOR) {
+function mount(
+  body: unknown,
+  status = 200,
+  allow: GrantSpec = OPERATOR,
+  routing: unknown = undefined,
+) {
   const seen: string[] = [];
   vi.stubGlobal(
     "fetch",
@@ -38,6 +49,12 @@ function mount(body: unknown, status = 200, allow: GrantSpec = OPERATOR) {
       seen.push(url);
       if (url.endsWith("/v1/me")) {
         return new Response(JSON.stringify(meFixture({ allow })), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.endsWith("/v1/ai/routing")) {
+        return new Response(JSON.stringify(routing), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
@@ -348,4 +365,62 @@ it("labels decide as Decision model", async () => {
 
   expect(await screen.findByText("Decision model")).toBeTruthy();
   expect(screen.queryByText("decide")).toBeNull();
+});
+
+// The decision model's pass and fallback rates, read from the usage response.
+// One consultation of each shape: one decided, three handed to the ladder.
+const DECIDING_OPERATOR: GrantSpec = {
+  ai_diagnostics: ["read"],
+  ai_routing: ["read"],
+};
+const decisionUsage = {
+  budget,
+  days: [],
+  decisions: [
+    {
+      task: "site_triage",
+      asked: 4,
+      decided: 1,
+      fallbacks: {
+        decision_below_floor: 1,
+        decision_error: 1,
+        decision_uncertified: 1,
+      },
+    },
+  ],
+};
+const unboundRouting = {
+  profile: "eu_hosted",
+  tiers: {},
+  embeddings: { provider: "fake", model: "fake-embed", dimensions: 8 },
+};
+const boundRouting = {
+  ...unboundRouting,
+  decisions: { provider: "openrouter_decision", model: "typesafe/jev-1.13" },
+};
+
+it("shows the decision model's pass and fallback rates when a decision model is bound", async () => {
+  mount(decisionUsage, 200, DECIDING_OPERATOR, boundRouting);
+  const task = await screen.findByText("site_triage");
+  const table = task.closest("table");
+  if (!table) throw new Error("the decision summary is not a table");
+  expect(within(table).getByText("25%")).toBeTruthy();
+  expect(within(table).getByText("75%")).toBeTruthy();
+  expect(
+    within(table).getByText(
+      /Decision model below its confidence floor: 1 · Decision model failed: 1 · Decision model not certified for this task: 1/,
+    ),
+  ).toBeTruthy();
+});
+
+// Rows written while a decision model was bound outlive the binding; once it is
+// gone, a rate for a model nobody runs answers a question nobody is asking.
+it("hides the decision model's rates when no decision model is bound", async () => {
+  const { seen } = mount(decisionUsage, 200, DECIDING_OPERATOR, unboundRouting);
+  await waitFor(() =>
+    expect(seen.some((url) => url.endsWith("/v1/ai/routing"))).toBe(true),
+  );
+  expect(await screen.findByText("No AI calls this month.")).toBeTruthy();
+  expect(screen.queryByText("site_triage")).toBeNull();
+  expect(screen.queryByText("Decision model")).toBeNull();
 });

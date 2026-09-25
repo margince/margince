@@ -7835,6 +7835,14 @@ export const de = {
   "aiusage.empty": "Keine KI-Aufrufe in diesem Monat.",
   "aiusage.prevMonth": "Vorheriger Monat",
   "aiusage.nextMonth": "Nächster Monat",
+  "aiusage.decisions.note":
+    "Jede Zahl zählt eine Anfrage, gleich wie viele Modelle sie erreicht hat. Bestanden heißt, die Antwort des Entscheidungsmodells galt; bei einem Rückfall hat ein Sprachmodell übernommen.",
+  "aiusage.decisions.empty":
+    "Diesen Monat hat keine Aufgabe das Entscheidungsmodell gefragt.",
+  "aiusage.decisions.col.asked": "Gefragt",
+  "aiusage.decisions.col.passRate": "Bestanden",
+  "aiusage.decisions.col.fallbackRate": "Rückfälle",
+  "aiusage.decisions.col.reasons": "Rückfälle nach Grund",
 
   "aibanner.degraded":
     "80 % des KI-Kontingents erreicht. Prüfe die betroffenen Funktionen.",
