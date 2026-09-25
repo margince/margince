@@ -263,7 +263,7 @@ func participantsOf(parties []extension.Participant) []connector.MessageParticip
 			Role:          p.Role,
 		})
 	}
-	return connector.CapParticipants(mapped)
+	return connector.CapParticipants(mapped).Participants
 }
 
 // counterpartyOf maps the published counterparty onto the core's and stamps what

@@ -42,20 +42,20 @@ func TestParseExcludesTheOwnerAndTheCounterpartyFromFurtherParties(t *testing.T)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if _, found := roleOf(msg.participants, "me@myco.com"); found {
+	if _, found := roleOf(msg.participants.Participants, "me@myco.com"); found {
 		t.Error("the mailbox owner was recorded as a further participant; their own row already names them")
 	}
-	if _, found := roleOf(msg.participants, "bob@target.com"); found {
+	if _, found := roleOf(msg.participants.Participants, "bob@target.com"); found {
 		t.Error("the counterparty was recorded as a further participant; their own row already names them")
 	}
-	role, found := roleOf(msg.participants, "colleague@myco.com")
+	role, found := roleOf(msg.participants.Participants, "colleague@myco.com")
 	if !found {
 		t.Fatal("a second recipient was dropped — recovering them is the point of the participant rows")
 	}
 	if role != connector.ParticipantRoleTo {
 		t.Errorf("a To recipient got role %q, want %q", role, connector.ParticipantRoleTo)
 	}
-	if role, _ := roleOf(msg.participants, "sam@target.com"); role != connector.ParticipantRoleCC {
+	if role, _ := roleOf(msg.participants.Participants, "sam@target.com"); role != connector.ParticipantRoleCC {
 		t.Errorf("a Cc recipient got role %q, want %q", role, connector.ParticipantRoleCC)
 	}
 }
@@ -80,7 +80,7 @@ func TestParseGivesADirectRecipientTheToRoleEvenWhenAlsoCopied(t *testing.T) {
 		t.Fatalf("Parse: %v", err)
 	}
 	var seen int
-	for _, p := range msg.participants {
+	for _, p := range msg.participants.Participants {
 		if p.Email == "dual@target.com" {
 			seen++
 			if p.Role != connector.ParticipantRoleTo {
@@ -118,9 +118,53 @@ func TestParseDropsTheFurtherPartiesOfABroadcast(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if len(msg.participants) != 0 {
+	if len(msg.participants.Participants) != 0 {
 		t.Errorf("a %d-address broadcast contributed %d participants, want none",
-			len(recipients), len(msg.participants))
+			len(recipients), len(msg.participants.Participants))
+	}
+	// And it SAYS it refused them. Withholding the names without the count
+	// makes a broadcast indistinguishable from a message that named nobody,
+	// and a caller that cannot tell those apart records "found none" over work
+	// it never did.
+	if !msg.participants.Capped() {
+		t.Error("a broadcast past the cap reported itself uncapped — it reads as a message " +
+			"that simply named nobody, and the parties it withheld are then invisible")
+	}
+	// The FURTHER parties, so neither the owner nor the counterparty is in it:
+	// those two are assigned by direction and never counted here.
+	if msg.participants.Named != len(recipients) {
+		t.Errorf("the broadcast named %d further parties and the count says %d — the count is "+
+			"what lets a caller say how large the list it refused was",
+			len(recipients), msg.participants.Named)
+	}
+}
+
+// The other side of the same distinction: a message that genuinely names no
+// further party is NOT capped, and a caller acting on Capped() must be able to
+// finish it rather than leave it on a backlog forever.
+func TestAMessageThatNamesNobodyIsNotCapped(t *testing.T) {
+	raw := crlf(
+		"From: bob@target.com",
+		"To: me@myco.com",
+		"Subject: Just us",
+		"Date: Wed, 04 Jun 2026 09:00:00 +0000",
+		"Message-ID: <m4@target.com>",
+		"Content-Type: text/plain; charset=utf-8",
+		"",
+		"Body.",
+		"",
+	)
+	msg, err := Parse(raw, "me@myco.com")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(msg.participants.Participants) != 0 {
+		t.Fatalf("a message naming only its two ends contributed %d further parties",
+			len(msg.participants.Participants))
+	}
+	if msg.participants.Capped() {
+		t.Error("a message with no further parties reported itself capped — the two states " +
+			"have to stay tellable apart in both directions, or the backlog never empties")
 	}
 }
 
@@ -148,12 +192,13 @@ func TestParticipantsOfReadsTheSamePartiesAsCapture(t *testing.T) {
 		t.Fatalf("Parse: %v", err)
 	}
 	captured := msg.ToRecord("gmail", raw).Participants
-	if len(replayed) != len(captured) {
-		t.Fatalf("replay found %d participants, live capture stamps %d", len(replayed), len(captured))
+	if len(replayed.Participants) != len(captured) {
+		t.Fatalf("replay found %d participants, live capture stamps %d",
+			len(replayed.Participants), len(captured))
 	}
-	for i := range replayed {
-		if replayed[i] != captured[i] {
-			t.Errorf("participant %d: replay %+v, capture %+v", i, replayed[i], captured[i])
+	for i := range replayed.Participants {
+		if replayed.Participants[i] != captured[i] {
+			t.Errorf("participant %d: replay %+v, capture %+v", i, replayed.Participants[i], captured[i])
 		}
 	}
 }
@@ -178,7 +223,7 @@ func TestParseRecordsABlindCopiedPartyUnderItsOwnRole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	role, found := roleOf(msg.participants, "quiet@partner.example")
+	role, found := roleOf(msg.participants.Participants, "quiet@partner.example")
 	if !found {
 		t.Fatal("a blind-copied party must be recorded — dropping them hides a party from the internal decision")
 	}

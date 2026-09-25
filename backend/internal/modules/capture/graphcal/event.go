@@ -125,7 +125,7 @@ func decode(ev rawEvent) meetingmap.Event {
 // ParticipantsOf reads the organizer and attendees out of one stored event
 // resource, for the replay pass that recovers meetings captured before
 // participants were recorded.
-func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, error) {
+func ParticipantsOf(raw []byte, owner string) (connector.Parties, error) {
 	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
 }
 
