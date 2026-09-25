@@ -109,18 +109,13 @@ func TestCompanyMessageCaseReplaysTheConversationItWasGiven(t *testing.T) {
 		t.Fatalf("the trace carries %d requests, want the one call this site sends", len(trace.Requests))
 	}
 	req := trace.Requests[0]
-	if len(req.Messages) != len(fixture.History)+2 {
-		t.Fatalf("the request carries %d turns, want the context block, %d replayed turns and the current message",
-			len(req.Messages), len(fixture.History))
+	want := make([]model.Message, 0, len(fixture.History)+1)
+	for _, turn := range fixture.History {
+		want = append(want, model.Message{Role: string(turn.Role), Content: turn.Message})
 	}
-	for i, turn := range fixture.History {
-		replayed := req.Messages[i+1]
-		if replayed.Role != string(turn.Role) || replayed.Content != turn.Message {
-			t.Errorf("replayed turn %d = %+v, want role %q and %q", i+1, replayed, turn.Role, turn.Message)
-		}
-	}
-	if last := req.Messages[len(req.Messages)-1]; last.Content != fixture.Message {
-		t.Errorf("the current message is not the last turn: %+v", last)
+	requireTurnsInOrder(t, req.Messages, append(want, model.Message{Role: chatRoleUser, Content: fixture.Message}))
+	if last := req.Messages[len(req.Messages)-1]; !strings.HasSuffix(last.Content, fixture.Message) {
+		t.Errorf("the current message does not end the conversation: %+v", last)
 	}
 	// Through promptlang.Rule rather than a literal: this asserts that the
 	// fixture's locale reached the prompt, and a copy of the rule's wording
@@ -160,11 +155,9 @@ func TestCompanyMessageCaseSpeaksTheClickedOptionAsAnAdministratorStatement(t *t
 	)
 
 	messages := trace.Requests[0].Messages
-	if len(messages) != len(fixture.History)+3 {
-		t.Fatalf("the request carries %d turns, want the context block, %d replayed turns, the click and the message",
-			len(messages), len(fixture.History))
-	}
-	spoken := messages[len(messages)-2]
+	// The click and the message are both the administrator's, so they arrive
+	// joined in the conversation's last turn, the click first.
+	spoken := messages[len(messages)-1]
 	if spoken.Role != chatRoleUser {
 		t.Errorf("the click is spoken as %q, want an administrator turn", spoken.Role)
 	}
@@ -181,7 +174,7 @@ func TestCompanyMessageCaseSpeaksTheClickedOptionAsAnAdministratorStatement(t *t
 	if !strings.Contains(spoken.Content, "<"+marker+">Acme Robotics GmbH</"+marker+">") {
 		t.Errorf("the clicked value is not inside this call's boundary: %q", spoken.Content)
 	}
-	if last := messages[len(messages)-1]; last.Content != fixture.Message {
-		t.Errorf("the current message is not the last turn: %+v", last)
+	if !strings.HasSuffix(spoken.Content, fixture.Message) {
+		t.Errorf("the current message does not follow the click: %+v", spoken)
 	}
 }

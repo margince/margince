@@ -323,7 +323,7 @@ func owedRequest(batch []owedCandidate) model.Request {
 		System:         owedverdict.SystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: owedverdict.Prompt(fence, batch)}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: owedSchema(),
+		ResponseSchema: owedSchema(owedIDs(batch)),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -362,11 +362,7 @@ func owedShapeValid(batch []owedCandidate) ai.Validator {
 // validateOwedPayload names the first batch-fidelity violation, or "" when the
 // payload is exact.
 func validateOwedPayload(payload owedPayload, batch []owedCandidate) string {
-	requested := make([]string, len(batch))
-	for i, m := range batch {
-		requested[i] = m.ID.String()
-	}
-	if msg := checkBatchFidelity(payload.Results, requested); msg != "" {
+	if msg := checkBatchFidelity(payload.Results, owedIDs(batch)); msg != "" {
 		return msg
 	}
 	// The vocabulary is this site's own, so it is checked here rather than in
@@ -386,13 +382,23 @@ func validateOwedPayload(payload owedPayload, batch []owedCandidate) string {
 
 func (r owedResult) answeredID() string { return r.ID }
 
+// owedIDs is the ids one batch asks about: what the schema lets the model name
+// and what the validator requires it to answer.
+func owedIDs(batch []owedCandidate) []string {
+	requested := make([]string, len(batch))
+	for i, m := range batch {
+		requested[i] = m.ID.String()
+	}
+	return requested
+}
+
 // owedSchema is the generation-time shape guardrail.
-func owedSchema() json.RawMessage {
+func owedSchema(requested []string) json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			owedResultsKey: schema.Array(schema.Object(
 				map[string]schema.Node{
-					"id":                    schema.String(),
+					"id":                    requestedIDNode(requested),
 					owedVerdictKey:          schema.Enum(activities.OwedVerdictAsksUs, activities.OwedVerdictInformsUs),
 					extractionConfidenceKey: schema.Number(),
 				},

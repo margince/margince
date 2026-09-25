@@ -1,13 +1,13 @@
 {
   "totals": {
     "sites": 47,
-    "sites_best_current": 13,
+    "sites_best_current": 46,
     "sites_best_partial": 0,
-    "sites_best_stale": 34,
+    "sites_best_stale": 1,
     "sites_absent": 0,
     "scenarios": 152,
-    "records": 144,
-    "bindings": 16,
+    "records": 172,
+    "bindings": 17,
     "self_judged_records": 4
   },
   "presets": [
@@ -1287,7 +1287,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 7,
           "cases_failing_often": 2,
@@ -1335,7 +1335,7 @@
             "env": "sovereign"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 9,
           "cases_failing_often": 1,
@@ -2510,6 +2510,506 @@
       "untested": 2,
       "unbound": 0,
       "unrecognised": 0
+    },
+    {
+      "file": "qwen3_local_vllm.yaml",
+      "profile": "sovereign",
+      "tiers": [
+        {
+          "tier": "local_small",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit"
+        },
+        {
+          "tier": "cheap_cloud",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit"
+        },
+        {
+          "tier": "premium",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit"
+        },
+        {
+          "tier": "frontier",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit"
+        }
+      ],
+      "tasks": [
+        {
+          "task": "account_scan",
+          "label": "Reading what an account needs",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "agent_loop",
+          "label": "Agent reasoning loop",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "brief_ranking",
+          "label": "Morning brief ranking",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "capture_classify",
+          "label": "Message classification",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 15,
+          "passed": 12,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "capture_confidentiality_verdict",
+          "label": "Thread confidentiality check",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 42,
+          "passed": 36,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "capture_counterparty_verdict",
+          "label": "First-time sender check",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 57,
+          "passed": 46,
+          "cases_failing_often": 4,
+          "cases_below_quality_bar": 4
+        },
+        {
+          "task": "cert_judge",
+          "label": "Certification judging",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "cold_start",
+          "label": "Onboarding read",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 27,
+          "passed": 23,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "corpus_ask",
+          "label": "Document corpus question",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 13,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "deal_health",
+          "label": "Deal status card",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 8,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "document_extract",
+          "label": "Document extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "draft_reply",
+          "label": "Reply drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 36,
+          "passed": 33,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 6
+        },
+        {
+          "task": "enrich",
+          "label": "Signature enrichment",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "growth_fit",
+          "label": "Company fit assessment",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 3,
+          "passed": 0,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "offer_draft",
+          "label": "Offer drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 9,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 3
+        },
+        {
+          "task": "owed_verdict",
+          "label": "Unanswered-message triage",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 12,
+          "passed": 6,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "propose_roles",
+          "label": "Buying-role reading",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 5,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "rate_extract",
+          "label": "Model pricing extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "request_settlement",
+          "label": "Did our reply settle it",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 12,
+          "passed": 6,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "signal_extract",
+          "label": "Signal extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 12,
+          "passed": 6,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "site_extract",
+          "label": "Website deep read",
+          "tier": "premium",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 9,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "site_fact_extract",
+          "label": "Website fact extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 6,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "site_triage",
+          "label": "Website triage",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 13,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "stage_evidence_extract",
+          "label": "Stage evidence extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 27,
+          "passed": 9,
+          "cases_failing_often": 6,
+          "cases_below_quality_bar": 5
+        },
+        {
+          "task": "summarize",
+          "label": "Record summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 27,
+          "passed": 13,
+          "cases_failing_often": 4,
+          "cases_below_quality_bar": 3
+        },
+        {
+          "task": "transcript_propose",
+          "label": "Meeting follow-up extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "voice_build",
+          "label": "Voice DNA build",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 12,
+          "passed": 9,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "weekly_learnings",
+          "label": "What last week taught",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 2,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "weekly_review",
+          "label": "Weekly review narrative",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 12,
+          "passed": 11,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1
+        }
+      ],
+      "bands": {
+        "certified": 6,
+        "supported_degraded": 2,
+        "not_supported": 20
+      },
+      "untested": 1,
+      "unbound": 0,
+      "unrecognised": 0
     }
   ],
   "bindings": [
@@ -2580,9 +3080,9 @@
         "env": "sovereign"
       },
       "sites": 13,
-      "sites_current": 11,
+      "sites_current": 9,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 4,
       "runs": 111,
       "passed": 90,
       "reliability": 0.8108108108108109,
@@ -2832,6 +3332,26 @@
         "supported_degraded": 0,
         "not_supported": 1
       }
+    },
+    {
+      "binding": {
+        "provider": "vllm",
+        "model": "mlx-community/Qwen3-14B-4bit",
+        "env": "sovereign"
+      },
+      "sites": 46,
+      "sites_current": 46,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 444,
+      "passed": 329,
+      "reliability": 0.740990990990991,
+      "slowest_p95_ms": 105742,
+      "bands": {
+        "certified": 11,
+        "supported_degraded": 7,
+        "not_supported": 28
+      }
     }
   ],
   "sites": [
@@ -2846,12 +3366,12 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
           "env": "sovereign"
         },
         "band": "not_supported",
-        "reliability": 0.5,
+        "reliability": 1,
         "state": "current"
       },
       "scenarios": [
@@ -3005,6 +3525,29 @@
               "scan_finds_the_question_nobody_answered"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 18680,
+          "latency_p95_ms": 27365,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -3063,6 +3606,29 @@
           "reliability": 1,
           "latency_p50_ms": 1231,
           "latency_p95_ms": 1672,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 6138,
+          "latency_p95_ms": 29452,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -3135,6 +3701,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 6138,
+          "latency_p95_ms": 29452,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -3147,8 +3736,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
           "env": "sovereign"
         },
         "band": "certified",
@@ -3320,6 +3909,29 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 9438,
+          "latency_p95_ms": 9862,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -3329,8 +3941,17 @@
       "key": "capture_classify/classify",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "supported_degraded",
+        "reliability": 0.8,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_message_that_is_both_is_labelled_commitment",
@@ -3569,6 +4190,29 @@
               "meeting_request_from_reply"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 12,
+          "reliability": 0.8,
+          "latency_p50_ms": 10491,
+          "latency_p95_ms": 25590,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -3578,8 +4222,17 @@
       "key": "capture_confidentiality_verdict/thread",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.8571428571428571,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
@@ -3674,8 +4327,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "14 scenarios it scored have changed since (how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_reason": "14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
             "grader_changed": [
               "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
               "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
@@ -3715,8 +4384,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "14 scenarios it scored have changed since (how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_reason": "14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
             "grader_changed": [
               "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
               "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
@@ -3756,8 +4441,24 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "14 scenarios it scored have changed since (how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_reason": "14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
             "grader_changed": [
               "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
               "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
@@ -3797,8 +4498,24 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "14 scenarios it scored have changed since (how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_reason": "14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
             "grader_changed": [
               "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
               "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
@@ -3816,6 +4533,29 @@
               "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 14,
+          "scenarios_total": 14,
+          "runs": 42,
+          "passed": 36,
+          "reliability": 0.8571428571428571,
+          "latency_p50_ms": 10804,
+          "latency_p95_ms": 13773,
+          "reported": {
+            "accepted": 36,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -3825,8 +4565,17 @@
       "key": "capture_counterparty_verdict/verdict",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.8070175438596491,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_chased_cold_pitch_is_still_spam",
@@ -3946,8 +4695,29 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
+          "stale_reason": "19 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_chased_cold_pitch_is_still_spam",
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_fluent_machine_written_pitch_is_still_spam",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "courteous_cold_pitch_is_spam",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
             "grader_changed": [
               "a_chased_cold_pitch_is_still_spam",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
@@ -3992,8 +4762,29 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
+          "stale_reason": "19 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_chased_cold_pitch_is_still_spam",
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_fluent_machine_written_pitch_is_still_spam",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "courteous_cold_pitch_is_spam",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
             "grader_changed": [
               "a_chased_cold_pitch_is_still_spam",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
@@ -4061,8 +4852,29 @@
             "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
+          "stale_reason": "19 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_chased_cold_pitch_is_still_spam",
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_fluent_machine_written_pitch_is_still_spam",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "courteous_cold_pitch_is_spam",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
             "grader_changed": [
               "a_chased_cold_pitch_is_still_spam",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
@@ -4107,8 +4919,29 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
+          "stale_reason": "19 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more",
           "stale_cause": {
+            "prompt_changed": [
+              "a_chased_cold_pitch_is_still_spam",
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_fluent_machine_written_pitch_is_still_spam",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "courteous_cold_pitch_is_spam",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
             "grader_changed": [
               "a_chased_cold_pitch_is_still_spam",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
@@ -4131,6 +4964,29 @@
               "the_owners_own_lawyer_is_not_the_workspaces_contact"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 19,
+          "scenarios_total": 19,
+          "runs": 57,
+          "passed": 46,
+          "reliability": 0.8070175438596491,
+          "latency_p50_ms": 10835,
+          "latency_p95_ms": 14980,
+          "reported": {
+            "accepted": 46,
+            "wrong_answer": 11,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -4143,8 +4999,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
           "env": "sovereign"
         },
         "band": "certified",
@@ -4354,6 +5210,29 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 6676,
+          "latency_p95_ms": 7122,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -4363,8 +5242,17 @@
       "key": "cold_start/acts",
       "scope": "single_turn",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_factual_question_about_connecting_is_answered",
@@ -4571,6 +5459,29 @@
               "results_act_keeps_an_off_topic_request_in_scope"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 9804,
+          "latency_p95_ms": 44039,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -4580,8 +5491,17 @@
       "key": "cold_start/company_message",
       "scope": "single_turn",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "supported_degraded",
+        "reliability": 0.6666666666666666,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "bare_answer_corrects_the_field_the_wizard_asked_for",
@@ -4736,6 +5656,29 @@
               "bare_answer_corrects_the_field_the_wizard_asked_for"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 9804,
+          "latency_p95_ms": 44039,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 0,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -4745,8 +5688,17 @@
       "key": "cold_start/field_extract",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "onboarding_readback_from_landing_page",
@@ -4889,6 +5841,29 @@
               "onboarding_readback_from_landing_page"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 9804,
+          "latency_p95_ms": 44039,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -4898,8 +5873,17 @@
       "key": "cold_start/sitereadmessage",
       "scope": "single_turn",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.5,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "an_administrator_agreeing_confirms_and_changes_nothing_further",
@@ -5067,6 +6051,29 @@
               "dossier_correction_the_administrator_asked_for"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 3,
+          "reliability": 0.5,
+          "latency_p50_ms": 9804,
+          "latency_p95_ms": 44039,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 3,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -5076,8 +6083,17 @@
       "key": "corpus_ask/corpus_ask",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.8666666666666667,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "corpus_ask_answers_only_from_the_passage_that_says_it",
@@ -5312,6 +6328,29 @@
               "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 13,
+          "reliability": 0.8666666666666667,
+          "latency_p50_ms": 19094,
+          "latency_p95_ms": 50205,
+          "reported": {
+            "accepted": 13,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -5321,8 +6360,17 @@
       "key": "deal_health/deal_status",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.8888888888888888,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "deal_status_an_overdue_task_is_not_done_work",
@@ -5460,6 +6508,29 @@
               "deal_status_says_nothing_is_wrong_when_nothing_is"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 41429,
+          "latency_p95_ms": 52661,
+          "reported": {
+            "accepted": 8,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -5538,8 +6609,17 @@
         "proof",
         "market"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "account_first_touch_with_a_deal_in_flight",
@@ -5739,6 +6819,29 @@
               "account_first_touch_with_a_deal_in_flight"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -5753,8 +6856,17 @@
         "proof",
         "market"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "supported_degraded",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "contact_first_touch_in_german",
@@ -5954,6 +7066,29 @@
               "contact_first_touch_in_german"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -5968,8 +7103,17 @@
         "proof",
         "market"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "first_message_from_an_intent_alone",
@@ -6169,6 +7313,29 @@
               "first_message_from_an_intent_alone"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -6183,8 +7350,17 @@
         "proof",
         "market"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "intro_request_asks_a_colleague_without_overclaiming",
@@ -6387,6 +7563,29 @@
               "intro_request_claims_no_more_warmth_than_the_record_holds"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -6401,8 +7600,17 @@
         "proof",
         "market"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.6666666666666666,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "an_instruction_inside_the_stated_reason_is_data_not_a_command",
@@ -6620,6 +7828,29 @@
               "intro_note_is_written_to_the_customer_not_about_the_request"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 6,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -6634,8 +7865,17 @@
         "proof",
         "market"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "supported_degraded",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "german_thread_with_an_introduction_in_it",
@@ -6915,6 +8155,29 @@
               "rich_german_thread_with_a_long_ask"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 13966,
+          "latency_p95_ms": 61898,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -6927,8 +8190,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
           "env": "sovereign"
         },
         "band": "certified",
@@ -7100,6 +8363,29 @@
               "contact_fields_from_a_mail_signature"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 25172,
+          "latency_p95_ms": 26648,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -7113,8 +8399,17 @@
         "positioning",
         "proof"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "growth_fit_reads_their_facts_against_our_offering",
@@ -7234,6 +8529,29 @@
               "growth_fit_reads_their_facts_against_our_offering"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 88050,
+          "latency_p95_ms": 105742,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -7247,8 +8565,17 @@
         "positioning",
         "proof"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.6,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "grounded_draft_from_a_conversation_price",
@@ -7427,6 +8754,29 @@
               "two_sources_disagree_on_price"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 9,
+          "reliability": 0.6,
+          "latency_p50_ms": 12366,
+          "latency_p95_ms": 45908,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 3,
+            "abstained": 3
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -7439,12 +8789,12 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
           "env": "sovereign"
         },
         "band": "not_supported",
-        "reliability": 0.5833333333333334,
+        "reliability": 0.5,
         "state": "current"
       },
       "scenarios": [
@@ -7491,8 +8841,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
           "stale_cause": {
+            "prompt_changed": [
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ],
             "grader_changed": [
               "a_direct_question_asks_us_and_a_report_does_not",
               "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
@@ -7507,9 +8863,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 7,
@@ -7522,7 +8878,15 @@
             "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ]
+          }
         },
         {
           "binding": {
@@ -7545,8 +8909,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
           "stale_cause": {
+            "prompt_changed": [
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ],
             "grader_changed": [
               "a_direct_question_asks_us_and_a_report_does_not",
               "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
@@ -7576,8 +8946,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
           "stale_cause": {
+            "prompt_changed": [
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ],
             "grader_changed": [
               "a_direct_question_asks_us_and_a_report_does_not",
               "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
@@ -7607,8 +8983,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
           "stale_cause": {
+            "prompt_changed": [
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ],
             "grader_changed": [
               "a_direct_question_asks_us_and_a_report_does_not",
               "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
@@ -7616,6 +8998,29 @@
               "the_recipient_line_separates_a_request_from_a_copy"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 6,
+          "reliability": 0.5,
+          "latency_p50_ms": 16315,
+          "latency_p95_ms": 26476,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 3,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -7796,6 +9201,29 @@
               "propose_roles_reads_no_role_out_of_a_title"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 5,
+          "reliability": 0.5555555555555556,
+          "latency_p50_ms": 20778,
+          "latency_p95_ms": 50079,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 4,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -7808,8 +9236,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
           "env": "sovereign"
         },
         "band": "certified",
@@ -7990,6 +9418,29 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 10304,
+          "latency_p95_ms": 22876,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -8002,8 +9453,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
           "env": "sovereign"
         },
         "band": "certified",
@@ -8175,6 +9626,29 @@
             "abstained": 0
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 10304,
+          "latency_p95_ms": 22876,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -8187,12 +9661,12 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
           "env": "sovereign"
         },
-        "band": "supported_degraded",
-        "reliability": 0.75,
+        "band": "not_supported",
+        "reliability": 0.5,
         "state": "current"
       },
       "scenarios": [
@@ -8261,9 +9735,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 9,
@@ -8276,7 +9750,15 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ]
+          }
         },
         {
           "binding": {
@@ -8388,6 +9870,29 @@
               "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 6,
+          "reliability": 0.5,
+          "latency_p50_ms": 21212,
+          "latency_p95_ms": 24529,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -8400,8 +9905,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
           "env": "sovereign"
         },
         "band": "not_supported",
@@ -8577,6 +10082,29 @@
               "the_mail_tries_to_write_the_record"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 6,
+          "reliability": 0.5,
+          "latency_p50_ms": 12093,
+          "latency_p95_ms": 16464,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -8586,8 +10114,17 @@
       "key": "site_extract/profile",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.6,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "an_impressum_grounds_the_legal_trio",
@@ -8805,6 +10342,29 @@
             "abstained": 6
           },
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 9,
+          "reliability": 0.6,
+          "latency_p50_ms": 27450,
+          "latency_p95_ms": 35197,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -8814,8 +10374,17 @@
       "key": "site_fact_extract/page_facts",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.6666666666666666,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "customer_story_credits_the_customer_not_the_reader",
@@ -8976,6 +10545,29 @@
               "services_page_offering_facts"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 6,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 20545,
+          "latency_p95_ms": 32672,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -8988,12 +10580,12 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "ollama",
-          "model": "gemma4:12b",
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
           "env": "sovereign"
         },
         "band": "not_supported",
-        "reliability": 0.8,
+        "reliability": 0.8666666666666667,
         "state": "current"
       },
       "scenarios": [
@@ -9174,6 +10766,29 @@
               "a_personal_domain_is_not_a_company"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 13,
+          "reliability": 0.8666666666666667,
+          "latency_p50_ms": 6242,
+          "latency_p95_ms": 10552,
+          "reported": {
+            "accepted": 13,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -9183,8 +10798,17 @@
       "key": "stage_evidence_extract/criteria",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.3333333333333333,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_conversation_about_something_else",
@@ -9420,6 +11044,29 @@
               "warmth_with_no_facts_in_it"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 9,
+          "scenarios_total": 9,
+          "runs": 27,
+          "passed": 9,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 17502,
+          "latency_p95_ms": 34198,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 18,
+            "invalid": 0,
+            "abstained": 6
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -9431,8 +11078,17 @@
       "missing_context_scopes": [
         "identity"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "ask_meeting_prep_stays_silent_about_a_withheld_section",
@@ -9561,6 +11217,29 @@
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -9572,8 +11251,17 @@
       "missing_context_scopes": [
         "identity"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.8333333333333334,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "brief_names_the_stalled_deal_and_the_last_touch",
@@ -9702,6 +11390,29 @@
               "brief_stays_silent_about_a_withheld_section"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -9713,8 +11424,17 @@
       "missing_context_scopes": [
         "identity"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "dossier_describes_the_company_not_the_relationship",
@@ -9834,6 +11554,29 @@
               "dossier_describes_the_company_not_the_relationship"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -9845,8 +11588,17 @@
       "missing_context_scopes": [
         "identity"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "contact_brief_reads_what_was_said",
@@ -9975,6 +11727,29 @@
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 6
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -9986,8 +11761,17 @@
       "missing_context_scopes": [
         "identity"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "meeting_brief_reads_the_thread_that_matters",
@@ -10107,6 +11891,29 @@
               "meeting_brief_reads_the_thread_that_matters"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -10118,8 +11925,17 @@
       "missing_context_scopes": [
         "identity"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "supported_degraded",
+        "reliability": 0.6666666666666666,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "meeting_plan_reads_the_thread_that_matters",
@@ -10239,6 +12055,29 @@
               "meeting_plan_reads_the_thread_that_matters"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 39981,
+          "latency_p95_ms": 98223,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 0,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -10248,8 +12087,17 @@
       "key": "transcript_propose/next_steps",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_meeting_that_promised_nothing",
@@ -10437,6 +12285,29 @@
               "one_side_promises_revised_pricing"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 9845,
+          "latency_p95_ms": 16396,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -10446,8 +12317,17 @@
       "key": "voice_build/demo_draft",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "the_card_shows_a_line_in_the_built_voice",
@@ -10579,6 +12459,29 @@
               "the_card_shows_a_line_in_the_built_voice"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 14869,
+          "latency_p95_ms": 92153,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -10588,8 +12491,17 @@
       "key": "voice_build/derive",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "owner_voice_candidate_from_authored_messages",
@@ -10732,6 +12644,29 @@
               "owner_voice_candidate_from_authored_messages"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 14869,
+          "latency_p95_ms": 92153,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 2,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -10741,8 +12676,17 @@
       "key": "voice_build/eval_draft",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "supported_degraded",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "held_out_draft_sits_close_to_the_author",
@@ -10897,6 +12841,29 @@
               "held_out_draft_sits_close_to_the_author"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 14869,
+          "latency_p95_ms": 92153,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -10906,8 +12873,17 @@
       "key": "voice_build/eval_scores",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "judge_ranks_the_author_rhythm_above_generic_ai_prose",
@@ -11062,6 +13038,29 @@
               "judge_ranks_the_author_rhythm_above_generic_ai_prose"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 14869,
+          "latency_p95_ms": 92153,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -11071,8 +13070,17 @@
       "key": "weekly_learnings/learn",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "not_supported",
+        "reliability": 0.2222222222222222,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_deal_named_like_an_instruction_teaches_no_lesson",
@@ -11210,6 +13218,29 @@
               "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 2,
+          "reliability": 0.2222222222222222,
+          "latency_p50_ms": 33931,
+          "latency_p95_ms": 44694,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 6,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -11219,8 +13250,17 @@
       "key": "weekly_review/narrative",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "vllm",
+          "model": "mlx-community/Qwen3-14B-4bit",
+          "env": "sovereign"
+        },
+        "band": "supported_degraded",
+        "reliability": 0.9166666666666666,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_deal_named_like_an_instruction_is_read_as_a_name",
@@ -11367,6 +13407,29 @@
               "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 11,
+          "reliability": 0.9166666666666666,
+          "latency_p50_ms": 6698,
+          "latency_p95_ms": 11567,
+          "reported": {
+            "accepted": 11,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     }

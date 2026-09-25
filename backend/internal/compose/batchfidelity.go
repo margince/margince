@@ -18,7 +18,11 @@ package compose
 // them into one parameterised check would make the error message name a
 // vocabulary the reader has to go and look up.
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/schema"
+)
 
 // batchAnswer is one result as this contract sees it: which message it answers.
 type batchAnswer interface {
@@ -58,4 +62,21 @@ func checkBatchFidelity[T batchAnswer](results []T, requestedIDs []string) strin
 		}
 	}
 	return ""
+}
+
+// requestedIDNode is the schema node for the id an answer names: a string that
+// must be one of the ids this call sent.
+//
+// checkBatchFidelity refuses a foreign id after the reply arrives; this refuses
+// it while the reply is written. On a grammar-constrained rung (Ollama's format,
+// vLLM's structured outputs, a vendor's strict schema) the decoder cannot emit a
+// string the enum lacks, so a small model that copies the first half of a
+// 36-character id and invents the rest is held to a real one instead of costing
+// the whole batch. The validator stays: a rung that reads the schema only as a
+// hint can still answer outside it, and a real id can still be the wrong one.
+//
+// Every per-call UUID is swept from a certification record's prompt digest, so
+// an enum built from them hashes alike across calls.
+func requestedIDNode(requested []string) schema.Node {
+	return schema.Enum(requested...)
 }

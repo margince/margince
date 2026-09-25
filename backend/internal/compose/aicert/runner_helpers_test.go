@@ -182,3 +182,16 @@ func TestPercentileNearestRank(t *testing.T) {
 		t.Errorf("percentile of an empty slice = %d, want 0", got)
 	}
 }
+
+// A sovereign record's claim is about the candidate. The judge is the lane's own
+// grader, sent only the corpus and the candidate's answer, so a sovereign run may
+// be graded by a cloud judge — and the candidate is still held to sovereign.
+func TestASovereignRunTakesACloudJudgeAndStillRefusesACloudCandidate(t *testing.T) {
+	cloud := ai.ProviderConfig{Provider: "anthropic", Model: "claude-cert-test"}
+	if _, err := ladderForTask("judge", cloud, judgeRole.profileFor(ai.ProfileSovereign), ai.TaskCertJudge); err != nil {
+		t.Errorf("a cloud judge was refused under a sovereign run: %v", err)
+	}
+	if _, err := ladderForTask("candidate", cloud, candidateRole.profileFor(ai.ProfileSovereign), ai.TaskColdStart); err == nil {
+		t.Error("a cloud candidate was accepted under a sovereign run; its record would describe a deployment nobody has")
+	}
+}

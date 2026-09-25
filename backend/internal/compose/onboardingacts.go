@@ -211,7 +211,7 @@ func onboardingActRequest(act, message string, history []model.Message, contextJ
 	messages = append(messages, model.Message{Role: chatRoleUser, Content: message})
 	return model.Request{
 		System: onboardingActSystem(act, locale) + "\n" + promptvoice.Rule + "\n" +
-			fence.Rule("dossier evidence and application state"), Messages: messages,
+			fence.Rule("dossier evidence and application state"), Messages: alternatingTurns(messages),
 		MaxTokens: ai.ReasoningOutputMaxTokens, ResponseSchema: companyReadMessageSchema,
 		SecretStripper: ai.NewSecretStripper(),
 	}

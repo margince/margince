@@ -117,7 +117,7 @@ func settleRequest(batch []settleCandidate) model.Request {
 		System:         settleSystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: settleSchema(),
+		ResponseSchema: settleSchema(settleIDs(batch)),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -151,11 +151,7 @@ func settleShapeValid(batch []settleCandidate) ai.Validator {
 // validateSettlePayload names the first batch-fidelity violation, or "" when
 // the payload is exact.
 func validateSettlePayload(payload settlePayload, batch []settleCandidate) string {
-	requested := make([]string, len(batch))
-	for i, c := range batch {
-		requested[i] = c.Request.RequestID.String()
-	}
-	if msg := checkBatchFidelity(payload.Results, requested); msg != "" {
+	if msg := checkBatchFidelity(payload.Results, settleIDs(batch)); msg != "" {
 		return msg
 	}
 	for _, r := range payload.Results {
@@ -184,18 +180,28 @@ func validateSettlePayload(payload settlePayload, batch []settleCandidate) strin
 	return ""
 }
 
+// settleIDs is the ids one batch asks about: what the schema lets the model
+// name and what the validator requires it to answer.
+func settleIDs(batch []settleCandidate) []string {
+	requested := make([]string, len(batch))
+	for i, c := range batch {
+		requested[i] = c.Request.RequestID.String()
+	}
+	return requested
+}
+
 // settleSchema is the generation-time shape guardrail.
 //
 // `remaining` is REQUIRED although it is empty on two verdicts of three: the
 // validator refuses a still_owed without it, and an optional key is one a
 // constrained decoder may skip — so the prompt's "empty string unless
 // still_owed" is the only way to leave it blank.
-func settleSchema() json.RawMessage {
+func settleSchema(requested []string) json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			settleResultsKey: schema.Array(schema.Object(
 				map[string]schema.Node{
-					"id":                    schema.String(),
+					"id":                    requestedIDNode(requested),
 					settleVerdictKey:        schema.Enum(activities.RequestSettled, activities.RequestStillOwed, activities.RequestUnsure),
 					settleRemainingKey:      schema.String(),
 					settleDueKey:            schema.String(),

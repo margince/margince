@@ -105,8 +105,9 @@ func TestOnboardingCompanyMessageAnswersAndReturnsTheDeterministicNextField(t *t
 		reply.AvailableAction != nil || runtime.runID != stateID {
 		t.Fatalf("reply = %+v, runtime run = %s", reply, runtime.runID)
 	}
-	if len(brain.request.Messages) != 4 || !strings.Contains(brain.request.Messages[0].Content, `"next_required_field":"display_name"`) ||
-		brain.request.Messages[3].Content != "Use Acme as our company name" || brain.request.SecretStripper == nil {
+	last := brain.request.Messages[len(brain.request.Messages)-1]
+	if !strings.Contains(brain.request.Messages[0].Content, `"next_required_field":"display_name"`) ||
+		last.Role != chatRoleUser || last.Content != "Use Acme as our company name" || brain.request.SecretStripper == nil {
 		t.Fatalf("model request = %+v", brain.request)
 	}
 }
