@@ -13,6 +13,7 @@ import { interactionIcon } from "./interactionchrome";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactConsentGuard = components["schemas"]["ContactConsentGuard"];
+type GuardEntry = components["schemas"]["ContactConsentGuardEntry"];
 
 // The guard describes communication purposes; the drawer holds recorded consent.
 export function ConsentAndChannels({
@@ -39,19 +40,15 @@ export function ConsentAndChannels({
   const titleId = useId();
   const mayWrite = useCanWriteRecord("contact", view.contact);
   const entries = guard?.entries ?? [];
-  // WHICH email purpose. The guard answers one verdict per purpose, and taking
-  // the first of them painted the Email row with whichever the server happened
-  // to list first — a bare "Allowed" that the composer then contradicted with
-  // "sending will be refused until Margince has a record", because the two were
-  // answering about different purposes and neither said which.
-  //
-  // Correspondence is the one a rail can speak for: it is the purpose a reply
-  // rides, and the only one an inbound message can flip on its own. The others
-  // get their own rows below, each carrying its name.
-  const correspondence =
-    entries.find(
-      (entry) => entry.purpose_class === "business_correspondence",
-    ) ?? entries.find((entry) => entry.channel === "email");
+  // Correspondence is the one purpose the MAIL row speaks for: it is the
+  // purpose a reply rides, and the only one an inbound message can flip on its
+  // own. Where a workspace defines none the row stays unanswered, because a
+  // newsletter's grant drawn against Email is a permission the composer then
+  // refuses — two true answers a rep cannot reconcile. Every other purpose
+  // carries its own row and its own name below.
+  const correspondence = entries.find(
+    (entry) => entry.purpose_class === "business_correspondence",
+  );
   const otherPurposes = entries.filter(
     (entry) => entry.channel === "email" && entry !== correspondence,
   );
@@ -92,7 +89,12 @@ export function ConsentAndChannels({
             />
             {/* A blocked identity still gets its row, with `reachable: false`: the
           conversation happened, and hiding the transport it happened on would
-          answer "can I write to them" by pretending they were never here. */}
+          answer "can I write to them" by pretending they were never here.
+          Correspondence answers for these too, and that is not the borrowing
+          the mail row refuses: the guard's channel is derived from the purpose
+          class, so it separates mail-shaped purposes from phone and says
+          nothing about chat — while a reply to someone who wrote to us rides
+          the same lawful basis whichever transport carried it. */}
             {channels.map((channel) => (
               <ConsentRow
                 key={channel.provider}
@@ -186,7 +188,7 @@ function ConsentRow({
   icon: ReactNode;
   label: string;
   reachable: boolean;
-  verdict: string | undefined;
+  verdict: GuardEntry["verdict"] | undefined;
   // Why this purpose answers as it does, under the row it explains. Absent for
   // the transports, which answer on reachability and need no sentence.
   reason?: string;
@@ -213,13 +215,17 @@ function ConsentRow({
   );
 }
 
-function verdictClass(verdict: string | undefined): string {
-  switch (verdict) {
-    case "allowed":
-      return "pe-rail-value pe-rail-value-good";
-    case "blocked":
-      return "pe-rail-value pe-rail-value-warning";
-    default:
-      return "pe-rail-value pe-rail-value-muted";
-  }
+// Paired with consentWord's table, and with the same `??` for the same reason:
+// the union is a claim about the wire, so a verdict off a newer server than
+// this build would otherwise reach the class attribute as `undefined` and the
+// row would carry no tone at all.
+const VERDICT_TONE: Record<GuardEntry["verdict"], string> = {
+  allowed: "pe-rail-value-good",
+  blocked: "pe-rail-value-warning",
+  unknown: "pe-rail-value-muted",
+};
+
+function verdictClass(verdict: GuardEntry["verdict"] | undefined): string {
+  const tone = (verdict && VERDICT_TONE[verdict]) ?? VERDICT_TONE.unknown;
+  return `pe-rail-value ${tone}`;
 }
