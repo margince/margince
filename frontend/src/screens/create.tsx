@@ -34,6 +34,11 @@ import {
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ProblemError, problemExistingId, problemMessageOf } from "./common";
+import {
+  type NameOffers,
+  OfferedNameControl,
+  offeredHint,
+} from "./create.offered";
 import { RepeatableRowsField } from "./repeatablerowsfield";
 import "./create.css";
 import "./common.css";
@@ -65,6 +70,8 @@ export type SubField = {
 
 export type CreateField = {
   searchTargets?: (q: string) => Promise<RecordPickerCandidate[]>;
+  // A text field that offers existing records by name. See NameOffers.
+  offers?: NameOffers;
   key: string;
   // Static fields carry an i18n `label` key; dynamic fields (custom fields,
   // whose labels are workspace data, not translated) carry a literal
@@ -674,17 +681,31 @@ export function RecordFormBody({
             key={field.key}
             label={fieldLabel(field, t)}
             required={field.required}
-            hint={field.hint}
+            hint={
+              field.offers
+                ? offeredHint(field.offers, values[field.key] ?? "", values, t)
+                : field.hint
+            }
             error={refusals.get(field.key)}
           >
             {(control) =>
-              fieldControl(
-                field,
-                control,
-                values[field.key] ?? "",
-                (next) => setVisibleValues({ ...values, [field.key]: next }),
-                t,
-                values,
+              field.offers ? (
+                <OfferedNameControl
+                  fieldKey={field.key}
+                  offers={field.offers}
+                  control={control}
+                  values={values}
+                  setValues={setVisibleValues}
+                />
+              ) : (
+                fieldControl(
+                  field,
+                  control,
+                  values[field.key] ?? "",
+                  (next) => setVisibleValues({ ...values, [field.key]: next }),
+                  t,
+                  values,
+                )
               )
             }
           </Field>

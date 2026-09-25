@@ -3322,6 +3322,9 @@ export const vi = {
   "create.postalCode": "Mã bưu chính",
   "create.country": "Quốc gia (ISO-3166, ví dụ DE)",
   "create.companyName": "Công ty",
+  "create.companyPicked": "Gắn liên hệ vào công ty có sẵn này.",
+  "create.companyNew":
+    "Tạo công ty mới nếu không chọn công ty có sẵn trong danh sách.",
   "create.dealName": "Tên deal",
   "create.amount": "Giá trị",
   "create.currency": "Tiền tệ",
