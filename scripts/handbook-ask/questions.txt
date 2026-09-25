@@ -200,3 +200,10 @@ what is on a project page
 how do I tag an email with a project
 how do I reply to an older email in the thread
 can I merge two duplicate deals
+
+# entry points that had no way in from the app
+how do I start a project from a company page
+how do I rename a saved view
+how do I delete a saved view
+how do I claim a company nobody owns
+how do I revoke a forecast share link

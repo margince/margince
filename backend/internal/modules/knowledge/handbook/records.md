@@ -172,6 +172,11 @@ You need edit rights on the record: your own, your team's, one shared with you f
 There is no bulk reassign for contacts or companies. For many deals or leads, see [Lists, filters and views](lists-filters-and-views.md).
 Also called: reassign a contact, hand over an account, transfer ownership, account owner.
 
+### How do I claim a company nobody owns?
+To claim an unowned company in Margince, open it and pick yourself in **Owner** among the facts under its name. The company is yours as soon as you pick.
+A company nobody owns can be read by everyone and edited by nobody, so its **Details** panel takes no changes until somebody claims it. Any role allowed to edit companies can claim one; an archived company cannot be claimed.
+Also called: take an unowned account, assign a company to me, claim an account.
+
 Two separate fields describe a company, and mixing them up is a common mistake.
 
 **Lifecycle** — where the account stands with you. One value only:

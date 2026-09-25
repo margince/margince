@@ -1,23 +1,34 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { CompanyProjectsPanel } from "./companyprojects";
 
 type Company360 = components["schemas"]["Company360"];
 
-afterEach(cleanup);
+// Every case answers /me, so no render reaches for a server that is not there;
+// a case about the create verb re-stubs with the grants it is about.
+beforeEach(() => {
+  stubServer({ project: ["read"] });
+});
 
-function draw(view: Company360 | undefined) {
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+function draw(view: Company360 | undefined, readOnly = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <CompanyProjectsPanel companyId="o-1" view={view} readOnly={false} />
+        <CompanyProjectsPanel companyId="o-1" view={view} readOnly={readOnly} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -82,5 +93,89 @@ describe("the account's projects panel", () => {
       ],
     });
     expect(screen.getByText("Depot fit-out")).toBeTruthy();
+  });
+});
+
+const ANSWERED: Company360 = {
+  as_of: "2026-08-25T09:00:00Z",
+  company: {
+    id: "o-1",
+    display_name: "Brandt Automotive GmbH",
+    captured_by: "human:u1",
+    source: "manual",
+    version: 1,
+    created_at: "2026-06-01T08:00:00Z",
+    updated_at: "2026-08-01T08:00:00Z",
+  },
+  sections_omitted: [],
+  projects: [],
+  projects_page: { has_more: false, next_cursor: null },
+};
+
+// /me with exactly `allow`, and a POST /projects that records its body.
+function stubServer(allow: GrantSpec) {
+  const created: unknown[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return Response.json({
+          user: { id: "u-1", display_name: "Mira Voss" },
+          authorization: meFixture({ allow }).authorization,
+        });
+      }
+      if (pathname.endsWith("/projects") && request.method === "POST") {
+        created.push(await request.json());
+        return Response.json(
+          { id: "pr-9", name: "Depot fit-out" },
+          {
+            status: 201,
+          },
+        );
+      }
+      return Response.json({ data: [], page: { has_more: false } });
+    }),
+  );
+  return created;
+}
+
+// A company page is where a rep already stands when the account needs a new
+// delivery. The project is born with THIS company on it, so the form never
+// asks which company: that is the one answer the rep could get wrong.
+describe("starting a project from the account", () => {
+  it("creates a project already linked to the company", async () => {
+    const created = stubServer({ project: ["create", "read"] });
+    const user = userEvent.setup();
+    draw(ANSWERED);
+
+    await user.click(
+      await screen.findByRole("button", { name: "New project" }),
+    );
+    expect(screen.queryByLabelText(/Company/)).toBeNull();
+    await user.type(screen.getByLabelText(/Project name/), "Depot fit-out");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() =>
+      expect(created).toEqual([
+        expect.objectContaining({ name: "Depot fit-out", company_id: "o-1" }),
+      ]),
+    );
+  });
+
+  it("offers no create verb to a reader who may not create projects", async () => {
+    stubServer({ project: ["read"] });
+    draw(ANSWERED);
+
+    expect(await screen.findByText("Attach project")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
+  });
+
+  it("offers no create verb on an archived account", async () => {
+    stubServer({ project: ["create", "read"] });
+    draw(ANSWERED, true);
+
+    expect(await screen.findByText("Projects")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
   });
 });
