@@ -35,7 +35,7 @@ To turn a proposal down, open it with **Decide** and choose **Reject**. In the a
 Also called: decline, deny, dismiss an agent action.
 
 ### What happens if an approval expires?
-An approval in Margince expires after **72 hours** if nobody decides it. Nothing is applied; the card shows **Expired**, and the agent has to propose again against the current state of the record. A pending card shows "expires in {countdown}". One kind never expires: a stopped scheduled message waits until somebody answers.
+An approval in Margince expires after **72 hours** by default if nobody decides it; a single card can carry a shorter or longer window. Nothing is applied; the card shows **Expired**, and the agent has to propose again against the current state of the record. A pending card shows "expires in {countdown}". One kind never expires: a stopped scheduled message waits until somebody answers.
 Also called: approval timed out, missed an approval, stale approval.
 
 ### Who approves agent actions?
@@ -179,12 +179,12 @@ quietly repeated.
 
 ## Expiry
 
-**An approval expires after 72 hours** if nobody decides it.
+**An approval expires after 72 hours** by default if nobody decides it.
 
 Three days rather than one is a deliberate choice. At 24 hours, a proposal
 raised on Friday afternoon had auto-rejected before anyone could have seen it,
 and the rejection is silent, so the only evidence was work that quietly did not
-happen. Three days carries Friday afternoon to Monday morning.
+happen. Three days carries Friday afternoon to Monday afternoon.
 
 An expired card shows as **Expired**. A pending card shows a countdown:
 "expires in {countdown}".

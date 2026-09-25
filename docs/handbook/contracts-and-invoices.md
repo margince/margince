@@ -163,8 +163,9 @@ Also called: bill a customer, raise an invoice, send an invoice, credit note.
 - **Billing contacts**, read from your own records rather than from the
   accounting system.
 
-The Finance card always names where the figures came from and when: "From
-{provider} · synced {when}". For a former customer the card is titled "Finance ·
+Once a source is connected, the Finance card names where the figures came from
+and when: "From {provider} · synced {when}", or "From {provider} · not yet
+synced" before its first sync. With no source connected it names none. For a former customer the card is titled "Finance ·
 historical".
 
 ### Absent is not zero

@@ -64,10 +64,17 @@ ask_one() {
     [[ -n "$outcome" && "$outcome" != unreviewed ]] && break
     [[ $try -lt 4 ]] && sleep $((try * 5))
   done
-  jq -r --arg q "$question" '[ $q, (.outcome // "error"),
+  # An empty or non-JSON body parses to no row at all, so the row is built first
+  # and an empty one becomes an error rather than a question silently not counted.
+  local row
+  row=$(jq -r --arg q "$question" '[ $q, (.outcome // "error"),
       ([.claims[]?.document_name // empty] | unique | join(",")),
-      ((.summary // "") | gsub("[\t\n]"; " ")) ] | @tsv' <<<"$resp" 2>/dev/null \
-    || printf '%s\terror\t\t\n' "$question"
+      ((.summary // "") | gsub("[\t\n]"; " ")) ] | @tsv' <<<"$resp" 2>/dev/null || true)
+  if [[ -n "$row" ]]; then
+    printf '%s\n' "$row"
+  else
+    printf '%s\terror\t\t\n' "$question"
+  fi
 }
 export -f ask_one
 export JAR API CORPUS
