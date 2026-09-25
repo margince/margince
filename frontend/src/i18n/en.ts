@@ -4158,7 +4158,7 @@ export const en = {
   "analytics.share.listOpen": "Shared links",
   "analytics.share.listTitle": "Your shared links",
   "analytics.share.listIntro":
-    "Links you issued that still open. Closing one stops it at once.",
+    "Every link you created that still opens is listed here. Closing one stops it at once.",
   "analytics.share.listEmpty":
     "You have no open links. Share view creates one.",
   "analytics.share.listCreated": "Created {date}",
@@ -4168,7 +4168,7 @@ export const en = {
   "analytics.share.populationOwner": "Colleague",
   "analytics.share.closeTitle": "Close this link?",
   "analytics.share.closeBody":
-    "Anyone who follows it afterwards is refused. A closed link cannot be reopened.",
+    "The link stops opening at once, for anyone who has it. A closed link cannot be reopened.",
   "analytics.frame": "As of {asOf} · {zone}",
   "review.title": "Checks before the call",
   "review.ready": "Ready",

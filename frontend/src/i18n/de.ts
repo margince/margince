@@ -4047,13 +4047,13 @@ export const de = {
   "analytics.share.listEmpty":
     "Du hast keine offenen Links. Mit „Ansicht teilen“ erstellst du einen.",
   "analytics.share.listCreated": "Erstellt am {date}",
-  "analytics.share.listExpires": "Läuft ab am {date}",
+  "analytics.share.listExpires": "Läuft am {date} ab",
   "analytics.share.populationCompany": "Gesamtes Unternehmen",
   "analytics.share.populationTeam": "Team",
   "analytics.share.populationOwner": "Teammitglied",
   "analytics.share.closeTitle": "Diesen Link schließen?",
   "analytics.share.closeBody":
-    "Wer ihm danach folgt, wird abgewiesen. Ein geschlossener Link lässt sich nicht wieder öffnen.",
+    "Der Link öffnet sofort nicht mehr, für alle, die ihn haben. Ein geschlossener Link lässt sich nicht wieder öffnen.",
   "analytics.frame": "Stand {asOf} · {zone}",
   "review.title": "Prüfungen vor der Einschätzung",
   "review.ready": "Bereit",

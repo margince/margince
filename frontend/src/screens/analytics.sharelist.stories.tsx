@@ -158,7 +158,7 @@ export const CloseLinkConfirm: Story = {
     await userEvent.click(
       await screen.findByRole("button", {
         name: "Close link",
-        description: "Team North",
+        description: /Team North$/,
       }),
     );
     await screen.findByRole("dialog", { name: "Close this link?" });

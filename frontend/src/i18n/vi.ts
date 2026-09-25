@@ -4017,7 +4017,7 @@ export const vi = {
   "analytics.share.populationOwner": "Đồng nghiệp",
   "analytics.share.closeTitle": "Đóng liên kết này?",
   "analytics.share.closeBody":
-    "Ai truy cập sau đó sẽ bị từ chối. Liên kết đã đóng không thể mở lại.",
+    "Liên kết ngừng mở ngay lập tức với bất kỳ ai có nó. Liên kết đã đóng không thể mở lại.",
   "analytics.frame": "Tính đến {asOf} · {zone}",
   "review.title": "Cần kiểm tra gì trước khi chốt cam kết?",
   "review.ready": "Sẵn sàng",

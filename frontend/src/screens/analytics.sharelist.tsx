@@ -205,10 +205,11 @@ function OpenShareRow({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
+  const metaId = useId();
   const populationId = useId();
   return (
     <PanelRow className="meta-row">
-      <span className="meta-row-line t-caption">
+      <span className="meta-row-line t-caption" id={metaId}>
         <span>{t(KIND_LABELS[share.kind])}</span>
         <span>
           {t("analytics.share.listCreated", {
@@ -226,11 +227,12 @@ function OpenShareRow({
       </span>
       {onClose && (
         <span className="meta-row-action">
-          {/* Every row's verb reads "Close link"; the population it describes
-              is what tells a screen-reader user which link it ends. */}
+          {/* Every row's verb reads "Close link"; its kind, dates and
+              population tell a screen-reader user which link it ends, even
+              between two links for one population. */}
           <Button
             variant="danger"
-            aria-describedby={populationId}
+            aria-describedby={`${metaId} ${populationId}`}
             onClick={(event) => onClose(event.currentTarget)}
           >
             {t("analytics.share.revoke")}

@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -407,12 +408,18 @@ describe("the links a reader has shared", () => {
     await user.click(
       await screen.findByRole("button", { name: "Shared links" }),
     );
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Close link",
-        description: "Team North",
-      }),
+    const verb = await screen.findByRole("button", {
+      name: "Close link",
+      description: /Team North$/,
+    });
+    // Kind and dates as well as the population, so two links for one team
+    // are told apart by the verb that ends each.
+    expect(verb).toHaveAccessibleDescription(
+      new RegExp(
+        `Live view.*Created ${formatDate(northLink.created_at, "en", viewerZone())}.*Team North`,
+      ),
     );
+    await user.click(verb);
     // Asked first: nothing is closed until the reader confirms.
     const confirm = await screen.findByRole("dialog", {
       name: "Close this link?",
@@ -665,7 +672,10 @@ async function closeOneOfThree(closed: OpenShare) {
   await user.click(await screen.findByRole("button", { name: "Shared links" }));
   await screen.findByText("Whole company");
   const closeVerb = (population: string) =>
-    screen.getByRole("button", { name: "Close link", description: population });
+    screen.getByRole("button", {
+      name: "Close link",
+      description: new RegExp(`${population}$`),
+    });
   const confirmClose = async () => {
     const confirm = screen.getByRole("dialog", { name: "Close this link?" });
     await user.click(
