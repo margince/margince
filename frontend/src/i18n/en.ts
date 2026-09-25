@@ -53,6 +53,7 @@ export const en = {
   "aiAdmin.unavailable": "Unavailable",
   "aiAdmin.impact.blocked": "Waiting on allowance",
   "aiAdmin.impact.model": "Different model selected",
+  "aiAdmin.impact.decision": "Decision model changed",
   "aiAdmin.impact.fallback": "Fallback chain changed",
   "aiAdmin.impact.unconfigured": "No model configured",
   "aiAdmin.impact.exempt": "Continues beyond allowance",

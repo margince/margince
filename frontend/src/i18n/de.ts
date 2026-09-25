@@ -59,6 +59,7 @@ export const de = {
   "aiAdmin.unavailable": "Nicht verfügbar",
   "aiAdmin.impact.blocked": "Wartet auf Kontingent",
   "aiAdmin.impact.model": "Anderes Modell gewählt",
+  "aiAdmin.impact.decision": "Entscheidungsmodell geändert",
   "aiAdmin.impact.fallback": "Ausweichkette geändert",
   "aiAdmin.impact.unconfigured": "Kein Modell konfiguriert",
   "aiAdmin.impact.exempt": "Läuft über das Kontingent hinaus weiter",

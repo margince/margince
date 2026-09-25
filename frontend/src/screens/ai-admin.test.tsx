@@ -186,6 +186,12 @@ it("explains each routing impact in operational language", () => {
           },
           {
             ...feature,
+            task: "decision",
+            display_name: "Decision activity",
+            impact: "decision_changed",
+          },
+          {
+            ...feature,
             task: "fallback",
             display_name: "Fallback activity",
             impact: "fallback_changed",
@@ -203,6 +209,7 @@ it("explains each routing impact in operational language", () => {
 
   expect(screen.getByText("Waiting on allowance")).toBeTruthy();
   expect(screen.getByText("Different model selected")).toBeTruthy();
+  expect(screen.getByText("Decision model changed")).toBeTruthy();
   expect(screen.getByText("Fallback chain changed")).toBeTruthy();
   expect(screen.getByText("No model configured")).toBeTruthy();
 });

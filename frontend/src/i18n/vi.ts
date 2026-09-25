@@ -65,6 +65,7 @@ export const vi = {
   "aiAdmin.unavailable": "Không khả dụng",
   "aiAdmin.impact.blocked": "Chờ hạn mức",
   "aiAdmin.impact.model": "Đã chọn mô hình khác",
+  "aiAdmin.impact.decision": "Đã đổi mô hình quyết định",
   "aiAdmin.impact.fallback": "Chuỗi dự phòng đã đổi",
   "aiAdmin.impact.unconfigured": "Chưa cấu hình mô hình",
   "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",

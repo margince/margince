@@ -105,35 +105,49 @@ func TestTheRoutingPreviewSaysWhyTheDecisionLaneIsSkipped(t *testing.T) {
 
 // A decision model that starts or stops answering a feature first changes which
 // model answers it, so the preview may not read that edit as "unchanged" while
-// every tier binding stays put. A lane that answers nothing either way changes
-// nothing a caller sees.
-func TestTheRoutingPreviewReportsADecisionLaneChangeAsAModelChange(t *testing.T) {
+// every tier binding stays put — it says the decision model moved. When the
+// tier binding moved too, the bigger change is the one reported. A lane that
+// answers nothing either way changes nothing a caller sees.
+func TestTheRoutingPreviewReportsADecisionLaneChangeApartFromAModelChange(t *testing.T) {
 	before := RoutingConfig{Profile: ProfileCloudFrontier, Tiers: map[Tier]ProviderConfig{
 		TierCheapCloud: {Provider: ProviderFake, Model: "cheap"}, TierPremium: {Provider: ProviderFake, Model: "premium"},
 	}}
+	retiered := map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: ProviderFake, Model: "cheap-next"}, TierPremium: {Provider: ProviderFake, Model: "premium-next"},
+	}
+	refallbacked := map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: ProviderFake, Model: "cheap"}, TierPremium: {Provider: ProviderFake, Model: "premium-next"},
+	}
 	certifyForTest(t, DecisionCertKey{Task: TaskSiteTriage, Site: "triage", Provider: jevLane.Provider, Model: jevLane.Model})
 	certifiedOther := &DecisionsConfig{Provider: jevLane.Provider, Model: "typesafe/jev-other", BaseURL: jevLane.BaseURL}
 	certifyForTest(t, DecisionCertKey{Task: TaskSiteTriage, Site: "triage", Provider: certifiedOther.Provider, Model: certifiedOther.Model})
 	uncertified := &DecisionsConfig{Provider: jevLane.Provider, Model: "typesafe/jev-9.99", BaseURL: jevLane.BaseURL}
-	with := func(lane *DecisionsConfig) RoutingConfig {
+	with := func(lane *DecisionsConfig, tiers map[Tier]ProviderConfig) RoutingConfig {
 		next := before
 		next.Decisions = lane
+		if tiers != nil {
+			next.Tiers = tiers
+		}
 		return next
 	}
 	cases := []struct {
 		name     string
 		from, to *DecisionsConfig
+		toTiers  map[Tier]ProviderConfig
 		want     string
 	}{
-		{"added", nil, jevLane, "model_changed"},
-		{"removed", jevLane, nil, "model_changed"},
-		{"another certified model", jevLane, certifiedOther, "model_changed"},
-		{"the same lane", jevLane, jevLane, "unchanged"},
-		{"unbound to an uncertified model", nil, uncertified, "unchanged"},
+		{"added", nil, jevLane, nil, "decision_changed"},
+		{"removed", jevLane, nil, nil, "decision_changed"},
+		{"another certified model", jevLane, certifiedOther, nil, "decision_changed"},
+		{"added beside a rebound tier", nil, jevLane, retiered, "model_changed"},
+		{"a rebound fallback alone", nil, nil, refallbacked, "fallback_changed"},
+		{"added beside a rebound fallback", nil, jevLane, refallbacked, "model_changed"},
+		{"the same lane", jevLane, jevLane, nil, "unchanged"},
+		{"unbound to an uncertified model", nil, uncertified, nil, "unchanged"},
 	}
 	for _, tc := range cases {
 		var got string
-		for _, row := range compareFeatureRoutes(with(tc.from), with(tc.to), BandNormal, BandNormal) {
+		for _, row := range compareFeatureRoutes(with(tc.from, nil), with(tc.to, tc.toTiers), BandNormal, BandNormal) {
 			if row.Task == string(TaskSiteTriage) {
 				got = row.Impact
 			}

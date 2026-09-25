@@ -19385,10 +19385,12 @@ type AiFeatureRoute struct {
 	DisplayName         string             `json:"display_name"`
 	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
 	ExecutionMode       string             `json:"execution_mode"`
-	Impact              string             `json:"impact"`
-	LeadingTier         string             `json:"leading_tier"`
-	NormalCandidates    []AiRouteCandidate `json:"normal_candidates"`
-	Task                string             `json:"task"`
+
+	// Impact How the proposed routing changes what answers this feature. decision_changed — only the decision model that answers it first moved (added, removed or rebound) while every tier binding stayed put; model_changed wins when the lead tier binding moved as well.
+	Impact           string             `json:"impact"`
+	LeadingTier      string             `json:"leading_tier"`
+	NormalCandidates []AiRouteCandidate `json:"normal_candidates"`
+	Task             string             `json:"task"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -19595,7 +19597,7 @@ type AiRunSummaryCurrency string
 
 // AiRungHealth One model tier and what it has been doing.
 type AiRungHealth struct {
-	// Calls Terminal attempts in the window.
+	// Calls Attempts in the window — terminal ones for a chat tier, every one for `decide`.
 	Calls int `json:"calls"`
 
 	// Failures How many of them carried an error.

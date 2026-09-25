@@ -111,6 +111,21 @@ func routeImpact(normal, effective []plannedBinding, blocked bool) string {
 	return "fallback_changed"
 }
 
+// withDecisionLeadChange folds a moved decision lead into a tier impact. Alone
+// it is decision_changed; beside a moved fallback both the first answer and a
+// later one changed, which is what model_changed already says; a moved lead
+// tier, a budget block or no ladder at all is the bigger fact and stands.
+func withDecisionLeadChange(tierImpact string) string {
+	switch tierImpact {
+	case "unchanged":
+		return "decision_changed"
+	case "fallback_changed":
+		return "model_changed"
+	default:
+		return tierImpact
+	}
+}
+
 func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 	out := make([]crmcontracts.AiRouteCandidate, 0, len(plan))
 	for _, binding := range plan {
@@ -151,8 +166,8 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 			Impact: routeImpact(normal, effective, blocked), BudgetExempt: task == TaskEmbeddings,
 		}
 		decisionRoute(&row, effectiveConfig, task, blocked)
-		if decisionLeadChanged(normalConfig, effectiveConfig, task, normalBlocked, row) && (row.Impact == "unchanged" || row.Impact == "fallback_changed") {
-			row.Impact = "model_changed"
+		if decisionLeadChanged(normalConfig, effectiveConfig, task, normalBlocked, row) {
+			row.Impact = withDecisionLeadChange(row.Impact)
 		}
 		out = append(out, row)
 	}

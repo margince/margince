@@ -9213,8 +9213,8 @@ export interface paths {
         };
         /**
          * Whether the model lanes are answering.
-         * @description One row per model tier for the last hour: how many terminal attempts it made, how many
-         *     failed, the most recent error it reported, and its median latency.
+         * @description One row per model tier for the last hour: how many attempts it made, how many failed, the
+         *     most recent error it reported, and its median latency.
          *
          *     This exists because an outage is otherwise invisible. Under the capture posture a thread
          *     stays held whether the classifier judged it confidential or never answered at all, so a
@@ -9223,8 +9223,12 @@ export interface paths {
          *
          *     Read from `ai_call`, which already records every attempt. Nothing is written for this: a
          *     health surface with its own bookkeeping would be a second account of what happened, free
-         *     to disagree with the first. Terminal attempts only, so a failure a retry rescued does not
-         *     report a lane as failing while every caller of it got an answer.
+         *     to disagree with the first. A chat tier counts its terminal attempts only, so a failure a
+         *     retry rescued does not report a lane as failing while every caller of it got an answer.
+         *     The `decide` tier counts every decision attempt: it is asked once per call and never
+         *     retried on its own tier, so its attempt is its final outcome even when the ladder answers
+         *     after it — counting terminal attempts alone would call a decision endpoint that fails
+         *     every call healthy.
          *
          *     An hour, because the question is whether it is answering NOW — a day-long window would
          *     call a lane that died forty minutes ago healthy on the strength of this morning.
@@ -18386,7 +18390,7 @@ export interface components {
              *     not.
              */
             healthy: boolean;
-            /** @description Terminal attempts in the window. */
+            /** @description Attempts in the window — terminal ones for a chat tier, every one for `decide`. */
             calls: number;
             /** @description How many of them carried an error. */
             failures: number;
@@ -18452,8 +18456,11 @@ export interface components {
             leading_tier: string;
             normal_candidates: components["schemas"]["AiRouteCandidate"][];
             effective_candidates: components["schemas"]["AiRouteCandidate"][];
-            /** @enum {string} */
-            impact: "unchanged" | "model_changed" | "fallback_changed" | "budget_blocked" | "unconfigured";
+            /**
+             * @description How the proposed routing changes what answers this feature. decision_changed — only the decision model that answers it first moved (added, removed or rebound) while every tier binding stayed put; model_changed wins when the lead tier binding moved as well.
+             * @enum {string}
+             */
+            impact: "unchanged" | "model_changed" | "decision_changed" | "fallback_changed" | "budget_blocked" | "unconfigured";
             budget_exempt: boolean;
             /** @description The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider. */
             decision_first: boolean;
@@ -51233,7 +51240,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One row per tier that made a terminal attempt in the window. */
+            /** @description One row per tier that made a counted attempt in the window. */
             200: {
                 headers: {
                     [name: string]: unknown;

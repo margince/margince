@@ -403,14 +403,19 @@ export function AiFeatureTable({
         return t("aiAdmin.impact.blocked");
       case "model_changed":
         return t("aiAdmin.impact.model");
+      case "decision_changed":
+        return t("aiAdmin.impact.decision");
       case "fallback_changed":
         return t("aiAdmin.impact.fallback");
       case "unconfigured":
         return t("aiAdmin.impact.unconfigured");
-      default:
+      case "unchanged":
         return row.budget_exempt
           ? t("aiAdmin.impact.exempt")
           : t("aiAdmin.impact.same");
+      default:
+        // A new impact must be named here rather than read as "unchanged".
+        return row.impact satisfies never;
     }
   };
   // Which model answers, and where the decision model stands in front of the
