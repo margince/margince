@@ -450,3 +450,17 @@ func TestTheLocalRouterTakesAFakeDecider(t *testing.T) {
 		t.Error("an uncertified model is served without WithEveryDecisionCertified")
 	}
 }
+
+// The decision half reads the binding its caller loaded, not whatever is
+// installed by the time it runs: a Rebind between Decide's entry and the
+// decision call must not split one logical call across two routings.
+func TestTheDecisionHalfReadsTheBindingItWasHanded(t *testing.T) {
+	decider := &scriptedDecider{replies: []decisionReply{answered("parked", 0.95)}}
+	f := newDecideFixture(t, decider, 0)
+	snapshot := f.router.binding()
+	f.router.install(snapshot.withConfig(RoutingConfig{}, nil))
+	try, err := f.router.decideFirst(wsContext(t), newLogicalCall(), snapshot, TaskSiteTriage, "triage", triageQuestion, triageLLMRequest, floorGate)
+	if err != nil || !try.decided || len(decider.calls) != 1 {
+		t.Fatalf("try=%+v err=%v calls=%d, want the handed binding's lane to answer", try, err, len(decider.calls))
+	}
+}

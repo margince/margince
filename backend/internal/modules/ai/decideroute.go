@@ -65,9 +65,13 @@ func (r *Router) Decide(ctx context.Context, task Task, site string, dreq decisi
 	if _, ok := taskLadders[task]; !ok {
 		return DecideOutcome{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
 	}
+	// One snapshot for the decision half and the flush, so a Rebind mid-call
+	// cannot split them across two routings. The ladder walk behind it loads
+	// its own binding per walk, exactly as CompleteStructured's walks do.
+	b := r.binding()
 	lc := newLogicalCall()
-	defer r.flushDetached(ctx, r.binding(), lc)
-	try, err := r.decideFirst(ctx, lc, task, site, dreq, req, gate)
+	defer r.flushDetached(ctx, b, lc)
+	try, err := r.decideFirst(ctx, lc, b, task, site, dreq, req, gate)
 	if err != nil {
 		return DecideOutcome{}, RouteInfo{}, err
 	}
@@ -82,11 +86,10 @@ func (r *Router) Decide(ctx context.Context, task Task, site string, dreq decisi
 // leaves to the ladder walk every state that walk already reports: no
 // workspace, a budget it cannot read, and a cached answer it will serve and
 // meter as a hit. A deferral is returned as the ladder would return it: no
-// call, no trace.
-func (r *Router) decideFirst(ctx context.Context, lc *logicalCall, task Task, site string,
+// call, no trace. b is the caller's snapshot of the binding.
+func (r *Router) decideFirst(ctx context.Context, lc *logicalCall, b *binding, task Task, site string,
 	dreq decision.Request, req model.Request, gate DecisionGate,
 ) (decisionTry, error) {
-	b := r.binding()
 	if b.decisions == nil {
 		return decisionTry{}, nil
 	}
