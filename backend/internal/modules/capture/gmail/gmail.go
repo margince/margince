@@ -449,9 +449,10 @@ func labelContainers(labels []string) []string {
 //
 // Graph has the same eight lines (graph.go), deliberately not shared: a
 // connector package owns its whole conversation with one provider and imports
-// no sibling, so the only home a shared helper could take is the connector
-// port — the seam every provider implements, not a place for one caller's
-// loop. The duty is asserted on both sides instead.
+// no sibling, which leaves the connector port to host a shared helper — the
+// seam every provider implements, not a place for one caller's loop. Growing
+// it for them would be the larger coupling, so the duty is asserted on both
+// sides instead.
 //
 // A failure on one removal does not stop the pull. Losing a round of new mail
 // over a message that is already gone from the mailbox trades a real capture

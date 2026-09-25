@@ -728,14 +728,14 @@ func TestAMessageInBothFoldersIsAttestedByTheSentPass(t *testing.T) {
 // The removal reporter's branches, which the Sync-level tests reach only on
 // their happy path.
 //
-// This is gmail's reportRemovals in all but the source-system argument, and the
+// This is gmail's reportRemovals, and the
 // two are deliberately NOT shared: a connector package here owns its whole
-// conversation with one provider and imports no sibling connector, so the only
-// home a shared helper could take is the connector port — which is the seam
-// every provider implements, not a place for one caller's loop. Both copies are
-// eight lines over an optional interface, and the port growing a helper for
-// them would be the larger coupling. The duty they share is asserted on both
-// sides instead, here and in gmail's TestAFailedRemovalDoesNotStopTheOnesBehindIt.
+// conversation with one provider and imports no sibling connector, which leaves
+// the connector port to host a shared helper — the seam every provider
+// implements, not a place for one caller's loop. Both copies are eight lines
+// over an optional interface, and growing the port for them would be the larger
+// coupling. The duty they share is asserted on both sides instead, here and in
+// gmail's TestAFailedRemovalDoesNotStopTheOnesBehindIt.
 type graphRemovalSink struct {
 	recordingSink
 	removed []connector.NaturalKey
@@ -753,7 +753,7 @@ func (s *graphRemovalSink) RemoveMessage(_ context.Context, key connector.Natura
 func TestAFailedRemovalDoesNotStopTheGraphRemovalsBehindIt(t *testing.T) {
 	sink := &graphRemovalSink{err: errors.New("the copy is held by a legal duty")}
 
-	reportRemovals(context.Background(), sink, []string{"a", "b", "c"}, connectorName)
+	reportRemovals(context.Background(), sink, []string{"a", "b", "c"})
 
 	if len(sink.removed) != 3 {
 		t.Fatalf("reached %d removals, want all 3 — one failure stopped the rest", len(sink.removed))
@@ -766,7 +766,7 @@ func TestAFailedRemovalDoesNotStopTheGraphRemovalsBehindIt(t *testing.T) {
 func TestAGraphSinkThatTakesNoRemovalsIsNotAFailure(t *testing.T) {
 	plain := &recordingSink{}
 
-	reportRemovals(context.Background(), plain, []string{"gone"}, connectorName)
+	reportRemovals(context.Background(), plain, []string{"gone"})
 
 	if len(plain.recs) != 0 {
 		t.Errorf("a removal reached Upsert: %+v", plain.recs)
@@ -777,7 +777,7 @@ func TestAGraphSinkThatTakesNoRemovalsIsNotAFailure(t *testing.T) {
 func TestAnEmptyGraphRemovalListAsksTheSinkNothing(t *testing.T) {
 	sink := &graphRemovalSink{}
 
-	reportRemovals(context.Background(), sink, nil, connectorName)
+	reportRemovals(context.Background(), sink, nil)
 
 	if len(sink.removed) != 0 {
 		t.Errorf("an empty list reached the sink: %+v", sink.removed)
@@ -789,7 +789,7 @@ func TestAnEmptyGraphRemovalListAsksTheSinkNothing(t *testing.T) {
 func TestEachGraphRemovalNamesThisConnectorsSourceSystem(t *testing.T) {
 	sink := &graphRemovalSink{}
 
-	reportRemovals(context.Background(), sink, []string{"AAMkAGI2"}, connectorName)
+	reportRemovals(context.Background(), sink, []string{"AAMkAGI2"})
 
 	if len(sink.removed) != 1 {
 		t.Fatalf("want one removal, got %+v", sink.removed)

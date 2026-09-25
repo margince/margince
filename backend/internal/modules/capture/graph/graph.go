@@ -268,7 +268,7 @@ func (c *Connector) pullFolder(
 	// and re-delivered in one round — and reporting first is the safe half: the
 	// re-delivery re-captures it, where the other order would destroy the copy
 	// that just arrived.
-	reportRemovals(ctx, sink, removed, connectorName)
+	reportRemovals(ctx, sink, removed)
 	for _, id := range ids {
 		raw, err := c.api.GetMIME(ctx, access, id)
 		if errors.Is(err, connector.ErrSkip) {
@@ -417,7 +417,7 @@ func marshalCursor(deltaLink, sentDeltaLink, email string) connector.Cursor {
 // round of new mail over a message that was already deleted, which trades a
 // real capture for a cleanup that the next round's delta will report again
 // anyway: Graph replays tombstones until the cursor moves past them.
-func reportRemovals(ctx context.Context, sink connector.Sink, removed []string, system string) {
+func reportRemovals(ctx context.Context, sink connector.Sink, removed []string) {
 	if len(removed) == 0 {
 		return
 	}
@@ -426,9 +426,9 @@ func reportRemovals(ctx context.Context, sink connector.Sink, removed []string, 
 		return
 	}
 	for _, id := range removed {
-		if err := remover.RemoveMessage(ctx, connector.NaturalKey{SourceSystem: system, SourceID: id}); err != nil {
+		if err := remover.RemoveMessage(ctx, connector.NaturalKey{SourceSystem: connectorName, SourceID: id}); err != nil {
 			slog.WarnContext(ctx, "graph: a provider-side deletion was not acted on",
-				"source_system", system, "error", err)
+				"source_system", connectorName, "error", err)
 		}
 	}
 }
