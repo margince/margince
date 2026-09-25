@@ -223,7 +223,7 @@ func TestARunWithUnreadableInputsStillExists(t *testing.T) {
 		},
 		DefaultConfig())
 
-	got, err := scanner.Scan(ctx, time.Now().UTC())
+	got, err := scanner.Scan(ctx, time.Now().UTC(), nil)
 	if err != nil {
 		t.Fatalf("the scan refused to run: %v — a missing run is the one answer that "+
 			"tells nobody anything", err)
@@ -275,14 +275,14 @@ func TestAFixedRecordClearsItsFindingOnTheNextScan(t *testing.T) {
 		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
 
-	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
 		t.Fatal(err)
 	}
 
 	// The rep moves the close date forward; tonight the condition is gone.
 	future := time.Now().UTC().AddDate(0, 0, 20)
 	subjects[0].ExpectedClose = &future
-	got, err := scanner.Scan(ctx, time.Now().UTC())
+	got, err := scanner.Scan(ctx, time.Now().UTC(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,7 +330,7 @@ func TestADeferredFindingSurvivesItsConditionClearing(t *testing.T) {
 		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
 
-	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -356,7 +356,7 @@ func TestADeferredFindingSurvivesItsConditionClearing(t *testing.T) {
 	// Tonight the condition goes away on its own.
 	future := time.Now().UTC().AddDate(0, 0, 20)
 	subjects[0].ExpectedClose = &future
-	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -396,7 +396,7 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 			return coverage(ctx, tx, now)
 		},
 		DefaultConfig())
-	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -410,7 +410,7 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 			{Source: "offers", State: CoverageChecked, CheckedThrough: &now},
 		}
 	}
-	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -432,7 +432,7 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 	recent := time.Now().UTC().AddDate(0, 0, -2)
 	subjects[0].LastInboundAt = &recent
 	coverage = checkedCoverage
-	got, err := scanner.Scan(ctx, time.Now().UTC())
+	got, err := scanner.Scan(ctx, time.Now().UTC(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

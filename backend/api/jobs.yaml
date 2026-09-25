@@ -556,10 +556,27 @@ kinds:
       Daily, because the check is what the Forecast tab's readiness verdict,
       coverage line and findings are all read from, and a check that never runs
       leaves every one of them with nothing to say. Run at boot like the other
-      passes here, and for a sharper reason than most: until the first run
-      exists the read answers 404, which the tab renders as a failed panel — so
-      the gap between an install starting and its first check is time a contact
-      spends looking at what reads like a broken page.
+      passes here — but a workspace nobody has STARTED is skipped, however often
+      this fires: the first pass over a backlog raises every exception at once,
+      and that queue is the feature's first impression. Until somebody starts it
+      the read answers 404, which the tab renders as the preview and the start
+      button rather than as a failed panel.
+
+  assurance_run:
+    role: worker
+    go_type: AssuranceRunArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    args:
+      Workspace: id
+      RequestedBy: id
+    reason: >-
+      The same pass assurance_sweep runs, on one workspace, because a human
+      asked: either to start the cycle or to confirm a record they have just
+      fixed before a call. Same five minutes for the same work — one walk of the
+      eligible deals and one bundling pass. Uniqueness on the workspace makes a
+      second press while one is in flight a refusal rather than a second walk.
 
 
   close_date_sweep:
