@@ -146,7 +146,7 @@ func Setup(t *testing.T) *Env {
 	}
 	// Registered here, before the test adds any cleanup of its own, so it runs
 	// last and sees a package that has genuinely stopped.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	e.Pool = pool
 	e.Contacts = contacts.NewStore(harnessDB(pool, e.WS))
 	e.Deals = deals.NewStore(harnessDB(pool, e.WS), installseam.Deals())

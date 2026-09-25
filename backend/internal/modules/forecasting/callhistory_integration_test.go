@@ -11,10 +11,8 @@ package forecasting
 // An installation holds exactly one workspace, so these tests share a database:
 // two cases calling the same (period, scope) would see each other's rows, and
 // the count assertions would fail on a collision rather than on a defect. That
-// stays true now they run in sequence — the periods keep them independent of
-// each other's ORDER, not only of each other's timing.
-//
-// They no longer call t.Parallel(); setupSnapshot says why.
+// stays true whether they run together or in sequence — the periods keep them
+// independent of each other's ORDER as well as of each other's timing.
 //
 // These need real Postgres for the reason the snapshot tests do: the ordering
 // is SQL's, the scope match is SQL's, and the NULL-versus-value distinction
@@ -83,6 +81,7 @@ func quarterOf(t *testing.T, day time.Time) Period {
 // from replacing nothing — a reader walking the chain needs the end of it to
 // be reachable.
 func TestTheCallHistoryIsTheChainNewestFirst(t *testing.T) {
+	t.Parallel()
 	e := setupSnapshot(t)
 	ctx := e.as()
 	period := quarterOf(t, time.Date(2031, time.August, 12, 12, 0, 0, 0, time.UTC))
@@ -125,6 +124,7 @@ func TestTheCallHistoryIsTheChainNewestFirst(t *testing.T) {
 // answer about a period the caller may read, and the endpoint serves `[]`
 // rather than `null` so a reader cannot tell one from the other by accident.
 func TestAPeriodNobodyCalledHasAnEmptyHistory(t *testing.T) {
+	t.Parallel()
 	e := setupSnapshot(t)
 	period := quarterOf(t, time.Date(2033, time.November, 12, 12, 0, 0, 0, time.UTC))
 
@@ -146,6 +146,7 @@ func TestAPeriodNobodyCalledHasAnEmptyHistory(t *testing.T) {
 // the workspace, and a query written with `=` instead of IS NOT DISTINCT FROM
 // finds nothing for the one scope every installation has.
 func TestACallHistoryHoldsOnlyItsOwnPeriodAndScope(t *testing.T) {
+	t.Parallel()
 	e := setupSnapshot(t)
 	ctx := e.as()
 	q3 := quarterOf(t, time.Date(2032, time.September, 12, 12, 0, 0, 0, time.UTC))
@@ -182,6 +183,7 @@ func TestACallHistoryHoldsOnlyItsOwnPeriodAndScope(t *testing.T) {
 // handler that resolves the caller's scope before calling it, and a second
 // object check here would refuse a manager who may call but not read.
 func TestACallHistoryNeedsTheForecastReadGrant(t *testing.T) {
+	t.Parallel()
 	e := setupSnapshot(t)
 	period := quarterOf(t, time.Date(2034, time.August, 12, 12, 0, 0, 0, time.UTC))
 
@@ -215,6 +217,7 @@ func (e *snapshotEnv) asUngranted() context.Context {
 // A period is called past the cap here rather than at it, so the assertion is
 // about the cut and not about an off-by-one at the boundary.
 func TestACappedHistoryKeepsTheNewestCalls(t *testing.T) {
+	t.Parallel()
 	e := setupSnapshot(t)
 	ctx := e.as()
 	period := quarterOf(t, time.Date(2035, time.May, 12, 12, 0, 0, 0, time.UTC))
