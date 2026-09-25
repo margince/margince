@@ -74,6 +74,14 @@ export const vi = {
   "aiAdmin.cloud": "Nhà cung cấp đám mây",
   "aiAdmin.endpoint": "Điểm cuối đã cấu hình; vị trí chưa xác minh",
   "aiAdmin.editBinding": "Sửa liên kết dùng chung",
+  "aiAdmin.decisionFirst":
+    "Mô hình quyết định trước ({provider} · {model} · {processing}) → sau đó {ladder}",
+  "aiAdmin.decisionSkip.unbound":
+    "Không dùng mô hình quyết định: chưa liên kết mô hình nào.",
+  "aiAdmin.decisionSkip.uncertified":
+    "Không dùng mô hình quyết định: chưa được chứng nhận cho hoạt động này.",
+  "aiAdmin.decisionSkip.local_only":
+    "Không dùng mô hình quyết định: hoạt động này chỉ dùng mô hình cục bộ.",
   "aiAdmin.effect": "Tác động",
   "aiAdmin.advanced": "Nâng cao: liên kết mô hình dùng chung",
   "aiAdmin.unused": "Không được hoạt động hiện có sử dụng: {tiers}",
@@ -7763,6 +7771,9 @@ export const vi = {
     "Mức dùng của tháng đã chọn. Ước tính tách biệt với hạn mức token hiện tại và hóa đơn nhà cung cấp.",
   "aiusage.col.task": "Tác vụ",
   "aiusage.col.tier": "Bậc",
+  "aiTier.decide": "Mô hình quyết định",
+  "aiusage.decisionShare":
+    "{task}: mô hình quyết định đã trả lời {share} số lệnh gọi",
   "aiusage.col.calls": "Lượt gọi",
   "aiusage.col.cached": "Đã cache",
   "aiusage.col.tokensIn": "Token vào",
@@ -7806,6 +7817,18 @@ export const vi = {
   "aicalls.badge.cacheHit": "Trúng cache",
   "aicalls.badge.degraded": "Giảm cấp",
   "aicalls.badge.retries": "Thử lại ×{count}",
+  "aicalls.badge.decision": "Mô hình quyết định",
+  "aicalls.reason.decision_below_floor":
+    "Mô hình quyết định dưới ngưỡng tin cậy",
+  "aicalls.reason.decision_error": "Mô hình quyết định bị lỗi",
+  "aicalls.reason.decision_off_enum":
+    "Mô hình quyết định trả lời ngoài các lựa chọn",
+  "aicalls.reason.decision_state_too_large":
+    "Dữ liệu vào quá lớn cho mô hình quyết định",
+  "aicalls.reason.decision_uncertified":
+    "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
+  "aicalls.reason.decision_local_only":
+    "Tác vụ chỉ chạy cục bộ, mô hình quyết định thì không",
   "aicalls.callsLabel": "Các lệnh gọi gần đây",
   "aicalls.filter.all": "Mọi tác vụ",
   "aicalls.loadMore": "Tải thêm",
@@ -8010,6 +8033,12 @@ export const vi = {
   "aiRouting.lane.local_large":
     "Tầng định tuyến cục bộ cao hơn; kiểm tra điểm cuối",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy hồi trên dữ liệu của bạn",
+  "aiRouting.lane.decisions":
+    "Câu hỏi có kiểu, hỏi trước các tầng khi đã chứng nhận",
+  "aiRouting.decisions.add": "Thêm mô hình quyết định",
+  "aiRouting.decisions.remove": "Gỡ mô hình quyết định",
+  "aiRouting.decisions.absent":
+    "Chưa có mô hình quyết định. Mọi tác vụ dùng các tầng.",
   "aiRouting.lanes.title": "Các làn định tuyến",
   "aiRouting.priceSheet": "Bảng giá",
   "aiRouting.provider.label": "Nhà cung cấp",

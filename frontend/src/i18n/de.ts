@@ -68,6 +68,14 @@ export const de = {
   "aiAdmin.cloud": "Cloud-Anbieter",
   "aiAdmin.endpoint": "Konfigurierter Endpunkt; Standort nicht geprüft",
   "aiAdmin.editBinding": "Gemeinsame Zuordnung bearbeiten",
+  "aiAdmin.decisionFirst":
+    "Zuerst Entscheidungsmodell ({provider} · {model} · {processing}) → dann {ladder}",
+  "aiAdmin.decisionSkip.unbound":
+    "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
+  "aiAdmin.decisionSkip.uncertified":
+    "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
+  "aiAdmin.decisionSkip.local_only":
+    "Entscheidungsmodell nicht genutzt: diese Aktivität bleibt bei lokalen Modellen.",
   "aiAdmin.effect": "Auswirkung",
   "aiAdmin.advanced": "Erweitert: gemeinsame Modellzuordnungen",
   "aiAdmin.unused":
@@ -7811,6 +7819,9 @@ export const de = {
     "Bisherige Nutzung im gewählten Monat. Die Schätzungen sind unabhängig vom aktuellen Token-Kontingent und von der Rechnung deines Anbieters.",
   "aiusage.col.task": "Aufgabe",
   "aiusage.col.tier": "Modellstufe",
+  "aiTier.decide": "Entscheidungsmodell",
+  "aiusage.decisionShare":
+    "{task}: Entscheidungsmodell hat {share} der Aufrufe beantwortet",
   "aiusage.col.calls": "Aufrufe",
   "aiusage.col.cached": "Aus dem Cache",
   "aiusage.col.tokensIn": "Tokens (Eingabe)",
@@ -7857,6 +7868,18 @@ export const de = {
   "aicalls.badge.cacheHit": "Cache-Treffer",
   "aicalls.badge.degraded": "Herabgestuft",
   "aicalls.badge.retries": "Wiederholung ×{count}",
+  "aicalls.badge.decision": "Entscheidungsmodell",
+  "aicalls.reason.decision_below_floor":
+    "Entscheidungsmodell unter seiner Konfidenzschwelle",
+  "aicalls.reason.decision_error": "Entscheidungsmodell fehlgeschlagen",
+  "aicalls.reason.decision_off_enum":
+    "Entscheidungsmodell hat außerhalb der Optionen geantwortet",
+  "aicalls.reason.decision_state_too_large":
+    "Eingabe zu groß für das Entscheidungsmodell",
+  "aicalls.reason.decision_uncertified":
+    "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
+  "aicalls.reason.decision_local_only":
+    "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
   "aicalls.callsLabel": "Letzte Aufrufe",
   "aicalls.filter.all": "Alle Aufgaben",
   "aicalls.loadMore": "Mehr laden",
@@ -8064,6 +8087,12 @@ export const de = {
   "aiRouting.lane.local_large":
     "Höhere lokale Modellstufe; konfigurierten Endpunkt prüfen",
   "aiRouting.lane.embeddings": "Suche und Abruf über Datensätze hinweg",
+  "aiRouting.lane.decisions":
+    "Typisierte Fragen, vor den Modellstufen gestellt, wo zertifiziert",
+  "aiRouting.decisions.add": "Entscheidungsmodell hinzufügen",
+  "aiRouting.decisions.remove": "Entscheidungsmodell entfernen",
+  "aiRouting.decisions.absent":
+    "Kein Entscheidungsmodell. Jede Aufgabe nutzt die Modellstufen.",
   "aiRouting.lanes.title": "Modellstufen",
   "aiRouting.priceSheet": "Preisliste",
   "aiRouting.provider.label": "Anbieter",

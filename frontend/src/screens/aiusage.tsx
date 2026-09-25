@@ -7,8 +7,9 @@ import { Button, Disclosure, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatMoney, formatNumber } from "../format/format";
+import { formatMoney, formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { isDecideTier, tierLabel } from "./ai-decision-labels";
 import { QueryGate, throwProblem, useMe } from "./common";
 import "./aiusage.css";
 import { calendarMonth } from "../format/calendarday";
@@ -97,6 +98,34 @@ function aggregate(days: AiUsage["days"]): UsageTask[] {
   return [...rows.values()];
 }
 
+// How much of each task the decision model answered: its calls over every call
+// the task made this window, for the tasks it served at all. Computed here
+// because it is a ratio of rows this screen already holds, and a task the lane
+// never touched has no share to report rather than a zero one.
+function decisionShares(
+  rows: readonly UsageTask[],
+): { task: string; share: number }[] {
+  const byTask = new Map<
+    string,
+    { name: string; decide: number; all: number }
+  >();
+  for (const row of rows) {
+    const entry = byTask.get(row.task) ?? {
+      name: row.task_display_name ?? row.task,
+      decide: 0,
+      all: 0,
+    };
+    entry.all += row.calls;
+    if (isDecideTier(row.tier)) {
+      entry.decide += row.calls;
+    }
+    byTask.set(row.task, entry);
+  }
+  return [...byTask.values()]
+    .filter((entry) => entry.decide > 0)
+    .map((entry) => ({ task: entry.name, share: entry.decide / entry.all }));
+}
+
 // The spend table's columns, built once per render of the body rather than
 // inline in the JSX: the cost column exists only when the server priced at
 // least one call, and a column list is data — DataTable owns the .table-scroll
@@ -117,7 +146,7 @@ function usageColumns(
     {
       key: "tier",
       header: t("aiusage.col.tier"),
-      render: (r: UsageTask) => r.tier,
+      render: (r: UsageTask) => tierLabel(r.tier, t),
     },
     {
       key: "calls",
@@ -173,6 +202,7 @@ function AiUsageBody({
   const t = useT();
   const { locale } = useLocale();
   const rows = useMemo(() => aggregate(data.days), [data.days]);
+  const shares = useMemo(() => decisionShares(rows), [rows]);
   const showCost = useMemo(
     () =>
       data.days.some((day) =>
@@ -260,6 +290,14 @@ function AiUsageBody({
                 rowKey={(row) => `${row.task}-${row.tier}`}
               />
             )}
+            {shares.map(({ task, share }) => (
+              <p key={task} className="t-caption">
+                {t("aiusage.decisionShare", {
+                  task,
+                  share: formatPercent(share, locale),
+                })}
+              </p>
+            ))}
           </div>
         }
       />

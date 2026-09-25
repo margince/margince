@@ -50,6 +50,7 @@ type CapturedRouting = {
     base_url?: string;
     dimensions?: number;
   };
+  decisions?: { provider: string; model: string; base_url?: string };
 };
 
 // The price sheet, which is also the catalogue this card offers from: a model
@@ -817,6 +818,89 @@ describe("AiRoutingCard", () => {
     expect(backend.getCapturedPut()?.tiers.premium.model).toBe(
       "gemini-3.1-pro-preview",
     );
+  });
+});
+
+/** Previews, then saves, and hands back what the PUT carried. */
+async function previewAndSave(
+  user: ReturnType<typeof userEvent.setup>,
+  backend: ReturnType<typeof backendFor>,
+) {
+  await user.click(screen.getByRole("button", { name: /preview effects/i }));
+  const save = screen.getByRole("button", { name: /save routing/i });
+  await waitFor(() => expect(save).not.toBeDisabled());
+  await user.click(save);
+  await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+  return backend.getCapturedPut();
+}
+
+describe("the decision model lane", () => {
+  // Absent is a real state: no task asks a decision model first. The row says
+  // so and offers to add one; it never draws an empty binding the server would
+  // refuse, and it offers only the adapters that answer a decision.
+  it("shows a decision model row and saves it", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    const absent = await screen.findByTestId("ai-routing-decisions");
+    expect(within(absent).getByText(/no decision model/i)).toBeInTheDocument();
+    await user.click(
+      within(absent).getByRole("button", { name: "Add decision model" }),
+    );
+    // Adding opens the lane's fields; the row is now a binding like any other.
+    const lane = screen.getByTestId("ai-routing-decisions");
+
+    const provider = within(lane).getByRole("combobox", { name: "Provider" });
+    await user.click(provider);
+    const offered = within(screen.getByRole("listbox"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(offered).toEqual(["openrouter_decision", "laya"]);
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "openrouter_decision",
+      }),
+    );
+    await user.type(
+      within(lane).getByRole("combobox", { name: "Model" }),
+      "jev-classify",
+    );
+    // The decisions endpoint is OpenRouter's, which it has to be told.
+    await user.type(
+      within(lane).getByLabelText("Host"),
+      "https://openrouter.ai/api/v1",
+    );
+
+    const sent = await previewAndSave(user, backend);
+    expect(sent?.decisions).toEqual({
+      provider: "openrouter_decision",
+      model: "jev-classify",
+      base_url: "https://openrouter.ai/api/v1",
+    });
+    // The lanes it sits beside are sent untouched.
+    expect(sent?.embeddings.model).toBe("gemini-embedding-001");
+  });
+
+  it("removing the decision model drops the key", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      decisions: { provider: "laya", model: "laya-small" },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("laya-small");
+
+    const lane = await openLane(user, "ai-routing-decisions");
+    await user.click(
+      within(lane).getByRole("button", { name: "Remove decision model" }),
+    );
+
+    const sent = await previewAndSave(user, backend);
+    expect(sent).not.toHaveProperty("decisions");
+    expect(sent?.tiers.premium.model).toBe("gemini-3.5-flash");
   });
 });
 

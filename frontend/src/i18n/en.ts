@@ -62,6 +62,13 @@ export const en = {
   "aiAdmin.cloud": "Cloud provider",
   "aiAdmin.endpoint": "Configured endpoint; location not verified",
   "aiAdmin.editBinding": "Edit shared binding",
+  "aiAdmin.decisionFirst":
+    "Decision model first ({provider} · {model} · {processing}) → then {ladder}",
+  "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
+  "aiAdmin.decisionSkip.uncertified":
+    "Decision model not used: not certified for this activity.",
+  "aiAdmin.decisionSkip.local_only":
+    "Decision model not used: this activity stays on local models.",
   "aiAdmin.effect": "Effect",
   "aiAdmin.advanced": "Advanced: shared model bindings",
   "aiAdmin.unused": "Not used by current shipped activities: {tiers}",
@@ -7981,6 +7988,8 @@ export const en = {
     "Historical usage for the selected month. Estimates are separate from the live token allowance and from your provider bill.",
   "aiusage.col.task": "Task",
   "aiusage.col.tier": "Tier",
+  "aiTier.decide": "Decision model",
+  "aiusage.decisionShare": "{task}: decision model answered {share} of calls",
   "aiusage.col.calls": "Calls",
   "aiusage.col.cached": "Cached",
   "aiusage.col.tokensIn": "Tokens in",
@@ -8024,6 +8033,18 @@ export const en = {
   "aicalls.badge.cacheHit": "Cache hit",
   "aicalls.badge.degraded": "Degraded",
   "aicalls.badge.retries": "Retry ×{count}",
+  "aicalls.badge.decision": "Decision model",
+  "aicalls.reason.decision_below_floor":
+    "Decision model below its confidence floor",
+  "aicalls.reason.decision_error": "Decision model failed",
+  "aicalls.reason.decision_off_enum":
+    "Decision model answered outside the options",
+  "aicalls.reason.decision_state_too_large":
+    "Input too large for the decision model",
+  "aicalls.reason.decision_uncertified":
+    "Decision model not certified for this task",
+  "aicalls.reason.decision_local_only":
+    "Task is local-only and the decision model is not",
   "aicalls.callsLabel": "Recent calls",
   "aicalls.filter.all": "All tasks",
   "aicalls.loadMore": "Load more",
@@ -8228,6 +8249,11 @@ export const en = {
   "aiRouting.lane.local_large":
     "Higher local-tier route; inspect the configured endpoint",
   "aiRouting.lane.embeddings": "Search and retrieval across records",
+  "aiRouting.lane.decisions":
+    "Typed questions, asked before the tiers where certified",
+  "aiRouting.decisions.add": "Add decision model",
+  "aiRouting.decisions.remove": "Remove decision model",
+  "aiRouting.decisions.absent": "No decision model. Every task uses the tiers.",
   "aiRouting.lanes.title": "Routing tiers",
   "aiRouting.priceSheet": "Price sheet",
   "aiRouting.provider.label": "Provider",

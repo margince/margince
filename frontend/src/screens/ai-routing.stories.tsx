@@ -96,6 +96,7 @@ function story(
   routing: unknown,
   allow: GrantSpec = MANAGER,
   vendors: Record<string, unknown> = VENDOR_LIST,
+  aiStatus: unknown = status,
 ) {
   return () => {
     installFetchStub({
@@ -105,7 +106,7 @@ function story(
         response.headers.set("ETag", '"routing-v1"');
         return response;
       },
-      "GET /ai/status": () => jsonResponse(status),
+      "GET /ai/status": () => jsonResponse(aiStatus),
       "POST /ai/routing/preview": () =>
         jsonResponse({
           current_version: "routing-v1",
@@ -216,6 +217,36 @@ export const AdvancedBindings: Story = {
     );
     await userEvent.click(
       canvas.getAllByRole("button", { name: /change/i })[0],
+    );
+  },
+};
+
+// A decision model bound in front of the ladder. The row offers only the
+// adapters that answer a decision, and says where the bound one processes text
+// from the server's own reading, which the features above repeat per activity.
+const DECISION = {
+  provider: "openrouter_decision",
+  model: "jev-classify",
+  base_url: "https://openrouter.ai/api/v1",
+};
+export const DecisionModel: Story = {
+  render: story({ ...BOUND, decisions: DECISION }, MANAGER, VENDOR_LIST, {
+    ...status,
+    features: status.features.map((feature) => ({
+      ...feature,
+      decision_first: true,
+      decision_candidate: {
+        tier: "decide",
+        provider: DECISION.provider,
+        model: DECISION.model,
+        processing: "cloud_provider",
+      },
+    })),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByText(/advanced.*shared.*bindings/i),
     );
   },
 };

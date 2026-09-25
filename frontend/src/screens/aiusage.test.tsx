@@ -320,3 +320,37 @@ it("opens on the READER's month and steps from it, not from UTC's", async () => 
     viewer.zone = "UTC";
   }
 });
+
+// `decide` is the decision lane's tier, which nobody bound as a tier, so the
+// column names it. The share is per task, over both days, and only for the task
+// the lane served: a task it never touched has no share rather than a zero one.
+it("labels decide as Decision model and shows the decision share", async () => {
+  const line = (task: string, tier: string, calls: number) => ({
+    task,
+    task_display_name: task === "triage" ? "Triage mail" : undefined,
+    tier,
+    calls,
+    tokens_in: 10,
+    tokens_out: 0,
+  });
+  mount({
+    budget,
+    days: [
+      {
+        date: "2026-07-20",
+        tasks: [line("triage", "decide", 2), line("triage", "cheap_cloud", 1)],
+      },
+      {
+        date: "2026-07-21",
+        tasks: [line("triage", "decide", 1), line("enrich", "premium", 4)],
+      },
+    ],
+  });
+
+  expect(await screen.findByText("Decision model")).toBeTruthy();
+  expect(screen.queryByText("decide")).toBeNull();
+  expect(
+    screen.getByText("Triage mail: decision model answered 75% of calls"),
+  ).toBeTruthy();
+  expect(screen.queryByText(/^enrich: decision model/)).toBeNull();
+});

@@ -18,6 +18,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { attemptReasonLabel, tierLabel } from "./ai-decision-labels";
 import { ExportScenarioDialog } from "./aiexport";
 import { QueryGate, QueryStates, throwProblem, useMe } from "./common";
 import "./aicalls.css";
@@ -77,7 +78,14 @@ export function CallDetailPanel({
             {query.data.attempts.map((attempt) => (
               <li key={attempt.attempt}>
                 <span className="t-num">#{ordinalNumber(attempt.attempt)}</span>{" "}
-                {attempt.attempt_reason || "—"} ·{" "}
+                {attempt.kind === "decision" && (
+                  <Badge>{t("aicalls.badge.decision")}</Badge>
+                )}{" "}
+                {/* Which rung this attempt ran on, then why it ran. A reason
+                    names what went wrong BEFORE it, so read beside the tier it
+                    says where the walk went next. */}
+                {attempt.tier ? `${tierLabel(attempt.tier, t)} · ` : ""}
+                {attemptReasonLabel(attempt.attempt_reason, t)} ·{" "}
                 {t("aicalls.ms", {
                   value: formatNumber(attempt.latency_ms, locale),
                 })}
@@ -413,6 +421,9 @@ function FragmentRow({
         <td>
           {call.task}
           <div className="aicalls-badges">
+            {call.kind === "decision" && (
+              <Badge>{t("aicalls.badge.decision")}</Badge>
+            )}
             {call.cache_hit && <Badge>{t("aicalls.badge.cacheHit")}</Badge>}
             {call.degraded && (
               <Badge tone="warning">{t("aicalls.badge.degraded")}</Badge>
@@ -430,7 +441,7 @@ function FragmentRow({
           </div>
         </td>
         <td>
-          {call.tier} · {call.provider}/{call.served_model}
+          {tierLabel(call.tier, t)} · {call.provider}/{call.served_model}
         </td>
         <td>{tokens}</td>
         <td>
