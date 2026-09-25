@@ -39,24 +39,21 @@ var readImportReportCopy = toolCopy{
 	Limits:  "These counts are what a contact weighs before committing. Same shape before and after.",
 }
 
-// The approval `awaiting_approval` names is the CONTACT's, and this tool is not
-// staged: the same passport holds the dry run and the commit, so nothing stops
-// the caller answering its own question. Two of three measured runs previewed,
-// read the report and committed in one turn, and the run that stopped is the
-// one the contact would have thanked.
+// A commit writes the file and cannot be undone from this surface. That, and
+// not the run's state name, is what earns the dry run its turn.
 //
-// What makes waiting right is on the surface already and was never joined to
-// it: this write cannot be undone from here. So the copy says whose answer it
-// is, and says the one case that does not need a fresh one — a contact who has
-// already been through the file and said to load it has approved it, and asking
-// again is not diligence.
+// The copy does not call awaiting_approval an approval, because it is not one:
+// the same passport that produced the report commits it, so a sentence naming
+// somebody else's answer describes a control nothing enforces — and an injected
+// instruction does not respect prose. What the state does carry is sequencing,
+// and refuseUncommittableRun enforces that: a run reaches it only by producing a
+// report, so requiring the state is requiring the report.
 var commitImportCopy = toolCopy{
 	Purpose: "Write a checked import into the workspace. The dry run is the check; this commits " +
 		"when it answers.",
-	Limits: "Only from awaiting_approval, which is the CONTACT's approval and not this call's to " +
-		"give: nothing stages it, and an import cannot be undone from here — undoing one needs the " +
-		"web app. Put the dry run's counts in front of them and let them say go — unless they have " +
-		"already been through the file and asked for it to be loaded, which is an approval and not " +
-		"a question to ask twice.",
+	Limits: "Only from awaiting_approval, the state a run reaches by producing a dry-run report, " +
+		"so there is always a report first. This cannot be undone from here — undoing an import " +
+		"needs the web app — so show the counts to whoever asked for the file unless they have " +
+		"already been through it and asked for it to be loaded.",
 	Instead: "read_import_report first: numbers nobody read are not a check.",
 }

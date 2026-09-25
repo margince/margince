@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 12 |
 | Tool catalog | 219.3 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 57291 |
+| Approx. wire tokens | 57274 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,7 +33,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Descriptions (incl. governance clause) | 57.5 KB | 26% | Yes, every step |
 | Input schemas | 46.1 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.0 KB | 7% | Partly |
-| **Description + input schema** | **103.7 KB** | **47%** | **the recurring cost** |
+| **Description + input schema** | **103.6 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -74,7 +74,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 2.8 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.7 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
-| [`commit_import`](#commit_import) | Commit an import |  |  | 2.1 KB |
+| [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.8 KB |
 | [`create_record`](#create_record) | Create a record |  |  | 3.6 KB |
@@ -2060,7 +2060,7 @@ Renders its result in [`ui://margince/geo-probe.html`](#geo_probe_view), visible
 
 **Commit an import**
 
-Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, which is the CONTACT's approval and not this call's to give: nothing stages it, and an import cannot be undone from here — undoing one needs the web app. Put the dry run's counts in front of them and let them say go — unless they have already been through the file and asked for it to be loaded, which is an approval and not a question to ask twice. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope "write".)
+Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app — so show the counts to whoever asked for the file unless they have already been through it and asked for it to be loaded. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
