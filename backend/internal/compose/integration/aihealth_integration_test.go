@@ -81,6 +81,39 @@ func TestAiHealthIgnoresAnAttemptARetryRescued(t *testing.T) {
 	}
 }
 
+// The decision lane is asked once per call and never retried on its own rung:
+// when it fails, the ladder answers the call instead, so its attempt is never
+// the terminal one. Read as a retry the ladder rescued, a decision endpoint
+// that fails every call would report healthy for as long as the ladder works.
+func TestAiHealthCountsAFailedDecisionAttemptTheLadderAnswered(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	seedDecisionAttempt(t, e, "", time.Now().Add(-10*time.Minute), ids.NewV7(), true)
+	logical := ids.NewV7()
+	seedDecisionAttempt(t, e, "provider_error", time.Now().Add(-4*time.Minute), logical, false)
+	seedAttempt(t, e, "cheap_cloud", "", 200, time.Now().Add(-3*time.Minute), logical, 2, true)
+
+	var got crmcontracts.AiHealth
+	if status := e.Call(t, http.MethodGet, "/v1/ai/health", nil, nil, &got); status != http.StatusOK {
+		t.Fatalf("GET /v1/ai/health = %d, want 200", status)
+	}
+	rungs := map[string]crmcontracts.AiRungHealth{}
+	for _, r := range got.Rungs {
+		rungs[r.Tier] = r
+	}
+	decide := rungs["decide"]
+	if decide.Calls != 2 || decide.Failures != 1 {
+		t.Errorf("decide calls/failures = %d/%d, want 2/1", decide.Calls, decide.Failures)
+	}
+	if decide.Healthy {
+		t.Error("a decision lane whose latest attempt failed is reported healthy " +
+			"because the ladder answered the call after it")
+	}
+	if !rungs["cheap_cloud"].Healthy {
+		t.Error("the rung that answered after the decision lane is reported unhealthy")
+	}
+}
+
 // An hour, because the question is whether it is answering NOW. A lane that
 // died forty minutes ago must not read as healthy on the strength of a call it
 // made this morning.
@@ -245,5 +278,24 @@ func seedAttempt(t *testing.T, e *apptest.AppEnv, tier, sentinel string,
 		        10, 5, $3, $4, $5, $6, $7, $8)`,
 		ids.NewV7(), tier, latency, errSentinel, logical, attempt, terminal, at); err != nil {
 		t.Fatalf("seeding an ai_call: %v", err)
+	}
+}
+
+func seedDecisionAttempt(t *testing.T, e *apptest.AppEnv, sentinel string,
+	at time.Time, logical ids.UUID, terminal bool,
+) {
+	t.Helper()
+	var errSentinel any
+	if sentinel != "" {
+		errSentinel = sentinel
+	}
+	if _, err := e.Owner.Exec(context.Background(), `
+		INSERT INTO ai_call (id, task, kind, tier, provider, model_id, request_fingerprint,
+		                     tokens_in, tokens_out, latency_ms, error_sentinel,
+		                     logical_call_id, attempt, is_terminal, occurred_at)
+		VALUES ($1, 'site_triage', 'decision', 'decide', 'openrouter_decision',
+		        'typesafe/jev-1.13', 'fp', 10, 0, 200, $2, $3, 1, $4, $5)`,
+		ids.NewV7(), errSentinel, logical, terminal, at); err != nil {
+		t.Fatalf("seeding a decision ai_call: %v", err)
 	}
 }

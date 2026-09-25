@@ -102,6 +102,13 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 		// answered where only the usage-meter write failed (callstore.go), and
 		// callstats.go already treats it as served for exactly that reason.
 		// Counting it as a failure would report a working lane as down.
+		//
+		// A DECISION attempt counts whether terminal or not. The lane is asked
+		// once per call and never retried on its own rung, so its attempt is
+		// already its final outcome; when it fails, the ladder answers the
+		// call and the decision row is never the terminal one. Read as a
+		// rescued retry, a decision endpoint failing every call would report
+		// healthy for as long as the ladder works.
 		rows, err := tx.Query(ctx, `
 			WITH terminal AS (
 			  SELECT tier, occurred_at, latency_ms,
@@ -111,7 +118,7 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 			         coalesce(error_sentinel, '') AS sentinel
 			    FROM ai_call
 			   WHERE occurred_at >= $1
-			     AND is_terminal
+			     AND (is_terminal OR kind = 'decision')
 			     AND NOT cache_hit
 			     AND tier <> ''
 			)
