@@ -23609,7 +23609,9 @@ type CompanyBriefEvidence struct {
 	// no name of their own (fact, profile_field) and never invented: the
 	// writer either already knew the name from the record it read, or
 	// leaves this out. Descriptive only — grounding checks type and id,
-	// never the name.
+	// never the name. Withheld with `quote` when the reader may not read
+	// the record's content: an activity's name is its subject line, which
+	// belongs to the message's audience.
 	Name *string `json:"name,omitempty"`
 
 	// Origin Where the words came from, in the writer's own language and the
