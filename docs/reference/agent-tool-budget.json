@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 76,
     "system_frame_tokens": 448,
-    "tokens": 24512,
+    "tokens": 24495,
     "median_tool_tokens": 273,
-    "mean_tool_tokens": 322
+    "mean_tool_tokens": 321
   },
   "agents": [
     {
@@ -326,10 +326,6 @@
       "tokens": 205
     },
     {
-      "name": "commit_import",
-      "tokens": 204
-    },
-    {
       "name": "merge_tags",
       "tokens": 198
     },
@@ -352,6 +348,10 @@
     {
       "name": "list_pipelines",
       "tokens": 191
+    },
+    {
+      "name": "commit_import",
+      "tokens": 187
     },
     {
       "name": "intro_path_to",

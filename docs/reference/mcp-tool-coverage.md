@@ -323,9 +323,9 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `merge_records` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `archive_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `update_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
-| `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `merge_tags` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 | `list_colleagues` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
+| `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `list_channel_providers` | 0.33 | 1/3 | `case42_can_i_answer_on_whatsapp` | `case42_can_i_answer_on_whatsapp` |
 | `remove_tag` | 0.00 | 0/3 | `case31_wrong_word_on_the_record` | `case31_wrong_word_on_the_record` |
 | `read_project_360` | 0.33 | 1/3 | `case41_close_the_project` | `case41_close_the_project` |
@@ -358,8 +358,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `update_tag` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
-| `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `merge_tags` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
+| `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `read_project_360` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `list_tags` | 0.83 | 5/6 | — | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
 | `get_tag` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |

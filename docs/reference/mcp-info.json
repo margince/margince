@@ -10,16 +10,16 @@
   "totals": {
     "tools": 76,
     "resources": 12,
-    "tool_catalog_bytes": 224581,
+    "tool_catalog_bytes": 224514,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 57291,
+    "approx_wire_tokens_total": 57274,
     "largest_tool_bytes": 8975,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 58925,
+      "description_bytes": 58858,
       "input_schema_bytes": 47242,
       "output_schema_bytes": 101983,
-      "description_plus_input_schema_bytes": 106167
+      "description_plus_input_schema_bytes": 106100
     }
   },
   "tools": {
@@ -1645,7 +1645,7 @@
           "readOnlyHint": false,
           "title": "Commit an import"
         },
-        "description": "Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, which is the CONTACT's approval and not this call's to give: nothing stages it, and an import cannot be undone from here — undoing one needs the web app. Put the dry run's counts in front of them and let them say go — unless they have already been through the file and asked for it to be loaded, which is an approval and not a question to ask twice. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app — so show the counts to whoever asked for the file unless they have already been through it and asked for it to be loaded. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
