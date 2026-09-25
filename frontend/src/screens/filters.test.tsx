@@ -216,7 +216,7 @@ it("shows the rows behind the count", async () => {
   // The identity column, and the row behind the count — a number alone cannot be
   // checked, which is what AC-5's table is for.
   expect(await screen.findByText("Ann Lee")).toBeTruthy();
-  expect(screen.getByRole("columnheader", { name: /full name/ })).toBeTruthy();
+  expect(screen.getByRole("columnheader", { name: /^Name/ })).toBeTruthy();
 });
 
 it("says how many match once a clause is complete", async () => {

@@ -170,15 +170,14 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "tab.deals",
   "deals.pipeline",
   "deal.fcPipeline",
+  "filters.field.pipeline_id",
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",
-  // The singular of the same noun, on the account facts strip, on the
-  // overnight scan's tally and on the forecast tile's deal count. All three
-  // are the borrowed word beside a numeral, so there is nothing left in any
+  // The singular of the same noun, on the overnight scan's tally and on the
+  // forecast tile's deal count. Both are the borrowed word beside a numeral, so there is nothing left in any
   // of them for Vietnamese to translate. Only the `_one` arms land here: the
   // `_other` arms differ because English pluralises and Vietnamese does not.
-  "co.facts.deals_one",
   "today.scan.readDeals_one",
   "analytics.forecastDeals_one",
   "deals.unit",
@@ -268,6 +267,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "search.kind.deal",
   "search.kind.lead",
   "search.kind.tag",
+  // The same loanword naming the tag field on Filters and views.
+  "filters.field.tag",
   // The lead rail's own deal card title, the same singular loanword as
   // search.kind.deal above it.
   "lead.rail.deal.title",

@@ -38,11 +38,6 @@ const frontendMailProviders = "../frontend/src/screens/connectorproviders.ts"
 // silently agrees with.
 var tsProviderEntry = regexp.MustCompile(`["']([a-z]+)["']`)
 
-// tsProviderComment strips comments first, so a provider merely NAMED in the
-// prose beside the literal cannot stand in for a deleted entry — and the doc
-// comment above this literal names all four of them.
-var tsProviderComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
 func TestTheFrontendMailProvidersMatchTheGoOnes(t *testing.T) {
 	t.Parallel()
 	source, err := os.ReadFile(frontendMailProviders)
@@ -60,7 +55,8 @@ func TestTheFrontendMailProvidersMatchTheGoOnes(t *testing.T) {
 		t.Fatalf("%s's %s literal is unterminated", frontendMailProviders, marker)
 	}
 
-	literal := tsProviderComment.ReplaceAllString(string(source)[start:start+end], " ")
+	// Comments go first: the doc comment above the literal names every provider.
+	literal := tsComment.ReplaceAllString(string(source)[start:start+end], " ")
 	var inTS []string
 	for _, m := range tsProviderEntry.FindAllStringSubmatch(literal, -1) {
 		inTS = append(inTS, m[1])

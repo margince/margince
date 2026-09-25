@@ -11,9 +11,8 @@ import { Heading } from "../design-system/heading";
 import { Chip } from "../design-system/readings";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, useMe } from "./common";
+import { throwProblem } from "./common";
 import { CreateAction } from "./create";
-import { useObjectCustomFields } from "./customfields.form";
 import { EntityRef } from "./entityref";
 import {
   type ListPage,
@@ -22,14 +21,13 @@ import {
   listFetchLimit,
   useListQuery,
 } from "./listquery";
+import { useProjectCreateForm } from "./projects.create";
 import {
-  mapProjectCreate,
   PHASE_LABEL,
   PROJECT_PHASES,
   type Project,
   type ProjectCompanyOption,
   type ProjectPhase,
-  projectFields,
 } from "./projects.form";
 import { lastActivityColumn, ownerColumn } from "./recordlist";
 import { SaveViewAction, useSavedViews, useSavedViewTabs } from "./savedviews";
@@ -129,19 +127,6 @@ export function useCompanyOptions(): ProjectCompanyOption[] {
   return companies.data?.data ?? [];
 }
 
-async function createProject(
-  values: Record<string, string>,
-  custom: Record<string, unknown>,
-): Promise<Project> {
-  const { data, error } = await api.POST("/projects", {
-    body: { ...mapProjectCreate(values), ...custom },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
-}
-
 /**
  * The create affordance, shared by the list's header and its first-run plate.
  * One element rather than two renderings, so the dialog behind both is the
@@ -149,26 +134,17 @@ async function createProject(
  */
 function NewProjectAction({
   companies,
-  me,
-}: Readonly<{ companies: ProjectCompanyOption[]; me: string }>) {
+}: Readonly<{ companies: ProjectCompanyOption[] }>) {
   const t = useT();
-  const cf = useObjectCustomFields("project");
+  const form = useProjectCreateForm({ options: companies });
   return (
     <CreateAction
       label={t("project.new")}
       invalidate="projects"
       screen="projects"
-      create={(values) => createProject(values, cf.toBody(values))}
+      create={form.create}
       resolveExisting={(_code, id) => ({ screen: "projects", id })}
-      fields={[
-        ...projectFields(t, {
-          companies,
-          me,
-          currentOwner: null,
-          mode: "create",
-        }),
-        ...cf.formFields,
-      ]}
+      fields={form.fields}
     />
   );
 }
@@ -181,7 +157,6 @@ export function ProjectsScreen() {
   const pageName = usePageName("projects");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const me = useMe();
   const companies = useCompanyOptions();
   const views = useSavedViews("projects");
   const savedViews = useSavedViewTabs("projects");
@@ -195,7 +170,7 @@ export function ProjectsScreen() {
   // header a moment before the plate replaces it would open a dialog the
   // swap throws away.
   const createAction = !state.isPending && (
-    <NewProjectAction companies={companies} me={me.data?.user.id ?? ""} />
+    <NewProjectAction companies={companies} />
   );
   // The first-run plate: nothing exists yet, and nothing is narrowing the
   // list. A filtered-empty list is the table's own case — it already knows to

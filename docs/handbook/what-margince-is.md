@@ -211,6 +211,8 @@ A customer or a client is a **company** you do business with, and the individual
 
 A prospect is called a **lead** in Margince. A lead is kept apart from contacts until you qualify it. Leads are in the **Leads** row of the sidebar.
 
+A reseller, a referral partner or a channel partner is called a **partner** in Margince: a company with partner terms, set up from the company's **More actions** → **Set up partner program**. A referral fee is its **commission**.
+
 A proposal or a quote is called an **offer** in Margince. You create an offer from the **Offers** panel on a deal, and the price list behind it is called **Products and offers** in Settings.
 
 A teammate or a colleague who signs in is called a **user** in Margince. Users are managed in Settings → **Members**.

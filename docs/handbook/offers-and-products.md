@@ -33,7 +33,7 @@ An offer with no lines cannot be sent.
 Also called: email the proposal, issue the quote.
 
 ### How do I print or download an offer?
-To print an offer or save it as a file, open the offer and choose **Render PDF**, then **View PDF** once it appears, and print or download the PDF from your browser. Margince has no separate print button, and the PDF carries the totals and lines but not the offer's intro and terms text.
+To print an offer or save it as a file, open the offer and choose **Render PDF**, then **View PDF** once it appears, and print or download the PDF from your browser. Margince has no separate print button. The PDF carries the offer's intro text, lines, totals and terms text, plus the template's header and footer.
 Also called: print a quote, offer PDF, download the proposal, export an offer.
 
 ### What happens after I send an offer?
@@ -118,8 +118,9 @@ You can render an offer **PDF** at any point, draft included. Where the
 installation has no file store wired, it says so plainly — "PDF rendering is not
 available on this installation." — rather than failing as an error.
 
-The offer's own **Intro text** and **Terms text** are stored on the offer but
-are not printed on the rendered PDF today.
+The rendered PDF prints the offer's own **Intro text** above the lines and its
+**Terms text** under the totals, and leaves either section out when it is
+empty. The terms always come from the offer, never from the template.
 
 ## What an offer refuses
 
@@ -192,17 +193,15 @@ default per locale: "Branded PDF layouts for offers in German and English."
 To create an offer template in Margince, open **Settings → Products and offers** and click **New template** in the **Offer templates** panel.
 1. Fill **Name** and choose the **Locale** (de-DE or en-US).
 2. Set **Default for locale** to true or false.
-3. Optionally fill **Header text** and **Footer text** (see the limits below).
+3. Optionally fill **Header text** and **Footer text**; the PDF prints the header above the buyer and the footer at the end.
 Then pick the template on an offer with **Edit header** → **Template**.
 Also called: quote template, proposal layout, letterhead.
 
-**Three honest limits of offer templates today.** An offer whose template has
+**Two honest limits of offer templates today.** An offer whose template has
 gone does **not** fall back to your locale default — it renders from an empty
-layout; an archived template, by contrast, keeps rendering. **Header text** and **Footer
-text** typed into a template are stored but never reach the rendered PDF, and
-there is no field at all for the terms text the renderer does print. A logo
-referenced in a template is not fetched or embedded either — the renderer works
-offline by design.
+layout; an archived template, by contrast, keeps rendering. A logo referenced
+in a template is not fetched or embedded either — the renderer works offline by
+design, so put your letterhead in **Header text**.
 
-If you need branded output now, treat the template as naming a locale rather
-than as carrying your letterhead.
+An offer template has no terms field: terms belong to each offer, set under
+**Edit header** → **Terms text**.

@@ -17,11 +17,13 @@
 
 import { type ListColumn, ListTable } from "../design-system/listtable";
 import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import {
   type FilterPreview,
   fieldLabel,
   type VocabularyField,
 } from "./filterdata";
+import { historyFieldLabel } from "./historyfieldlabels";
 
 /** A preview row: schema-derived, so its values span every type the table holds. */
 type PreviewRow = Record<string, unknown>;
@@ -122,7 +124,7 @@ export function FilterResults({
   const names = previewColumnNames(preview?.columns ?? [], named);
   const columns: ListColumn<PreviewRow>[] = names.map((name, index) => ({
     key: name,
-    header: headerFor(name, fields),
+    header: headerFor(name, fields, t),
     // The identity column is fixed: it is what makes a row recognisable, so the
     // picker may not hide it and the phone layout promotes it to the card's
     // heading.
@@ -162,13 +164,17 @@ function rowKey(row: PreviewRow): string {
 }
 
 /**
- * A column's header: the admin's word for a custom field, the column's own name
- * for a core one — the same reading the field picker gives, so a clause and the
- * column it selects call the field by one name.
+ * A column's header: the same word the field picker gives a filterable field,
+ * so a clause and the column it selects call the field by one name, and the
+ * History tab's word for any other column the projection carries.
  */
-function headerFor(name: string, fields: readonly VocabularyField[]): string {
+function headerFor(
+  name: string,
+  fields: readonly VocabularyField[],
+  t: (key: MessageKey) => string,
+): string {
   const known = fields.find((field) => field.name === name);
-  return known ? fieldLabel(known) : name.replaceAll("_", " ");
+  return known ? fieldLabel(known, t) : historyFieldLabel(name, t);
 }
 
 /**
