@@ -31,6 +31,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
+  stubWithSession,
 } from "./story-utils";
 
 // The contact record page V2 (ADR-0096) — its own gallery, one per surface the
@@ -1217,15 +1218,9 @@ const emptyBand: View = {
   claims: [],
 };
 
-// Card stories route the session themselves: the stub's list-shaped fallback
-// reads as a malformed session and draws a branch the story is not named for.
-function cardViewer(): void {
-  installFetchStub({ "GET /me": meRoute({}) });
-}
-
 export const BriefStates: Story = {
   render: () => {
-    cardViewer();
+    stubWithSession({}, {});
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>
@@ -1264,7 +1259,7 @@ export const BriefStates: Story = {
 
 export const OverviewPanels: Story = {
   render: () => {
-    cardViewer();
+    stubWithSession({}, {});
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>
@@ -1547,7 +1542,7 @@ const foldedActivities: View = {
 // and the memory panel's full channel set plus its empty state.
 export const OverviewGaps: Story = {
   render: () => {
-    cardViewer();
+    stubWithSession({}, {});
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>

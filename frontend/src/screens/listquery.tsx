@@ -898,11 +898,6 @@ export function ListTable<Row>({
   // trigger — so a fresh object here costs nothing.
   const chosen = chosenFor(allChips, query.filters);
 
-  // A functional updater reads the query at commit time, not at the time the
-  // timer was scheduled: a concurrent sort/filter/includeArchived change
-  // (which sets query immediately, before this timer fires) is preserved
-  // instead of being reverted by a stale closure over `query`. Skipped when
-  // the screen isn't searchable — there is no debounce to race in that case.
   // The address moves without this screen unmounting — Back, Forward, a link to
   // the same list narrowed differently — and the box has to follow it or it
   // shows words the rows are not answering. Pressing Back out of a search left
@@ -950,6 +945,8 @@ export function ListTable<Row>({
     }
     const timer = setTimeout(() => {
       committed.current = localSearch;
+      // Functional, so a sort, filter or archive toggle set while the timer
+      // waited survives instead of being reverted by a stale `query`.
       setQuery((prev) =>
         prev.q === localSearch ? prev : { ...prev, q: localSearch },
       );
