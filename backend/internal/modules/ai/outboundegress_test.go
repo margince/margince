@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -26,7 +27,7 @@ func TestEveryProviderDeclaresAnEgressClass(t *testing.T) {
 	t.Parallel()
 
 	declared := make(map[string]bool, len(providerEgress))
-	for _, provider := range KnownProviders() {
+	for _, provider := range providerNames() {
 		if _, ok := providerEgress[provider]; !ok {
 			t.Errorf("provider %q declares no egress class, so its outbound client is guarded by a default nobody chose", provider)
 		}
@@ -34,7 +35,7 @@ func TestEveryProviderDeclaresAnEgressClass(t *testing.T) {
 	}
 	for provider := range providerEgress {
 		if !declared[provider] {
-			t.Errorf("providerEgress declares %q, which SelectBrain does not accept — a rule for a lane that does not exist", provider)
+			t.Errorf("providerEgress declares %q, which the registry does not hold — a rule for a lane that does not exist", provider)
 		}
 	}
 	if egressPublicOnly != 0 {
@@ -54,15 +55,16 @@ func TestEveryProviderDeclaresAnEgressClass(t *testing.T) {
 func TestEveryLocalProviderTakesTheOperatorLane(t *testing.T) {
 	t.Parallel()
 
-	for _, provider := range KnownProviders() {
+	for _, provider := range providerNames() {
 		if provider == ProviderFake {
 			continue // dials nothing, so its class binds nothing
 		}
 		onOperatorLane := egressFor(provider) == egressOperatorEndpoint
-		if ProviderIsLocal(provider) && !onOperatorLane {
+		d, _ := providerByName(provider)
+		if d.local && !onOperatorLane {
 			t.Errorf("provider %q is sovereign-eligible but may not dial the operator's own network", provider)
 		}
-		if !ProviderIsLocal(provider) && onOperatorLane && provider != providerOpenAICompatible {
+		if !d.local && onOperatorLane && provider != providerOpenAICompatible {
 			t.Errorf("provider %q is a cloud vendor on the permissive lane, so a binding may point this installation's model key at an address inside its own network", provider)
 		}
 	}
@@ -156,10 +158,11 @@ func TestTheWriteRuleAndTheDialerAgree(t *testing.T) {
 
 // The guard is only as good as its coverage: an adapter handed a client built
 // anywhere else dials unguarded, and nothing about the call site would look
-// wrong. So the package is allowed exactly one call to newOutboundClient, and it
-// is the one in SelectBrain — read off the syntax tree rather than grepped, so a
-// call spelled across a line break cannot hide from it.
-func TestSelectBrainIsTheOnlyBuilderOfAnOutboundClient(t *testing.T) {
+// wrong. So the package is allowed exactly two calls to newOutboundClient, one
+// per selector — SelectBrain for the chat adapters, selectDecider for the
+// decision wire — read off the syntax tree rather than grepped, so a call
+// spelled across a line break cannot hide from it.
+func TestOnlyTheSelectorsBuildAnOutboundClient(t *testing.T) {
 	t.Parallel()
 
 	entries, err := os.ReadDir(".")
@@ -196,8 +199,9 @@ func TestSelectBrainIsTheOnlyBuilderOfAnOutboundClient(t *testing.T) {
 			return true
 		})
 	}
-	if len(callers) != 1 || callers[0] != "selectbrain.go:SelectBrain" {
-		t.Errorf("newOutboundClient is called from %v, want only selectbrain.go:SelectBrain — every other builder dials unguarded", callers)
+	slices.Sort(callers)
+	if want := []string{"selectbrain.go:SelectBrain", "selectdecider.go:selectDecider"}; !slices.Equal(callers, want) {
+		t.Errorf("newOutboundClient is called from %v, want only %v — every other builder dials unguarded", callers, want)
 	}
 }
 

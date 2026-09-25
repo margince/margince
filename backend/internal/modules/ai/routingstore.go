@@ -157,10 +157,11 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 // the same lane of next when next declares none and binds the same provider,
 // host and model.
 //
-// The HTTP contract has no field for them, so every write through it arrives
-// with none: without this, reading the binding and writing it straight back
-// would drop an `only:` residency pin, and the broker would go back to serving
-// that lane from any region. Keyed on the model as well as the host because a
+// A write that omits them — a client that predates the contract's `routing`
+// field, or a settings seed — would otherwise drop an `only:` residency pin,
+// and the broker would go back to serving that lane from any region. The
+// routing editor applies the same rule from its side (rebind in
+// frontend/src/screens/ai-routing-fields.tsx). Keyed on the model as well as the host because a
 // pin names hosts that serve ONE model — carried onto another, it would fail
 // every call for want of a host, with nothing in the form able to lift it.
 func (next RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingConfig {

@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/decision"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -139,6 +140,45 @@ func (c *siteTriageCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf("the model answered %q at confidence %.2f where the scenario expects %q",
 				gated.Kind, float64(gated.Confidence), c.expected),
+		}
+	}
+	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+}
+
+// siteTriageCase also has a decision form: the same page asked of a decision
+// model, read by the same gate the worker applies.
+var _ aitasks.DecisionCase = (*siteTriageCase)(nil)
+
+// DecisionSite is the site the worker asks its decision at.
+func (*siteTriageCase) DecisionSite() string { return triageDecisionSite }
+
+// DecisionRequest is the worker's decision request, built from the same page
+// Run builds the LLM request from.
+func (c *siteTriageCase) DecisionRequest() decision.Request { return triageDecision(c.page) }
+
+// GateDecision is the worker's own gate, so a certified answer is one the
+// shipped path would have kept.
+func (*siteTriageCase) GateDecision(a decision.Answer) ai.DecisionVerdict {
+	return triageDecisionGate(a)
+}
+
+// Floors is the one floor the gate applies to every kind.
+func (*siteTriageCase) Floors() map[string]float64 {
+	floors := make(map[string]float64, len(siteTriageKinds))
+	for _, kind := range siteTriageKinds {
+		floors[kind] = triageAbortConfidence
+	}
+	return floors
+}
+
+// EvaluateDecision grades an answer the gate kept. The answer is a closed
+// label, so exact match against the scenario is the whole judgment.
+func (c *siteTriageCase) EvaluateDecision(a decision.Answer) aitasks.Outcome {
+	if a.Choice != c.expected {
+		return aitasks.Outcome{
+			Result: aitasks.OutcomeWrongAnswer,
+			Detail: fmt.Sprintf("the decision model answered %q at confidence %.2f where the scenario expects %q",
+				a.Choice, a.Confidence, c.expected),
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}

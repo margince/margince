@@ -23,6 +23,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { decisionSkipLabel, processingLabel } from "./ai-decision-labels";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { settingsHref } from "./settingsrouting";
 
@@ -392,16 +393,57 @@ export function AiFeatureTable({
         return t("aiAdmin.impact.blocked");
       case "model_changed":
         return t("aiAdmin.impact.model");
+      case "decision_changed":
+        return t("aiAdmin.impact.decision");
       case "fallback_changed":
         return t("aiAdmin.impact.fallback");
       case "unconfigured":
         return t("aiAdmin.impact.unconfigured");
-      default:
+      case "unchanged":
         return row.budget_exempt
           ? t("aiAdmin.impact.exempt")
           : t("aiAdmin.impact.same");
+      default:
+        // A new impact must be named here rather than read as "unchanged".
+        return row.impact satisfies never;
     }
   };
+  // Which model answers, and where the decision model stands in front of the
+  // ladder. Only the lead is summarized: the ladder behind it opens below.
+  const summary = (row: Feature) => {
+    const lead = row.effective_candidates[0];
+    const ladder = `${lead.provider} · ${lead.model}`;
+    const decision = row.decision_candidate;
+    if (!row.decision_first || !decision) {
+      return ladder;
+    }
+    return t("aiAdmin.decisionFirst", {
+      provider: decision.provider,
+      model: decision.model,
+      processing: processingLabel(decision.processing, t),
+      ladder,
+    });
+  };
+  const modelCell = (row: Feature) =>
+    row.effective_candidates.length ? (
+      <Disclosure summary={summary(row)}>
+        <ol>
+          {row.effective_candidates.map((candidate) => (
+            <li key={candidate.tier}>
+              {candidate.provider} · {candidate.model} ·{" "}
+              {processingLabel(candidate.processing, t)}
+            </li>
+          ))}
+        </ol>
+        {onEdit && (
+          <Button onClick={() => onEdit(row.leading_tier)}>
+            {t("aiAdmin.editBinding")}
+          </Button>
+        )}
+      </Disclosure>
+    ) : (
+      "—"
+    );
   return (
     <DataTable
       label={t("aiAdmin.features")}
@@ -418,30 +460,16 @@ export function AiFeatureTable({
         {
           key: "model",
           header: t("aiAdmin.model"),
-          render: (row: Feature) =>
-            row.effective_candidates.length ? (
-              <Disclosure
-                summary={`${row.effective_candidates[0].provider} · ${row.effective_candidates[0].model}`}
-              >
-                <ol>
-                  {row.effective_candidates.map((candidate) => (
-                    <li key={candidate.tier}>
-                      {candidate.provider} · {candidate.model} ·{" "}
-                      {candidate.processing === "cloud_provider"
-                        ? t("aiAdmin.cloud")
-                        : t("aiAdmin.endpoint")}
-                    </li>
-                  ))}
-                </ol>
-                {onEdit && (
-                  <Button onClick={() => onEdit(row.leading_tier)}>
-                    {t("aiAdmin.editBinding")}
-                  </Button>
-                )}
-              </Disclosure>
-            ) : (
-              "—"
-            ),
+          render: (row: Feature) => (
+            <>
+              {modelCell(row)}
+              {row.decision_skip_reason ? (
+                <p className="t-caption">
+                  {decisionSkipLabel(row.decision_skip_reason, t)}
+                </p>
+              ) : null}
+            </>
+          ),
         },
         {
           key: "impact",

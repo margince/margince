@@ -114,8 +114,24 @@ func validateTask(name string, def taskDef, tierSet map[string]bool) error {
 	if err := validateSiteTools(name, def); err != nil {
 		return err
 	}
+	if err := validateDecision(name, def); err != nil {
+		return err
+	}
 	if err := def.CompanyContext.validate(name); err != nil {
 		return err
+	}
+	return nil
+}
+
+// validateDecision refuses a decision form on a task that cannot carry one.
+// A decision attempt is a network call ahead of the ladder, and only a
+// background task's deadline has room for it; a planned task has no site for
+// an adapter to build the decision request at.
+func validateDecision(name string, def taskDef) error {
+	if def.Decision && (def.Status != statusShipped || def.ExecutionMode != "background") {
+		return fmt.Errorf("task %q: decision: true needs status shipped and execution_mode background — "+
+			"a decision attempt is a further network call that an interactive route deadline does not budget for, "+
+			"and a planned task has no site to adapt", name)
 	}
 	return nil
 }

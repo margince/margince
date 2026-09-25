@@ -9,6 +9,9 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { tierLabel } from "./ai-decision-labels";
+import { useRouting } from "./ai-routing";
+import { DecisionSummaryRow } from "./aiusage-decisions";
 import { QueryGate, throwProblem, useMe } from "./common";
 import "./aiusage.css";
 import { calendarMonth } from "../format/calendarday";
@@ -117,7 +120,7 @@ function usageColumns(
     {
       key: "tier",
       header: t("aiusage.col.tier"),
-      render: (r: UsageTask) => r.tier,
+      render: (r: UsageTask) => tierLabel(r.tier, t),
     },
     {
       key: "calls",
@@ -165,10 +168,12 @@ function AiUsageBody({
   data,
   month,
   onMonth,
+  decisionsBound,
 }: Readonly<{
   data: AiUsage;
   month: Month;
   onMonth: (next: Month) => void;
+  decisionsBound: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -190,6 +195,10 @@ function AiUsageBody({
   // number that is short without saying so is the one a reader acts on: it is
   // always the smaller figure, and nobody investigates a bill that looks
   // cheaper than expected until it does not.
+  const taskNames = useMemo(
+    () => new Map(rows.map((row) => [row.task, row.task_display_name])),
+    [rows],
+  );
   const unpricedCalls = useMemo(
     () => rows.reduce((sum, row) => sum + (row.unpriced_calls ?? 0), 0),
     [rows],
@@ -263,6 +272,12 @@ function AiUsageBody({
           </div>
         }
       />
+      {decisionsBound && (
+        <DecisionSummaryRow
+          decisions={data.decisions ?? []}
+          taskName={(task) => taskNames.get(task) ?? task}
+        />
+      )}
       {/* The per-day breakdown is diagnostic — a reader reconciling one day's
           calls asks for it, and it is noise to everyone else — so it stands in
           the list as its own closed section rather than as a fourth row. */}
@@ -321,6 +336,13 @@ export function AiUsageCard() {
   // month it could change.
   const [month, setMonth] = useState<Month>(currentMonth);
   const query = useAiUsage(month, canSee);
+  // The decision rates are shown only while a decision model is bound: rows
+  // written under a binding outlive it, and a rate for a model nobody runs
+  // answers a question nobody is asking. A reader who may not see the routing
+  // cannot be told whether one is bound, so the rates stay hidden for them too.
+  const canRoute = useCan("ai_routing", "read");
+  const routing = useRouting(canSee && canRoute);
+  const decisionsBound = routing.data?.routing.decisions !== undefined;
 
   if (!canSee) {
     // Withheld, not absent. An absent spend card on the AI page is a claim about
@@ -348,7 +370,12 @@ export function AiUsageCard() {
         <PanelIntro>{t("aiusage.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("aiusage.title")}>
           {(data) => (
-            <AiUsageBody data={data} month={month} onMonth={setMonth} />
+            <AiUsageBody
+              data={data}
+              month={month}
+              onMonth={setMonth}
+              decisionsBound={decisionsBound}
+            />
           )}
         </QueryGate>
       </PanelBody>

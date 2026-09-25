@@ -3,7 +3,11 @@
 
 package ai
 
-import "github.com/margince/margince/backend/internal/shared/ports/model"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/ports/model"
+)
 
 // ModelRef is a bound (provider, model) pair — the identity a rate is keyed
 // on. The cost pre-flight estimator prices an observed served slice against
@@ -23,6 +27,11 @@ func embedInclusiveMeta(cfg RoutingConfig) map[Tier]routeMeta {
 	}
 	if cfg.Embeddings.Model != "" {
 		meta[TierEmbedLane] = routeMeta{provider: cfg.Embeddings.Provider, model: cfg.Embeddings.Model, baseURL: cfg.Embeddings.BaseURL}
+	}
+	// The decisions lane likewise, under TierDecideLane, so the decision trace
+	// and the rate lookup name the model that answered.
+	if cfg.Decisions != nil {
+		meta[TierDecideLane] = cfg.Decisions.routeMeta()
 	}
 	return meta
 }
@@ -148,4 +157,25 @@ func (r *Router) CurrentModelForTier(tier Tier) (ModelRef, bool) {
 		return ModelRef{}, false
 	}
 	return ModelRef{Provider: m.provider, Model: m.model}, true
+}
+
+// buildClients turns validated bindings into live Clients via
+// SelectBrain. Construction errors (missing BYOK key, unknown provider)
+// surface here — still startup, still loud.
+//
+//nolint:ireturn // the embedder is whichever adapter the embeddings lane names; the port interface IS its type
+func (cfg RoutingConfig) buildClients() (map[Tier]model.Client, model.Client, error) {
+	clients := make(map[Tier]model.Client, len(cfg.Tiers))
+	for tier, binding := range cfg.Tiers {
+		client, err := SelectBrain(binding, cfg.keys)
+		if err != nil {
+			return nil, nil, fmt.Errorf("ai: tier %s: %w", tier, err)
+		}
+		clients[tier] = client
+	}
+	embedder, err := SelectBrain(cfg.Embeddings.ProviderConfig, cfg.keys)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ai: embeddings lane: %w", err)
+	}
+	return clients, embedder, nil
 }

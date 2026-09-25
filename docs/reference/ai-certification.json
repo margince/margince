@@ -6,7 +6,7 @@
     "sites_best_stale": 1,
     "sites_absent": 0,
     "scenarios": 152,
-    "records": 172,
+    "records": 173,
     "bindings": 17,
     "self_judged_records": 4
   },
@@ -1898,10 +1898,10 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
-          "state": "stale",
+          "band": "certified",
+          "state": "current",
           "runs": 15,
-          "passed": 14,
+          "passed": 15,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -2003,8 +2003,8 @@
         }
       ],
       "bands": {
-        "certified": 6,
-        "supported_degraded": 4,
+        "certified": 7,
+        "supported_degraded": 3,
         "not_supported": 13
       },
       "untested": 6,
@@ -3300,16 +3300,16 @@
         "env": "cloud_frontier"
       },
       "sites": 39,
-      "sites_current": 0,
+      "sites_current": 1,
       "sites_partial": 0,
-      "sites_stale": 39,
+      "sites_stale": 38,
       "runs": 384,
-      "passed": 310,
-      "reliability": 0.8072916666666666,
+      "passed": 311,
+      "reliability": 0.8098958333333334,
       "slowest_p95_ms": 140306,
       "bands": {
-        "certified": 13,
-        "supported_degraded": 7,
+        "certified": 14,
+        "supported_degraded": 6,
         "not_supported": 19
       }
     },
@@ -10580,12 +10580,12 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "vllm",
-          "model": "mlx-community/Qwen3-14B-4bit",
-          "env": "sovereign"
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "cloud_frontier"
         },
-        "band": "not_supported",
-        "reliability": 0.8666666666666667,
+        "band": "certified",
+        "reliability": 1,
         "state": "current"
       },
       "scenarios": [
@@ -10741,31 +10741,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
           "scenarios_total": 5,
           "runs": 15,
-          "passed": 14,
-          "reliability": 0.9333333333333333,
-          "latency_p50_ms": 672,
-          "latency_p95_ms": 1758,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 533,
+          "latency_p95_ms": 1227,
           "reported": {
-            "accepted": 14,
-            "wrong_answer": 1,
+            "accepted": 15,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
-          "stale_cause": {
-            "grader_changed": [
-              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
-              "a_mailbox_vendor_is_not_the_senders_employer",
-              "a_one_contact_consultancy_is_still_a_company",
-              "a_parked_domain_identifies_nobody",
-              "a_personal_domain_is_not_a_company"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -13470,6 +13461,27 @@
         "env": "cloud_frontier"
       },
       "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    }
+  ],
+  "decisions": [
+    {
+      "task": "site_triage",
+      "site": "triage",
+      "binding": {
+        "provider": "openrouter_decision",
+        "model": "typesafe/jev-1.13",
+        "env": "cloud_frontier"
+      },
+      "state": "current",
+      "verdict": "certified",
+      "serves": true,
+      "runs": 15,
+      "kept": 15,
+      "kept_wrong": 0,
+      "fallback_rate": 0,
+      "fallback_by_reason": {},
+      "served_pass_rate": 1,
+      "stale_reason": ""
     }
   ]
 }

@@ -111,15 +111,27 @@ func routeImpact(normal, effective []plannedBinding, blocked bool) string {
 	return "fallback_changed"
 }
 
+// withDecisionLeadChange folds a moved decision lead into a tier impact. Alone
+// it is decision_changed; beside a moved fallback both the first answer and a
+// later one changed, which is what model_changed already says; a moved lead
+// tier, a budget block or no ladder at all is the bigger fact and stands.
+func withDecisionLeadChange(tierImpact string) string {
+	switch tierImpact {
+	case "unchanged":
+		return "decision_changed"
+	case "fallback_changed":
+		return "model_changed"
+	default:
+		return tierImpact
+	}
+}
+
 func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 	out := make([]crmcontracts.AiRouteCandidate, 0, len(plan))
 	for _, binding := range plan {
 		processing := "configured_endpoint"
-		switch binding.config.Provider {
-		case "anthropic", "openai", "gemini":
-			if binding.config.BaseURL == "" {
-				processing = "cloud_provider"
-			}
+		if providerIsVendorHosted(binding.config.Provider) && binding.config.BaseURL == "" {
+			processing = "cloud_provider"
 		}
 		out = append(out, crmcontracts.AiRouteCandidate{Tier: string(binding.tier), Provider: binding.config.Provider, Model: binding.config.Model, Processing: processing})
 	}
@@ -138,7 +150,7 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 		if task != TaskEmbeddings && Status(task) != StatusShipped {
 			continue
 		}
-		normal, _ := boundPlan(normalConfig, task, normalBand)
+		normal, normalBlocked := boundPlan(normalConfig, task, normalBand)
 		effective, blocked := boundPlan(effectiveConfig, task, band)
 		name := DisplayName(task)
 		mode := string(taskExecutionModes[task])
@@ -148,11 +160,16 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 			mode = "embedding"
 			leading = "embeddings"
 		}
-		out = append(out, crmcontracts.AiFeatureRoute{
+		row := crmcontracts.AiFeatureRoute{
 			Task: string(task), DisplayName: name, ExecutionMode: mode, LeadingTier: leading,
 			NormalCandidates: wireCandidates(normal), EffectiveCandidates: wireCandidates(effective),
 			Impact: routeImpact(normal, effective, blocked), BudgetExempt: task == TaskEmbeddings,
-		})
+		}
+		decisionRoute(&row, effectiveConfig, task, blocked)
+		if decisionLeadChanged(normalConfig, effectiveConfig, task, normalBlocked, row) {
+			row.Impact = withDecisionLeadChange(row.Impact)
+		}
+		out = append(out, row)
 	}
 	return out
 }

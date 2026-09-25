@@ -87,7 +87,13 @@ func TestAICertificationPage(t *testing.T) {
 		aicert.Census{Sites: census.All(), Scopes: census.Scopes()}, stamps, perScenario, records,
 	)
 
+	_, decisionRows, err := aicert.DecisionCertTable(corpus, census, records)
+	if err != nil {
+		t.Fatalf("reading the decision records against this build: %v", err)
+	}
+
 	doc := buildAICertDoc(rows, unclaimed, corpus, records)
+	doc.Decisions = buildAICertDecisions(decisionRows)
 	doc.Presets = attributeAICertPresets(loadAICertPresets(t), doc, records)
 	assertAICertDocCoversEverything(t, doc, rows, corpus, records)
 	assertAICertPresetsAreAttributed(t, doc.Presets, doc)
@@ -173,6 +179,9 @@ func assertAICertRecordsAllAccountedFor(t *testing.T, doc aiCertDoc, records []a
 	}
 	for _, rec := range doc.Unclaimed {
 		shown[rec.Task+"/"+rec.Binding.Provider+"/"+rec.Binding.Model+"/"+rec.Binding.Env] = true
+	}
+	for _, d := range doc.Decisions {
+		shown[decisionRecordKey(d)] = true
 	}
 	for _, rec := range records {
 		if !shown[aicert.RecordKey(rec)] {
@@ -262,6 +271,9 @@ func renderAICertPage(doc aiCertDoc, verdictRule string, bars []aiCertQualityBar
 	})
 	writeAICertFolded(&page, "Stale records, and why", func(page *strings.Builder) {
 		writeAICertStale(page, doc.Sites)
+	})
+	writeAICertFolded(&page, "Decision models", func(page *strings.Builder) {
+		writeAICertDecisions(page, doc.Decisions)
 	})
 	writeAICertSites(&page, doc.Sites)
 	writeAICertUnclaimed(&page, doc.Unclaimed)

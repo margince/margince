@@ -157,9 +157,9 @@ func (s *RateStore) prepareModelRate(ctx context.Context, in SetModelRateInput) 
 	if err != nil {
 		return preparedModelRate{}, err
 	}
-	if in.Lane != "" && in.Lane != LaneChat && in.Lane != LaneEmbeddings {
+	if in.Lane != "" && in.Lane != LaneChat && in.Lane != LaneEmbeddings && in.Lane != LaneDecisions {
 		return preparedModelRate{}, rateInvalid("lane", "rate_lane_unknown",
-			"lane must be either chat or embeddings")
+			"lane must be chat, embeddings or decisions")
 	}
 	return preparedModelRate{
 		provider: provider, modelID: modelID,

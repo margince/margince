@@ -297,15 +297,13 @@
 
 /* THE INSET THE PANEL PAYS FOR, on the blocks that are its direct children.
    `PanelRow` carries the panel's own margin and these do not, so a band
-   heading, an empty band's sentence and the way to the rest of the backlog all
-   began a full --padPanel to the left of every row they stand over — three
-   lines that read as having escaped the card. They stay direct children
-   because a `PanelBody` around them would draw the panel's seam hairline
-   between a heading and the rows it heads, which is the one place panel.css
-   says a rule must never fall. */
+   heading and an empty band's sentence began a full --padPanel to the left of
+   every row they stand over — lines that read as having escaped the card. They
+   stay direct children because a `PanelBody` around them would draw the
+   panel's seam hairline between a heading and the rows it heads, which is the
+   one place panel.css says a rule must never fall. */
 .worklist-band,
-.worklist-band-clear,
-.worklist-more {
+.worklist-band-clear {
   padding-inline: var(--padPanel);
 }
 
@@ -453,14 +451,25 @@
   white-space: nowrap;
 }
 
-/* The way to the rest of the backlog: the button and, when a page was refused,
-   the line saying so beside it. */
+/* The way to the rest of the day: the button, where its rows may land, and,
+   when a page was refused, the line saying so. A block of the page between
+   panels rather than inside one, so it takes the panels' edge and the page's
+   own interval above it, with no inset of its own. */
 .worklist-more {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  padding-block: var(--space-3);
+}
+.worklist-more > p {
+  margin: 0;
+}
+/* A thumb needs the WCAG 2.2 target the row verbs already get; `max()` so a
+   later rise in the shared control height is not capped by this floor. */
+@media (pointer: coarse) {
+  .worklist-more .btn {
+    min-block-size: max(var(--controlHeight), 44px);
+  }
 }
 
 /* The spans behind the snooze's caret, as LINES of a list.

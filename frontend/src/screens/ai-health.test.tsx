@@ -151,3 +151,10 @@ describe("model lane health", () => {
     expect(asked.some((url) => url.includes("/ai/health"))).toBe(false);
   });
 });
+
+it("names the decision lane's rung rather than printing its tier id", async () => {
+  renderCard([{ ...ANSWERING, tier: "decide" }]);
+
+  expect(await screen.findByText("Decision model")).toBeInTheDocument();
+  expect(screen.queryByText("decide")).toBeNull();
+});

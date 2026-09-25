@@ -9248,8 +9248,8 @@ export interface paths {
         };
         /**
          * Whether the model lanes are answering.
-         * @description One row per model tier for the last hour: how many terminal attempts it made, how many
-         *     failed, the most recent error it reported, and its median latency.
+         * @description One row per model tier for the last hour: how many attempts it made, how many failed, the
+         *     most recent error it reported, and its median latency.
          *
          *     This exists because an outage is otherwise invisible. Under the capture posture a thread
          *     stays held whether the classifier judged it confidential or never answered at all, so a
@@ -9258,8 +9258,12 @@ export interface paths {
          *
          *     Read from `ai_call`, which already records every attempt. Nothing is written for this: a
          *     health surface with its own bookkeeping would be a second account of what happened, free
-         *     to disagree with the first. Terminal attempts only, so a failure a retry rescued does not
-         *     report a lane as failing while every caller of it got an answer.
+         *     to disagree with the first. A chat tier counts its terminal attempts only, so a failure a
+         *     retry rescued does not report a lane as failing while every caller of it got an answer.
+         *     The `decide` tier counts every decision attempt: it is asked once per call and never
+         *     retried on its own tier, so its attempt is its final outcome even when the ladder answers
+         *     after it — counting terminal attempts alone would call a decision endpoint that fails
+         *     every call healthy.
          *
          *     An hour, because the question is whether it is answering NOW — a day-long window would
          *     call a lane that died forty minutes ago healthy on the strength of this morning.
@@ -16245,12 +16249,13 @@ export interface components {
             model_id: string;
             /**
              * @description What the model is FOR. A property of the model rather than of this dated row: the
-             *     routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-             *     where the embeddings lane binds, and a zero output price cannot tell them apart —
-             *     every local chat row carries one too.
+             *     routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+             *     where the embeddings lane binds and a `decisions` one where the decision lane
+             *     binds, and a zero output price cannot tell them apart — every local chat row
+             *     carries one too.
              * @enum {string}
              */
-            lane: "chat" | "embeddings";
+            lane: "chat" | "embeddings" | "decisions";
             input_per_mtok: string;
             output_per_mtok: string;
             cache_read_per_mtok: string;
@@ -16271,7 +16276,7 @@ export interface components {
              *     correct a mis-filed model.
              * @enum {string}
              */
-            lane?: "chat" | "embeddings";
+            lane?: "chat" | "embeddings" | "decisions";
             /** @description USD per 1M input tokens. Plain non-negative decimal, up to 12 integer and 6 fractional digits (keeps the stored µUSD within int64). */
             input_per_mtok: string;
             /** @description USD per 1M output tokens. */
@@ -16969,7 +16974,7 @@ export interface components {
              * @description What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
              * @enum {string}
              */
-            lane?: "chat" | "embeddings";
+            lane?: "chat" | "embeddings" | "decisions";
             /** @description Absent where the vendor publishes none. */
             context_length?: number;
             /** @description The vendor's asking price per million input tokens, in the same USD decimal strings as `AiModelRate` so a screen can show a vendor's price beside a recorded one without converting between them. Absent where the vendor publishes no price. */
@@ -17010,6 +17015,7 @@ export interface components {
                 [key: string]: components["schemas"]["AiTierBinding"];
             };
             embeddings: components["schemas"]["AiEmbeddingsBinding"];
+            decisions?: components["schemas"]["AiDecisionsBinding"];
         };
         AiTierBinding: {
             /**
@@ -17027,6 +17033,36 @@ export interface components {
              *     the adapter already has and can never widen it. Omit for the provider's own answer.
              */
             input?: string[];
+            routing?: components["schemas"]["AiOpenRouterRouting"];
+        };
+        /**
+         * @description Upstream-selection preferences for an openai_compatible binding pointed at
+         *     OpenRouter; refused on any other binding, and on the embeddings lane every
+         *     preference but only, ignore and allow_fallbacks is refused. Absent means the
+         *     product default (reliability over price); an empty object means no preferences
+         *     (the broker's own price-weighted routing). The two are different choices and a
+         *     client must not turn one into the other.
+         */
+        AiOpenRouterRouting: {
+            /** @description Upstream slugs allowed; a hard filter. */
+            only?: string[];
+            /** @description Upstream slugs excluded; a hard filter. */
+            ignore?: string[];
+            /** @description Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter. */
+            quantizations?: string[];
+            /** @description price | throughput | latency. Reorders rather than filters, and disables load balancing. */
+            sort?: string;
+            /** @description Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent. */
+            require_parameters?: boolean;
+            /** @description Override the broker's host fallback. False is a real choice, distinct from absent. */
+            allow_fallbacks?: boolean;
+            /**
+             * Format: double
+             * @description Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
+             */
+            preferred_max_latency_p90?: number;
+            /** @description none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default. */
+            reasoning_effort?: string;
         };
         AiEmbeddingsBinding: components["schemas"]["AiTierBinding"] & {
             /**
@@ -17034,6 +17070,20 @@ export interface components {
              *     default; a value outside [1,2000] is refused.
              */
             dimensions?: number;
+        };
+        /**
+         * @description The decision-model lane: a model that answers a typed question with calibrated
+         *     probabilities, asked before a decision site's ladder. Absent means no task uses
+         *     one. It serves a task only when certified for that site and when its endpoint
+         *     reaches no further than the task's own bindings.
+         */
+        AiDecisionsBinding: {
+            /** @description openrouter_decision | laya. */
+            provider: string;
+            /** @description The decision model id: a Jev slug, or a Laya checkpoint. */
+            model: string;
+            /** @description Endpoint root; openrouter_decision requires an OpenRouter host. */
+            base_url?: string;
         };
         /**
          * @description The installation's provider-lookup posture. Read by every role, changed only by
@@ -18375,7 +18425,7 @@ export interface components {
              *     not.
              */
             healthy: boolean;
-            /** @description Terminal attempts in the window. */
+            /** @description Attempts in the window — terminal ones for a chat tier, every one for `decide`. */
             calls: number;
             /** @description How many of them carried an error. */
             failures: number;
@@ -18441,9 +18491,20 @@ export interface components {
             leading_tier: string;
             normal_candidates: components["schemas"]["AiRouteCandidate"][];
             effective_candidates: components["schemas"]["AiRouteCandidate"][];
-            /** @enum {string} */
-            impact: "unchanged" | "model_changed" | "fallback_changed" | "budget_blocked" | "unconfigured";
+            /**
+             * @description How the proposed routing changes what answers this feature. decision_changed — only the decision model that answers it first moved (added, removed or rebound) while every tier binding stayed put; model_changed wins when the lead tier binding moved as well.
+             * @enum {string}
+             */
+            impact: "unchanged" | "model_changed" | "decision_changed" | "fallback_changed" | "budget_blocked" | "unconfigured";
             budget_exempt: boolean;
+            /** @description The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider. */
+            decision_first: boolean;
+            /**
+             * @description Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
+             * @enum {string}
+             */
+            decision_skip_reason?: "unbound" | "uncertified" | "local_only";
+            decision_candidate?: components["schemas"]["AiRouteCandidate"];
         };
         AiDeferredWork: {
             carrier: string;
@@ -18483,7 +18544,7 @@ export interface components {
                     /** @description capture_classify, enrich, summarize, … */
                     task: string;
                     task_display_name?: string;
-                    /** @description local_small, cheap_cloud, premium, frontier, local_large. */
+                    /** @description local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane). */
                     tier: string;
                     calls: number;
                     cached_hits?: number;
@@ -18510,6 +18571,20 @@ export interface components {
                 /** @description ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067). */
                 currency?: string;
             };
+            /** @description Per task, how often the decision model was consulted over the same window and how often its answer stood. Read from the ai_call trace, one logical call counted once, because the metered calls above count attempts and cannot give a rate. Empty when no call in the window consulted a decision model. */
+            decisions?: components["schemas"]["AiDecisionSummary"][];
+        };
+        /** @description One task's decision-model pass and fallback counts over the usage window. */
+        AiDecisionSummary: {
+            task: string;
+            /** @description Logical calls that consulted the decision model, including those refused before any call was sent. */
+            asked: number;
+            /** @description Logical calls the decision model answered: its answer stood and no LLM ran. */
+            decided: number;
+            /** @description Logical calls handed to the LLM ladder, keyed by the attempt reason the ladder's first attempt carries (decision_below_floor, decision_error, …). A reason with no calls is absent. Read an unrecognized key as "some reason" rather than refusing it. */
+            fallbacks: {
+                [key: string]: number;
+            };
         };
         /** @description One terminal model call from the ai_call trace (AIRT-SCHEMA-2). */
         AiCallSummary: {
@@ -18517,6 +18592,11 @@ export interface components {
             id: string;
             /** Format: date-time */
             occurred_at: string;
+            /**
+             * @description What the call asked: a chat completion, an embedding, or a decision model.
+             * @enum {string}
+             */
+            kind: "completion" | "embedding" | "decision";
             task: string;
             /** @description Empty when the call failed before routing. */
             tier: string;
@@ -18543,13 +18623,25 @@ export interface components {
             error_sentinel?: string | null;
             /** @description A captured payload row exists for this call. */
             has_payload: boolean;
+            /** @description Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which. */
+            decision_attempted: boolean;
         };
         /** @description One attempt (terminal or not) within a logical call. */
         AiCallAttempt: {
             attempt: number;
             is_terminal: boolean;
-            /** @description Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. */
+            /** @description Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
             attempt_reason: string;
+            /**
+             * @description What this attempt asked: a chat completion, an embedding, or a decision model.
+             * @enum {string}
+             */
+            kind: "completion" | "embedding" | "decision";
+            /** @description The tier this attempt ran on; decide for the decision lane. */
+            tier?: string;
+            provider?: string;
+            /** @description The configured binding this attempt ran on. */
+            model_id?: string;
             error_sentinel?: string | null;
             tokens_in: number;
             tokens_out: number;
@@ -18574,7 +18666,7 @@ export interface components {
             payload_captured: boolean;
             /** @description Present only when payload_captured. Post-secret-stripper content (AIRT-AC-4); rune-capped with a visible truncation marker. */
             payload?: {
-                /** @description The captured request: {"system": string, "messages": [{role, content}]}. */
+                /** @description The captured request: {"system": string, "messages": [{role, content}]}, or, for a decision call, {"state": string, "questions": {…}}. */
                 request: unknown;
                 /** @description The captured response text (JSON string). */
                 response: unknown;
@@ -27457,6 +27549,39 @@ export interface components {
             updated_at: string;
             /** Format: date-time */
             archived_at?: string | null;
+            /**
+             * @description How a human resolved this signal, and who. Null while `status` is
+             *     `open` or `acknowledged` — only a human outcome appends one.
+             *
+             *     The latest, not the history: a signal reopened and resolved again
+             *     says how it stands now. Every append is kept, and an audit reader
+             *     is where the earlier ones belong.
+             */
+            resolution?: components["schemas"]["SignalResolution"];
+        };
+        /**
+         * @description A human's answer on one signal. `outcome` is the status they set,
+         *     `note` is what they wrote, `resolved_by` is who they are.
+         *
+         *     Written on every human resolution since the table existed and read
+         *     nowhere until this projection: the note explaining WHY a signal was
+         *     dismissed was recorded and then invisible to the next reader of it.
+         */
+        SignalResolution: {
+            /**
+             * @description The status the human set.
+             * @enum {string}
+             */
+            outcome: "resolved" | "dismissed";
+            /** @description What they wrote about it, if anything. */
+            note?: string | null;
+            /**
+             * Format: uuid
+             * @description The colleague who answered; null once their account is deleted.
+             */
+            resolved_by?: string | null;
+            /** Format: date-time */
+            resolved_at: string;
         };
         SignalEvidence: {
             snippet: string;
@@ -51258,7 +51383,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One row per tier that made a terminal attempt in the window. */
+            /** @description One row per tier that made a counted attempt in the window. */
             200: {
                 headers: {
                     [name: string]: unknown;

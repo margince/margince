@@ -8,6 +8,7 @@ import (
 	"maps"
 	"sync"
 
+	"github.com/margince/margince/backend/internal/shared/ports/decision"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -21,6 +22,8 @@ type localOpts struct {
 	monthlyBudget   int64
 	fakeClient      *FakeClient
 	capturePayloads bool
+	fakeDecider     decision.Client
+	everyCertified  bool
 }
 
 // LocalOption configures the DB-less router NewLocalRouter builds — the
@@ -72,6 +75,32 @@ func WithFakeClient(c *FakeClient) LocalOption {
 // aicert lane's trace dump) actually wants the bodies.
 func WithPayloadCapture() LocalOption {
 	return func(o *localOpts) { o.capturePayloads = true }
+}
+
+// WithFakeDecider stands client in for the decisions lane's own, so a test or
+// an offline certification run scripts the decision model the way
+// WithFakeClient scripts the chat tiers. It answers only where the config
+// binds a lane: the lane's provider and model still name every trace row.
+func WithFakeDecider(client decision.Client) LocalOption {
+	return func(o *localOpts) { o.fakeDecider = client }
+}
+
+// WithEveryDecisionCertified treats every (task, site, provider, model) as
+// certified. It exists for the certification lane alone, which must run the
+// lane to produce the record the generated table is built from — a runtime
+// that served only certified rows could never measure the first one. The
+// production constructor has no such knob.
+func WithEveryDecisionCertified() LocalOption {
+	return func(o *localOpts) { o.everyCertified = true }
+}
+
+// localDecisionLane is the lane a DB-less router serves: the config's own, or
+// the injected fake under the config's binding.
+func localDecisionLane(cfg RoutingConfig, fake decision.Client) (*decisionLane, error) {
+	if fake == nil || cfg.Decisions == nil {
+		return cfg.buildDecisionLane()
+	}
+	return &decisionLane{client: fake, meta: cfg.Decisions.routeMeta()}, nil
 }
 
 // sharedFakeCarriage is what ONE injected fake can honestly claim while standing
@@ -148,7 +177,14 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 	// WithCallStore opts a caller into tracing.
 	router := assembleRouter(clients, embedder, cfg.Profile, &memoryMeter{}, StaticBudget(o.monthlyBudget), o.callStore, meta, o.capturePayloads, nil)
 	router.cacheOff = o.cacheOff
-	router.install(router.binding().withConfigSnapshot(cfg))
+	if o.everyCertified {
+		router.decisionCertified = func(DecisionCertKey) bool { return true }
+	}
+	decisions, err := localDecisionLane(cfg, o.fakeDecider)
+	if err != nil {
+		return nil, err
+	}
+	router.install(router.binding().withConfig(cfg, decisions))
 	return router, nil
 }
 

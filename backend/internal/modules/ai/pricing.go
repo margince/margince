@@ -15,9 +15,10 @@ import "time"
 // inherits (RateStore.writeModelRate).
 type Lane string
 
-// The two lanes a bound model can serve. The chat tiers and the embeddings
-// lane bind separately because retrieval has to keep working when the chat
-// budget is exhausted, and the model is a different one even on one vendor.
+// The lanes a bound model can serve. The chat tiers and the embeddings lane
+// bind separately because retrieval has to keep working when the chat budget
+// is exhausted, and the model is a different one even on one vendor; the
+// decisions lane (LaneDecisions, decide.go) is a third wire altogether.
 const (
 	LaneChat       Lane = "chat"
 	LaneEmbeddings Lane = "embeddings"
@@ -143,6 +144,14 @@ func rateOn(day time.Time, provider, model string, in, out, cacheRead, cacheWrit
 func embedOn(day time.Time, provider, model string, in int64) ModelRate {
 	r := rateOn(day, provider, model, in, 0, 0, 0)
 	r.Lane = LaneEmbeddings
+	return r
+}
+
+// decideOn is rateOn for the decisions lane. A decision bills its input alone:
+// the lane records no output tokens, so no output or cache price is offered.
+func decideOn(day time.Time, provider, model string, in int64) ModelRate {
+	r := rateOn(day, provider, model, in, 0, 0, 0)
+	r.Lane = LaneDecisions
 	return r
 }
 
@@ -283,6 +292,11 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		embedOn(day, providerOpenAICompatible, "mistralai/mistral-embed-2312", 100_000),
 		embedOn(day, providerOpenAICompatible, "baai/bge-m3", 10_000),
 		embedOn(day, providerOpenAICompatible, "openai/text-embedding-3-small", 20_000),
+		// Read 2026-09-25 from the decisions endpoint's own usage.cost: one call
+		// of 425 input tokens cost $0.00001785, which is $0.042 per million
+		// input tokens exactly. Keyed on the configured id, which is what a
+		// decision row names; the endpoint serves a dated snapshot of it.
+		decideOn(day, providerOpenRouterDecision, "typesafe/jev-1.13", 42_000),
 	}
 }
 
@@ -302,6 +316,10 @@ func localZeroRates(day time.Time) []ModelRate {
 		// tier's default, gemma3, which is not an embedding model), so it
 		// needs its own explicit zero row.
 		embedOn(day, providerOllama, "bge-m3", 0),
+		// Laya's published checkpoints, served on the operator's own host.
+		decideOn(day, providerLaya, "typed-decisions", 0),
+		decideOn(day, providerLaya, "multilingual", 0),
+		decideOn(day, providerLaya, "english", 0),
 		// The offline fake provider carries no model id of its own — a
 		// binding that omits `model:` (the common case: `{provider: fake}`)
 		// resolves to model_id "" (routeMeta.model = cfg.Model, unmodified).

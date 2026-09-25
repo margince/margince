@@ -53,6 +53,7 @@ export const en = {
   "aiAdmin.unavailable": "Unavailable",
   "aiAdmin.impact.blocked": "Waiting on allowance",
   "aiAdmin.impact.model": "Different model selected",
+  "aiAdmin.impact.decision": "Decision model changed",
   "aiAdmin.impact.fallback": "Fallback chain changed",
   "aiAdmin.impact.unconfigured": "No model configured",
   "aiAdmin.impact.exempt": "Continues beyond allowance",
@@ -62,6 +63,13 @@ export const en = {
   "aiAdmin.cloud": "Cloud provider",
   "aiAdmin.endpoint": "Configured endpoint; location not verified",
   "aiAdmin.editBinding": "Edit shared binding",
+  "aiAdmin.decisionFirst":
+    "Decision model first ({provider} · {model} · {processing}) → then {ladder}",
+  "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
+  "aiAdmin.decisionSkip.uncertified":
+    "Decision model not used: not certified for this activity.",
+  "aiAdmin.decisionSkip.local_only":
+    "Decision model not used: this activity takes only a local decision provider.",
   "aiAdmin.effect": "Effect",
   "aiAdmin.advanced": "Advanced: shared model bindings",
   "aiAdmin.unused": "Not used by current shipped activities: {tiers}",
@@ -7983,6 +7991,7 @@ export const en = {
     "Historical usage for the selected month. Estimates are separate from the live token allowance and from your provider bill.",
   "aiusage.col.task": "Task",
   "aiusage.col.tier": "Tier",
+  "aiTier.decide": "Decision model",
   "aiusage.col.calls": "Calls",
   "aiusage.col.cached": "Cached",
   "aiusage.col.tokensIn": "Tokens in",
@@ -7997,6 +8006,13 @@ export const en = {
   "aiusage.empty": "No AI calls this month.",
   "aiusage.prevMonth": "Previous month",
   "aiusage.nextMonth": "Next month",
+  "aiusage.decisions.note":
+    "Each figure counts one request, however many models it reached. Pass means the decision model’s answer stood; a fallback went on to a language model.",
+  "aiusage.decisions.empty": "No task asked the decision model this month.",
+  "aiusage.decisions.col.asked": "Asked",
+  "aiusage.decisions.col.passRate": "Pass rate",
+  "aiusage.decisions.col.fallbackRate": "Fallback rate",
+  "aiusage.decisions.col.reasons": "Fallbacks by reason",
 
   "aibanner.degraded": "80% of AI allowance reached. Review affected features.",
   "aibanner.queued": "AI allowance reached. Review deferred work.",
@@ -8026,6 +8042,18 @@ export const en = {
   "aicalls.badge.cacheHit": "Cache hit",
   "aicalls.badge.degraded": "Degraded",
   "aicalls.badge.retries": "Retry ×{count}",
+  "aicalls.badge.decision": "Decision model",
+  "aicalls.reason.decision_below_floor":
+    "Decision model below its confidence floor",
+  "aicalls.reason.decision_error": "Decision model failed",
+  "aicalls.reason.decision_off_enum":
+    "Decision model answered outside the options",
+  "aicalls.reason.decision_state_too_large":
+    "Input too large for the decision model",
+  "aicalls.reason.decision_uncertified":
+    "Decision model not certified for this task",
+  "aicalls.reason.decision_local_only":
+    "Task is local-only and the decision model is not",
   "aicalls.callsLabel": "Recent calls",
   "aicalls.filter.all": "All tasks",
   "aicalls.loadMore": "Load more",
@@ -8230,6 +8258,11 @@ export const en = {
   "aiRouting.lane.local_large":
     "Higher local-tier route; inspect the configured endpoint",
   "aiRouting.lane.embeddings": "Search and retrieval across records",
+  "aiRouting.lane.decisions":
+    "Typed questions, asked before the tiers where certified",
+  "aiRouting.decisions.add": "Add decision model",
+  "aiRouting.decisions.remove": "Remove decision model",
+  "aiRouting.decisions.absent": "No decision model. Every task uses the tiers.",
   "aiRouting.lanes.title": "Routing tiers",
   "aiRouting.priceSheet": "Price sheet",
   "aiRouting.provider.label": "Provider",
@@ -8289,6 +8322,11 @@ export const en = {
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
     "Provider host root without a version segment; /v1 is added. Required for openai_compatible, which has no default.",
+  "aiRouting.baseUrl.help.openrouterDecision":
+    "OpenRouter host root, such as https://openrouter.ai/api; /alpha/decisions is added. Required: this adapter has no default host.",
+  "aiRouting.baseUrl.help.laya":
+    "Laya server root without a path; /v1/systemone is added. Leave blank for the default, http://127.0.0.1:8765.",
+  "aiRouting.baseUrl.placeholder.laya": "http://127.0.0.1:8765",
   "aiRouting.models.noKey":
     "Price sheet only: this provider has no key, so its model list cannot be requested. Any model ID it serves still works; type it.",
   "aiRouting.models.noEndpoint":
@@ -9613,15 +9651,19 @@ export const en = {
   "worklist.loading": "Loading Worklist…",
   "worklist.queue": "Today",
   "worklist.review": "To review",
-  "worklist.more": "Show more",
+  "worklist.more": "Load more",
+  "worklist.more.where":
+    "More of the day: new items can land in “{today}” or “{review}”.",
   "worklist.more.failed": "More items did not load. Retry.",
   "worklist.summary":
     "{urgent} urgent · {due} due · {inPlay} in play · {lower} routine · {total} total",
   "worklist.summary.noMiddle":
     "{urgent} urgent · {due} due · {lower} routine · {total} total",
+  "worklist.summary.split": "{today} today · {review} to review",
   "worklist.completeness": "{shown} of {considered} shown",
   "worklist.review.partial":
-    "{loaded} of {total} shown. Load more to see the rest.",
+    "{loaded} of {total} shown. Load more below to see the rest.",
+  "worklist.review.partialDone": "{loaded} of {total} shown.",
   "worklist.completeness.bounded_one":
     "{shown} shown · {sources} source has more",
   "worklist.completeness.bounded_other":

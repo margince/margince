@@ -108,7 +108,7 @@
 737 frontend/src/screens/installation-settings.tsx
 762 frontend/src/screens/extension-access.tsx
 781 frontend/src/screens/onboarding-conversation/connect-scene.tsx
-789 frontend/src/screens/worklist.tsx
+777 frontend/src/screens/worklist.tsx
 790 frontend/src/screens/companycontacts/summary.tsx
 818 frontend/src/screens/import.tsx
 827 frontend/src/screens/voice-dna.tsx
@@ -127,7 +127,7 @@
 950 frontend/src/screens/automations.tsx
 965 frontend/src/screens/integrations-provider.tsx
 546 frontend/src/design-system/decisiondeck.tsx
-982 frontend/src/screens/ai-routing.tsx
+717 frontend/src/screens/ai-routing.tsx
 878 frontend/src/screens/create.tsx
 822 frontend/src/design-system/decisioncard.tsx
 989 frontend/src/screens/companyheader.tsx

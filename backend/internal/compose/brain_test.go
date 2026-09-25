@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/decision"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -114,5 +115,48 @@ func TestAnUnservableBindingIsTheOnlyFailureAFallbackMayAnswer(t *testing.T) {
 func TestAModelPathWithNoRouterReportsNoRoutingVersion(t *testing.T) {
 	if got := (ModelPath{}).RoutingVersion(); got != "" {
 		t.Errorf("RoutingVersion() = %q, want none", got)
+	}
+}
+
+// oneAnswerDecider answers every decision call with one label, and counts what
+// it was asked.
+type oneAnswerDecider struct {
+	answer decision.Answer
+	calls  int
+}
+
+func (d *oneAnswerDecider) Decide(context.Context, decision.Request) (decision.Response, error) {
+	d.calls++
+	return decision.Response{Answers: map[string]decision.Answer{decisionQuestionKey: d.answer}}, nil
+}
+
+// A task lane is a deciding lane: a site asking through ai.Decide reaches the
+// decision model when one is bound, rather than falling to the ladder because
+// the brain it holds cannot decide.
+func TestRouterBrainDecides(t *testing.T) {
+	cfg := ai.FakeRoutingConfig()
+	cfg.Decisions = &ai.DecisionsConfig{Provider: "openrouter_decision", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api"}
+	decider := &oneAnswerDecider{answer: decision.Answer{Choice: siteKindParked, Confidence: 0.95}}
+	fake := ai.NewFakeClient()
+	path, err := NewLocalModelPath(cfg, ai.WithFakeClient(fake), ai.WithFakeDecider(decider), ai.WithEveryDecisionCertified())
+	if err != nil {
+		t.Fatalf("NewLocalModelPath: %v", err)
+	}
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	page := crawlPage{URL: "https://parked.example", Text: "This domain is for sale."}
+
+	out, err := ai.Decide(ctx, path.SiteTriage, triageDecisionSite, triageDecision(page),
+		triageRequest(page, "en"), triageShapeValid, triageDecisionGate)
+	if err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+	if !out.Decided || out.Answer.Choice != siteKindParked {
+		t.Errorf("outcome = %+v, want the decision model's parked answer to stand", out)
+	}
+	if decider.calls != 1 {
+		t.Errorf("decision calls = %d, want 1", decider.calls)
+	}
+	if n := len(fake.Calls()); n != 0 {
+		t.Errorf("ladder calls = %d, want none behind a decision that stood", n)
 	}
 }
