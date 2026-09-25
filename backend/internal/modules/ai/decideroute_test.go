@@ -205,14 +205,14 @@ func TestAnAcceptedDecisionIsTracedAndMeteredOnTheDecideTier(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := f.store.recorded[0]
-	if row.Provider != providerOpenRouterDecision || row.ModelID != "typesafe/jev-1.13" || row.TokensIn != 400 || row.TokensOut != 0 ||
+	if row.Provider != providerOpenRouterDecision || row.ModelID != jevLane.Model || row.TokensIn != 400 || row.TokensOut != 0 ||
 		row.ServedModel != "typesafe/jev-1.13-20260917" || row.ServedIdentitySource != servedIdentitySourceResponse || row.ServedProvider != "TypeSafe" {
 		t.Errorf("decision row = %+v", row)
 	}
 	if len(f.meter.records) != 1 || f.meter.records[0] != (Usage{Task: TaskSiteTriage, Tier: TierDecideLane, TokensIn: 400}) {
 		t.Errorf("metered %+v, want one decide-tier usage of 400 input tokens", f.meter.records)
 	}
-	if got := decider.calls[0].Model; got != "typesafe/jev-1.13" {
+	if got := decider.calls[0].Model; got != jevLane.Model {
 		t.Errorf("the decider was asked for model %q, want the lane's", got)
 	}
 }
@@ -442,6 +442,6 @@ func TestTheLocalRouterTakesAFakeDecider(t *testing.T) {
 		t.Fatal(err)
 	}
 	if production.decisionCertified(DecisionCertKey{Task: TaskSiteTriage, Site: "triage", Provider: jevLane.Provider, Model: jevLane.Model}) {
-		t.Error("the empty table certifies a row without WithEveryDecisionCertified")
+		t.Error("an uncertified model is served without WithEveryDecisionCertified")
 	}
 }

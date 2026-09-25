@@ -10,7 +10,9 @@ import (
 )
 
 var (
-	jevLane  = &DecisionsConfig{Provider: providerOpenRouterDecision, Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api"}
+	// jevLane names a model no committed record certifies, so a test reads the
+	// certification table as empty for it whatever the generated table holds.
+	jevLane  = &DecisionsConfig{Provider: providerOpenRouterDecision, Model: "typesafe/jev-uncertified", BaseURL: "https://openrouter.ai/api"}
 	layaLane = &DecisionsConfig{Provider: providerLaya, Model: "typed-decisions"}
 )
 
@@ -75,7 +77,7 @@ func TestTheRoutingPreviewSaysWhyTheDecisionLaneIsSkipped(t *testing.T) {
 	cfg.Decisions = jevLane
 	uncertified := triageRoute(t, cfg, BandNormal)
 	if uncertified.DecisionFirst || reason(uncertified) != DecisionSkipUncertified {
-		t.Errorf("empty table: first=%v reason=%q", uncertified.DecisionFirst, reason(uncertified))
+		t.Errorf("uncertified model: first=%v reason=%q", uncertified.DecisionFirst, reason(uncertified))
 	}
 	want := crmcontracts.AiRouteCandidate{Tier: "decide", Provider: jevLane.Provider, Model: jevLane.Model, Processing: "cloud_provider"}
 	if uncertified.DecisionCandidate == nil || *uncertified.DecisionCandidate != want {
