@@ -186,7 +186,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterAssuranceTool(r, nil)
 	RegisterInputChecksTool(r, nil)
 	RegisterCoverageTool(r, nil)
-	RegisterIntentTools(r, inertRetriever{}, nil)
+	RegisterIntentTools(r, inertRetriever{}, nil, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context) ([]SlippingDeal, error) { return nil, nil },

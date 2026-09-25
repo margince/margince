@@ -13,10 +13,10 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 76 |
 | Resources | 12 |
-| Tool catalog | 219.3 KB |
+| Tool catalog | 219.8 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 57274 |
-| Largest tool | `prep_for_meeting` (8.8 KB) |
+| Approx. wire tokens | 57413 |
+| Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the WIRE bytes: they carry each tool's output schema and the governance
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 99.6 KB | 45% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 57.5 KB | 26% | Yes, every step |
-| Input schemas | 46.1 KB | 21% | Yes, every step |
+| Input schemas | 46.7 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.0 KB | 7% | Partly |
-| **Description + input schema** | **103.6 KB** | **47%** | **the recurring cost** |
+| **Description + input schema** | **104.2 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -71,7 +71,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.8 KB |
-| [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 2.8 KB |
+| [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.7 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
@@ -109,7 +109,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`log_activity`](#log_activity) | Log an activity |  |  | 3.9 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
-| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
+| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 4.3 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
@@ -1569,7 +1569,12 @@ Answer "what has been going on with this?" for one contact, company, deal, lead,
       "type": "string"
     },
     "record_id": {
+      "description": "The record to build around. Give this or record_name, not both.",
       "format": "uuid",
+      "type": "string"
+    },
+    "record_name": {
+      "description": "The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
       "type": "string"
     },
     "record_type": {
@@ -1585,8 +1590,7 @@ Answer "what has been going on with this?" for one contact, company, deal, lead,
     }
   },
   "required": [
-    "record_type",
-    "record_id"
+    "record_type"
   ],
   "type": "object"
 }
@@ -7978,7 +7982,12 @@ Get ready for a specific meeting: given the meeting, the same written brief a hu
       "type": "string"
     },
     "record_id": {
+      "description": "The record to build around. Give this or record_name, not both.",
       "format": "uuid",
+      "type": "string"
+    },
+    "record_name": {
+      "description": "The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
       "type": "string"
     },
     "record_type": {
@@ -7994,8 +8003,7 @@ Get ready for a specific meeting: given the meeting, the same written brief a hu
     }
   },
   "required": [
-    "record_type",
-    "record_id"
+    "record_type"
   ],
   "type": "object"
 }

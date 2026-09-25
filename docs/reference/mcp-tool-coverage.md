@@ -31,7 +31,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires as one of a set | 1 |
 | … **no case requires** | 39 |
 | … of those, permitted somewhere but never required | 19 |
-| Prompt tokens spent on tools no case requires | 12866 |
+| Prompt tokens spent on tools no case requires | 13005 |
 | Use cases | 21 |
 | Acceptance criteria the cases declare, each with a statement | 49 |
 
@@ -421,14 +421,14 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `book_meeting` | 423 | — | — | — |
 | `annotate_brief` | 418 | `agent_loop` | — | `morning_brief` |
 | `review_commitments` | 401 | — | `case41_close_the_project` | `overnight_at_risk_sweep` |
+| `prep_for_meeting` | 394 | — | `case23_find_us_a_slot`, `case5_before_the_meeting` | — |
 | `enrich` | 391 | `enrich` | — | — |
 | `describe_report_vocabulary` | 349 | — | `case20_put_it_in_the_board_pack`, `case7_ask_for_a_number` | — |
+| `catch_me_up_on` | 348 | `agent_loop` | `case23_find_us_a_slot`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case5_before_the_meeting`, `case6_ask_the_company`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `describe_record_fields` | 345 | — | — | — |
 | `forecast_input_checks` | 324 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |
-| `prep_for_meeting` | 324 | — | `case23_find_us_a_slot`, `case5_before_the_meeting` | — |
 | `demote_lead` | 317 | — | — | — |
 | `describe_analytics_vocabulary` | 286 | — | `case7_ask_for_a_number` | — |
-| `catch_me_up_on` | 279 | `agent_loop` | `case23_find_us_a_slot`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case5_before_the_meeting`, `case6_ask_the_company`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `draft_email` | 278 | `draft_reply` | — | — |
 | `draft_follow_ups_for` | 274 | — | — | — |
 | `prepare_handoff` | 267 | — | `case41_close_the_project` | — |
