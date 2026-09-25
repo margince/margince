@@ -62,8 +62,10 @@ func (cfg RoutingConfig) buildDecisionLane() (*decisionLane, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ai: decisions lane: %w", err)
 	}
-	return &decisionLane{
-		client: client,
-		meta:   routeMeta{provider: lane.Provider, model: lane.Model, baseURL: lane.BaseURL},
-	}, nil
+	return &decisionLane{client: client, meta: lane.routeMeta()}, nil
+}
+
+// routeMeta is the lane's identity as every trace row and rate lookup names it.
+func (lane DecisionsConfig) routeMeta() routeMeta {
+	return routeMeta{provider: lane.Provider, model: lane.Model, baseURL: lane.BaseURL}
 }

@@ -30,8 +30,8 @@ func embedInclusiveMeta(cfg RoutingConfig) map[Tier]routeMeta {
 	}
 	// The decisions lane likewise, under TierDecideLane, so the decision trace
 	// and the rate lookup name the model that answered.
-	if lane := cfg.Decisions; lane != nil {
-		meta[TierDecideLane] = routeMeta{provider: lane.Provider, model: lane.Model, baseURL: lane.BaseURL}
+	if cfg.Decisions != nil {
+		meta[TierDecideLane] = cfg.Decisions.routeMeta()
 	}
 	return meta
 }
@@ -162,6 +162,8 @@ func (r *Router) CurrentModelForTier(tier Tier) (ModelRef, bool) {
 // buildClients turns validated bindings into live Clients via
 // SelectBrain. Construction errors (missing BYOK key, unknown provider)
 // surface here — still startup, still loud.
+//
+//nolint:ireturn // the embedder is whichever adapter the embeddings lane names; the port interface IS its type
 func (cfg RoutingConfig) buildClients() (map[Tier]model.Client, model.Client, error) {
 	clients := make(map[Tier]model.Client, len(cfg.Tiers))
 	for tier, binding := range cfg.Tiers {

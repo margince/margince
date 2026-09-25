@@ -82,14 +82,23 @@ type Validator func(text string) error
 const maxLadderWalks = 3
 
 func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Request, validate Validator) (model.Response, RouteInfo, error) {
-	ladder, ok := taskLadders[task]
-	if !ok {
+	if _, ok := taskLadders[task]; !ok {
 		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
 	}
 	lc := newLogicalCall()
 	defer r.flushDetached(ctx, r.binding(), lc)
+	return r.completeStructuredOn(ctx, lc, task, req, validate, "")
+}
 
-	resp, info, err := r.serveAttempt(ctx, lc, task, ladder, req, "")
+// completeStructuredOn is the §5.2 policy over a logical call its caller owns
+// and flushes. firstReason is why its first walk runs: "" for an ordinary first
+// try, a decision_* reason when a decision attempt in the same logical call
+// did not stand.
+func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task Task, req model.Request,
+	validate Validator, firstReason string,
+) (model.Response, RouteInfo, error) {
+	ladder := taskLadders[task]
+	resp, info, err := r.serveAttempt(ctx, lc, task, ladder, req, firstReason)
 	if err != nil {
 		return model.Response{}, info, err
 	}

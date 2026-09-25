@@ -151,7 +151,9 @@ type railOccurrence struct {
 // — every return above those is untraced, so announcing higher would open an
 // occurrence with no terminal trace behind it at all. From that point the
 // deferred finalizeAttempt is armed, so the attempt APPENDS a terminal trace
-// whatever it does next.
+// whatever it does next. callDecider calls it too, for a decision site's call,
+// after the same workspace, budget and cache checks and every refusal — and
+// appends the decision row whatever the call does, so the same holds there.
 //
 // Appending is not writing, and that gap is this placement's honest limit: the
 // flush is best-effort by design (it must never fail a working model call), so

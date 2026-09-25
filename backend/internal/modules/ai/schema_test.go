@@ -59,6 +59,7 @@ func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
 			EmbeddingsBinding struct {
 				Properties map[string]any `json:"properties"`
 			} `json:"embeddingsBinding"`
+			//nolint:tagliatelle // "$defs" member names are this schema's own, matching the file
 			DecisionsBinding struct {
 				Properties struct {
 					Provider struct{ Enum []string } `json:"provider"`

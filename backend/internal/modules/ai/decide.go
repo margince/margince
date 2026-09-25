@@ -5,6 +5,8 @@ package ai
 
 import (
 	"context"
+	"slices"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/ports/decision"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -31,6 +33,23 @@ const (
 	attemptReasonDecisionUncertified   = "decision_uncertified"
 	attemptReasonDecisionLocalOnly     = "decision_local_only"
 )
+
+// decisionAttemptReasons is every reason a decision attempt hands the walk
+// after it, so the one test of "is this a decision reason" reads a list the
+// constants above are written into once.
+var decisionAttemptReasons = []string{
+	attemptReasonDecisionBelowFloor, attemptReasonDecisionError, attemptReasonDecisionOffEnum,
+	attemptReasonDecisionStateTooLarge, attemptReasonDecisionUncertified, attemptReasonDecisionLocalOnly,
+}
+
+func isDecisionFallbackReason(reason string) bool {
+	return slices.Contains(decisionAttemptReasons, reason)
+}
+
+// DecisionCallTimeout bounds one decision call. A decision answers in well
+// under two seconds (p50 about 0.6 s), and the ladder waits behind it, so a
+// slow one falls back rather than stalling a background task for minutes.
+const DecisionCallTimeout = 15 * time.Second
 
 // Why a task that declares a decision form is not answered by the decision
 // lane. The route preview reports one; the wire enum is the same three words.
@@ -77,7 +96,8 @@ type decidingLane interface {
 // would ask it, so a site is written once against this seam and a lane without
 // the decision form still serves it.
 func Decide(ctx context.Context, lane Completer, site string, dreq decision.Request,
-	req model.Request, validate Validator, gate DecisionGate) (DecideOutcome, error) {
+	req model.Request, validate Validator, gate DecisionGate,
+) (DecideOutcome, error) {
 	if deciding, ok := lane.(decidingLane); ok {
 		return deciding.CompleteDecided(ctx, site, dreq, req, validate, gate)
 	}
