@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { RelationshipPulse, ThinState, WhoKnowsThem } from "./contact360";
+import { ThinState } from "./contact360";
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -77,58 +77,6 @@ afterEach(() => {
   cleanup();
 });
 
-function viewWithChanges(): Contact360 {
-  return {
-    as_of: "2026-08-18T09:00:00Z",
-    contact,
-    sections_omitted: [],
-    last_inbound_at: "2026-08-17T10:00:00Z",
-    last_outbound_at: "2026-07-07T10:00:00Z",
-    relationship_changes: [
-      { kind: "replied_after_gap", at: "2026-08-17T10:00:00Z", days: 41 },
-      {
-        kind: "warmed",
-        at: "2026-08-18T09:00:00Z",
-        from_bucket: "weak",
-        to_bucket: "moderate",
-      },
-    ],
-  };
-}
-
-// The pulse says what the relationship IS; the changes under it say what
-// happened to it, and the pair is the point — "warm" is inferable from the two
-// dates above, "they replied after 41 quiet days" is what makes those dates
-// mean anything. A list that rendered nothing would leave the card asserting a
-// state with no event behind it.
-describe("what happened to the relationship", () => {
-  it("says each change in the 360's own sentence", () => {
-    render(
-      <LocaleProvider initial="en">
-        <RelationshipPulse view={viewWithChanges()} />
-      </LocaleProvider>,
-    );
-
-    expect(screen.getByText("They replied after 41 quiet days.")).toBeTruthy();
-    // A band move names BOTH bands: "the relationship moved" without saying
-    // from what to what is a claim the reader has to take on trust.
-    expect(
-      screen.getByText("The relationship moved from weak to moderate."),
-    ).toBeTruthy();
-  });
-
-  it("draws no list at all when nothing has moved", () => {
-    const view = viewWithChanges();
-    render(
-      <LocaleProvider initial="en">
-        <RelationshipPulse view={{ ...view, relationship_changes: [] }} />
-      </LocaleProvider>,
-    );
-
-    expect(screen.queryByRole("list")).toBeNull();
-  });
-});
-
 describe("the thin contact page", () => {
   it("names the employer of somebody still in the job", () => {
     mount(viewWith(null));
@@ -155,48 +103,5 @@ describe("the thin contact page", () => {
 
     expect(screen.queryByText(/Brandt Automotive GmbH/)).toBeNull();
     expect(screen.getByText(/Add their employer/)).toBeTruthy();
-  });
-});
-
-// The network card is the route in: each colleague by name, with the proof that
-// they are one — whether the traffic runs both ways, and when they last heard back.
-describe("who here knows them", () => {
-  it("lists each colleague who knows the contact, with the proof of the route", async () => {
-    render(
-      <LocaleProvider initial="en">
-        <WhoKnowsThem
-          view={{
-            ...viewWith(null),
-            network: {
-              colleagues: [
-                {
-                  user_id: "u-anna",
-                  display_name: "Anna Rep",
-                  strength_bucket: "strong",
-                  interactions_90d: 12,
-                  inbound_90d: 5,
-                  outbound_90d: 7,
-                  last_inbound_at: "2026-08-17T12:00:00Z",
-                },
-                {
-                  user_id: "u-ben",
-                  display_name: "Ben Rep",
-                  strength_bucket: "weak",
-                  interactions_90d: 3,
-                  inbound_90d: 0,
-                  outbound_90d: 3,
-                },
-              ],
-            },
-          }}
-        />
-      </LocaleProvider>,
-    );
-
-    const rows = await screen.findAllByRole("listitem");
-    expect(rows.map((row) => row.textContent)).toEqual([
-      "Anna Rep12 two-way exchanges in 90 days · replied 17/08/2026",
-      "Ben Rep3 interactions in 90 days, one-sided",
-    ]);
   });
 });

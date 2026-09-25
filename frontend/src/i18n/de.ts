@@ -1188,6 +1188,7 @@ export const de = {
     "Dieser Deal hat noch keinen Deal Room. Eröffne einen auf der Deal-Seite.",
   "roompage.backToDeal": "← Zurück zum Deal",
   "roompage.accessMenu": "Zugang zum Raum",
+  "roompage.manage": "Raum verwalten",
   "roompage.pause": "Pausieren",
   "roompage.pauseHint":
     "Die Käuferseite behält ihre Links, sieht aber eine Pausenseite, bis du fortsetzt.",
@@ -6761,15 +6762,6 @@ export const de = {
   // Die Beziehungsgraph-Karten (ADR-0078). Die Kollegen-Stufen sind die von
   // PO-F-3b und unterscheiden sich bewusst von denen der arbeitsbereichsweiten
   // Karte: beide messen Verschiedenes und dürfen nicht vergleichbar wirken.
-  "network.title": "Verbindungen im Team",
-  "network.empty":
-    "Noch kein Teammitglied stand mit diesem Kontakt in Verbindung.",
-  "network.interactions": "Interaktionen (90 Tage): {count}",
-  "network.neverSpoken": "Kein Kontakt erfasst",
-  "network.bucket.none": "Kein Kontakt",
-  "network.bucket.weak": "Schwach",
-  "network.bucket.moderate": "Mittel",
-  "network.bucket.strong": "Stark",
   "coverage.engaged": "Im Austausch",
   "coverage.quiet": "Kein beidseitiger Kontakt",
   "coverage.seatWithheld": "Ein Kontakt, den du nicht lesen kannst",
@@ -8647,18 +8639,6 @@ export const de = {
   "contact.bandBadge.weak": "Schwach",
   "contact.bandBadge.moderate": "Mittel",
   "contact.bandBadge.strong": "Stark",
-  "contact.pulse.title": "Beziehung",
-  "contact.pulse.warmestIs":
-    "{name} hat die stärkste Beziehung zu diesem Kontakt.",
-  "contact.pulse.nobodyYet":
-    "Im Unternehmen hat noch niemand einen erfassten Austausch mit diesem Kontakt.",
-  "contact.pulse.lastInbound": "Letzte Nachricht des Kontakts",
-  "contact.pulse.lastOutbound": "Letzte Nachricht deines Teams",
-  "contact.pulse.neverInbound": "nie",
-  "contact.pulse.neverOutbound": "nie",
-  "contact.pulse.why": "So wird das berechnet",
-  "contact.pulse.arithmetic":
-    "Score {score}/100 = 100 × Aktualität {recency} × Häufigkeit {frequency} × Gegenseitigkeit {reciprocity}. Wird beim Laden aus erfassten Aktivitäten berechnet und nicht gespeichert.",
   "contact.identity.title": "Identität",
   "contact.identity.emailDead":
     "Unzustellbar. E-Mails an diese Adresse werden nicht zugestellt.",
@@ -8673,9 +8653,6 @@ export const de = {
     "Für keinen Zweck ist eine Einwilligung erteilt, daher sind ausgehende Nachrichten blockiert.",
   "contact.consent.blocked": "Blockiert: {purposes}",
   "contact.network.title": "Teammitglieder, die diesen Kontakt kennen",
-  "contact.network.twoWay": "Wechselseitige Austausche in 90 Tagen: {count}",
-  "contact.network.oneSided": "Einseitige Interaktionen in 90 Tagen: {count}",
-  "contact.network.replied": "hat am {when} geantwortet",
 
   "contact.page.loading": "Wird geladen…",
   "contact.page.notOpened": "Dieser Kontakt wurde nicht geöffnet.",

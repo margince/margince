@@ -1178,6 +1178,7 @@ export const vi = {
     "Deal này chưa có Deal Room. Hãy mở một phòng từ trang deal.",
   "roompage.backToDeal": "← Về deal",
   "roompage.accessMenu": "Quyền vào phòng",
+  "roompage.manage": "Quản lý phòng",
   "roompage.pause": "Tạm dừng",
   "roompage.pauseHint":
     "Người mua giữ liên kết nhưng thấy trang tạm dừng cho đến khi bạn tiếp tục.",
@@ -6718,14 +6719,6 @@ export const vi = {
   // The relationship-graph cards (ADR-0078). The colleague bands are PO-F-3b's
   // own vocabulary and deliberately differ from the workspace-wide card's:
   // the two measure different things and must not read as comparable.
-  "network.title": "Ai bên mình quen họ",
-  "network.empty": "Chưa ai bên mình từng trao đổi với liên hệ này.",
-  "network.interactions": "{count} lượt tương tác (90 ngày)",
-  "network.neverSpoken": "Chưa ghi nhận liên hệ",
-  "network.bucket.none": "Chưa liên hệ",
-  "network.bucket.weak": "Yếu",
-  "network.bucket.moderate": "Vừa",
-  "network.bucket.strong": "Mạnh",
   "coverage.engaged": "Đang trao đổi",
   "coverage.quiet": "Chưa có trao đổi hai chiều",
   "coverage.seatWithheld": "Một liên hệ bạn không thể xem",
@@ -8573,16 +8566,6 @@ export const vi = {
   "contact.bandBadge.weak": "Yếu",
   "contact.bandBadge.moderate": "Vừa",
   "contact.bandBadge.strong": "Mạnh",
-  "contact.pulse.title": "Quan hệ",
-  "contact.pulse.warmestIs": "{name} có quan hệ thân thiết nhất bên mình.",
-  "contact.pulse.nobodyYet": "Chưa ai bên mình ghi nhận trao đổi với họ.",
-  "contact.pulse.lastInbound": "Họ viết lần cuối",
-  "contact.pulse.lastOutbound": "Mình viết lần cuối",
-  "contact.pulse.neverInbound": "chưa bao giờ",
-  "contact.pulse.neverOutbound": "chưa bao giờ",
-  "contact.pulse.why": "Cách tính con số này",
-  "contact.pulse.arithmetic":
-    "Điểm {score}/100 = 100 x độ gần đây {recency} x tần suất {frequency} x mức qua lại {reciprocity}. Tính lúc đọc từ nhịp trao đổi đã thu thập, không bao giờ lưu lại.",
   "contact.identity.title": "Danh tính",
   "contact.identity.emailDead":
     "Bị trả lại — thư gửi tới địa chỉ này không đến nơi",
@@ -8597,9 +8580,6 @@ export const vi = {
     "Chưa mục đích nào được cấp phép, nên việc gửi ra vẫn bị chặn.",
   "contact.consent.blocked": "Bị chặn: {purposes}",
   "contact.network.title": "Ai bên mình quen họ",
-  "contact.network.twoWay": "{count} lượt trao đổi hai chiều trong 90 ngày",
-  "contact.network.oneSided": "{count} lượt tương tác trong 90 ngày, một chiều",
-  "contact.network.replied": "đã hồi đáp {when}",
 
   "contact.page.loading": "Đang tải…",
   "contact.page.notOpened": "Không mở được liên hệ này.",

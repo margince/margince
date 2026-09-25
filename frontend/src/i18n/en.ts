@@ -1253,6 +1253,7 @@ export const en = {
     "This deal has no Deal Room yet. Open one from the deal page.",
   "roompage.backToDeal": "← Back to deal",
   "roompage.accessMenu": "Room access",
+  "roompage.manage": "Manage room",
   "roompage.pause": "Pause",
   "roompage.pauseHint":
     "Buyers keep their links but see a paused page until you resume.",
@@ -6962,14 +6963,6 @@ export const en = {
   // The relationship-graph cards (ADR-0078). The colleague bands are PO-F-3b's
   // own vocabulary and deliberately differ from the workspace-wide card's:
   // the two measure different things and must not read as comparable.
-  "network.title": "Colleague connections",
-  "network.empty": "No colleague has been in touch with this contact yet.",
-  "network.interactions": "{count} interactions (90 days)",
-  "network.neverSpoken": "No recorded contact",
-  "network.bucket.none": "No contact",
-  "network.bucket.weak": "Weak",
-  "network.bucket.moderate": "Moderate",
-  "network.bucket.strong": "Strong",
   "coverage.engaged": "Engaged",
   "coverage.quiet": "No two-way contact",
   "coverage.seatWithheld": "A contact you cannot read",
@@ -8798,18 +8791,6 @@ export const en = {
   "contact.bandBadge.weak": "Weak",
   "contact.bandBadge.moderate": "Moderate",
   "contact.bandBadge.strong": "Strong",
-  "contact.pulse.title": "Relationship",
-  "contact.pulse.warmestIs":
-    "{name} has the strongest relationship with this contact.",
-  "contact.pulse.nobodyYet":
-    "No one in the company has a recorded exchange with this contact yet.",
-  "contact.pulse.lastInbound": "They last wrote",
-  "contact.pulse.lastOutbound": "Your team last wrote",
-  "contact.pulse.neverInbound": "never",
-  "contact.pulse.neverOutbound": "never",
-  "contact.pulse.why": "How this is computed",
-  "contact.pulse.arithmetic":
-    "Score {score}/100 = 100 × recency {recency} × frequency {frequency} × reciprocity {reciprocity}. Computed on load from captured activity and not stored.",
   "contact.identity.title": "Identity",
   "contact.identity.emailDead":
     "Bouncing. Mail to this address is not delivered.",
@@ -8824,9 +8805,6 @@ export const en = {
     "No purpose granted, so outbound messages are blocked.",
   "contact.consent.blocked": "Blocked: {purposes}",
   "contact.network.title": "Colleagues who know this contact",
-  "contact.network.twoWay": "{count} two-way exchanges in 90 days",
-  "contact.network.oneSided": "{count} interactions in 90 days, one-sided",
-  "contact.network.replied": "replied {when}",
 
   // The contact record page V2 (ADR-0096). The strip, rail and card words are
   // split by SLOT rather than by sentence, because the same word means
