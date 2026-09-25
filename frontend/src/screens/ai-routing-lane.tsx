@@ -286,9 +286,9 @@ export function DecisionLaneRow({
 }
 
 // A decision model and its host name one adapter's endpoint: OpenRouter's Jev
-// slug means nothing to TypeSafe's own API or to a self-hosted checkpoint. A provider switch
-// therefore starts the binding over rather than pointing the new adapter at the
-// old one's address.
+// slug means nothing to TypeSafe's own API or to a self-hosted checkpoint. A
+// provider switch therefore starts the binding over rather than pointing the
+// new adapter at the old one's address.
 function reboundDecision(
   previous: DecisionsBinding,
   next: DecisionsBinding,

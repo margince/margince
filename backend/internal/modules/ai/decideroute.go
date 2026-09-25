@@ -20,9 +20,9 @@ import (
 )
 
 // maxDecisionStateBytes bounds the state a decision request carries. A
-// self-hosted Jev-wire server (Laya) refuses a state over 50,000 characters, and a byte count at or under this
-// is under that in any encoding; a larger state goes to the ladder, whose
-// prompt the site already bounds for itself.
+// self-hosted Jev-wire server (Laya) refuses a state over 50,000 characters,
+// and a byte count at or under this is under that in any encoding; a larger
+// state goes to the ladder, whose prompt the site already bounds for itself.
 const maxDecisionStateBytes = 48_000
 
 // DecisionProbe is the decision half of Decide alone, as the certification

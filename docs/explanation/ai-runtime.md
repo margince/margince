@@ -348,21 +348,22 @@ unless every check passes, in this order:
    bytes, the call has 15 seconds, and the answer must be an offered label at
    or above the **site's own** floor (the one its LLM path applies).
 
-A fallback leaves its reason on the ladder's first attempt: `decision_local_only`, `decision_uncertified`,
-`decision_state_too_large`, `decision_error`, `decision_off_enum` or `decision_below_floor`. A decision
-attempt is its own `ai_call` row (`kind = decision`, tier `decide`), metered on input tokens and priced on
-the `decisions` rate lane. It keeps the answer (`decision_choice`, `decision_confidence`) whether or not it
-stood, `no_payload` tasks included, so floors can be tuned from real fallbacks; the call detail shows it. The route preview shows per feature whether
-the lane answers first, or why not: `unbound`, `local_only` or `uncertified`.
-`GET /v1/ai/usage` reports each task's `decisions` (asked, decided, fallbacks by
-reason) from `ai_call` per logical call, since `ai_usage` counts attempts.
+A fallback leaves its reason on the ladder's first attempt:
+`decision_local_only`, `decision_uncertified`, `decision_state_too_large`,
+`decision_error`, `decision_off_enum` or `decision_below_floor`. A decision
+attempt is its own `ai_call` row (`kind = decision`, tier `decide`), metered on
+input tokens and priced on the `decisions` rate lane. It keeps its answer
+(`decision_choice`, `decision_confidence`) whether or not it stood, `no_payload`
+tasks included: floors are tuned from real fallbacks. The route preview says per
+feature whether the lane answers first or why not (`unbound`, `local_only`,
+`uncertified`); `GET /v1/ai/usage` counts a task's `decisions` per logical call.
 
 Two providers speak the one wire, `base_url` being the full endpoint: `jev`,
 TypeSafe's own API, and `jev_compatible`, any Jev-wire server — OpenRouter
 ([openrouter.md](../reference/openrouter.md#11-the-decisions-endpoint)) or a
-self-hosted Kev, Laya or LiteLLM. Endpoints and keys: [configuration.md](../reference/configuration.md).
-`sovereign` refuses `jev` and holds `jev_compatible` to its endpoint rule;
-`eu_hosted` refuses `jev` and an OpenRouter endpoint.
+self-hosted Kev, Laya or LiteLLM. `sovereign` refuses `jev` and holds
+`jev_compatible` to its endpoint rule; `eu_hosted` refuses `jev` and an
+OpenRouter endpoint. See [configuration.md](../reference/configuration.md).
 
 ## The one gate — `ai.Router`
 
@@ -461,8 +462,7 @@ model-call hot path.
 - **The pre-flight estimate (`compose/costestimate`).** The same estimate told as one
   end-to-end story — the consent screen, the scope count, and the spend that lands after the
   import finishes — is [mail-history-import.md](mail-history-import.md); the formula is here.
-  Before a backfill runs,
-  the preview estimates its cost as `Σ per-task (per-unit cost × expected units)`:
+  Before a backfill runs, the preview estimates its cost as `Σ per-task (per-unit cost × expected units)`:
   - **Per-unit cost** comes from the last 7 days of `ai_call` history, grouped
     into `(task, tier, provider, model)` slices. Each slice is priced at whichever
     model *will* serve it now: the model that served it if that's still bound,
