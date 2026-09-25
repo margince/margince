@@ -14,10 +14,6 @@ package gates
 // rotation spends the presented token, retires the passport and mints a
 // replacement under the same grant, so the agent comes back identical in every
 // way that governs it and different in the one field three rules were comparing.
-// The three disagreed about what that meant — the release refused nothing, while
-// redemption and the poll refused the proposer its own proposal — which is the
-// shape a reader cannot see from one call site.
-//
 // So the comparison lives in sameAgent and a fourth reader re-deriving it fails
 // here rather than shipping a fourth answer. Approvals is the whole corpus
 // because `row` is unexported: no other package can hold a staged proposal to

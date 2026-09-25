@@ -17,12 +17,6 @@ import (
 // access-token lifetime, with the same connection, the same lender and the same
 // scopes.
 //
-// Spelling it as passport equality therefore broke in both directions at once:
-// the proposer stopped recognising its own proposal when it came to redeem or
-// poll it, and stopped being refused when it came to APPROVE it — a confirm-first
-// call released by the credential that staged it, with the receipt naming the
-// human who never saw it.
-//
 // The connection is asked first because it is the durable half. Passport
 // equality still answers for a passport a human minted directly: those carry no
 // grant, and minting one is human-only in the contract — held by
