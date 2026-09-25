@@ -611,3 +611,69 @@ func TestSyncKeepsGoingWhenTheSinkCannotTakeRemovals(t *testing.T) {
 		t.Fatalf("captured %d messages, want 1 — a sink without the verb still captures mail", len(sink.recs))
 	}
 }
+
+// failingRemover refuses every removal, so the loop's behaviour after one
+// failure is observable rather than inferred.
+type failingRemover struct {
+	recordingSink
+	seen []string
+}
+
+func (s *failingRemover) RemoveMessage(_ context.Context, key connector.NaturalKey) error {
+	s.seen = append(s.seen, key.SourceID)
+	return errors.New("the copy is held by a legal duty")
+}
+
+// A failure on one removal does not stop the pull, nor the removals behind it.
+// Losing a round of new mail because one deletion could not be acted on trades
+// a small wrong for a larger one — and the message that failed is still here,
+// which the next round's history will mention again.
+func TestAFailedRemovalDoesNotStopTheOnesBehindIt(t *testing.T) {
+	sink := &failingRemover{}
+
+	reportRemovals(context.Background(), sink, []string{"first@mail", "second@mail", "third@mail"})
+
+	if len(sink.seen) != 3 {
+		t.Fatalf("reached %d removals (%v), want all 3 — one failure stopped the rest", len(sink.seen), sink.seen)
+	}
+}
+
+// A Sink that cannot take removals is not a fault: connector.MessageRemover is
+// optional by design, so a fixture implementing only Upsert behaves exactly as
+// this connector did before it learned about deletions.
+func TestASinkThatTakesNoRemovalsIsNotAFailure(t *testing.T) {
+	plain := &recordingSink{}
+
+	reportRemovals(context.Background(), plain, []string{"gone@mail"})
+
+	if len(plain.recs) != 0 {
+		t.Errorf("a removal reached Upsert: %+v", plain.recs)
+	}
+}
+
+// Nothing deleted asks nothing of the sink — including of a sink that could
+// have taken it. The round is the ordinary one and must not touch the seam.
+func TestAnEmptyRemovalListAsksTheSinkNothing(t *testing.T) {
+	sink := &removalSink{}
+
+	reportRemovals(context.Background(), sink, nil)
+
+	if len(sink.removed) != 0 {
+		t.Errorf("an empty deletion list still reached the sink: %+v", sink.removed)
+	}
+}
+
+// Each removal names the message by the natural key it was captured under:
+// this connector's own source system, and Gmail's id for the message.
+func TestEachRemovalNamesTheKeyTheMessageWasCapturedUnder(t *testing.T) {
+	sink := &removalSink{}
+
+	reportRemovals(context.Background(), sink, []string{"gone@mail.gmail.com"})
+
+	if len(sink.removed) != 1 {
+		t.Fatalf("want one removal, got %+v", sink.removed)
+	}
+	if got := sink.removed[0]; got.SourceSystem != connectorName || got.SourceID != "gone@mail.gmail.com" {
+		t.Errorf("removal named %+v, want this connector's system and Gmail's id", got)
+	}
+}

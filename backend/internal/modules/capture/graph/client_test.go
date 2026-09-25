@@ -252,15 +252,23 @@ func TestDeltaInitWalksPagesFiltersTombstonesAndReturnsDeltaLink(t *testing.T) {
 	}
 }
 
-func TestDeltaResumeCollectsAddedAndSkipsRemoved(t *testing.T) {
+func TestDeltaResumeCollectsAddedAndReportsRemoved(t *testing.T) {
 	srv := msStub(t)
 	api := NewAPI(srv.Client(), srv.URL)
-	ids, _, delta, err := api.Delta(context.Background(), "access-2", srv.URL+"/me/mailFolders/inbox/messages/delta?%24deltatoken=d1")
+	ids, removed, delta, err := api.Delta(context.Background(), "access-2", srv.URL+"/me/mailFolders/inbox/messages/delta?%24deltatoken=d1")
 	if err != nil {
 		t.Fatalf("Delta: %v", err)
 	}
 	if strings.Join(ids, ",") != "m3" {
 		t.Errorf("ids = %v, want [m3] (the tombstoned entry is not fetched)", ids)
+	}
+	// The tombstone travels its OWN way rather than being dropped. A @removed
+	// entry carries no message fields, so there is nothing to fetch — but it is
+	// the owner saying they deleted their copy, and this workspace may be
+	// holding one. Discarding it here is the bug this return value fixed, and
+	// asserting only the fetched ids would not notice it coming back.
+	if strings.Join(removed, ",") != "tombstone" {
+		t.Errorf("removed = %v, want [tombstone] — the deletion was dropped on the floor", removed)
 	}
 	if !strings.Contains(delta, "d2") {
 		t.Errorf("advanced deltaLink = %q, want the d2 link", delta)
