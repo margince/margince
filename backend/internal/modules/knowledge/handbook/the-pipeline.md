@@ -212,9 +212,8 @@ frozen exchange rate** on the way, which the dialog does not tell you.
 Reopening is treated as seriously as closing, because it takes revenue back out
 of a quarter that has already been reported.
 
-If a partner earned commission on the win, reopening does not delete it. A
-reversal row is added and the original is marked **Reversed**. A deal that was
-won, reopened and won again shows three rows. Nothing is rewritten.
+Reopening a won deal does not delete a partner's commission on it; a reversal
+row is added instead, as [Partners and commission](partners.md) explains.
 
 ## Stalled deals
 
@@ -350,34 +349,13 @@ report. **Show archived** lets you see one, read-only. There is no way to bring
 one back from the app. Closed or archived, a deal has no checkbox for a bulk
 action. **Two deals cannot be merged.**
 
+### Can I merge two duplicate deals?
+No. Margince has no merge for deals: merging covers contacts and companies only. When one opportunity was entered twice, keep the better deal and archive the other with **More actions** → **Archive deal**. Archiving carries nothing across, so move what you need first: relink its emails to the kept deal with **Relink**, and note anything else on the kept deal. Also called: duplicate deal, combine two opportunities.
+
 ## Partners on a deal
 
-If a partner is involved, name them and say how under **Partner attribution**:
-**Sourced the deal (earns commission)** or **Influenced an existing deal (no
-commission)**. Naming a partner without saying which reads **Not set (counted as
-sourced)**. Commission accrues on the sourced case only.
-
-### The commission ledger
-
-A partner's own page carries a **Commission** panel with a row per deal: the
-**Deal**, what was **Earned**, the **Rate**, the **Deal value** it was taken
-from, and a **Status**. Above it sits **Outstanding**, accrued or approved.
-
-Four statuses, and a row moves through them by somebody deciding:
-
-| Status | What it means |
-|---|---|
-| **Accrued** | Earned, nobody has approved it |
-| **Approved** | Approved for payment |
-| **Paid** | Paid |
-| **Reversed** | Undone, with the original left standing |
-
-The verbs are Approve, Mark as paid and Reverse. Where a decision is not yours,
-the cell says **"No permission to decide"** rather than offering a button that
-refuses. Nothing earned yet reads "No commission yet".
-
-The partner's margin tier is frozen onto the commission at the moment it accrues,
-so changing a partner's tier later does not rewrite what they have already
-earned. A partner with no tier earns nothing, and no commission row is written at
-all — which is different from writing a zero. "We owe them nothing" and "we owe
-them nothing yet" are not the same claim, and a zero row would blur them.
+A deal in Margince can name the partner that brought it under **via partner**,
+and say under **Partner attribution** whether they sourced it or only
+influenced it. Commission accrues on a sourced win only. Setting up partners,
+crediting one on a deal, and approving or paying their commission are on
+[Partners and commission](partners.md).

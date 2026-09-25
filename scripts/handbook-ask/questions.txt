@@ -189,3 +189,13 @@ how do I upload the signed contract for a customer
 # after the final held-out round
 where do I see my team's pipeline
 how do I ask margince a question about a company
+
+# partners, projects and replies
+how do I make a company a partner
+how do I pay a partner their commission
+how do I see all our partners
+how do I start delivery after we won the deal
+what is on a project page
+how do I tag an email with a project
+how do I reply to an older email in the thread
+can I merge two duplicate deals

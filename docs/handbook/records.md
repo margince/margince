@@ -108,6 +108,10 @@ To link a contact to a company in Margince, open the contact's page and choose *
 To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**.
 Also called: set a contact's company, assign to an account, employer.
 
+### How do I match a purchased job history entry to a company?
+When purchased employment history in Margince names an employer it cannot match, the contact's **Companies** section shows **Company match needed.**; choose **Match company**.
+Pick an existing company, or enter its **Confirmed company website** to create it, then choose **Save company link**. The choice applies to every unmatched role at that employer. **Dismiss evidence** drops an entry that should not become a link. A company name alone never creates a company. Also called: unresolved employer, imported job history.
+
 Emails are typed **work, personal or other**; phones **work, mobile, home or
 other**. One number may appear twice under two types — a switchboard that is
 both work and mobile — and editing the list keeps the two rows apart.
