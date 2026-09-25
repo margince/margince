@@ -24,7 +24,9 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -134,6 +136,15 @@ func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceR
 	// sign them to hundreds of findings they never made. Who asked is a
 	// different fact and rides on the run row's own requested_by.
 	wsCtx = principal.SystemActing(wsCtx, assuranceActor)
+	// An unnamed asker is refused HERE, before the pass does its work. The run
+	// row's own constraint refuses a blank requester, so the alternative is a
+	// full walk of the pipeline thrown away at the commit — and the transport
+	// that enqueues this already holds an authenticated human, so a blank one
+	// means the args were built somewhere that does not.
+	if strings.TrimSpace(job.Args.RequestedBy) == "" {
+		return jobs.FaultContext(ctx, fmt.Errorf(
+			"%s: a pass somebody asked for carries no asker", job.Args.Kind()))
+	}
 	return jobs.FaultContext(ctx, w.sweep.check(wsCtx, job.Args.Workspace, &job.Args.RequestedBy))
 }
 

@@ -104,11 +104,11 @@ function ReviewPanel({
         {/* Coverage first and SEPARATE. A reader who takes "no findings" for a
             clean pipeline when nobody could look has been told the opposite of
             what happened. */}
-        <CoverageLine run={run} />
+        <CoverageLine sources={run.sources} />
         {/* Beside the coverage line rather than in the header: a recheck is an
             answer to what the coverage line just said, and the header already
             carries the verdict. */}
-        <Recheck />
+        <Recheck runId={run.run_id} />
       </PanelBody>
       <QueryGate query={checks} pendingLabel={title}>
         {(found) =>
@@ -154,11 +154,11 @@ function ReadinessBadge({ run }: Readonly<{ run: Assurance }>) {
 //
 // Named sources rather than a count: "2 of 6 sources" tells a reader a number,
 // and which two is what they need to fix it.
-function CoverageLine({ run }: Readonly<{ run: Assurance }>) {
+export function CoverageLine({
+  sources,
+}: Readonly<{ sources: Assurance["sources"] | undefined }>) {
   const t = useT();
-  const unread = (run.sources ?? []).filter(
-    (source) => source.state !== "checked",
-  );
+  const unread = (sources ?? []).filter((source) => source.state !== "checked");
   if (unread.length === 0) {
     return <p className="sub">{t("review.allSourcesRead")}</p>;
   }

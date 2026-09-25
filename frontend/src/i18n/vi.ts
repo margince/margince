@@ -3978,15 +3978,19 @@ export const vi = {
     "Chưa kiểm tra gì: lần kiểm tra đầu tiên chưa chạy. Các số liệu ở trên phản ánh hồ sơ hiện tại.",
   "review.firstCheck.title": "Bắt đầu kiểm tra dữ liệu đầu vào",
   "review.firstCheck.body":
-    "Việc kiểm tra hằng đêm chỉ chạy sau khi bạn bắt đầu. Lượt chạy đầu tiên nêu mọi vấn đề tìm được cùng một lúc và mở một việc cho mỗi giao dịch liên quan, nên biết trước quy mô là điều đáng làm.",
+    "Việc kiểm tra hằng đêm chỉ chạy sau khi bạn bắt đầu. Lần kiểm tra đầu tiên nêu mọi phát hiện cùng một lúc và mở một việc cho mỗi giao dịch liên quan, nên biết trước quy mô là điều đáng làm.",
   "review.firstCheck.scope":
-    "Giao dịch sẽ kiểm tra: {deals}. Vấn đề sẽ nêu: {findings}.",
+    "Giao dịch sẽ kiểm tra: {deals}. Phát hiện sẽ nêu: {findings}.",
   "review.firstCheck.start": "Bắt đầu kiểm tra",
-  "review.firstCheck.starting": "Đang bắt đầu kiểm tra",
-  "review.firstCheck.pending": "Đang tính xem một lượt kiểm tra sẽ tìm thấy gì",
+  "review.firstCheck.starting": "Đang bắt đầu kiểm tra…",
+  "review.firstCheck.pending":
+    "Đang tính xem một lượt kiểm tra sẽ tìm thấy gì…",
   "review.check.running": "Đang kiểm tra. Kết quả sẽ hiện ở đây khi xong.",
   "review.recheck.label": "Kiểm tra lại",
-  "review.recheck.starting": "Đang bắt đầu kiểm tra",
+  "review.recheck.starting": "Đang bắt đầu kiểm tra…",
+  "review.firstCheck.cannotLook":
+    "Một lượt kiểm tra ngay bây giờ không đọc được mọi nguồn cần thiết, nên không thể nói sẽ tìm thấy gì. Vẫn có thể bắt đầu; lượt chạy sẽ báo đúng khoảng trống đó.",
+  "review.check.failed": "Không thể bắt đầu kiểm tra",
   "review.nothingToCheck": "Không có gì để kiểm tra.",
   "review.answer": "Trả lời",
   "review.colSeverity": "Mức độ",

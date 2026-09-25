@@ -4011,16 +4011,19 @@ export const de = {
     "Noch nichts geprüft: Die erste Prüfung wurde noch nicht ausgeführt. Die Werte oben geben die aktuellen Datensätze wieder.",
   "review.firstCheck.title": "Eingabeprüfung starten",
   "review.firstCheck.body":
-    "Die nächtliche Prüfung läuft hier erst, wenn du sie startest. Der erste Durchlauf meldet alle gefundenen Probleme auf einmal und öffnet eine Aufgabe je betroffenem Deal. Der Umfang ist deshalb vorab wissenswert.",
+    "Die nächtliche Prüfung läuft hier erst, wenn du sie startest. Die erste Prüfung meldet alle Befunde auf einmal und öffnet eine Aufgabe je betroffenem Deal. Der Umfang ist deshalb vorab wissenswert.",
   "review.firstCheck.scope":
-    "Zu prüfende Deals: {deals}. Zu meldende Probleme: {findings}.",
+    "Zu prüfende Deals: {deals}. Zu meldende Befunde: {findings}.",
   "review.firstCheck.start": "Prüfung starten",
-  "review.firstCheck.starting": "Prüfung wird gestartet",
-  "review.firstCheck.pending": "Ermittelt, was eine Prüfung finden würde",
+  "review.firstCheck.starting": "Prüfung wird gestartet…",
+  "review.firstCheck.pending": "Ermittelt, was eine Prüfung finden würde…",
   "review.check.running":
     "Die Prüfung läuft. Die Befunde erscheinen hier, sobald sie fertig ist.",
   "review.recheck.label": "Erneut prüfen",
-  "review.recheck.starting": "Prüfung wird gestartet",
+  "review.recheck.starting": "Prüfung wird gestartet…",
+  "review.firstCheck.cannotLook":
+    "Eine Prüfung könnte jetzt nicht alle nötigen Quellen lesen und kann deshalb nicht sagen, was sie finden würde. Starten ist trotzdem möglich; der Lauf meldet dieselbe Lücke.",
+  "review.check.failed": "Die Prüfung konnte nicht gestartet werden",
   "review.nothingToCheck": "Nichts zu prüfen.",
   "review.answer": "Beantworten",
   "review.colSeverity": "Schweregrad",

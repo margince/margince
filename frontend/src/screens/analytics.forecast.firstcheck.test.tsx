@@ -33,7 +33,15 @@ type Posted = { url: string };
 
 // The server as a never-checked workspace presents it: the assurance read
 // answers 404 and the preview answers what a first pass would find.
-function show({ conflict }: { conflict?: boolean } = {}) {
+function show({
+  conflict,
+  preview = PREVIEW,
+  refuse,
+}: {
+  conflict?: boolean;
+  preview?: typeof PREVIEW;
+  refuse?: { status: number; detail: string };
+} = {}) {
   const posted: Posted[] = [];
   vi.stubGlobal(
     "fetch",
@@ -42,6 +50,16 @@ function show({ conflict }: { conflict?: boolean } = {}) {
       const url = String(request ? request.url : input);
       if (request?.method === "POST") {
         posted.push({ url });
+        if (refuse) {
+          return jsonResponse(
+            {
+              title: "Forbidden",
+              status: refuse.status,
+              detail: refuse.detail,
+            },
+            refuse.status,
+          );
+        }
         return conflict
           ? jsonResponse(
               {
@@ -54,7 +72,7 @@ function show({ conflict }: { conflict?: boolean } = {}) {
           : jsonResponse({ status: "enqueued" }, 202);
       }
       if (url.includes("/forecast/assurance/preview")) {
-        return jsonResponse(PREVIEW);
+        return jsonResponse(preview);
       }
       if (url.includes("/forecast/assurance/exceptions")) {
         return jsonResponse({ data: [] });
@@ -139,5 +157,42 @@ describe("a workspace nobody has started", () => {
     // 409 is not a failure to report as one: the pass this reader wanted is
     // already under way, and an error notice would send them to fix something.
     expect(await screen.findByText(/check is running/i)).toBeTruthy();
+  });
+
+  // The misreading this whole surface exists to prevent, on the one screen
+  // that had reproduced it: a preview that could not read its sources reports
+  // no findings, and no findings is exactly what a clean pipeline reports.
+  it("does not report a clean pipeline when it could not read the sources", async () => {
+    show({
+      preview: {
+        ...PREVIEW,
+        eligible_deals: 0,
+        findings: [],
+        readiness: "checks_incomplete",
+        sources: [{ source: "mail", state: "unavailable" }],
+      },
+    });
+
+    await screen.findByRole("button", { name: "Start checking" });
+    // The zeroes must not be printed as a scope: a reader takes "0 findings"
+    // for a sound pipeline and starts the cycle on it.
+    expect(screen.queryByText(/Findings it would raise/)).toBeNull();
+    // What is said instead names the source that went unread, so the reader
+    // knows there is something to fix rather than nothing to do.
+    expect(await screen.findByText(/mailbox/i)).toBeTruthy();
+  });
+
+  it("says why a refused press did nothing", async () => {
+    const user = userEvent.setup();
+    show({ refuse: { status: 403, detail: "you may not start a check" } });
+
+    await user.click(
+      await screen.findByRole("button", { name: "Start checking" }),
+    );
+
+    // A stopped spinner and nothing else is indistinguishable from a button
+    // that is not wired up, and a seat without `forecast: create` sees exactly
+    // that on every press.
+    expect(await screen.findByText(/could not be started/i)).toBeTruthy();
   });
 });

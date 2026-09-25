@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -111,6 +112,20 @@ func askEveryRule(now time.Time, subjects []Subject, cfg Config) walked {
 func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) (Result, error) {
 	var out Result
 	err := s.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// ONE pass at a time, and the lock is the whole reason a human may ask
+		// for one. Two overlapping passes walk two snapshots, and CloseCleared
+		// closes any open finding its own walk did not re-mint — so the older
+		// snapshot can close a finding the newer one just raised, and the deal
+		// it belongs to loses the task that was about to be minted for it.
+		// Nothing arbitrated this while the nightly sweep was the only caller.
+		//
+		// The key carries no workspace, following LockWriteIdentity's own rule:
+		// one installation serves one company, so a workspace would distinguish
+		// nothing. A pass that has to wait is correct — it runs next, over the
+		// records the first one left.
+		if err := storekit.LockWriteIdentity(ctx, tx, "assurance", "pass"); err != nil {
+			return err
+		}
 		runID, err := s.store.StartRun(ctx, tx, now, requestedBy)
 		if err != nil {
 			return err
