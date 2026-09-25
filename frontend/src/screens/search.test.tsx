@@ -474,6 +474,98 @@ describe("SearchScreen", () => {
     expect(await screen.findByText("Key Account")).toBeTruthy();
     expect(screen.queryByText(/Records: \d+/)).toBeNull();
   });
+
+  // A partner is a property of a company and not a thing the search finds, so
+  // the company hit carries the fact and the route: the account is a partner,
+  // and its partner record is one press away rather than reachable only by
+  // knowing the Partners screen exists.
+  it("marks a partner company and routes to its partner record", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "company",
+              id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+              title: "Brandt GmbH",
+              trust_tier: "authoritative",
+              is_partner: true,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    const { container } = render(<SearchScreen q="brandt" />);
+    await waitFor(() => expect(screen.getByText("Brandt GmbH")).toBeTruthy());
+    expect(screen.getByText("Partner")).toBeTruthy();
+    // The one badge on the row is the fact; the route beside it is a link,
+    // because a badge is never pressed.
+    expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(1);
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Open partner record" }));
+    expect(window.location.hash).toBe(
+      "#/companies/01a05ebd-b03d-7183-b2fb-c00bcb58b419/partner",
+    );
+  });
+
+  // `false` is a company checked and found plain; an absent field is a marker
+  // nobody took, which the server sends when the reader may not read partner
+  // programmes. Neither is a partner, so neither draws the mark or the route.
+  it.each([{ is_partner: false }, { is_partner: null }, {}])(
+    "draws no partner mark for a company hit carrying %o",
+    async (marker) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () =>
+          jsonResponse({
+            data: [
+              {
+                type: "company",
+                id: "o1",
+                title: "Brandt GmbH",
+                trust_tier: "authoritative",
+                ...marker,
+              },
+            ],
+            page: { next_cursor: null, has_more: false },
+          }),
+        ),
+      );
+      const { container } = render(<SearchScreen q="brandt" />);
+      await waitFor(() => expect(screen.getByText("Brandt GmbH")).toBeTruthy());
+      expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(0);
+      expect(screen.queryByText("Open partner record")).toBeNull();
+    },
+  );
+
+  // The marker means nothing off a company, and the screen holds that itself
+  // rather than trusting the server to send it on company hits alone.
+  it("draws no partner mark on a hit that is not a company", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "contact",
+              id: "p1",
+              title: "Dana Buyer",
+              trust_tier: "authoritative",
+              is_partner: true,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    const { container } = render(<SearchScreen q="dana" />);
+    await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
+    expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(0);
+    expect(screen.queryByText("Open partner record")).toBeNull();
+  });
 });
 
 // The results screen dropped `project` hits for months: the server ranked and

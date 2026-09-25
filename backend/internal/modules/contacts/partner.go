@@ -26,6 +26,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// livePartnerSQL renders "this company's partner programme is live" — a row
+// that has not been retired — qualified by the caller's alias, or unqualified
+// when there is none. Shared, because a reader and a guard that spelled this
+// differently would disagree about which companies are partners.
+func livePartnerSQL(alias string) string {
+	if alias == "" {
+		return "archived_at IS NULL"
+	}
+	return alias + ".archived_at IS NULL"
+}
+
 const partnerColumns = `company_id, cert_status, partner_role, margin_tier,
 	certified_staff, retention_rate, relationship_stage, next_step, next_step_due_at,
 	served_segments, partner_fit_score, partner_fit_score_computed,
@@ -297,7 +308,7 @@ func (s *Store) GetPartner(ctx context.Context, companyID ids.CompanyID) (partne
 		}
 		var err error
 		out, err = scanPartner(tx.QueryRow(ctx,
-			`SELECT `+partnerColumns+` FROM partner WHERE company_id = $1 AND archived_at IS NULL`,
+			`SELECT `+partnerColumns+` FROM partner WHERE company_id = $1 AND `+livePartnerSQL(""),
 			companyID))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound // the company is not a partner
@@ -378,7 +389,7 @@ func (s *Store) MarginTierOf(ctx context.Context, companyID ids.CompanyID) (*str
 	var tier *string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
-			`SELECT margin_tier FROM partner WHERE company_id = $1 AND archived_at IS NULL`,
+			`SELECT margin_tier FROM partner WHERE company_id = $1 AND `+livePartnerSQL(""),
 			companyID).Scan(&tier)
 		if errors.Is(err, pgx.ErrNoRows) {
 			tier = nil

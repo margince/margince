@@ -40,6 +40,15 @@ type Store struct {
 	// ask): an email hit then carries no row, and the frontend renders it the
 	// generic way rather than showing a blank canonical one.
 	emailSummaries EmailSummaryReader
+	// partnerMarks answers which companies carry a live partner programme, for
+	// THIS caller. It is the contacts store's own reader, injected by compose
+	// because a module never imports a sibling — and because a partner is a
+	// property of a company rather than a record to find, so there is no branch
+	// here that could answer it.
+	//
+	// Nil where nothing supplied it (a worker's store, a test that does not
+	// ask), and a company hit then carries no marker.
+	partnerMarks PartnerMarker
 }
 
 // NewStore opens this module's store on a handle already bound to the
@@ -60,6 +69,12 @@ func (s *Store) WithEmailSummaries(read EmailSummaryReader) *Store {
 	return s
 }
 
+// WithPartnerMarks binds the reader behind a company hit's `is_partner`.
+func (s *Store) WithPartnerMarks(mark PartnerMarker) *Store {
+	s.partnerMarks = mark
+	return s
+}
+
 // bounded is this store with a time ceiling on every statement it runs.
 //
 // The ceiling rides the HANDLE, so it reaches the lanes this store opens for
@@ -69,7 +84,10 @@ func (s *Store) WithEmailSummaries(read EmailSummaryReader) *Store {
 func (s *Store) bounded(budget time.Duration) *Store {
 	// Every field travels, not just the handle: this rebuilds the store, so a
 	// field left out here is one the bounded lane silently does without.
-	return &Store{db: s.db.Bounded(budget), carriedBy: s.carriedBy, emailSummaries: s.emailSummaries}
+	return &Store{
+		db: s.db.Bounded(budget), carriedBy: s.carriedBy,
+		emailSummaries: s.emailSummaries, partnerMarks: s.partnerMarks,
+	}
 }
 
 // forWorkspace is this store re-bound to one tenant of the fleet enumeration.
@@ -99,6 +117,9 @@ type Hit struct {
 	// caller may read. Nil on every other hit type, nil for a non-email
 	// activity, and nil when no reader is bound.
 	EmailSummary *crmcontracts.EmailSummary
+	// IsPartner is set on a `company` hit alone: whether the account carries a
+	// live partner programme. Nil elsewhere, and nil when no marker was taken.
+	IsPartner *bool
 }
 
 type Page struct {
@@ -203,7 +224,10 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		if err := s.countTagReach(ctx, tx, page.Hits); err != nil {
 			return err
 		}
-		return s.attachEmailSummaries(ctx, tx, page.Hits)
+		if err := s.attachEmailSummaries(ctx, tx, page.Hits); err != nil {
+			return err
+		}
+		return s.markPartners(ctx, tx, page.Hits)
 	})
 	if err != nil {
 		return Page{}, err
