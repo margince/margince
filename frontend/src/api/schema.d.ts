@@ -16210,12 +16210,13 @@ export interface components {
             model_id: string;
             /**
              * @description What the model is FOR. A property of the model rather than of this dated row: the
-             *     routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-             *     where the embeddings lane binds, and a zero output price cannot tell them apart —
-             *     every local chat row carries one too.
+             *     routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+             *     where the embeddings lane binds and a `decisions` one where the decision lane
+             *     binds, and a zero output price cannot tell them apart — every local chat row
+             *     carries one too.
              * @enum {string}
              */
-            lane: "chat" | "embeddings";
+            lane: "chat" | "embeddings" | "decisions";
             input_per_mtok: string;
             output_per_mtok: string;
             cache_read_per_mtok: string;
@@ -16236,7 +16237,7 @@ export interface components {
              *     correct a mis-filed model.
              * @enum {string}
              */
-            lane?: "chat" | "embeddings";
+            lane?: "chat" | "embeddings" | "decisions";
             /** @description USD per 1M input tokens. Plain non-negative decimal, up to 12 integer and 6 fractional digits (keeps the stored µUSD within int64). */
             input_per_mtok: string;
             /** @description USD per 1M output tokens. */
@@ -16934,7 +16935,7 @@ export interface components {
              * @description What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
              * @enum {string}
              */
-            lane?: "chat" | "embeddings";
+            lane?: "chat" | "embeddings" | "decisions";
             /** @description Absent where the vendor publishes none. */
             context_length?: number;
             /** @description The vendor's asking price per million input tokens, in the same USD decimal strings as `AiModelRate` so a screen can show a vendor's price beside a recorded one without converting between them. Absent where the vendor publishes no price. */
@@ -16975,6 +16976,7 @@ export interface components {
                 [key: string]: components["schemas"]["AiTierBinding"];
             };
             embeddings: components["schemas"]["AiEmbeddingsBinding"];
+            decisions?: components["schemas"]["AiDecisionsBinding"];
         };
         AiTierBinding: {
             /**
@@ -17029,6 +17031,20 @@ export interface components {
              *     default; a value outside [1,2000] is refused.
              */
             dimensions?: number;
+        };
+        /**
+         * @description The decision-model lane: a model that answers a typed question with calibrated
+         *     probabilities, asked before a decision site's ladder. Absent means no task uses
+         *     one. It serves a task only when certified for that site and when its endpoint
+         *     reaches no further than the task's own bindings.
+         */
+        AiDecisionsBinding: {
+            /** @description openrouter_decision | laya. */
+            provider: string;
+            /** @description The decision model id: a Jev slug, or a Laya checkpoint. */
+            model: string;
+            /** @description Endpoint root; openrouter_decision requires an OpenRouter host. */
+            base_url?: string;
         };
         /**
          * @description The installation's provider-lookup posture. Read by every role, changed only by
@@ -18437,6 +18453,14 @@ export interface components {
             /** @enum {string} */
             impact: "unchanged" | "model_changed" | "fallback_changed" | "budget_blocked" | "unconfigured";
             budget_exempt: boolean;
+            /** @description The decision lane answers this feature first: bound, certified for its site, and reaching no further than its ladder. */
+            decision_first: boolean;
+            /**
+             * @description Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
+             * @enum {string}
+             */
+            decision_skip_reason?: "unbound" | "uncertified" | "widens_reach";
+            decision_candidate?: components["schemas"]["AiRouteCandidate"];
         };
         AiDeferredWork: {
             carrier: string;
@@ -18476,7 +18500,7 @@ export interface components {
                     /** @description capture_classify, enrich, summarize, … */
                     task: string;
                     task_display_name?: string;
-                    /** @description local_small, cheap_cloud, premium, frontier, local_large. */
+                    /** @description local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane). */
                     tier: string;
                     calls: number;
                     cached_hits?: number;
@@ -18510,6 +18534,11 @@ export interface components {
             id: string;
             /** Format: date-time */
             occurred_at: string;
+            /**
+             * @description What the call asked: a chat completion, an embedding, or a decision model.
+             * @enum {string}
+             */
+            kind: "completion" | "embedding" | "decision";
             task: string;
             /** @description Empty when the call failed before routing. */
             tier: string;
@@ -18541,8 +18570,18 @@ export interface components {
         AiCallAttempt: {
             attempt: number;
             is_terminal: boolean;
-            /** @description Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. */
+            /** @description Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_egress_refused — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
             attempt_reason: string;
+            /**
+             * @description What this attempt asked: a chat completion, an embedding, or a decision model.
+             * @enum {string}
+             */
+            kind: "completion" | "embedding" | "decision";
+            /** @description The tier this attempt ran on; decide for the decision lane. */
+            tier?: string;
+            provider?: string;
+            /** @description The configured binding this attempt ran on. */
+            model_id?: string;
             error_sentinel?: string | null;
             tokens_in: number;
             tokens_out: number;
@@ -18567,7 +18606,7 @@ export interface components {
             payload_captured: boolean;
             /** @description Present only when payload_captured. Post-secret-stripper content (AIRT-AC-4); rune-capped with a visible truncation marker. */
             payload?: {
-                /** @description The captured request: {"system": string, "messages": [{role, content}]}. */
+                /** @description The captured request: {"system": string, "messages": [{role, content}]}, or, for a decision call, {"state": string, "questions": {…}}. */
                 request: unknown;
                 /** @description The captured response text (JSON string). */
                 response: unknown;

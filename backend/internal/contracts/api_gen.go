@@ -751,6 +751,7 @@ func (e AiActivityKind) Valid() bool {
 // Defines values for AiModelRateLane.
 const (
 	AiModelRateLaneChat       AiModelRateLane = "chat"
+	AiModelRateLaneDecisions  AiModelRateLane = "decisions"
 	AiModelRateLaneEmbeddings AiModelRateLane = "embeddings"
 )
 
@@ -758,6 +759,8 @@ const (
 func (e AiModelRateLane) Valid() bool {
 	switch e {
 	case AiModelRateLaneChat:
+		return true
+	case AiModelRateLaneDecisions:
 		return true
 	case AiModelRateLaneEmbeddings:
 		return true
@@ -2275,6 +2278,7 @@ func (e AutomationRunTier) Valid() bool {
 // Defines values for AvailableModelLane.
 const (
 	AvailableModelLaneChat       AvailableModelLane = "chat"
+	AvailableModelLaneDecisions  AvailableModelLane = "decisions"
 	AvailableModelLaneEmbeddings AvailableModelLane = "embeddings"
 )
 
@@ -2282,6 +2286,8 @@ const (
 func (e AvailableModelLane) Valid() bool {
 	switch e {
 	case AvailableModelLaneChat:
+		return true
+	case AvailableModelLaneDecisions:
 		return true
 	case AvailableModelLaneEmbeddings:
 		return true
@@ -12613,6 +12619,7 @@ func (e SetActivityDispositionRequestDisposition) Valid() bool {
 // Defines values for SetAiModelRateRequestLane.
 const (
 	SetAiModelRateRequestLaneChat       SetAiModelRateRequestLane = "chat"
+	SetAiModelRateRequestLaneDecisions  SetAiModelRateRequestLane = "decisions"
 	SetAiModelRateRequestLaneEmbeddings SetAiModelRateRequestLane = "embeddings"
 )
 
@@ -12620,6 +12627,8 @@ const (
 func (e SetAiModelRateRequestLane) Valid() bool {
 	switch e {
 	case SetAiModelRateRequestLaneChat:
+		return true
+	case SetAiModelRateRequestLaneDecisions:
 		return true
 	case SetAiModelRateRequestLaneEmbeddings:
 		return true
@@ -19146,7 +19155,10 @@ type AiCall struct {
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
 	Id         openapi_types.UUID `json:"id"`
-	LatencyMs  int                `json:"latency_ms"`
+
+	// Kind What the call asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
 
 	// ModelId The configured binding.
 	ModelId    string    `json:"model_id"`
@@ -19154,7 +19166,7 @@ type AiCall struct {
 
 	// Payload Present only when payload_captured. Post-secret-stripper content (AIRT-AC-4); rune-capped with a visible truncation marker.
 	Payload *struct {
-		// Request The captured request: {"system": string, "messages": [{role, content}]}.
+		// Request The captured request: {"system": string, "messages": [{role, content}]}, or, for a decision call, {"state": string, "questions": {…}}.
 		Request interface{} `json:"request"`
 
 		// Response The captured response text (JSON string).
@@ -19181,14 +19193,24 @@ type AiCall struct {
 type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
-	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder.
-	AttemptReason string    `json:"attempt_reason"`
-	ErrorSentinel *string   `json:"error_sentinel,omitempty"`
-	IsTerminal    bool      `json:"is_terminal"`
-	LatencyMs     int       `json:"latency_ms"`
-	OccurredAt    time.Time `json:"occurred_at"`
-	TokensIn      int       `json:"tokens_in"`
-	TokensOut     int       `json:"tokens_out"`
+	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_egress_refused — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
+	AttemptReason string  `json:"attempt_reason"`
+	ErrorSentinel *string `json:"error_sentinel,omitempty"`
+	IsTerminal    bool    `json:"is_terminal"`
+
+	// Kind What this attempt asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
+
+	// ModelId The configured binding this attempt ran on.
+	ModelId    *string   `json:"model_id,omitempty"`
+	OccurredAt time.Time `json:"occurred_at"`
+	Provider   *string   `json:"provider,omitempty"`
+
+	// Tier The tier this attempt ran on; decide for the decision lane.
+	Tier      *string `json:"tier,omitempty"`
+	TokensIn  int     `json:"tokens_in"`
+	TokensOut int     `json:"tokens_out"`
 }
 
 // AiCallListResponse defines model for AiCallListResponse.
@@ -19221,7 +19243,10 @@ type AiCallSummary struct {
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
 	Id         openapi_types.UUID `json:"id"`
-	LatencyMs  int                `json:"latency_ms"`
+
+	// Kind What the call asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
 
 	// ModelId The configured binding.
 	ModelId         string    `json:"model_id"`
@@ -19237,6 +19262,21 @@ type AiCallSummary struct {
 	Tier      string `json:"tier"`
 	TokensIn  int    `json:"tokens_in"`
 	TokensOut int    `json:"tokens_out"`
+}
+
+// AiDecisionsBinding The decision-model lane: a model that answers a typed question with calibrated
+// probabilities, asked before a decision site's ladder. Absent means no task uses
+// one. It serves a task only when certified for that site and when its endpoint
+// reaches no further than the task's own bindings.
+type AiDecisionsBinding struct {
+	// BaseUrl Endpoint root; openrouter_decision requires an OpenRouter host.
+	BaseUrl *string `json:"base_url,omitempty"`
+
+	// Model The decision model id: a Jev slug, or a Laya checkpoint.
+	Model string `json:"model"`
+
+	// Provider openrouter_decision | laya.
+	Provider string `json:"provider"`
 }
 
 // AiDeferredWork defines model for AiDeferredWork.
@@ -19279,7 +19319,14 @@ type AiEmbeddingsBinding struct {
 
 // AiFeatureRoute defines model for AiFeatureRoute.
 type AiFeatureRoute struct {
-	BudgetExempt        bool               `json:"budget_exempt"`
+	BudgetExempt      bool              `json:"budget_exempt"`
+	DecisionCandidate *AiRouteCandidate `json:"decision_candidate,omitempty"`
+
+	// DecisionFirst The decision lane answers this feature first: bound, certified for its site, and reaching no further than its ladder.
+	DecisionFirst bool `json:"decision_first"`
+
+	// DecisionSkipReason Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
+	DecisionSkipReason  *string            `json:"decision_skip_reason,omitempty"`
 	DisplayName         string             `json:"display_name"`
 	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
 	ExecutionMode       string             `json:"execution_mode"`
@@ -19305,9 +19352,10 @@ type AiModelRate struct {
 	InputPerMtok      string             `json:"input_per_mtok"`
 
 	// Lane What the model is FOR. A property of the model rather than of this dated row: the
-	// routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-	// where the embeddings lane binds, and a zero output price cannot tell them apart —
-	// every local chat row carries one too.
+	// routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+	// where the embeddings lane binds and a `decisions` one where the decision lane
+	// binds, and a zero output price cannot tell them apart — every local chat row
+	// carries one too.
 	Lane          AiModelRateLane `json:"lane"`
 	ModelId       string          `json:"model_id"`
 	OutputPerMtok string          `json:"output_per_mtok"`
@@ -19315,9 +19363,10 @@ type AiModelRate struct {
 }
 
 // AiModelRateLane What the model is FOR. A property of the model rather than of this dated row: the
-// routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-// where the embeddings lane binds, and a zero output price cannot tell them apart —
-// every local chat row carries one too.
+// routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+// where the embeddings lane binds and a `decisions` one where the decision lane
+// binds, and a zero output price cannot tell them apart — every local chat row
+// carries one too.
 type AiModelRateLane string
 
 // AiModelRateListResponse defines model for AiModelRateListResponse.
@@ -19421,6 +19470,11 @@ type AiRouteCandidate struct {
 // refuses an unknown key with a 422 naming it — restating the set here would be a second
 // copy free to drift from the generated one.
 type AiRouting struct {
+	// Decisions The decision-model lane: a model that answers a typed question with calibrated
+	// probabilities, asked before a decision site's ladder. Absent means no task uses
+	// one. It serves a task only when certified for that site and when its endpoint
+	// reaches no further than the task's own bindings.
+	Decisions  *AiDecisionsBinding `json:"decisions,omitempty"`
 	Embeddings AiEmbeddingsBinding `json:"embeddings"`
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
@@ -19580,7 +19634,7 @@ type AiUsage struct {
 			Task            string  `json:"task"`
 			TaskDisplayName *string `json:"task_display_name,omitempty"`
 
-			// Tier local_small, cheap_cloud, premium, frontier, local_large.
+			// Tier local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane).
 			Tier      string `json:"tier"`
 			TokensIn  int    `json:"tokens_in"`
 			TokensOut int    `json:"tokens_out"`

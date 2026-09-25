@@ -23733,12 +23733,13 @@ components:
         model_id: { type: string }
         lane:
           type: string
-          enum: [chat, embeddings]
+          enum: [chat, embeddings, decisions]
           description: |
             What the model is FOR. A property of the model rather than of this dated row: the
-            routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-            where the embeddings lane binds, and a zero output price cannot tell them apart —
-            every local chat row carries one too.
+            routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+            where the embeddings lane binds and a `decisions` one where the decision lane
+            binds, and a zero output price cannot tell them apart — every local chat row
+            carries one too.
         input_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         output_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         cache_read_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
@@ -23757,7 +23758,7 @@ components:
         model_id: { type: string }
         lane:
           type: string
-          enum: [chat, embeddings]
+          enum: [chat, embeddings, decisions]
           description: |
             What the model is for. OMIT to keep what the sheet already files this model as —
             a re-price must never re-file an embedder as a chat model, and a refresh knows
@@ -24764,7 +24765,7 @@ components:
           description: The vendor's own human label, absent where it publishes none.
         lane:
           type: string
-          enum: [chat, embeddings]
+          enum: [chat, embeddings, decisions]
           description: >-
             What the vendor says the model is FOR, absent where it does not say. Absent means
             UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
@@ -24846,6 +24847,8 @@ components:
           description: Tier name to the model bound on it. Empty means no models are bound.
         embeddings:
           $ref: '#/components/schemas/AiEmbeddingsBinding'
+        decisions:
+          $ref: '#/components/schemas/AiDecisionsBinding'
 
     AiTierBinding:
       type: object
@@ -24898,6 +24901,20 @@ components:
               description: |
                 The vector width the provider is asked to emit. Omit (or 0) for the compiled
                 default; a value outside [1,2000] is refused.
+
+    AiDecisionsBinding:
+      type: object
+      additionalProperties: false
+      required: [provider, model]
+      description: |
+        The decision-model lane: a model that answers a typed question with calibrated
+        probabilities, asked before a decision site's ladder. Absent means no task uses
+        one. It serves a task only when certified for that site and when its endpoint
+        reaches no further than the task's own bindings.
+      properties:
+        provider: { type: string, description: 'openrouter_decision | laya.' }
+        model: { type: string, description: 'The decision model id: a Jev slug, or a Laya checkpoint.' }
+        base_url: { type: string, description: 'Endpoint root; openrouter_decision requires an OpenRouter host.' }
 
     IntegrationsSettings:
       type: object
@@ -26428,7 +26445,7 @@ components:
         processing: { type: string, enum: [cloud_provider, configured_endpoint], x-go-type: string }
     AiFeatureRoute:
       type: object
-      required: [task, display_name, execution_mode, normal_candidates, effective_candidates, impact, budget_exempt, leading_tier]
+      required: [task, display_name, execution_mode, normal_candidates, effective_candidates, impact, budget_exempt, leading_tier, decision_first]
       properties:
         task: { type: string }
         display_name: { type: string }
@@ -26438,6 +26455,14 @@ components:
         effective_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
         impact: { type: string, enum: [unchanged, model_changed, fallback_changed, budget_blocked, unconfigured], x-go-type: string }
         budget_exempt: { type: boolean }
+        decision_first: { type: boolean, description: 'The decision lane answers this feature first: bound, certified for its site, and reaching no further than its ladder.' }
+        decision_skip_reason:
+          type: string
+          enum: [unbound, uncertified, widens_reach]
+          x-go-type: string
+          description: 'Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.'
+        decision_candidate:
+          $ref: '#/components/schemas/AiRouteCandidate'
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]
@@ -26493,7 +26518,7 @@ components:
                   properties:
                     task: { type: string, description: 'capture_classify, enrich, summarize, …' }
                     task_display_name: { type: string }
-                    tier: { type: string, description: 'local_small, cheap_cloud, premium, frontier, local_large.' }
+                    tier: { type: string, description: 'local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane).' }
                     calls: { type: integer }
                     cached_hits: { type: integer }
                     tokens_in: { type: integer }
@@ -26520,10 +26545,11 @@ components:
     AiCallSummary:
       type: object
       description: One terminal model call from the ai_call trace (AIRT-SCHEMA-2).
-      required: [id, occurred_at, task, tier, provider, model_id, served_model, calls_attempted, tokens_in, tokens_out, reasoning_tokens, cached_tokens, latency_ms, cache_hit, degraded, has_payload]
+      required: [id, occurred_at, kind, task, tier, provider, model_id, served_model, calls_attempted, tokens_in, tokens_out, reasoning_tokens, cached_tokens, latency_ms, cache_hit, degraded, has_payload]
       properties:
         id: { type: string, format: uuid }
         occurred_at: { type: string, format: date-time }
+        kind: { type: string, enum: [completion, embedding, decision], x-go-type: string, description: 'What the call asked: a chat completion, an embedding, or a decision model.' }
         task: { type: string }
         tier: { type: string, description: 'Empty when the call failed before routing.' }
         provider: { type: string }
@@ -26563,11 +26589,15 @@ components:
     AiCallAttempt:
       type: object
       description: One attempt (terminal or not) within a logical call.
-      required: [attempt, is_terminal, attempt_reason, tokens_in, tokens_out, latency_ms, occurred_at]
+      required: [attempt, is_terminal, attempt_reason, kind, tokens_in, tokens_out, latency_ms, occurred_at]
       properties:
         attempt: { type: integer }
         is_terminal: { type: boolean }
-        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder.' }
+        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_egress_refused — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
+        kind: { type: string, enum: [completion, embedding, decision], x-go-type: string, description: 'What this attempt asked: a chat completion, an embedding, or a decision model.' }
+        tier: { type: string, description: 'The tier this attempt ran on; decide for the decision lane.' }
+        provider: { type: string }
+        model_id: { type: string, description: 'The configured binding this attempt ran on.' }
         error_sentinel: { type: [string, 'null'] }
         tokens_in: { type: integer }
         tokens_out: { type: integer }
@@ -26595,7 +26625,7 @@ components:
               description: 'Present only when payload_captured. Post-secret-stripper content (AIRT-AC-4); rune-capped with a visible truncation marker.'
               required: [request, response]
               properties:
-                request: { description: 'The captured request: {"system": string, "messages": [{role, content}]}.' }
+                request: { description: 'The captured request: {"system": string, "messages": [{role, content}]}, or, for a decision call, {"state": string, "questions": {…}}.' }
                 response: { description: 'The captured response text (JSON string).' }
     AiCallListResponse:
       type: object
