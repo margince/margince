@@ -2,7 +2,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { ErrorLine } from "../design-system/errorline";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
@@ -45,7 +44,7 @@ import {
 import { QueueBand } from "./worklist.queuebands";
 import { WorklistReadings } from "./worklist.readings";
 import { WorklistRow } from "./worklist.row";
-import { WalkNotice } from "./worklist.walknotice";
+import { LoadMoreOfTheDay, WalkNotice } from "./worklist.walknotice";
 import "./worklist.css";
 
 // The Worklist: one ranked list, not fourteen lanes.
@@ -516,28 +515,16 @@ function WorklistBody({
           <ReviewPanel
             items={review}
             shortfall={reviewMissing}
+            more={hasMore}
             rows={rowProps}
           />
-          {/* The way to the rest of the day, below BOTH panels: a next page's
-          rows land in whichever one their destination names, so a control
-          inside either would look dead whenever they all went to the other. */}
+          {/* One way on for the whole day, below both panels it fills. */}
           {queue.length > 0 && hasMore && (
-            <div className="worklist-more">
-              <Button onClick={onMore} pending={loadingMore}>
-                {t("worklist.more")}
-              </Button>
-              <p className="t-caption">
-                {t("worklist.more.where", {
-                  today: t("worklist.queue"),
-                  review: t("worklist.review"),
-                })}
-              </p>
-              {/* A refused page leaves the button looking exactly as an
-              unpressed one does, so the failure says the rest is still there. */}
-              {moreFailed && (
-                <ErrorLine inline>{t("worklist.more.failed")}</ErrorLine>
-              )}
-            </div>
+            <LoadMoreOfTheDay
+              pending={loadingMore}
+              failed={moreFailed}
+              onMore={onMore}
+            />
           )}
           {/* Team oversight belongs to the explicitly selected wider scope. */}
           {owner === "" &&
@@ -583,10 +570,12 @@ function WorklistBody({
 function ReviewPanel({
   items,
   shortfall,
+  more,
   rows,
 }: Readonly<{
   items: readonly WorklistItem[];
   shortfall: { loaded: number; total: number } | null;
+  more: boolean;
   rows: RowContext;
 }>) {
   const t = useT();
@@ -609,13 +598,17 @@ function ReviewPanel({
       // cut sees a panel that looks complete and nothing that says otherwise.
       // The day's own total is the denominator, never drawn bare: it counts
       // every candidate the read weighed, so alone it would claim rows this
-      // panel does not hold.
+      // panel does not hold. Once the walk is over the gap is still true, but
+      // there is no control left to point at.
       footer={
         shortfall
-          ? t("worklist.review.partial", {
-              loaded: formatNumber(shortfall.loaded, locale),
-              total: formatNumber(shortfall.total, locale),
-            })
+          ? t(
+              more ? "worklist.review.partial" : "worklist.review.partialDone",
+              {
+                loaded: formatNumber(shortfall.loaded, locale),
+                total: formatNumber(shortfall.total, locale),
+              },
+            )
           : undefined
       }
     >
@@ -695,7 +688,7 @@ export function WorklistScreen({
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
   const refreshWalk = useRefreshWalk();
   const queryClient = useQueryClient();
-  // A failed SHOW MORE is not a failed page. `isError` covers both, and
+  // A failed LOAD MORE is not a failed page. `isError` covers both, and
   // treating them alike would replace a screen of rows the reader is working
   // through with an error panel because one extra page did not arrive. The
   // rows already loaded are still true, so the surface stays ready and the

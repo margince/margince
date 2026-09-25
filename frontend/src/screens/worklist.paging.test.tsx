@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -283,9 +284,9 @@ describe("the way to the rest of the day speaks for both panels", () => {
     expect(
       review.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
-    expect(
-      screen.getByText("New items can land in Today or To review."),
-    ).toBeTruthy();
+    expect(more).toHaveAccessibleDescription(
+      "New items can land in “Today” or “To review”.",
+    );
   });
 
   it("lands a page of only review rows in To review and stays in reach", async () => {
@@ -295,7 +296,6 @@ describe("the way to the rest of the day speaks for both panels", () => {
         next_cursor: "page-2",
       }),
       day({ queue: [judgement], next_cursor: "page-3" }),
-      day(),
     ]);
     renderWorklist();
     const user = userEvent.setup();
@@ -315,7 +315,7 @@ describe("the way to the rest of the day speaks for both panels", () => {
 });
 
 describe("the header states the split", () => {
-  it("says what the two panels hold, a zero half included", async () => {
+  it("names the two panels' halves, a zero half included", async () => {
     stub(
       day({
         queue: [row({ id: "pair-1", destination: "review" })],
@@ -330,7 +330,7 @@ describe("the header states the split", () => {
     );
     renderWorklist();
 
-    await screen.findByText("0 urgent · 0 due · 0 planned · 5 to review");
+    await screen.findByText("0 today · 5 to review");
     // No bare total: it would count both panels as one.
     expect(screen.queryByText(/\d total/)).toBeNull();
   });
@@ -350,17 +350,71 @@ describe("the header states the split", () => {
     expect(screen.queryByText(/to review/)).toBeNull();
   });
 
-  // Two names for one panel is how a reader stops trusting the header, so the
-  // sentence's review half is the panel's heading in every locale.
+  // Today is all three of its parts at once: the bands under it break it down.
+  it("counts every part of Today in its half", async () => {
+    stub(
+      day({
+        queue: [row({ id: "a" })],
+        summary: {
+          urgent: 1,
+          due: 2,
+          lower_priority: 3,
+          total: 10,
+          buckets: { urgent: 1, due_today: 2, planned: 3, review: 4 },
+        },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("6 today · 4 to review");
+  });
+
+  // Like the five-figure sentence, the split is the DAY's and is read off page
+  // one: a later page's partition describes only its own slice.
+  it("keeps the split still while the rows grow", async () => {
+    stubWalk([
+      day({
+        queue: [row({ id: "a", title: "First thing" })],
+        summary: {
+          urgent: 1,
+          due: 2,
+          lower_priority: 6,
+          total: 14,
+          buckets: { urgent: 1, due_today: 2, planned: 6, review: 5 },
+        },
+        next_cursor: "page-2",
+      }),
+      day({
+        queue: [row({ id: "b", title: "Second thing" })],
+        summary: {
+          urgent: 0,
+          due: 0,
+          lower_priority: 1,
+          total: 1,
+          buckets: { urgent: 0, due_today: 0, planned: 1, review: 0 },
+        },
+      }),
+    ]);
+    renderWorklist();
+    const user = userEvent.setup();
+
+    await screen.findByText("9 today · 5 to review");
+    await user.click(screen.getByRole("button", { name: MORE }));
+
+    await screen.findByText("Second thing");
+    expect(screen.getByText("9 today · 5 to review")).toBeTruthy();
+    expect(screen.queryByText("1 today · 0 to review")).toBeNull();
+  });
+
+  // Two names for one panel is how a reader stops trusting the header, so each
+  // half is its panel's heading, in every locale.
   it.each([
     ["en", en],
     ["de", de],
     ["vi", viCatalog],
-  ])("names the review half with the %s panel heading", (_, catalog) => {
-    expect(
-      catalog["worklist.summary.split"].endsWith(
-        `{review} ${catalog["worklist.review"].toLowerCase()}`,
-      ),
-    ).toBe(true);
+  ])("names both halves with the %s panel headings", (_, catalog) => {
+    expect(catalog["worklist.summary.split"]).toBe(
+      `{today} ${catalog["worklist.queue"].toLowerCase()} · {review} ${catalog["worklist.review"].toLowerCase()}`,
+    );
   });
 });

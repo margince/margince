@@ -135,10 +135,10 @@ export const BothDialsDark: Story = {
   render: () => frame(["mine", "unassigned", "team", "all"]),
 };
 
-/** A server that sends the partition: the sentence says what the two panels
- *  hold, Today's three parts and then the review half. A half with nothing in
- *  it still prints its zero, so the line keeps its shape from day to day. */
+/** A server that sends the partition: the sentence names the two panels by
+ *  their headings, Today and To review. A half with nothing in it still prints
+ *  its zero, so the line keeps its shape from day to day. */
 export const TheSplit: Story = {
   render: () =>
-    frame(["mine"], "", { urgent: 0, due_today: 3, planned: 9, review: 5 }),
+    frame(["mine"], "", { urgent: 0, due_today: 3, planned: 9, review: 0 }),
 };

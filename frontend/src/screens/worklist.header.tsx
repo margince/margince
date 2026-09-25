@@ -171,11 +171,11 @@ function useLanesColumn(): [RefObject<HTMLDivElement | null>, boolean] {
 /**
  * What the day holds, as one sentence.
  *
- * With the partition it says what the two panels say: Today's three parts, then
- * the review half, every figure drawn even at zero so the line keeps its shape
- * from one morning to the next. Without it (an older server) the five-figure
- * sentence stands, and an unsent `in_play` drops its clause rather than print 0
- * for silence.
+ * With the partition it names the two panels by their headings, both figures
+ * drawn even at zero so the line keeps its shape. It does not break Today down:
+ * the bands and pills do, and an "urgent" here would disagree with the Brief's,
+ * which also counts review rows. Without it (an older server) the five-figure
+ * sentence stands, and an unsent `in_play` drops its clause rather than print 0.
  */
 function summarySentence(
   summary: Worklist["summary"],
@@ -186,9 +186,7 @@ function summarySentence(
   const { buckets } = summary;
   if (buckets) {
     return t("worklist.summary.split", {
-      urgent: figure(buckets.urgent),
-      due: figure(buckets.due_today),
-      planned: figure(buckets.planned),
+      today: figure(buckets.urgent + buckets.due_today + buckets.planned),
       review: figure(buckets.review),
     });
   }

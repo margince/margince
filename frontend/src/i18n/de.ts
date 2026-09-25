@@ -9426,11 +9426,11 @@ export const de = {
     "{urgent} dringend · {due} fällig · {inPlay} in Arbeit · {lower} Routine · {total} gesamt",
   "worklist.summary.noMiddle":
     "{urgent} dringend · {due} fällig · {lower} Routine · {total} gesamt",
-  "worklist.summary.split":
-    "{urgent} dringend · {due} fällig · {planned} geplant · {review} zu prüfen",
+  "worklist.summary.split": "{today} heute · {review} zu prüfen",
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.review.partial":
     "{loaded} von {total} angezeigt. Lade unten mehr vom Tag, um den Rest zu sehen.",
+  "worklist.review.partialDone": "{loaded} von {total} angezeigt.",
   "worklist.completeness.bounded_one":
     "{shown} angezeigt · {sources} Quelle hat mehr",
   "worklist.completeness.bounded_other":
