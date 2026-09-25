@@ -106,8 +106,9 @@ type BackfillPreview struct {
 // ADR-0020). Pricing the projected spend is the estimator's job now (ADR-0068),
 // so this returns the raw message count only.
 func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int) (BackfillPreview, error) {
-	if !backfillWindows[windowMonths] {
-		return BackfillPreview{}, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
+	if !r.admitsWindow(windowMonths) {
+		return BackfillPreview{}, fmt.Errorf("%w: %d months (this installation offers %v)",
+			ErrWindowInvalid, windowMonths, r.OfferedBackfillWindows())
 	}
 	var connID ids.UUID
 	var name string
@@ -165,8 +166,12 @@ type EnqueueBackfill func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) e
 // keeps the queued row forever, nothing pages it, and every later start for that
 // connection answers 409 backfill_running.
 func (r *Registry) StartBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
-	if !backfillWindows[windowMonths] {
-		return BackfillRun{}, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
+	// Checked HERE as well as at the estimate, and not only there: the estimate
+	// is a preview a client may skip, and a start that trusted it would take
+	// the whole window from anyone who called this door directly.
+	if !r.admitsWindow(windowMonths) {
+		return BackfillRun{}, fmt.Errorf("%w: %d months (this installation offers %v)",
+			ErrWindowInvalid, windowMonths, r.OfferedBackfillWindows())
 	}
 	if enqueue == nil {
 		return BackfillRun{}, errors.New("capture: starting a backfill needs a scheduler — an unpaged run blocks its connection permanently")

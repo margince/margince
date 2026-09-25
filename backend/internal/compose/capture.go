@@ -98,6 +98,11 @@ type CaptureConfig struct {
 	//
 	// Held by: TestOnlyTheResolverReadsTheTracePayloadsField (backend/internal/platform/deployconfig/capture_test.go)
 	TracePayloads bool
+	// MaxBackfillMonths caps how far back a mailbox import may reach, already
+	// resolved against its default by CaptureConfigFromDeploy. Zero is no cap,
+	// which is both the shipped behaviour and what the zero-value
+	// constructions below mean.
+	MaxBackfillMonths int
 	// Logger carries the process logger to the post-commit steps the Sink
 	// drives, where a fault is reported rather than returned (nothing may fail
 	// a capture). Nil falls back to the default logger — the site_lead accept
@@ -155,6 +160,7 @@ func CaptureConfigFromDeploy(c deployconfig.Capture, log *slog.Logger) CaptureCo
 		TransactionalExtra: c.TransactionalExtra,
 		TransactionalNever: c.TransactionalNever,
 		TracePayloads:      c.TracesPayloads(),
+		MaxBackfillMonths:  c.BackfillCeiling(),
 		Logger:             log,
 	}
 }
@@ -174,6 +180,10 @@ func CaptureConfigFromDeploy(c deployconfig.Capture, log *slog.Logger) CaptureCo
 func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureConfig) *capture.Registry {
 	db := InstallationDB(pool)
 	r := capture.NewRegistry(db, newCaptureSink(pool, cfg), identity.NewService(pool), vault).
+		// How far back this installation lets a mailbox import reach. Zero
+		// leaves the product's own ceiling, which is what an enumerate-only
+		// construction and every deployment that has not set one get.
+		WithMaxBackfillMonths(cfg.MaxBackfillMonths).
 		// The digest's projects section is answered here because its reads
 		// span the deals module's tables (digestprojects.go).
 		WithDigestProjects(digestProjectsSource)
