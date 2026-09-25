@@ -468,8 +468,8 @@ describe("AgentRail", () => {
   // not colour the orb: a corner that flashed red on a flaky connection is
   // exactly the failure mode this derivation was rebuilt to avoid.
   it("does not colour the orb for a transient tool failure", async () => {
-    stubAgentRailApi({
-      dedupe: () =>
+    const fetchMock = stubAgentRailApi({
+      connectors: () =>
         jsonResponse(
           { code: "internal_error", title: "internal error", status: 500 },
           500,
@@ -481,6 +481,11 @@ describe("AgentRail", () => {
     // would let this pass before the 500 ever reached React Query, which is the
     // one moment the assertion is supposed to be about.
     await settlesOnLine(container, en["agent.line.allClear"]);
+    expect(
+      fetchMock.mock.calls.some(([request]) =>
+        new URL(request.url).pathname.endsWith("/connectors"),
+      ),
+    ).toBe(true);
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
   });
 
