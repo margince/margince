@@ -6,7 +6,7 @@
     "sites_best_stale": 1,
     "sites_absent": 0,
     "scenarios": 152,
-    "records": 172,
+    "records": 173,
     "bindings": 17,
     "self_judged_records": 4
   },
@@ -1898,12 +1898,12 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "certified",
+          "band": "supported_degraded",
           "state": "current",
           "runs": 15,
-          "passed": 15,
+          "passed": 14,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
+          "cases_below_quality_bar": 1
         },
         {
           "task": "stage_evidence_extract",
@@ -2003,8 +2003,8 @@
         }
       ],
       "bands": {
-        "certified": 7,
-        "supported_degraded": 3,
+        "certified": 6,
+        "supported_degraded": 4,
         "not_supported": 13
       },
       "untested": 6,
@@ -3304,12 +3304,12 @@
       "sites_partial": 0,
       "sites_stale": 38,
       "runs": 384,
-      "passed": 311,
-      "reliability": 0.8098958333333334,
+      "passed": 310,
+      "reliability": 0.8072916666666666,
       "slowest_p95_ms": 140306,
       "bands": {
-        "certified": 14,
-        "supported_degraded": 6,
+        "certified": 13,
+        "supported_degraded": 7,
         "not_supported": 19
       }
     },
@@ -10584,8 +10584,8 @@
           "model": "openai/gpt-oss-120b",
           "env": "cloud_frontier"
         },
-        "band": "certified",
-        "reliability": 1,
+        "band": "supported_degraded",
+        "reliability": 0.9333333333333333,
         "state": "current"
       },
       "scenarios": [
@@ -10742,17 +10742,17 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "certified",
+          "band": "supported_degraded",
           "scenarios_measured": 5,
           "scenarios_total": 5,
           "runs": 15,
-          "passed": 15,
-          "reliability": 1,
-          "latency_p50_ms": 533,
-          "latency_p95_ms": 1227,
+          "passed": 14,
+          "reliability": 0.9333333333333333,
+          "latency_p50_ms": 608,
+          "latency_p95_ms": 1865,
           "reported": {
-            "accepted": 15,
-            "wrong_answer": 0,
+            "accepted": 14,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
@@ -13463,5 +13463,25 @@
       "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
     }
   ],
-  "decisions": []
+  "decisions": [
+    {
+      "task": "site_triage",
+      "site": "triage",
+      "binding": {
+        "provider": "jev_compatible",
+        "model": "typesafe/jev-1.13",
+        "env": "cloud_frontier"
+      },
+      "state": "current",
+      "verdict": "certified",
+      "serves": true,
+      "runs": 15,
+      "kept": 15,
+      "kept_wrong": 0,
+      "fallback_rate": 0,
+      "fallback_by_reason": {},
+      "served_pass_rate": 1,
+      "stale_reason": ""
+    }
+  ]
 }
