@@ -12,6 +12,10 @@ away or leave.
 **You connect it yourself.** Without your sign-in at the mail provider, the
 system reaches nothing.
 
+**Spam, trash and drafts are never captured.** What is read is your inbox and
+your sent folder — on Microsoft 365 those two folders and nothing else, on IMAP
+the mailbox you configured plus your sent folder.
+
 ## Who can read it
 
 This is the question that matters, and the answer depends on one setting:
@@ -32,7 +36,8 @@ against visibility when it cannot decide at all.
 
 ## What you control
 
-- **Exclude a sender** so their mail is never captured.
+- **Exclude a sender** so their mail is never captured — Settings → Capture
+  activity, the "Capture exclusions" card.
 - **Destroy what was already captured** — irreversibly, including attachments
   and everything derived from it. Mail a colleague also received stays theirs;
   your access to it ends.
@@ -45,8 +50,12 @@ against visibility when it cannot decide at all.
 ## Retention
 
 Commercial correspondence: as required by German statute. Everything else: the
-period your employer sets. Mail judged personal is destroyed after a seven-day
-undo window.
+period your employer sets.
+
+Mail judged personal is destroyed, and how long that takes depends on who
+judged it: seven days where you marked the sender personal yourself, thirty
+where the classifier did. The longer window belongs to the decision nobody has
+confirmed — until it closes you can correct it on the Senders page.
 
 ## Your rights
 

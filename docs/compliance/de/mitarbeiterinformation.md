@@ -24,6 +24,10 @@ E-Mail-Anbieter greift das System auf nichts zu.
 - daraus abgeleitete Kontakt- und Firmendatensätze
 - technische Protokolle über den Abruf
 
+Spam, Papierkorb und Entwürfe werden nicht erfasst. Erfasst werden der Posteingang
+und der Ordner „Gesendet"; bei Microsoft 365 ausschließlich diese beiden Ordner,
+bei IMAP das eingerichtete Postfach und der Sendeordner.
+
 ## Zwecke und Rechtsgrundlagen
 
 | Zweck | Rechtsgrundlage |
@@ -55,7 +59,7 @@ im Zweifel gegen die Sichtbarkeit.
 ## Was Sie selbst steuern
 
 - **Absender ausschließen:** Post von einer Adresse oder Domain gar nicht erst
-  erfassen — Einstellungen → Verbindungen.
+  erfassen — Einstellungen → Erfassungsaktivität, Karte „Nicht erfassen".
 - **Bereits erfasste Post löschen:** unwiderruflich, einschließlich Anhängen und
   abgeleiteter Daten. Post, die auch eine Kollegin empfangen hat, bleibt ihr
   erhalten; Ihr Zugriff darauf endet.
@@ -69,8 +73,13 @@ im Zweifel gegen die Sichtbarkeit.
 ## Aufbewahrung
 
 Handelsbriefe: [z. B. sechs Jahre] nach § 257 HGB, § 147 AO. Übrige
-Korrespondenz: [Frist]. Als privat eingestufte Post wird nach Ablauf einer
-Widerrufsfrist von sieben Tagen vernichtet.
+Korrespondenz: [Frist].
+
+Als privat eingestufte Post wird vernichtet, und wie lange das dauert, hängt
+davon ab, wer die Einstufung vorgenommen hat: sieben Tage, wenn Sie den Absender
+selbst als privat gekennzeichnet haben, und dreißig Tage, wenn der Klassifikator
+es war. Die längere Frist gilt der unbestätigten Entscheidung — bis dahin können
+Sie sie auf der Seite „Absender" korrigieren.
 
 ## Ihre Rechte
 
