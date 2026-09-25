@@ -224,26 +224,44 @@ type waitingRelaxation struct {
 }
 
 // countWaiting runs the waiting query under one relaxation and counts its rows.
-func (s *Store) countWaiting(
+// waitingStatement renders the eligibility query for ONE relaxation, together
+// with the arguments it was built against.
+//
+// The caller owns the argument list and passes its `arg`, so two reads built
+// for one query — the relaxed and the strict halves of a difference — number
+// their placeholders continuously into one slice. Renumbering a finished
+// statement instead would mean rewriting $N inside SQL that contains string
+// literals, which is the kind of surgery this tree does not do.
+//
+// Extracted so the count and the row list are the same statement asked two
+// ways. They must be: every hidden figure is a difference between runs of this
+// query, and a row list built from a second spelling would name rows the count
+// never counted — which is the one way this reading can lie to the reader who
+// clicks a figure to see what is behind it.
+//
+// waiting.go carries a third spelling of the same constant for the queue's own
+// paged read, and it is deliberately left alone: this change adds no copy, and
+// folding that one in means threading its keyset bound through here, which is
+// a refactor of the queue's read rather than of this guardrail.
+func (s *Store) waitingStatement(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, relax waitingRelaxation, measured int,
-) (int, error) {
-	args := []any{}
-	arg := func(v any) int { args = append(args, v); return len(args) }
+	arg func(any) int,
+) (string, error) {
 	instant := arg(asOf)
 	content, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	// The same gate for the reply that may LIFT a snooze. A reply this
 	// reader cannot see must not put the row back on their day: the row
 	// reappearing is itself the disclosure that it arrived.
 	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	if linkVisible == "" {
 		linkVisible = scopeUnbounded
@@ -271,13 +289,13 @@ func (s *Store) countWaiting(
 	}
 	ownDomains, err := s.ownDomainList(ctx, tx)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
 	if err != nil {
-		return 0, err
+		return "", err
 	}
-	inner := fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
+	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
@@ -290,7 +308,19 @@ func (s *Store) countWaiting(
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		fmt.Sprintf("$%d", arg(readerAddresses)),
 		unansweredConversationAdmittingThreadless(fmt.Sprintf("$%d", instant)),
-		noKeyset)
+		noKeyset), nil
+}
+
+// countWaiting is the statement above asked for how many.
+func (s *Store) countWaiting(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, relax waitingRelaxation, measured int,
+) (int, error) {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	inner, err := s.waitingStatement(ctx, tx, asOf, relax, measured, arg)
+	if err != nil {
+		return 0, err
+	}
 	var count int
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a

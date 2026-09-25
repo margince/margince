@@ -58,6 +58,12 @@ func (w waitingSaying) Hidden(context.Context, time.Time) (HiddenWork, error) {
 	return HiddenWork{Shown: len(w.rows)}, nil
 }
 
+// HiddenRows answers nothing: this fixture drives the team board, and a double
+// that returned rows would be asserting about a read the test never makes.
+func (w waitingSaying) HiddenRows(context.Context, time.Time, string) ([]WaitingCustomer, error) {
+	return nil, nil
+}
+
 // overdueSaying is the counting reader over a fixed tally.
 type overdueSaying map[ids.UUID]int
 

@@ -24,6 +24,13 @@ func (h hidingWork) Hidden(context.Context, time.Time) (HiddenWork, error) {
 	return HiddenWork(h), nil
 }
 
+// HiddenRows answers nothing: these fixtures drive the counts and the queue,
+// and a double that returned rows would be asserting about a read the test
+// never makes.
+func (h hidingWork) HiddenRows(context.Context, time.Time, string) ([]WaitingCustomer, error) {
+	return nil, nil
+}
+
 // The real constructor with every lane unbound, which is what these cases vary
 // from. Built through NewService rather than as a struct literal: a test that
 // assembles its own Service proves nothing about the one production assembles,
