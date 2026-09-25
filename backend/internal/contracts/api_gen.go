@@ -19669,13 +19669,16 @@ type AiRunSummaryCurrency string
 
 // AiRungHealth One model tier and what it has been doing.
 type AiRungHealth struct {
-	// Calls Attempts in the window — terminal ones for a chat tier, every one for `decide`.
+	// Calls Attempts this tier made in the window, each counted once — including one that failed
+	// and handed the call to the next tier, and each same-tier retry. Cache hits are not
+	// counted.
 	Calls int `json:"calls"`
 
-	// Failures How many of them carried an error.
+	// Failures How many of those attempts carried an error, whether or not a later attempt answered the caller.
 	Failures int `json:"failures"`
 
-	// Healthy The tier answered at least once in the window without every attempt failing. Decided
+	// Healthy The tier's latest attempt in the window answered. The latest, not a ratio: a tier
+	// that answered fifty minutes ago and has failed every attempt since is down now. Decided
 	// here rather than left to each client: two clients deciding what an all-failed rung
 	// means would be two answers, and one surface would call an outage while the other did
 	// not.

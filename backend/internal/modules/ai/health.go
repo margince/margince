@@ -39,11 +39,12 @@ const HealthWindow = time.Hour
 type RungHealth struct {
 	// Tier is the rung's name — local_small, cloud_large and the rest.
 	Tier string
-	// Calls and Failures count the window.
+	// Calls and Failures count this rung's own attempts in the window —
+	// RungHealthReport's query states which attempts those are.
 	Calls    int
 	Failures int
 	// LastOutcomeFailed is what actually decides health: whether the MOST
-	// RECENT terminal attempt on this rung carried an error.
+	// RECENT attempt on this rung carried an error.
 	//
 	// A count cannot answer it. A lane with a single success at the top of the
 	// hour that has failed every call since still has more successes than zero,
@@ -61,7 +62,7 @@ type RungHealth struct {
 	MedianLatencyMs int
 }
 
-// Healthy reports that this rung's most recent terminal attempt answered.
+// Healthy reports that this rung's most recent attempt answered.
 //
 // The LATEST outcome, not a ratio over the window. A lane whose last success
 // was at the top of the hour and has failed everything since is down now, and that is the
@@ -91,49 +92,58 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 	since := m.now().Add(-HealthWindow)
 	var out []RungHealth
 	err := m.db.Tx(ctx, func(tx pgx.Tx) error {
-		// TERMINAL attempts only, and cache hits excluded. A retried call
-		// writes a row per attempt, and counting the failed ones a retry then
-		// rescued would report a lane as failing while every caller of it got
-		// an answer. A cache hit never reached the provider at all, so it says
-		// nothing about whether the provider is answering — counting one as a
-		// success is how a dead lane reports healthy.
+		// Every attempt counts once, on the tier that made it: a call that
+		// walked three rungs is one call on each. An attempt with an error
+		// sentinel is a failure on its own tier whether or not a later rung
+		// or retry answered the caller — a tier that fails over on every call
+		// is failing, and read off terminal attempts alone it would show
+		// "N calls, 0 failed" while the rung above did its work. One rule for
+		// every tier, the decision lane's included.
+		//
+		// A same-tier retry is another attempt and counts again. A schema
+		// retry's first attempt carries no sentinel — the provider answered
+		// and the task's validator refused the text — so it is an answered
+		// call: this surface asks whether the tier responds, not whether its
+		// answers pass a task's check. None of this raises a false alarm,
+		// because Healthy reads the tier's LATEST attempt, not the ratio.
+		//
+		// Cache hits are excluded: one never reached the provider, so it says
+		// nothing about whether the provider is answering, and counting one
+		// as a success is how a dead lane reports healthy. An empty tier is a
+		// call refused before any rung was chosen, which is no rung's attempt.
 		//
 		// `metering_failed` is a SUCCESS here. It marks a call the model
 		// answered where only the usage-meter write failed (callstore.go), and
 		// callstats.go already treats it as served for exactly that reason.
 		// Counting it as a failure would report a working lane as down.
 		//
-		// A DECISION attempt counts whether terminal or not. The lane is asked
-		// once per call and never retried on its own rung, so its attempt is
-		// already its final outcome; when it fails, the ladder answers the
-		// call and the decision row is never the terminal one. Read as a
-		// rescued retry, a decision endpoint failing every call would report
-		// healthy for as long as the ladder works.
+		// Latest is ordered by occurred_at, then attempt: every attempt of one
+		// logical call is written in one transaction and shares occurred_at,
+		// so within a call the higher attempt is the later one.
 		rows, err := tx.Query(ctx, `
-			WITH terminal AS (
-			  SELECT tier, occurred_at, latency_ms,
+			WITH attempts AS (
+			  SELECT tier, occurred_at, attempt, latency_ms,
 			         (error_sentinel IS NOT NULL
 			          AND error_sentinel <> ''
 			          AND error_sentinel <> 'metering_failed') AS failed,
 			         coalesce(error_sentinel, '') AS sentinel
 			    FROM ai_call
 			   WHERE occurred_at >= $1
-			     AND (is_terminal OR kind = 'decision')
 			     AND NOT cache_hit
 			     AND tier <> ''
 			)
 			SELECT tier,
 			       count(*)                                   AS calls,
 			       count(*) FILTER (WHERE failed)             AS failures,
-			       coalesce((array_agg(sentinel ORDER BY occurred_at DESC)
+			       coalesce((array_agg(sentinel ORDER BY occurred_at DESC, attempt DESC)
 			                 FILTER (WHERE failed))[1], '')   AS last_sentinel,
 			       max(occurred_at)                           AS last_call_at,
 			       coalesce(percentile_disc(0.5) WITHIN GROUP (ORDER BY latency_ms), 0) AS median_latency,
 			       -- The LATEST attempt's own outcome, which is what decides
 			       -- health. array_agg over the same ordering the sentinel
 			       -- uses, so both describe the same most-recent row.
-			       coalesce((array_agg(failed ORDER BY occurred_at DESC))[1], false) AS last_failed
-			  FROM terminal
+			       coalesce((array_agg(failed ORDER BY occurred_at DESC, attempt DESC))[1], false) AS last_failed
+			  FROM attempts
 			 GROUP BY tier
 			 ORDER BY tier`, since)
 		if err != nil {

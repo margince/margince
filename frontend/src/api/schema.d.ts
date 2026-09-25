@@ -9258,12 +9258,14 @@ export interface paths {
          *
          *     Read from `ai_call`, which already records every attempt. Nothing is written for this: a
          *     health surface with its own bookkeeping would be a second account of what happened, free
-         *     to disagree with the first. A chat tier counts its terminal attempts only, so a failure a
-         *     retry rescued does not report a lane as failing while every caller of it got an answer.
-         *     The `decide` tier counts every decision attempt: it is asked once per call and never
-         *     retried on its own tier, so its attempt is its final outcome even when the ladder answers
-         *     after it — counting terminal attempts alone would call a decision endpoint that fails
-         *     every call healthy.
+         *     to disagree with the first. Every tier, `decide` included, counts each attempt it made
+         *     once: a call that walked three tiers is one call on each, and a same-tier retry is
+         *     another call on that tier. An attempt that carried an error is a failure on its own tier
+         *     even when a later tier or retry answered the caller, so a tier that fails over on every
+         *     call shows it. A schema retry's first attempt is an answer, not a failure: the model
+         *     replied and the task refused the text. Cache hits never reached a model and are not
+         *     counted. `healthy` reads the tier's latest attempt, not the ratio, so a failure a retry
+         *     rescued is counted without reporting a lane that is answering now as down.
          *
          *     An hour, because the question is whether it is answering NOW — a day-long window would
          *     call a lane that died forty minutes ago healthy on the strength of this morning.
@@ -18419,15 +18421,20 @@ export interface components {
             /** @description The rung's name — `local_small`, `cloud_large` and the rest. */
             tier: string;
             /**
-             * @description The tier answered at least once in the window without every attempt failing. Decided
+             * @description The tier's latest attempt in the window answered. The latest, not a ratio: a tier
+             *     that answered fifty minutes ago and has failed every attempt since is down now. Decided
              *     here rather than left to each client: two clients deciding what an all-failed rung
              *     means would be two answers, and one surface would call an outage while the other did
              *     not.
              */
             healthy: boolean;
-            /** @description Attempts in the window — terminal ones for a chat tier, every one for `decide`. */
+            /**
+             * @description Attempts this tier made in the window, each counted once — including one that failed
+             *     and handed the call to the next tier, and each same-tier retry. Cache hits are not
+             *     counted.
+             */
             calls: number;
-            /** @description How many of them carried an error. */
+            /** @description How many of those attempts carried an error, whether or not a later attempt answered the caller. */
             failures: number;
             /**
              * @description The most recent error this tier reported, absent when it reported none. It is the

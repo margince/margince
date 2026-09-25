@@ -54,10 +54,11 @@ func TestAiHealthReportsARungThatStoppedAnswering(t *testing.T) {
 	}
 }
 
-// A failure a retry rescued is not a lane that failed. Counting non-terminal
-// attempts would report a rung as failing while every caller of it got an
-// answer, which is a false alarm an operator learns to ignore.
-func TestAiHealthIgnoresAnAttemptARetryRescued(t *testing.T) {
+// A failure a retry rescued is still a failure on that rung: the attempt
+// reached the provider and it did not answer. It does not make the rung read
+// down while its latest attempt answers, because health is the latest outcome
+// and not the ratio.
+func TestAiHealthCountsAnAttemptARetryRescuedButReadsTheLatest(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	logical := ids.NewV7()
@@ -73,18 +74,18 @@ func TestAiHealthIgnoresAnAttemptARetryRescued(t *testing.T) {
 	if len(got.Rungs) != 1 {
 		t.Fatalf("%d rungs, want 1", len(got.Rungs))
 	}
-	if got.Rungs[0].Failures != 0 {
-		t.Errorf("failures = %d, want 0 — the retry answered", got.Rungs[0].Failures)
+	if got.Rungs[0].Calls != 2 || got.Rungs[0].Failures != 1 {
+		t.Errorf("calls/failures = %d/%d, want 2/1", got.Rungs[0].Calls, got.Rungs[0].Failures)
 	}
 	if !got.Rungs[0].Healthy {
-		t.Error("a rung whose retry succeeded is reported unhealthy")
+		t.Error("a rung whose latest attempt answered is reported unhealthy")
 	}
 }
 
-// The decision lane is asked once per call and never retried on its own rung:
-// when it fails, the ladder answers the call instead, so its attempt is never
-// the terminal one. Read as a retry the ladder rescued, a decision endpoint
-// that fails every call would report healthy for as long as the ladder works.
+// When the decision lane fails, the ladder answers the call instead, so its
+// attempt is never the terminal one. Counted only where terminal, a decision
+// endpoint that fails every call would report healthy for as long as the
+// ladder works.
 func TestAiHealthCountsAFailedDecisionAttemptTheLadderAnswered(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
