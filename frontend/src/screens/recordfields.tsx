@@ -437,7 +437,7 @@ function RecordFieldForm({
           else onSubmit(submitted, submittedRows);
         }}
         onClose={onClose}
-        submitLabelKey="record.save"
+        intent="save"
       />
     </div>
   );

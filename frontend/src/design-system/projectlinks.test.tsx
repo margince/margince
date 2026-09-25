@@ -212,7 +212,8 @@ describe("ProjectLinks", () => {
     );
   });
 
-  it("says what it links, so a mirror cannot half-rename itself", () => {
+  it("says what it links, so a mirror cannot half-rename itself", async () => {
+    const user = userEvent.setup();
     render(
       <LocaleProvider initial="en">
         <ProjectLinks
@@ -230,6 +231,7 @@ describe("ProjectLinks", () => {
             attach: "Attach company",
             move: "Attach company",
             detachTitle: "Remove company from project?",
+            detachConfirm: "Remove company",
             search: "Search companies by name",
           }}
         />
@@ -240,6 +242,11 @@ describe("ProjectLinks", () => {
     // name, which is what a screen reader announces.
     expect(screen.getByRole("button", { name: "Attach company" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Attach project" })).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Detach Beta Systeme" }),
+    );
+    expect(screen.getByRole("button", { name: "Remove company" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Detach project" })).toBeNull();
   });
 
   // The disclosure this section used to make. A reader who may see a company

@@ -64,6 +64,7 @@ how do I change the rate card
 how do I create a contract
 how do I renew a contract
 how do I create an invoice
+how do I connect my accounting system
 # deal rooms
 what is a deal room
 how do I share a deal room with a buyer

@@ -1328,7 +1328,7 @@ export const de = {
   "finance.syncing":
     "Synchronisierung mit dem Buchhaltungssystem läuft. Die Zahlen erscheinen nach der ersten Synchronisierung.",
   "finance.noConnection":
-    "Kein Buchhaltungssystem verbunden. Verbinde eines, um Rechnungen und Zahlungsverhalten dieses Kunden zu sehen.",
+    "Kein Buchhaltungssystem verbunden. Rechnungen und Zahlungsverhalten dieses Kunden erscheinen, sobald eines verbunden ist.",
   "finance.unmapped":
     "Verbunden, aber dieses Unternehmen ist noch keinem Kunden im Buchhaltungssystem zugeordnet.",
   "finance.netInvoiced": "Netto fakturiert · 12 Monate",
@@ -1357,7 +1357,6 @@ export const de = {
   "finance.col.status": "Status",
   "finance.unnumbered": "Ohne Nummer",
   "finance.moreInvoices": "Weitere Rechnungen im Buchhaltungssystem",
-  "finance.connect": "Finanzsystem verbinden",
   "finance.syncedFrom": "Aus {provider} · synchronisiert {when}",
   "finance.fromNeverSynced": "Aus {provider} · noch nicht synchronisiert",
   "finance.status.draft": "Entwurf",
@@ -9126,6 +9125,20 @@ export const de = {
   "filters.emptyGroup":
     "Noch keine Bedingungen. Eine leere Gruppe trifft auf nichts zu; füge eine Bedingung hinzu.",
   "filters.field": "Feld",
+  "filters.field.classification": "Klassifizierung",
+  "filters.field.company_industry": "Branche des Unternehmens",
+  "filters.field.company_lifecycle": "Lebenszyklus des Unternehmens",
+  "filters.field.company_size_band": "Größe des Unternehmens",
+  "filters.field.hosting_provider": "Hosting",
+  "filters.field.mail_provider": "E-Mail-System",
+  "filters.field.operated_service": "Betriebener Dienst",
+  "filters.field.owner_team_id": "Zuständiges Team",
+  "filters.field.phase": "Phase",
+  "filters.field.pipeline_id": "Pipeline",
+  "filters.field.relationship_type": "Beziehungstyp",
+  "filters.field.stage_id": "Phase",
+  "filters.field.tag": "Tag",
+  "filters.field.technology": "Technologie",
   "filters.choosePlaceholder": "Feld ausw\u00e4hlen",
   "filters.customBadge": "Eigenes Feld",
   "filters.operator": "Operator",
@@ -9251,6 +9264,7 @@ export const de = {
     "Noch keine Unternehmen. Ein Projekt kann den Kunden und alle Partner oder Subunternehmen umfassen, die es umsetzen.",
   "projectCompanies.attach": "Unternehmen verknüpfen",
   "projectCompanies.detachTitle": "Unternehmen aus dem Projekt entfernen?",
+  "projectCompanies.detachConfirm": "Unternehmen entfernen",
   "projectCompanies.searchLabel": "Unternehmen nach Name suchen",
   "contactProjects.title": "Projekte",
   "contactProjects.empty":
