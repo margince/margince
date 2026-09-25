@@ -220,9 +220,12 @@ func (s *Store) liveEntitiesOf(ctx context.Context, entityType string, src pendi
 		// is installation-wide: there is no narrower set for a pass to rebuild.
 		// A pass given a workspace therefore rebuilds the same rows as a pass
 		// given any other, which is what makes the fan-out collapsible.
+		// The embeddable predicate is the set form's half of capture privacy:
+		// without it a binding-change re-index recreates an embedding for every
+		// held message, which is the one thing the per-row indexer refuses.
 		sql := fmt.Sprintf(`SELECT t.id, %s FROM %s t
-			 WHERE t.archived_at IS NULL`,
-			src.text, src.table)
+			 WHERE t.archived_at IS NULL AND %s`,
+			src.text, src.table, src.embeddablePredicate())
 		rows, err := tx.Query(ctx, sql)
 		if err != nil {
 			return fmt.Errorf("search: selecting live %s rows: %w", entityType, err)

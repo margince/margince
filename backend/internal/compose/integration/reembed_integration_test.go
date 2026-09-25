@@ -376,3 +376,100 @@ func TestReembedRunMarkerIsHeldUntilTheRunEnds(t *testing.T) {
 		t.Fatal("the marker is still held after the run ended — every later confirm is refused until a forced steal")
 	}
 }
+
+// A re-index does not send a HELD message's text to the embedder, and does not
+// count it as work still owed.
+//
+// WHAT IS NOT THE DEFECT, because the issue reported it as one: a re-index
+// cannot publish a held message into semantic search. UpsertEmbedding re-checks
+// the audience ON WRITE, under a FOR SHARE lock so a narrowing committing a
+// moment later cannot be missed: a vector is inserted only while the row is
+// still `workspace` and unrestricted, whatever the read that produced its text
+// saw. (The rule carries the labels A165 and ADR-0114.) That guard holds with
+// or without the set-form predicate this case is about, which is why the
+// "not embedded" assertion below is NOT the discriminating one — it is here so
+// a future change to that guard cannot pass unnoticed.
+//
+// WHAT IS: the set form had no audience predicate, so the scan handed every
+// held message's subject and body to the EMBEDDER before the write refused the
+// result. One model call per held row on every binding change, and on a
+// cloud-bound embedder that is the text of a message nobody may read leaving
+// the machine — paid for, and then thrown away.
+//
+// And the count never settles. EntitiesPending reads the same set, so held rows
+// are owed work forever: nothing will ever embed them, and the backlog an
+// operator watches cannot reach zero on any installation that holds mail.
+func TestAReindexDoesNotEmbedHeldMailOrOweItForever(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+	fake := ai.NewFakeClient()
+	embedder := fakeEmbedderNamed(t, fake, "model-audience")
+	identity, _ := embedder.EmbedIdentity()
+	if err := e.Store.SeedBinding(ctx, identity); err != nil {
+		t.Fatalf("SeedBinding: %v", err)
+	}
+
+	open := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, direction, source, captured_by, audience, audience_reason)
+		VALUES ($1, 'note', 'Open note', 'a phrase anyone may find', NULL, 'manual', 'human:x',
+		        'workspace', 'not_captured')`)
+	held := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
+		                      source, captured_by, audience, audience_reason)
+		VALUES ($1, 'email', 'Held thread', 'a phrase nobody else may find', 'inbound',
+		        'gmail', 'held-1', 'gmail:held-1', 'connector:gmail', 'participants', 'pending_verdict')`)
+
+	before := len(fake.Calls())
+	if err := e.Store.Reembed(ctx, search.ReembedPass{Run: ids.NewV7(), Identity: identity}, embedder); err != nil {
+		t.Fatalf("Reembed: %v", err)
+	}
+
+	// THE ASSERTION. Two embeddable-looking rows, one embeddable: one call.
+	if calls := len(fake.Calls()) - before; calls != 1 {
+		t.Errorf("the pass made %d embed calls over one embeddable row and one held one, want 1. A held "+
+			"message's subject and body were handed to the embedder — on a cloud-bound binding that is the "+
+			"text of a message nobody may read leaving the machine, paid for and then refused by the write",
+			calls)
+	}
+	if got := e.activityEmbeddingModel(t, open); got != identity {
+		t.Errorf("the workspace-audience activity was not embedded (model = %q): the predicate is refusing "+
+			"rows it should admit, which would make the call count above right for the wrong reason", got)
+	}
+	// Not discriminating on its own — the write guard holds this too — and kept
+	// so a change to that guard cannot pass here unnoticed.
+	if got := e.activityEmbeddingModel(t, held); got != "" {
+		t.Errorf("a `participants` activity is embedded under %q: the audience re-check on write has stopped "+
+			"holding, and a colleague can now find a held message by a phrase from its body", got)
+	}
+
+	pending, err := e.Store.EntitiesPending(ctx, identity)
+	if err != nil {
+		t.Fatalf("EntitiesPending: %v", err)
+	}
+	if pending != 0 {
+		t.Errorf("EntitiesPending = %d after a clean pass, want 0. The held row is counted as work still "+
+			"owed, and nothing will ever do it — so this figure cannot reach zero on any installation that "+
+			"holds mail, and an operator reading it waits for a pass that has already finished", pending)
+	}
+}
+
+// activityEmbeddingModel answers the identity an activity's embedding was
+// written under, or "" when it has none.
+//
+// Absence is the ANSWER here, not a failure: the case under test is a row that
+// must not be embedded at all, and storedEmbeddingModel fatals on no rows
+// because every caller before this one was asserting the opposite.
+func (e *SearchEnv) activityEmbeddingModel(t *testing.T, entityID ids.UUID) string {
+	t.Helper()
+	var model string
+	err := e.Owner.QueryRow(context.Background(),
+		`SELECT model FROM embedding WHERE entity_type = 'activity' AND entity_id = $1 AND chunk_ix = 0`,
+		entityID).Scan(&model)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ""
+	}
+	if err != nil {
+		t.Fatalf("reading stored embedding for activity %s: %v", entityID, err)
+	}
+	return model
+}
