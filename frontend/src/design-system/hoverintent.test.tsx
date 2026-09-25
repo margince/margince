@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useHoverIntent } from "./hoverintent";
-import { armHoverIntent } from "./hoverintent-testing";
+import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 
 // The whole point of the hook is what it does NOT do, and none of that is
 // visible by eye — a popover that fires on a passing pointer looks identical
@@ -63,18 +63,7 @@ let opened: number;
 let closed: number;
 
 beforeEach(() => {
-  vi.useFakeTimers({
-    // performance.now IS the clock this hook reasons with, so a fake timer
-    // that leaves it running measures a real elapsed time against a simulated
-    // one and every threshold reads as instantly met.
-    toFake: [
-      "setTimeout",
-      "clearTimeout",
-      "setInterval",
-      "clearInterval",
-      "performance",
-    ],
-  });
+  takeHoverClock();
   opened = 0;
   closed = 0;
   armHoverIntent();

@@ -15,7 +15,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { EvidenceMark } from "./evidencemark";
-import { armHoverIntent } from "./hoverintent-testing";
+import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import { Popover } from "./popover";
 
 // A PORTALLED PANEL BEHAVES, FOR FOCUS, AS THOUGH IT SAT BY ITS TRIGGER.
@@ -150,15 +150,7 @@ describe.each(PANELS)(
     // than a copy of either — the claim here is about what happens after they
     // elapse, not about what they are.
     it("hands focus back to the trigger when a passing pointer closes it", () => {
-      vi.useFakeTimers({
-        toFake: [
-          "setTimeout",
-          "clearTimeout",
-          "setInterval",
-          "clearInterval",
-          "performance",
-        ],
-      });
+      takeHoverClock();
       armHoverIntent();
       mount();
       const trigger = screen.getByRole("button", { name: triggerName });

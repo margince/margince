@@ -24,8 +24,9 @@ import { useCallback, useEffect, useRef } from "react";
 // ceiling unasked — a race that load decides. The unit suite therefore makes
 // the hook INERT by default (vitest.setup.ts): pointers open nothing, focus
 // still does. A case whose subject is hover calls `armHoverIntent()` from
-// hoverintent-testing.ts, and must then own the clock (fake `performance`
-// too, as hoverintent.test.tsx does) or leave the trigger before asserting.
+// hoverintent-testing.ts, then either waits for the open or owns the clock
+// (`takeHoverClock()`). It never asserts an ABSENCE on the real clock: that
+// holds before the hook could have fired, whatever the hook does.
 
 // Below this the pointer counts as stopped. In px/ms, so it holds the same
 // meaning on a trackpad flick and a slow mouse drag.

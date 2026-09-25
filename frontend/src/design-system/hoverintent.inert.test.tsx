@@ -3,16 +3,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { armHoverIntent } from "./hoverintent-testing";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import { useTooltip } from "./tooltip";
 
 // That the suite's hover-intent triggers stay shut under a pointer unless a
-// case asks otherwise. vitest.setup.ts arms that; this is what fails if it
-// stops, or if the mock no longer reaches a module a test file imports.
-//
-// Driven through a real caller rather than the hook itself, because the flake
-// lived in screens that reach the hook two imports down.
+// case asks otherwise. vitest.setup.ts holds that; this is what fails if it
+// stops, or if the mock no longer reaches a hook a real caller imports.
 
 function Anchor() {
   const tip = useTooltip<HTMLButtonElement>("Deals");
@@ -28,17 +25,7 @@ function Anchor() {
 // settled by now.
 const LONG_AFTER_ANY_CEILING = 10_000;
 
-beforeEach(() => {
-  vi.useFakeTimers({
-    toFake: [
-      "setTimeout",
-      "clearTimeout",
-      "setInterval",
-      "clearInterval",
-      "performance",
-    ],
-  });
-});
+beforeEach(takeHoverClock);
 
 afterEach(() => {
   vi.useRealTimers();
@@ -59,21 +46,34 @@ it("opens nothing under a resting pointer, however long the case waits", () => {
   expect(screen.queryByRole("tooltip")).toBeNull();
 });
 
-it("opens under a resting pointer once the case arms the real hook", () => {
-  armHoverIntent();
+// In file order whatever the run's shuffle: the second case reads what the
+// first left behind.
+describe("arming lasts one case", { shuffle: false }, () => {
+  it("opens under a resting pointer once the case arms the real hook", () => {
+    armHoverIntent();
+    render(<Anchor />);
+
+    restPointerOn(screen.getByRole("button"));
+
+    expect(screen.getByRole("tooltip").textContent).toBe("Deals");
+  });
+
+  it("starts inert again after a case that armed it", () => {
+    render(<Anchor />);
+
+    restPointerOn(screen.getByRole("button"));
+
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+});
+
+it("opens for a trigger mounted before the case armed it", () => {
   render(<Anchor />);
+  armHoverIntent();
 
   restPointerOn(screen.getByRole("button"));
 
   expect(screen.getByRole("tooltip").textContent).toBe("Deals");
-});
-
-it("starts inert again after a case that armed it", () => {
-  render(<Anchor />);
-
-  restPointerOn(screen.getByRole("button"));
-
-  expect(screen.queryByRole("tooltip")).toBeNull();
 });
 
 it("still opens on keyboard focus, which never went through the hook", () => {

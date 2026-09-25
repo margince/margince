@@ -71,10 +71,10 @@ for (const key of ["localStorage", "sessionStorage"] as const) {
 // A pointer arriving on a hover-intent trigger opens NOTHING in this suite.
 //
 // The hook settles on a real-millisecond timer and a test DOM's silent pointer
-// reads as a resting hand, so every click or hover armed an open that raced the
-// next assertion, and a loaded run failed a different file each time. Keyboard
-// focus opens without the hook and is untouched. A case whose subject IS hover
-// calls `armHoverIntent()`; hoverintent.inert.test.tsx fails if this stops.
+// reads as a resting hand, so an armed hook opens under any click at a moment
+// machine load decides. Focus opens without the hook and is untouched. A case
+// whose subject IS hover calls `armHoverIntent()`; hoverintent.inert.test.tsx
+// fails if this stops.
 vi.mock(import("./src/design-system/hoverintent"), async (importOriginal) => {
   const actual = await importOriginal();
   const { inertUnlessArmed } = await import(
