@@ -11,6 +11,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import {
   type EncodedPredicate,
@@ -124,6 +125,43 @@ export function groupFields(fields: readonly VocabularyField[]) {
   return { core, custom };
 }
 
+// What each core filter field is CALLED. The vocabulary carries wire names
+// (`owner_id`), and a builder that printed them spoke a column's language to a
+// reader who never sees one. A column the History tab already names keeps that
+// word, so a field reads the same on both surfaces.
+//
+// Held to the engine in both directions by
+// backend/gates/frontendfilterfieldlabels_test.go: a core field with no word
+// here fails, and so does a word for a field no engine has. A retired field
+// keeps its word, because a saved clause naming it still evaluates.
+const FILTER_FIELD_LABELS = new Map<string, MessageKey>([
+  ["candidate_company_key", "history.field.candidate_company_key"],
+  ["classification", "filters.field.classification"],
+  ["company_id", "history.field.company_id"],
+  ["company_industry", "filters.field.company_industry"],
+  ["company_lifecycle", "filters.field.company_lifecycle"],
+  ["company_size_band", "filters.field.company_size_band"],
+  ["domain", "history.field.domain"],
+  ["forecast_category", "history.field.forecast_category"],
+  ["hosting_provider", "filters.field.hosting_provider"],
+  ["industry", "history.field.industry"],
+  ["lifecycle", "history.field.lifecycle"],
+  ["mail_provider", "filters.field.mail_provider"],
+  ["operated_service", "filters.field.operated_service"],
+  ["owner_id", "history.field.owner_id"],
+  ["owner_team_id", "filters.field.owner_team_id"],
+  ["partner_company_id", "history.field.partner_company_id"],
+  ["phase", "filters.field.phase"],
+  ["pipeline_id", "filters.field.pipeline_id"],
+  ["project_id", "history.field.project_id"],
+  ["relationship_type", "filters.field.relationship_type"],
+  ["size_band", "history.field.size_band"],
+  ["stage_id", "filters.field.stage_id"],
+  ["status", "history.field.status"],
+  ["tag", "filters.field.tag"],
+  ["technology", "filters.field.technology"],
+]);
+
 /**
  * The label a picker shows for a field.
  *
@@ -132,9 +170,17 @@ export function groupFields(fields: readonly VocabularyField[]) {
  * those. Until this screen joins that catalog, stripping the prefix and
  * un-snaking the rest is an honest approximation of the admin's label rather
  * than an invented one: `cf_loyalty_tier` reads as "loyalty tier", which is what
- * the admin typed, modulo capitalization.
+ * the admin typed, modulo capitalization. A core field the map does not name
+ * falls back the same way rather than vanishing from the picker.
  */
-export function fieldLabel(field: VocabularyField): string {
+export function fieldLabel(
+  field: VocabularyField,
+  t: (key: MessageKey) => string,
+): string {
+  const key = field.custom ? undefined : FILTER_FIELD_LABELS.get(field.name);
+  if (key) {
+    return t(key);
+  }
   const bare = field.custom ? field.name.replace(/^cf_/, "") : field.name;
   return bare.replaceAll("_", " ");
 }

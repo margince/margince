@@ -73,7 +73,7 @@ Also called: my contacts, my deals, my accounts, assigned to me, owned by me.
 ### How do I filter by a colleague's name?
 To filter a list by one colleague in Margince, use **Filters and views**: the owner filters on the list screens offer only you, your teams and **Unassigned**.
 1. Open **Filters and views** and pick the **Record type**: **Contacts**, **Companies** or **Deals**.
-2. Choose **Add clause**, then under **Select field** pick **owner id**.
+2. Choose **Add clause**, then under **Select field** pick **Owner**.
 3. Keep the operator **is** (or **is any of** for several colleagues) and pick the colleague.
 The matching rows show under **Matching records**.
 Also called: records owned by a teammate, another user's deals, filter by sales rep.
@@ -206,7 +206,7 @@ Groups nest at most 4 levels deep.
 Also called: advanced search, segment, query builder.
 
 ### What can I filter on in Filters and views?
-The fields on **Filters and views** in Margince are, for **Contacts**: owner, owner's team, tag and custom fields. **Companies** add industry, size band, lifecycle, relationship type, domain, and what the company runs (mail provider, hosting provider, operated service, technology). **Deals** add pipeline, stage, company, partner company, project, status, forecast category and the company's industry, size band and lifecycle. Custom fields carry a **Custom field** badge. Your own company is never in a company filter.
+The fields on **Filters and views** in Margince are, for **Contacts**: **Owner**, **Owner team**, **Tag** and custom fields. **Companies** add **Industry**, **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**). **Deals** add **Pipeline**, **Stage**, **Company**, **Partner**, **Project**, **Status**, **Forecast category**, **Company industry**, **Company size** and **Company lifecycle**. Custom fields carry a **Custom field** badge. Your own company is never in a company filter.
 Also called: filter fields, which attributes can I filter.
 
 ### How do I save a filter from Filters and views?

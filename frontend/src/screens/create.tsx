@@ -576,10 +576,18 @@ function MultiselectField({
   );
 }
 
+// A submit button's resting and busy labels travel as one pair, so an edit
+// can never announce "Creating…" while it saves.
+export const SUBMIT_COPY = {
+  create: { label: "create.save", busy: "create.saving" },
+  save: { label: "record.save", busy: "common.saving" },
+} as const satisfies Record<string, { label: MessageKey; busy: MessageKey }>;
+export type SubmitIntent = keyof typeof SUBMIT_COPY;
+
 // The shared modal form body: fields → controls, the error paragraph, and
 // the Cancel/Save row. Both create and edit render this identically — only
 // the values' origin (empty defaults vs. a prefilled record) and the submit
-// label differ, and those stay with each modal's owner.
+// intent differ, and those stay with each modal's owner.
 export function RecordFormBody({
   fields,
   values,
@@ -592,7 +600,7 @@ export function RecordFormBody({
   resolveExisting,
   onSubmit,
   onClose,
-  submitLabelKey,
+  intent,
 }: Readonly<{
   fields: CreateField[];
   values: Record<string, string>;
@@ -608,7 +616,7 @@ export function RecordFormBody({
   resolveExisting?: (code: string, id: string) => Route;
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
   onClose: () => void;
-  submitLabelKey: MessageKey;
+  intent: SubmitIntent;
 }>) {
   const t = useT();
   const formId = useId();
@@ -736,9 +744,9 @@ export function RecordFormBody({
           type="submit"
           disabled={!pending && (requiredMissing || refusals.size > 0)}
           pending={pending}
-          busyLabel={t("create.saving")}
+          busyLabel={t(SUBMIT_COPY[intent].busy)}
         >
-          {t(submitLabelKey)}
+          {t(SUBMIT_COPY[intent].label)}
         </Button>
       </div>
     </form>
@@ -840,7 +848,7 @@ export function CreateRecordModal({
           onSubmit(sent, sentRows);
         }}
         onClose={onClose}
-        submitLabelKey="create.save"
+        intent="create"
       />
     </Modal>
   );

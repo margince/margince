@@ -170,6 +170,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "tab.deals",
   "deals.pipeline",
   "deal.fcPipeline",
+  "filters.field.pipeline_id",
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",
@@ -268,6 +269,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "search.kind.deal",
   "search.kind.lead",
   "search.kind.tag",
+  // The same loanword naming the tag field on Filters and views.
+  "filters.field.tag",
   // The lead rail's own deal card title, the same singular loanword as
   // search.kind.deal above it.
   "lead.rail.deal.title",

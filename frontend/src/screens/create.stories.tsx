@@ -137,7 +137,7 @@ export const FormBodyFilled: Story = {
           error={null}
           onSubmit={() => undefined}
           onClose={() => undefined}
-          submitLabelKey="create.save"
+          intent="create"
         />
       );
     }

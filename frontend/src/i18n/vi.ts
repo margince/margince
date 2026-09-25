@@ -1315,7 +1315,7 @@ export const vi = {
   "finance.syncing":
     "Đang đồng bộ với nguồn kế toán. Số liệu sẽ hiện sau lần quét đầu tiên.",
   "finance.noConnection":
-    "Chưa kết nối nguồn tài chính — hãy kết nối để thấy khách hàng này đã được xuất hóa đơn bao nhiêu và có trả đúng hạn không",
+    "Chưa kết nối nguồn tài chính — hóa đơn và việc thanh toán của khách hàng này sẽ hiện khi có nguồn được kết nối",
   "finance.unmapped":
     "Đã kết nối, nhưng công ty này chưa được khớp với khách hàng nào trong hệ thống kế toán",
   "finance.netInvoiced": "Đã xuất hóa đơn ròng · 12 tháng",
@@ -1345,7 +1345,6 @@ export const vi = {
   "finance.col.status": "Trạng thái",
   "finance.unnumbered": "Không số",
   "finance.moreInvoices": "Còn hóa đơn khác trong hệ thống kế toán",
-  "finance.connect": "Kết nối nguồn tài chính",
   "finance.syncedFrom": "Từ {provider} · đồng bộ {when}",
   "finance.fromNeverSynced": "Từ {provider} · chưa đồng bộ",
   "finance.status.draft": "Nháp",
@@ -9046,6 +9045,20 @@ export const vi = {
   "filters.emptyGroup":
     "Ch\u01b0a c\u00f3 \u0111i\u1ec1u ki\u1ec7n \u2014 nh\u00f3m tr\u1ed1ng kh\u00f4ng kh\u1edbp v\u1edbi g\u00ec, h\u00e3y th\u00eam m\u1ed9t \u0111i\u1ec1u ki\u1ec7n.",
   "filters.field": "Tr\u01b0\u1eddng",
+  "filters.field.classification": "Phân loại",
+  "filters.field.company_industry": "Ngành của công ty",
+  "filters.field.company_lifecycle": "Vòng đời của công ty",
+  "filters.field.company_size_band": "Quy mô công ty",
+  "filters.field.hosting_provider": "Lưu trữ",
+  "filters.field.mail_provider": "Hệ thống thư",
+  "filters.field.operated_service": "Dịch vụ vận hành",
+  "filters.field.owner_team_id": "Nhóm sở hữu",
+  "filters.field.phase": "Giai đoạn",
+  "filters.field.pipeline_id": "Pipeline",
+  "filters.field.relationship_type": "Loại quan hệ",
+  "filters.field.stage_id": "Giai đoạn",
+  "filters.field.tag": "Tag",
+  "filters.field.technology": "Công nghệ",
   "filters.choosePlaceholder": "Ch\u1ecdn m\u1ed9t tr\u01b0\u1eddng",
   "filters.customBadge": "Tr\u01b0\u1eddng t\u00f9y ch\u1ec9nh",
   "filters.operator": "To\u00e1n t\u1eed",
@@ -9181,6 +9194,7 @@ export const vi = {
     "Dự án là công việc nhiều công ty cùng làm — khách hàng, cùng mọi đối tác hoặc nhà thầu phụ tham gia.",
   "projectCompanies.attach": "Liên kết công ty",
   "projectCompanies.detachTitle": "Bỏ công ty này khỏi dự án?",
+  "projectCompanies.detachConfirm": "Bỏ công ty",
   "projectCompanies.searchLabel": "Tìm công ty theo tên",
   "contactProjects.title": "Dự án",
   "contactProjects.empty":

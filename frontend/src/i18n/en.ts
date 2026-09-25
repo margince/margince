@@ -1395,7 +1395,7 @@ export const en = {
   "finance.syncing":
     "Syncing with the accounting system. Figures appear after the first sync.",
   "finance.noConnection":
-    "No accounting system connected. Connect one to see invoices and payment behavior for this customer.",
+    "No accounting system connected. Invoices and payment behavior for this customer appear once one is.",
   "finance.unmapped":
     "Connected, but this company is not yet matched to a customer in the accounting system.",
   "finance.netInvoiced": "Net invoiced · 12 months",
@@ -1423,7 +1423,6 @@ export const en = {
   "finance.col.status": "Status",
   "finance.unnumbered": "No number",
   "finance.moreInvoices": "More invoices in the accounting system",
-  "finance.connect": "Connect finance",
   "finance.syncedFrom": "From {provider} · synced {when}",
   "finance.fromNeverSynced": "From {provider} · not yet synced",
   "finance.status.draft": "Draft",
@@ -9304,6 +9303,20 @@ export const en = {
   "filters.emptyGroup":
     "No clauses yet. An empty group matches nothing; add a clause.",
   "filters.field": "Field",
+  "filters.field.classification": "Classification",
+  "filters.field.company_industry": "Company industry",
+  "filters.field.company_lifecycle": "Company lifecycle",
+  "filters.field.company_size_band": "Company size",
+  "filters.field.hosting_provider": "Hosting",
+  "filters.field.mail_provider": "Mail system",
+  "filters.field.operated_service": "Operated service",
+  "filters.field.owner_team_id": "Owner team",
+  "filters.field.phase": "Phase",
+  "filters.field.pipeline_id": "Pipeline",
+  "filters.field.relationship_type": "Relationship type",
+  "filters.field.stage_id": "Stage",
+  "filters.field.tag": "Tag",
+  "filters.field.technology": "Technology",
   "filters.choosePlaceholder": "Select field",
   "filters.customBadge": "Custom field",
   "filters.operator": "Operator",
@@ -9449,6 +9462,7 @@ export const en = {
     "No companies yet. A project can include the client and any partner or subcontractor delivering it.",
   "projectCompanies.attach": "Attach company",
   "projectCompanies.detachTitle": "Remove company from project?",
+  "projectCompanies.detachConfirm": "Remove company",
   "projectCompanies.searchLabel": "Search companies by name",
   "contactProjects.title": "Projects",
   "contactProjects.empty":

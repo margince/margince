@@ -34,6 +34,7 @@ export type LinkWords = Readonly<{
   attach: string;
   move: string;
   detachTitle: string;
+  detachConfirm: string;
   search: string;
 }>;
 
@@ -137,6 +138,7 @@ export function ProjectLinks({
     attach: t("projectLinks.attach"),
     move: t("projectLinks.move"),
     detachTitle: t("projectLinks.detachTitle"),
+    detachConfirm: t("projectLinks.detachConfirm"),
     search: t("projectLinks.searchLabel"),
   };
   // Focus returns to the SECTION rather than to the row's own verb: a
@@ -391,7 +393,7 @@ function DetachDialog({
       onClose={onClose}
       returnFocusTo={returnFocusTo}
       title={words.detachTitle}
-      confirmLabel={t("projectLinks.detachConfirm")}
+      confirmLabel={words.detachConfirm}
       confirmVariant="danger"
       pending={busy}
       error={refusal}
