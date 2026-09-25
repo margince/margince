@@ -19227,6 +19227,16 @@ type AiCall struct {
 	// CallsAttempted The attempt number of this terminal attempt: 1 = first try succeeded/failed terminally, >1 = retries happened.
 	CallsAttempted int `json:"calls_attempted"`
 
+	// Config What that identity resolves to. OMITTED — not null — on a call
+	// that names no configuration, which is the only case it is absent
+	// for: `ai_call_config_fk` binds a hash that IS set to a row, so a
+	// call carrying one always resolves.
+	//
+	// The hash alone tells a reader that two calls shared a
+	// configuration, and nothing about what it was — which is the
+	// question a diagnostics reader is actually asking.
+	Config *AiCallConfig `json:"config,omitempty"`
+
 	// ConfigHash Routing/prompt config identity of this call.
 	ConfigHash         *string `json:"config_hash,omitempty"`
 	ContextFingerprint string  `json:"context_fingerprint"`
@@ -19304,6 +19314,20 @@ type AiCallAttempt struct {
 	Tier      *string `json:"tier,omitempty"`
 	TokensIn  int     `json:"tokens_in"`
 	TokensOut int     `json:"tokens_out"`
+}
+
+// AiCallConfig The configuration an AI call ran under, resolved from its `config_hash`.
+//
+// Written on every call since the table existed and joined by nothing: a
+// reader could see that two calls shared a configuration and never what
+// changed between two that did not.
+type AiCallConfig struct {
+	PromptVersion string `json:"prompt_version"`
+
+	// ProviderParams The provider parameters this configuration pinned.
+	ProviderParams    *map[string]interface{} `json:"provider_params,omitempty"`
+	RoutingConfigHash string                  `json:"routing_config_hash"`
+	TaskContractHash  string                  `json:"task_contract_hash"`
 }
 
 // AiCallListResponse defines model for AiCallListResponse.
