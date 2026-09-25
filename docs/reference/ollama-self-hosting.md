@@ -10,7 +10,8 @@ run the lane, [enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md)
 for pointing a stack at Ollama, [ai-certification.md](ai-certification.md) for
 the committed readiness report, and
 [`config/presets/gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml)
-for the binding this page recommends.
+for the binding this page recommends. The same machine serving models through vLLM instead is
+[vllm-self-hosting.md](vllm-self-hosting.md).
 
 ## The short answer
 
