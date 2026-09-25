@@ -90,8 +90,8 @@ func TestAFailedAnswerIsNotReadAsUndescribed(t *testing.T) {
 // may already have saved would point them at the wrong fix.
 func TestAnUnwiredAnswerIsAFaultRatherThanTheRefusal(t *testing.T) {
 	err := (&Service{}).refuseUntilDescribed(context.Background())
-	if err == nil || errors.Is(err, apperrors.ErrConflict) {
-		t.Errorf("unwired answer = %v, want a non-conflict fault", err)
+	if !errors.Is(err, errInstallationDescribedUnwired) || errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("unwired answer = %v, want errInstallationDescribedUnwired and no conflict", err)
 	}
 }
 

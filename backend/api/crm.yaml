@@ -16800,9 +16800,10 @@ paths:
             public base URL, so neither the mailed link nor an admin-issued one could reach the
             member — an invite would create an ACTIVE account nobody could ever sign in as), or
             `company_not_described` (this installation has not yet saved its own company through
-            `PUT /company`; an installation adds no seat until it has, because a client reads every
-            non-admin seat as proof that it has. Asked after the caller's grant, so a caller who may
-            not invite is answered 403 either way).
+            `PUT /company`; the onboarding gate holds every admin on the company form until it is
+            saved, so no seat of any role is added before then, and a client may read any non-admin
+            seat as proof that the company exists. Asked after the caller's grant, so a caller who
+            may not invite is answered 403 either way).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -16930,7 +16931,8 @@ paths:
             `email_taken` — a seat with this address already exists. A former member is
             recorded once; if they came back, reactivate the seat rather than adding a
             second one. Or `company_not_described` — this installation has not yet saved its
-            own company through `PUT /company`, and adds no seat of any kind until it has.
+            own company through `PUT /company`. The onboarding gate holds every admin on the
+            company form until it is saved, so no seat of any role is added before then.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }

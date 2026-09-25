@@ -36,9 +36,9 @@ var (
 	errInstallationDescribedUnwired = errors.New("identity: nothing answers whether the installation has described its company")
 )
 
-// refuseUntilDescribed: an installation adds nobody until it has described itself,
-// because the client treats every non-admin seat as proof that it has. Asked outside
-// the seat's transaction, since an anchor is never archived or merged.
+// refuseUntilDescribed holds the onboarding gate's line for every role: no seat before the
+// company is saved, so any non-admin seat implies a described installation. Asked
+// outside the seat's transaction, since an anchor is never archived or merged.
 func (s *Service) refuseUntilDescribed(ctx context.Context) error {
 	if s.installationDescribed == nil {
 		return errInstallationDescribedUnwired
