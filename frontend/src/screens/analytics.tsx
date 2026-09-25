@@ -17,6 +17,7 @@ import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
+import { Stack } from "../design-system/stack";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
 import {
@@ -444,7 +445,7 @@ function ForecastStrip({
           The slots stay slots rather than becoming a bar list: every category
           carries TWO figures, the raw total and the probability-weighted one
           beneath it, and a ranked bar carries a single amount per row. */}
-      <div style={{ marginTop: "var(--space-4)" }}>
+      <div className="analytics-forecast">
         <StatStrip>
           {[...FORECAST_CATEGORIES, ...uncategorisedSlot(rows)].map(
             (category) => {
@@ -897,16 +898,10 @@ function ExplainPanel({
           </p>
           {url == null && <p>{t("common.empty")}</p>}
           {url != null && query.isPending && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-2)",
-              }}
-            >
+            <Stack gap="2">
               <Skeleton width="60%" />
               <Skeleton width="90%" />
-            </div>
+            </Stack>
           )}
           {query.isError && (
             <>

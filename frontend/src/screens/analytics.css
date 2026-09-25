@@ -22,3 +22,8 @@
   display: flex;
   flex-direction: column;
 }
+
+/* The forecast strip stands a step below the banner that qualifies it. */
+.analytics-forecast {
+  margin-top: var(--space-4);
+}

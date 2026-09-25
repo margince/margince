@@ -18,6 +18,7 @@ import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import { leadManualSignalsKey, leadWriteKeys } from "./leadkeys";
+import "./leadsignals.css";
 
 type SetSignalRequest = components["schemas"]["SetLeadManualSignalRequest"];
 type SignalFactor = SetSignalRequest["factor"];
@@ -197,7 +198,7 @@ export function LeadManualSignals({
       {signals.isPending && <span>{t("lead.scoreLoading")}</span>}
       <ErrorLine error={signals.error} />
       {signals.isSuccess && (
-        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        <ul className="leadsignals-list">
           {SIGNAL_FACTORS.map((name) => {
             const entries = signals.data.filter(
               (entry: ManualSignal) => entry.factor === name,
@@ -205,15 +206,7 @@ export function LeadManualSignals({
             const live = entries.find((entry) => !entry.superseded_at);
             const superseded = entries.filter((entry) => entry.superseded_at);
             return (
-              <li
-                key={name}
-                style={{
-                  display: "flex",
-                  gap: "var(--space-2)",
-                  alignItems: "baseline",
-                  flexWrap: "wrap",
-                }}
-              >
+              <li key={name} className="leadsignals-factor">
                 <span>{label(name)}</span>
                 {live ? (
                   <>
