@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -157,10 +158,11 @@ func TestTheWriteRuleAndTheDialerAgree(t *testing.T) {
 
 // The guard is only as good as its coverage: an adapter handed a client built
 // anywhere else dials unguarded, and nothing about the call site would look
-// wrong. So the package is allowed exactly one call to newOutboundClient, and it
-// is the one in SelectBrain — read off the syntax tree rather than grepped, so a
-// call spelled across a line break cannot hide from it.
-func TestSelectBrainIsTheOnlyBuilderOfAnOutboundClient(t *testing.T) {
+// wrong. So the package is allowed exactly two calls to newOutboundClient, one
+// per selector — SelectBrain for the chat adapters, selectDecider for the
+// decision wire — read off the syntax tree rather than grepped, so a call
+// spelled across a line break cannot hide from it.
+func TestOnlyTheSelectorsBuildAnOutboundClient(t *testing.T) {
 	t.Parallel()
 
 	entries, err := os.ReadDir(".")
@@ -197,8 +199,9 @@ func TestSelectBrainIsTheOnlyBuilderOfAnOutboundClient(t *testing.T) {
 			return true
 		})
 	}
-	if len(callers) != 1 || callers[0] != "selectbrain.go:SelectBrain" {
-		t.Errorf("newOutboundClient is called from %v, want only selectbrain.go:SelectBrain — every other builder dials unguarded", callers)
+	slices.Sort(callers)
+	if want := []string{"selectbrain.go:SelectBrain", "selectdecider.go:selectDecider"}; !slices.Equal(callers, want) {
+		t.Errorf("newOutboundClient is called from %v, want only %v — every other builder dials unguarded", callers, want)
 	}
 }
 
