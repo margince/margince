@@ -112,22 +112,13 @@ Also called: set a contact's company, assign to an account, employer.
 When purchased employment history in Margince names an employer it cannot match, the contact's **Companies** section shows **Company match needed.**; choose **Match company**.
 Pick an existing company, or enter its **Confirmed company website** to create it, then choose **Save company link**. The choice applies to every unmatched role at that employer. **Dismiss evidence** drops an entry that should not become a link. A company name alone never creates a company. Also called: unresolved employer, imported job history.
 
-Emails are typed **work, personal or other**; phones **work, mobile, home or
-other**. One number may appear twice under two types — a switchboard that is
-both work and mobile — and editing the list keeps the two rows apart.
+Emails are typed **work, personal or other**; phones **work, mobile, home or other**. One number may appear twice under two types — a switchboard that is both work and mobile — and editing the list keeps the two rows apart.
 
-The contact header says **who can see this contact**: private to its owner, or
-everyone in the company; a company header says the same. See
-[Seats, roles and who can see what](seats-roles-and-access.md).
+The contact header says **who can see this contact**: private to its owner, or everyone in the company; a company header says the same. See [Seats, roles and who can see what](seats-roles-and-access.md).
 
-A contact's job title appears in two places and they are not the same thing. The
-title on the contact record is a convenience copy; the authoritative one lives on
-the employment relationship with the company. A contact can have exactly one
-current primary employer, or none.
+A contact's job title appears in two places and they are not the same thing. The title on the contact record is a convenience copy; the authoritative one lives on the employment relationship with the company. A contact can have exactly one current primary employer, or none.
 
-Other things a contact carries: an owner, a consent record per purpose, a
-relationship strength, when they were last active, and — if they came from a
-lead — a pointer back to that lead.
+Other things a contact carries: an owner, a consent record per purpose, a relationship strength, when they were last active, and — if they came from a lead — a pointer back to that lead.
 
 ### How do I merge duplicate contacts?
 To merge two duplicate contacts in Margince, open the contact you want to remove, choose **More actions**, then **Merge contact**.
