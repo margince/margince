@@ -235,7 +235,7 @@ export function DecisionLaneRow({
       disabled={disabled}
       open={open}
       onOpen={() => onOpen(!open)}
-      onChange={onChange}
+      onChange={(next) => onChange(reboundDecision(binding, next))}
       providers={DECISION_PROVIDERS}
       chip={processing ? <Badge>{processing}</Badge> : null}
       extra={
@@ -253,6 +253,19 @@ export function DecisionLaneRow({
       }
     />
   );
+}
+
+// A decision model and its host name one adapter's endpoint: Jev's slug on
+// OpenRouter means nothing to a Laya checkpoint on loopback. A provider switch
+// therefore starts the binding over rather than pointing the new adapter at the
+// old one's address.
+function reboundDecision(
+  previous: DecisionsBinding,
+  next: DecisionsBinding,
+): DecisionsBinding {
+  return next.provider === previous.provider
+    ? next
+    : { provider: next.provider, model: "" };
 }
 
 // Where the bound decision model processes text, as the server classified it.
