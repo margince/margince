@@ -10410,15 +10410,22 @@ export const vi = {
   "magic.action.mail_filed": "Đã xếp email thu thập vào liên hệ này",
   "magic.action.company_profile_read": "Đã đọc hồ sơ kỹ thuật của công ty",
   "magic.action.fields_changed": "Đã thay đổi {fields}",
-  "magic.action.retention_lead_anonymize": "Đã ẩn danh khách hàng tiềm năng chưa chuyển đổi đã quá hạn lưu trữ",
-  "magic.action.retention_lead_archive": "Đã lưu trữ khách hàng tiềm năng chưa chuyển đổi đã quá hạn lưu trữ",
-  "magic.action.retention_contact_anonymize": "Đã ẩn danh liên hệ không có đồng ý hoặc giao dịch đã quá hạn lưu trữ",
+  "magic.action.retention_lead_anonymize":
+    "Đã ẩn danh khách hàng tiềm năng chưa chuyển đổi đã quá hạn lưu trữ",
+  "magic.action.retention_lead_archive":
+    "Đã lưu trữ khách hàng tiềm năng chưa chuyển đổi đã quá hạn lưu trữ",
+  "magic.action.retention_contact_anonymize":
+    "Đã ẩn danh liên hệ không có đồng ý hoặc giao dịch đã quá hạn lưu trữ",
   "magic.action.retention_contact_erase": "Đã xóa liên hệ đã quá hạn lưu trữ",
-  "magic.action.retention_activity_archive": "Đã lưu trữ email, cuộc họp và ghi chú đã quá hạn lưu trữ",
-  "magic.action.retention_activity_erase": "Đã xóa nội dung bản chép lời đã quá hạn lưu trữ",
-  "magic.action.retention_deal_archive": "Đã lưu trữ giao dịch đã đóng đã quá hạn lưu trữ",
+  "magic.action.retention_activity_archive":
+    "Đã lưu trữ email, cuộc họp và ghi chú đã quá hạn lưu trữ",
+  "magic.action.retention_activity_erase":
+    "Đã xóa nội dung bản chép lời đã quá hạn lưu trữ",
+  "magic.action.retention_deal_archive":
+    "Đã lưu trữ giao dịch đã đóng đã quá hạn lưu trữ",
   "magic.why.mail_filed": "Địa chỉ người gửi thuộc về liên hệ này.",
-  "magic.why.public_records": "Từ trang web công khai và bản ghi DNS của công ty.",
+  "magic.why.public_records":
+    "Từ trang web công khai và bản ghi DNS của công ty.",
   "magic.why.site_read": "Đọc trên {site}.",
   "magic.why.signature": "Lấy từ chữ ký email.",
   "magic.why.retention": "Quy tắc lưu trữ: sau {days} ngày.",

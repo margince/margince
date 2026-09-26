@@ -63,12 +63,12 @@ type entry struct {
 // line's About column shows. An activity is named by its subject, read through
 // the content clause that already decided the reader may see it.
 var recordLabels = map[string]string{
-	"deal":     "e.name",
-	"company":  "e.display_name",
-	"contact":  "e.full_name",
-	"lead":     "e.full_name",
-	"project":  "e.name",
-	"activity": "e.subject",
+	typeDeal:    "e.name",
+	typeCompany: "e.display_name",
+	typeContact: "e.full_name",
+	typeLead:    "e.full_name",
+	typeProject: "e.name",
+	"activity":  "e.subject",
 }
 
 // readCap bounds the audit rows one arm reads before lines are grouped. The
@@ -89,12 +89,21 @@ const readCap = 5000
 // serving a row this read cannot prove the reader may see, and the failure would
 // be invisible: the row looks like every other row.
 var scopedTypes = map[string]string{
-	"deal":    "deal",
-	"company": "company",
-	"contact": "contact",
-	"lead":    "lead",
-	"project": "project",
+	typeDeal:    typeDeal,
+	typeCompany: typeCompany,
+	typeContact: typeContact,
+	typeLead:    typeLead,
+	typeProject: typeProject,
 }
+
+// The record types the done lane places, each also the table it joins.
+const (
+	typeDeal    = "deal"
+	typeCompany = "company"
+	typeContact = "contact"
+	typeLead    = "lead"
+	typeProject = "project"
+)
 
 // doneSince reads the admitted machine actions in the window, for the records
 // this reader may see.

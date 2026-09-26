@@ -10697,15 +10697,23 @@ export const en = {
   "magic.action.mail_filed": "Filed captured email under this contact",
   "magic.action.company_profile_read": "Read the company's technical profile",
   "magic.action.fields_changed": "Changed {fields}",
-  "magic.action.retention_lead_anonymize": "Anonymized unconverted leads past their retention period",
-  "magic.action.retention_lead_archive": "Archived unconverted leads past their retention period",
-  "magic.action.retention_contact_anonymize": "Anonymized contacts without consent or a deal past their retention period",
-  "magic.action.retention_contact_erase": "Erased contacts past their retention period",
-  "magic.action.retention_activity_archive": "Archived emails, meetings and notes past their retention period",
-  "magic.action.retention_activity_erase": "Erased transcript content past its retention period",
-  "magic.action.retention_deal_archive": "Archived closed deals past their retention period",
+  "magic.action.retention_lead_anonymize":
+    "Anonymized unconverted leads past their retention period",
+  "magic.action.retention_lead_archive":
+    "Archived unconverted leads past their retention period",
+  "magic.action.retention_contact_anonymize":
+    "Anonymized contacts without consent or a deal past their retention period",
+  "magic.action.retention_contact_erase":
+    "Erased contacts past their retention period",
+  "magic.action.retention_activity_archive":
+    "Archived emails, meetings and notes past their retention period",
+  "magic.action.retention_activity_erase":
+    "Erased transcript content past its retention period",
+  "magic.action.retention_deal_archive":
+    "Archived closed deals past their retention period",
   "magic.why.mail_filed": "The sender's address belongs to this contact.",
-  "magic.why.public_records": "From the company's public website and DNS records.",
+  "magic.why.public_records":
+    "From the company's public website and DNS records.",
   "magic.why.site_read": "Read on {site}.",
   "magic.why.signature": "Taken from an email signature.",
   "magic.why.retention": "Retention rule: after {days} days.",

@@ -20,6 +20,15 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
+// The job names used more than once below.
+const (
+	bySystem        = "magic.by.system"
+	byWebsiteReader = "magic.by.website_reader"
+	byMailReader    = "magic.by.mail_reader"
+	byMailFiling    = "magic.by.mail_filing"
+	byAutomation    = "magic.by.automation"
+)
+
 // description is what one audit row says to a reader.
 type description struct {
 	summary crmcontracts.MagicSentence
@@ -42,7 +51,7 @@ var bookkeepingFields = map[string]bool{
 // describe answers what an admitted audit row means to a reader, and whether it
 // means anything at all.
 func describe(e entry) (description, bool) {
-	if e.Action != "update" {
+	if e.Action != actionUpdate {
 		meaning, ok := meaningOf(e.Action)
 		if !ok {
 			return description{}, false
@@ -130,36 +139,36 @@ func actorLabel(e entry) crmcontracts.MagicSentence {
 	case strings.HasPrefix(e.ActorID, "connector:"):
 		return crmcontracts.MagicSentence{Key: "magic.by.mailbox"}
 	case strings.HasPrefix(e.ActorID, "automation:"):
-		return crmcontracts.MagicSentence{Key: "magic.by.automation"}
+		return crmcontracts.MagicSentence{Key: byAutomation}
 	case e.ActorType == string(crmcontracts.MagicActorTypeMagicActorAgent):
 		return crmcontracts.MagicSentence{Key: "magic.by.agent"}
 	}
-	return crmcontracts.MagicSentence{Key: "magic.by.system"}
+	return crmcontracts.MagicSentence{Key: bySystem}
 }
 
 // actorKeys are the background jobs a reader meets on this page, by the actor
 // id their audit rows carry.
 var actorKeys = map[string]string{
-	"link-reconcile":             "magic.by.mail_filing",
-	"cohort-promote":             "magic.by.mail_filing",
+	"link-reconcile":             byMailFiling,
+	"cohort-promote":             byMailFiling,
 	"system:technical-lookup":    "magic.by.company_lookup",
-	"agent:deepread":             "magic.by.website_reader",
-	"system:contact_auto_enrich": "magic.by.website_reader",
-	"system:capture_auto_enrich": "magic.by.website_reader",
+	"agent:deepread":             byWebsiteReader,
+	"system:contact_auto_enrich": byWebsiteReader,
+	"system:capture_auto_enrich": byWebsiteReader,
 	"agent:enrich":               "magic.by.signature_reader",
 	"agent:overnight":            "magic.by.overnight_agent",
-	"system:capture_classify":    "magic.by.mail_reader",
-	"system:owed_verdict":        "magic.by.mail_reader",
-	"agent:signal-scan":          "magic.by.mail_reader",
+	"system:capture_classify":    byMailReader,
+	"system:owed_verdict":        byMailReader,
+	"agent:signal-scan":          byMailReader,
 	"system:auto_apply":          "magic.by.auto_apply",
-	"system:automation":          "magic.by.automation",
+	"system:automation":          byAutomation,
 	"system:lead-router":         "magic.by.lead_routing",
-	"system:audience_rescope":    "magic.by.system",
-	"system:forecast-snapshot":   "magic.by.system",
-	"system:notice-case-open":    "magic.by.system",
-	"system:handbook-corpus":     "magic.by.system",
-	"agent:knowledge-ingest":     "magic.by.system",
-	"routing-seed":               "magic.by.system",
+	"system:audience_rescope":    bySystem,
+	"system:forecast-snapshot":   bySystem,
+	"system:notice-case-open":    bySystem,
+	"system:handbook-corpus":     bySystem,
+	"agent:knowledge-ingest":     bySystem,
+	"routing-seed":               bySystem,
 }
 
 // isRetention reports an audit row the retention engine wrote.
@@ -188,7 +197,8 @@ func hasAny(m map[string]any, keys []string) bool {
 	return false
 }
 
-func equalJSON(a, b any) bool {
+// equalJSON compares two decoded JSON values by their encoding.
+func equalJSON(a, b any) bool { //craft:ignore naked-any values decoded from an audit image's JSON have no static type
 	ja, errA := json.Marshal(a)
 	jb, errB := json.Marshal(b)
 	return errA == nil && errB == nil && string(ja) == string(jb)

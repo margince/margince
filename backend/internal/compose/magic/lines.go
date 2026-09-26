@@ -93,7 +93,7 @@ func lineOf(e entry) (crmcontracts.MagicLine, string, bool) {
 		// Undo is filled by judgeUndoOn once the page is drawn — it needs the
 		// transaction and the record, neither of which this dressing has.
 	}
-	if meaning, admitted := meaningOf(e.Action); admitted && meaning.consequence != "" && e.Action != "update" {
+	if meaning, admitted := meaningOf(e.Action); admitted && meaning.consequence != "" && e.Action != actionUpdate {
 		consequence := meaning.consequence
 		line.Consequence = &consequence
 	}

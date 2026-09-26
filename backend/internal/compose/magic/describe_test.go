@@ -10,10 +10,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func auditRow(actor, action, before, after, evidence string, at time.Time) entry {
+// auditRow is one machine update of a contact named Anna Keller.
+func auditRow(actor, before, after, evidence string, at time.Time) entry {
 	name := "Anna Keller"
 	e := entry{
-		ID: ids.NewV7(), OccurredAt: at, Action: action, EntityType: "contact",
+		ID: ids.NewV7(), OccurredAt: at, Action: actionUpdate, EntityType: "contact",
 		EntityID: ids.NewV7(), ActorType: "system", ActorID: actor, Label: &name,
 	}
 	if before != "" {
@@ -30,7 +31,7 @@ func auditRow(actor, action, before, after, evidence string, at time.Time) entry
 
 // Mail filed under a contact reads as that, says why, and names the job.
 func TestAMailFilingSaysWhatItDidAndWhy(t *testing.T) {
-	line, _, ok := lineOf(auditRow("link-reconcile", "update", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", time.Now()))
+	line, _, ok := lineOf(auditRow("link-reconcile", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", time.Now()))
 	if !ok {
 		t.Fatal("a mail filing was not shown")
 	}
@@ -47,7 +48,7 @@ func TestAMailFilingSaysWhatItDidAndWhy(t *testing.T) {
 
 // An enrichment names the fields it changed and the page it read them on.
 func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
-	line, _, ok := lineOf(auditRow("agent:deepread", "update",
+	line, _, ok := lineOf(auditRow("agent:deepread",
 		`{"role": null, "title": null}`, `{"role": "Counsel", "title": "Counsel"}`,
 		`{"source": "site_read", "source_ref": "site_read:https://www.studiolegal.de/de/team"}`, time.Now()))
 	if !ok {
@@ -64,9 +65,9 @@ func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
 // An update that moved nothing a reader cares about is not a line.
 func TestAnUpdateThatSaysNothingIsNotShown(t *testing.T) {
 	for _, e := range []entry{
-		auditRow("system", "update", "", "", "", time.Now()),
-		auditRow("agent:knowledge-ingest", "update", `{"chunk_count": 0}`, `{"chunk_count": 25}`, "", time.Now()),
-		auditRow("system", "update", `{"stage": "a"}`, `{"stage": "a"}`, "", time.Now()),
+		auditRow("system", "", "", "", time.Now()),
+		auditRow("agent:knowledge-ingest", `{"chunk_count": 0}`, `{"chunk_count": 25}`, "", time.Now()),
+		auditRow("system", `{"stage": "a"}`, `{"stage": "a"}`, "", time.Now()),
 	} {
 		if _, _, ok := lineOf(e); ok {
 			t.Errorf("%s %s after=%s was shown; it changed nothing a reader can use", e.ActorID, e.Action, e.After)
@@ -80,10 +81,10 @@ func TestOneJobOnManyRecordsIsOneLineWithACount(t *testing.T) {
 	now := time.Now()
 	var entries []entry
 	for i := range 250 {
-		entries = append(entries, auditRow("link-reconcile", "update", "", `{"cohort_linked": 1, "cohort_promoted": 0}`, "",
+		entries = append(entries, auditRow("link-reconcile", "", `{"cohort_linked": 1, "cohort_promoted": 0}`, "",
 			now.Add(-time.Duration(i)*time.Second)))
 	}
-	entries = append(entries, auditRow("system", "update", "", "", "", now))
+	entries = append(entries, auditRow("system", "", "", "", now))
 	lines, housekeeping := linesOf(entries, 100)
 	if len(lines) != 1 {
 		t.Fatalf("got %d lines, want the job folded into one", len(lines))
@@ -99,11 +100,11 @@ func TestOneJobOnManyRecordsIsOneLineWithACount(t *testing.T) {
 // Two passes of one job over the same record count that record once.
 func TestAGroupCountsRecordsNotAuditRows(t *testing.T) {
 	now := time.Now()
-	first := auditRow("link-reconcile", "update", "", `{"cohort_linked": 1, "cohort_promoted": 0}`, "", now)
+	first := auditRow("link-reconcile", "", `{"cohort_linked": 1, "cohort_promoted": 0}`, "", now)
 	again := first
 	again.ID = ids.NewV7()
 	again.OccurredAt = now.Add(-time.Minute)
-	other := auditRow("link-reconcile", "update", "", `{"cohort_linked": 1, "cohort_promoted": 0}`, "", now.Add(-2*time.Minute))
+	other := auditRow("link-reconcile", "", `{"cohort_linked": 1, "cohort_promoted": 0}`, "", now.Add(-2*time.Minute))
 	lines, _ := linesOf([]entry{first, again, other}, 100)
 	if len(lines) != 1 || lines[0].Count == nil || *lines[0].Count != 2 {
 		t.Fatalf("got %d lines with count %v, want one line counting the two distinct records", len(lines), lines[0].Count)
