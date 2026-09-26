@@ -17053,10 +17053,11 @@ export interface components {
              *     Gemini 3 or later only; refused on any other provider, on a model that predates
              *     the field, and on the embeddings lane. Absent means the adapter's default, and a
              *     save that omits it keeps the stored level while provider, host and model are
-             *     unchanged.
+             *     unchanged. `default` clears a stored level back to the adapter's default; it is
+             *     never stored or returned, and is accepted on any binding.
              * @enum {string}
              */
-            thinking_level?: "minimal" | "low" | "medium" | "high";
+            thinking_level?: "default" | "minimal" | "low" | "medium" | "high";
         };
         /**
          * @description Upstream-selection preferences for an openai_compatible binding pointed at

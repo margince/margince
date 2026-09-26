@@ -104,3 +104,23 @@ func TestAWriteKeepsTheStoredThinkingLevelOfTheSameBindingOnly(t *testing.T) {
 		}
 	}
 }
+
+// `default` is the clear: the stored level goes, on the same binding and on a
+// re-pointed one alike, and the word itself is never kept.
+func TestAWriteOfTheDefaultThinkingLevelClearsTheStoredOne(t *testing.T) {
+	t.Parallel()
+	lite := ProviderConfig{Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: "low"}
+	stored := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierCheapCloud: lite, TierPremium: lite}}
+	next := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: thinkingLevelDefault},
+		TierPremium:    {Provider: providerGemini, Model: "gemini-3.5-flash", ThinkingLevel: thinkingLevelDefault},
+	}}
+
+	got := next.keepingStoredUpstream(stored)
+
+	for tier, binding := range got.Tiers {
+		if binding.ThinkingLevel != "" {
+			t.Errorf("%s: thinking_level = %q after a write of default, want none", tier, binding.ThinkingLevel)
+		}
+	}
+}

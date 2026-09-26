@@ -112,9 +112,10 @@ func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
 	}
 }
 
-// The HTTP contract offers a routing save the same levels the parser takes. A
-// level the contract lists and the parser refuses is a 422 an admin was invited
-// to cause; one the parser takes and the contract omits cannot be saved at all.
+// The HTTP contract offers a routing save the same levels the parser takes,
+// plus the store's clear. A level the contract lists and the parser refuses is
+// a 422 an admin was invited to cause; one the parser takes and the contract
+// omits cannot be saved at all.
 func TestTheContractOffersTheThinkingLevelsTheParserTakes(t *testing.T) {
 	raw, err := os.ReadFile("../../../api/crm.yaml")
 	if err != nil {
@@ -137,7 +138,8 @@ func TestTheContractOffersTheThinkingLevelsTheParserTakes(t *testing.T) {
 	if err := yaml.Unmarshal(raw, &contract); err != nil {
 		t.Fatalf("parse contract: %v", err)
 	}
-	assertSetEqual(t, "contract thinking levels", contract.Components.Schemas.Binding.Properties.ThinkingLevel.Enum, geminiThinkingLevels)
+	assertSetEqual(t, "contract thinking levels", contract.Components.Schemas.Binding.Properties.ThinkingLevel.Enum,
+		append([]string{thinkingLevelDefault}, geminiThinkingLevels...))
 }
 
 func assertSetEqual(t *testing.T, label string, got, want []string) {

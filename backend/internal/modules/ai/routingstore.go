@@ -165,15 +165,22 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 // the host because a pin names hosts that serve ONE model, and a level is
 // refused on a model that predates it — carried onto another, either would
 // fail the lane with nothing in the form able to lift it.
+//
+// A thinking level of thinkingLevelDefault is the explicit clear, as an empty
+// `routing` object is for upstream preferences: it is stored as no level.
 func (next RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingConfig {
 	carry := func(lane, kept ProviderConfig) ProviderConfig {
+		cleared := lane.ThinkingLevel == thinkingLevelDefault
+		if cleared {
+			lane.ThinkingLevel = ""
+		}
 		if lane.Provider != kept.Provider || !sameEndpoint(lane.BaseURL, kept.BaseURL) || lane.Model != kept.Model {
 			return lane
 		}
 		if lane.Routing == nil {
 			lane.Routing = kept.Routing
 		}
-		if lane.ThinkingLevel == "" {
+		if lane.ThinkingLevel == "" && !cleared {
 			lane.ThinkingLevel = kept.ThinkingLevel
 		}
 		return lane

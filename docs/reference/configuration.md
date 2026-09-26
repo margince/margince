@@ -1506,6 +1506,10 @@ cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite, thinking_level: l
   Gemini 2.5 model (which answers the field with a 400) is a startup error.
   Which levels one Gemini 3 model takes is the vendor's to say:
   `gemini-3.1-pro-preview` refuses `minimal`.
+- **Clearing it through the API takes `default`.** A routing save that omits
+  `thinking_level` keeps the stored level while provider, host and model are
+  unchanged; one that sends `thinking_level: default` clears it, and `default`
+  itself is never stored.
 - **Thinking is output.** Gemini charges it to the same `maxOutputTokens` as the
   answer; the adapter reports it as reasoning tokens inside the output count, so
   it is metered and priced, and a structured answer whose thinking ate the

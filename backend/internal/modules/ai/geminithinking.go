@@ -105,6 +105,10 @@ type geminiThinking struct {
 // leaves the pairing to the vendor's 400.
 var geminiThinkingLevels = []string{"minimal", "low", "medium", "high"} //nolint:goconst // Google's vocabulary; the same words in the broker's and Ollama's lists belong to other vendors and must not move with it
 
+// thinkingLevelDefault is the `thinking_level` a routing save sends to clear a
+// stored level; the store turns it into no level before anything validates it.
+const thinkingLevelDefault = "default"
+
 // validateThinkingLevel refuses a binding's `thinking_level` that no request
 // could carry: on a provider other than gemini, outside the vocabulary, or on a
 // model that predates the field. Refused at load rather than sent, because the

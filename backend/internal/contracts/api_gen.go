@@ -750,6 +750,7 @@ func (e AiActivityKind) Valid() bool {
 
 // Defines values for AiEmbeddingsBindingThinkingLevel.
 const (
+	AiEmbeddingsBindingThinkingLevelDefault AiEmbeddingsBindingThinkingLevel = "default"
 	AiEmbeddingsBindingThinkingLevelHigh    AiEmbeddingsBindingThinkingLevel = "high"
 	AiEmbeddingsBindingThinkingLevelLow     AiEmbeddingsBindingThinkingLevel = "low"
 	AiEmbeddingsBindingThinkingLevelMedium  AiEmbeddingsBindingThinkingLevel = "medium"
@@ -759,6 +760,8 @@ const (
 // Valid indicates whether the value is a known member of the AiEmbeddingsBindingThinkingLevel enum.
 func (e AiEmbeddingsBindingThinkingLevel) Valid() bool {
 	switch e {
+	case AiEmbeddingsBindingThinkingLevelDefault:
+		return true
 	case AiEmbeddingsBindingThinkingLevelHigh:
 		return true
 	case AiEmbeddingsBindingThinkingLevelLow:
@@ -939,6 +942,7 @@ func (e AiRunSummaryCurrency) Valid() bool {
 
 // Defines values for AiTierBindingThinkingLevel.
 const (
+	AiTierBindingThinkingLevelDefault AiTierBindingThinkingLevel = "default"
 	AiTierBindingThinkingLevelHigh    AiTierBindingThinkingLevel = "high"
 	AiTierBindingThinkingLevelLow     AiTierBindingThinkingLevel = "low"
 	AiTierBindingThinkingLevelMedium  AiTierBindingThinkingLevel = "medium"
@@ -948,6 +952,8 @@ const (
 // Valid indicates whether the value is a known member of the AiTierBindingThinkingLevel enum.
 func (e AiTierBindingThinkingLevel) Valid() bool {
 	switch e {
+	case AiTierBindingThinkingLevelDefault:
+		return true
 	case AiTierBindingThinkingLevelHigh:
 		return true
 	case AiTierBindingThinkingLevelLow:
@@ -19575,7 +19581,8 @@ type AiEmbeddingsBinding struct {
 	// Gemini 3 or later only; refused on any other provider, on a model that predates
 	// the field, and on the embeddings lane. Absent means the adapter's default, and a
 	// save that omits it keeps the stored level while provider, host and model are
-	// unchanged.
+	// unchanged. `default` clears a stored level back to the adapter's default; it is
+	// never stored or returned, and is accepted on any binding.
 	ThinkingLevel *AiEmbeddingsBindingThinkingLevel `json:"thinking_level,omitempty"`
 }
 
@@ -19583,7 +19590,8 @@ type AiEmbeddingsBinding struct {
 // Gemini 3 or later only; refused on any other provider, on a model that predates
 // the field, and on the embeddings lane. Absent means the adapter's default, and a
 // save that omits it keeps the stored level while provider, host and model are
-// unchanged.
+// unchanged. `default` clears a stored level back to the adapter's default; it is
+// never stored or returned, and is accepted on any binding.
 type AiEmbeddingsBindingThinkingLevel string
 
 // AiFeatureRoute defines model for AiFeatureRoute.
@@ -19885,7 +19893,8 @@ type AiTierBinding struct {
 	// Gemini 3 or later only; refused on any other provider, on a model that predates
 	// the field, and on the embeddings lane. Absent means the adapter's default, and a
 	// save that omits it keeps the stored level while provider, host and model are
-	// unchanged.
+	// unchanged. `default` clears a stored level back to the adapter's default; it is
+	// never stored or returned, and is accepted on any binding.
 	ThinkingLevel *AiTierBindingThinkingLevel `json:"thinking_level,omitempty"`
 }
 
@@ -19893,7 +19902,8 @@ type AiTierBinding struct {
 // Gemini 3 or later only; refused on any other provider, on a model that predates
 // the field, and on the embeddings lane. Absent means the adapter's default, and a
 // save that omits it keeps the stored level while provider, host and model are
-// unchanged.
+// unchanged. `default` clears a stored level back to the adapter's default; it is
+// never stored or returned, and is accepted on any binding.
 type AiTierBindingThinkingLevel string
 
 // AiUsage AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total.

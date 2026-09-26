@@ -24965,13 +24965,14 @@ components:
           $ref: '#/components/schemas/AiOpenRouterRouting'
         thinking_level:
           type: string
-          enum: [minimal, low, medium, high]
+          enum: [default, minimal, low, medium, high]
           description: |
             How deeply a gemini tier thinks when the request names no level of its own.
             Gemini 3 or later only; refused on any other provider, on a model that predates
             the field, and on the embeddings lane. Absent means the adapter's default, and a
             save that omits it keeps the stored level while provider, host and model are
-            unchanged.
+            unchanged. `default` clears a stored level back to the adapter's default; it is
+            never stored or returned, and is accepted on any binding.
 
     AiOpenRouterRouting:
       type: object
