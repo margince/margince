@@ -1,22 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { Info } from "lucide-react";
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useId,
-  useState,
-} from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, SectionHeader, Skeleton } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
-import { Heading } from "../design-system/heading";
-import { IconAction } from "../design-system/iconaction";
-import { Modal } from "../design-system/modal";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Row, Stack } from "../design-system/stack";
+import { Stack } from "../design-system/stack";
 import { SurfaceState } from "../design-system/surfacestate";
 import {
   formatDateTime,
@@ -25,6 +15,7 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { ExplainDrawer } from "./analytics.explain.drawer";
 import { throwProblem } from "./common";
 import { EntityRef, useEntityName } from "./entityref";
 
@@ -403,51 +394,16 @@ export function CellExplain({
   figure,
   children,
 }: Readonly<{ url: string | null; figure: string; children?: ReactNode }>) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  // Counts the opens, so each one mounts a fresh body that takes the handle
-  // and frame of that moment, even while the last close is still animating.
-  const [opens, setOpens] = useState(0);
-  const titleId = useId();
-  const figureId = useId();
   if (url == null) {
     return <>{children}</>;
   }
-  const trigger = (
-    <>
-      <IconAction
-        inline
-        label={t("explain.cell", { figure })}
-        icon={<Info aria-hidden />}
-        onClick={() => {
-          setOpens((count) => count + 1);
-          setOpen(true);
-        }}
-      />
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        labelledBy={`${titleId} ${figureId}`}
-        placement="right"
-      >
-        <Heading size="large" id={titleId}>
-          {t("explain.title")}
-        </Heading>
-        <p className="t-label" id={figureId}>
-          {figure}
-        </p>
-        <ExplainBody key={opens} url={url} framed />
-      </Modal>
-    </>
-  );
-  if (children === undefined) {
-    return trigger;
-  }
   return (
-    <Row gap="1" wrap={false}>
+    <ExplainDrawer
+      figure={figure}
+      body={(opens) => <ExplainBody key={opens} url={url} framed />}
+    >
       {children}
-      {trigger}
-    </Row>
+    </ExplainDrawer>
   );
 }
 

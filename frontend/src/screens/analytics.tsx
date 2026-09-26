@@ -41,6 +41,7 @@ import {
 } from "./analytics.explain";
 import { ForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
+import { ENTITY_LABEL_KEY, QuestionsView } from "./analytics.questions";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { ShareViewButton } from "./analytics.share";
 import { QueryGate, throwProblem } from "./common";
@@ -109,6 +110,7 @@ const SECTION_REPORTS = {
   coverage: [],
   // What was sold becoming what is delivered: the three project reports.
   delivery: ["projects-by-phase", "project-commitments", "projects-gone-quiet"],
+  questions: [],
 } as const satisfies Record<Section, readonly ReportKey[]>;
 
 type ReportRow = components["schemas"]["ReportResult"]["rows"][number];
@@ -210,20 +212,6 @@ function absentReading(
   if (query.isError) return "analytics.readingUnavailable";
   return "analytics.readingNone";
 }
-
-// A report's own name, spelled once: the segment picker and the heading of the
-// card that segment opens read the same key, so the tab and the surface behind
-// it cannot drift into two names for one report.
-const REPORT_LABEL_KEY = {
-  "pipeline-current": "analytics.reportDeals",
-  forecast: "analytics.reportForecast",
-  "open-deals-per-company": "analytics.reportOpenByCompany",
-  "win-loss": "analytics.reportWinLoss",
-  "stage-age": "analytics.reportStageAge",
-  "projects-by-phase": "analytics.reportProjectsByPhase",
-  "project-commitments": "analytics.reportProjectCommitments",
-  "projects-gone-quiet": "analytics.reportProjectsGoneQuiet",
-} as const satisfies Record<ReportKey, string>;
 
 // The line under a report's title, for the reports whose copy says something
 // the card's own title does not. A report absent from here gets no caption: an
@@ -1483,7 +1471,7 @@ function ReportCard({
   });
 
   return (
-    <QueryGate query={reportQuery} pendingLabel={t(REPORT_LABEL_KEY[report])}>
+    <QueryGate query={reportQuery} pendingLabel={t(ENTITY_LABEL_KEY[report])}>
       {(run) => (
         <ExplainFrame
           frame={{
@@ -1492,7 +1480,7 @@ function ReportCard({
           }}
         >
           <Panel
-            title={t(REPORT_LABEL_KEY[report])}
+            title={t(ENTITY_LABEL_KEY[report])}
             // The verb that reveals the derivation under this panel: it
             // announces its open state and names what it controls, so a
             // reader who cannot see the panel appear is still told it did.
@@ -1604,6 +1592,7 @@ export function AnalyticsScreen() {
           outcomes: t("analytics.sectionOutcomes"),
           coverage: t("analytics.sectionCoverage"),
           delivery: t("analytics.sectionDelivery"),
+          questions: t("analytics.sectionQuestions"),
         }}
         label={t("analytics.sections")}
       />
@@ -1628,6 +1617,7 @@ export function AnalyticsScreen() {
         locale={locale}
         context={context.data}
         selection={selection}
+        onSelectScope={selectScope}
         stages={pipelineQuery.data?.stages ?? []}
       />
     </div>
@@ -1641,15 +1631,25 @@ function SectionBody({
   locale,
   context,
   selection,
+  onSelectScope,
   stages,
 }: Readonly<{
   section: Section;
   locale: Locale;
   context: components["schemas"]["AnalyticsContext"] | undefined;
   selection: AnalyticsSelection | null;
+  onSelectScope: (scope: AnalyticsSelection["scope"]) => void;
   stages: readonly Stage[];
 }>) {
   switch (section) {
+    case "questions":
+      return selection && context ? (
+        <QuestionsView
+          context={context}
+          selection={selection}
+          onSelectScope={onSelectScope}
+        />
+      ) : null;
     case "coverage":
       // Like the other context-bearing sections: nothing renders before the
       // frame arrives, so the view never has to guess a zone.

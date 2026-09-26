@@ -1869,6 +1869,7 @@ const ADDRESSED_VIEWS = [
   "companies/o-brandt/tasks",
   "analytics/forecast",
   "analytics/pipeline",
+  "analytics/questions",
   // The three record headers whose verbs are icon-only: the name a sighted
   // reader gets on hover is not the name axe checks, so what is swept here is
   // the other half — that every square carries an accessible name at all, and
@@ -2024,6 +2025,79 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expect(drawer.getByText(de["explain.excluded_one"])).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "analytics — a row's explain drawer open");
+  });
+
+  // The Questions section with a question asked and one of its rows opened:
+  // the builder's rows of pickers, the answer table and the drawer it opens
+  // are three surfaces the closed tab never draws. The engine's three routes
+  // are stubbed here because the shared mock answers no analytics question.
+  test("no AA violations on an asked question with its drawer open", async ({
+    page,
+  }) => {
+    const json = (body: unknown) => ({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+    await page.route("**/analytics/schema", (route) =>
+      route.fulfill(
+        json({
+          version: "v1",
+          entities: [
+            {
+              name: "deals-by-stage",
+              group_by: ["currency", "stage_id", "status"],
+              measures: ["amount_minor"],
+            },
+          ],
+        }),
+      ),
+    );
+    await page.route("**/analytics/query", (route) =>
+      route.fulfill(
+        json({
+          columns: ["count"],
+          rows: [{ count: 12, _withheld: false }],
+          withheld: false,
+          total_safe: true,
+          schema_version: "v1",
+        }),
+      ),
+    );
+    await page.route("**/analytics/explain", (route) =>
+      route.fulfill(
+        json({
+          columns: ["id", "status"],
+          rows: [{ id: "d-fleet", status: "open" }],
+          withheld: false,
+          truncated: false,
+        }),
+      ),
+    );
+    await page.goto("/#/analytics/questions");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page
+      .getByRole("combobox", { name: de["analytics.q.population"] })
+      .click();
+    await page
+      .getByRole("option", { name: de["analytics.reportDealsByStage"] })
+      .click();
+    await page.getByRole("button", { name: de["analytics.q.ask"] }).click();
+    await page
+      .getByRole("button", {
+        name: de["explain.cell"].replace(
+          "{figure}",
+          de["analytics.q.allRecords"],
+        ),
+      })
+      .click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(
+      page,
+      "analytics — an asked question's drawer open",
+    );
   });
 
   // A list header FOLDS its verbs into one overflow menu below 1100px
