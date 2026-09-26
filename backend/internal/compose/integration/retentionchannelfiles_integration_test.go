@@ -67,6 +67,7 @@ func TestRetentionTreatsAChannelMessageLikeMail(t *testing.T) {
 	mail, channel := seedAgedCorrespondence(t, e)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}

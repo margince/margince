@@ -78,6 +78,7 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 	}
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}
@@ -161,6 +162,7 @@ func TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything(t *testing.T) {
 	// nil, spelled out: the argument the constructor now demands, supplied as
 	// the value compose never passes.
 	bare := privacy.NewRetentionService(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
+	SettleIntoInstall(t, e)
 	err := bare.EvaluateInstallation(RetentionPassCtx(e.WS))
 	if !errors.Is(err, privacy.ErrRetentionSeamMissing) {
 		t.Fatalf("a pass with no raw-capture purger returned %v, want ErrRetentionSeamMissing — "+

@@ -51,6 +51,7 @@ var retentionActions = map[string]retentionExecutor{
 	"ai_call_payload/erase": (*RetentionService).erasePayload,
 	"raw_capture/erase":     (*RetentionService).eraseRawCapture,
 	"lead/anonymize":        (*RetentionService).anonymizeLead,
+	"lead/archive":          (*RetentionService).archiveLead,
 	"contact/anonymize":     (*RetentionService).anonymizeContact,
 }
 
