@@ -55,6 +55,15 @@ web page — plus the answer we expect. It lives in
    "expected answer" is a check list (phrases that must not appear) rather than a
    model answer, it is not shown to the judge at all.
 
+Some scenarios skip ②. When the answer is a closed label, a tool name, a number
+or an empty list, the mechanical check already sees everything a rubric would
+ask for. Such a scenario declares `judge: none` and says why in
+`judge_none_reason`, and it carries no rubric and no quality bars. It counts
+toward the feature's right answers like any other and adds nothing to the
+quality average. A gate runs each one against the wrong answer its judge used to
+catch, and that answer must fail. The certification page marks these scenarios
+"checked mechanically".
+
 The judge is never the model being tested, nor one of its family: a Gemini
 candidate is not graded by a Gemini judge. The default judge is
 `claude_cli:claude-sonnet-4-6`.

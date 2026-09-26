@@ -163,6 +163,14 @@ func TestRatePricingCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			wantDetail: `no surviving row for "aurora-large"`,
 		},
 		{
+			// The gate asks only that a row cite something; the prices must be
+			// read off the passage that states the model.
+			name:       "the right prices cited at another model's passage",
+			reply:      pricingReply(pricingRow("aurora-large", "5", "25", "0.5", "6.25", "s1", "0.95")),
+			wantResult: aitasks.OutcomeWrongAnswer,
+			wantDetail: `"aurora-large" cites s1, which does not state it`,
+		},
+		{
 			// The gate admits a row whose prices are not per-MTok decimals; the
 			// diff then drops it, so the scenario's price is never staged.
 			name:       "a price the sheet cannot read",

@@ -258,3 +258,29 @@ func TestAWithheldJudgementLeavesTheRunUngraded(t *testing.T) {
 		t.Errorf("waited %v — a withheld judgement is not an outage", *waited)
 	}
 }
+
+// A case declaring judge: none is never sent to the judge: its record row is
+// graded on its pass count and carries neither bands nor scores.
+func TestAJudgelessCaseCertifiesWithoutAskingTheJudge(t *testing.T) {
+	sc := testScenario("basic", Bands{})
+	sc.Expect.Rubric, sc.Expect.Judge, sc.Expect.JudgeNoneReason = "", judgeNone, "the check reads the whole answer"
+	candidate := ai.NewFakeClient().Script(slices.Repeat([]string{containsWidget}, adaptiveMaxRuns)...)
+	judge := ai.NewFakeClient()
+	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
+		})
+	if err != nil {
+		t.Fatalf("certifying: %v", err)
+	}
+	if calls := len(judge.Calls()); calls != 0 {
+		t.Errorf("the judge was asked %d time(s) about a case that declares none", calls)
+	}
+	row := rec.Scenarios[0]
+	if rec.Verdict != VerdictCertified || !row.JudgeNone || row.Bands != nil || row.JudgeScores != nil {
+		t.Errorf("verdict %q, row %+v; want certified on %d passing runs, marked judge_none with no bands or scores",
+			rec.Verdict, row, rec.Runs)
+	}
+}

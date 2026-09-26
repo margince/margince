@@ -393,6 +393,9 @@ func writeAICertGrading(page *strings.Builder, rule string, selfJudged int, bars
 	page.WriteString("     right label, the right record, no invented facts, fast enough.\n")
 	page.WriteString("   - *Is it good?* A second AI model, chosen so that it is not the one being tested,\n")
 	page.WriteString("     scores the answer from 0 to 100 against a written description of a good answer.\n")
+	page.WriteString("     A test case whose own check already sees everything that description asks is\n")
+	page.WriteString("     *checked mechanically* instead: no scoring model is asked, and it counts on its\n")
+	page.WriteString("     right answers alone.\n")
 	if selfJudged > 0 {
 		fmt.Fprintf(page, "     %d older results were scored by the model they tested or one of its family; the\n"+
 			"     next re-check replaces them.\n", selfJudged)
@@ -461,7 +464,9 @@ type aiCertQualityBar struct {
 func aiCertQualityBars(corpus []aicert.Scenario) []aiCertQualityBar {
 	counts := map[aicert.Bands]int{}
 	for _, sc := range corpus {
-		counts[sc.Expect.Bands]++
+		if sc.Expect.Judged() {
+			counts[sc.Expect.Bands]++
+		}
 	}
 	bars := make([]aiCertQualityBar, 0, len(counts))
 	for bands, cases := range counts {
@@ -530,6 +535,9 @@ func assertAICertThresholdsStateTheRule(t *testing.T, page string, corpus []aice
 		fmt.Sprintf("| Tries per test case | %d ", aicert.DefaultRepeats),
 	}
 	for _, sc := range corpus {
+		if !sc.Expect.Judged() {
+			continue
+		}
 		b := sc.Expect.Bands
 		want = append(want, fmt.Sprintf("| Quality bar %d / %d / %d — ", b.CertifiedMin, b.DegradedMin, b.Floor))
 	}

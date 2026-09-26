@@ -20,13 +20,9 @@ expect:
   answer:
     min: 80
     max: 100
-  rubric: >
-    The candidate's summary point restates exactly what act_1 says and cites
-    it correctly — a well-calibrated grader scores this in the high band
-    (roughly 80-100) and gives a reason naming why it is well-grounded.
-    Score the GRADER's own output high only if its score and reason are
-    consistent with that assessment.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The output graded is itself a grade, and a grader is certified by its score
+    landing in the calibrated range, which the check requires. Its one-sentence
+    reason is never read by the rule, and grading a grader with a grader would
+    be circular.

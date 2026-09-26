@@ -186,6 +186,9 @@ type ScenarioRecord struct {
 	// are absent on a row graded before the pooled rule.
 	JudgeScores []int     `json:"judge_scores,omitempty"`
 	Bands       *RowBands `json:"bands,omitempty"`
+	// JudgeNone marks a case its mechanical check graded alone: it has no bands
+	// and no scores, and is regraded from its counts.
+	JudgeNone bool `json:"judge_none,omitempty"`
 	// The same reported-outcome counts the task carries, on this scenario's own
 	// runs: they say what came back, never whether it was what was asked for.
 	ReportedAccepted    int `json:"reported_accepted"`
@@ -233,7 +236,7 @@ type DecisionStats struct {
 // rule, recomputed from its scores and bands so a row written before the gates
 // were read this way reads them too; a row without bands keeps its stored one.
 func (sc ScenarioRecord) CaseVerdict() string {
-	if sc.Bands == nil {
+	if sc.legacy() {
 		return sc.Verdict
 	}
 	return caseVerdict(rowCase(sc))
@@ -241,11 +244,14 @@ func (sc ScenarioRecord) CaseVerdict() string {
 
 // CaseJudgeBand is CaseVerdict's judge-score half, read the same way.
 func (sc ScenarioRecord) CaseJudgeBand() string {
-	if sc.Bands == nil {
+	if sc.legacy() {
 		return sc.JudgeBand
 	}
 	return caseJudgeBand(rowCase(sc))
 }
+
+// legacy says the row predates rows keeping what the rule regrades them from.
+func (sc ScenarioRecord) legacy() bool { return sc.Bands == nil && !sc.JudgeNone }
 
 // SiteTally is one SITE's share of a task's record, folded from the scenario
 // rows that ran on it.
@@ -298,7 +304,7 @@ func (r Record) ForSite(variant string) (SiteTally, bool) {
 		if sc.Site != variant {
 			continue
 		}
-		legacy = legacy || sc.Bands == nil
+		legacy = legacy || sc.legacy()
 		worst = lowerVerdict(worst, sc.CaseVerdict())
 		cases = append(cases, rowCase(sc))
 		tally.Runs += sc.Runs

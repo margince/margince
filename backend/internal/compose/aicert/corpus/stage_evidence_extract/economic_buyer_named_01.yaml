@@ -22,17 +22,8 @@ expect:
     - criterion_key: economic_buyer_identified
       met: true
       settled_by: Martin
-  rubric: >
-    The buyer names the contact who approves the spend and describes the split
-    between her role and his. economic_buyer_identified is met, cited on the
-    second line where she says it. Note this criterion is one WE may observe as
-    readily as they state it — it names something we learn, not something the
-    buyer does — so a claim here is admissible whichever side said it. That
-    does not make it free: a claim must still quote a passage that names the
-    contact. Claiming problem_confirmed scores at the floor; nobody described a
-    problem. Reading Lars's question as the evidence scores low — a question is
-    not an answer, and the citation must point at the line that states the fact.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The claim's criterion and direction are checked exactly, and its quote must
+    contain the phrase that settles it, which pins the line that states it. The
+    schema has no field for a stage, and any other criterion fails.

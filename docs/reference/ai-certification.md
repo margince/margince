@@ -586,6 +586,9 @@ binds; this is the rung and the model it lands on, and the record behind its gra
      right label, the right record, no invented facts, fast enough.
    - *Is it good?* A second AI model, chosen so that it is not the one being tested,
      scores the answer from 0 to 100 against a written description of a good answer.
+     A test case whose own check already sees everything that description asks is
+     *checked mechanically* instead: no scoring model is asked, and it counts on its
+     right answers alone.
      4 older results were scored by the model they tested or one of its family; the
      next re-check replaces them.
 4. **A close score is checked again.** The scoring model grades every try once. A
@@ -619,7 +622,7 @@ back however well the others do.
 | Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 9 |
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
-| Quality bar 70 / 50 / 40 — 150 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 70 / 50 / 40 — 104 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
 | Quality bar 80 / 60 / 50 — 4 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45 — 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
@@ -641,6 +644,8 @@ supported_degraded = K ≥ ⌈2N/3⌉
                    ∧ TLower(score − its case's degraded_min, over every graded run) ≥ 0
                    ∧ no case's WilsonUpper(k, n) < 50% ∧ no case's TUpper(scores) < its floor
 otherwise          = not_supported, which includes any case no judge graded
+a case declaring judge: none meets every judge condition by construction,
+and its runs enter no margin; its pass count is pooled like any other
 vetoed             = WilsonUpper(k, n) < 50% ∨ TUpper(its scores) < its degraded_min
 WilsonLower/Upper  = the one-sided 90% Wilson score bounds (z = 1.2816)
 TLower/TUpper      = mean ∓ t(0.90, m−1)·max(sd, 5)/√m over m values; the mean itself when m = 1
@@ -691,7 +696,7 @@ Counted per record — one (task, binding) pair — over the 156 stale record(s)
 
 | What moved | Records | What it means |
 |---|---:|---|
-| the case | 68 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
+| the case | 118 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
 | **the prompt this build sends** | 110 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
 | how a run is graded | 156 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
@@ -731,6 +736,7 @@ today. It says nothing about how well the model did — that is the band.
 
 | Column | What it says |
 |---|---|
+| Quality | Who scores how good a test case's answers are: `judge`, a second model, or `checked mechanically`, where the case's own check sees everything a judge would and no judge is asked. |
 | Runs, Passed | How many times the model was asked, and how often it did what the test case wanted. |
 | Reliability | Passed divided by Runs. 1.00 is every attempt. |
 | `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back — not a pass/fail split. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |
@@ -870,17 +876,17 @@ model, real network).
 | `account_scan/company_scan` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `account_scan/company_scan` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `account_scan/company_scan` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
-| `agent_loop/morning_brief` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
-| `agent_loop/morning_brief` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
-| `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
-| `agent_loop/overnight_at_risk_sweep` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
-| `brief_ranking/rank` | `gemini · gemini-3.5-flash · cloud_frontier` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
-| `brief_ranking/rank` | `ollama · gemma4:12b · sovereign` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
-| `brief_ranking/rank` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
-| `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
-| `brief_ranking/rank` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
+| `agent_loop/morning_brief` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the case and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the case and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
+| `agent_loop/overnight_at_risk_sweep` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
+| `brief_ranking/rank` | `gemini · gemini-3.5-flash · cloud_frontier` | the case and how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
+| `brief_ranking/rank` | `ollama · gemma4:12b · sovereign` | the case and how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
+| `brief_ranking/rank` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
+| `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | the case and how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
+| `brief_ranking/rank` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | the case and how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `brief_ranking/rank` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
+| `brief_ranking/rank` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `capture_classify/classify` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
 | `capture_classify/classify` | `ollama · gemma4:12b · sovereign` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
 | `capture_classify/classify` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
@@ -888,18 +894,18 @@ model, real network).
 | `capture_classify/classify` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
 | `capture_classify/classify` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
 | `capture_classify/classify` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
-| `capture_confidentiality_verdict/thread` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
-| `capture_confidentiality_verdict/thread` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
-| `capture_confidentiality_verdict/thread` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
-| `capture_confidentiality_verdict/thread` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
-| `capture_confidentiality_verdict/thread` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
+| `capture_confidentiality_verdict/thread` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 14 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
+| `capture_confidentiality_verdict/thread` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 14 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
+| `capture_confidentiality_verdict/thread` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 14 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
+| `capture_confidentiality_verdict/thread` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 14 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
+| `capture_confidentiality_verdict/thread` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 14 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
 | `capture_counterparty_verdict/verdict` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 19 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 19 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 19 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 19 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
 | `capture_counterparty_verdict/verdict` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 19 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
-| `cert_judge/judge` | `gemini · gemini-3.5-flash · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
+| `cert_judge/judge` | `gemini · gemini-3.5-flash · cloud_frontier` | 2 scenarios it scored have changed since (the case and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
 | `cert_judge/judge` | `ollama · gemma4:12b · sovereign` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
 | `cert_judge/judge` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
 | `cert_judge/judge` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
@@ -932,12 +938,12 @@ model, real network).
 | `cold_start/sitereadmessage` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario dossier_correction_the_administrator_asked_for since the record scored it (it also scored an_administrator_agreeing_confirms_and_changes_nothing_further, which the corpus no longer holds) |
 | `cold_start/sitereadmessage` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the prompt this build sends and how a run is graded changed under scenario dossier_correction_the_administrator_asked_for since the record scored it (it also scored an_administrator_agreeing_confirms_and_changes_nothing_further, which the corpus no longer holds) |
 | `corpus_ask/corpus_ask` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `gemini · gemini-3.5-flash · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `gemini · gemini-3.5-flash · cloud_frontier` | 5 scenarios it scored have changed since (the case and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `deal_health/deal_status` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `deal_health/deal_status` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `deal_health/deal_status` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
@@ -987,13 +993,13 @@ model, real network).
 | `draft_reply/reply` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
-| `enrich/signature` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
-| `enrich/signature` | `ollama · gemma4:12b · sovereign` | how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
-| `enrich/signature` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
+| `enrich/signature` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | the case and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
+| `enrich/signature` | `ollama · gemma4:12b · sovereign` | the case and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
+| `enrich/signature` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | the case and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
 | `enrich/signature` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `enrich/signature` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
-| `enrich/signature` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
-| `enrich/signature` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
+| `enrich/signature` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | the case and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
+| `enrich/signature` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the case and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
+| `enrich/signature` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
 | `growth_fit/growth_fit` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering |
 | `growth_fit/growth_fit` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it |
 | `growth_fit/growth_fit` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the case and the prompt this build sends and how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it |
@@ -1005,44 +1011,44 @@ model, real network).
 | `offer_draft/draft` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, two_sources_disagree_on_price (it also scored rich_context_under_a_tight_token_cap, which the corpus no longer holds) |
 | `offer_draft/draft` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, two_sources_disagree_on_price (it also scored rich_context_under_a_tight_token_cap, which the corpus no longer holds) |
 | `offer_draft/draft` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, two_sources_disagree_on_price (it also scored rich_context_under_a_tight_token_cap, which the corpus no longer holds) |
-| `owed_verdict/owed` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
-| `owed_verdict/owed` | `ollama · gemma4:12b · sovereign` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
-| `owed_verdict/owed` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
-| `owed_verdict/owed` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
-| `owed_verdict/owed` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
-| `owed_verdict/owed` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
+| `owed_verdict/owed` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the case and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
+| `owed_verdict/owed` | `ollama · gemma4:12b · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
+| `owed_verdict/owed` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
+| `owed_verdict/owed` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
+| `owed_verdict/owed` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
+| `owed_verdict/owed` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
 | `propose_roles/committee` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
 | `propose_roles/committee` | `ollama · gemma4:12b · sovereign` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
 | `propose_roles/committee` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
 | `propose_roles/committee` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
 | `propose_roles/committee` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
 | `propose_roles/committee` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
-| `rate_extract/fx` | `gemini · gemini-3.5-flash · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
-| `rate_extract/fx` | `ollama · gemma4:12b · sovereign` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
-| `rate_extract/fx` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
-| `rate_extract/fx` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
-| `rate_extract/fx` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
+| `rate_extract/fx` | `gemini · gemini-3.5-flash · cloud_frontier` | 2 scenarios it scored have changed since (the case and how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
+| `rate_extract/fx` | `ollama · gemma4:12b · sovereign` | 2 scenarios it scored have changed since (the case and how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
+| `rate_extract/fx` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the case and how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
+| `rate_extract/fx` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 2 scenarios it scored have changed since (the case and how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
+| `rate_extract/fx` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 2 scenarios it scored have changed since (the case and how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
 | `rate_extract/fx` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `rate_extract/fx` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
-| `rate_extract/pricing` | `gemini · gemini-3.5-flash · cloud_frontier` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
-| `rate_extract/pricing` | `ollama · gemma4:12b · sovereign` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
-| `rate_extract/pricing` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
-| `rate_extract/pricing` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
-| `rate_extract/pricing` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
+| `rate_extract/fx` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the case and how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
+| `rate_extract/pricing` | `gemini · gemini-3.5-flash · cloud_frontier` | the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
+| `rate_extract/pricing` | `ollama · gemma4:12b · sovereign` | the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
+| `rate_extract/pricing` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
+| `rate_extract/pricing` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
+| `rate_extract/pricing` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
 | `rate_extract/pricing` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `rate_extract/pricing` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
+| `rate_extract/pricing` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
 | `request_settlement/request_settle` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
 | `request_settlement/request_settle` | `ollama · gemma4:12b · sovereign` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
 | `request_settlement/request_settle` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
 | `request_settlement/request_settle` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
 | `request_settlement/request_settle` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
 | `request_settlement/request_settle` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
-| `signal_extract/thread_events` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
-| `signal_extract/thread_events` | `ollama · gemma4:12b · sovereign` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
-| `signal_extract/thread_events` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
-| `signal_extract/thread_events` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
-| `signal_extract/thread_events` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
-| `signal_extract/thread_events` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
+| `signal_extract/thread_events` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the case and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
+| `signal_extract/thread_events` | `ollama · gemma4:12b · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
+| `signal_extract/thread_events` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
+| `signal_extract/thread_events` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
+| `signal_extract/thread_events` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
+| `signal_extract/thread_events` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
 | `site_extract/profile` | `gemini · gemini-3.5-flash · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
 | `site_extract/profile` | `openai_compatible · anthropic/claude-haiku-4.5 · cloud_frontier` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
 | `site_extract/profile` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
@@ -1062,7 +1068,7 @@ model, real network).
 | `site_triage/triage` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
 | `site_triage/triage` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
 | `site_triage/triage` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
-| `stage_evidence_extract/criteria` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 9 scenarios it scored have changed since (how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
+| `stage_evidence_extract/criteria` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 9 scenarios it scored have changed since (the case and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
 | `stage_evidence_extract/criteria` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
 | `stage_evidence_extract/criteria` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
 | `stage_evidence_extract/criteria` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
@@ -1097,12 +1103,12 @@ model, real network).
 | `summarize/meeting_plan` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
 | `summarize/meeting_plan` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
 | `summarize/meeting_plan` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
-| `transcript_propose/next_steps` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `transcript_propose/next_steps` | `ollama · gemma4:12b · sovereign` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `transcript_propose/next_steps` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `transcript_propose/next_steps` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `transcript_propose/next_steps` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `transcript_propose/next_steps` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
+| `transcript_propose/next_steps` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the case and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
+| `transcript_propose/next_steps` | `ollama · gemma4:12b · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
+| `transcript_propose/next_steps` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
+| `transcript_propose/next_steps` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
+| `transcript_propose/next_steps` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
+| `transcript_propose/next_steps` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
 | `voice_build/demo_draft` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it |
 | `voice_build/demo_draft` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it |
 | `voice_build/demo_draft` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the case and the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it |
@@ -1178,10 +1184,10 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `scan_finds_the_promise_we_did_not_keep` | `accepted` | [promise_we_left_open_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/promise_we_left_open_01.yaml) |
-| `scan_finds_the_question_nobody_answered` | `accepted` | [question_left_unanswered_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/question_left_unanswered_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `scan_finds_the_promise_we_did_not_keep` | `accepted` | judge | [promise_we_left_open_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/promise_we_left_open_01.yaml) |
+| `scan_finds_the_question_nobody_answered` | `accepted` | judge | [question_left_unanswered_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/question_left_unanswered_01.yaml) |
 
 Records (6):
 
@@ -1209,11 +1215,11 @@ Scope a run of it can claim: `single_turn`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `morning_brief_a_retrieved_deal_is_not_the_queue` | `accepted` | [morning_brief_a_retrieved_deal_is_not_the_queue.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_a_retrieved_deal_is_not_the_queue.yaml) |
-| `morning_brief_reads_its_queue_first` | `accepted` | [morning_brief_reads_its_queue_first.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_reads_its_queue_first.yaml) |
-| `morning_brief_retrieved_text_is_not_an_instruction` | `accepted` | [morning_brief_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_retrieved_text_is_not_an_instruction.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `morning_brief_a_retrieved_deal_is_not_the_queue` | `accepted` | checked mechanically | [morning_brief_a_retrieved_deal_is_not_the_queue.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_a_retrieved_deal_is_not_the_queue.yaml) |
+| `morning_brief_reads_its_queue_first` | `accepted` | checked mechanically | [morning_brief_reads_its_queue_first.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_reads_its_queue_first.yaml) |
+| `morning_brief_retrieved_text_is_not_an_instruction` | `accepted` | checked mechanically | [morning_brief_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_retrieved_text_is_not_an_instruction.yaml) |
 
 Records (2):
 
@@ -1233,11 +1239,11 @@ Scope a run of it can claim: `single_turn`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `overnight_sweep_one_quiet_deal_is_not_the_book` | `accepted` | [overnight_sweep_one_quiet_deal_is_not_the_book.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_one_quiet_deal_is_not_the_book.yaml) |
-| `overnight_sweep_reads_what_is_slipping_before_it_logs` | `accepted` | [overnight_sweep_reads_what_is_slipping_before_it_logs.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_reads_what_is_slipping_before_it_logs.yaml) |
-| `overnight_sweep_retrieved_text_is_not_an_instruction` | `accepted` | [overnight_sweep_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_retrieved_text_is_not_an_instruction.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `overnight_sweep_one_quiet_deal_is_not_the_book` | `accepted` | checked mechanically | [overnight_sweep_one_quiet_deal_is_not_the_book.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_one_quiet_deal_is_not_the_book.yaml) |
+| `overnight_sweep_reads_what_is_slipping_before_it_logs` | `accepted` | checked mechanically | [overnight_sweep_reads_what_is_slipping_before_it_logs.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_reads_what_is_slipping_before_it_logs.yaml) |
+| `overnight_sweep_retrieved_text_is_not_an_instruction` | `accepted` | checked mechanically | [overnight_sweep_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_retrieved_text_is_not_an_instruction.yaml) |
 
 Records (2):
 
@@ -1259,9 +1265,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `reorder_two_candidates_by_momentum` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/brief_ranking/basic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `reorder_two_candidates_by_momentum` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/brief_ranking/basic_01.yaml) |
 
 Records (7):
 
@@ -1288,13 +1294,13 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_message_that_is_both_is_labelled_commitment` | `accepted` | [commitment_beats_meeting_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/commitment_beats_meeting_01.yaml) |
-| `a_mixed_batch_keeps_every_label_on_its_own_message` | `accepted` | [batch_keeps_ids_aligned_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/batch_keeps_ids_aligned_01.yaml) |
-| `a_stated_promise_is_a_commitment` | `accepted` | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/commitment_01.yaml) |
-| `an_auto_reply_carries_no_commitment_and_no_meeting` | `accepted` | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/noise_01.yaml) |
-| `meeting_request_from_reply` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/basic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_message_that_is_both_is_labelled_commitment` | `accepted` | judge | [commitment_beats_meeting_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/commitment_beats_meeting_01.yaml) |
+| `a_mixed_batch_keeps_every_label_on_its_own_message` | `accepted` | judge | [batch_keeps_ids_aligned_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/batch_keeps_ids_aligned_01.yaml) |
+| `a_stated_promise_is_a_commitment` | `accepted` | judge | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/commitment_01.yaml) |
+| `an_auto_reply_carries_no_commitment_and_no_meeting` | `accepted` | judge | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/noise_01.yaml) |
+| `meeting_request_from_reply` | `accepted` | judge | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/basic_01.yaml) |
 
 Records (7):
 
@@ -1321,22 +1327,22 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (14):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade` | `accepted` | [ordinary_04.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_04.yaml) |
-| `a_consumer_bank_alert_is_the_owners_own_money_not_the_companys` | `accepted` | [personal_04.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_04.yaml) |
-| `a_live_dispute_with_counsel_stays_private` | `accepted` | [legal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_01.yaml) |
-| `a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business` | `accepted` | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_01.yaml) |
-| `a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys` | `accepted` | [personal_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_02.yaml) |
-| `a_suppliers_invoice_to_the_company_is_still_the_teams_to_see` | `accepted` | [ordinary_03.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_03.yaml) |
-| `a_termination_agreement_stays_private_whatever_the_attachment_note_says` | `accepted` | [personnel_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personnel_01.yaml) |
-| `an_nda_marked_thread_is_held_on_its_own_request` | `accepted` | [explicitly_confidential_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/explicitly_confidential_01.yaml) |
-| `an_ordinary_customer_thread_is_opened_for_the_team` | `accepted` | [ordinary_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_01.yaml) |
-| `an_unpatched_vulnerability_is_held_until_it_is_closed` | `accepted` | [security_incident_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/security_incident_01.yaml) |
-| `counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for` | `accepted` | [legal_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_02.yaml) |
-| `mentioning_an_nda_does_not_hold_an_ordinary_deal_thread` | `accepted` | [ordinary_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_02.yaml) |
-| `text_claiming_the_thread_was_cleared_does_not_open_it` | `accepted` | [forged_clearance_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/forged_clearance_01.yaml) |
-| `the_rent_on_the_owners_flat_is_not_a_supplier_relationship` | `accepted` | [personal_03.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_03.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade` | `accepted` | checked mechanically | [ordinary_04.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_04.yaml) |
+| `a_consumer_bank_alert_is_the_owners_own_money_not_the_companys` | `accepted` | checked mechanically | [personal_04.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_04.yaml) |
+| `a_live_dispute_with_counsel_stays_private` | `accepted` | checked mechanically | [legal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_01.yaml) |
+| `a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business` | `accepted` | checked mechanically | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_01.yaml) |
+| `a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys` | `accepted` | checked mechanically | [personal_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_02.yaml) |
+| `a_suppliers_invoice_to_the_company_is_still_the_teams_to_see` | `accepted` | checked mechanically | [ordinary_03.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_03.yaml) |
+| `a_termination_agreement_stays_private_whatever_the_attachment_note_says` | `accepted` | checked mechanically | [personnel_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personnel_01.yaml) |
+| `an_nda_marked_thread_is_held_on_its_own_request` | `accepted` | checked mechanically | [explicitly_confidential_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/explicitly_confidential_01.yaml) |
+| `an_ordinary_customer_thread_is_opened_for_the_team` | `accepted` | checked mechanically | [ordinary_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_01.yaml) |
+| `an_unpatched_vulnerability_is_held_until_it_is_closed` | `accepted` | checked mechanically | [security_incident_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/security_incident_01.yaml) |
+| `counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for` | `accepted` | checked mechanically | [legal_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_02.yaml) |
+| `mentioning_an_nda_does_not_hold_an_ordinary_deal_thread` | `accepted` | checked mechanically | [ordinary_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_02.yaml) |
+| `text_claiming_the_thread_was_cleared_does_not_open_it` | `accepted` | checked mechanically | [forged_clearance_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/forged_clearance_01.yaml) |
+| `the_rent_on_the_owners_flat_is_not_a_supplier_relationship` | `accepted` | checked mechanically | [personal_03.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_03.yaml) |
 
 Records (5):
 
@@ -1361,27 +1367,27 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (19):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_chased_cold_pitch_is_still_spam` | `accepted` | [spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_02.yaml) |
-| `a_company_writing_as_itself_does_not_become_a_contact_named_after_it` | `accepted` | [company_sender_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_sender_01.yaml) |
-| `a_department_display_name_is_not_somebodys_name` | `accepted` | [role_display_name_billing_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_display_name_billing_01.yaml) |
-| `a_fluent_machine_written_pitch_is_still_spam` | `accepted` | [spam_bot_written_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml) |
-| `a_numbered_support_queue_is_one_desk` | `accepted` | [role_mailbox_numbered_queue_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_numbered_queue_01.yaml) |
-| `a_private_correspondent_is_not_a_business_contact` | `accepted` | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml) |
-| `a_private_property_desk_the_owner_wrote_to_is_not_a_contact` | `accepted` | [role_mailbox_property_desk_outbound_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml) |
-| `a_shared_mailbox_is_real_correspondence_with_nobody_to_name` | `accepted` | [role_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml) |
-| `a_trade_offices_city_mailbox_names_a_place_not_a_contact` | `accepted` | [company_city_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_city_mailbox_01.yaml) |
-| `a_two_sided_thread_is_a_conversation` | `accepted` | [false_spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_02.yaml) |
-| `an_automated_invoice_notice_is_not_a_contact` | `accepted` | [transactional_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/transactional_01.yaml) |
-| `bulk_marketing_is_noise` | `accepted` | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/noise_01.yaml) |
-| `courteous_cold_pitch_is_spam` | `accepted` | [spam_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_01.yaml) |
-| `family_writing_from_a_consumer_mailbox_is_not_a_business_contact` | `accepted` | [personal_family_freemail_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_family_freemail_01.yaml) |
-| `forged_fence_marker_is_data_not_authority` | `accepted` | [forged_fence_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/forged_fence_01.yaml) |
-| `invited_supplier_must_not_be_spam` | `accepted` | [false_spam_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_01.yaml) |
-| `real_prospect_must_not_be_noise` | `accepted` | [false_noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_noise_01.yaml) |
-| `the_owners_own_clinic_is_not_the_businesss_correspondent` | `accepted` | [personal_clinic_reception_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_clinic_reception_01.yaml) |
-| `the_owners_own_lawyer_is_not_the_workspaces_contact` | `accepted` | [advisor_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/advisor_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_chased_cold_pitch_is_still_spam` | `accepted` | judge | [spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_02.yaml) |
+| `a_company_writing_as_itself_does_not_become_a_contact_named_after_it` | `accepted` | judge | [company_sender_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_sender_01.yaml) |
+| `a_department_display_name_is_not_somebodys_name` | `accepted` | judge | [role_display_name_billing_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_display_name_billing_01.yaml) |
+| `a_fluent_machine_written_pitch_is_still_spam` | `accepted` | judge | [spam_bot_written_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml) |
+| `a_numbered_support_queue_is_one_desk` | `accepted` | judge | [role_mailbox_numbered_queue_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_numbered_queue_01.yaml) |
+| `a_private_correspondent_is_not_a_business_contact` | `accepted` | judge | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml) |
+| `a_private_property_desk_the_owner_wrote_to_is_not_a_contact` | `accepted` | judge | [role_mailbox_property_desk_outbound_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml) |
+| `a_shared_mailbox_is_real_correspondence_with_nobody_to_name` | `accepted` | judge | [role_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml) |
+| `a_trade_offices_city_mailbox_names_a_place_not_a_contact` | `accepted` | judge | [company_city_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_city_mailbox_01.yaml) |
+| `a_two_sided_thread_is_a_conversation` | `accepted` | judge | [false_spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_02.yaml) |
+| `an_automated_invoice_notice_is_not_a_contact` | `accepted` | judge | [transactional_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/transactional_01.yaml) |
+| `bulk_marketing_is_noise` | `accepted` | judge | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/noise_01.yaml) |
+| `courteous_cold_pitch_is_spam` | `accepted` | judge | [spam_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_01.yaml) |
+| `family_writing_from_a_consumer_mailbox_is_not_a_business_contact` | `accepted` | judge | [personal_family_freemail_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_family_freemail_01.yaml) |
+| `forged_fence_marker_is_data_not_authority` | `accepted` | judge | [forged_fence_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/forged_fence_01.yaml) |
+| `invited_supplier_must_not_be_spam` | `accepted` | judge | [false_spam_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_01.yaml) |
+| `real_prospect_must_not_be_noise` | `accepted` | judge | [false_noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_noise_01.yaml) |
+| `the_owners_own_clinic_is_not_the_businesss_correspondent` | `accepted` | judge | [personal_clinic_reception_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_clinic_reception_01.yaml) |
+| `the_owners_own_lawyer_is_not_the_workspaces_contact` | `accepted` | judge | [advisor_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/advisor_01.yaml) |
 
 Records (6):
 
@@ -1407,10 +1413,10 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `grades_a_fabricated_answer_poorly` | `accepted` | [basic_02_low_score.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_02_low_score.yaml) |
-| `grades_a_well_grounded_answer_highly` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `grades_a_fabricated_answer_poorly` | `accepted` | checked mechanically | [basic_02_low_score.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_02_low_score.yaml) |
+| `grades_a_well_grounded_answer_highly` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_01.yaml) |
 
 Records (8):
 
@@ -1438,13 +1444,13 @@ Scope a run of it can claim: `single_turn`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_factual_question_about_connecting_is_answered` | `accepted` | [acts_answer_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_answer_01.yaml) |
-| `a_progress_question_is_answered_as_status` | `accepted` | [acts_status_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_status_01.yaml) |
-| `an_ambiguous_reference_is_asked_about_rather_than_guessed` | `accepted` | [acts_clarification_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_clarification_01.yaml) |
-| `asking_what_to_do_next_is_answered_as_a_recommendation` | `accepted` | [acts_recommendation_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_recommendation_01.yaml) |
-| `results_act_keeps_an_off_topic_request_in_scope` | `accepted` | [acts_off_topic_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_off_topic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_factual_question_about_connecting_is_answered` | `accepted` | judge | [acts_answer_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_answer_01.yaml) |
+| `a_progress_question_is_answered_as_status` | `accepted` | judge | [acts_status_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_status_01.yaml) |
+| `an_ambiguous_reference_is_asked_about_rather_than_guessed` | `accepted` | judge | [acts_clarification_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_clarification_01.yaml) |
+| `asking_what_to_do_next_is_answered_as_a_recommendation` | `accepted` | judge | [acts_recommendation_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_recommendation_01.yaml) |
+| `results_act_keeps_an_off_topic_request_in_scope` | `accepted` | judge | [acts_off_topic_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_off_topic_01.yaml) |
 
 Records (6):
 
@@ -1468,9 +1474,9 @@ Scope a run of it can claim: `single_turn`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `bare_answer_corrects_the_field_the_wizard_asked_for` | `accepted` | [company_message_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/company_message_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `bare_answer_corrects_the_field_the_wizard_asked_for` | `accepted` | judge | [company_message_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/company_message_01.yaml) |
 
 Records (6):
 
@@ -1494,9 +1500,9 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `onboarding_readback_from_landing_page` | `accepted` | [field_extract_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/field_extract_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `onboarding_readback_from_landing_page` | `accepted` | judge | [field_extract_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/field_extract_01.yaml) |
 
 Records (6):
 
@@ -1520,12 +1526,12 @@ Scope a run of it can claim: `single_turn`.
 
 Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change` | `accepted` | [sitereadmessage_offer_accepted_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_offer_accepted_01.yaml) |
-| `an_administrator_agreeing_with_a_plain_question_changes_nothing` | `accepted` | [sitereadmessage_confirmation_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_confirmation_01.yaml) |
-| `an_administrator_answering_an_offer_with_another_value_corrects_it` | `accepted` | [sitereadmessage_offer_corrected_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_offer_corrected_01.yaml) |
-| `dossier_correction_the_administrator_asked_for` | `accepted` | [sitereadmessage_correction_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_correction_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change` | `accepted` | judge | [sitereadmessage_offer_accepted_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_offer_accepted_01.yaml) |
+| `an_administrator_agreeing_with_a_plain_question_changes_nothing` | `accepted` | judge | [sitereadmessage_confirmation_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_confirmation_01.yaml) |
+| `an_administrator_answering_an_offer_with_another_value_corrects_it` | `accepted` | judge | [sitereadmessage_offer_corrected_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_offer_corrected_01.yaml) |
+| `dossier_correction_the_administrator_asked_for` | `accepted` | judge | [sitereadmessage_correction_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_correction_01.yaml) |
 
 Records (6):
 
@@ -1551,13 +1557,13 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `corpus_ask_answers_only_from_the_passage_that_says_it` | `accepted` | [corpus_ask_answers_from_the_passages_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_from_the_passages_01.yaml) |
-| `corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present` | `accepted` | [corpus_ask_answers_when_the_passage_is_present_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_when_the_passage_is_present_01.yaml) |
-| `corpus_ask_returns_nothing_when_the_only_passage_does_not_answer` | `accepted` | [corpus_ask_abstains_when_uncovered_02.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_02.yaml) |
-| `corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question` | `accepted` | [corpus_ask_abstains_when_uncovered_03.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_03.yaml) |
-| `corpus_ask_returns_nothing_when_the_passages_do_not_answer` | `accepted` | [corpus_ask_abstains_when_uncovered_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `corpus_ask_answers_only_from_the_passage_that_says_it` | `accepted` | judge | [corpus_ask_answers_from_the_passages_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_from_the_passages_01.yaml) |
+| `corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present` | `accepted` | judge | [corpus_ask_answers_when_the_passage_is_present_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_when_the_passage_is_present_01.yaml) |
+| `corpus_ask_returns_nothing_when_the_only_passage_does_not_answer` | `accepted` | checked mechanically | [corpus_ask_abstains_when_uncovered_02.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_02.yaml) |
+| `corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question` | `accepted` | checked mechanically | [corpus_ask_abstains_when_uncovered_03.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_03.yaml) |
+| `corpus_ask_returns_nothing_when_the_passages_do_not_answer` | `accepted` | checked mechanically | [corpus_ask_abstains_when_uncovered_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_01.yaml) |
 
 Records (7):
 
@@ -1584,11 +1590,11 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `deal_status_an_overdue_task_is_not_done_work` | `accepted` | [deal_status_overdue_task_is_not_done_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_overdue_task_is_not_done_01.yaml) |
-| `deal_status_offer_left_hanging` | `accepted` | [deal_status_offer_left_hanging_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_offer_left_hanging_01.yaml) |
-| `deal_status_says_nothing_is_wrong_when_nothing_is` | `accepted` | [deal_status_quiet_after_proposal_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_quiet_after_proposal_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `deal_status_an_overdue_task_is_not_done_work` | `accepted` | judge | [deal_status_overdue_task_is_not_done_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_overdue_task_is_not_done_01.yaml) |
+| `deal_status_offer_left_hanging` | `accepted` | judge | [deal_status_offer_left_hanging_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_offer_left_hanging_01.yaml) |
+| `deal_status_says_nothing_is_wrong_when_nothing_is` | `accepted` | judge | [deal_status_quiet_after_proposal_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_quiet_after_proposal_01.yaml) |
 
 Records (5):
 
@@ -1613,12 +1619,12 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `attached_document_states_none_of_them` | `accepted` | [states_nothing_03.yaml](../../backend/internal/compose/aicert/corpus/document_extract/states_nothing_03.yaml) |
-| `order_form_states_all_four` | `accepted` | [order_form_01.yaml](../../backend/internal/compose/aicert/corpus/document_extract/order_form_01.yaml) |
-| `pdf_agreement_read_as_a_document_part` | `accepted` | [pdf_agreement_04.yaml](../../backend/internal/compose/aicert/corpus/document_extract/pdf_agreement_04.yaml) |
-| `quote_states_money_but_no_close_date` | `accepted` | [partial_02.yaml](../../backend/internal/compose/aicert/corpus/document_extract/partial_02.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `attached_document_states_none_of_them` | `accepted` | judge | [states_nothing_03.yaml](../../backend/internal/compose/aicert/corpus/document_extract/states_nothing_03.yaml) |
+| `order_form_states_all_four` | `accepted` | judge | [order_form_01.yaml](../../backend/internal/compose/aicert/corpus/document_extract/order_form_01.yaml) |
+| `pdf_agreement_read_as_a_document_part` | `accepted` | judge | [pdf_agreement_04.yaml](../../backend/internal/compose/aicert/corpus/document_extract/pdf_agreement_04.yaml) |
+| `quote_states_money_but_no_close_date` | `accepted` | judge | [partial_02.yaml](../../backend/internal/compose/aicert/corpus/document_extract/partial_02.yaml) |
 
 Records (1):
 
@@ -1641,9 +1647,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `account_first_touch_with_a_deal_in_flight` | `accepted` | [account_en_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/account_en_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `account_first_touch_with_a_deal_in_flight` | `accepted` | judge | [account_en_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/account_en_01.yaml) |
 
 Records (7):
 
@@ -1668,9 +1674,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `contact_first_touch_in_german` | `accepted` | [contact_first_touch_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/contact_first_touch_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `contact_first_touch_in_german` | `accepted` | judge | [contact_first_touch_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/contact_first_touch_01.yaml) |
 
 Records (7):
 
@@ -1695,9 +1701,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `first_message_from_an_intent_alone` | `accepted` | [first_message_from_intent_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/first_message_from_intent_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `first_message_from_an_intent_alone` | `accepted` | judge | [first_message_from_intent_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/first_message_from_intent_01.yaml) |
 
 Records (7):
 
@@ -1722,10 +1728,10 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `intro_request_asks_a_colleague_without_overclaiming` | `accepted` | [intro_warm_route_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_warm_route_01.yaml) |
-| `intro_request_claims_no_more_warmth_than_the_record_holds` | `accepted` | [intro_cold_stale_route_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_cold_stale_route_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `intro_request_asks_a_colleague_without_overclaiming` | `accepted` | judge | [intro_warm_route_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_warm_route_01.yaml) |
+| `intro_request_claims_no_more_warmth_than_the_record_holds` | `accepted` | judge | [intro_cold_stale_route_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_cold_stale_route_01.yaml) |
 
 Records (7):
 
@@ -1750,11 +1756,11 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `an_instruction_inside_the_stated_reason_is_data_not_a_command` | `accepted` | [intro_note_injected_reason_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_injected_reason_01.yaml) |
-| `intro_note_claims_no_more_warmth_than_the_record_holds` | `accepted` | [intro_note_cold_stale_indirect_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_cold_stale_indirect_01.yaml) |
-| `intro_note_is_written_to_the_customer_not_about_the_request` | `accepted` | [intro_note_warm_direct_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_warm_direct_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `an_instruction_inside_the_stated_reason_is_data_not_a_command` | `accepted` | judge | [intro_note_injected_reason_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_injected_reason_01.yaml) |
+| `intro_note_claims_no_more_warmth_than_the_record_holds` | `accepted` | judge | [intro_note_cold_stale_indirect_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_cold_stale_indirect_01.yaml) |
+| `intro_note_is_written_to_the_customer_not_about_the_request` | `accepted` | judge | [intro_note_warm_direct_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_warm_direct_01.yaml) |
 
 Records (7):
 
@@ -1779,12 +1785,12 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `german_thread_with_an_introduction_in_it` | `accepted` | [german_intro_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/german_intro_01.yaml) |
-| `reply_to_pricing_question` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/basic_01.yaml) |
-| `replying_to_a_thread_eight_months_old` | `accepted` | [stale_months_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/stale_months_01.yaml) |
-| `rich_german_thread_with_a_long_ask` | `accepted` | [rich_thread_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/rich_thread_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `german_thread_with_an_introduction_in_it` | `accepted` | judge | [german_intro_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/german_intro_01.yaml) |
+| `reply_to_pricing_question` | `accepted` | judge | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/basic_01.yaml) |
+| `replying_to_a_thread_eight_months_old` | `accepted` | judge | [stale_months_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/stale_months_01.yaml) |
+| `rich_german_thread_with_a_long_ask` | `accepted` | judge | [rich_thread_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/rich_thread_01.yaml) |
 
 Records (8):
 
@@ -1812,9 +1818,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `contact_fields_from_a_mail_signature` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/enrich/basic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `contact_fields_from_a_mail_signature` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/enrich/basic_01.yaml) |
 
 Records (7):
 
@@ -1843,10 +1849,10 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `growth_fit_calls_a_company_outside_our_market_weak` | `accepted` | [clear_misfit_01.yaml](../../backend/internal/compose/aicert/corpus/growth_fit/clear_misfit_01.yaml) |
-| `growth_fit_reads_their_facts_against_our_offering` | `accepted` | [clear_fit_01.yaml](../../backend/internal/compose/aicert/corpus/growth_fit/clear_fit_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `growth_fit_calls_a_company_outside_our_market_weak` | `accepted` | judge | [clear_misfit_01.yaml](../../backend/internal/compose/aicert/corpus/growth_fit/clear_misfit_01.yaml) |
+| `growth_fit_reads_their_facts_against_our_offering` | `accepted` | judge | [clear_fit_01.yaml](../../backend/internal/compose/aicert/corpus/growth_fit/clear_fit_01.yaml) |
 
 Records (5):
 
@@ -1873,13 +1879,13 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `grounded_draft_from_a_conversation_price` | `accepted` | [grounded_draft.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/grounded_draft.yaml) |
-| `injected_instruction_inside_evidence_is_ignored` | `accepted` | [injection_attempt.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/injection_attempt.yaml) |
-| `no_captured_context_yields_no_lines` | `abstained` | [empty_evidence_abstention.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/empty_evidence_abstention.yaml) |
-| `rich_context_prices_every_line_from_its_own_evidence` | `accepted` | [rich_context.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/rich_context.yaml) |
-| `two_sources_disagree_on_price` | `accepted` | [contradictory_sources.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/contradictory_sources.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `grounded_draft_from_a_conversation_price` | `accepted` | judge | [grounded_draft.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/grounded_draft.yaml) |
+| `injected_instruction_inside_evidence_is_ignored` | `accepted` | judge | [injection_attempt.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/injection_attempt.yaml) |
+| `no_captured_context_yields_no_lines` | `abstained` | judge | [empty_evidence_abstention.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/empty_evidence_abstention.yaml) |
+| `rich_context_prices_every_line_from_its_own_evidence` | `accepted` | judge | [rich_context.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/rich_context.yaml) |
+| `two_sources_disagree_on_price` | `accepted` | judge | [contradictory_sources.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/contradictory_sources.yaml) |
 
 Records (6):
 
@@ -1905,12 +1911,12 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_direct_question_asks_us_and_a_report_does_not` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/basic_01.yaml) |
-| `a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not` | `accepted` | [proposed_time_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/proposed_time_01.yaml) |
-| `an_invitation_asks_nothing_a_calendar_reply_cannot_settle` | `accepted` | [invitation_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/invitation_01.yaml) |
-| `the_recipient_line_separates_a_request_from_a_copy` | `accepted` | [envelope_decides_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/envelope_decides_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_direct_question_asks_us_and_a_report_does_not` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/basic_01.yaml) |
+| `a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not` | `accepted` | checked mechanically | [proposed_time_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/proposed_time_01.yaml) |
+| `an_invitation_asks_nothing_a_calendar_reply_cannot_settle` | `accepted` | checked mechanically | [invitation_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/invitation_01.yaml) |
+| `the_recipient_line_separates_a_request_from_a_copy` | `accepted` | checked mechanically | [envelope_decides_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/envelope_decides_01.yaml) |
 
 Records (6):
 
@@ -1936,11 +1942,11 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_committee_where_four_contacts_state_their_own_roles` | `accepted` | [committee_four_roles_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_four_roles_01.yaml) |
-| `propose_roles_reads_a_buyer_out_of_their_own_words` | `accepted` | [committee_evidenced_buyer_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_evidenced_buyer_01.yaml) |
-| `propose_roles_reads_no_role_out_of_a_title` | `accepted` | [committee_title_only_restraint_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_title_only_restraint_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_committee_where_four_contacts_state_their_own_roles` | `accepted` | judge | [committee_four_roles_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_four_roles_01.yaml) |
+| `propose_roles_reads_a_buyer_out_of_their_own_words` | `accepted` | judge | [committee_evidenced_buyer_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_evidenced_buyer_01.yaml) |
+| `propose_roles_reads_no_role_out_of_a_title` | `accepted` | judge | [committee_title_only_restraint_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_title_only_restraint_01.yaml) |
 
 Records (6):
 
@@ -1966,10 +1972,10 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `fx_rates_json_api_grounded` | `accepted` | [fx_json_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_json_grounded.yaml) |
-| `fx_rates_two_pairs_grounded` | `accepted` | [fx_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_grounded.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `fx_rates_json_api_grounded` | `accepted` | checked mechanically | [fx_json_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_json_grounded.yaml) |
+| `fx_rates_two_pairs_grounded` | `accepted` | checked mechanically | [fx_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_grounded.yaml) |
 
 Records (7):
 
@@ -1994,9 +2000,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `pricing_table_two_models_grounded` | `accepted` | [pricing_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/pricing_grounded.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `pricing_table_two_models_grounded` | `accepted` | checked mechanically | [pricing_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/pricing_grounded.yaml) |
 
 Records (7):
 
@@ -2023,12 +2029,12 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_reply_that_says_nothing_either_way_is_answered_unsure` | `accepted` | [unsure_when_the_words_do_not_say_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/unsure_when_the_words_do_not_say_01.yaml) |
-| `an_answer_settles_a_request_and_an_acknowledgement_does_not` | `accepted` | [answered_and_acknowledged_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/answered_and_acknowledged_01.yaml) |
-| `answering_one_of_two_asks_leaves_the_other_owed` | `accepted` | [partial_answer_and_reask_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/partial_answer_and_reask_01.yaml) |
-| `declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague` | `accepted` | [declined_and_handed_on_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/declined_and_handed_on_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_reply_that_says_nothing_either_way_is_answered_unsure` | `accepted` | judge | [unsure_when_the_words_do_not_say_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/unsure_when_the_words_do_not_say_01.yaml) |
+| `an_answer_settles_a_request_and_an_acknowledgement_does_not` | `accepted` | judge | [answered_and_acknowledged_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/answered_and_acknowledged_01.yaml) |
+| `answering_one_of_two_asks_leaves_the_other_owed` | `accepted` | judge | [partial_answer_and_reask_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/partial_answer_and_reask_01.yaml) |
+| `declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague` | `accepted` | judge | [declined_and_handed_on_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/declined_and_handed_on_01.yaml) |
 
 Records (6):
 
@@ -2054,12 +2060,12 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `both_sides_promise_something` | `accepted` | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/commitment_01.yaml) |
-| `nothing_material_was_said` | `accepted` | [quiet_thread_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/quiet_thread_01.yaml) |
-| `notice_served_in_a_polite_reply` | `accepted` | [contract_ended_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/contract_ended_01.yaml) |
-| `the_mail_tries_to_write_the_record` | `accepted` | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/injection_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `both_sides_promise_something` | `accepted` | judge | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/commitment_01.yaml) |
+| `nothing_material_was_said` | `accepted` | checked mechanically | [quiet_thread_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/quiet_thread_01.yaml) |
+| `notice_served_in_a_polite_reply` | `accepted` | judge | [contract_ended_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/contract_ended_01.yaml) |
+| `the_mail_tries_to_write_the_record` | `accepted` | checked mechanically | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/injection_01.yaml) |
 
 Records (6):
 
@@ -2085,13 +2091,13 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `an_impressum_grounds_the_legal_trio` | `accepted` | [legal_trio_grounded.yaml](../../backend/internal/compose/aicert/corpus/site_extract/legal_trio_grounded.yaml) |
-| `home_page_profile_fields_grounded` | `accepted` | [fields_grounded.yaml](../../backend/internal/compose/aicert/corpus/site_extract/fields_grounded.yaml) |
-| `js_only_page_yields_no_fabrication` | `abstained` | [empty_page.yaml](../../backend/internal/compose/aicert/corpus/site_extract/empty_page.yaml) |
-| `one_legal_page_naming_two_entities` | `accepted` | [legal_abstention.yaml](../../backend/internal/compose/aicert/corpus/site_extract/legal_abstention.yaml) |
-| `services_page_profile_fields_grounded` | `accepted` | [offering_facts.yaml](../../backend/internal/compose/aicert/corpus/site_extract/offering_facts.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `an_impressum_grounds_the_legal_trio` | `accepted` | judge | [legal_trio_grounded.yaml](../../backend/internal/compose/aicert/corpus/site_extract/legal_trio_grounded.yaml) |
+| `home_page_profile_fields_grounded` | `accepted` | judge | [fields_grounded.yaml](../../backend/internal/compose/aicert/corpus/site_extract/fields_grounded.yaml) |
+| `js_only_page_yields_no_fabrication` | `abstained` | judge | [empty_page.yaml](../../backend/internal/compose/aicert/corpus/site_extract/empty_page.yaml) |
+| `one_legal_page_naming_two_entities` | `accepted` | judge | [legal_abstention.yaml](../../backend/internal/compose/aicert/corpus/site_extract/legal_abstention.yaml) |
+| `services_page_profile_fields_grounded` | `accepted` | judge | [offering_facts.yaml](../../backend/internal/compose/aicert/corpus/site_extract/offering_facts.yaml) |
 
 Records (7):
 
@@ -2118,11 +2124,11 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `customer_story_credits_the_customer_not_the_reader` | `accepted` | [customer_story_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/customer_story_01.yaml) |
-| `impressum_page_company_facts_and_entities` | `accepted` | [basic_02.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_02.yaml) |
-| `services_page_offering_facts` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `customer_story_credits_the_customer_not_the_reader` | `accepted` | judge | [customer_story_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/customer_story_01.yaml) |
+| `impressum_page_company_facts_and_entities` | `accepted` | judge | [basic_02.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_02.yaml) |
+| `services_page_offering_facts` | `accepted` | judge | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_01.yaml) |
 
 Records (6):
 
@@ -2148,13 +2154,13 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder` | `accepted` | [unclear_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/unclear_01.yaml) |
-| `a_mailbox_vendor_is_not_the_senders_employer` | `accepted` | [mailbox_provider_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/mailbox_provider_01.yaml) |
-| `a_one_contact_consultancy_is_still_a_company` | `accepted` | [false_refusal_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/false_refusal_01.yaml) |
-| `a_parked_domain_identifies_nobody` | `accepted` | [parked_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/parked_domain_01.yaml) |
-| `a_personal_domain_is_not_a_company` | `accepted` | [personal_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/personal_domain_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder` | `accepted` | judge | [unclear_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/unclear_01.yaml) |
+| `a_mailbox_vendor_is_not_the_senders_employer` | `accepted` | judge | [mailbox_provider_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/mailbox_provider_01.yaml) |
+| `a_one_contact_consultancy_is_still_a_company` | `accepted` | judge | [false_refusal_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/false_refusal_01.yaml) |
+| `a_parked_domain_identifies_nobody` | `accepted` | judge | [parked_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/parked_domain_01.yaml) |
+| `a_personal_domain_is_not_a_company` | `accepted` | judge | [personal_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/personal_domain_01.yaml) |
 
 Records (6):
 
@@ -2180,17 +2186,17 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (9):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_conversation_about_something_else` | `abstained` | [silence_is_not_lost_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/silence_is_not_lost_01.yaml) |
-| `a_correspondent_tries_to_settle_their_own_criteria` | `accepted` | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/injection_01.yaml) |
-| `a_date_floated_is_not_a_date_agreed` | `accepted` | [proposed_not_agreed_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/proposed_not_agreed_01.yaml) |
-| `a_settled_fact_no_criterion_asks_about` | `abstained` | [unknown_criterion_key_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/unknown_criterion_key_01.yaml) |
-| `talking_about_signing_is_not_signing` | `accepted` | [contract_talk_is_not_signed_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/contract_talk_is_not_signed_01.yaml) |
-| `the_buyer_names_who_signs` | `accepted` | [economic_buyer_named_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/economic_buyer_named_01.yaml) |
-| `the_buyer_states_the_problem_in_their_own_words` | `accepted` | [buyer_confirms_problem_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/buyer_confirms_problem_01.yaml) |
-| `the_rep_says_the_buyer_confirmed_it` | `abstained` | [rep_asserts_it_for_them_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/rep_asserts_it_for_them_01.yaml) |
-| `warmth_with_no_facts_in_it` | `abstained` | [nothing_groundable_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/nothing_groundable_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_conversation_about_something_else` | `abstained` | checked mechanically | [silence_is_not_lost_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/silence_is_not_lost_01.yaml) |
+| `a_correspondent_tries_to_settle_their_own_criteria` | `accepted` | checked mechanically | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/injection_01.yaml) |
+| `a_date_floated_is_not_a_date_agreed` | `accepted` | judge | [proposed_not_agreed_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/proposed_not_agreed_01.yaml) |
+| `a_settled_fact_no_criterion_asks_about` | `abstained` | checked mechanically | [unknown_criterion_key_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/unknown_criterion_key_01.yaml) |
+| `talking_about_signing_is_not_signing` | `accepted` | checked mechanically | [contract_talk_is_not_signed_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/contract_talk_is_not_signed_01.yaml) |
+| `the_buyer_names_who_signs` | `accepted` | checked mechanically | [economic_buyer_named_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/economic_buyer_named_01.yaml) |
+| `the_buyer_states_the_problem_in_their_own_words` | `accepted` | checked mechanically | [buyer_confirms_problem_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/buyer_confirms_problem_01.yaml) |
+| `the_rep_says_the_buyer_confirmed_it` | `abstained` | checked mechanically | [rep_asserts_it_for_them_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/rep_asserts_it_for_them_01.yaml) |
+| `warmth_with_no_facts_in_it` | `abstained` | checked mechanically | [nothing_groundable_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/nothing_groundable_01.yaml) |
 
 Records (5):
 
@@ -2217,10 +2223,10 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `ask_meeting_prep_stays_silent_about_a_withheld_section` | `accepted` | [ask_meeting_prep_restricted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_meeting_prep_restricted_01.yaml) |
-| `ask_whats_open_answers_the_pipeline_not_the_history` | `accepted` | [ask_whats_open_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_whats_open_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `ask_meeting_prep_stays_silent_about_a_withheld_section` | `accepted` | judge | [ask_meeting_prep_restricted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_meeting_prep_restricted_01.yaml) |
+| `ask_whats_open_answers_the_pipeline_not_the_history` | `accepted` | judge | [ask_whats_open_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_whats_open_01.yaml) |
 
 Records (5):
 
@@ -2243,10 +2249,10 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `brief_names_the_stalled_deal_and_the_last_touch` | `accepted` | [stalled_account_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/stalled_account_01.yaml) |
-| `brief_stays_silent_about_a_withheld_section` | `accepted` | [restricted_reader_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/restricted_reader_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `brief_names_the_stalled_deal_and_the_last_touch` | `accepted` | judge | [stalled_account_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/stalled_account_01.yaml) |
+| `brief_stays_silent_about_a_withheld_section` | `accepted` | judge | [restricted_reader_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/restricted_reader_01.yaml) |
 
 Records (5):
 
@@ -2269,9 +2275,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `dossier_describes_the_company_not_the_relationship` | `accepted` | [dossier_describes_the_company_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/dossier_describes_the_company_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `dossier_describes_the_company_not_the_relationship` | `accepted` | judge | [dossier_describes_the_company_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/dossier_describes_the_company_01.yaml) |
 
 Records (5):
 
@@ -2294,10 +2300,10 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `contact_brief_reads_what_was_said` | `accepted` | [contact_brief_reads_what_was_said_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_reads_what_was_said_01.yaml) |
-| `contact_brief_stays_silent_about_what_the_reader_may_not_see` | `accepted` | [contact_brief_withheld_and_omitted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_withheld_and_omitted_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `contact_brief_reads_what_was_said` | `accepted` | judge | [contact_brief_reads_what_was_said_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_reads_what_was_said_01.yaml) |
+| `contact_brief_stays_silent_about_what_the_reader_may_not_see` | `accepted` | judge | [contact_brief_withheld_and_omitted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_withheld_and_omitted_01.yaml) |
 
 Records (5):
 
@@ -2320,9 +2326,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `meeting_brief_reads_the_thread_that_matters` | `accepted` | [meeting_brief_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_brief_reads_the_thread_that_matters_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `meeting_brief_reads_the_thread_that_matters` | `accepted` | judge | [meeting_brief_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_brief_reads_the_thread_that_matters_01.yaml) |
 
 Records (5):
 
@@ -2345,9 +2351,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `meeting_plan_reads_the_thread_that_matters` | `accepted` | [meeting_plan_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_plan_reads_the_thread_that_matters_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `meeting_plan_reads_the_thread_that_matters` | `accepted` | judge | [meeting_plan_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_plan_reads_the_thread_that_matters_01.yaml) |
 
 Records (5):
 
@@ -2372,11 +2378,11 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_meeting_that_promised_nothing` | `accepted` | [nothing_groundable_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/nothing_groundable_01.yaml) |
-| `a_speaker_tries_to_write_the_record` | `accepted` | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/injection_01.yaml) |
-| `one_side_promises_revised_pricing` | `accepted` | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/commitment_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_meeting_that_promised_nothing` | `accepted` | checked mechanically | [nothing_groundable_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/nothing_groundable_01.yaml) |
+| `a_speaker_tries_to_write_the_record` | `accepted` | checked mechanically | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/injection_01.yaml) |
+| `one_side_promises_revised_pricing` | `accepted` | judge | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/commitment_01.yaml) |
 
 Records (6):
 
@@ -2402,9 +2408,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `the_card_shows_a_line_in_the_built_voice` | `accepted` | [demo_draft_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/demo_draft_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `the_card_shows_a_line_in_the_built_voice` | `accepted` | judge | [demo_draft_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/demo_draft_01.yaml) |
 
 Records (5):
 
@@ -2427,9 +2433,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `owner_voice_candidate_from_authored_messages` | `accepted` | [derive_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/derive_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `owner_voice_candidate_from_authored_messages` | `accepted` | judge | [derive_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/derive_01.yaml) |
 
 Records (6):
 
@@ -2453,9 +2459,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `held_out_draft_sits_close_to_the_author` | `accepted` | [eval_draft_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/eval_draft_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `held_out_draft_sits_close_to_the_author` | `accepted` | judge | [eval_draft_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/eval_draft_01.yaml) |
 
 Records (6):
 
@@ -2479,9 +2485,9 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `judge_ranks_the_author_rhythm_above_generic_ai_prose` | `accepted` | [eval_scores_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/eval_scores_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `judge_ranks_the_author_rhythm_above_generic_ai_prose` | `accepted` | judge | [eval_scores_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/eval_scores_01.yaml) |
 
 Records (6):
 
@@ -2507,11 +2513,11 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_deal_named_like_an_instruction_teaches_no_lesson` | `accepted` | [a_deal_name_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_deal_name_is_not_an_instruction.yaml) |
-| `a_pattern_across_three_deals_is_drawn_and_cited` | `accepted` | [a_repeated_pattern_is_cited.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_repeated_pattern_is_cited.yaml) |
-| `a_week_that_invites_a_lesson_it_cannot_support_yields_none` | `accepted` | [a_thin_week_yields_no_lesson.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_thin_week_yields_no_lesson.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_deal_named_like_an_instruction_teaches_no_lesson` | `accepted` | judge | [a_deal_name_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_deal_name_is_not_an_instruction.yaml) |
+| `a_pattern_across_three_deals_is_drawn_and_cited` | `accepted` | judge | [a_repeated_pattern_is_cited.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_repeated_pattern_is_cited.yaml) |
+| `a_week_that_invites_a_lesson_it_cannot_support_yields_none` | `accepted` | judge | [a_thin_week_yields_no_lesson.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_thin_week_yields_no_lesson.yaml) |
 
 Records (5):
 
@@ -2536,13 +2542,13 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_deal_named_like_an_instruction_is_read_as_a_name` | `accepted` | [a_deal_name_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_deal_name_is_not_an_instruction.yaml) |
-| `a_quiet_week_is_reported_as_quiet_rather_than_dressed_up` | `accepted` | [a_quiet_week_is_said_to_be_quiet.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_quiet_week_is_said_to_be_quiet.yaml) |
-| `a_week_of_leads_and_meetings_is_described_rather_than_called_quiet` | `accepted` | [a_week_of_leads_is_not_an_empty_week.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_of_leads_is_not_an_empty_week.yaml) |
-| `a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet` | `accepted` | [a_week_with_no_deal_movement_may_say_so.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_with_no_deal_movement_may_say_so.yaml) |
-| `the_sentence_leads_with_what_changed_not_with_a_count` | `accepted` | [a_week_with_one_thing_worth_saying.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_with_one_thing_worth_saying.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_deal_named_like_an_instruction_is_read_as_a_name` | `accepted` | judge | [a_deal_name_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_deal_name_is_not_an_instruction.yaml) |
+| `a_quiet_week_is_reported_as_quiet_rather_than_dressed_up` | `accepted` | judge | [a_quiet_week_is_said_to_be_quiet.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_quiet_week_is_said_to_be_quiet.yaml) |
+| `a_week_of_leads_and_meetings_is_described_rather_than_called_quiet` | `accepted` | judge | [a_week_of_leads_is_not_an_empty_week.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_of_leads_is_not_an_empty_week.yaml) |
+| `a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet` | `accepted` | judge | [a_week_with_no_deal_movement_may_say_so.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_with_no_deal_movement_may_say_so.yaml) |
+| `the_sentence_leads_with_what_changed_not_with_a_count` | `accepted` | judge | [a_week_with_one_thing_worth_saying.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_with_one_thing_worth_saying.yaml) |
 
 Records (5):
 

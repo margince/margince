@@ -141,12 +141,15 @@ func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
 		Verdict:             caseVerdict(stats),
 		JudgeBand:           caseJudgeBand(stats),
 		JudgeScores:         stats.scores,
-		Bands:               &RowBands{CertifiedMin: set.Bands.CertifiedMin, DegradedMin: set.Bands.DegradedMin, Floor: set.Bands.Floor},
+		JudgeNone:           set.Mechanical,
 		Runs:                len(results),
 		ReportedAccepted:    tally.accepted,
 		ReportedWrongAnswer: tally.wrongAnswer,
 		ReportedInvalid:     tally.invalid,
 		ReportedAbstained:   tally.abstained,
+	}
+	if !set.Mechanical {
+		row.Bands = &RowBands{CertifiedMin: set.Bands.CertifiedMin, DegradedMin: set.Bands.DegradedMin, Floor: set.Bands.Floor}
 	}
 	for _, r := range results {
 		if r.HardPass {
@@ -238,6 +241,12 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	if !entry.graded {
 		log.WarnContext(ctx, "aicert: this run has no whole answer, so it fails and is not sent to the judge",
 			"task", string(task), "scenario", sc.Name, "site", sc.Site, "withheld", pooled.Withheld, "truncated", pooled.Truncated)
+		outcome.Ungraded = true
+		return outcome, nil
+	}
+	// A case declaring judge: none is graded by the check above alone, so no
+	// judge is asked and the run carries no opinion.
+	if !sc.Expect.Judged() {
 		outcome.Ungraded = true
 		return outcome, nil
 	}

@@ -310,6 +310,7 @@ func writeAICertGlossary(page *strings.Builder) {
 	page.WriteString("| `absent` | Never tested, on any setup. Not a failure — an honest gap. Its columns are dashes because nothing has measured it. |\n\n")
 	page.WriteString("#### The numbers\n\n")
 	page.WriteString("| Column | What it says |\n|---|---|\n")
+	page.WriteString("| Quality | Who scores how good a test case's answers are: `judge`, a second model, or `checked mechanically`, where the case's own check sees everything a judge would and no judge is asked. |\n")
 	page.WriteString("| Runs, Passed | How many times the model was asked, and how often it did what the test case wanted. |\n")
 	page.WriteString("| Reliability | Passed divided by Runs. 1.00 is every attempt. |\n")
 	page.WriteString("| `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back — not a pass/fail split. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |\n")
@@ -577,12 +578,21 @@ func writeAICertScenarios(page *strings.Builder, scenarios []aiCertScenario) {
 		return
 	}
 	fmt.Fprintf(page, "Scenarios (%d):\n\n", len(scenarios))
-	page.WriteString("| Scenario | Expects | Case |\n|---|---|---|\n")
+	page.WriteString("| Scenario | Expects | Quality | Case |\n|---|---|---|---|\n")
 	for _, sc := range scenarios {
-		fmt.Fprintf(page, "| `%s` | `%s` | [%s](%s) |\n",
-			sc.Name, sc.Expects, filepath.Base(sc.File), corpusLinkPrefix+sc.File)
+		fmt.Fprintf(page, "| `%s` | `%s` | %s | [%s](%s) |\n",
+			sc.Name, sc.Expects, qualityCell(sc.GradedBy), filepath.Base(sc.File), corpusLinkPrefix+sc.File)
 	}
 	page.WriteString("\n")
+}
+
+// qualityCell says who grades a case's quality: a case its mechanical check
+// grades alone has no judge score to read.
+func qualityCell(gradedBy string) string {
+	if gradedBy == "mechanical" {
+		return "checked mechanically"
+	}
+	return "judge"
 }
 
 func writeAICertSiteRecords(page *strings.Builder, records []aiCertRecord) {

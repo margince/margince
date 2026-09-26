@@ -36,11 +36,7 @@ type taskDriver struct {
 // the WHOLE task: a demoted answer or a demoted grader anywhere in the set means
 // no record, not a lower band.
 func (d taskDriver) runScenarios(ctx context.Context, scenarios []Scenario, stamps map[string]string, repeats int) ([]ScenarioRuns, error) {
-	bands := make([]Bands, len(scenarios))
-	for i, sc := range scenarios {
-		bands[i] = sc.Expect.Bands
-	}
-	sets, err := runRounds(bands, repeats, d.maxRuns, func(i, run int) (RunResult, error) {
+	sets, err := runRounds(caseSeeds(scenarios), repeats, d.maxRuns, func(i, run int) (RunResult, error) {
 		if run > repeats && (run-repeats-1)%adaptiveRound == 0 {
 			d.log.InfoContext(ctx, "aicert: extending a borderline case by another round",
 				"task", string(d.task), "scenario", scenarios[i].Name, "runs_so_far", run-1)
@@ -114,4 +110,14 @@ type certifyHooks struct {
 	// maxRuns, when set, caps each case's adaptive runs below adaptiveMaxRuns:
 	// a test pinning an exact run count sets it to the repeats it asks for.
 	maxRuns int
+}
+
+// caseSeeds is each scenario's run set before its first run: what the verdict
+// rule and the adaptive rounds read of the case beyond its runs.
+func caseSeeds(scenarios []Scenario) []ScenarioRuns {
+	seeds := make([]ScenarioRuns, len(scenarios))
+	for i, sc := range scenarios {
+		seeds[i] = ScenarioRuns{Bands: sc.Expect.Bands, Mechanical: !sc.Expect.Judged()}
+	}
+	return seeds
 }

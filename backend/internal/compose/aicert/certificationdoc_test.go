@@ -136,6 +136,9 @@ type aiCertPick struct {
 type aiCertScenario struct {
 	Name    string `json:"name"`
 	Expects string `json:"expects"`
+	// GradedBy says whether a judge scores the case's quality ("judge") or its
+	// mechanical check grades it alone ("mechanical").
+	GradedBy string `json:"graded_by"`
 	// File is the case, as a path from the repository root, so a reader of the
 	// JSON can open it without knowing where this page sits.
 	File string `json:"file"`
@@ -239,7 +242,7 @@ func buildAICertSite(siteKey string, taskRows []aicert.ReadinessRow, cases []aic
 	}
 	for _, sc := range cases {
 		site.Scenarios = append(site.Scenarios, aiCertScenario{
-			Name: sc.Name, Expects: sc.Expect.Outcome, File: repoPathOf(sc),
+			Name: sc.Name, Expects: sc.Expect.Outcome, GradedBy: gradedByOf(sc), File: repoPathOf(sc),
 		})
 	}
 	for _, row := range mine {
@@ -531,4 +534,12 @@ func staleCauseOf(s aicert.Standing) *staleCause {
 		}
 	}
 	return &out
+}
+
+// gradedByOf names what grades a case's quality, as the document spells it.
+func gradedByOf(sc aicert.Scenario) string {
+	if sc.Expect.Judged() {
+		return "judge"
+	}
+	return "mechanical"
 }

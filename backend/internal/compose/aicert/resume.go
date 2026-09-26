@@ -392,11 +392,7 @@ var errNotJournaled = errors.New("aicert: run not journaled")
 // make is journaled — the extensions included, which the replayed outcomes
 // decide exactly as the live ones did.
 func (t taskJournal) replaysRounds(scenarios []Scenario, stamps map[string]string, repeats int) bool {
-	bands := make([]Bands, len(scenarios))
-	for i, sc := range scenarios {
-		bands[i] = sc.Expect.Bands
-	}
-	_, err := runRounds(bands, repeats, adaptiveMaxRuns, func(i, run int) (RunResult, error) {
+	_, err := runRounds(caseSeeds(scenarios), repeats, adaptiveMaxRuns, func(i, run int) (RunResult, error) {
 		out, ok := t.lookup(scenarios[i], stamps[scenarios[i].Name], run)
 		if !ok {
 			return RunResult{}, errNotJournaled

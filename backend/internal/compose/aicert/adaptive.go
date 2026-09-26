@@ -13,18 +13,15 @@ import (
 	"slices"
 )
 
-// runRounds fills every case to repeats runs through score, then keeps adding
+// runRounds fills every case seeded by seeds to repeats runs through score, then keeps adding
 // the rounds nextRunCounts asks for, up to maxRuns a case, until it asks for
 // none. score is handed the case's index and the 1-based run number.
 //
 // ONE loop for the live run and for the journal's "is everything replayable"
 // check, so the two can never disagree about which runs a task makes.
-func runRounds(bands []Bands, repeats, maxRuns int, score func(i, run int) (RunResult, error)) ([]ScenarioRuns, error) {
-	sets := make([]ScenarioRuns, len(bands))
-	for i, b := range bands {
-		sets[i] = ScenarioRuns{Bands: b}
-	}
-	target := slices.Repeat([]int{repeats}, len(bands))
+func runRounds(seeds []ScenarioRuns, repeats, maxRuns int, score func(i, run int) (RunResult, error)) ([]ScenarioRuns, error) {
+	sets := slices.Clone(seeds)
+	target := slices.Repeat([]int{repeats}, len(seeds))
 	for {
 		for i := range sets {
 			for run := len(sets[i].Runs) + 1; run <= target[i]; run++ {

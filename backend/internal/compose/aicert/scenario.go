@@ -134,7 +134,21 @@ type Expectations struct {
 	NearMisses []string `yaml:"near_misses,omitempty"`
 	Bands      Bands    `yaml:"bands"`
 	Caps       Caps     `yaml:"caps,omitempty"`
+	// Judge is judgeNone for a case its mechanical check grades alone, and
+	// JudgeNoneReason says why that check sees everything a judge would. Such a
+	// case carries no rubric and no bands, since nothing would read them. Both
+	// are omitted from the stamp when empty, so a judged case's stamp is the one
+	// it had before they existed.
+	Judge           string `yaml:"judge,omitempty" json:"judge,omitempty"`
+	JudgeNoneReason string `yaml:"judge_none_reason,omitempty" json:"judge_none_reason,omitempty"`
 }
+
+// judgeNone is the one value expect.judge takes: the case is not sent to a judge.
+const judgeNone = "none"
+
+// Judged says a judge grades this case's quality; a case declaring judge: none
+// is graded by its mechanical check alone.
+func (e Expectations) Judged() bool { return e.Judge != judgeNone }
 
 // Scenario is one certification test case, parsed from
 // corpus/<task>/<name>.yaml.
@@ -256,7 +270,36 @@ func validateScenario(sc Scenario, path string, census *aitasks.Registry) error 
 	if sc.SanitizedBy == "" {
 		return fmt.Errorf("aicert: %s: sanitized_by is required — name who reviewed this scenario for sensitive content", path)
 	}
+	if err := validateJudge(sc.Expect, path); err != nil {
+		return err
+	}
+	if !sc.Expect.Judged() {
+		return nil
+	}
 	return validateBands(sc.Expect.Bands, path)
+}
+
+// validateJudge holds a judge-less case to what makes it honest: a reason, an
+// expected answer for the mechanical check to hold the reply to, and no rubric
+// or bands, which would read as graded when nothing grades them.
+func validateJudge(e Expectations, path string) error {
+	switch {
+	case e.Judge != "" && e.Judge != judgeNone:
+		return fmt.Errorf("aicert: %s: expect.judge is %q; leave it out for a judged case, or write %q", path, e.Judge, judgeNone)
+	case e.Judged() && e.JudgeNoneReason != "":
+		return fmt.Errorf("aicert: %s: expect.judge_none_reason is set on a judged case; add `judge: %s` or remove the reason", path, judgeNone)
+	case e.Judged():
+		return nil
+	case strings.TrimSpace(e.JudgeNoneReason) == "":
+		return fmt.Errorf("aicert: %s: judge: %s needs judge_none_reason saying why the mechanical check sees everything a judge would", path, judgeNone)
+	case strings.TrimSpace(e.Rubric) != "":
+		return fmt.Errorf("aicert: %s: judge: %s, yet it carries a rubric nobody reads; move what it demands into the expected answer, or keep the judge", path, judgeNone)
+	case e.Bands != (Bands{}):
+		return fmt.Errorf("aicert: %s: judge: %s, yet it carries quality bands no score is held to; remove them", path, judgeNone)
+	case len(e.Answer) == 0:
+		return fmt.Errorf("aicert: %s: judge: %s with no expect.answer leaves nothing to grade the reply against", path, judgeNone)
+	}
+	return nil
 }
 
 // validateOutcome holds expect.outcome to the four things a certified reply can

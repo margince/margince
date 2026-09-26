@@ -224,13 +224,31 @@ func (c *rateFxCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if len(fetched) == 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: strings.Join(detail, "; ")}
 	}
-	if disagreements := c.disagreements(fetched); len(disagreements) > 0 {
+	disagreements := append(c.disagreements(fetched), c.misattributions(pairs)...)
+	if len(disagreements) > 0 {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: strings.Join(append(disagreements, detail...), "; "),
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted, Detail: strings.Join(detail, "; ")}
+}
+
+// misattributions names every pair the gate admitted for an expected currency
+// whose evidence cites no passage stating its rate.
+func (c *rateFxCase) misattributions(pairs []extractedFxPair) []string {
+	passages := ratePassages(c.pageText)
+	var out []string
+	for _, p := range pairs {
+		cur, _, anchored := fxAnchor(c.base, p)
+		if _, expected := c.expected[cur]; !anchored || !expected || !fxPairAccepted(p) {
+			continue
+		}
+		if miss := misattributed(passages, cur, p.Evidence, p.Rate); miss != "" {
+			out = append(out, miss)
+		}
+	}
+	return out
 }
 
 // disagreements names every expected currency the fetched rates do not price the

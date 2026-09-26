@@ -41,8 +41,11 @@ type expectForRender struct {
 	Answer     any      `yaml:"answer,omitempty"`
 	Rubric     string   `yaml:"rubric,omitempty"`
 	NearMisses []string `yaml:"near_misses,omitempty"`
-	Bands      Bands    `yaml:"bands"`
+	Bands      Bands    `yaml:"bands,omitempty"`
 	Caps       Caps     `yaml:"caps,omitempty"`
+	Judge      string   `yaml:"judge,omitempty"`
+	// JudgeNoneReason mirrors Expectations.JudgeNoneReason.
+	JudgeNoneReason string `yaml:"judge_none_reason,omitempty"`
 }
 
 // RenderScenario emits a scenario as the YAML the corpus format uses, suitable
@@ -56,6 +59,7 @@ func RenderScenario(sc Scenario) ([]byte, error) {
 			Outcome: sc.Expect.Outcome, Rubric: sc.Expect.Rubric,
 			NearMisses: sc.Expect.NearMisses,
 			Bands:      sc.Expect.Bands, Caps: sc.Expect.Caps,
+			Judge: sc.Expect.Judge, JudgeNoneReason: sc.Expect.JudgeNoneReason,
 		},
 	}
 	fixture, err := decodePreservingNumbers(sc.Fixture)

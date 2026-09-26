@@ -240,13 +240,32 @@ func (c *ratePricingCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		}
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: strings.Join(detail, "; ")}
 	}
-	if disagreements := c.disagreements(kept); len(disagreements) > 0 {
+	disagreements := append(c.disagreements(kept), c.misattributions(kept)...)
+	if len(disagreements) > 0 {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: strings.Join(append(disagreements, detail...), "; "),
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted, Detail: strings.Join(detail, "; ")}
+}
+
+// misattributions names every surviving row for an expected model whose
+// evidence cites no passage stating its prices.
+func (c *ratePricingCase) misattributions(kept []extractedModel) []string {
+	passages := ratePassages(c.pageText)
+	var out []string
+	for i := range kept {
+		if _, expected := c.expected[kept[i].ModelID]; !expected {
+			continue
+		}
+		row := kept[i]
+		if miss := misattributed(passages, row.ModelID, row.Evidence,
+			row.InputUsd, row.OutputUsd, row.CacheReadUsd, row.CacheWriteUsd); miss != "" {
+			out = append(out, miss)
+		}
+	}
+	return out
 }
 
 // rateRowRefusals names every claimed row the gate did not let through, by asking

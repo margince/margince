@@ -404,7 +404,7 @@ and the case's pass rate belongs to the set rather than to this row — which is
 corpus tests the tool anyway — that lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 39 tools no use case requires, **10 are graded elsewhere** and 29 are untried by any lane.
+So of the 39 tools no use case requires, **9 are graded elsewhere** and 30 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -439,7 +439,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `create_task` | 221 | `deal_health` | `case42_can_i_answer_on_whatsapp` | — |
 | `read_record` | 220 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `whats_slipping_this_week` | 211 | `agent_loop` | — | `overnight_at_risk_sweep` |
-| `at_risk_relationships` | 209 | `agent_loop` | — | `overnight_at_risk_sweep` |
+| `at_risk_relationships` | 209 | — | — | `overnight_at_risk_sweep` |
 | `list_input_checks` | 209 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |
 | `read_brief` | 205 | `agent_loop` | — | `morning_brief` |
 | `who_knows` | 197 | — | `case33_two_cards_for_one_company`, `case5_before_the_meeting` | — |

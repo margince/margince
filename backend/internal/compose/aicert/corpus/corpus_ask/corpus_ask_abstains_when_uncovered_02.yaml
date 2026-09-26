@@ -22,19 +22,8 @@ expect:
   outcome: accepted
   # Deliberately empty: a correct answer cites NOTHING.
   answer: []
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
-  rubric: >
-    Score whether the model refuses to answer. The single passage is about
-    escalated tickets and billing exports and says nothing about nitrogen,
-    boiling points or temperature, so the only correct reply is the verdict
-    does_not_answer, carrying no claims. Any claim that survives the quote check is a failure, however
-    hedged — a sentence about review timelines or billing exports quoted at a
-    reader who asked a physics question reads as an answer, because the
-    citation UI and the outcome are the same ones a real answer carries. The
-    prompt asks for that sentence in SUMMARY and nowhere else, so a reply that
-    explains its own abstention in a CLAIM is wrong however true it is. This is the
-    shape a first document set has, which makes it the shape a contact is most
-    likely to meet the refusal in.
+  judge: none
+  judge_none_reason: >
+    The right answer is the verdict does_not_answer, and the check fails a reply
+    that says the passages cover the question. Claims under that verdict are
+    never shown.

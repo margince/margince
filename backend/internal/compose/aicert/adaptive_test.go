@@ -80,7 +80,7 @@ func TestAnUndecidedPoolExtendsEveryCase(t *testing.T) {
 // case right every time runs 3, then 6, then 9, and stops at the cap.
 func TestRunRoundsDrivesEachExtensionOnceAndStopsAtTheCap(t *testing.T) {
 	var asked []int
-	sets, err := runRounds([]Bands{wideBands}, defaultRepeats, adaptiveMaxRuns, func(_, run int) (RunResult, error) {
+	sets, err := runRounds([]ScenarioRuns{{Bands: wideBands}}, defaultRepeats, adaptiveMaxRuns, func(_, run int) (RunResult, error) {
 		asked = append(asked, run)
 		return RunResult{HardPass: true, Score: 90}, nil
 	})
@@ -98,7 +98,7 @@ func TestRunRoundsDrivesEachExtensionOnceAndStopsAtTheCap(t *testing.T) {
 // RUNS= sets the first round; at or past the cap nothing is extended.
 func TestAFirstRoundAtTheCapIsNeverExtended(t *testing.T) {
 	calls := 0
-	if _, err := runRounds([]Bands{wideBands}, 11, adaptiveMaxRuns, func(_, _ int) (RunResult, error) {
+	if _, err := runRounds([]ScenarioRuns{{Bands: wideBands}}, 11, adaptiveMaxRuns, func(_, _ int) (RunResult, error) {
 		calls++
 		return RunResult{HardPass: true, Score: 70}, nil
 	}); err != nil {

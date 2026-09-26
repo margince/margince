@@ -177,12 +177,6 @@ func readWrongReachCensus(dir string, specs []mcp.ToolSpec, offered map[string][
 		if got := scenarioSite.FindStringSubmatch(text); len(got) == 2 {
 			site = got[1]
 		}
-		rubric := scenarioRubric.FindStringSubmatch(text)
-		if len(rubric) != 2 {
-			census.Skipped = append(census.Skipped,
-				entry.Name()+" (no rubric block this scan could read)")
-			continue
-		}
 		// A scenario whose expected step this scan cannot read CANNOT be
 		// counted: with no answer to subtract, the tool the scenario exists to
 		// reward is counted as a wrong reach, and the census would report the
@@ -202,6 +196,14 @@ func readWrongReachCensus(dir string, specs []mcp.ToolSpec, offered map[string][
 			continue
 		}
 		named := declaredNearMisses(body, registered, answer)
+		// Only the prose fallback reads the rubric, so a scenario declaring its
+		// near misses is counted whether or not a judge still grades it.
+		rubric := scenarioRubric.FindStringSubmatch(text)
+		if named == nil && len(rubric) != 2 {
+			census.Skipped = append(census.Skipped,
+				entry.Name()+" (no near_misses list and no rubric block this scan could read)")
+			continue
+		}
 		if named == nil {
 			census.Heuristic = append(census.Heuristic, entry.Name())
 			named = map[string]bool{}

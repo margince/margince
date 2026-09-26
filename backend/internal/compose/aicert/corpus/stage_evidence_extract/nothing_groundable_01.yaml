@@ -18,17 +18,7 @@ fixture:
 expect:
   outcome: abstained
   answer: []
-  rubric: >
-    Warm, encouraging, and empty of anything a criterion could rest on. "The
-    team came away positive" is a mood, not a stated problem and not a date.
-    The empty list scores highest. The trap here is that the tone reads like
-    progress: a reader that converts enthusiasm into problem_confirmed met=true
-    has invented the buyer's words, and scores at the floor. This is the most
-    common shape of conversation in a real pipeline, which is why abstaining on
-    it matters more than any single positive reading — a site that settles a
-    criterion on warmth will settle criteria constantly, and every one of them
-    will look cited.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The right answer is no claim, and the check fails any claim the reply makes,
+    grounded or not. The rubric only ranked the ways of making one.

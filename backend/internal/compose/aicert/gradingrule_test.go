@@ -40,6 +40,7 @@ var gradingRuleOwners = []struct {
 	{"stats.go", []string{"wilsonBounds", "meanBounds", "meanAndSD", "tQuantile"}},
 	{"adaptive.go", []string{"runRounds", "nextRunCounts", "caseBorderline", "poolUndecided"}},
 	{"run.go", []string{"runEntry"}},
+	{"taskdriver.go", []string{"caseSeeds"}},
 	{"judge.go", []string{"judgeScore", "wantsAnotherOpinion", "nearABand", "absDiff", "foldOpinions", "judgeVerdict"}},
 	{"../certjudge.go", []string{"ParseJudgeVerdict"}},
 	{"thresholds.go", []string{

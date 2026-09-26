@@ -162,39 +162,8 @@ expect:
   # Deliberately empty: a correct answer cites NOTHING. Every passage is about
   # projects; the question is how to create one, and no passage answers it.
   answer: []
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
-  rubric: >
-    Score whether the model refuses to answer. Every passage is about projects,
-    which is what makes this hard and what makes it the scenario that matters:
-    the model must decide whether the passages STATE the answer, not whether they
-    are about the same subject. None of them says how a project is created,
-    so the only correct reply is the verdict
-    does_not_answer, carrying no claims.
-
-    Three shapes of wrong answer are available here, and the corpus carries the
-    material for all three because retrieval really does return it.
-
-    The first is the one seen in the field. Handed "It is born while you are
-    still selling", a model wrote "You create a project while you're still in the
-    selling phase" — a fabricated instruction resting on a real quote, which the
-    quote check passes because the quote is genuine and the check never reads the
-    sentence beside it. That is the failure this endpoint exists to prevent.
-
-    The second is the permissions table, and it is the subtlest: the handbook DOES
-    say who may create a project — User, Team Lead, Management and Admin yes,
-    Read-only no. A claim built from it is true and is an answer to a DIFFERENT
-    question. A reader who asked how to create one and is told which roles may is
-    left believing they were answered. Score it wrong.
-
-    The third is a sentence reporting the model's own search — "I couldn't find
-    instructions on how to add a project" — written as a CLAIM. That sentence is
-    right and belongs in the summary, which is where the prompt asks for it; as a
-    claim it arrives welded to a quote and renders in the citation UI exactly as
-    an answer does, so the reader is shown evidence for a search report.
-
-    A refusal that says what these documents DO cover sends the reader to ask a
-    colleague, which is the only outcome here that leaves them better off than
-    they started.
+  judge: none
+  judge_none_reason: >
+    The right answer is the verdict does_not_answer, and the check fails a reply
+    that says the passages cover the question. Claims under that verdict are
+    never shown.

@@ -104,10 +104,12 @@ func medianOf(sorted []int) int {
 }
 
 // ScenarioRuns is one scenario's run set and the bands its own judge scores are
-// held to; scenarios in one task carry different bands.
+// held to; scenarios in one task carry different bands. Mechanical marks a case
+// declaring judge: none, which has no bands and no scores.
 type ScenarioRuns struct {
-	Runs  []RunResult
-	Bands Bands
+	Runs       []RunResult
+	Bands      Bands
+	Mechanical bool
 }
 
 // Verdict folds a set of scenario run sets into one certification outcome —
@@ -125,6 +127,9 @@ type ScenarioRuns struct {
 //	                   ∧ TLower(score − its case's degraded_min, over every graded run) ≥ 0
 //	                   ∧ no case's WilsonUpper(k, n) < 50% ∧ no case's TUpper(scores) < its floor
 //	otherwise          = not_supported, which includes any case no judge graded
+//
+//	a case declaring judge: none meets every judge condition by construction,
+//	and its runs enter no margin; its pass count is pooled like any other
 //
 //	vetoed             = WilsonUpper(k, n) < 50% ∨ TUpper(its scores) < its degraded_min
 //	WilsonLower/Upper  = the one-sided 90% Wilson score bounds (z = 1.2816)
@@ -181,8 +186,11 @@ func caseMechanicalBand(c caseStats) string {
 }
 
 // caseJudgeBand is the judge-score half of caseVerdict; a case no judge graded
-// vetoes, as it does in the pool.
+// vetoes, as it does in the pool, unless it declared that none would.
 func caseJudgeBand(c caseStats) string {
+	if c.mechanical {
+		return VerdictCertified
+	}
 	if len(c.scores) == 0 {
 		return VerdictNotSupported
 	}
@@ -203,17 +211,18 @@ type caseStats struct {
 	runs, passed int
 	scores       []int
 	bands        Bands
+	mechanical   bool
 }
 
 // caseOf reads a run set into the counts the rule needs; an ungraded run is
-// counted as a run and never as a score.
+// counted as a run and never as a score, and a mechanical case has none.
 func caseOf(set ScenarioRuns) caseStats {
-	c := caseStats{runs: len(set.Runs), bands: set.Bands}
+	c := caseStats{runs: len(set.Runs), bands: set.Bands, mechanical: set.Mechanical}
 	for _, r := range set.Runs {
 		if r.HardPass {
 			c.passed++
 		}
-		if !r.Ungraded {
+		if !r.Ungraded && !c.mechanical {
 			c.scores = append(c.scores, r.Score)
 		}
 	}
@@ -242,6 +251,9 @@ func underFloor(c caseStats) bool {
 // rowCase reads a record's scenario row back into what the rule needs of its
 // case; a row graded before the pooled rule has no bands and no scores.
 func rowCase(sc ScenarioRecord) caseStats {
+	if sc.JudgeNone {
+		return caseStats{runs: sc.Runs, passed: sc.Passed, mechanical: true}
+	}
 	c := caseStats{runs: sc.Runs, passed: sc.Passed, scores: sc.JudgeScores}
 	if sc.Bands != nil {
 		c.bands = Bands{CertifiedMin: sc.Bands.CertifiedMin, DegradedMin: sc.Bands.DegradedMin, Floor: sc.Bands.Floor}
@@ -290,10 +302,15 @@ func mechanicalBand(cases []caseStats, passed, runs int) string {
 
 // judgeBand is the best grade the judge scores alone reach, ignoring pass/fail;
 // a scenario row carries caseJudgeBand. A case no judge graded reaches nothing: a
-// band is not met by a score nobody gave.
+// band is not met by a score nobody gave. A mechanical case is not read here,
+// and a task of nothing else is certified by its pass counts alone.
 func judgeBand(cases []caseStats) string {
-	vetoed, belowCertified := false, false
+	vetoed, belowCertified, judged := false, false, false
 	for _, c := range cases {
+		if c.mechanical {
+			continue
+		}
+		judged = true
 		if len(c.scores) == 0 {
 			return VerdictNotSupported
 		}
@@ -308,6 +325,9 @@ func judgeBand(cases []caseStats) string {
 			belowCertified = true
 		}
 	}
+	if !judged {
+		return VerdictCertified
+	}
 	certifiedLower, _ := meanBounds(marginsOver(cases, func(b Bands) int { return b.CertifiedMin }))
 	degradedLower, _ := meanBounds(marginsOver(cases, func(b Bands) int { return b.DegradedMin }))
 	switch {
@@ -321,7 +341,7 @@ func judgeBand(cases []caseStats) string {
 }
 
 // marginsOver answers each graded run's distance above the bar picked from its
-// own case's bands, pooled across cases.
+// own case's bands, pooled across cases; a mechanical case holds no score.
 func marginsOver(cases []caseStats, bar func(Bands) int) []float64 {
 	var margins []float64
 	for _, c := range cases {
