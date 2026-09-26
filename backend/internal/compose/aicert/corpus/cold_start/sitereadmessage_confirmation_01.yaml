@@ -15,7 +15,7 @@ fixture:
     - role: user
       message: What does the imprint say about our legal name?
     - role: assistant
-      message: The imprint names Acme Robotics GmbH, HRB 12345. Before I read further: is Munich where your team works day to day?
+      message: "The imprint names Acme Robotics GmbH, HRB 12345. Before I read further, is Munich where your team works day to day?"
   evidence:
     - source_id: S1
       kind: legal_entity
