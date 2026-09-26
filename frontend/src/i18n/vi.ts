@@ -3330,7 +3330,7 @@ export const vi = {
   "deepread.title": "Margince có thể điền giúp",
   "deepread.titleRead": "Nghiên cứu website",
   "deepread.sub":
-    "Margince đọc website của công ty để tìm tên miền, ngành, quy mô, địa điểm và những người có thể ra quyết định, rồi đề xuất bước đầu tiên. Kết quả được xếp chờ bạn duyệt — không có gì được ghi cho đến khi bạn chấp nhận.",
+    "Margince đọc website của công ty để tìm tên miền, ngành, quy mô và địa điểm, rồi đề xuất bước đầu tiên. Kết quả được xếp chờ bạn duyệt — không có gì được ghi cho đến khi bạn chấp nhận. Những người được nêu tên trên website sẽ không được thêm vào.",
   "deepread.cta": "Bắt đầu nghiên cứu công ty",
   "deepread.ctaAgain": "Đọc lại website",
   "deepread.starting": "Đang bắt đầu…",

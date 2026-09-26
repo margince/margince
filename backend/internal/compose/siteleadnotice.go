@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -17,7 +18,8 @@ import (
 // notice and records that it was sent: named-person website enrichment does not
 // switch on before that path exists, and capturing a stranger without it is the
 // thing the promise rules out. Staging refuses while it is false, and so does
-// accepting a proposal staged before it was.
+// accepting a proposal staged before it was. The step it waits for is a function
+// named sendArticle14Notice, called directly in siteLeadAcceptEffect's body.
 //
 // Held by: TestSiteLeadCaptureOpensOnlyWithANoticeStep
 // (backend/internal/compose/siteleadnotice_test.go), which fails in both
@@ -41,4 +43,17 @@ func siteLeadPrecheck() approvals.ReleasePrecheck {
 		}
 		return nil
 	}
+}
+
+// siteLeadsRefused is the one staging-side check, asked by every path that would
+// stage website people: the crawl worker's and the onboarding confirmation's. It
+// reports true, and says why in the log, when the lane is shut and there was
+// somebody to refuse.
+func siteLeadsRefused(ctx context.Context, log *slog.Logger, readID string, found int) bool {
+	if siteLeadCaptureOpen || found == 0 {
+		return false
+	}
+	log.InfoContext(ctx, "published contacts not proposed",
+		"lane", laneContacts, "reason", dropNoArticle14Notice, "read", readID, "contacts", found)
+	return true
 }

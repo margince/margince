@@ -191,6 +191,9 @@ func siteReadConfirmationRefusal(err error) error {
 }
 
 func (e *deepReadEngine) stageOnboardingContacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, read contacts.SiteRead, found []contacts.SiteReadContact) ([]ids.UUID, error) {
+	if siteLeadsRefused(ctx, e.logger(), read.ID.String(), len(found)) {
+		return nil, nil
+	}
 	decider, ok := principal.Actor(ctx)
 	if !ok {
 		return nil, errors.New("compose: company site-read confirmation has no deciding principal")

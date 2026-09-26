@@ -1156,6 +1156,7 @@ const (
 	ApprovalBundleMemberOutcomeDecided        ApprovalBundleMemberOutcome = "decided"
 	ApprovalBundleMemberOutcomeEffectFailed   ApprovalBundleMemberOutcome = "effect_failed"
 	ApprovalBundleMemberOutcomeExpired        ApprovalBundleMemberOutcome = "expired"
+	ApprovalBundleMemberOutcomeRefused        ApprovalBundleMemberOutcome = "refused"
 )
 
 // Valid indicates whether the value is a known member of the ApprovalBundleMemberOutcome enum.
@@ -1168,6 +1169,8 @@ func (e ApprovalBundleMemberOutcome) Valid() bool {
 	case ApprovalBundleMemberOutcomeEffectFailed:
 		return true
 	case ApprovalBundleMemberOutcomeExpired:
+		return true
+	case ApprovalBundleMemberOutcomeRefused:
 		return true
 	default:
 		return false
@@ -20458,7 +20461,9 @@ type ApprovalBundleMember struct {
 	// (the status says which). `expired` — it lapsed undecided and is no longer
 	// approvable; re-propose instead. `effect_failed` — the verdict IS recorded and
 	// audited, but the follow-on change did not land; the member reads approved and
-	// unredeemed, and the server log carries the cause.
+	// unredeemed, and the server log carries the cause. `refused` — its kind refused
+	// approving it before anything was decided (the same check a single approval runs),
+	// so it is still pending and can be declined or decided later.
 	Outcome ApprovalBundleMemberOutcome `json:"outcome"`
 }
 
@@ -20467,7 +20472,9 @@ type ApprovalBundleMember struct {
 // (the status says which). `expired` — it lapsed undecided and is no longer
 // approvable; re-propose instead. `effect_failed` — the verdict IS recorded and
 // audited, but the follow-on change did not land; the member reads approved and
-// unredeemed, and the server log carries the cause.
+// unredeemed, and the server log carries the cause. `refused` — its kind refused
+// approving it before anything was decided (the same check a single approval runs),
+// so it is still pending and can be declined or decided later.
 type ApprovalBundleMemberOutcome string
 
 // ApprovalEvidence One claim's backing material, so confirming a proposal is a check rather than a vote of confidence in the model. Per claim, not per approval: a proposal asserting three things carries three of these.

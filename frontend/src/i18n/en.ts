@@ -3469,7 +3469,7 @@ export const en = {
   // what it now holds rather than pitching a capability already used.
   "deepread.titleRead": "Website research",
   "deepread.sub":
-    "Reads the company’s website for domain, industry, size, locations and likely decision-makers, then suggests a first step. Findings stay staged until you accept.",
+    "Reads the company’s website for domain, industry, size and locations, then suggests a first step. Findings stay staged until you accept. Nobody named on the site is added.",
   "deepread.cta": "Start company research",
   "deepread.ctaAgain": "Read website again",
   "deepread.starting": "Starting…",

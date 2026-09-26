@@ -31790,10 +31790,12 @@ export interface components {
              *     (the status says which). `expired` — it lapsed undecided and is no longer
              *     approvable; re-propose instead. `effect_failed` — the verdict IS recorded and
              *     audited, but the follow-on change did not land; the member reads approved and
-             *     unredeemed, and the server log carries the cause.
+             *     unredeemed, and the server log carries the cause. `refused` — its kind refused
+             *     approving it before anything was decided (the same check a single approval runs),
+             *     so it is still pending and can be declined or decided later.
              * @enum {string}
              */
-            outcome: "decided" | "already_decided" | "expired" | "effect_failed";
+            outcome: "decided" | "already_decided" | "expired" | "effect_failed" | "refused";
         };
         /**
          * Format: int64

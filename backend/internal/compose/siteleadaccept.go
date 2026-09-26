@@ -34,9 +34,9 @@ const siteLeadCapturedBy = "agent:siteread"
 // injects for kind "site_lead".
 func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		// siteLeadPrecheck refuses a single decision before it commits. A bundle
-		// decision runs no precheck, so this is what stops it: the member is left
-		// approved and unredeemed, which approvals re-drives once the lane opens.
+		// siteLeadPrecheck refuses a single or bundled approval before it
+		// commits; this is the backstop for any path that reaches the effect
+		// without one.
 		if !siteLeadCaptureOpen {
 			return errSiteLeadCaptureClosed
 		}

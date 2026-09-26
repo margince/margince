@@ -147,23 +147,36 @@ func TestASiteLeadStagedBeforeTheLaneShutStaysPendingWhenAccepted(t *testing.T) 
 	}
 }
 
-// A bundle decision runs no precheck, so the refusal inside the effect is what
-// stops it: the member is decided, and no lead exists.
-func TestABundleApprovalCapturesNoSiteLeadWhileTheLaneIsShut(t *testing.T) {
+// A bundle approval runs each member's precheck too, so a site lead in it is
+// refused before anything is decided and stays pending, where it can still be
+// declined. Left approved, it could never be redeemed once its window passed.
+func TestABundleApprovalLeavesASiteLeadPendingWhileTheLaneIsShut(t *testing.T) {
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	bundleID := ids.NewV7()
-	stageSiteLeadAsBefore(t, e, company, bundleID)
+	id := stageSiteLeadAsBefore(t, e, company, bundleID)
 
 	svc := approvalsServiceWithEffects(e.Pool)
-	// The bundle is decided; its member's work is what did not run.
-	if _, err := svc.DecideBundle(e.As(e.Rep2, nil, integration.AdminPerms), bundleID, true, nil); err != nil {
+	members, err := svc.DecideBundle(e.As(e.Rep2, nil, integration.AdminPerms), bundleID, true, nil)
+	if err != nil {
 		t.Fatalf("deciding the bundle: %v", err)
+	}
+	if len(members) != 1 || members[0].Outcome != approvals.BundleRefused {
+		t.Fatalf("bundle members = %+v, want the site lead refused", members)
+	}
+	var status string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT status FROM approval WHERE id = $1`, id).Scan(&status)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if status != "pending" {
+		t.Fatalf("the refused member is %s, want pending", status)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM lead`); n != 0 {
 		t.Fatalf("%d leads after approving a bundle holding a site lead, want 0", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'site_lead' AND consumed_at IS NOT NULL`); n != 0 {
-		t.Fatalf("%d site_lead approvals redeemed, want 0: nothing was carried out", n)
+	if _, err := svc.DecideBundle(e.As(e.Rep2, nil, integration.AdminPerms), bundleID, false, nil); err != nil {
+		t.Fatalf("declining the bundle after the refusal: %v", err)
 	}
 }

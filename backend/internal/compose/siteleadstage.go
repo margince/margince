@@ -68,10 +68,7 @@ func (w *siteDeepReadWorker) stageSiteLeadsInTx(ctx context.Context, tx pgx.Tx, 
 	}
 	// Refused before anything is staged: a proposal nobody may accept would
 	// only park a stranger's details in the inbox for no purpose.
-	if !siteLeadCaptureOpen {
-		w.log.InfoContext(ctx, "published contacts not proposed",
-			"lane", laneContacts, "reason", dropNoArticle14Notice,
-			"read", readID.String(), "contacts", len(found))
+	if siteLeadsRefused(ctx, w.log, readID.String(), len(found)) {
 		return nil, nil
 	}
 	if claim.CompanyID == nil {
