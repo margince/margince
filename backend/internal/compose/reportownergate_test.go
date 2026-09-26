@@ -150,9 +150,11 @@ func rowNamedBesideTheGrouping(spec reportSpec, owner string) []analyticsquery.Q
 		byOwner := []string{owner}
 		out = append(out,
 			analyticsquery.Query{GroupBy: byOwner, Measures: []analyticsquery.Measure{
-				{Fn: analyticsquery.CountDistinct, Field: name}}},
+				{Fn: analyticsquery.CountDistinct, Field: name},
+			}},
 			analyticsquery.Query{GroupBy: byOwner, Filters: []analyticsquery.Filter{
-				{Field: name, Op: analyticsquery.OpIsNotNull}}})
+				{Field: name, Op: analyticsquery.OpIsNotNull},
+			}})
 	}
 	return out
 }

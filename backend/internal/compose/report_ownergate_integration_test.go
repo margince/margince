@@ -209,17 +209,17 @@ func TestADrillThroughShowsWhatTheOrdinaryReadShowsAndNoMore(t *testing.T) {
 	}
 }
 
-// typedReader is a seat asking typed questions of deals and projects.
-func (e *forecastEnv) typedReader(user ids.UUID, teams []ids.UUID, scope principal.RowScope) context.Context {
+// typedReader is an own-scope seat asking typed questions of deals and projects.
+func (e *forecastEnv) typedReader(user ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, TeamIDs: teams,
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
 				"deal": {Read: true}, "project": {Read: true}, "forecast": {Read: true},
 				"installation_settings": {Read: true},
 			},
-			RowScope: scope,
+			RowScope: principal.RowScopeOwn,
 		},
 	})
 }
@@ -236,7 +236,7 @@ func TestATypedOwnerBreakdownStaysNarrowedWhateverElseNamesTheRow(t *testing.T) 
 				VALUES ($1, 'Delivery', $2, $3, 'delivering', 'manual', 'human:x')`, company, owner)
 		}
 	}
-	rep := e.typedReader(e.Rep1, nil, principal.RowScopeOwn)
+	rep := e.typedReader(e.Rep1)
 	byOwner := analyticsquery.Query{Entity: "projects-gone-quiet", GroupBy: []string{"owner_id"}}
 	cases := map[string]analyticsquery.Query{
 		"count_distinct(project_id)": {
@@ -271,7 +271,7 @@ func TestATypedFilterNamingAColleagueIsRefused(t *testing.T) {
 		seedClosedWin(t, e, "Mine", e.Rep1, 1000)
 		seedClosedWin(t, e, "Theirs", e.Rep3, 1000)
 	}
-	rep := e.typedReader(e.Rep1, nil, principal.RowScopeOwn)
+	rep := e.typedReader(e.Rep1)
 	for _, op := range []analyticsquery.FilterOp{analyticsquery.OpEq, analyticsquery.OpNe, analyticsquery.OpLt} {
 		_, err := e.askAnalytics(rep, t, analyticsquery.Query{
 			Entity:   "win-loss",
@@ -306,7 +306,7 @@ func TestATypedQuestionsNamedScopeIsAppliedToAnInstallWideReport(t *testing.T) {
 		seedClosedWin(t, e, "Mine", e.Rep1, 1000)
 		seedClosedWin(t, e, "Theirs", e.Rep3, 1000)
 	}
-	rep := e.typedReader(e.Rep1, nil, principal.RowScopeOwn)
+	rep := e.typedReader(e.Rep1)
 	count := analyticsquery.Query{
 		Entity: "win-loss", Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}},
 	}
@@ -336,7 +336,7 @@ func TestATypedExplanationCarriesItsAnswersNarrowing(t *testing.T) {
 		seedClosedWin(t, e, "Mine", e.Rep1, 1000)
 		seedClosedWin(t, e, "Theirs", e.Rep3, 1000)
 	}
-	rep := e.typedReader(e.Rep1, nil, principal.RowScopeOwn)
+	rep := e.typedReader(e.Rep1)
 	explanation, err := e.explainCell(rep, t, analyticsquery.Explain{
 		Query: analyticsquery.Query{
 			Entity: "win-loss", GroupBy: []string{"owner_id"},
