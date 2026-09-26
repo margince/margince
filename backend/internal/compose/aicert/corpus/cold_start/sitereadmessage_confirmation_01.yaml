@@ -36,11 +36,13 @@ expect:
   rubric: >
     The administrator answers a yes/no question that offered nothing with "Yes,
     that's right." Score high only if the reply is classified "confirmation" AND
-    proposes no changes. A reply that acknowledges and then proposes the legal
-    name is refused by the validator — nobody offered it and nobody asked for
-    it — so score it at the floor and expect the run to be reported invalid
-    rather than wrong_answer. The same holds for sweeping in the offer_summary
-    from S2. "answer" and "status" score in the middle: wrong label on a reply
+    proposes no changes. A reply that acknowledges and then puts the legal
+    name in proposed_changes is refused by the validator — nobody offered it
+    and nobody asked for it — so score it at the floor and expect the run to
+    be reported invalid rather than wrong_answer. The same holds for sweeping
+    in the offer_summary from S2. Asking whether to use a value, as an entry
+    in offers with proposed_changes empty, changes nothing and is not a
+    proposal: it is a fair next question, and scores high. "answer" and "status" score in the middle: wrong label on a reply
     whose substance — acknowledge, change nothing — can still be right.
   bands:
     certified_min: 70
