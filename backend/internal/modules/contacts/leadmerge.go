@@ -72,25 +72,7 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	if err := carryLeadActivitiesToLead(ctx, tx, sourceID, targetID); err != nil {
-		return crmcontracts.Lead{}, err
-	}
-	if err := carryLeadConsentToLead(ctx, tx, sourceID, targetID, by); err != nil {
-		return crmcontracts.Lead{}, err
-	}
-	// The STOPS and the consent links, which are consent's tables and not a
-	// relink — see stopcarry.go and satellitecarry.go.
-	if err := s.carryStopsTx(ctx, tx,
-		commsauthz.LeadStopSubject(sourceID),
-		commsauthz.LeadStopSubject(targetID)); err != nil {
-		return crmcontracts.Lead{}, fmt.Errorf("carry the merged-away lead's stops: %w", err)
-	}
-	if err := s.carryConsentSatellitesTx(ctx, tx,
-		commsauthz.LeadStopSubject(sourceID),
-		commsauthz.LeadStopSubject(targetID)); err != nil {
-		return crmcontracts.Lead{}, fmt.Errorf("carry the merged-away lead's consent links: %w", err)
-	}
-	if err := carryLeadMembershipsToLead(ctx, tx, sourceID, targetID); err != nil {
+	if err := s.carryLeadToLeadTx(ctx, tx, sourceID, targetID, by); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if err := retireStaleCandidates(ctx, tx, sourceID); err != nil {
@@ -124,6 +106,27 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		return crmcontracts.Lead{}, fmt.Errorf("read surviving lead: %w", err)
 	}
 	return out, nil
+}
+
+// carryLeadToLeadTx moves everything the merged-away lead holds onto the
+// survivor: its activities and consent, which contacts owns, then its stops and
+// consent links, which are consent's tables and not a relink (stopcarry.go,
+// satellitecarry.go), then its memberships.
+func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.LeadID, by string) error {
+	if err := carryLeadActivitiesToLead(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	if err := carryLeadConsentToLead(ctx, tx, sourceID, targetID, by); err != nil {
+		return err
+	}
+	from, to := commsauthz.LeadStopSubject(sourceID), commsauthz.LeadStopSubject(targetID)
+	if err := s.carryStopsTx(ctx, tx, from, to); err != nil {
+		return fmt.Errorf("carry the merged-away lead's stops: %w", err)
+	}
+	if err := s.carryConsentSatellitesTx(ctx, tx, from, to); err != nil {
+		return fmt.Errorf("carry the merged-away lead's consent links: %w", err)
+	}
+	return carryLeadMembershipsToLead(ctx, tx, sourceID, targetID)
 }
 
 // readLeadMergeState reads one end of a lead merge: the live lead, or — for

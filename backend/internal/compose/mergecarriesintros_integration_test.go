@@ -101,14 +101,14 @@ func TestAnAskTheSurvivorAlreadyHasOpenIsClosed(t *testing.T) {
 	retired := c.contactAt(t, "Dup Retired", "dup@carry.test")
 	survivor := c.contactAt(t, "Dup Survivor", "dup-survivor@carry.test")
 	survivors := c.ask(t, survivor, c.e.Rep1, nil)
-	retireds := c.ask(t, retired, c.e.Rep1, nil)
+	retiredAsk := c.ask(t, retired, c.e.Rep1, nil)
 
 	c.merge(t, retired, survivor)
 
 	if status, _, _ := c.askStatus(t, survivors); status != "requested" {
 		t.Errorf("the survivor's own ask is %s, want it to stand as requested", status)
 	}
-	status, contact, _ := c.askStatus(t, retireds)
+	status, contact, _ := c.askStatus(t, retiredAsk)
 	if status != "cancelled" || contact != survivor.UUID {
 		t.Errorf("the duplicate ask is %s on %s, want cancelled and carried to the survivor", status, contact)
 	}
@@ -116,7 +116,7 @@ func TestAnAskTheSurvivorAlreadyHasOpenIsClosed(t *testing.T) {
 		SELECT count(*) FROM event_outbox
 		 WHERE envelope->>'type' = 'intro_request.closed'
 		   AND envelope->'payload'->>'intro_request_id' = $1
-		   AND envelope->'payload'->>'reason' = 'cancelled'`, retireds.String()); n != 1 {
+		   AND envelope->'payload'->>'reason' = 'cancelled'`, retiredAsk.String()); n != 1 {
 		t.Errorf("%d intro_request.closed event(s) for the closed duplicate, want 1", n)
 	}
 }
