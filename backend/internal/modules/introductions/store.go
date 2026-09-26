@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -142,6 +144,9 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 				return err
 			}
 		}
+		if err := lockNamedContacts(ctx, tx, req.ContactID, req.ThroughContactID); err != nil {
+			return err
+		}
 		_, err := tx.Exec(ctx, `
 			INSERT INTO intro_request (
 				id, contact_id, requester_user_id, introducer_user_id,
@@ -190,6 +195,24 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 		return ids.UUID{}, err
 	}
 	return id, nil
+}
+
+// lockNamedContacts holds both contacts an ask names until it commits, so a
+// merge retiring either waits for the ask and carries it rather than
+// committing first and leaving it on the retired record. In id order, so two
+// writers naming the same pair cannot take them in opposite orders.
+func lockNamedContacts(ctx context.Context, tx pgx.Tx, about ids.UUID, through *ids.UUID) error {
+	named := []ids.UUID{about}
+	if through != nil && *through != about {
+		named = append(named, *through)
+	}
+	slices.SortFunc(named, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) })
+	for _, id := range named {
+		if err := auth.LockSubjectLive(ctx, tx, "contact", id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Decide records the colleague's answer.

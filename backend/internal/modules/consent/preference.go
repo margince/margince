@@ -186,11 +186,29 @@ type addressedContact struct {
 // core 0217 retired the policy that used to supply one — and the row-scope
 // probe below scopes it to the caller.
 func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (token string, found bool, err error) {
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return "", false, err
-	}
 	email = strings.ToLower(strings.TrimSpace(email))
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		holder, held, err := lockAddressHolderTx(ctx, tx, email)
+		if err != nil || !held {
+			return err
+		}
+		found = true
+		token, err = ensurePreferenceTokenTx(ctx, tx, holder.ContactID, holder.EmailID)
+		return err
+	})
+	if err != nil {
+		return "", false, err
+	}
+	return token, found, nil
+}
+
+// lockAddressHolderTx resolves the live contact holding an address and locks
+// them, so a merge cannot retire them before the caller's write commits.
+func lockAddressHolderTx(ctx context.Context, tx pgx.Tx, email string) (addressedContact, bool, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return addressedContact{}, false, err
+	}
+	for pass := 0; ; pass++ {
 		// The SAME resolution the send gate applies (gate.go resolveContact), and
 		// it has to be: this mints the unsubscribe credential for a send the
 		// gate has already authorized against one contact, so a lookup that can
@@ -214,17 +232,17 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 			WHERE lower(pe.email) = $1 AND pe.archived_at IS NULL
 			LIMIT 2`, email)
 		if err != nil {
-			return err
+			return addressedContact{}, false, err
 		}
 		matches, err := pgx.CollectRows(rows, pgx.RowToStructByPos[addressedContact])
 		if err != nil {
-			return err
+			return addressedContact{}, false, err
 		}
 		if len(matches) == 0 {
-			return nil // not a known recipient in this workspace: no token, no header
+			return addressedContact{}, false, nil // not a known recipient in this workspace: no token, no header
 		}
 		if len(matches) > 1 {
-			return fmt.Errorf("consent: the recipient address is live on more than one contact, so no unsubscribe link can name which: %w",
+			return addressedContact{}, false, fmt.Errorf("consent: the recipient address is live on more than one contact, so no unsubscribe link can name which: %w",
 				apperrors.ErrConflict)
 		}
 		contactID := matches[0].ContactID
@@ -249,17 +267,20 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 		// answering "yes, still yours" for the tombstone — its own doc names
 		// that case — and this path would then mint a NEW public credential
 		// for the subject whose old one the erasure just deleted.
-		if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID.UUID); err != nil {
-			return err
+		err = auth.EnsureVisibleLive(ctx, tx, "contact", contactID.UUID)
+		if err == nil {
+			// HELD until the token commits, so a merge of this contact waits
+			// for it and carries it, rather than committing between the probe
+			// and the insert and leaving the link on the retired record.
+			err = auth.LockSubjectLive(ctx, tx, "contact", contactID.UUID)
 		}
-		found = true
-		token, err = ensurePreferenceTokenTx(ctx, tx, contactID, matches[0].EmailID)
-		return err
-	})
-	if err != nil {
-		return "", false, err
+		// A merge that committed after the lookup moved the address onto its
+		// survivor, and the next pass finds it there.
+		if errors.Is(err, apperrors.ErrNotFound) && pass == 0 {
+			continue
+		}
+		return matches[0], err == nil, err
 	}
-	return token, found, nil
 }
 
 // ensurePreferenceTokenTx returns the token this message's unsubscribe link

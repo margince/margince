@@ -142,6 +142,9 @@ func (s *Store) EnsureWithdrawalCredentialTx(
 			return "", err
 		}
 	}
+	if err := holdLeadSubject(ctx, tx, in.LeadID); err != nil {
+		return "", err
+	}
 	return insertWithdrawalCredential(ctx, tx, in)
 }
 
@@ -182,7 +185,20 @@ func (s *Store) ensureWithdrawalCredentialForSendTx(
 			return "", err
 		}
 	}
+	if err := holdLeadSubject(ctx, tx, in.LeadID); err != nil {
+		return "", err
+	}
 	return insertWithdrawalCredential(ctx, tx, in)
+}
+
+// holdLeadSubject holds a lead the link names until it commits, as the contact
+// arm above is held: a lead merge or promotion then waits for the link and
+// carries it, rather than committing first and stranding it on the retired lead.
+func holdLeadSubject(ctx context.Context, tx pgx.Tx, lead ids.LeadID) error {
+	if lead.IsZero() {
+		return nil
+	}
+	return auth.LockSubjectLive(ctx, tx, entityLead, lead.UUID)
 }
 
 // validWithdrawalMint refuses what no link can be written for, before either
