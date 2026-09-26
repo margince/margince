@@ -32,7 +32,7 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 A [preset](../../config/presets/README.md) picks which AI model runs each feature, so the same
 feature can be ready under one preset and not under another.
 
-73 of the 143 grades below were measured on an older version of the product and
+72 of the 143 grades below were measured on an older version of the product and
 are waiting to be re-checked; each is marked below.
 
 | Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
@@ -41,7 +41,7 @@ are waiting to be re-checked; each is marked below.
 | [`gemini_cloud`](#gemini_cloud) | global cloud | 20 | 7 | 0 | 0 | 20 of 27 features ready (2 re-checks pending), 2 not served (local-only data) |
 | [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 6 | 1 | 5 | 17 | 6 of 29 features ready (re-check pending) |
 | [`openrouter_cloud`](#openrouter_cloud) | global cloud | 12 | 8 | 5 | 2 | 12 of 27 features ready (2 re-checks pending), 2 not served (local-only data) |
-| [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 11 | 3 | 12 | 1 | 11 of 27 features ready (4 re-checks pending), 2 not served (local-only data) |
+| [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 11 | 3 | 12 | 1 | 11 of 27 features ready (3 re-checks pending), 2 not served (local-only data) |
 | [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 6 | 2 | 20 | 1 | 6 of 29 features ready (re-check pending) |
 
 **What the grades mean**
@@ -404,7 +404,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `openrouter_cloud_eu`
 
-Your data goes to: EU-hosted cloud. 11 of 27 features ready (4 re-checks pending), 2 not served (local-only data). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
+Your data goes to: EU-hosted cloud. 11 of 27 features ready (3 re-checks pending), 2 not served (local-only data). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -435,7 +435,7 @@ Your data goes to: EU-hosted cloud. 11 of 27 features ready (4 re-checks pending
 | Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet | Right in 14 of 21 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Website triage <sub>`site_triage`</sub> | ✅ Ready | Right every time (15 of 15) |
-| Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet | Right in 5 of 12 tries; 2 test cases wrong too often · re-check pending |
+| Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet | Right in 23 of 24 tries; answer quality below the bar in 4 test cases |
 | What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 3 test cases |
 
 <details>
@@ -485,7 +485,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `transcript_propose` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | current |
 | `voice_build` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
 | `weekly_learnings` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
-| `weekly_review` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `weekly_review` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
 
 </details>
 
@@ -692,13 +692,13 @@ Everything the grades above are computed from, folded so the page stays short.
 
 #### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 92 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
+Counted per record — one (task, binding) pair — over the 91 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
-| the case | 72 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
-| **the prompt this build sends** | 75 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| how a run is graded | 89 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
+| the case | 71 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
+| **the prompt this build sends** | 74 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
+| how a run is graded | 88 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -837,7 +837,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 0 | 0 | 6 | 141 | 127 | 0.90 | 73147ms | 2 | 0 | 4 |
 | `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 40 | 0 | 0 | 40 | 324 | 266 | 0.82 | 237887ms | 19 | 8 | 13 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 10 | 0 | 0 | 10 | 45 | 39 | 0.87 | 20620ms | 8 | 0 | 2 |
-| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 34 | 25 | 0 | 9 | 465 | 353 | 0.76 | 86185ms | 7 | 9 | 18 |
+| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 34 | 26 | 0 | 8 | 477 | 371 | 0.78 | 83052ms | 7 | 9 | 18 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 4 | 0 | 2 | 159 | 139 | 0.87 | 5569ms | 2 | 1 | 3 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 6 | 0 | 0 | 6 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
@@ -1034,7 +1034,6 @@ model, real network).
 | `weekly_learnings/learn` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
 | `weekly_learnings/learn` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
 | `weekly_review/narrative` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
-| `weekly_review/narrative` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
 | `weekly_review/narrative` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
 
 </details>
@@ -2461,7 +2460,7 @@ Records (5):
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 45 | 45 | 1.00 | 966ms | 1521ms | 45 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `not_supported` | 12 | 9 | 0.75 | 2150ms | 3003ms | 9 | 3 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `not_supported` | 12 | 5 | 0.42 | 1764ms | 86185ms | 5 | 5 | 2 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `not_supported` | 24 | 23 | 0.96 | 2603ms | 4656ms | 23 | 0 | 1 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 45 | 45 | 1.00 | 1259ms | 2627ms | 45 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/5 | `supported_degraded` | 12 | 11 | 0.92 | 6698ms | 11567ms | 11 | 1 | 0 | 0 |
 

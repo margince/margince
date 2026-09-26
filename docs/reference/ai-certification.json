@@ -2507,11 +2507,11 @@
             "env": "eu_hosted"
           },
           "band": "not_supported",
-          "state": "stale",
-          "runs": 12,
-          "passed": 5,
-          "cases_failing_often": 2,
-          "cases_below_quality_bar": 0
+          "state": "current",
+          "runs": 24,
+          "passed": 23,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 4
         }
       ],
       "bands": {
@@ -3194,13 +3194,13 @@
         "env": "eu_hosted"
       },
       "sites": 34,
-      "sites_current": 25,
+      "sites_current": 26,
       "sites_partial": 0,
-      "sites_stale": 9,
-      "runs": 465,
-      "passed": 353,
-      "reliability": 0.7591397849462366,
-      "slowest_p95_ms": 86185,
+      "sites_stale": 8,
+      "runs": 477,
+      "passed": 371,
+      "reliability": 0.7777777777777778,
+      "slowest_p95_ms": 83052,
       "bands": {
         "certified": 7,
         "supported_degraded": 9,
@@ -14037,41 +14037,22 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
+          "scenarios_measured": 5,
           "scenarios_total": 5,
-          "runs": 12,
-          "passed": 5,
-          "reliability": 0.4166666666666667,
-          "latency_p50_ms": 1764,
-          "latency_p95_ms": 86185,
+          "runs": 24,
+          "passed": 23,
+          "reliability": 0.9583333333333334,
+          "latency_p50_ms": 2603,
+          "latency_p95_ms": 4656,
           "reported": {
-            "accepted": 5,
-            "wrong_answer": 5,
-            "invalid": 2,
+            "accepted": 23,
+            "wrong_answer": 0,
+            "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
-          "stale_cause": {
-            "case_changed": [
-              "a_deal_named_like_an_instruction_is_read_as_a_name",
-              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
-              "the_sentence_leads_with_what_changed_not_with_a_count"
-            ],
-            "prompt_changed": [
-              "a_deal_named_like_an_instruction_is_read_as_a_name",
-              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
-              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "the_sentence_leads_with_what_changed_not_with_a_count"
-            ],
-            "grader_changed": [
-              "a_deal_named_like_an_instruction_is_read_as_a_name",
-              "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
-              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "the_sentence_leads_with_what_changed_not_with_a_count"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
