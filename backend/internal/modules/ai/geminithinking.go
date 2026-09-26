@@ -51,6 +51,28 @@ func geminiThinksShallowByDefault(model string) bool {
 	return strings.Contains(model, "flash-lite")
 }
 
+// geminiRaisedToFloor is the level a request that names none of its own is
+// sent: level (the adapter's default, empty for the model's own) raised to
+// floor where that default is shallower. Flash-Lite thinks at minimal by
+// default and every other Gemini 3 at medium or deeper, so medium is assumed:
+// naming high to a model already there is harmless. Pre-3 is sent nothing.
+func geminiRaisedToFloor(modelID, level, floor string) string {
+	if floor == "" || !geminiTakesThinkingLevel(modelID) {
+		return level
+	}
+	effective := level
+	if effective == "" {
+		effective = effortMedium
+		if geminiThinksShallowByDefault(modelID) {
+			effective = effortMinimal
+		}
+	}
+	if effortAtLeast(effective, floor) {
+		return level
+	}
+	return floor
+}
+
 // geminiTakesThinkingLevel reports whether a model accepts
 // thinkingConfig.thinkingLevel on generateContent. Google's reference for the
 // field: "Recommended for Gemini 3 or later models. Use with earlier models

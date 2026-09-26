@@ -40,9 +40,9 @@ func siteThinkingRouter(t *testing.T, bindingLevel string) (*Router, *[][]byte) 
 	return r, &bodies
 }
 
-// The contract's per-site level reaches the wire of the site that declares it
-// and of no other, and its place in the precedence is between the request's
-// own level and the binding's.
+// The contract's per-site floor reaches the wire of the site that declares it
+// and of no other, and ranks below both the request's own level and the
+// binding's.
 func TestASiteThinkingLevelReachesOnlyItsOwnSitesRequests(t *testing.T) {
 	medium := map[string]json.RawMessage{providerGemini: json.RawMessage(`{"thinking_level":"medium"}`)}
 	for name, tc := range map[string]struct {
@@ -57,7 +57,7 @@ func TestASiteThinkingLevelReachesOnlyItsOwnSitesRequests(t *testing.T) {
 		"a sibling site keeps the binding's":        {TaskColdStart, "acts", "", nil, ""},
 		"another task's site is sent none":          {TaskDraftReply, "reply", "", nil, ""},
 		"a request naming no site is sent none":     {TaskColdStart, "", "", nil, ""},
-		"the site outranks the binding":             {TaskColdStart, "sitereadmessage", "high", nil, `"thinkingLevel":"low"`},
+		"the binding outranks the site":             {TaskColdStart, "sitereadmessage", "minimal", nil, `"thinkingLevel":"minimal"`},
 		"a site declaring none keeps the binding's": {TaskDraftReply, "reply", "high", nil, `"thinkingLevel":"high"`},
 		"the request outranks the site":             {TaskColdStart, "sitereadmessage", "", medium, `"thinkingLevel":"medium"`},
 	} {
@@ -96,48 +96,72 @@ func TestARequestNamingAnUndeclaredSiteIsRefused(t *testing.T) {
 	}
 }
 
-// Only a Gemini 3 rung is sent the level; the other gemini options a request
-// carries survive the merge, and the caller's map is left as it was.
-func TestASiteThinkingLevelIsSentOnlyWhereItCanBeCarried(t *testing.T) {
+// The router hands the site's floor to every rung on the request itself, and
+// leaves the caller's provider options as they were.
+func TestTheSiteFloorRidesTheRequestAndLeavesItsOptionsAlone(t *testing.T) {
 	signatures := map[string]json.RawMessage{providerGemini: json.RawMessage(`{"thought_signatures":["s"]}`)}
-	req := model.Request{Site: "sitereadmessage", ProviderOptions: signatures}
-	for name, lane := range map[string]routeMeta{
-		"an OpenAI-compatible rung": {provider: providerOpenAICompatible, model: "m"},
-		"an Ollama rung":            {provider: providerOllama, model: "gemma4"},
-		"a Gemini 2.5 rung":         {provider: providerGemini, model: "gemini-2.5-flash"},
+	got, err := withSiteThinking(model.Request{Site: "sitereadmessage", ProviderOptions: signatures}, TaskColdStart)
+	if err != nil || got.ThinkingFloor != "low" {
+		t.Fatalf("floor = %q (err %v), want low", got.ThinkingFloor, err)
+	}
+	if string(got.ProviderOptions[providerGemini]) != `{"thought_signatures":["s"]}` {
+		t.Errorf("options = %s, want them untouched", got.ProviderOptions)
+	}
+	kept, err := withSiteThinking(model.Request{Site: "acts", ThinkingFloor: "high"}, TaskColdStart)
+	if err != nil || kept.ThinkingFloor != "high" {
+		t.Errorf("a site declaring none replaced the caller's floor: %q (err %v)", kept.ThinkingFloor, err)
+	}
+}
+
+// On Gemini the floor raises only a default shallower than itself: Flash-Lite
+// (minimal) is raised to low, a deeper model is sent nothing, and a model
+// before Gemini 3, which takes no thinkingLevel, is sent nothing either.
+func TestAGeminiFloorRaisesOnlyAShallowerDefault(t *testing.T) {
+	for name, tc := range map[string]struct {
+		model, level, floor, want string
+	}{
+		"flash-lite's minimal is raised":        {siteThinkingFlashLite, "", "low", "low"},
+		"pro at its own default is left alone":  {"gemini-3.1-pro-preview", "", "low", ""},
+		"the structured default already meets":  {"gemini-3.5-flash", "low", "low", "low"},
+		"the structured default is raised":      {"gemini-3.5-flash", "low", "high", "high"},
+		"a Gemini 2.5 is never named a level":   {"gemini-2.5-flash", "", "low", ""},
+		"no floor leaves the adapter's default": {siteThinkingFlashLite, "", "", ""},
 	} {
-		got, err := withSiteThinking(req, TaskColdStart, lane)
-		if err != nil || string(got.ProviderOptions[providerGemini]) != `{"thought_signatures":["s"]}` {
-			t.Errorf("%s: options = %s (err %v), want them untouched", name, got.ProviderOptions[providerGemini], err)
+		if got := geminiRaisedToFloor(tc.model, tc.level, tc.floor); got != tc.want {
+			t.Errorf("%s: level = %q, want %q", name, got, tc.want)
 		}
-	}
-	got, err := withSiteThinking(req, TaskColdStart, routeMeta{provider: providerGemini, model: siteThinkingFlashLite})
-	if err != nil {
-		t.Fatal(err)
-	}
-	opts, err := geminiReadOptions(got.ProviderOptions)
-	if err != nil || opts.ThinkingLevel != "low" || !slices.Equal(opts.ThoughtSignatures, []string{"s"}) {
-		t.Errorf("merged options = %+v (err %v), want low beside the request's own signatures", opts, err)
-	}
-	if string(signatures[providerGemini]) != `{"thought_signatures":["s"]}` {
-		t.Errorf("the caller's options map was written to: %s", signatures[providerGemini])
 	}
 }
 
 // The certification record and the preset view read the same precedence: the
-// sites a binding serves off its own level, and none where it is not sent.
+// floor each site asks of a binding that takes one, and none where the binding
+// names its own level or its adapter maps no floor.
 func TestSiteThinkingLevelsNamesTheSitesServedOffTheBindingsLevel(t *testing.T) {
 	flashLite := ProviderConfig{Provider: providerGemini, Model: siteThinkingFlashLite}
 	want := map[string]string{"company_message": "low", "sitereadmessage": "low"}
 	if got := SiteThinkingLevels(flashLite, TaskColdStart); !maps.Equal(got, want) {
 		t.Errorf("at the default: %v, want %v", got, want)
 	}
-	flashLite.ThinkingLevel = "low"
+	flashLite.ThinkingLevel = "minimal"
 	if got := SiteThinkingLevels(flashLite, TaskColdStart); got != nil {
-		t.Errorf("a binding already at low serves every site at its own level, got %v", got)
+		t.Errorf("a binding naming its own level outranks every site's floor, got %v", got)
 	}
-	if got := SiteThinkingLevels(ProviderConfig{Provider: providerOpenAICompatible, Model: "m"}, TaskColdStart); got != nil {
-		t.Errorf("a rung never sent the level reports %v", got)
+	broker := ProviderConfig{Provider: providerOpenAICompatible, Model: "openai/gpt-oss-120b", BaseURL: "https://openrouter.ai/api"}
+	if got := SiteThinkingLevels(broker, TaskColdStart); !maps.Equal(got, want) {
+		t.Errorf("a broker rung asks the floor, got %v, want %v", got, want)
+	}
+	broker.Routing = &OpenRouterRouting{ReasoningEffort: "none"}
+	if got := SiteThinkingLevels(broker, TaskColdStart); got != nil {
+		t.Errorf("a broker rung whose binding sets its own effort reports %v", got)
+	}
+	for _, never := range []ProviderConfig{
+		{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://api.mistral.ai"},
+		{Provider: providerVLLM, Model: "mlx-community/Qwen3-14B-4bit"},
+		{Provider: providerOpenAI, Model: "gpt-4.1"},
+	} {
+		if got := SiteThinkingLevels(never, TaskColdStart); got != nil {
+			t.Errorf("%s/%s is never sent a floor and reports %v", never.Provider, never.Model, got)
+		}
 	}
 }
 

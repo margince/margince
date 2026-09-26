@@ -246,6 +246,9 @@ func (c *openaiClient) post(ctx context.Context, path string, req model.Request,
 	if err != nil {
 		return nil, err
 	}
+	if effort == "" {
+		effort = openaiEffortFor(wire.Model, req.ThinkingFloor)
+	}
 	if effort != "" {
 		wire.Reasoning = &openaiReasoning{Effort: effort}
 	}

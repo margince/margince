@@ -47,17 +47,16 @@
 #                     and never the whole served catalog: the runner refuses a
 #                     job with no allowlist, and compose's allowlist gate fails
 #                     a site that names every registered tool.
-#   thinking          on a site in mapping form: how deeply that site's requests
-#                     think — minimal | low | medium | high, the Gemini
-#                     thinkingLevel vocabulary (the ai package's tests hold it
-#                     there). Per SITE, never per tier: one model can answer
-#                     one prompt better for thinking and another worse. It
-#                     reaches only a request that names its site (Request.Site),
-#                     and only a Gemini 3 rung, as its thinkingLevel: no other
-#                     wire says whether the bound model can think, and a level
-#                     sent to one that cannot fails every call. Precedence: a
-#                     request's own ProviderOptions beat this, and this beats
-#                     the binding's thinking_level.
+#   thinking          on a site in mapping form: the least that site's
+#                     requests think — minimal | low | medium | high. A FLOOR:
+#                     it raises a model that thinks less by default and never
+#                     lowers one that thinks more. Per SITE, never per tier:
+#                     one model can answer one prompt better for thinking and
+#                     another worse. It reaches only a request that names its
+#                     site (Request.Site). Precedence: a request's own
+#                     ProviderOptions, then the binding's thinking_level or
+#                     routing.reasoning_effort, then this. What each provider
+#                     is sent: docs/reference/ai-thinking.md.
 #   no_payload        content from this task must NEVER reach ai_call_payload,
 #                     whatever the deployment's capture posture says. A parsed
 #                     field, not a phrase in `doc:` — a sentence in a comment

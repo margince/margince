@@ -3,30 +3,21 @@
 
 package ai
 
-// How deeply one site's requests think, when api/ai-tasks.yaml says so.
+// How much one site's requests think, when api/ai-tasks.yaml says so.
 //
-// Precedence, strongest first: the request's own
-// ProviderOptions["gemini"].thinking_level, then the site's declared
-// `thinking`, then the binding's `thinking_level`, then the adapter's default
-// (geminithinking.go). The site beats the binding because the evidence is per
-// prompt: one model thinks its way out of a failure on one site and answers
-// another site worse for it, and a binding is shared by every site on the rung.
-//
-// Only a Gemini 3 rung is sent it. The OpenAI and Ollama wires carry a level
-// too, but neither binding says whether its model can think at all, and a
-// level sent to one that cannot fails every call on that rung.
+// A site's level is a FLOOR: think at least this much, never less than the
+// model's own default. The router puts it on Request.ThinkingFloor and each
+// adapter maps it to its own wire. Precedence, strongest first: the request's
+// own ProviderOptions, then the binding's explicit setting (`thinking_level`,
+// `routing.reasoning_effort`), then the site floor, then the adapter default.
+// docs/reference/ai-thinking.md is the per-provider table.
 
 import (
-	"encoding/json"
 	"fmt"
-	"maps"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
-
-// geminiThinkingOption is the key the gemini adapter reads a request's own
-// level from, inside its ProviderOptions namespace.
-const geminiThinkingOption = "thinking_level"
 
 // SiteThinking returns the thinking level task's site declares, empty when it
 // declares none or the request names no site. A site the task never declares
@@ -44,23 +35,57 @@ func SiteThinking(task Task, site string) (string, error) {
 	return "", fmt.Errorf("ai: task %s declares no site %q; name one of its sites in api/ai-tasks.yaml or leave Request.Site empty", task, site)
 }
 
-// siteThinkingReaches reports whether a rung is sent a site's level at all.
-func siteThinkingReaches(provider, modelID string) bool {
-	return provider == providerGemini && geminiTakesThinkingLevel(modelID)
+// withSiteThinking returns req carrying its site's floor. A floor the caller
+// set itself stands when the site declares none.
+func withSiteThinking(req model.Request, task Task) (model.Request, error) {
+	level, err := SiteThinking(task, req.Site)
+	if err != nil || level == "" {
+		return req, err
+	}
+	req.ThinkingFloor = level
+	return req, nil
 }
 
-// SiteThinkingLevels is, per site of task, the level a request built for that
-// site is served at on binding, wherever it differs from the binding's own
-// level. It is the router's precedence read for a request that names no level
-// of its own, which is how every site builder builds one; nil means every site
-// runs at the binding's level.
+// thinkingFloorReaches reports whether binding's adapter maps a floor at all.
+// An explicit binding setting outranks the floor, so such a binding takes none.
+func thinkingFloorReaches(binding ProviderConfig) bool {
+	d, _ := providerByName(binding.Provider)
+	return d.thinkingFloor != nil && d.thinkingFloor(binding)
+}
+
+func geminiTakesThinkingFloor(binding ProviderConfig) bool {
+	return binding.ThinkingLevel == "" && geminiTakesThinkingLevel(binding.Model)
+}
+
+func openRouterTakesThinkingFloor(binding ProviderConfig) bool {
+	routing := UpstreamPreferencesFor(binding)
+	return IsOpenRouterHost(binding.BaseURL) && (routing == nil || routing.ReasoningEffort == "")
+}
+
+func anthropicTakesThinkingFloor(binding ProviderConfig) bool {
+	return anthropicThinkingModeOf(binding.Model) != anthropicThinksUnknown
+}
+
+func openaiTakesThinkingFloor(binding ProviderConfig) bool {
+	_, reasons := openaiDefaultEffort(binding.Model)
+	return reasons
+}
+
+// ollamaTakesThinkingFloor is true for every binding: whether the model thinks
+// is /api/show's answer at call time, which a binding cannot see.
+func ollamaTakesThinkingFloor(ProviderConfig) bool { return true }
+
+// SiteThinkingLevels is, per site of task, the floor a request built for that
+// site asks binding for; nil when no site declares one or binding takes none.
+// It names what was ASKED, not what was sent: a model whose own default is
+// already deeper is sent nothing, and still thought at least that much.
 func SiteThinkingLevels(binding ProviderConfig, task Task) map[string]string {
-	if !siteThinkingReaches(binding.Provider, binding.Model) {
+	if !thinkingFloorReaches(binding) {
 		return nil
 	}
 	var levels map[string]string
 	for _, site := range taskSites[task] {
-		if site.Thinking == "" || site.Thinking == binding.ThinkingLevel {
+		if site.Thinking == "" {
 			continue
 		}
 		if levels == nil {
@@ -71,39 +96,40 @@ func SiteThinkingLevels(binding ProviderConfig, task Task) map[string]string {
 	return levels
 }
 
-// withSiteThinking returns req as it is sent to one rung: carrying its site's
-// level in the gemini namespace, unless the request names a level of its own
-// or the rung is not sent one. The caller's map is never written to — the
-// same request walks every rung of the ladder.
-func withSiteThinking(req model.Request, task Task, lane routeMeta) (model.Request, error) {
-	level, err := SiteThinking(task, req.Site)
-	if err != nil || level == "" || !siteThinkingReaches(lane.provider, lane.model) {
-		return req, err
-	}
-	own, err := geminiReadOptions(req.ProviderOptions)
-	if err != nil || own.ThinkingLevel != "" {
-		return req, err
-	}
-	fields := map[string]json.RawMessage{}
-	if raw := req.ProviderOptions[providerGemini]; len(raw) > 0 {
-		if err := json.Unmarshal(raw, &fields); err != nil {
-			return req, fmt.Errorf("ai: gemini: provider options: %w", err)
+// The thinking vocabulary every vendor's is a slice of.
+const (
+	effortNone    = "none"
+	effortMinimal = "minimal"
+	effortLow     = "low"
+	effortMedium  = "medium"
+	effortHigh    = "high"
+	effortXHigh   = "xhigh"
+	effortMax     = "max"
+)
+
+// effortRank orders a thinking level on the one scale every vendor's
+// vocabulary is a slice of: reasoningEfforts, hardest first.
+func effortRank(level string) (int, bool) {
+	i := slices.Index(reasoningEfforts, level)
+	return len(reasoningEfforts) - i, i >= 0
+}
+
+// effortAtLeast reports whether level is known and no shallower than floor.
+func effortAtLeast(level, floor string) bool {
+	have, ok := effortRank(level)
+	want, wantOK := effortRank(floor)
+	return ok && wantOK && have >= want
+}
+
+// lowestEffortAtLeast is the shallowest of offered that still meets floor,
+// empty when none does. `none` never meets a floor.
+func lowestEffortAtLeast(floor string, offered []string) string {
+	best, bestRank := "", len(reasoningEfforts)+1
+	for _, level := range offered {
+		rank, _ := effortRank(level)
+		if level != effortNone && effortAtLeast(level, floor) && rank < bestRank {
+			best, bestRank = level, rank
 		}
 	}
-	encodedLevel, err := json.Marshal(level)
-	if err != nil {
-		return req, fmt.Errorf("ai: site thinking level: %w", err)
-	}
-	fields[geminiThinkingOption] = encodedLevel
-	namespace, err := json.Marshal(fields)
-	if err != nil {
-		return req, fmt.Errorf("ai: gemini: provider options: %w", err)
-	}
-	options := maps.Clone(req.ProviderOptions)
-	if options == nil {
-		options = map[string]json.RawMessage{}
-	}
-	options[providerGemini] = namespace
-	req.ProviderOptions = options
-	return req, nil
+	return best
 }

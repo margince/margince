@@ -370,6 +370,9 @@ func geminiGenerationConfig(req model.Request, modelID string, opts geminiOption
 			level = geminiStructuredThinkingLevel
 		}
 	}
+	if opts.ThinkingLevel == "" {
+		level = geminiRaisedToFloor(modelID, level, req.ThinkingFloor)
+	}
 	if level != "" {
 		cfg.ThinkingConfig = &geminiThinking{ThinkingLevel: level}
 	}

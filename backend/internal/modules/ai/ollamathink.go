@@ -32,10 +32,10 @@ package ai
 //     that is what this adapter sent before the field existed, and a guess would
 //     be a coin toss between the two ways a model can answer wrongly.
 //
-// A request that names its own value through
-// Request.ProviderOptions["ollama"].think skips all of that — the same seam the
-// gemini and openai adapters read. No caller sets it today, and a site's
-// contract level is not sent here (sitethinking.go says why).
+// A request with a thinking floor is sent the least thinking that meets it
+// instead (floorThink): the lowest level at or above it, else `true`. A request
+// that names its own value through Request.ProviderOptions["ollama"].think
+// skips all of that — the same seam the gemini and openai adapters read.
 
 import (
 	"bytes"
@@ -44,8 +44,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
-	"sync"
+
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // ollamaOptionsNamespace is the ProviderOptions key this adapter reads.
@@ -53,6 +55,7 @@ const ollamaOptionsNamespace = "ollama"
 
 var (
 	ollamaThinkOff      = json.RawMessage("false")
+	ollamaThinkOn       = json.RawMessage("true")
 	errOllamaThinkShape = errors.New("think must be a boolean or an effort-level string")
 )
 
@@ -87,48 +90,27 @@ func ollamaThinkOverride(opts map[string]json.RawMessage) (json.RawMessage, erro
 	return parsed.Think, nil
 }
 
-// ollamaThinkCache remembers what /api/show said about each model, so the
-// question costs one request per model per client rather than one per call. Its
-// lifetime is the client's, which is the binding's: a routing rebind builds a new
-// client, so re-pulling a tag under the same binding is noticed at the next
-// rebind or restart. The zero value is ready to use.
-type ollamaThinkCache struct {
-	mu      sync.Mutex
-	byModel map[string]json.RawMessage
-}
-
-// think resolves the `think` value for one call; nil means send none.
-//
-// The lock guards the map alone. A lookup is an HTTP call, and holding the lock
-// across it would make every call on the client wait for one model's answer,
-// including calls for models already resolved. Two concurrent first calls may
-// both ask; the answers are equal, so the second write is harmless.
-func (c *ollamaClient) think(ctx context.Context, model string, opts map[string]json.RawMessage) (json.RawMessage, error) {
-	override, err := ollamaThinkOverride(opts)
+// think resolves the `think` value for one call; nil means send none. Without
+// a floor it is the cheapest value the model lists; with one, the least
+// thinking that meets it (floorThink).
+func (c *ollamaClient) think(ctx context.Context, model string, req model.Request) (json.RawMessage, error) {
+	override, err := ollamaThinkOverride(req.ProviderOptions)
 	if err != nil || override != nil {
 		return override, err
 	}
-	c.thinks.mu.Lock()
-	cached, ok := c.thinks.byModel[model]
-	c.thinks.mu.Unlock()
-	if ok {
-		return cached, nil
-	}
-	resolved, err := c.showThink(ctx, model)
+	values, err := c.thinks.lookup(ctx, model, c.showThink)
 	if err != nil {
 		return nil, err
 	}
-	c.thinks.mu.Lock()
-	defer c.thinks.mu.Unlock()
-	if c.thinks.byModel == nil {
-		c.thinks.byModel = map[string]json.RawMessage{}
+	if req.ThinkingFloor != "" {
+		return floorThink(values, req.ThinkingFloor), nil
 	}
-	c.thinks.byModel[model] = resolved
-	return resolved, nil
+	return cheapestThink(values), nil
 }
 
-// showThink asks the server what this model accepts for `think`.
-func (c *ollamaClient) showThink(ctx context.Context, model string) (json.RawMessage, error) {
+// showThink asks the server what this model accepts for `think`: nil when the
+// model does not think or the server cannot be asked.
+func (c *ollamaClient) showThink(ctx context.Context, model string) ([]json.RawMessage, error) {
 	payload, err := json.Marshal(struct {
 		Model string `json:"model"`
 	}{model})
@@ -152,7 +134,7 @@ func (c *ollamaClient) showThink(ctx context.Context, model string) (json.RawMes
 	if err := json.NewDecoder(body).Decode(&shown); err != nil {
 		return nil, fmt.Errorf("ai: ollama: decode show response: %w", err)
 	}
-	return cheapestThink(shown.Thinking.Values), nil
+	return shown.Thinking.Values, nil
 }
 
 // showUnavailable reports a server that cannot be asked about the model, as
@@ -176,11 +158,6 @@ func showUnavailable(err error) bool {
 	return false
 }
 
-// thinkLevelRank orders the effort levels Ollama documents, lowest first. The
-// order of a model's `values` array is not part of that contract, so the lowest
-// level is chosen by name.
-var thinkLevelRank = map[string]int{"low": 0, "medium": 1, "high": 2, "max": 3}
-
 // cheapestThink picks the value that spends the least on thinking: `false` if
 // the model can turn it off, else the lowest level it lists by name, else (a
 // level this adapter does not know) the first one listed.
@@ -190,22 +167,42 @@ func cheapestThink(values []json.RawMessage) json.RawMessage {
 			return ollamaThinkOff
 		}
 	}
-	var lowest json.RawMessage
-	lowestRank := len(thinkLevelRank)
-	for _, v := range values {
-		var level string
-		if json.Unmarshal(v, &level) != nil {
-			continue
-		}
-		if rank, known := thinkLevelRank[level]; known && rank < lowestRank {
-			lowest, lowestRank = v, rank
-		}
-	}
-	if lowest != nil {
+	if lowest := lowestThinkLevel(values, "minimal"); lowest != nil {
 		return lowest
 	}
 	if len(values) > 0 {
 		return values[0]
+	}
+	return nil
+}
+
+// floorThink is the least thinking values offer that meets floor: the lowest
+// level at or above it, else `true`. A model listing neither (it does not
+// think, or the server does not say) is sent nothing, as before the floor.
+func floorThink(values []json.RawMessage, floor string) json.RawMessage {
+	if level := lowestThinkLevel(values, floor); level != nil {
+		return level
+	}
+	for _, v := range values {
+		if bytes.Equal(v, ollamaThinkOn) {
+			return ollamaThinkOn
+		}
+	}
+	return nil
+}
+
+// lowestThinkLevel is the shallowest level string in values that meets floor,
+// by name: the order of a model's `values` is not part of Ollama's contract.
+func lowestThinkLevel(values []json.RawMessage, floor string) json.RawMessage {
+	levels := make([]string, len(values))
+	for i, v := range values {
+		if json.Unmarshal(v, &levels[i]) != nil {
+			levels[i] = ""
+		}
+	}
+	lowest := lowestEffortAtLeast(floor, levels)
+	if i := slices.Index(levels, lowest); lowest != "" && i >= 0 {
+		return values[i]
 	}
 	return nil
 }

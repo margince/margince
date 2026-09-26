@@ -218,7 +218,7 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	key, keyErr := cacheKey(wsID, task, req)
 	if keyErr == nil {
 		// The site's own defect, found with the key's: before any provider.
-		_, keyErr = SiteThinking(task, req.Site)
+		req, keyErr = withSiteThinking(req, task)
 	}
 
 	// Every terminal from here on is traced — the budget-read and cache-key
@@ -385,7 +385,8 @@ func cacheKey(wsID ids.WorkspaceID, task Task, req model.Request) (string, error
 		ContextScopes      []string                   `json:"context_scopes"`
 		ContextFingerprint string                     `json:"context_fingerprint"`
 		Site               string                     `json:"site"`
-	}{req.Model, req.System, req.Messages, req.Tools, req.MaxTokens, req.ResponseSchema, req.Attachments, req.ProviderOptions, req.ContextScopes, req.ContextFingerprint, req.Site})
+		ThinkingFloor      string                     `json:"thinking_floor,omitempty"`
+	}{req.Model, req.System, req.Messages, req.Tools, req.MaxTokens, req.ResponseSchema, req.Attachments, req.ProviderOptions, req.ContextScopes, req.ContextFingerprint, req.Site, req.ThinkingFloor})
 	if err != nil {
 		// A ProviderOptions namespace carrying invalid JSON would otherwise
 		// marshal to nil and collapse every such request onto one cache key —

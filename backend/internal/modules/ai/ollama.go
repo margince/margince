@@ -27,8 +27,8 @@ type ollamaClient struct {
 	// attachmentMIMEs is what THIS binding carries: the wire's own carriage,
 	// narrowed by any `input:` the operator declared (inputmodality.go).
 	attachmentMIMEs []string
-	// thinks is what /api/show said each model accepts for `think`.
-	thinks ollamaThinkCache
+	// thinks is what /api/show listed each model as accepting for `think`.
+	thinks perModelFacts[[]json.RawMessage]
 }
 
 type ollamaWire struct {
@@ -383,7 +383,7 @@ func (c *ollamaClient) sendChat(ctx context.Context, req model.Request, stream b
 	if wire.Model == "" {
 		wire.Model = c.defaultModel
 	}
-	think, err := c.think(ctx, wire.Model, req.ProviderOptions)
+	think, err := c.think(ctx, wire.Model, req)
 	if err != nil {
 		return nil, err
 	}

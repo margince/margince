@@ -65,6 +65,9 @@ type aiCertPresetTier struct {
 	Provider      string `json:"provider"`
 	Model         string `json:"model"`
 	ThinkingLevel string `json:"thinking_level,omitempty"`
+	// binding is the whole rung: which floor a site asks of it depends on its
+	// host and routing too, which the page does not show.
+	binding ai.ProviderConfig
 }
 
 // aiCertPresetTask is one task as this preset serves it: the first ladder rung
@@ -143,7 +146,7 @@ func tiersOfPreset(cfg ai.RoutingConfig) []aiCertPresetTier {
 		}
 		tiers = append(tiers, aiCertPresetTier{
 			Tier: string(tier), Provider: string(binding.Provider), Model: binding.Model,
-			ThinkingLevel: binding.ThinkingLevel,
+			ThinkingLevel: binding.ThinkingLevel, binding: binding,
 		})
 	}
 	return tiers
@@ -198,9 +201,7 @@ func presetTaskRow(task string, preset aiCertPreset,
 		// A record grades the rung only where every site ran at the level this
 		// rung serves it: the contract's site levels move with the build, and
 		// a record from before one was declared measured a different call.
-		serves := ai.SiteThinkingLevels(ai.ProviderConfig{
-			Provider: rung.Provider, Model: rung.Model, ThinkingLevel: rung.ThinkingLevel,
-		}, ai.Task(task))
+		serves := ai.SiteThinkingLevels(rung.binding, ai.Task(task))
 		if seen, ok := measured[task+"\x00"+row.Model.label()]; ok && maps.Equal(seen.siteThinking, serves) {
 			row.Band, row.State, row.Runs, row.Passed = seen.Band, seen.State, seen.Runs, seen.Passed
 			row.CasesFailingOften, row.CasesBelowQualityBar = seen.CasesFailingOften, seen.CasesBelowQualityBar
@@ -387,6 +388,7 @@ func TestAPresetIsCreditedOnlyByARecordAtItsOwnThinkingLevel(t *testing.T) {
 			}}}
 			preset := aiCertPreset{File: "flash-lite.yaml", Profile: rec.EnvClass, Tiers: []aiCertPresetTier{{
 				Tier: string(ai.TierCheapCloud), Provider: "gemini", Model: flashLite, ThinkingLevel: tc.presetLevel,
+				binding: ai.ProviderConfig{Provider: "gemini", Model: flashLite, ThinkingLevel: tc.presetLevel},
 			}}}
 			got := attributeAICertPresets([]aiCertPreset{preset}, doc, []aicert.Record{rec})[0].Tasks[0]
 			if got.Band != tc.wantBand {
@@ -427,6 +429,7 @@ func TestAPresetIsCreditedOnlyByARecordAtTheLevelsItServesEachSite(t *testing.T)
 			}}}
 			preset := aiCertPreset{File: "gemini.yaml", Profile: rec.EnvClass, Tiers: []aiCertPresetTier{{
 				Tier: string(ai.TierCheapCloud), Provider: "gemini", Model: flashLite,
+				binding: ai.ProviderConfig{Provider: "gemini", Model: flashLite},
 			}}}
 			got := attributeAICertPresets([]aiCertPreset{preset}, doc, []aicert.Record{rec})[0].Tasks[0]
 			if got.Band != tc.wantBand {

@@ -160,11 +160,11 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 27,
-          "passed": 24,
-          "cases_failing_often": 1,
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
@@ -507,9 +507,9 @@
       "bands": {
         "certified": 10,
         "supported_degraded": 2,
-        "not_supported": 13
+        "not_supported": 12
       },
-      "untested": 2,
+      "untested": 3,
       "unbound": 0,
       "not_served": 2,
       "unrecognised": 0
@@ -1667,12 +1667,12 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 39,
-          "passed": 37,
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 1
+          "cases_below_quality_bar": 0
         },
         {
           "task": "corpus_ask",
@@ -1764,11 +1764,11 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "stale",
-          "runs": 3,
-          "passed": 0,
-          "cases_failing_often": 1,
-          "cases_below_quality_bar": 0
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 2
         },
         {
           "task": "offer_draft",
@@ -1795,11 +1795,11 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 12,
-          "passed": 9,
-          "cases_failing_often": 1,
+          "band": "certified",
+          "state": "current",
+          "runs": 24,
+          "passed": 23,
+          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
@@ -1939,12 +1939,12 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 27,
-          "passed": 18,
-          "cases_failing_often": 3,
-          "cases_below_quality_bar": 2
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 72,
+          "passed": 53,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 7
         },
         {
           "task": "transcript_propose",
@@ -2012,11 +2012,11 @@
         }
       ],
       "bands": {
-        "certified": 8,
+        "certified": 9,
         "supported_degraded": 7,
-        "not_supported": 9
+        "not_supported": 7
       },
-      "untested": 3,
+      "untested": 4,
       "unbound": 0,
       "not_served": 2,
       "unrecognised": 0
@@ -2170,12 +2170,12 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 27,
-          "passed": 26,
+          "band": "",
+          "state": "",
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 2
+          "cases_below_quality_bar": 0
         },
         {
           "task": "corpus_ask",
@@ -2517,9 +2517,9 @@
       "bands": {
         "certified": 10,
         "supported_degraded": 1,
-        "not_supported": 14
+        "not_supported": 13
       },
-      "untested": 2,
+      "untested": 3,
       "unbound": 0,
       "not_served": 2,
       "unrecognised": 0
@@ -3314,17 +3314,17 @@
         "env": "cloud_frontier"
       },
       "sites": 41,
-      "sites_current": 17,
+      "sites_current": 25,
       "sites_partial": 0,
-      "sites_stale": 24,
-      "runs": 540,
-      "passed": 462,
-      "reliability": 0.8555555555555555,
-      "slowest_p95_ms": 140306,
+      "sites_stale": 16,
+      "runs": 606,
+      "passed": 523,
+      "reliability": 0.863036303630363,
+      "slowest_p95_ms": 18514,
       "bands": {
         "certified": 11,
-        "supported_degraded": 14,
-        "not_supported": 16
+        "supported_degraded": 15,
+        "not_supported": 15
       }
     },
     {
@@ -9040,33 +9040,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "latency_p50_ms": 2138,
-          "latency_p95_ms": 2290,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 2137,
+          "latency_p95_ms": 3252,
           "reported": {
-            "accepted": 0,
-            "wrong_answer": 2,
+            "accepted": 12,
+            "wrong_answer": 0,
             "invalid": 0,
-            "abstained": 1
+            "abstained": 0
           },
-          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "growth_fit_reads_their_facts_against_our_offering"
-            ],
-            "prompt_changed": [
-              "growth_fit_reads_their_facts_against_our_offering"
-            ],
-            "grader_changed": [
-              "growth_fit_reads_their_facts_against_our_offering"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -9568,42 +9557,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 4,
           "scenarios_total": 4,
-          "runs": 12,
-          "passed": 9,
-          "reliability": 0.75,
-          "latency_p50_ms": 1683,
-          "latency_p95_ms": 4051,
+          "runs": 24,
+          "passed": 23,
+          "reliability": 0.9583333333333334,
+          "latency_p50_ms": 1250,
+          "latency_p95_ms": 2896,
           "reported": {
-            "accepted": 9,
-            "wrong_answer": 3,
+            "accepted": 23,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy",
-          "stale_cause": {
-            "case_changed": [
-              "a_direct_question_asks_us_and_a_report_does_not",
-              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
-              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
-              "the_recipient_line_separates_a_request_from_a_copy"
-            ],
-            "prompt_changed": [
-              "a_direct_question_asks_us_and_a_report_does_not",
-              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
-              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
-              "the_recipient_line_separates_a_request_from_a_copy"
-            ],
-            "grader_changed": [
-              "a_direct_question_asks_us_and_a_report_does_not",
-              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
-              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
-              "the_recipient_line_separates_a_request_from_a_copy"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -12080,32 +12049,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 6,
-          "passed": 4,
-          "reliability": 0.6666666666666666,
-          "latency_p50_ms": 27718,
-          "latency_p95_ms": 140306,
+          "runs": 18,
+          "passed": 15,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 1571,
+          "latency_p95_ms": 2849,
           "reported": {
-            "accepted": 4,
-            "wrong_answer": 0,
+            "accepted": 15,
+            "wrong_answer": 2,
             "invalid": 0,
-            "abstained": 2
+            "abstained": 1
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
-          "stale_cause": {
-            "prompt_changed": [
-              "ask_meeting_prep_stays_silent_about_a_withheld_section",
-              "ask_whats_open_answers_the_pipeline_not_the_history"
-            ],
-            "grader_changed": [
-              "ask_meeting_prep_stays_silent_about_a_withheld_section",
-              "ask_whats_open_answers_the_pipeline_not_the_history"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -12279,36 +12238,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 6,
-          "passed": 6,
+          "runs": 15,
+          "passed": 15,
           "reliability": 1,
-          "latency_p50_ms": 27718,
-          "latency_p95_ms": 140306,
+          "latency_p50_ms": 1571,
+          "latency_p95_ms": 2849,
           "reported": {
-            "accepted": 6,
+            "accepted": 15,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
-          "stale_cause": {
-            "case_changed": [
-              "brief_names_the_stalled_deal_and_the_last_touch",
-              "brief_stays_silent_about_a_withheld_section"
-            ],
-            "prompt_changed": [
-              "brief_names_the_stalled_deal_and_the_last_touch",
-              "brief_stays_silent_about_a_withheld_section"
-            ],
-            "grader_changed": [
-              "brief_names_the_stalled_deal_and_the_last_touch",
-              "brief_stays_silent_about_a_withheld_section"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -12468,30 +12413,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 27718,
-          "latency_p95_ms": 140306,
+          "latency_p50_ms": 1571,
+          "latency_p95_ms": 2849,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
-          "stale_cause": {
-            "prompt_changed": [
-              "dossier_describes_the_company_not_the_relationship"
-            ],
-            "grader_changed": [
-              "dossier_describes_the_company_not_the_relationship"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -12655,32 +12592,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 6,
-          "passed": 3,
-          "reliability": 0.5,
-          "latency_p50_ms": 27718,
-          "latency_p95_ms": 140306,
+          "runs": 18,
+          "passed": 11,
+          "reliability": 0.6111111111111112,
+          "latency_p50_ms": 1571,
+          "latency_p95_ms": 2849,
           "reported": {
-            "accepted": 3,
-            "wrong_answer": 3,
+            "accepted": 11,
+            "wrong_answer": 7,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
-          "stale_cause": {
-            "prompt_changed": [
-              "contact_brief_reads_what_was_said",
-              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
-            ],
-            "grader_changed": [
-              "contact_brief_reads_what_was_said",
-              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -12842,33 +12769,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
+          "scenarios_measured": 1,
           "scenarios_total": 1,
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "latency_p50_ms": 27718,
-          "latency_p95_ms": 140306,
+          "runs": 9,
+          "passed": 4,
+          "reliability": 0.4444444444444444,
+          "latency_p50_ms": 1571,
+          "latency_p95_ms": 2849,
           "reported": {
-            "accepted": 0,
-            "wrong_answer": 3,
+            "accepted": 4,
+            "wrong_answer": 5,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "meeting_brief_reads_the_thread_that_matters"
-            ],
-            "prompt_changed": [
-              "meeting_brief_reads_the_thread_that_matters"
-            ],
-            "grader_changed": [
-              "meeting_brief_reads_the_thread_that_matters"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -13025,30 +12941,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
           "scenarios_total": 1,
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "latency_p50_ms": 27718,
-          "latency_p95_ms": 140306,
+          "runs": 9,
+          "passed": 5,
+          "reliability": 0.5555555555555556,
+          "latency_p50_ms": 1571,
+          "latency_p95_ms": 2849,
           "reported": {
-            "accepted": 2,
-            "wrong_answer": 1,
+            "accepted": 5,
+            "wrong_answer": 4,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
-          "stale_cause": {
-            "prompt_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
-            ],
-            "grader_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {

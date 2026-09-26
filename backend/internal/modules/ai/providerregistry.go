@@ -61,6 +61,9 @@ type providerDescriptor struct {
 	// (classifyHost). That one answer makes it sovereign-eligible and decides
 	// whether a local-only task may take it.
 	localByEndpoint bool
+	// thinkingFloor reports whether a binding's adapter maps a site's thinking
+	// floor onto its wire (sitethinking.go); nil maps none.
+	thinkingFloor func(ProviderConfig) bool
 }
 
 // capSet is the set of wires an adapter answers on.
@@ -95,13 +98,14 @@ var providerRegistry = []providerDescriptor{
 	{
 		name: providerAnthropic, caps: capChat, egress: egressPublicOnly, keyEnv: "ANTHROPIC_API_KEY",
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
-		carriage: anthropicCarries,
+		carriage: anthropicCarries, thinkingFloor: anthropicTakesThinkingFloor,
 	},
 	{
 		name: providerOllama, caps: capChat, local: true, egress: egressOperatorEndpoint,
 		servedSource: servedIdentitySourceResponse, defaultBaseURL: defaultOllamaBaseURL,
 		public: true, defaultModel: defaultOllamaModel, carriage: carriesImages,
 		wildcardReason: "serves whichever vision model the operator pulled",
+		thinkingFloor:  ollamaTakesThinkingFloor,
 	},
 	{
 		// vllm and openai_compatible are ONE adapter, and it has no document
@@ -129,16 +133,17 @@ var providerRegistry = []providerDescriptor{
 		keyEnv: "OPENAI_COMPATIBLE_API_KEY", servedSource: servedIdentitySourceEcho,
 		public: true, carriage: carriesImages,
 		wildcardReason: "serves whichever vendor the operator pointed base_url at",
+		thinkingFloor:  openRouterTakesThinkingFloor,
 	},
 	{
 		name: providerOpenAI, caps: capChat, egress: egressPublicOnly, keyEnv: "OPENAI_API_KEY",
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
-		carriage: openAICarries,
+		carriage: openAICarries, thinkingFloor: openaiTakesThinkingFloor,
 	},
 	{
 		name: providerGemini, caps: capChat, egress: egressPublicOnly, keyEnv: "GEMINI_API_KEY",
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
-		carriage: geminiCarries,
+		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
 	},
 	{
 		// TypeSafe's own API: a vendor cloud, so never local and never pinned

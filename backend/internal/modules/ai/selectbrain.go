@@ -200,7 +200,8 @@ func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (
 			// Only the cloud binding takes these: a local vLLM deployment serves
 			// one model from one host, so upstream selection has nothing to
 			// choose between and a `provider` object would be noise on its wire.
-			routing: cfg.Routing,
+			routing:   cfg.Routing,
+			reasoning: openRouterReasoningFacts(cfg.BaseURL),
 		}, nil
 	case providerOpenAI:
 		key := cloudKey(providerOpenAI, keys)

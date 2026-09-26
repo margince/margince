@@ -46,6 +46,7 @@ type anthropicWire struct {
 	Tools        []anthropicToolWire    `json:"tools,omitempty"`
 	Stream       bool                   `json:"stream,omitempty"`
 	OutputConfig *anthropicOutputConfig `json:"output_config,omitempty"`
+	Thinking     *anthropicThinking     `json:"thinking,omitempty"`
 }
 
 type anthropicToolWire struct {
@@ -308,6 +309,7 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, schema js
 	if wire.MaxTokens <= 0 {
 		wire.MaxTokens = unsetMaxOutputTokens
 	}
+	wire.Thinking = anthropicThinkingFor(wire.Model, req.ThinkingFloor, wire.MaxTokens, len(req.Tools))
 	for _, tool := range req.Tools {
 		wire.Tools = append(wire.Tools, anthropicToolWire{
 			Name: tool.Name, Description: tool.Description, InputSchema: tool.InputSchema,

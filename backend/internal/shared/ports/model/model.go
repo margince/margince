@@ -199,6 +199,12 @@ type Request struct {
 	// none. Routing metadata like the two above: the router reads the site's
 	// declared thinking level from it, and refuses a site the task never declares.
 	Site string
+	// ThinkingFloor is the least thinking this request asks for (minimal | low |
+	// medium | high); empty asks for none. The router fills it from the site's
+	// declared level, and each adapter maps it to its own wire as a floor: it
+	// raises a model that thinks less by default and never lowers one that
+	// thinks more (docs/reference/ai-thinking.md has the per-provider table).
+	ThinkingFloor string
 	// ContextBytes and ContextTokensEstimate describe only the final delimited
 	// company-context block. They are trace metadata, never provider inputs.
 	ContextBytes          int

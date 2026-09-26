@@ -192,11 +192,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 	for i, t := range boundRungs {
 		// The rail's lease covers one model call, and this is the next one.
 		lc.renewRailLease(ctx)
-		rungReq, optErr := withSiteThinking(req, task, b.routeMeta[t])
-		if optErr != nil {
-			return model.Response{}, t, false, fmt.Errorf("%w: %w", errRequestFailed, optErr)
-		}
-		out, callErr := b.clients[t].Complete(ctx, rungReq)
+		out, callErr := b.clients[t].Complete(ctx, req)
 		if callErr != nil {
 			lastErr, lastTier = callErr, t
 			// A refused account is the operator's to fix, and only the rung
