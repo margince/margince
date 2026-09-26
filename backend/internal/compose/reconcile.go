@@ -58,7 +58,8 @@ type followUpStager struct {
 	// owner resolves the authority the DRAFT is read under. The reply carries a
 	// counterparty's address and the message it answers, both of which end up
 	// stored on the card — so they are read as the contact the card is for, never
-	// under the sweep's own unbounded principal.
+	// under the sweep's own unbounded principal. Its handle is also the
+	// transaction the owner is read and the proposal staged in.
 	owner dealOwnerAuthority
 	// pool reads the installation's base language the drafted reply's card is
 	// written in.
