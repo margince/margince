@@ -312,6 +312,9 @@ func TestCompanyReadMessageCaseRunsWhatProductionRuns(t *testing.T) {
 		reply         string
 		wantResult    string
 		wantRefusedBy string
+		// productionDrops marks a reply production keeps minus its unauthorized
+		// change, where the case still refuses it in the gate's words.
+		productionDrops bool
 	}{
 		{
 			name: "a change the administrator asked for", reply: companyReadCorrectionReply,
@@ -321,8 +324,9 @@ func TestCompanyReadMessageCaseRunsWhatProductionRuns(t *testing.T) {
 		{
 			name: "a change nobody authorized", reply: companyReadUnaskedChangeReply,
 			fixture: companyReadCorrectionFixture(), expected: companyReadCorrectionExpectation(t),
-			wantResult:    aitasks.OutcomeInvalid,
-			wantRefusedBy: `compose: company read answer proposes "industry" without an administrator change request`,
+			wantResult:      aitasks.OutcomeInvalid,
+			wantRefusedBy:   `compose: company read answer proposes "industry" without an administrator change request`,
+			productionDrops: true,
 		},
 		{
 			// The offer reaches production through the slot its own previous
@@ -338,7 +342,7 @@ func TestCompanyReadMessageCaseRunsWhatProductionRuns(t *testing.T) {
 			history, offer := productionOfferTurn(t, tc.fixture)
 			brain := &replyBrainStub{response: model.Response{Text: tc.reply}}
 			engine := deepReadEngine{brain: brain}
-			_, productionErr := engine.answerCompanySiteRead(
+			produced, productionErr := engine.answerCompanySiteRead(
 				context.Background(), strings.TrimSpace(tc.fixture.Message), history, tc.fixture.Evidence, offer,
 			)
 
@@ -348,8 +352,15 @@ func TestCompanyReadMessageCaseRunsWhatProductionRuns(t *testing.T) {
 			if productionErr != nil {
 				productionRefusal = productionErr.Error()
 			}
-			if productionRefusal != tc.wantRefusedBy {
-				t.Fatalf("production refusal = %q, want %q", productionRefusal, tc.wantRefusedBy)
+			wantProductionRefusal := tc.wantRefusedBy
+			if tc.productionDrops {
+				wantProductionRefusal = ""
+				if len(produced.ProposedChanges) != 0 {
+					t.Fatalf("production kept an unauthorized change: %+v", produced.ProposedChanges)
+				}
+			}
+			if productionRefusal != wantProductionRefusal {
+				t.Fatalf("production refusal = %q, want %q", productionRefusal, wantProductionRefusal)
 			}
 			if outcome.Result != tc.wantResult {
 				t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)

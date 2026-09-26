@@ -146,7 +146,7 @@ func TestOnlyAWholeAgreementIsBare(t *testing.T) {
 	}
 	for _, message := range []string{
 		"yes but use Acme AG", "ja, aber nimm Acme AG", "yes, and set the industry too", "no", "not yet",
-		"Is that right?", "yes please change the legal name to Acme AG",
+		"Is that right?", "yes please change the legal name to Acme AG", "Right?", "Correct?", "ok?",
 	} {
 		if isCompanyChangeConfirmation(message) {
 			t.Errorf("%q says more than yes and was taken for bare agreement", message)

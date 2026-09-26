@@ -12,6 +12,7 @@ package compose
 
 import (
 	"encoding/json"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -102,4 +103,25 @@ func (g companyReadGate) validate(text string) error {
 
 func (g companyReadGate) validateReply(reply companyReadModelReply) error {
 	return validateCompanyReadReplyValue(reply, g.known, g.statements, g.authorization)
+}
+
+// admit is validate as the answer path applies it: a reply whose only fault is
+// a change nobody asked for still answers the administrator, so it is kept
+// without that change. Certification holds the model to validate, which
+// refuses it, because the reply the model sent was still wrong.
+func (g companyReadGate) admit(text string) error {
+	reply, err := parseCompanyReadReply(text)
+	if err != nil {
+		return err
+	}
+	return g.validateReply(g.authorized(reply))
+}
+
+// authorized is reply without the proposed changes this conversation did not
+// authorize.
+func (g companyReadGate) authorized(reply companyReadModelReply) companyReadModelReply {
+	reply.ProposedChanges = slices.DeleteFunc(slices.Clone(reply.ProposedChanges), func(change companyReadProposedChange) bool {
+		return !g.authorization.allows(change)
+	})
+	return reply
 }

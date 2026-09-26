@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"slices"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -136,7 +135,7 @@ func (e *deepReadEngine) answerCompanySiteRead(ctx context.Context, message stri
 		return companyReadModelReply{}, err
 	}
 	gate := newCompanyReadGate(message, history, evidence, offer)
-	response, err := ai.Ask(ctx, e.brain, req, gate.validate)
+	response, err := ai.Ask(ctx, e.brain, req, gate.admit)
 	if err != nil {
 		return companyReadModelReply{}, err
 	}
@@ -144,6 +143,7 @@ func (e *deepReadEngine) answerCompanySiteRead(ctx context.Context, message stri
 	if err := json.Unmarshal([]byte(ai.Unfence(response.Text)), &reply); err != nil {
 		return companyReadModelReply{}, fmt.Errorf("compose: company read answer is not valid JSON: %w", err)
 	}
+	reply = gate.authorized(reply)
 	if err := gate.validateReply(reply); err != nil {
 		return companyReadModelReply{}, err
 	}
@@ -151,11 +151,19 @@ func (e *deepReadEngine) answerCompanySiteRead(ctx context.Context, message stri
 }
 
 func validateCompanyReadReply(text string, known map[string]companyReadEvidence, administratorStatements string, authorization companyChangeAuthorization) error {
-	var reply companyReadModelReply
-	if err := json.Unmarshal([]byte(ai.Unfence(text)), &reply); err != nil {
-		return fmt.Errorf("output must be a company-read reply object: %w", err)
+	reply, err := parseCompanyReadReply(text)
+	if err != nil {
+		return err
 	}
 	return validateCompanyReadReplyValue(reply, known, administratorStatements, authorization)
+}
+
+func parseCompanyReadReply(text string) (companyReadModelReply, error) {
+	var reply companyReadModelReply
+	if err := json.Unmarshal([]byte(ai.Unfence(text)), &reply); err != nil {
+		return companyReadModelReply{}, fmt.Errorf("output must be a company-read reply object: %w", err)
+	}
+	return reply, nil
 }
 
 func validateCompanyReadReplyValue(reply companyReadModelReply, known map[string]companyReadEvidence, administratorStatements string, authorization companyChangeAuthorization) error {
@@ -295,25 +303,6 @@ func messageRequestsCompanyChanges(message string) bool {
 		}
 	}
 	return false
-}
-
-// isCompanyChangeConfirmation recognizes a bare agreement — the whole message
-// is one of these, in any of the onboarding languages. It is a closed list on
-// purpose: a reply that agrees AND says something else is not bare, and must
-// not borrow the authority agreement confers.
-func isCompanyChangeConfirmation(message string) bool {
-	normalized := strings.ToLower(strings.Trim(strings.Join(strings.Fields(message), " "), "?!., "))
-	normalized = strings.NewReplacer(",", "", "’", "'").Replace(normalized)
-	return slices.Contains(companyBareAgreements, normalized)
-}
-
-var companyBareAgreements = []string{
-	"yes", "yes please", "yep", "yeah", "ok", "okay", "sure", "right", "correct", "exactly",
-	"that's right", "that is right", "that's correct", "that is correct",
-	"yes that's right", "yes that is right", "yes correct", "yes exactly", "ok yes", "yes ok", "please do",
-	"ja", "ja bitte", "jawohl", "genau", "richtig", "stimmt", "passt", "okay ja", "ja genau", "ja richtig",
-	"ja das stimmt", "das stimmt", "das passt", "gerne", "ja gerne",
-	"vâng", "có", "đúng", "đúng rồi", "đúng vậy", "được", "ok vâng", "vâng đúng rồi",
 }
 
 var companyFieldAliases = map[string][]string{

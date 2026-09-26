@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -81,6 +82,26 @@ func (a companyChangeAuthorization) withStandingOffer(offer *companyReadOffer) c
 		a.acceptedOffer = exactGrant{field: offer.Field, value: strings.TrimSpace(offer.Value)}
 	}
 	return a
+}
+
+// isCompanyChangeConfirmation recognizes a bare agreement — the whole message
+// is one of these, in any of the onboarding languages. It is a closed list on
+// purpose: a reply that agrees AND says something else is not bare, and must
+// not borrow the authority agreement confers, and "Right?" asks rather than
+// agrees, so a question mark is never trimmed away.
+func isCompanyChangeConfirmation(message string) bool {
+	normalized := strings.ToLower(strings.Trim(strings.Join(strings.Fields(message), " "), "!., "))
+	normalized = strings.NewReplacer(",", "", "’", "'").Replace(normalized)
+	return slices.Contains(companyBareAgreements, normalized)
+}
+
+var companyBareAgreements = []string{
+	"yes", "yes please", "yep", "yeah", "ok", "okay", "sure", "right", "correct", "exactly",
+	"that's right", "that is right", "that's correct", "that is correct",
+	"yes that's right", "yes that is right", "yes correct", "yes exactly", "ok yes", "yes ok", "please do",
+	"ja", "ja bitte", "jawohl", "genau", "richtig", "stimmt", "passt", "okay ja", "ja genau", "ja richtig",
+	"ja das stimmt", "das stimmt", "das passt", "gerne", "ja gerne",
+	"vâng", "có", "đúng", "đúng rồi", "đúng vậy", "được", "ok vâng", "vâng đúng rồi",
 }
 
 // offerAccepted reports whether a reply turned the standing offer into the

@@ -71,22 +71,14 @@ func TestABareYesAcceptsTheOfferTheServerRecorded(t *testing.T) {
 	// An offer is made to one human: another administrator replaying the same
 	// conversation is granted nothing by it, and leaves it standing.
 	bystander := env.As(env.Rep2, nil, integration.AdminPerms)
-	if got := sendAs(bystander, "Yes", history...); got.Code == http.StatusOK {
-		t.Fatalf("another administrator's yes accepted an offer made to Rep1: %s", got.Body.String())
+	if changes := proposedBy(t, sendAs(bystander, "Yes", history...)); len(changes) != 0 {
+		t.Fatalf("another administrator's yes accepted an offer made to Rep1: %+v", changes)
 	}
 	if field := env.WsScalar(t, `SELECT conversation_offer->>'field' FROM site_read WHERE id = $1`, read.ID); field != fieldDisplayName {
-		t.Fatalf("a refused bystander's yes changed the slot to %q", field)
+		t.Fatalf("a bystander's yes changed the slot to %q", field)
 	}
-	accepted := send("Yes", history...)
-	if accepted.Code != http.StatusOK {
-		t.Fatalf("the yes → %d %s", accepted.Code, accepted.Body.String())
-	}
-	var reply crmcontracts.CompanySiteReadMessageReply
-	if err := json.Unmarshal(accepted.Body.Bytes(), &reply); err != nil {
-		t.Fatal(err)
-	}
-	if len(reply.ProposedChanges) != 1 || reply.ProposedChanges[0].Value != "Acme" {
-		t.Fatalf("the yes proposed %+v, want exactly the offered display name", reply.ProposedChanges)
+	if changes := proposedBy(t, send("Yes", history...)); len(changes) != 1 || changes[0].Value != "Acme" {
+		t.Fatalf("the yes proposed %+v, want exactly the offered display name", changes)
 	}
 	if !strings.Contains(brain.request.Messages[0].Content, `"your_previous_offer":{`) {
 		t.Fatalf("the model was not shown the offer it made: %s", brain.request.Messages[0].Content)
@@ -101,9 +93,23 @@ func TestABareYesAcceptsTheOfferTheServerRecorded(t *testing.T) {
 
 	// The same yes replayed over the same conversation finds nothing standing:
 	// the offer was good for one reply.
-	if replayed := send("Yes", history...); replayed.Code == http.StatusOK {
-		t.Fatalf("a spent offer granted a second change: %s", replayed.Body.String())
+	if changes := proposedBy(t, send("Yes", history...)); len(changes) != 0 {
+		t.Fatalf("a spent offer granted a second change: %+v", changes)
 	}
+}
+
+// proposedBy is the changes an answered message proposed; the message must
+// have been answered.
+func proposedBy(t *testing.T, recorder *httptest.ResponseRecorder) []crmcontracts.CompanySiteReadSuggestedChange {
+	t.Helper()
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("the message → %d %s", recorder.Code, recorder.Body.String())
+	}
+	var reply crmcontracts.CompanySiteReadMessageReply
+	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
+		t.Fatalf("decode the reply: %v", err)
+	}
+	return reply.ProposedChanges
 }
 
 func offerMessageRequest(ctx context.Context, t *testing.T, readID, message string, history []crmcontracts.CompanySiteReadConversationTurn) *http.Request {
