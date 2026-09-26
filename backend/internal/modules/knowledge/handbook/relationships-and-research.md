@@ -241,8 +241,8 @@ rather than 60.
 Every company-research finding arrives as a **staged proposal** in your approval
 inbox, one for the company's facts.
 
-People named on the company's website are **not** added. A person found that way
-may only become a record once Margince can tell them it collected their details
+Nobody named on the company's website is added. Somebody found that way may
+only become a record once Margince can tell them it collected their details
 and record that it did (the notice GDPR Article 14 requires). Until that exists,
 a read proposes no one, and a proposal of that kind left from an earlier read
 cannot be accepted. You can still decline it to clear it.

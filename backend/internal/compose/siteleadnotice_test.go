@@ -15,10 +15,10 @@ import (
 // mentioning the article does not count.
 const noticeStep = "sendArticle14Notice"
 
-// The site-lead lane is open exactly when accepting a lead sends the person an
-// Article 14 notice. Read off the accept path's own source, so the switch and
-// the step it waits for cannot drift apart: opening the lane without the step
-// fails here, and so does building the step while the lane stays shut.
+// The site-lead lane is open exactly when accepting a lead sends its subject an
+// Article 14 notice, read off the accept path's own source: opening the lane
+// without the step fails here, and so does building the step while the lane
+// stays shut.
 func TestSiteLeadCaptureOpensOnlyWithANoticeStep(t *testing.T) {
 	file, err := parser.ParseFile(token.NewFileSet(), "siteleadaccept.go", nil, 0)
 	if err != nil {
@@ -30,7 +30,7 @@ func TestSiteLeadCaptureOpensOnlyWithANoticeStep(t *testing.T) {
 	}
 	if siteLeadCaptureOpen && !sendsNotice {
 		t.Errorf("siteLeadCaptureOpen is true but siteLeadAcceptEffect does not call %s directly in its body: "+
-			"a person named on a website would be captured with no notice", noticeStep)
+			"somebody named on a website would be captured with no notice", noticeStep)
 	}
 	if !siteLeadCaptureOpen && sendsNotice {
 		t.Errorf("siteLeadAcceptEffect calls %s but siteLeadCaptureOpen is still false: "+

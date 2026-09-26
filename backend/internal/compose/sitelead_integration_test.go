@@ -5,7 +5,7 @@
 
 package compose
 
-// The deep read's contact lane while it is shut (siteLeadCaptureOpen): a person
+// The deep read's contact lane while it is shut (siteLeadCaptureOpen): somebody
 // a company's website names becomes nobody's lead until accepting one also sends
 // them the Article 14 notice. A read proposes no one, and a proposal staged
 // before the lane shut cannot be accepted, one decision at a time or in a bundle.

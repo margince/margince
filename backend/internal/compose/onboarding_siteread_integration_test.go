@@ -393,7 +393,7 @@ func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsContactsSeparate(t *testi
 	if siteRows != 2 || humanRows != 1 {
 		t.Fatalf("profile provenance site/human = %d/%d, want 2/1", siteRows, humanRows)
 	}
-	// People the site named are not proposed while the Article 14 notice path
+	// Nobody the site named is proposed while the Article 14 notice path
 	// is missing (siteLeadCaptureOpen); the confirmation itself still succeeds.
 	if leads != 0 || leadProposals != 0 {
 		t.Fatalf("contacts lane created %d leads and %d proposals, want none while the notice path is missing", leads, leadProposals)

@@ -13,9 +13,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// siteLeadCaptureOpen says whether a person a company's website names may become
-// a lead. It stays false until accepting one also sends that person the Article 14
-// notice and records that it was sent: named-person website enrichment does not
+// siteLeadCaptureOpen says whether somebody a company's website names may become
+// a lead. It stays false until accepting one also sends them the Article 14
+// notice and records that it was sent: website enrichment of named individuals does not
 // switch on before that path exists, and capturing a stranger without it is the
 // thing the promise rules out. Staging refuses while it is false, and so does
 // accepting a proposal staged before it was. The step it waits for is a function
@@ -30,7 +30,7 @@ const siteLeadCaptureOpen = false
 // errSiteLeadCaptureClosed is what accepting a site lead answers while the lane
 // is shut. A conflict rather than a denial: the decider may accept proposals,
 // and this one cannot be carried out until the notice path exists.
-var errSiteLeadCaptureClosed = fmt.Errorf("%w: a person named on a website cannot be captured "+
+var errSiteLeadCaptureClosed = fmt.Errorf("%w: somebody named on a website cannot be captured "+
 	"until Margince can send them the Article 14 notice; the proposal stays in the inbox", apperrors.ErrConflict)
 
 // siteLeadPrecheck refuses accepting a site lead before the decision commits,
@@ -46,7 +46,7 @@ func siteLeadPrecheck() approvals.ReleasePrecheck {
 }
 
 // siteLeadsRefused is the one staging-side check, asked by every path that would
-// stage website people: the crawl worker's and the onboarding confirmation's. It
+// stage names a website published: the crawl worker's and the onboarding confirmation's. It
 // reports true, and says why in the log, when the lane is shut and there was
 // somebody to refuse.
 func siteLeadsRefused(ctx context.Context, log *slog.Logger, readID string, found int) bool {
