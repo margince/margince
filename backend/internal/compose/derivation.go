@@ -246,6 +246,14 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	// measure the vocabulary declares — a derived measure (e.g. the
 	// weighted value) sits NEXT TO its inputs, so the lineage bottoms
 	// out at base values with no opaque intermediate step.
+	//
+	// On an install-wide report these rows carry colleagues' owners and
+	// amounts, which adds no disclosure: deal and project are identity tables,
+	// deal values are open to every seat that may read the deal, and the
+	// ordinary read serves this caller the same owner and amount. What that
+	// read withholds, a field mask, is withheld here too (fetchDerivation's
+	// mask exclusion). Held by:
+	// TestADrillThroughShowsWhatTheOrdinaryReadShowsAndNoMore.
 	plan.columns = []string{"id"}
 	plan.selects = []string{"t.id AS id"}
 	for _, name := range sortedKeys(spec.dimensions) {

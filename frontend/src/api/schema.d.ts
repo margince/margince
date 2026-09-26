@@ -29398,7 +29398,13 @@ export interface components {
              */
             run_id?: string;
             labels?: components["schemas"]["AnalyticsIdLabels"];
+            population_narrowed?: components["schemas"]["PopulationNarrowed"];
         };
+        /**
+         * @description Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+         * @enum {string|null}
+         */
+        PopulationNarrowed: "owners_you_may_measure" | null;
         /** @description Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it. */
         AnalyticsIdLabels: {
             [key: string]: {
@@ -29529,6 +29535,7 @@ export interface components {
             /** @description The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why. */
             truncated: boolean;
             labels?: components["schemas"]["AnalyticsIdLabels"];
+            population_narrowed?: components["schemas"]["PopulationNarrowed"];
         };
         /**
          * @description One rep's week as they meant it to go — the forward counterpart to the frozen
@@ -30276,11 +30283,7 @@ export interface components {
             total_rows?: number;
             /** @description Visible rows a field mask withheld from this run — excluded from every aggregate and from the drill-through alike, so the numbers stay reconcilable. Null when no mask applied; 0 means masked but nothing excluded. */
             excluded_by_permission?: number | null;
-            /**
-             * @description Why this answer covers fewer rows than the report's population, or absent when it covers all of them. `owners_you_may_measure`: the report measures every record the caller may read, the plan broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
-             * @enum {string|null}
-             */
-            population_narrowed?: "owners_you_may_measure" | null;
+            population_narrowed?: components["schemas"]["PopulationNarrowed"];
             /** Format: date-time */
             generated_at?: string;
             /** @description Handle for "Explain This Number" drill-through to source rows (`GET /reports/{report}/derivation`); the result-level handle explains the whole filtered set, each row's handle the single cell. */
@@ -30312,11 +30315,7 @@ export interface components {
             total_rows?: number;
             /** @description Visible rows a field mask withheld — the same exclusion the explained report applied, so the drill-through reconciles exactly. */
             excluded_by_permission?: number | null;
-            /**
-             * @description The same narrowing the explained report announced, applied to these source rows so they reconcile to it.
-             * @enum {string|null}
-             */
-            population_narrowed?: "owners_you_may_measure" | null;
+            population_narrowed?: components["schemas"]["PopulationNarrowed"];
             /** Format: date-time */
             generated_at?: string;
             /**

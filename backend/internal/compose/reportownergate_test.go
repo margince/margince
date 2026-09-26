@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -108,17 +109,52 @@ func ownerGateGap(ctx context.Context, spec reportSpec, name string) string {
 	if !shaped {
 		return ""
 	}
+	stranger := ids.NewV7().String()
 	if _, isFilter := spec.filters[name]; isFilter {
 		// nil tx: an own-scope rep's lens refuses a stranger without a read.
-		err := requireMeasurableOwners(ctx, nil, spec, map[string]any{name: ids.NewV7().String()})
+		err := requireMeasurableOwners(ctx, nil, spec, map[string]any{name: stranger})
 		if !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return "the filter " + name + " naming a stranger is not refused"
 		}
 	}
-	if _, isDimension := spec.dimensions[name]; isDimension && !breaksDownByOwner(spec, []string{name}) {
+	if _, isDimension := spec.dimensions[name]; !isDimension {
+		return ""
+	}
+	if !breaksDownByOwner(spec, []string{name}) {
 		return "grouping by " + name + " is not narrowed to the owners the caller may measure"
 	}
+	// The typed grammar names the owner as a dimension, in a filter under any
+	// comparison, and beside a row id that is not part of the grouping.
+	typed := analyticsquery.Filter{Field: name, Op: analyticsquery.OpNe, Value: stranger}
+	err := requireMeasurableTypedOwners(ctx, nil, spec, []analyticsquery.Filter{typed})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return "a typed filter on " + name + " naming a stranger is not refused"
+	}
+	for _, q := range rowNamedBesideTheGrouping(spec, name) {
+		if !typedOwnerBreakdown(spec, q) {
+			return "a typed breakdown by " + name + " is not narrowed when a row id is named outside the grouping"
+		}
+	}
 	return ""
+}
+
+// rowNamedBesideTheGrouping is a breakdown by owner that also names the row's
+// own id, once as a measure and once as a filter, for every spec whose
+// vocabulary has a row id.
+func rowNamedBesideTheGrouping(spec reportSpec, owner string) []analyticsquery.Query {
+	var out []analyticsquery.Query
+	for name, expr := range spec.dimensions {
+		if expr != colRowID {
+			continue
+		}
+		byOwner := []string{owner}
+		out = append(out,
+			analyticsquery.Query{GroupBy: byOwner, Measures: []analyticsquery.Measure{
+				{Fn: analyticsquery.CountDistinct, Field: name}}},
+			analyticsquery.Query{GroupBy: byOwner, Filters: []analyticsquery.Filter{
+				{Field: name, Op: analyticsquery.OpIsNotNull}}})
+	}
+	return out
 }
 
 func TestEveryInstallWideOwnerNameGoesThroughTheOwnerGate(t *testing.T) {

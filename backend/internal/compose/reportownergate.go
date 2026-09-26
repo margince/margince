@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // narrowedToMeasurableOwners is what an answer's envelope says when a
@@ -56,9 +57,13 @@ func namesOwner(spec reportSpec, field string) bool {
 // A refusal rather than an empty answer: a rep asking for a colleague's revenue
 // who is handed a zero reads it as "that colleague sold nothing".
 //
+// A plan that also pins the row's own id names one record, owner and all, which
+// the caller may open through its ordinary read. That is how a listing's row
+// handle stays openable by the caller the listing was served to.
+//
 //craft:ignore naked-any filter values are the decoded JSON plan, schemaless by design
 func requireMeasurableOwners(ctx context.Context, tx pgx.Tx, spec reportSpec, filters map[string]any) error {
-	if !ownerGated(spec) {
+	if !ownerGated(spec) || pinsOneRecord(spec, filters) {
 		return nil
 	}
 	for _, key := range slices.Sorted(maps.Keys(filters)) {
@@ -66,19 +71,82 @@ func requireMeasurableOwners(ctx context.Context, tx pgx.Tx, spec reportSpec, fi
 		if value == nil || !namesOwner(spec, key) {
 			continue
 		}
-		text, ok := value.(string)
-		if !ok {
-			return &FilterValueNotAllowedError{Filter: key, Kind: analyticsquery.JSONShapeOf(value)}
-		}
-		owner, err := ids.Parse(text)
-		if err != nil {
-			return fmt.Errorf("report filter %s names no seat: %w", key, apperrors.ErrInvalidArgument)
-		}
-		if err := requireMeasurableOwner(ctx, tx, owner); err != nil {
+		if err := requireMeasurableOwnerValue(ctx, tx, key, value); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// requireMeasurableOwnerValue judges one filter value naming an owner.
+//
+//craft:ignore naked-any the value is the decoded JSON plan's, schemaless by design
+func requireMeasurableOwnerValue(ctx context.Context, tx pgx.Tx, key string, value any) error {
+	text, ok := value.(string)
+	if !ok {
+		return &FilterValueNotAllowedError{Filter: key, Kind: analyticsquery.JSONShapeOf(value)}
+	}
+	owner, err := ids.Parse(text)
+	if err != nil {
+		return fmt.Errorf("report filter %s names no seat: %w", key, apperrors.ErrInvalidArgument)
+	}
+	return requireMeasurableOwner(ctx, tx, owner)
+}
+
+// pinsOneRecord answers whether a filter set fixes the row's own id to a value.
+//
+//craft:ignore naked-any filter values are the decoded JSON plan, schemaless by design
+func pinsOneRecord(spec reportSpec, filters map[string]any) bool {
+	for key, value := range filters {
+		if value != nil && (spec.dimensions[key] == colRowID || spec.filters[key] == colRowID) {
+			return true
+		}
+	}
+	return false
+}
+
+// requireMeasurableTypedOwners is requireMeasurableOwners for the typed
+// grammar, whose filters compare with ne, lt and the rest as well as eq. Every
+// value naming an owner is judged, whatever the comparison: a range between
+// two ids the caller may name can still isolate one they may not, which is why
+// typedOwnerBreakdown narrows those comparisons as well.
+func requireMeasurableTypedOwners(
+	ctx context.Context, tx pgx.Tx, spec reportSpec, filters []analyticsquery.Filter,
+) error {
+	if !ownerGated(spec) {
+		return nil
+	}
+	for _, f := range filters {
+		if f.Value == nil || !namesOwner(spec, f.Field) {
+			continue
+		}
+		if err := requireMeasurableOwnerValue(ctx, tx, f.Field, f.Value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// typedOwnerBreakdown answers whether a typed question splits its answer per
+// owner: grouping by owner, or comparing an owner with anything but equality.
+//
+// Only the GROUPING can make it a listing. A row id among the filters or the
+// measures says nothing about how the answer is split, so it never lifts the
+// narrowing.
+func typedOwnerBreakdown(spec reportSpec, q analyticsquery.Query) bool {
+	if breaksDownByOwner(spec, q.GroupBy) {
+		return true
+	}
+	return slices.ContainsFunc(q.Filters, func(f analyticsquery.Filter) bool {
+		return namesOwner(spec, f.Field) && !exactOwnerComparisons[f.Op]
+	})
+}
+
+// exactOwnerComparisons pin the owner to one judged value, or to none, or to
+// every owned row, so none of them isolates a group requireMeasurableTypedOwners
+// did not judge.
+var exactOwnerComparisons = map[analyticsquery.FilterOp]bool{
+	analyticsquery.OpEq: true, analyticsquery.OpIsNull: true, analyticsquery.OpIsNotNull: true,
 }
 
 // requireMeasurableOwner runs one named owner through the explicit owner
@@ -116,6 +184,14 @@ func breaksDownByOwner(spec reportSpec, groupBy []string) bool {
 		}
 	}
 	return byOwner && !byRow
+}
+
+// measuresOwners answers whether the spec's own rows carry the owner column a
+// population narrows on, read from the schema descriptors the ad-hoc
+// vocabulary is built from.
+func measuresOwners(spec reportSpec) bool {
+	fields, known := schemaFields(spec.entity)
+	return known && slices.ContainsFunc(fields, func(f datasource.FieldDef) bool { return f.Name == paramOwnerID })
 }
 
 // pinsOwner answers whether a set of filter names fixes the owner already, in

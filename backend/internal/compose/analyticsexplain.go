@@ -35,6 +35,8 @@ type AnalyticsExplanation struct {
 	// Truncated says the cell covers more records than were returned. A reader
 	// who sums the rows and finds less than the cell needs to know why.
 	Truncated bool
+	// PopulationNarrowed is the answer's, said again for its records.
+	PopulationNarrowed string
 	// Entity is the record type each row's id names, and Question the question
 	// explained, whose group columns may name other records: both for labelling.
 	Entity   datasource.EntityType
@@ -72,8 +74,9 @@ func ExplainAnalyticsCell(
 	// The SAME population the count was taken over — the Explain carries the
 	// whole query, scope included. A drill-through narrowed differently from
 	// its own headline opens records the number never counted.
+	var narrowed string
 	plan, err := analyticsquery.CompileExplain(
-		in, schema, analyticsScope(ctx, tx, spec, in.Query))
+		in, schema, analyticsScope(ctx, tx, spec, in.Query, &narrowed))
 	if err != nil {
 		return AnalyticsExplanation{}, err
 	}
@@ -97,9 +100,10 @@ func ExplainAnalyticsCell(
 	}
 	return AnalyticsExplanation{
 		Columns: plan.Columns, Rows: rows,
-		Truncated: len(rows) == analyticsquery.ExplainRowLimit,
-		Entity:    spec.entity,
-		Question:  in.Query,
+		Truncated:          len(rows) == analyticsquery.ExplainRowLimit,
+		PopulationNarrowed: narrowed,
+		Entity:             spec.entity,
+		Question:           in.Query,
 	}, nil
 }
 

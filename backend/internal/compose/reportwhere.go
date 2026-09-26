@@ -162,13 +162,16 @@ func specScopeClauses(ctx context.Context, spec reportSpec, arg func(any) int) (
 // excluded_by_permission — so it composes the three itself, and the gate
 // TestEveryPopulationsNarrowingsAreComposedInOnePlace ratifies it by name.
 // Every other path takes the whole set from here.
+//
+// breakdown says the question splits its answer per owner (typedOwnerBreakdown);
+// the string returned is the narrowing the answer must announce, or "".
 func specNarrowings(
 	ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope,
-	named referencedColumns, arg func(any) int,
-) ([]string, error) {
+	named referencedColumns, breakdown bool, arg func(any) int,
+) ([]string, string, error) {
 	out, err := specScopeClauses(ctx, spec, arg)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	// The POPULATION the caller asked to measure, resolved against their own
 	// lens. Record authorization is not it: deals are workspace-readable by
@@ -181,27 +184,27 @@ func specNarrowings(
 	// refuse, and it would pass, because the gate reads the clause builders
 	// and not what a caller does after them.
 	//
-	// Gated on spec.population like buildReportWhere's own population half:
-	// a spec that opts out (measureEveryReadableRow) means it, on every door
-	// onto it — the saved-analytics path this composes for must not narrow a
-	// report the run_report path already answers unnarrowed, and for a spec
-	// with no owner_id column (activities-by-kind) resolving this
-	// unconditionally is not a narrower answer, it is a crash.
-	if spec.population == measureCallersOwn {
+	// A spec that opts out (measureEveryReadableRow) has no DEFAULT narrowing,
+	// on every door onto it. A scope the caller NAMED is still their question,
+	// so it is authorized and applied here too; a saved question labelled
+	// "my records" must not answer for the installation. A spec with no owner
+	// column (activities-by-kind) has nothing to narrow it on, and resolving
+	// it there is not a narrower answer, it is a crash.
+	namedScope := requested.Kind != "" && measuresOwners(spec)
+	if spec.population == measureCallersOwn || namedScope {
 		_, population, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg, unownedIsPartOfDefault)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		if population != "" {
 			out = append(out, population)
 		}
 	}
-	// The typed grammar compares an owner with more than equality, so no single
-	// value can be judged: any mention of the owner column narrows to the
-	// owners the caller may measure.
-	owners, _, err := ownerBreakdownClause(ctx, tx, spec, named[colOwnerID] && !named[colRowID], arg)
+	// A named scope already sits inside the caller's lens, so only an
+	// unscoped breakdown by owner is narrowed further.
+	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, breakdown && !namedScope, arg)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if owners != "" {
 		out = append(out, owners)
@@ -210,15 +213,15 @@ func specNarrowings(
 	// so the row leaves the population entirely.
 	masks, _, err := maskExclusionClauses(ctx, spec, arg)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	// And the records the population POINTS AT: grouping by a reference column
 	// would otherwise name ids the caller's ordinary read of the same row masks.
 	refs, err := referenceScopeClauses(ctx, spec, named, arg)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return append(append(out, masks...), refs...), nil
+	return append(append(out, masks...), refs...), narrowed, nil
 }
 
 // referencedColumns is the set of SQL expressions one query SELECTS BY — the

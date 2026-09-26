@@ -9490,6 +9490,9 @@
               "type": "string"
             }
           },
+          "population_narrowed": {
+            "type": "string"
+          },
           "rows": {
             "type": "array",
             "items": {

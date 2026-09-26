@@ -40012,7 +40012,21 @@ components:
             Where this answer was saved, present only when the query asked for it. A report
             block cites this id plus a cell's coordinates instead of carrying the number.
         labels: { $ref: '#/components/schemas/AnalyticsIdLabels' }
+        population_narrowed: { $ref: '#/components/schemas/PopulationNarrowed' }
       additionalProperties: false
+    PopulationNarrowed:
+      type: [string, 'null']
+      enum: [owners_you_may_measure, null]
+      description: >-
+        Why this answer covers fewer rows than the report's population, or
+        absent when it covers all of them. A drill-through or explanation
+        carries the same value as the answer it explains, and its records are
+        narrowed the same way. `owners_you_may_measure`: the report measures
+        every record the caller may read, the question broke it down by owner,
+        and only the owners the caller may measure are counted — themselves,
+        the members of the teams they manage, and rows nobody owns. An
+        all-scope seat is never narrowed. It names a reason and never a count,
+        because how many rows were left out would describe them.
     AnalyticsIdLabels:
       type: object
       description: >-
@@ -40275,6 +40289,7 @@ components:
             The cell covers more records than were returned. A reader who adds up the rows
             and finds less than the cell needs to know why.
         labels: { $ref: '#/components/schemas/AnalyticsIdLabels' }
+        population_narrowed: { $ref: '#/components/schemas/PopulationNarrowed' }
       additionalProperties: false
     WeeklyPlan:
       type: object
@@ -41392,18 +41407,7 @@ components:
           description: Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
         total_rows: { type: integer }
         excluded_by_permission: { type: [integer, 'null'], description: 'Visible rows a field mask withheld from this run — excluded from every aggregate and from the drill-through alike, so the numbers stay reconcilable. Null when no mask applied; 0 means masked but nothing excluded.' }
-        population_narrowed:
-          type: [string, 'null']
-          enum: [owners_you_may_measure, null]
-          description: >-
-            Why this answer covers fewer rows than the report's population, or
-            absent when it covers all of them. `owners_you_may_measure`: the
-            report measures every record the caller may read, the plan broke it
-            down by owner, and only the owners the caller may measure are
-            counted — themselves, the members of the teams they manage, and
-            rows nobody owns. An all-scope seat is never narrowed. It names a
-            reason and never a count, because how many rows were left out would
-            describe them.
+        population_narrowed: { $ref: '#/components/schemas/PopulationNarrowed' }
         generated_at: { type: string, format: date-time }
         derivation_url:
           type: [string, 'null']
@@ -41438,10 +41442,7 @@ components:
           description: The requested aggregates recomputed over exactly these source rows — equals the explained cell.
         total_rows: { type: integer, description: Source rows matched (rows is capped at the report row limit). }
         excluded_by_permission: { type: [integer, 'null'], description: 'Visible rows a field mask withheld — the same exclusion the explained report applied, so the drill-through reconciles exactly.' }
-        population_narrowed:
-          type: [string, 'null']
-          enum: [owners_you_may_measure, null]
-          description: The same narrowing the explained report announced, applied to these source rows so they reconcile to it.
+        population_narrowed: { $ref: '#/components/schemas/PopulationNarrowed' }
         generated_at: { type: string, format: date-time }
         as_of:
           type: string

@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 12 |
 | Tool catalog | 221.9 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 57948 |
+| Approx. wire tokens | 57958 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -13157,6 +13157,9 @@ Compute a grouped aggregate — counts, sums, averages, medians — over a gover
             "type": "string"
           },
           "type": "array"
+        },
+        "population_narrowed": {
+          "type": "string"
         },
         "rows": {
           "items": {

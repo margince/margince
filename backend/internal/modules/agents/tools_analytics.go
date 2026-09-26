@@ -74,6 +74,10 @@ type AnalyticsQueryResult struct {
 	SchemaVersion string `json:"schema_version"`
 	// RunID names the saved run, present exactly when save was set.
 	RunID *string `json:"run_id,omitempty"`
+	// PopulationNarrowed is present when a breakdown by owner was narrowed to
+	// the owners the caller may measure (`owners_you_may_measure`), so the
+	// rows read as some owners' rather than every owner's.
+	PopulationNarrowed *string `json:"population_narrowed,omitempty"`
 }
 
 func (t runAnalyticsQuery) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

@@ -11185,6 +11185,21 @@ func (e PipelineStageRungSubjectKind) Valid() bool {
 	}
 }
 
+// Defines values for PopulationNarrowed.
+const (
+	PopulationNarrowedOwnersYouMayMeasure PopulationNarrowed = "owners_you_may_measure"
+)
+
+// Valid indicates whether the value is a known member of the PopulationNarrowed enum.
+func (e PopulationNarrowed) Valid() bool {
+	switch e {
+	case PopulationNarrowedOwnersYouMayMeasure:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PreferenceCenterPurposesChoice.
 const (
 	PreferenceCenterPurposesChoiceNoObjection PreferenceCenterPurposesChoice = "no_objection"
@@ -12262,36 +12277,6 @@ func (e ReportBlockSeverity) Valid() bool {
 	case ReportBlockSeverityUnsupported:
 		return true
 	case ReportBlockSeverityWarning:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ReportDerivationPopulationNarrowed.
-const (
-	ReportDerivationPopulationNarrowedOwnersYouMayMeasure ReportDerivationPopulationNarrowed = "owners_you_may_measure"
-)
-
-// Valid indicates whether the value is a known member of the ReportDerivationPopulationNarrowed enum.
-func (e ReportDerivationPopulationNarrowed) Valid() bool {
-	switch e {
-	case ReportDerivationPopulationNarrowedOwnersYouMayMeasure:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ReportResultPopulationNarrowed.
-const (
-	ReportResultPopulationNarrowedOwnersYouMayMeasure ReportResultPopulationNarrowed = "owners_you_may_measure"
-)
-
-// Valid indicates whether the value is a known member of the ReportResultPopulationNarrowed enum.
-func (e ReportResultPopulationNarrowed) Valid() bool {
-	switch e {
-	case ReportResultPopulationNarrowedOwnersYouMayMeasure:
 		return true
 	default:
 		return false
@@ -20200,6 +20185,9 @@ type AnalyticsAnswer struct {
 	// Labels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
 	Labels *AnalyticsIdLabels `json:"labels,omitempty"`
 
+	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
+
 	// Rows One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
 	Rows []map[string]interface{} `json:"rows"`
 
@@ -20274,6 +20262,9 @@ type AnalyticsExplanation struct {
 
 	// Labels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
 	Labels *AnalyticsIdLabels `json:"labels,omitempty"`
+
+	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
 
 	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. `label` is the record's display name, read under this caller's own grants; it is ABSENT on a row the caller may not name, which keeps its id and nothing more.
 	Rows []map[string]interface{} `json:"rows"`
@@ -34261,6 +34252,9 @@ type PipelineTrace struct {
 	Stages []PipelineStageRung `json:"stages"`
 }
 
+// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+type PopulationNarrowed string
+
 // PostDealRoomCommentRequest defines model for PostDealRoomCommentRequest.
 type PostDealRoomCommentRequest struct {
 	Body   string  `json:"body"`
@@ -36060,9 +36054,9 @@ type ReportDerivation struct {
 	// Plan The validated predicate/group/aggregate set that was resolved.
 	Plan map[string]interface{} `json:"plan"`
 
-	// PopulationNarrowed The same narrowing the explained report announced, applied to these source rows so they reconcile to it.
-	PopulationNarrowed *ReportDerivationPopulationNarrowed `json:"population_narrowed,omitempty"`
-	Report             string                              `json:"report"`
+	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
+	Report             string              `json:"report"`
 
 	// Rows The underlying source rows (drill-through), row-scoped exactly like the report.
 	Rows []map[string]interface{} `json:"rows"`
@@ -36070,9 +36064,6 @@ type ReportDerivation struct {
 	// TotalRows Source rows matched (rows is capped at the report row limit).
 	TotalRows *int `json:"total_rows,omitempty"`
 }
-
-// ReportDerivationPopulationNarrowed The same narrowing the explained report announced, applied to these source rows so they reconcile to it.
-type ReportDerivationPopulationNarrowed string
 
 // ReportDocument A report as composed: structure and words, with every figure named by a handle.
 type ReportDocument struct {
@@ -36103,9 +36094,9 @@ type ReportResult struct {
 	// Plan The validated query plan that was executed (shown before/after run).
 	Plan map[string]interface{} `json:"plan"`
 
-	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. `owners_you_may_measure`: the report measures every record the caller may read, the plan broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
-	PopulationNarrowed *ReportResultPopulationNarrowed `json:"population_narrowed,omitempty"`
-	Report             string                          `json:"report"`
+	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
+	Report             string              `json:"report"`
 
 	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
 	Rows []map[string]interface{} `json:"rows"`
@@ -36114,9 +36105,6 @@ type ReportResult struct {
 	Timezone  string `json:"timezone"`
 	TotalRows *int   `json:"total_rows,omitempty"`
 }
-
-// ReportResultPopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. `owners_you_may_measure`: the report measures every record the caller may read, the plan broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
-type ReportResultPopulationNarrowed string
 
 // ReportRun A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor.
 type ReportRun struct {

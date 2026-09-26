@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -92,6 +93,34 @@ func TestProjectCommitmentsListsEveryReadableProjectForATeamManager(t *testing.T
 	manager := managerScopedTo(e, []ids.UUID{e.Team1}, "activity")
 	result := runProjectReport(manager, t, e, "project-commitments", `{}`)
 	assertListsProjects(t, result, seeded)
+}
+
+// A listing's row handles are openable by the caller it was served to. Each
+// pins its project's own id, so opening one reads one project the manager may
+// open, whoever owns it.
+func TestAListingsRowHandlesOpenForTheCallerTheyWereServedTo(t *testing.T) {
+	e := integration.Setup(t)
+	seeded := seedOutsideProjects(t, e)
+
+	manager := managerScopedTo(e, []ids.UUID{e.Team1}, "activity")
+	result := runProjectReport(manager, t, e, "project-commitments", `{}`)
+	opened := 0
+	for _, row := range result.Rows {
+		handle := fmt.Sprint(row["derivation_url"])
+		req := httptest.NewRequest(http.MethodGet, handle, nil).WithContext(manager)
+		rec := httptest.NewRecorder()
+		reportHandlers{engine: newReportEngine(e.Pool)}.ExplainReport(
+			rec, req, "project-commitments", crmcontracts.ExplainReportParams{})
+		var detail derivationWire
+		decodeWire(t, rec, http.StatusOK, &detail)
+		if detail.TotalRows != 1 || fmt.Sprint(detail.Rows[0]["id"]) != fmt.Sprint(row["project_id"]) {
+			t.Errorf("the handle for project %v opened %+v, want that one project", row["project_id"], detail.Rows)
+		}
+		opened++
+	}
+	if opened != len(seeded) {
+		t.Errorf("opened %d row handles, want one per seeded project (%d)", opened, len(seeded))
+	}
 }
 
 func TestProjectsGoneQuietListsEveryReadableProjectForATeamManager(t *testing.T) {

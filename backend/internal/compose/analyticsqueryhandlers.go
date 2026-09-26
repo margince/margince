@@ -368,7 +368,8 @@ func (h analyticsQueryHandlers) labelledExplanation(
 	return crmcontracts.AnalyticsExplanation{
 		Columns: columns, Rows: rows,
 		Withheld: out.Withheld, Truncated: out.Truncated,
-		Labels: idLabelsWire(analyticsIDLabels(ctx, h.names, out.Question, rows)),
+		PopulationNarrowed: populationNarrowedWire(out.PopulationNarrowed),
+		Labels:             idLabelsWire(analyticsIDLabels(ctx, h.names, out.Question, rows)),
 	}
 }
 
@@ -380,8 +381,9 @@ func (h analyticsQueryHandlers) labelledAnswer(
 	return crmcontracts.AnalyticsAnswer{
 		Columns: answer.Columns, Rows: answer.Rows,
 		Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
-		SchemaVersion: answer.SchemaVersion,
-		Labels:        idLabelsWire(analyticsIDLabels(ctx, h.names, q, answer.Rows)),
+		SchemaVersion:      answer.SchemaVersion,
+		PopulationNarrowed: populationNarrowedWire(answer.PopulationNarrowed),
+		Labels:             idLabelsWire(analyticsIDLabels(ctx, h.names, q, answer.Rows)),
 	}
 }
 
