@@ -139,9 +139,13 @@ function openPanelIn(
 }
 
 function ownsKeyboard(container: HTMLElement | null): boolean {
-  const layers = document.querySelectorAll<HTMLElement>(
-    '[role="dialog"][aria-modal="true"]',
-  );
+  // A leaving dialog is still painted, inside the `inert` its surface marks the
+  // exit with; it can take no key, so the layer beneath it is already on top.
+  const layers = [
+    ...document.querySelectorAll<HTMLElement>(
+      '[role="dialog"][aria-modal="true"]',
+    ),
+  ].filter((layer) => layer.closest("[inert]") === null);
   const top = layers[layers.length - 1];
   return !top || top === container || openPanelIn(top) === container;
 }

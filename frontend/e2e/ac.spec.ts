@@ -2963,8 +2963,6 @@ test("the shared links drawer is worked by the keyboard alone", async ({
   await page.keyboard.press("Escape");
   await expect(confirm).toBeHidden();
   await expect(closeLinks.first()).toBeFocused();
-  // The confirmation stays the top layer until its exit has played out.
-  await expect(page.locator('[role="dialog"]')).toHaveCount(1);
 
   // Escape on the drawer closes it and hands focus back to its trigger.
   await page.keyboard.press("Escape");
