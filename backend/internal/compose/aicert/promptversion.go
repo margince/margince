@@ -122,11 +122,10 @@ func ScenarioStamps(ctx context.Context, scenarios []Scenario, census *aitasks.R
 		if err != nil {
 			return nil, err
 		}
-		graderRequest, err := graderRequestDigest(sc, request)
+		grader, err := graderStamp(sc, census, request)
 		if err != nil {
 			return nil, err
 		}
-		grader := gradedBy(gradingRule, graderRequest)
 		sum := sha256.Sum256(encoded)
 		// All three parts are fixed-width hex, so concatenating them is unambiguous.
 		stamp := hex.EncodeToString(sum[:]) + candidate + grader
@@ -167,7 +166,7 @@ func (c *stampCompleter) Complete(_ context.Context, req model.Request) (model.R
 
 // firstBuiltRequest is the first request sc's site builds from it — the one both
 // halves of the stamp are taken from, the candidate's directly and the grader's
-// through the ask it carries. A site whose case cannot be prepared, or which
+// through the ask and rules it carries. A site whose case cannot be prepared, or which
 // reaches a reply without ever building a request, has nothing to stamp and is
 // refused: a silently empty half would let the product's own code drift under a
 // stamp that still matched.
@@ -193,7 +192,31 @@ func firstBuiltRequest(ctx context.Context, sc Scenario, census *aitasks.Registr
 		}
 		return model.Request{}, fmt.Errorf("aicert: stamp: scenario %q: the case completed without building a request, so nothing it sends can be stamped", sc.Name)
 	}
+	if err := refuseMisnamedSite(sc, completer.first); err != nil {
+		return model.Request{}, err
+	}
 	return completer.first, nil
+}
+
+// refuseMisnamedSite holds a site's request to the site it is built for. A
+// request naming another site is routed under that site's contract, and a
+// site declaring a thinking level whose request names no site never gets it —
+// the level stays in the contract while every call runs without it.
+func refuseMisnamedSite(sc Scenario, req model.Request) error {
+	level := ""
+	for _, declared := range ai.SitesFor(ai.Task(sc.Task)) {
+		if declared.Name == sc.Site {
+			level = declared.Thinking
+		}
+	}
+	switch {
+	case req.Site != "" && req.Site != sc.Site:
+		return fmt.Errorf("aicert: stamp: scenario %q: site %s/%s builds a request naming site %q", sc.Name, sc.Task, sc.Site, req.Site)
+	case level != "" && req.Site == "":
+		return fmt.Errorf("aicert: stamp: scenario %q: site %s/%s declares thinking %s and builds a request naming no site, so the level never reaches the router; set model.Request.Site",
+			sc.Name, sc.Task, sc.Site, level)
+	}
+	return nil
 }
 
 // stampCandidateOutput holds the place the candidate's answer takes in the
@@ -211,17 +234,17 @@ const stampCandidateOutput = "(the candidate output, which no stamp can know bef
 // of the grader's prompt kept in sync by hand. The grader mints its own data
 // boundary per call, canonicalised away exactly as the candidate's is.
 //
-// Two of the three things that request is made of are knowable before a run. The
-// rubric is the scenario's own text. The ask is read off the request the case
-// just built, by the same candidateAsk a run reads it with, so a site that
-// changes what it asks changes what its grader is shown. The third — the
-// candidate's OUTPUT — is what the run produces, and stampCandidateOutput stands
-// in its position.
+// Everything that request is made of but one is knowable before a run. The
+// rubric and the expected answer are the scenario's own text. The ask and the
+// product rules are read off the request the case just built, by the same
+// graderInput a run reads them with, so a site that changes what it asks or
+// instructs changes what its grader is shown. The candidate's OUTPUT is what the
+// run produces, and stampCandidateOutput stands in its position.
 //
 // So the digest reaches every part of the grading call this build decides
 // independently of the candidate's words: the system prompt and the boundary it
 // declares, the labels and order of the user turn, which spans are fenced and
-// which are read in the clear, the answer ceiling, and both texts that arrive
+// which are read in the clear, the answer ceiling, and every text that arrives
 // verbatim. Editing any of them moves the stamp.
 //
 // It does not reach a change whose effect depends on the candidate's actual
@@ -230,16 +253,30 @@ const stampCandidateOutput = "(the candidate output, which no stamp can know bef
 // stamp that read them would differ for every run of the same corpus, which is
 // the opposite of what a staleness signal is for.
 func graderRequestDigest(sc Scenario, candidateRequest model.Request) (string, error) {
-	ask, err := candidateAsk(aitasks.Trace{Requests: []model.Request{candidateRequest}})
+	in, err := graderInput(sc, aitasks.Trace{Requests: []model.Request{candidateRequest}}, stampCandidateOutput)
 	if err != nil {
 		return "", fmt.Errorf("aicert: stamp: scenario %q: %w", sc.Name, err)
 	}
-	return canonicalRequestDigest(compose.JudgeRequest(sc.Expect.Rubric, ask, stampCandidateOutput))
+	return canonicalRequestDigest(compose.JudgeRequest(in))
+}
+
+// graderStamp is a scenario's grader third. A case its check grades alone is
+// never sent to the judge, so only the rule reaches it: a judge prompt edit
+// leaves its record current.
+func graderStamp(sc Scenario, census *aitasks.Registry, candidateRequest model.Request) (string, error) {
+	if !sc.Expect.Judged() {
+		return gradedBy(gradingRule, ""), nil
+	}
+	graderRequest, err := graderRequestDigest(asGraded(sc, census), candidateRequest)
+	if err != nil {
+		return "", err
+	}
+	return gradedBy(gradingRule, graderRequest), nil
 }
 
 // gradingRule versions the scoring rule and the judge-opinion policy, so every
 // record graded the old way reads stale; gradingrule_test.go fails an unbumped edit.
-const gradingRule = "grading-rule-4"
+const gradingRule = "grading-rule-10"
 
 // gradedBy is the stamp's grader third: the grader's request digest under the
 // rule that turns its opinions into a verdict, which no request carries.

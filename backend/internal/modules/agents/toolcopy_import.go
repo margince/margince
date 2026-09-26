@@ -25,7 +25,7 @@ var previewImportCopy = toolCopy{
 		"out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add.",
 	Instead: "create_record for one record you already know.",
 	Retain: "Keep the run_id. The counts it answers — created, duplicates, skipped — and the " +
-		"mapping it settled on are what the contact weighs, so report both: a column this placed by " +
+		"mapping it settled on are what the user weighs, so report both: a column this placed by " +
 		"a name they did not write is a decision they did not make.",
 }
 
@@ -36,7 +36,7 @@ var readImportRunCopy = toolCopy{
 
 var readImportReportCopy = toolCopy{
 	Purpose: "What an import will do, or did: rows created, updated, failed, unusable, duplicates.",
-	Limits:  "These counts are what a contact weighs before committing. Same shape before and after.",
+	Limits:  "These counts are what the user weighs before committing. Same shape before and after.",
 }
 
 // A commit writes the file and cannot be undone from this surface. That, and

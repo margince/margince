@@ -44,6 +44,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -65,9 +66,56 @@ const siteReadMessageSite = "cold_start/sitereadmessage"
 // The turns are carried in the transport's own wire shape so the case bounds
 // them the way the transport bounds them.
 type companyReadMessageFixture struct {
-	Message  string                                         `json:"message"`
-	History  []crmcontracts.CompanySiteReadConversationTurn `json:"history"`
-	Evidence []companyReadEvidence                          `json:"evidence"`
+	Message  string                   `json:"message"`
+	History  []companyReadFixtureTurn `json:"history"`
+	Evidence []companyReadEvidence    `json:"evidence"`
+}
+
+// companyReadFixtureTurn is one replayed turn as a scenario writes it: the wire
+// turn, and on Margince's turn the offer the server recorded when it made it.
+// The wire carries no offer, so this is the only place a scenario can say one
+// was made.
+type companyReadFixtureTurn struct {
+	crmcontracts.CompanySiteReadConversationTurn
+	Offer *companyReadOffer `json:"offer,omitempty"`
+}
+
+// companyReadFixtureDraftVersion is the dossier draft every fixture's offers
+// are recorded against and answered over: a scenario certifies the model, and
+// a re-read dossier between two of its turns is not a question a model answers.
+const companyReadFixtureDraftVersion = 1
+
+// companyReadFixtureConversation maps the scenario's turns through the
+// transport's own mapping and derives the standing offer the way the transport
+// does: the last recorded offer, standing only if the conversation ends on the
+// turn that made it. An offer the gate would have refused when it was made
+// describes a slot the server never writes, so it is refused here.
+func companyReadFixtureConversation(site string, turns []companyReadFixtureTurn, evidence []companyReadEvidence) ([]model.Message, *companyReadOffer, error) {
+	wire := make([]crmcontracts.CompanySiteReadConversationTurn, len(turns))
+	var recorded *contacts.SiteReadOffer
+	for i, turn := range turns {
+		wire[i] = turn.CompanySiteReadConversationTurn
+		if turn.Offer == nil {
+			continue
+		}
+		if turn.Role != crmcontracts.CompanySiteReadConversationTurnRoleAssistant {
+			return nil, nil, fmt.Errorf("%s: turn %d is the administrator's and carries an offer; only Margince makes one", site, i+1)
+		}
+		cited := make(map[string]struct{}, len(turn.Offer.SourceIDs))
+		for _, sourceID := range turn.Offer.SourceIDs {
+			cited[sourceID] = struct{}{}
+		}
+		if err := validateCompanyReadOffers([]companyReadOffer{*turn.Offer}, cited, companyReadEvidenceIndex(evidence)); err != nil {
+			return nil, nil, fmt.Errorf("%s: turn %d records an offer the server would have refused: %w", site, i+1, err)
+		}
+		offer := recordedOffer(*turn.Offer, turn.Message, companyReadFixtureDraftVersion)
+		recorded = &offer
+	}
+	history, err := companyReadConversation(&wire)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s: the fixture's history is not one the transport accepts: %w", site, err)
+	}
+	return history, standingOffer(recorded, history, companyReadFixtureDraftVersion), nil
 }
 
 // companyReadMessageCases serves the site that answers an administrator about
@@ -98,19 +146,18 @@ func (companyReadMessageCases) Prepare(fixture, expected json.RawMessage) (aitas
 	if err := refuseUnassemblableDossier(siteReadMessageSite, f.Evidence); err != nil {
 		return nil, err
 	}
-	history, err := companyReadConversation(&f.History)
+	history, offer, err := companyReadFixtureConversation(siteReadMessageSite, f.History, f.Evidence)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"%s: the fixture's history is not one the transport accepts: %w", siteReadMessageSite, err)
+		return nil, err
 	}
 	message := strings.TrimSpace(f.Message)
-	gate := newCompanyReadGate(message, history, f.Evidence)
+	gate := newCompanyReadGate(message, history, f.Evidence, offer)
 	want, err := readCompanyConversationExpectation(siteReadMessageSite, expected, gate)
 	if err != nil {
 		return nil, err
 	}
 	return &companyReadMessageCase{
-		message: message, history: history, evidence: f.Evidence, gate: gate, expected: want,
+		message: message, history: history, evidence: f.Evidence, offer: offer, gate: gate, expected: want,
 	}, nil
 }
 
@@ -120,6 +167,7 @@ type companyReadMessageCase struct {
 	message  string
 	history  []model.Message
 	evidence []companyReadEvidence
+	offer    *companyReadOffer
 	gate     companyReadGate
 	expected companyConversationExpectation
 }
@@ -129,7 +177,7 @@ type companyReadMessageCase struct {
 // when the brain supports one, and a case that retried would certify the answer
 // a model gives after being told to try again rather than the answer it gives.
 func (c *companyReadMessageCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req, err := companyReadAnswerRequest(c.message, c.history, c.evidence)
+	req, err := companyReadAnswerRequest(c.message, c.history, c.evidence, c.offer)
 	if err != nil {
 		return aitasks.Trace{}, fmt.Errorf("%s: %w", siteReadMessageSite, err)
 	}

@@ -99,7 +99,7 @@ type replyDraftVoiceArtifact struct {
 }
 
 // replyDraftCases serves the one site that drafts a reply to an activity.
-type replyDraftCases struct{}
+type replyDraftCases struct{ checkerSpecAnswer }
 
 func (replyDraftCases) Site() aitasks.Site {
 	return aitasks.Site{

@@ -39,6 +39,7 @@ func (t qualifyLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "qualify_lead", Title: "Qualify a lead", Version: toolVersionV1,
 		Description:   qualifyLeadCopy.render(),
+		Instead:       qualifyLeadCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getLead + updateLead",
 		// `lead_id`, not `record_id`, and the difference is a convention this

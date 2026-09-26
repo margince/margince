@@ -131,9 +131,11 @@ type openAICompatLatencyPercentile struct {
 	P90 float64 `json:"p90"`
 }
 
-// openAICompatReasoningWire is the reasoning-model control block.
+// openAICompatReasoningWire is the reasoning-model control block. Enabled
+// turns on a model that reasons only when asked and grades no effort.
 type openAICompatReasoningWire struct {
-	Effort string `json:"effort,omitempty"`
+	Effort  string `json:"effort,omitempty"`
+	Enabled *bool  `json:"enabled,omitempty"`
 }
 
 // providerWire renders the `provider` object, or nil when these preferences
@@ -261,7 +263,7 @@ var (
 		"fp16", "bf16", "fp32", "unknown",
 	}
 	// The effort levels the broker accepts, hardest first.
-	reasoningEfforts = []string{"max", "xhigh", "high", "medium", "low", "minimal", "none"}
+	reasoningEfforts = []string{effortMax, effortXHigh, effortHigh, effortMedium, effortLow, effortMinimal, effortNone}
 )
 
 // Validate refuses a preference the broker would silently ignore.

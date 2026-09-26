@@ -125,7 +125,7 @@ var errSelfJudged = errors.New("a model grading itself is certified by construct
 // one place the candidate-is-not-the-judge rule is spelled: both validations and
 // the run itself ask it, so what was checked up front is what grades.
 func (c RunnerConfig) judgeFor(candidate ai.ProviderConfig) (ai.ProviderConfig, error) {
-	if sameModel(candidate, c.JudgeBinding) {
+	if sameModel(candidate, c.JudgeBinding) || cliJudgesOwnFamily(candidate, c.JudgeBinding) {
 		return ai.ProviderConfig{}, errSelfJudged
 	}
 	return c.JudgeBinding, nil

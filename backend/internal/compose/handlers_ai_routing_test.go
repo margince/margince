@@ -118,11 +118,15 @@ func TestABindingsRoutingSurvivesTheRoundTripInAllThreeStates(t *testing.T) {
 // out of the fixture fails here, rather than passing a round trip that never
 // exercised it — which is how a whole preferences block once went missing on
 // every admin save without a test noticing.
+//
+// The mapping validates nothing, so the fixture need not be a binding the
+// store would accept: a thinking_level on an openai_compatible lane and on the
+// embeddings lane is refused there, and must still reach it to be refused.
 func TestEveryRoutingFieldSurvivesTheRoundTrip(t *testing.T) {
 	yes := true
 	openRouter := ai.ProviderConfig{
 		Provider: "openai_compatible", Model: "m", BaseURL: "https://openrouter.ai/api",
-		Input: []string{"text", "image"},
+		Input: []string{"text", "image"}, ThinkingLevel: "medium",
 		Routing: &ai.OpenRouterRouting{
 			Only: []string{"a"}, Ignore: []string{"b"}, Quantizations: []string{"bf16"},
 			Sort: "throughput", RequireParameters: &yes, AllowFallbacks: &yes,

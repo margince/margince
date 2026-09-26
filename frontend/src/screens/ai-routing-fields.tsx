@@ -91,15 +91,17 @@ type TierBindingLike = {
   model: string;
   base_url?: string;
   routing?: unknown;
+  thinking_level?: string;
 };
 
-// Broker preferences were written for one provider at one address and one
-// model: the server refuses them on a binding that is not OpenRouter, and an
-// `only:` pin names hosts that serve ONE model. Changing any of the three
-// therefore takes them off, the same rule the server applies when it carries a
-// stored lane's preferences onto a write that omits them. Which hosts ARE
-// OpenRouter is the server's rule; the editor keeps no second copy of it, so it
-// drops on any move instead of guessing.
+// Broker preferences and a thinking level were written for one provider at one
+// address and one model: the server refuses preferences on a binding that is not
+// OpenRouter and a level on one that is not a Gemini 3, and an `only:` pin names
+// hosts that serve ONE model. Changing any of the three therefore takes both
+// off, the same rule the server applies when it carries a stored lane's values
+// onto a write that omits them. Which hosts ARE OpenRouter is the server's rule;
+// the editor keeps no second copy of it, so it drops on any move instead of
+// guessing.
 export function rebind<B extends TierBindingLike>(
   binding: B,
   patch: Partial<Pick<TierBindingLike, "provider" | "model" | "base_url">>,
@@ -111,6 +113,7 @@ export function rebind<B extends TierBindingLike>(
     (next.base_url ?? "") !== (binding.base_url ?? "");
   if (moved) {
     delete next.routing;
+    delete next.thinking_level;
   }
   return next;
 }

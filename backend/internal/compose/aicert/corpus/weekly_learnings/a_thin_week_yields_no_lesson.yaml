@@ -5,7 +5,7 @@ source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 # THE CASE THIS SITE EXISTS FOR. Three rows clears the floor, so the request is
 # really made — and then there is nothing in them that supports a claim about
-# cause. One deal won, one lost, one commitment kept, no pattern between them.
+# cause. One deal won, one lost, one moved, no pattern between them.
 #
 # A model will happily explain why the won one was won. That explanation is the
 # defect: a rep would act on it, and it rests on a single event that could as
@@ -17,7 +17,7 @@ fixture:
     tasks_due: 3
     tasks_done: 2
     tasks_carried_over: 1
-    deals_moved: 2
+    deals_moved: 3
     deals_won: 1
     deals_lost: 1
     commitments_due: 1
@@ -25,26 +25,23 @@ fixture:
     meetings_held: 1
     leads_routed: 0
   deals:
-    - type: deal
-      id: "01a05500-0000-7000-8000-0000000000d1"
+    - id: "01a05500-0000-7000-8000-0000000000d1"
       label: "Nordwind expansion"
       outcome: "won"
-    - type: deal
-      id: "01a05500-0000-7000-8000-0000000000d2"
+    - id: "01a05500-0000-7000-8000-0000000000d2"
       label: "Weber Rahmenvertrag"
       outcome: "lost"
-  commitments:
-    - type: commitment
-      id: "01a05500-0000-7000-8000-0000000000c1"
-      label: "Call the Weber sponsor"
+    - id: "01a05500-0000-7000-8000-0000000000d3"
+      label: "Stahlbau Krämer"
+      outcome: "moved"
 expect:
   outcome: accepted
   answer:
     must_abstain: true
   bands: { certified_min: 70, degraded_min: 50, floor: 40 }
   rubric: >
-    Returning no learnings is the correct answer. One deal won and one lost, with
-    nothing recorded about why either went the way it did, supports no claim
-    about what works. A reply that explains the win, or that offers "follow up
+    Returning no learnings is the correct answer. One deal won, one lost and one
+    moved, with nothing recorded about why any went the way it did, supports no
+    claim about what works. A reply that explains the win, or that offers "follow up
     faster" as a lesson, is wrong: the first is a coincidence with prose around
     it and the second is advice the week did not produce.

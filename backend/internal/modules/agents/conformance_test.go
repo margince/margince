@@ -523,6 +523,11 @@ func TestRegisterRefusesWireDefects(t *testing.T) {
 		spec.Description = strings.Repeat("a", maxDescriptionRunes+1)
 		NewRegistry(nil, nil).Register(echoTool{spec: spec})
 	})
+	mustPanic(t, "an Instead that is not a sentence of the Description would leave its pointer behind when cut", func() {
+		spec := objectSpec("pointing", principal.ScopeRead)
+		spec.Instead = "Use find_records instead."
+		NewRegistry(nil, nil).Register(echoTool{spec: spec})
+	})
 	// The bound has to admit what the surface actually ships, or it is a rule
 	// against writing the descriptions this change exists to write.
 	longest := 0

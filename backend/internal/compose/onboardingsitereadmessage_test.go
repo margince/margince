@@ -56,7 +56,7 @@ func TestCompanyReadAnswerBuildsABoundedGroundedModelRequest(t *testing.T) {
 	got, err := engine.answerCompanySiteRead(context.Background(), "Please update the legal name to Acme GmbH.", history, []companyReadEvidence{{
 		ID: "S1", Kind: "legal_entity", Field: "legal_identity", Value: "Acme GmbH",
 		Quote: "Acme GmbH, HRB 12345", URL: "https://acme.example/imprint",
-	}})
+	}}, nil)
 	if err != nil {
 		t.Fatalf("answerCompanySiteRead: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestCompanyReadAnswerBuildsABoundedGroundedModelRequest(t *testing.T) {
 
 	want := errors.New("provider unavailable")
 	engine.brain = &replyBrainStub{err: want}
-	if _, err := engine.answerCompanySiteRead(context.Background(), "Try again", nil, nil); !errors.Is(err, want) {
+	if _, err := engine.answerCompanySiteRead(context.Background(), "Try again", nil, nil, nil); !errors.Is(err, want) {
 		t.Fatalf("provider error = %v, want %v", err, want)
 	}
 }
@@ -429,5 +429,32 @@ func TestCompanyFieldMentionUnderstandsTheCompleteGermanVocabulary(t *testing.T)
 		if !companyFieldMentioned(message, field) {
 			t.Errorf("German field %q was not recognized in %q", field, message)
 		}
+	}
+}
+
+// A yes with no offer standing authorizes nothing, so the change riding on the
+// reply is dropped and the reply still answers; a reply wrong in any other way
+// is refused as before.
+func TestAnUnauthorizedChangeIsDroppedAndTheReplyKept(t *testing.T) {
+	evidence := []companyReadEvidence{{
+		ID: "S1", Kind: "legal_entity", Field: "legal_identity", Value: "Acme GmbH",
+		Quote: "Acme GmbH, HRB 12345", URL: "https://acme.example/imprint",
+	}}
+	unasked := `{"kind":"correction","message":"I'm proposing Acme GmbH as the legal name.",` +
+		`"proposed_changes":[{"field":"legal_name","value":"Acme GmbH","reason":"The imprint states it.","source_ids":["S1"]}],` +
+		`"offers":[],"source_ids":["S1"]}`
+	engine := deepReadEngine{brain: &replyBrainStub{response: model.Response{Text: unasked}}}
+	got, err := engine.answerCompanySiteRead(context.Background(), "Yes", offerHistory(), evidence, nil)
+	if err != nil {
+		t.Fatalf("a reply whose only fault is an unasked change was refused: %v", err)
+	}
+	if len(got.ProposedChanges) != 0 || got.Message == "" {
+		t.Fatalf("answer = %+v, want the message kept and no change", got)
+	}
+
+	miscited := strings.TrimSuffix(unasked, `"source_ids":["S1"]}`) + `"source_ids":["S9"]}`
+	engine.brain = &replyBrainStub{response: model.Response{Text: miscited}}
+	if _, err := engine.answerCompanySiteRead(context.Background(), "Yes", offerHistory(), evidence, nil); err == nil {
+		t.Fatal("a reply citing a source outside the dossier was admitted once its change was dropped")
 	}
 }

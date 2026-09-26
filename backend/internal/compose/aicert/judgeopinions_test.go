@@ -6,6 +6,7 @@ package aicert
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -43,26 +44,33 @@ func widgetAskTrace() aitasks.Trace {
 
 func judged(t *testing.T, fake *ai.FakeClient, extra ...ai.LocalOption) judgement {
 	t.Helper()
+	return judgedAgainst(t, wideBands, fake, extra...)
+}
+
+func judgedAgainst(t *testing.T, bands Bands, fake *ai.FakeClient, extra ...ai.LocalOption) judgement {
+	t.Helper()
 	router, rec := judgeOver(t, fake, extra...)
-	got, err := judgeScore(wsContext(t), router, rec, testScenario("basic", wideBands), widgetAskTrace(), gradedOutput, quietLogger())
+	got, err := judgeScore(wsContext(t), router, rec, testScenario("basic", bands), widgetAskTrace(), gradedOutput, quietLogger())
 	if err != nil {
 		t.Fatalf("judgeScore: %v", err)
 	}
 	return got
 }
 
-// One judge's word decides nothing below the bar: it scored one correct answer
-// 0, 100 and 20 across three runs. A low score is weighed against two fresh
-// opinions, a reply that never parsed is no opinion at all, and a score at the
-// bar costs exactly the one call it always did. wideBands' certified_min is 70.
-func TestALowScoreIsWeighedAgainstFreshOpinions(t *testing.T) {
+// A run is graded once and asked again only where a reading could decide its
+// case: within 10 of a bar or under the floor a second opinion, two more than 5
+// apart a third. It scores at the median of what parsed, the mean of two; a
+// reply that never parsed is no opinion and is replaced within the same three.
+func TestARunIsReaskedOnlyWhereOneReadingCouldDecideIt(t *testing.T) {
 	scored := func(score int, servedBy string) ai.FakeStep {
 		return ai.FakeStep{Text: scoreJSON(score), ServedModel: servedBy}
 	}
 	// An opinion that never parses costs the structured policy's three walks:
 	// the try, the told-what-failed retry, and the escalation.
 	junk := slices.Repeat([]ai.FakeStep{{Text: unparseable, ServedModel: "judge-junk"}}, 3)
+	strict := Bands{CertifiedMin: 90, DegradedMin: 70, Floor: 50}
 	for name, tc := range map[string]struct {
+		bands        Bands
 		replies      []ai.FakeStep
 		wantCalls    int
 		wantScore    int
@@ -70,29 +78,58 @@ func TestALowScoreIsWeighedAgainstFreshOpinions(t *testing.T) {
 		wantUngraded bool
 		wantServedBy string
 	}{
-		"a score at certified_min is one opinion": {
-			replies: []ai.FakeStep{scored(70, "judge-a")}, wantCalls: 1,
-			wantScore: 70, wantScores: []int{70}, wantServedBy: "judge-a",
+		"a score 11 from every bar is taken on one reading": {
+			replies:   []ai.FakeStep{scored(81, "judge-a"), scored(10, "judge-b")},
+			wantCalls: 1, wantScore: 81, wantScores: []int{81}, wantServedBy: "judge-a",
 		},
-		"a low score is scored at the median of three": {
-			replies:   []ai.FakeStep{scored(10, "judge-a"), scored(80, "judge-b"), scored(30, "judge-c")},
-			wantCalls: 3, wantScore: 30, wantScores: []int{10, 80, 30}, wantServedBy: "judge-c",
+		"a score far under the floor is asked again, since one run under it decides the case": {
+			replies:   []ai.FakeStep{scored(29, "judge-a"), scored(27, "judge-b"), scored(90, "judge-c")},
+			wantCalls: 2, wantScore: 28, wantScores: []int{29, 27}, wantServedBy: "judge-b",
 		},
-		"an unparseable re-judge drops out of the median": {
-			replies:   slices.Concat([]ai.FakeStep{scored(10, "judge-a"), scored(20, "judge-b")}, junk),
-			wantCalls: 5, wantScore: 15, wantScores: []int{10, 20}, wantServedBy: "judge-b",
+		"a zero is not taken on one reading": {
+			replies:   []ai.FakeStep{scored(0, "judge-a"), scored(80, "judge-b"), scored(75, "judge-c")},
+			wantCalls: 3, wantScore: 75, wantScores: []int{0, 80, 75}, wantServedBy: "judge-c",
 		},
-		"two unparseable re-judges leave the first opinion standing": {
-			replies:   slices.Concat([]ai.FakeStep{scored(10, "judge-a")}, junk, junk),
-			wantCalls: 7, wantScore: 10, wantScores: []int{10}, wantServedBy: "judge-a",
+		"a score 10 from a bar is asked again, and two that agree are averaged": {
+			replies:   []ai.FakeStep{scored(80, "judge-a"), scored(75, "judge-b"), scored(10, "judge-c")},
+			wantCalls: 2, wantScore: 77, wantScores: []int{80, 75}, wantServedBy: "judge-b",
 		},
-		"a first reply that never parses leaves the run ungraded, not 0": {
-			replies: junk, wantCalls: 3, wantUngraded: true,
+		"the case's own bars decide, not a fixed line": {
+			bands:     strict,
+			replies:   []ai.FakeStep{scored(95, "judge-a"), scored(93, "judge-b"), scored(10, "judge-c")},
+			wantCalls: 2, wantScore: 94, wantScores: []int{95, 93}, wantServedBy: "judge-b",
+		},
+		"two readings more than 5 apart are settled by a third": {
+			replies:   []ai.FakeStep{scored(72, "judge-a"), scored(60, "judge-b"), scored(65, "judge-c")},
+			wantCalls: 3, wantScore: 65, wantScores: []int{72, 60, 65}, wantServedBy: "judge-c",
+		},
+		"a low near score is re-asked as a high one is": {
+			replies:   []ai.FakeStep{scored(45, "judge-a"), scored(35, "judge-b"), scored(38, "judge-c")},
+			wantCalls: 3, wantScore: 38, wantScores: []int{45, 35, 38}, wantServedBy: "judge-c",
+		},
+		"an unparseable first opinion is replaced": {
+			replies:   slices.Concat(junk, []ai.FakeStep{scored(95, "judge-b"), scored(10, "judge-c")}),
+			wantCalls: 4, wantScore: 95, wantScores: []int{95}, wantServedBy: "judge-b",
+		},
+		"an unparseable opinion still counts toward the three": {
+			replies:   slices.Concat([]ai.FakeStep{scored(72, "judge-a")}, junk, []ai.FakeStep{scored(60, "judge-c")}),
+			wantCalls: 5, wantScore: 66, wantScores: []int{72, 60}, wantServedBy: "judge-c",
+		},
+		"two unparseable opinions leave the one that parsed": {
+			replies:   slices.Concat([]ai.FakeStep{scored(72, "judge-a")}, junk, junk),
+			wantCalls: 7, wantScore: 72, wantScores: []int{72}, wantServedBy: "judge-a",
+		},
+		"no opinion that parses leaves the run ungraded, not 0": {
+			replies: slices.Concat(junk, junk, junk), wantCalls: 9, wantUngraded: true,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
+			bands := tc.bands
+			if bands == (Bands{}) {
+				bands = wideBands
+			}
 			fake := ai.NewFakeClient().ScriptSteps(tc.replies...)
-			got := judged(t, fake)
+			got := judgedAgainst(t, bands, fake)
 			if calls := len(fake.Calls()); calls != tc.wantCalls {
 				t.Errorf("the judge was called %d times, want %d", calls, tc.wantCalls)
 			}
@@ -114,50 +151,61 @@ func TestOpinionsNoneOfWhichParsedLeaveTheRunUngraded(t *testing.T) {
 	}
 }
 
-// The degrade is folded over every call the run's grading made, so a re-judge
-// demoted onto a cheaper tier voids the run exactly as a demoted first call
-// would. The budget puts two calls at ~90% utilisation, inside the soft-degrade
-// band, so only the last re-judge is demoted and no call is deferred.
-func TestADemotedRejudgeMarksTheRunJudgeDegraded(t *testing.T) {
+// The degrade is folded over every call the run's grading made, so a demoted
+// third opinion voids the run exactly as a demoted first one would. The scores
+// earn all three opinions; the tight budget puts two calls at ~90% utilisation,
+// inside the soft-degrade band, so only the third is demoted and none deferred.
+func TestADemotedOpinionMarksTheRunJudgeDegraded(t *testing.T) {
 	sc := testScenario("basic", wideBands)
+	probeIn, err := graderInput(sc, widgetAskTrace(), gradedOutput)
+	if err != nil {
+		t.Fatalf("assembling the grader's input: %v", err)
+	}
 	probe, err := ai.NewFakeClient().Script(scoreJSON(10)).
-		Complete(context.Background(), compose.JudgeRequest(sc.Expect.Rubric, widgetAsk, gradedOutput))
+		Complete(context.Background(), compose.JudgeRequest(probeIn))
 	if err != nil {
 		t.Fatalf("probing the judge's first-call token cost: %v", err)
 	}
-	budget := 2 * int64(probe.InputTokens+probe.OutputTokens) * 10 / 9
+	perCall := int64(probe.InputTokens + probe.OutputTokens)
 
 	for name, tc := range map[string]struct {
-		first        int
+		budget       int64
 		wantDegraded bool
 	}{
-		"a score at the bar makes no second call to be demoted": {first: 90, wantDegraded: false},
-		"a low score's re-judge is demoted":                     {first: 10, wantDegraded: true},
+		"a budget every opinion fits in demotes nothing": {budget: 100 * perCall, wantDegraded: false},
+		"a third opinion past the soft line is demoted":  {budget: 2 * perCall * 10 / 9, wantDegraded: true},
 	} {
 		t.Run(name, func(t *testing.T) {
-			fake := ai.NewFakeClient().Script(scoreJSON(tc.first), scoreJSON(10), scoreJSON(10))
-			if got := judged(t, fake, ai.WithMonthlyBudget(budget)); got.degraded != tc.wantDegraded {
+			fake := ai.NewFakeClient().Script(scoreJSON(72), scoreJSON(60), scoreJSON(65))
+			if got := judged(t, fake, ai.WithMonthlyBudget(tc.budget)); got.degraded != tc.wantDegraded {
 				t.Fatalf("judge degraded = %v, want %v", got.degraded, tc.wantDegraded)
 			}
 		})
 	}
 }
 
-// Every opinion a run was scored from survives the resume journal, so a reader
-// of a replayed record can still see which grade was contested.
+// Every opinion a run was scored from survives the resume journal, however many
+// it was asked for, so a reader of a replayed record can still see which grade
+// was contested, and a replay reaches the record the live run did.
 func TestTheJournalKeepsEveryOpinionARunWasScoredFrom(t *testing.T) {
 	dir := t.TempDir()
 	sc := testScenario("basic", wideBands)
-	candidate := ai.NewFakeClient().Script(slices.Repeat([]string{containsWidget}, testRepeats)...)
-	judge := ai.NewFakeClient().Script(scoreJSON(10), scoreJSON(80), scoreJSON(30), unparseable, unparseable, unparseable, scoreJSON(90))
-	if _, err := certifyOnce(t, dir, sc, candidate, judge); err != nil {
+	candidate := ai.NewFakeClient().Script(slices.Repeat([]string{containsWidget}, adaptiveMaxRuns)...)
+	judge := ai.NewFakeClient().Script(slices.Concat(
+		[]string{scoreJSON(72), scoreJSON(60), scoreJSON(65)},
+		slices.Repeat([]string{unparseable}, 3*maxJudgeOpinions),
+		[]string{scoreJSON(75), scoreJSON(77)},
+		opinionsOf(90, adaptiveMaxRuns-3))...)
+	live, err := certifyOnce(t, dir, sc, candidate, judge)
+	if err != nil {
 		t.Fatalf("certifying: %v", err)
 	}
 
 	want := map[int]RunResult{
-		1: {Score: 30, JudgeScores: []int{10, 80, 30}},
+		1: {Score: 65, JudgeScores: []int{72, 60, 65}},
 		2: {Ungraded: true},
-		3: {Score: 90, JudgeScores: []int{90}},
+		3: {Score: 76, JudgeScores: []int{75, 77}},
+		4: {Score: 90, JudgeScores: []int{90}},
 	}
 	withJournal(t, dir, fixedResumeNow, func(j *runJournal) {
 		for run, w := range want {
@@ -171,6 +219,16 @@ func TestTheJournalKeepsEveryOpinionARunWasScoredFrom(t *testing.T) {
 			}
 		}
 	})
+
+	refusingCandidate, refusingJudge := refusingFakes(t)
+	replayed, err := certifyOnce(t, dir, sc, refusingCandidate, refusingJudge)
+	if err != nil {
+		t.Fatalf("replaying the journaled runs: %v", err)
+	}
+	if len(refusingJudge.Calls()) != 0 || !reflect.DeepEqual(live, replayed) {
+		t.Fatalf("the replay asked the judge %d time(s) and reached\n %+v\nwant the live record\n %+v",
+			len(refusingJudge.Calls()), replayed, live)
+	}
 }
 
 // A judge whose provider withheld its answer gave no opinion, which is what an
@@ -180,13 +238,16 @@ func TestAWithheldJudgementLeavesTheRunUngraded(t *testing.T) {
 	waited := recordSleeps(t)
 	withheld := ai.FakeStep{Err: fmt.Errorf("%w: SAFETY", model.ErrOutputWithheld)}
 	candidate := ai.NewFakeClient().Script(containsWidget, containsWidget, containsWidget)
-	judge := ai.NewFakeClient().ScriptSteps(slices.Repeat([]ai.FakeStep{withheld}, 2)...).Script(scoreJSON(90), scoreJSON(90))
+	// A withheld opinion walks the whole ladder before it is given up on, and a
+	// run with none is asked all three times.
+	judge := ai.NewFakeClient().ScriptSteps(slices.Repeat([]ai.FakeStep{withheld}, ladderRungs(t)*maxJudgeOpinions)...).Script(opinionsOf(90, 2)...)
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
 		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
+			maxRuns:       3,
 		})
 	if err != nil {
 		t.Fatalf("a judge that declined to grade one run aborted the task: %v", err)
@@ -194,7 +255,36 @@ func TestAWithheldJudgementLeavesTheRunUngraded(t *testing.T) {
 	if rec.Runs != 3 || rec.Reliability != 1 {
 		t.Errorf("runs=%d reliability=%v, want 3 passing runs — the candidate answered every one", rec.Runs, rec.Reliability)
 	}
+	if got := rec.Scenarios[0].JudgeScores; !slices.Equal(got, []int{90, 90}) {
+		t.Errorf("graded scores = %v, want the two runs a judge answered and none for the withheld one", got)
+	}
 	if len(*waited) != 0 {
 		t.Errorf("waited %v — a withheld judgement is not an outage", *waited)
+	}
+}
+
+// A case declaring judge: none is never sent to the judge: its record row is
+// graded on its pass count and carries neither bands nor scores.
+func TestAJudgelessCaseCertifiesWithoutAskingTheJudge(t *testing.T) {
+	sc := testScenario("basic", Bands{})
+	sc.Expect.Rubric, sc.Expect.Judge, sc.Expect.JudgeNoneReason = "", judgeNone, "the check reads the whole answer"
+	candidate := ai.NewFakeClient().Script(slices.Repeat([]string{containsWidget}, adaptiveMaxRuns)...)
+	judge := ai.NewFakeClient()
+	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
+		})
+	if err != nil {
+		t.Fatalf("certifying: %v", err)
+	}
+	if calls := len(judge.Calls()); calls != 0 {
+		t.Errorf("the judge was asked %d time(s) about a case that declares none", calls)
+	}
+	row := rec.Scenarios[0]
+	if rec.Verdict != VerdictCertified || !row.JudgeNone || row.Bands != nil || row.JudgeScores != nil {
+		t.Errorf("verdict %q, row %+v; want certified on %d passing runs, marked judge_none with no bands or scores",
+			rec.Verdict, row, rec.Runs)
 	}
 }

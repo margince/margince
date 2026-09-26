@@ -30,7 +30,11 @@ fixture:
 
       Viele Grüße
       Marek Janetzke
-    intent: Die Frage zum Paketumfang beantworten und ein kurzes Gespräch anbieten.
+    # The answer lives in the rep's intent: nothing else the site is handed says
+    # what either package includes.
+    intent: >-
+      Die Schnittstelle ist nur in Enterprise enthalten, nicht im
+      Professional-Paket – das beantworten und ein kurzes Gespräch anbieten.
   voice: null
 expect:
   outcome: accepted
@@ -52,9 +56,10 @@ expect:
     is the correct behaviour and scores full marks on this axis — silence about
     introductions is right, not evasive.
 
-    Beyond those: the draft answers the package question from what it was given,
-    offers the call the intent asked for, and does not claim anything has been
-    sent.
+    Beyond those: the draft answers the package question with the fact the
+    intent supplies — the interface is in Enterprise only, not in Professional —
+    adds no package fact nobody supplied, offers the call the intent asked for,
+    and does not claim anything has been sent.
   bands:
     certified_min: 70
     degraded_min: 50

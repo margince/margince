@@ -268,6 +268,7 @@ func WithDeepRead(inserter *jobs.Runner, brain completer) Option {
 			rollout: &s.companyContextRollout,
 			voice:   ai.NewVoiceStore(InstallationDB(pool)),
 			company: contacts.NewStore(InstallationDB(pool)),
+			offers:  contacts.NewStore(InstallationDB(pool)),
 		}
 	}
 }

@@ -27,16 +27,27 @@ const gradingRuleGolden = "testdata/grading_rule.golden"
 // gradingRuleOwners are the declarations that decide which runs enter the tally
 // and turn a judge's replies into a verdict, so an edit to any of them changes
 // what a committed record would score today. defaultRepeats is not one: a record
-// stores its own run counts and the verdict is recomputed from them.
+// stores its own run counts and the verdict is recomputed from them. The
+// adaptive rounds are: they decide which runs a record holds at all.
 var gradingRuleOwners = []struct {
 	file  string
 	names []string
 }{
-	{"score.go", []string{"Verdict", "judgeBand", "verdictOver", "majorityOf", "judgeMedianAndMin", "medianOf"}},
+	{"score.go", []string{
+		"Verdict", "caseOf", "passVetoed", "judgeUpper", "underFloor", "rowCase", "verdictOver", "mechanicalBand",
+		"judgeBand", "marginsOver", "lowerVerdict", "verdictRank", "majorityOf", "judgeMedianAndMin", "medianOf",
+	}},
+	{"stats.go", []string{"wilsonBounds", "meanBounds", "meanAndSD", "tQuantile"}},
+	{"adaptive.go", []string{"runRounds", "nextRunCounts", "caseBorderline", "poolUndecided"}},
 	{"run.go", []string{"runEntry"}},
-	{"judge.go", []string{"judgeScore", "foldOpinions", "judgeVerdict"}},
+	{"taskdriver.go", []string{"caseSeeds"}},
+	{"judge.go", []string{"judgeScore", "wantsAnotherOpinion", "nearABand", "absDiff", "foldOpinions", "judgeVerdict"}},
 	{"../certjudge.go", []string{"ParseJudgeVerdict"}},
-	{"thresholds.go", []string{"certifiedPassPercent", "majorityNumerator", "majorityDenominator", "rejudgeOpinions"}},
+	{"thresholds.go", []string{
+		"certifiedPassPercent", "certifiedPassBoundPercent", "casePassPercent", "vetoPassPercent",
+		"majorityNumerator", "majorityDenominator", "confidenceZ", "tQuantile90", "adaptiveRound", "adaptiveMaxRuns",
+		"reaskBandMargin", "reaskDisagreement", "maxJudgeOpinions", "judgeScoreSDFloor",
+	}},
 }
 
 // gradingRuleDigest hashes each owner's gofmt'd source with comments and blank

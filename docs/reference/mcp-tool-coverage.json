@@ -6,11 +6,11 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 40,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 13182,
+    "tokens_served_but_never_driven": 13177,
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
     "tools_added_by_shipped_units": 0,
-    "never_driven_but_graded_elsewhere": 10
+    "never_driven_but_graded_elsewhere": 9
   },
   "models": [
     {
@@ -1202,7 +1202,7 @@
     },
     {
       "name": "list_records",
-      "tokens": 722,
+      "tokens": 721,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1297,7 +1297,7 @@
     },
     {
       "name": "annotate_brief",
-      "tokens": 418,
+      "tokens": 417,
       "agents": [
         "morning_brief"
       ],
@@ -1344,7 +1344,7 @@
     },
     {
       "name": "enrich",
-      "tokens": 391,
+      "tokens": 390,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1477,7 +1477,7 @@
     },
     {
       "name": "draft_follow_ups_for",
-      "tokens": 274,
+      "tokens": 273,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1557,7 +1557,7 @@
     },
     {
       "name": "decide_approval_bundle",
-      "tokens": 236,
+      "tokens": 235,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1646,9 +1646,7 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1668,7 +1666,7 @@
     },
     {
       "name": "read_brief",
-      "tokens": 206,
+      "tokens": 205,
       "agents": [
         "morning_brief"
       ],
@@ -1683,20 +1681,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "relink_thread",
-      "tokens": 196,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
       "name": "who_knows",
-      "tokens": 196,
+      "tokens": 197,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1704,6 +1690,18 @@
         "case33_two_cards_for_one_company",
         "case5_before_the_meeting"
       ],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
+      "name": "relink_thread",
+      "tokens": 196,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
@@ -1802,7 +1800,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 726,
+      "tokens": 725,
       "agents": [],
       "required_by_cases": [
         "case10_finish_the_import",
@@ -2420,7 +2418,7 @@
     },
     {
       "name": "decide_approval",
-      "tokens": 273,
+      "tokens": 272,
       "agents": [],
       "required_by_cases": [
         "case8_whats_waiting"
@@ -2692,43 +2690,6 @@
       }
     },
     {
-      "name": "list_colleagues",
-      "tokens": 196,
-      "agents": [],
-      "required_by_cases": [
-        "case33_two_cards_for_one_company"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case30_a_word_for_it",
-        "case31_wrong_word_on_the_record",
-        "case32_two_words_for_one_thing"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "data_coverage",
       "tokens": 195,
       "agents": [],
@@ -2747,6 +2708,43 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "list_colleagues",
+      "tokens": 193,
+      "agents": [],
+      "required_by_cases": [
+        "case33_two_cards_for_one_company"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case30_a_word_for_it",
+        "case31_wrong_word_on_the_record",
+        "case32_two_words_for_one_thing"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         },
         "claude-opus-5": {

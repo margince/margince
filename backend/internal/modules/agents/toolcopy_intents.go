@@ -103,10 +103,10 @@ var whoKnowsCopy = toolCopy{
 	Limits: "It reports relationships this workspace can evidence from its own recorded " +
 		"interactions, so a genuine relationship nobody has logged does not appear. Never spoken " +
 		"is reported as no relationship rather than a score of zero.",
-	Instead: "Use intro_path_to when you want a route into a COMPANY rather than the contacts who " +
+	Instead: "Use intro_path_to when you want a route into a COMPANY rather than the colleagues who " +
 		"know one contact.",
 	Retain: "Each colleague comes back with a user_id; the strength bucket, not the raw score, " +
-		"is what a contact should be asked about.",
+		"is what a colleague should be asked about.",
 }
 
 var companyCoverageCopy = toolCopy{
@@ -138,7 +138,7 @@ var introPathToCopy = toolCopy{
 var atRiskRelationshipsCopy = toolCopy{
 	Purpose: "Answer \"where are our relationships thin?\": across the caller's OPEN deals, the " +
 		"ones resting on a single contact, missing an engaged champion, or carried almost " +
-		"entirely by one contact on our side.",
+		"entirely by one colleague on our side.",
 	Limits: "It sweeps open deals — a deal already won or lost is not at risk and is left out — " +
 		"and it takes no arguments, because the caller's own visibility already decides which " +
 		"deals these are. It is about the shape of the relationships around a deal, not about " +
@@ -179,8 +179,8 @@ var annotateBriefCopy = toolCopy{
 	Purpose: "Write what you found onto the morning brief you just read: one sentence about " +
 		"the night as a whole, and for each deal you looked at, why it is on the list, what " +
 		"changed, and the one next move you would make.",
-	Limits: "It writes onto that contact's own brief for today and nothing else — it cannot be " +
-		"pointed at another contact, another day, or a deal that is not already in their " +
+	Limits: "It writes onto that user's own brief for today and nothing else — it cannot be " +
+		"pointed at another user, another day, or a deal that is not already in their " +
 		"queue, and it cannot change the ranking. Every evidence id you cite must be one the " +
 		"brief already recorded for that item; citing anything else refuses the whole write, " +
 		"so cite from what read_brief gave you rather than from memory.",
@@ -191,11 +191,11 @@ var annotateBriefCopy = toolCopy{
 }
 
 var readBriefCopy = toolCopy{
-	Purpose: "Read the ranked queue the contact you act for sees when they open their morning " +
+	Purpose: "Read the ranked queue the user you act for sees when they open their morning " +
 		"brief — the deals the workspace decided are worth their attention today, in order, " +
 		"with the rows behind each ranking.",
 	Limits: "It re-reads the last assembled run rather than building a new one, so its as_of " +
-		"says how current it is, and it is that contact's own queue: it cannot be asked for " +
+		"says how current it is, and it is that user's own queue: it cannot be asked for " +
 		"anyone else's. Acting on, dismissing or snoozing an item is theirs alone.",
 	Instead: "Use whats_slipping_this_week when the question is which deals are losing momentum " +
 		"regardless of what today's brief chose, and read_record for what one of these deals " +

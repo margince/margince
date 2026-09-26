@@ -23,6 +23,9 @@ fixture:
     id: 7b2e4c19-53f8-4a26-b71d-9e0c3a85f412
     name: Priya Raman
     first_name: Priya
+    # Production's fold always sends the surname beside the given name
+    # (accountdraft.lastName), and the greeting rule reads both.
+    last_name: Raman
     title: Head of Operations
     email: p.raman@example.com
     relationship: moderate
@@ -44,30 +47,30 @@ expect:
   outcome: accepted
   answer: written
   rubric: >
-    An account this side has corresponded with, silent for 24 days, with one
-    open deal and one commitment we made and have not met.
+    An account silent for 24 days, with one open deal and one commitment we made
+    and have not met: to send the integration scope, due 2026-07-25.
 
-    The commitment is the spine. We said we would send the integration scope and
-    the due date has passed, so the draft should lead with it rather than open
-    with a generic check-in. A draft that never mentions it has missed the one
-    thing there was to write about and cannot score above degraded.
+    Full marks (100): a short English message that leads with the overdue scope
+    document, says plainly that it is late, and asks for the decision date the
+    intent named, inventing nothing.
 
-    Grounding. The company, industry, description, deal name, stage and
-    commitment are all supplied and may be used. Anything else may not: no
-    amount and no currency were given, so any figure at all is invented and
-    scores at the floor. So is any date beyond the supplied due date, any named
-    competitor, and any claim about what the recipient thinks.
+    Cap (degraded, 50-69): a draft that never mentions the scope document has
+    missed the one thing there was to write about.
 
-    Time. 24 days is the "weeks" band. The draft must not assume Priya still has
-    the July conversation in mind — say what it was about rather than referring
-    to it — and must not write "just circling back" or "as discussed".
+    Floor (40 or below), each on its own: any figure or currency (none was
+    given); any date beyond the supplied due date, a named competitor, or a
+    claim about what the recipient thinks; saying the scope was already sent;
+    "just circling back" or "as discussed"; a relationship strength, a score,
+    or anything about other accounts.
 
-    No internals. The relationship reading ("moderate") is steering for the writer,
-    not something to say to her. A draft that mentions a relationship strength,
-    a score, or anything about other accounts scores at the floor.
+    Correct, never a fault: naming the dispatch integration and its scope
+    document IS naming what the July exchange was about; any wording presenting
+    the scope as coming with this message ("attached is", "enclosed", "I am
+    sending", "here is"); any greeting the product rules allow, including the
+    recipient's full name in a formal one.
 
-    Full marks for a short English message that leads with the overdue scope
-    document, asks for the decision date the intent named, and invents nothing.
+    Deductions, at most 10 points each: the lateness implied rather than said
+    (-10); an apology longer than a clause (-5); more than one ask (-5).
   bands:
     certified_min: 70
     degraded_min: 50

@@ -124,7 +124,9 @@ func (p *companyContextProvider) Prepare(ctx context.Context, task ai.Task, req 
 	content := "Confirmed company context:\n" + fence.Wrap(block)
 	req.ContextBytes = len(content)
 	req.ContextTokensEstimate = (len(content) + 3) / 4
-	req.Messages = append([]model.Message{{Role: chatRoleUser, Content: content}}, req.Messages...)
+	// Joined into the caller's opening user turn rather than sent as one of its
+	// own, which would put two user turns in a row (chatturns.go says who refuses).
+	req.Messages = alternatingTurns(append([]model.Message{{Role: chatRoleUser, Content: content}}, req.Messages...))
 	return req, nil
 }
 

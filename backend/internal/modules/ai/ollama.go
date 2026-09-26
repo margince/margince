@@ -27,8 +27,8 @@ type ollamaClient struct {
 	// attachmentMIMEs is what THIS binding carries: the wire's own carriage,
 	// narrowed by any `input:` the operator declared (inputmodality.go).
 	attachmentMIMEs []string
-	// thinks is what /api/show said each model accepts for `think`.
-	thinks ollamaThinkCache
+	// thinks is what /api/show listed each model as accepting for `think`.
+	thinks perModelFacts[[]json.RawMessage]
 }
 
 type ollamaWire struct {
@@ -319,7 +319,7 @@ func (c *ollamaClient) Embed(ctx context.Context, req model.EmbedRequest) (model
 			"model", embedModel, "estimated_tokens", estimatedTokens,
 			"window_tokens", window, "inputs", len(req.Inputs))
 	}
-	payload, _, err := sendablePayload(ctx,
+	payload, _, err := SendablePayload(ctx,
 		ollamaEmbedWire{Model: embedModel, Input: req.Inputs, Options: &ollamaEmbedOptions{NumCtx: window}}, nil)
 	if err != nil {
 		return model.Embeddings{}, err
@@ -383,7 +383,7 @@ func (c *ollamaClient) sendChat(ctx context.Context, req model.Request, stream b
 	if wire.Model == "" {
 		wire.Model = c.defaultModel
 	}
-	think, err := c.think(ctx, wire.Model, req.ProviderOptions)
+	think, err := c.think(ctx, wire.Model, req)
 	if err != nil {
 		return nil, err
 	}
@@ -415,7 +415,7 @@ func (c *ollamaClient) sendChat(ctx context.Context, req model.Request, stream b
 	// Sized last: the window has to account for the messages, tools and schema
 	// just assembled, so this cannot move above them.
 	wire.Options = &ollamaOptions{NumPredict: maxTokens, NumCtx: wire.contextWindow(maxTokens)}
-	payload, _, err := sendablePayload(ctx, wire, req.SecretStripper)
+	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
 		return nil, err
 	}

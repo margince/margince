@@ -72,6 +72,7 @@ func (t listChannelProviders) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "list_channel_providers", Title: "List messaging transports", Version: toolVersionV1,
 		Description:   listChannelProvidersCopy.render(),
+		Instead:       listChannelProvidersCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "listChannelProviders",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),

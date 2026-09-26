@@ -109,6 +109,7 @@ func (t prepareHandoff) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "prepare_handoff", Title: "Prepare a delivery handoff", Version: toolVersionV1,
 		Description:   prepareHandoffCopy.render(),
+		Instead:       prepareHandoffCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getProject + listDeals + listProjectStakeholders + listActivities",
 		InputSchema: schema(`{"type":"object","required":["project_id"],"properties":{

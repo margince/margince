@@ -128,9 +128,10 @@ func (d DealIn) MarshalJSON() ([]byte, error) {
 	}{wire: wire(d), Amount: amount})
 }
 
-// ProjectIn is the body of work the message is about.
+// ProjectIn is the body of work the message is about. It carries no id: a
+// project is not a record a reason may cite, and an id the grounding filter
+// refuses only invites a citation it drops.
 type ProjectIn struct {
-	ID   string `json:"id"`
 	Name string `json:"name"`
 	// Key is the handle a human writes in a subject line, when the project
 	// has one.
@@ -255,7 +256,6 @@ func findProject(view crmcontracts.Company360, projectID ids.ProjectID) (Project
 // open tasks and the unfiled ones — never another project's.
 func projectFact(project crmcontracts.Company360Project, view crmcontracts.Company360) ProjectIn {
 	out := ProjectIn{
-		ID:    project.ProjectId.String(),
 		Name:  project.Name,
 		Phase: string(project.Phase),
 	}

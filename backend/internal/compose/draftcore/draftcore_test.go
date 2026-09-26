@@ -47,7 +47,7 @@ func TestACleanDraftIsNotRetried(t *testing.T) {
 	lane := &scripted{bodies: []string{"Hallo Marek,\n\nder Vertrag ist unterschrieben."}}
 
 	got, err := draftcore.CorrectOnce(context.Background(),
-		textlang.German, convstate.BandMonths, false, lane.write, bodyOf, nil, nil)
+		textlang.German, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, nil)
 	if err != nil {
 		t.Fatalf("CorrectOnce errored on a clean draft: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestARejectedPhraseEarnsOneRetryThatNamesIt(t *testing.T) {
 	}}
 
 	got, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, false, lane.write, bodyOf, nil, nil)
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestTheModelIsNeverAskedMoreThanTwice(t *testing.T) {
 	lane := &scripted{bodies: []string{stubborn, stubborn}}
 
 	if _, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, false, lane.write, bodyOf, nil, nil); err != nil {
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if len(lane.corrections) != 2 {
@@ -102,22 +102,25 @@ func TestTheModelIsNeverAskedMoreThanTwice(t *testing.T) {
 	}
 }
 
-// A retry that makes things WORSE is discarded. Strictly worse: a TIE goes to
-// the retry, because both attempts carry one finding often enough to matter —
-// the model swaps "circling back" for "checking in" — and the retried one was
-// at least written with the correction in hand.
-func TestOnlyAStrictlyWorseRetryIsDiscarded(t *testing.T) {
+// Only a strictly better retry is served. A TIE goes to the first attempt: the
+// retry was told what to fix and did not fix it, and the first is what the
+// prompt alone produced — the correction's cost is the part the check cannot see.
+func TestOnlyAStrictlyBetterRetryIsServed(t *testing.T) {
 	tied := &scripted{bodies: []string{
 		"Hi Priya, just circling back on this.",
 		"Hi Priya, just checking in on this.",
 	}}
+	seen := &recorder{}
 	got, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, false, tied.write, bodyOf, nil, nil)
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, tied.write, bodyOf, nil, seen)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.body != tied.bodies[1] {
-		t.Errorf("a tie should go to the corrected attempt, got %q", got.body)
+	if got.body != tied.bodies[0] {
+		t.Errorf("a tie should go to the first attempt, got %q", got.body)
+	}
+	if len(seen.servedRetry) != 1 || seen.servedRetry[0] {
+		t.Errorf("the log should say the first attempt was served, got %v", seen.servedRetry)
 	}
 
 	lane := &scripted{bodies: []string{
@@ -126,7 +129,7 @@ func TestOnlyAStrictlyWorseRetryIsDiscarded(t *testing.T) {
 	}}
 
 	worse, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, false, lane.write, bodyOf, nil, nil)
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +145,7 @@ func TestAFailedRetryLeavesTheFirstDraftStanding(t *testing.T) {
 	lane := &failOnRetry{first: first}
 
 	got, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, false, lane.write, bodyOf, nil, nil)
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, nil)
 	if err != nil {
 		t.Fatalf("a failed retry must not fail the draft: %v", err)
 	}
@@ -157,7 +160,7 @@ func TestAFailedFirstAttemptIsReturnedAsAnError(t *testing.T) {
 	lane := &scripted{bodies: []string{"unused"}, err: errors.New("model unavailable")}
 
 	if _, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandFresh, false, lane.write, bodyOf, nil, nil); err == nil {
+		textlang.English, convstate.BandFresh, draftcheck.Grounds{}, lane.write, bodyOf, nil, nil); err == nil {
 		t.Fatal("a failed first attempt should return its error")
 	}
 }
@@ -178,13 +181,15 @@ func (f *failOnRetry) write(context.Context, string) (draft, error) {
 // recorder captures what the loop reported, so the observability the loop took
 // over from its callers is proven rather than assumed.
 type recorder struct {
-	failed     int
-	notCleared []string
+	failed      int
+	notCleared  []string
+	servedRetry []bool
 }
 
 func (r *recorder) RetryFailed(context.Context, int, error) { r.failed++ }
-func (r *recorder) RetryDidNotClear(_ context.Context, _ draftcheck.Rule, phrase string, _ int) {
+func (r *recorder) RetryDidNotClear(_ context.Context, _ draftcheck.Rule, phrase string, _ int, served bool) {
 	r.notCleared = append(r.notCleared, phrase)
+	r.servedRetry = append(r.servedRetry, served)
 }
 
 // A retry that does not help is invisible from the outside — the caller gets a
@@ -196,7 +201,7 @@ func TestTheLoopReportsARetryThatDidNotHelp(t *testing.T) {
 	lane := &scripted{bodies: []string{stubborn, stubborn}}
 
 	if _, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, false, lane.write, bodyOf, nil, seen); err != nil {
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, seen); err != nil {
 		t.Fatal(err)
 	}
 	if len(seen.notCleared) != 1 {
@@ -208,7 +213,7 @@ func TestTheLoopReportsARetryThatDidNotHelp(t *testing.T) {
 
 	broken := &recorder{}
 	if _, err := draftcore.CorrectOnce(context.Background(), textlang.English,
-		convstate.BandMonths, false, (&failOnRetry{first: stubborn}).write, bodyOf, nil, broken); err != nil {
+		convstate.BandMonths, draftcheck.Grounds{}, (&failOnRetry{first: stubborn}).write, bodyOf, nil, broken); err != nil {
 		t.Fatal(err)
 	}
 	if broken.failed != 1 {
@@ -218,7 +223,7 @@ func TestTheLoopReportsARetryThatDidNotHelp(t *testing.T) {
 	quiet := &recorder{}
 	clean := &scripted{bodies: []string{stubborn, "Hi Priya, the scope is ready."}}
 	if _, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, false, clean.write, bodyOf, nil, quiet); err != nil {
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, clean.write, bodyOf, nil, quiet); err != nil {
 		t.Fatal(err)
 	}
 	if quiet.failed != 0 || len(quiet.notCleared) != 0 {
@@ -249,7 +254,7 @@ func TestAFalseClaimIsWorseThanAnyNumberOfPhrasingTics(t *testing.T) {
 			"depot slots are open on Tuesday.",
 	}}
 	got, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, false, lane.write, bodyOf, nil, nil)
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +275,7 @@ func TestTheUnclearedRetryIsReportedWithItsSeverity(t *testing.T) {
 	seen := &severityRecorder{}
 	lane := &scripted{bodies: []string{stubborn, stubborn}}
 	if _, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, false, lane.write, bodyOf, nil, seen); err != nil {
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, seen); err != nil {
 		t.Fatal(err)
 	}
 	if len(seen.rules) != 1 {
@@ -287,7 +292,7 @@ func TestTheUnclearedRetryIsReportedWithItsSeverity(t *testing.T) {
 type severityRecorder struct{ rules []draftcheck.Rule }
 
 func (severityRecorder) RetryFailed(context.Context, int, error) {}
-func (r *severityRecorder) RetryDidNotClear(_ context.Context, rule draftcheck.Rule, _ string, _ int) {
+func (r *severityRecorder) RetryDidNotClear(_ context.Context, rule draftcheck.Rule, _ string, _ int, _ bool) {
 	r.rules = append(r.rules, rule)
 }
 
@@ -310,7 +315,7 @@ func TestTwoBrokenRulesLoseToThreePhrasingsOfOne(t *testing.T) {
 		"Circling back as discussed.\n\nTouching base on the quote, which is attached.",
 	}}
 	got, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, false, lane.write, bodyOf, nil, nil)
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,5 +323,33 @@ func TestTwoBrokenRulesLoseToThreePhrasingsOfOne(t *testing.T) {
 		t.Errorf("a draft breaking TWO rules was served over one breaking one three ways — the "+
 			"raw finding count is not comparable across rules that do not match at the same "+
 			"rate.\n  served: %q", got.body)
+	}
+}
+
+// A tie between two false claims goes to the retry when it cleared the claim it
+// was told about: it did what the correction asked, and the claim it made
+// instead is no worse. A retry repeating the reported claim still loses the tie.
+func TestAClaimTieGoesToTheRetryThatClearedTheReportedClaim(t *testing.T) {
+	invented := "It was great speaking with you earlier. The quote is attached."
+	attributed := "You mentioned the depot slots were the blocker, so the quote is attached."
+	for _, tc := range []struct {
+		name   string
+		retry  string
+		served string
+	}{
+		{"cleared the reported claim", attributed, attributed},
+		{"repeated the reported claim", invented, invented},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lane := &scripted{bodies: []string{invented, tc.retry}}
+			got, err := draftcore.CorrectOnce(context.Background(),
+				textlang.English, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.body != tc.served {
+				t.Errorf("served %q, want %q", got.body, tc.served)
+			}
+		})
 	}
 }

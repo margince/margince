@@ -94,7 +94,7 @@ type RunnerConfig struct {
 	Routing    *ai.RoutingConfig // MARGINCE_AICERT_ROUTING
 	Profile    ai.Profile        // MARGINCE_AICERT_PROFILE
 	TaskFilter string            // MARGINCE_AICERT_TASK ("" = all tasks with a corpus)
-	Repeats    int               // MARGINCE_AICERT_RUNS, default defaultRepeats, must be odd
+	Repeats    int               // MARGINCE_AICERT_RUNS: each case's first round, default defaultRepeats
 	RecordDir  string
 	CorpusDir  string
 	// TraceDir, when non-empty, turns on the opt-in payload trace
@@ -261,7 +261,7 @@ func certifyAndWrite(ctx context.Context, cfg RunnerConfig, task ai.Task, scenar
 	if err := WriteRecord(cfg.RecordDir, rec); err != nil {
 		return nil, fmt.Errorf("task %s: writing record: %w", task, err)
 	}
-	decisions, err := certifyDecisionsFor(ctx, cfg, task, scenarios, binding, rec, repeats, hooks, log)
+	decisions, err := certifyDecisionsFor(ctx, cfg, task, scenarios, binding, rec, hooks, log)
 	if err != nil {
 		log.ErrorContext(ctx, "aicert: decision leg failed — no decision record written", "task", string(task), "err", err)
 		return []Record{rec}, fmt.Errorf("task %s: %w", task, err)
@@ -281,27 +281,6 @@ func runPreflights(ctx context.Context, cfg RunnerConfig, journal *runJournal, b
 		return err
 	}
 	return preflightDecisions(ctx, cfg, byTask, nil, log)
-}
-
-// certifyHooks is the injection seam for certifyTask's two router
-// constructions and the per-run payload trace both routers feed. The
-// candidate/judge LocalOption lists let this package's own tests reach in —
-// a scripted *ai.FakeClient via ai.WithFakeClient, a starved
-// ai.WithMonthlyBudget to force a deterministic degrade — none of which
-// RunnerConfig's pinned shape has room for. trace is the one field a real
-// run sets: Run passes &certifyHooks{trace: t} (t nil unless
-// MARGINCE_AICERT_TRACE named a directory), the tests leave it nil. This
-// mirrors ai.assembleRouter: "the seam unit tests inject fakes through."
-type certifyHooks struct {
-	candidateOpts []ai.LocalOption
-	judgeOpts     []ai.LocalOption
-	// decisionOpts reach the decision leg's router alone — a scripted
-	// decision model via ai.WithFakeDecider.
-	decisionOpts []ai.LocalOption
-	trace        *payloadTrace
-	// journal is this task's view of the resume journal. Its zero value is the
-	// disabled one, so a caller that resumes nothing leaves it alone.
-	journal taskJournal
 }
 
 // certifyTask runs every scenario for one task over a fresh
@@ -327,8 +306,12 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	var candidateExtra, judgeExtra []ai.LocalOption
 	var trace *payloadTrace
 	var journal taskJournal
+	maxRuns := adaptiveMaxRuns
 	if hooks != nil {
 		candidateExtra, judgeExtra, trace, journal = hooks.candidateOpts, hooks.judgeOpts, hooks.trace, hooks.journal
+		if hooks.maxRuns > 0 {
+			maxRuns = hooks.maxRuns
+		}
 	}
 	// Capture the post-stripper bodies only when a trace will consume them —
 	// otherwise the router pays the marshal+strip cost for content nothing reads.
@@ -352,25 +335,28 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 		return Record{}, err
 	}
 	judgeRec := newTraceRecorder()
-	judgeOpts := append([]ai.LocalOption{ai.WithoutResultCache(), ai.WithCallStore(judgeRec)}, judgeExtra...)
+	judgeOpts := append([]ai.LocalOption{ai.WithoutResultCache(), ai.WithCallStore(judgeRec)}, judgeTransport(judgeBinding)...)
+	judgeOpts = append(judgeOpts, judgeExtra...)
 	judgeRouter, err := compose.NewLocalRouterForCert(judgeCfg, judgeOpts...)
 	if err != nil {
 		return Record{}, fmt.Errorf("aicert: task %s: judge router: %w", task, err)
 	}
 
 	acc := &taskAccumulation{selfJudgedEveryRun: true}
-	sets := make([]ScenarioRuns, 0, len(scenarios))
-	for _, sc := range scenarios {
-		results, err := runScenario(ctx, task, sc, scenarioStamps[sc.Name], census, repeats, candidateRouter, candidateRec, judgeRouter, judgeRec, log, acc, trace, journal)
-		if err != nil {
-			return Record{}, err
-		}
-		sets = append(sets, ScenarioRuns{Runs: results, Bands: sc.Expect.Bands})
+	driver := taskDriver{
+		task: task, census: census, candidateRouter: candidateRouter, candidateRec: candidateRec,
+		judgeRouter: judgeRouter, judgeRec: judgeRec, log: log, acc: acc, trace: trace, journal: journal, maxRuns: maxRuns,
+	}
+	sets, err := driver.runScenarios(ctx, scenarios, scenarioStamps, repeats)
+	if err != nil {
+		return Record{}, err
 	}
 	taskVerdict, _ := Verdict(sets...)
 
 	rec := buildRecord(task, taskVerdict, acc, profile, promptVersion)
 	rec.CandidateUpstream, rec.JudgeUpstream = ai.UpstreamPreferencesFor(binding), ai.UpstreamPreferencesFor(judgeBinding)
+	rec.ThinkingLevel, rec.SiteThinking = binding.ThinkingLevel, ai.SiteThinkingLevels(binding, task)
+	rec.JudgeProvider = judgeBinding.Provider
 	return rec, nil
 }
 
@@ -401,6 +387,9 @@ type taskAccumulation struct {
 	// graded by the candidate itself" said of a set no judge ever saw.
 	anyRunGraded bool
 	identitySet  bool
+	// contextServed counts the runs served the company context, so the record
+	// claims it only when every run was.
+	contextServed int
 	// certifiedScope is the narrowest scope any run's site covered. A task is
 	// one record but not always one site — cold_start ships a one-shot
 	// extraction beside three multi-turn conversations — so the record may
@@ -437,6 +426,9 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 	}
 	acc.identitySet = acc.identitySet || !withheld
 	acc.certifiedScope = aitasks.NarrowerScope(acc.certifiedScope, outcome.CertifiedScope)
+	if outcome.ContextApplied {
+		acc.contextServed++
+	}
 	// A run no judge saw says nothing about the judge. Capturing its empty
 	// identity would let one truncated run at the END of a set erase the grader
 	// from the record, and its empty ServedModel would read as not-self-judged
@@ -452,20 +444,6 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 		acc.passed++
 	}
 	return nil
-}
-
-// repeatsOrDefault applies RunnerConfig.Repeats' default and validates
-// its oddness up front — a wrong-N call into Verdict is a programmer
-// bug (score.go panics on it), but a wrong MARGINCE_AICERT_RUNS is an
-// operator input error and must fail with a message that says so.
-func repeatsOrDefault(n int) (int, error) {
-	if n == 0 {
-		n = defaultRepeats
-	}
-	if n < 1 || n%2 == 0 {
-		return 0, fmt.Errorf("aicert: runner: repeats must be odd and positive, got %d", n)
-	}
-	return n, nil
 }
 
 // ensureWorkspace mints a fixed, DB-less workspace principal when ctx

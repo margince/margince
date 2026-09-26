@@ -238,7 +238,7 @@ func applyResolvedHumanFacts(
 			"category":     edit.proposal.Category,
 			"field":        edit.proposal.Field,
 			"value":        edit.value,
-			auditKeySource: companySourceHuman,
+			auditKeySource: CompanySourceHuman,
 		})
 	}
 	return applied, nil

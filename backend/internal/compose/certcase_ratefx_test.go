@@ -39,8 +39,13 @@ const (
 
 func fxRatesFixture(t *testing.T) json.RawMessage {
 	t.Helper()
+	return fxRatesFixtureOf(t, fxPageText)
+}
+
+func fxRatesFixtureOf(t *testing.T, page string) json.RawMessage {
+	t.Helper()
 	raw, err := json.Marshal(rateFxFixture{
-		PageText:          fxPageText,
+		PageText:          page,
 		BaseCurrency:      fxBase,
 		TrackedCurrencies: []string{"EUR", "GBP"},
 	})
@@ -95,7 +100,12 @@ func (s fxCompleterStub) Complete(_ context.Context, _ model.Request) (model.Res
 
 func runFxCase(t *testing.T, expected json.RawMessage, reply string) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
-	prepared, err := rateFxCases{}.Prepare(fxRatesFixture(t), expected)
+	return runFxCaseOn(t, fxPageText, expected, reply)
+}
+
+func runFxCaseOn(t *testing.T, page string, expected json.RawMessage, reply string) (aitasks.Outcome, aitasks.Trace) {
+	t.Helper()
+	prepared, err := rateFxCases{}.Prepare(fxRatesFixtureOf(t, page), expected)
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -108,8 +118,10 @@ func runFxCase(t *testing.T, expected json.RawMessage, reply string) (aitasks.Ou
 
 // fxOutcomeCase is one canned reply and the verdict this site owes it.
 type fxOutcomeCase struct {
-	name       string
-	reply      string
+	name  string
+	reply string
+	// page is the rates page read, fxPageText when empty.
+	page       string
 	wantResult string
 	wantDetail string
 }
@@ -182,13 +194,36 @@ func fxOutcomeCases() []fxOutcomeCase {
 			wantResult: aitasks.OutcomeWrongAnswer,
 			wantDetail: `no rate for "EUR"`,
 		},
+		{
+			// The gate asks only that a pair cite something; the rate must be
+			// read off the passage that states it.
+			name:       "the right rate cited at a passage that does not state it",
+			reply:      fxRatesReply(fxPair("EUR", "USD", "1.0850", "s0", "0.95"), gbpPair()),
+			wantResult: aitasks.OutcomeWrongAnswer,
+			wantDetail: `"EUR" cites s0, which does not state it`,
+		},
+		{
+			name:       "a page printing a decimal comma",
+			reply:      fxRatesReply(fxPair("EUR", "USD", "1.0850", "s1", "0.95"), gbpPair()),
+			page:       strings.Replace(fxPageText, "1.0850", "1,0850", 1),
+			wantResult: aitasks.OutcomeAccepted,
+		},
+		{
+			name:       "a passage id written in its brackets",
+			reply:      fxRatesReply(fxPair("EUR", "USD", "1.0850", "[s1]", "0.95"), gbpPair()),
+			wantResult: aitasks.OutcomeAccepted,
+		},
 	}
 }
 
 func TestRateFxCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 	for _, tc := range fxOutcomeCases() {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome, _ := runFxCase(t, eurExpected(t), tc.reply)
+			page := tc.page
+			if page == "" {
+				page = fxPageText
+			}
+			outcome, _ := runFxCaseOn(t, page, eurExpected(t), tc.reply)
 			if outcome.Result != tc.wantResult {
 				t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)
 			}

@@ -130,9 +130,10 @@ func binaryIdentity() (string, error) {
 }
 
 // bindingKey renders a binding as the string two runs are compared on. Input is
-// folded in with the rest because it changes what the model may be GIVEN, and
-// the upstream preferences because they choose the host, and with it the
-// precision, that serves the model: both are part of what a run measured.
+// folded in with the rest because it changes what the model may be GIVEN, the
+// upstream preferences because they choose the host, and with it the
+// precision, that serves the model, and the thinking level because it changes
+// how the model answers: all three are part of what a run measured.
 //
 // The preferences are the EFFECTIVE ones, so an inherited default and the same
 // block spelled out are one key. Each component is QUOTED rather than joined on
@@ -145,7 +146,7 @@ func bindingKey(c ai.ProviderConfig) string {
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprintf("%q|%q|%q|%q|%q", c.Provider, c.Model, c.BaseURL, strings.Join(c.Input, ","), upstream)
+	return fmt.Sprintf("%q|%q|%q|%q|%q|%q", c.Provider, c.Model, c.BaseURL, strings.Join(c.Input, ","), upstream, c.ThinkingLevel)
 }
 
 // runJournal is the whole run's journal file: the live runs it loaded, and the
@@ -377,19 +378,31 @@ func (j *runJournal) replaysEverything(ctx context.Context, cfg RunnerConfig, by
 		if err != nil {
 			return false
 		}
-		view := j.forTask(task, candidate, judge)
-		for _, sc := range scenarios {
-			for run := 1; run <= repeats; run++ {
-				if _, ok := view.lookup(sc, stamps[sc.Name], run); !ok {
-					return false
-				}
-			}
+		if !j.forTask(task, candidate, judge).replaysRounds(scenarios, stamps, repeats) {
+			return false
 		}
 	}
 	return true
 }
 
-// taskJournal is one task's view of the journal, so runScenario carries a
+// errNotJournaled stops replaysRounds at the first run the journal lacks.
+var errNotJournaled = errors.New("aicert: run not journaled")
+
+// replaysRounds reports whether every run this task's adaptive rounds would
+// make is journaled — the extensions included, which the replayed outcomes
+// decide exactly as the live ones did.
+func (t taskJournal) replaysRounds(scenarios []Scenario, stamps map[string]string, repeats int) bool {
+	_, err := runRounds(caseSeeds(scenarios), repeats, adaptiveMaxRuns, func(i, run int) (RunResult, error) {
+		out, ok := t.lookup(scenarios[i], stamps[scenarios[i].Name], run)
+		if !ok {
+			return RunResult{}, errNotJournaled
+		}
+		return out.RunResult, nil
+	})
+	return err == nil
+}
+
+// taskJournal is one task's view of the journal, so a taskDriver carries a
 // single value instead of a file, two bindings and a task name.
 type taskJournal struct {
 	j                *runJournal

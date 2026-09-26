@@ -8,7 +8,9 @@ fixture:
     - url: https://kestrelfold.test/services
       kind: services
       text: |
-        Kestrel Fold Services We provide inventory-forecasting software for grocery retailers, part of the retail-tech industry serving mid-market chains. Our value proposition: cut overstock write-offs within 90 days without any new point-of-sale hardware or integration work.
+        Services
+
+        Kestrel Fold provides inventory-forecasting software for grocery retailers, part of the retail-tech industry serving mid-market chains. Our value proposition: cut overstock write-offs within 90 days without any new point-of-sale hardware or integration work.
 
         Every deployment reaches its buying decision through the COO and the head of supply chain, who jointly sign off on the rollout.
 expect:
@@ -17,14 +19,18 @@ expect:
     display_name: Kestrel Fold
   rubric: >
     A non-home page still carries several groundable profile fields: the
-    company's own name, industry ("retail-tech"), value_proposition ("cut
-    overstock write-offs within 90 days without any new point-of-sale
-    hardware"), and buying_center ("the COO and the head of supply chain") —
-    the profile lane reads across whichever crawled pages carry identity signal,
-    not home alone. Score how many were proposed with the right citing passage
-    id and a value drawn from that passage's own words, and penalize any field
-    this page does not state (history, the legal trio, or any fabricated
-    ICP/USP/buying-intent this page never mentions).
+    company's own name, offer_summary ("inventory-forecasting software for
+    grocery retailers"), icp ("mid-market chains" of grocery retailers),
+    industry ("retail-tech"), value_proposition ("cut overstock write-offs
+    within 90 days without any new point-of-sale hardware"), and buying_center
+    ("the COO and the head of supply chain") — the profile lane reads across
+    whichever crawled pages carry identity signal, not home alone. Score how
+    many were proposed with the right citing passage id and a value drawn from
+    that passage's own words, and penalize any field this page does not state
+    (history, the legal trio, or a USP, pain or buying intent this page never
+    mentions). The expected answer pins only display_name, the one value with a
+    single right wording; it is not the whole answer, and proposing the other
+    grounded fields is what earns the score.
   bands:
     certified_min: 70
     degraded_min: 50

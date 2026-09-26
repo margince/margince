@@ -74,47 +74,38 @@ fixture:
 expect:
   outcome: accepted
   answer: plain
-  rubric: 'A long, specific message deserves a specific answer, and this fixture exists
-
-    because the short ones did not measure that: a draft can pass every other case
-
-    by being politely vague, and this one floors that.
-
+  # A loose timeframe ("in den kommenden Tagen") proposes a time, which is the
+  # ask this product writes; a weekday or a date names one while nothing is
+  # booked, which the shared drafting rules forbid.
+  rubric: >
+    A long, specific message deserves a specific answer, and this fixture exists
+    because the short ones did not measure that: a draft can pass every other
+    case by being politely vague, and this one floors that.
 
     Ground it in what the message SAYS. It raises several distinct points — the
+    positioning away from a CRM comparison, the argument aimed at the works
+    council, the shift from engineering language to commercial language for the
+    buying group, and a proposal that the sender's own company take one of the
+    design-partner slots. A draft that engages with at least two of them by name,
+    picks up the ask and invents nothing is a good draft and scores 80 or more;
+    engaging with all four is full marks. One that answers "thank you for your
+    feedback, shall we have a call" has read nothing and cannot score above
+    degraded, however well written it is.
 
-    positioning away from a CRM comparison, the argument aimed at the works council,
+    Pick up the ask. The message proposes a deep dive; the intent says to set it
+    up. A draft that proposes something else, or asks vaguely for "a short
+    update", has ignored what was actually requested.
 
-    the shift from engineering language to commercial language for the buying group,
+    German throughout, and du throughout — the correspondence is on du terms and
+    the register is given. A draft that switches to Sie mid-message, or writes
+    English, scores at the floor whatever else it gets right.
 
-    and a proposal that the sender''s own company take one of the design-partner
-
-    slots. A draft that engages with at least two of them by name scores well. One
-
-    that answers "thank you for your feedback, shall we have a call" has read
-
-    nothing and cannot score above degraded, however well written it is.
-
-
-    Pick up the ask. The message proposes a deep dive; the intent says to set it up.
-
-    A draft that proposes something else, or asks vaguely for "a short update",
-
-    has ignored what was actually requested.
-
-
-    German throughout, and du throughout — the correspondence is on du terms and the
-
-    register is given. A draft that switches to Sie mid-message, or writes English,
-
-    scores at the floor whatever else it gets right.
-
-
-    Invent nothing. No date, no figure, no commitment the message did not contain.
-
-    Naming a specific next step the sender never proposed is invention even when it
-
-    sounds helpful.'
+    Invent nothing. No figure and no commitment the message did not contain.
+    Proposing the deep dive for a loose timeframe ("in den kommenden Tagen")
+    is the ask itself and is correct; no weekday or date, which the shared
+    rules forbid while nothing is booked. Naming a
+    specific next step the sender never proposed is invention even when it
+    sounds helpful.
   bands:
     certified_min: 70
     degraded_min: 50

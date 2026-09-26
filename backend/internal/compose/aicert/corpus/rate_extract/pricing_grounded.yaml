@@ -24,19 +24,10 @@ expect:
       output_per_mtok: '1.5'
       cache_read_per_mtok: '0'
       cache_write_per_mtok: '0'
-  rubric: >
-    This pricing page states two models, both from the provider Aurora AI named
-    in each passage. The first passage grounds aurora-large at input 5, output
-    25, cache-read 0.5, cache-write 6.25; the second grounds aurora-mini at
-    input 0.25, output 1.5, and states caching is unavailable, so its cache
-    buckets are 0. Score how faithfully the two models are extracted with the
-    RIGHT citing passage id and prices drawn from that passage as plain per-MTok
-    decimal strings (not ranges, not numbers, not currency symbols). The
-    provider must be Aurora AI, drawn from the passage — penalize an invented
-    provider. confidence must be a decimal string within 0.0–1.0. Penalize any
-    invented model, price, an out-of-range confidence, or a caching price for
-    aurora-mini that the page says has none.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    Every row the gate lets through is staged for approval, and every one is
+    checked: a model the scenario names must carry exactly its four prices,
+    printed by the passage it cites, and a model it does not name fails. The
+    gate drops an uncited, untracked or low-confidence row before the sheet sees
+    it, so nothing else the rubric asked reaches an administrator.

@@ -83,3 +83,44 @@ func TestAWriteKeepsTheStoredUpstreamAcrossSpellingsOfOneEndpoint(t *testing.T) 
 		}
 	}
 }
+
+// A thinking level is carried the way a pin is: kept on the same binding written
+// back without one, dropped on a re-pointed lane, never over one the write states.
+func TestAWriteKeepsTheStoredThinkingLevelOfTheSameBindingOnly(t *testing.T) {
+	t.Parallel()
+	lite := ProviderConfig{Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: "low"}
+	stored := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierCheapCloud: lite, TierLocalSmall: lite, TierPremium: lite}}
+	next := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: providerGemini, Model: "gemini-3.1-flash-lite"},
+		TierLocalSmall: {Provider: providerGemini, Model: "gemini-3.5-flash"},
+		TierPremium:    {Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: "medium"},
+	}}
+
+	got := next.keepingStoredUpstream(stored)
+
+	for tier, want := range map[Tier]string{TierCheapCloud: "low", TierLocalSmall: "", TierPremium: "medium"} {
+		if level := got.Tiers[tier].ThinkingLevel; level != want {
+			t.Errorf("%s: thinking_level = %q, want %q", tier, level, want)
+		}
+	}
+}
+
+// `default` is the clear: the stored level goes, on the same binding and on a
+// re-pointed one alike, and the word itself is never kept.
+func TestAWriteOfTheDefaultThinkingLevelClearsTheStoredOne(t *testing.T) {
+	t.Parallel()
+	lite := ProviderConfig{Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: "low"}
+	stored := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierCheapCloud: lite, TierPremium: lite}}
+	next := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: thinkingLevelDefault},
+		TierPremium:    {Provider: providerGemini, Model: "gemini-3.5-flash", ThinkingLevel: thinkingLevelDefault},
+	}}
+
+	got := next.keepingStoredUpstream(stored)
+
+	for tier, binding := range got.Tiers {
+		if binding.ThinkingLevel != "" {
+			t.Errorf("%s: thinking_level = %q after a write of default, want none", tier, binding.ThinkingLevel)
+		}
+	}
+}

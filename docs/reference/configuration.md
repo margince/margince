@@ -888,7 +888,7 @@ place keeps the api reading a password file that is no longer written. Use
 | `MARGINCE_AICERT` | — | `make e2e-ai` | the AI-certification lane's runtime switch. The `e2e_llm` build tag keeps this paid, live lane out of every ordinary lane; once the tag is set, an empty value here **fails** rather than skips, so the lane can never report success for having done nothing. |
 | `MARGINCE_AICERT_MODEL`, `MARGINCE_AICERT_JUDGE_MODEL` | — (`make e2e-ai` defaults the judge to `openai_compatible:openai/gpt-oss-120b`) | `make e2e-ai` | `provider:model` each. The run refuses without a judge, and without a candidate unless `MARGINCE_AICERT_ROUTING` names the bindings instead; `make e2e-ai` supplies the judge, so only the candidate is yours to name. The candidate is what the run certifies; the judge grades it and must be a DIFFERENT model, because one grading itself is certified by construction. ONE judge grades every task of a run, so a run in which any task it certifies has the judge as its candidate is refused before a single paid call, naming those tasks. The default is chosen for cost; `gemini:gemini-3.1-flash-lite` or `gemini:gemini-3.5-flash` are the documented alternatives. An exported `MARGINCE_AICERT_JUDGE_MODEL` replaces the Makefile default, and `JUDGE=` overrides both. Surfaced as `MODEL=` and `JUDGE=`. |
 | `MARGINCE_AICERT_ROUTING` | — | `make e2e-ai` | path to a deployment config whose `seeds.ai_routing` names the binding to certify. Certifies a DEPLOYMENT rather than a model: each task is measured against whatever is bound at its **leading ladder rung** (the rung that would actually serve it), so one run writes records across several models — which is what the config binds. Mutually exclusive with `MARGINCE_AICERT_MODEL`, and the run refuses both: one names a deployment, the other one candidate to A/B a prompt fix against. Under it `MARGINCE_AICERT_PROFILE` is ignored and the profile is the file's own, because a record's environment class must come from the config that named the models. The judge is still named separately and is never resolved from the routing — `cert_judge` is itself a task and leads at `premium`, so a config binding a model there would make the grader collide with every `premium`-led candidate. Surfaced as `ROUTING=`. |
-| `MARGINCE_AICERT_BASE_URL`, `MARGINCE_AICERT_JUDGE_BASE_URL` | — (`make e2e-ai` defaults the judge's to `https://openrouter.ai/api` while the judge is its default model, else empty) | `make e2e-ai` | endpoint host root for a broker or OpenAI-wire host. Required for `openai_compatible`, which fails closed without one; empty for a native vendor, which uses its own default. An `openai_compatible` judge left without its own falls back to the candidate's. Surfaced as `BASE_URL=`, `JUDGE_BASE_URL=`. |
+| `MARGINCE_AICERT_BASE_URL`, `MARGINCE_AICERT_JUDGE_BASE_URL` | — (`make e2e-ai` defaults the judge's to `https://openrouter.ai/api` for an `openai_compatible` judge when neither `BASE_URL=` nor `MARGINCE_AICERT_BASE_URL` is set, else empty) | `make e2e-ai` | endpoint host root for a broker or OpenAI-wire host. Required for `openai_compatible`, which fails closed without one; empty for a native vendor, which uses its own default. An `openai_compatible` judge left without its own falls back to the candidate's. Surfaced as `BASE_URL=`, `JUDGE_BASE_URL=`. |
 | `MARGINCE_AICERT_PROFILE` | — | `make e2e-ai` | the environment class a record is filed under (`eu_hosted` \| `sovereign` \| `cloud_frontier`), default `cloud_frontier`; ignored when `MARGINCE_AICERT_ROUTING` is set, which takes the profile from the config file instead. Not a label: it is part of a record's identity, and it is enforced — a cloud vendor under `sovereign` is refused rather than run, and so is a broker candidate under `eu_hosted` that `MARGINCE_AICERT_UPSTREAM` does not pin to EU-region hosts. Surfaced as `PROFILE=`. |
 | `MARGINCE_VOICE_MODEL`, `MARGINCE_VOICE_BASE_URL` | — | `TestVoiceLiveSmoke` | the model the manual voice-live smoke drives, `provider:model`, plus an endpoint host root when it is on a broker. Manual-only: the smoke fails rather than skips without one, so a run that measured nothing is never mistaken for a pass. |
 | `MARGINCE_AICERT_UPSTREAM`, `MARGINCE_AICERT_JUDGE_UPSTREAM` | — | `make e2e-ai` | broker upstream-selection preferences to serve the candidate, and the judge, under, as the JSON of one `ai.OpenRouterRouting` (`only`, `ignore`, `quantizations`, `sort`, `require_parameters`, `allow_fallbacks`, `preferred_max_latency_p90`, `reasoning_effort`). Optional. Unset, a broker binding is served under the product default production applies (`sort: throughput`, `quantizations: [fp16, bf16]`, `require_parameters: true`); `{}` opts out and measures the broker's own price-weighted choice. That default is a hard filter, so a model no host serves at fp16 or bf16 cannot be reached under it — the run's pre-flight call finds that before the corpus and names the variable, and `{}` is the way through. Every record names the preferences each binding was served under (`candidate_upstream`, `judge_upstream`), since two records of one model are comparable only where those agree. The candidate's is read only alongside `MODEL=` — a deployment's tiers carry their own bindings, so passing it with `ROUTING=` is refused rather than accepted and applied to nothing; the judge's is read either way, because the judge is never resolved from the routing. Preferences on a binding that is not a broker on an OpenRouter host are refused, and so are unknown keys: a misspelt preference would be dropped in silence and the run would report the default's numbers under a tuned run's name. The field set, and the measurements behind the default, are in [openrouter.md](openrouter.md). Surfaced as `UPSTREAM=`, `JUDGE_UPSTREAM=`. |
@@ -1480,6 +1480,44 @@ declaring it; on OpenRouter:
 curl -s https://openrouter.ai/api/v1/models \
   | jq '.data[] | select(.id=="<slug>") | .architecture.input_modalities'
 ```
+
+#### `thinking_level:` — how deeply a Gemini tier thinks
+
+A `gemini` tier may name the thinking level its requests are sent when the
+request names none of its own:
+
+```yaml
+cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite, thinking_level: low }
+```
+
+- **Omitted, the adapter decides**: a structured request thinks at `low`, and a
+  Flash-Lite keeps its own shallower default (`minimal`), so it is sent no level
+  at all. Naming `low` on a Flash-Lite therefore *raises* its thinking.
+- **It outranks a site's floor.** A site in `backend/api/ai-tasks.yaml` may
+  declare `thinking:` (cold_start's two company conversations declare `low`).
+  That is a floor — at least this much, never less than the adapter would send
+  without it — and it applies only where the binding names no level of its own.
+  On a structured request the adapter already sends `low`, under a Gemini 3
+  Flash or Pro model's own default, and a `low` floor does not undo that.
+- **A request's own level wins over both** (`ProviderOptions["gemini"].thinking_level`).
+  Strongest first: the request's own level, the binding's, the site floor, the
+  adapter's default. What every provider is sent for a floor, including the
+  broker's `routing.reasoning_effort`: [ai-thinking.md](ai-thinking.md).
+- **Accepted values are `minimal`, `low`, `medium` and `high`.** Anything else, the
+  field on a provider other than `gemini`, on the `embeddings:` lane, or on a
+  Gemini 2.5 model (which answers the field with a 400) is a startup error.
+  Which levels one Gemini 3 model takes is the vendor's to say:
+  `gemini-3.1-pro-preview` refuses `minimal`.
+- **Clearing it through the API takes `default`.** A routing save that omits
+  `thinking_level` keeps the stored level while provider, host and model are
+  unchanged; one that sends `thinking_level: default` clears it, and `default`
+  itself is never stored.
+- **Thinking is output.** Gemini charges it to the same `maxOutputTokens` as the
+  answer; the adapter reports it as reasoning tokens inside the output count, so
+  it is metered and priced, and a structured answer whose thinking ate the
+  ceiling is retried with more room.
+- Settings → AI has no field for it; re-saving a tier bound to the same model
+  keeps the stored level, and re-pointing the tier drops it.
 
 A cloud binding is refused at startup under `profile: sovereign` (zero
 egress by construction) — and so is a **local provider pointed at somebody

@@ -98,7 +98,7 @@ func TestDeterministicPipelineCitesTheLeadingOpenDeal(t *testing.T) {
 		},
 		WonLifetime: 1_200_000,
 		WonCurrency: "EUR",
-		LostCount:   3,
+		LostCount:   new(3),
 	}, "en")
 	var pipeline *Sentence
 	for i := range sentences {

@@ -187,6 +187,7 @@ func (t catchMeUpOn) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "catch_me_up_on", Title: "Catch me up on a record", Version: toolVersionV1,
 		Description:   catchMeUpOnCopy.render(),
+		Instead:       catchMeUpOnCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "getContact/getCompany/getDeal + listActivities",
 		InputSchema:  schema(anchorSchema),
@@ -223,6 +224,7 @@ func (t prepForMeeting) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "prep_for_meeting", Title: "Prepare for a meeting", Version: toolVersionV1,
 		Description:   prepForMeetingCopy.render(),
+		Instead:       prepForMeetingCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "getMeetingBrief | getContact/getCompany/getDeal + listActivities",
 		InputSchema:  schema(anchorSchema),

@@ -81,6 +81,13 @@ func refuseUnpreparableMeetingBrief(f meetingPlanFixture, want meetingPlanExpect
 	// would pass forever without the model contributing anything, which is the
 	// one way a certification case fails silently.
 	in, _ := meetingPlanInput(f)
+	// The sections prompt carries no message bodies, so a token only a body
+	// says is one no reply could ground.
+	if !strings.Contains(meetingbrief.BriefRequest(in, string(textlang.English)).Messages[0].Content, want.NamesToken) {
+		return fmt.Errorf(
+			"summarize/meeting_brief: the token %q is not in the summary the sections prompt is sent, so no reply could say it",
+			want.NamesToken)
+	}
 	if strings.Contains(sectionProse(meetingbrief.Deterministic(in)), want.NamesToken) {
 		return fmt.Errorf(
 			"summarize/meeting_brief: the token %q is already in the deterministic sections' own prose, so a reply saying nothing would satisfy this scenario",

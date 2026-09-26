@@ -61,6 +61,7 @@ func (t checkLocationSupportTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "check_location_support", Title: "Can a card read this device's location", Version: toolVersionV1,
 		Description:   checkLocationSupportCopy.render(),
+		Instead:       checkLocationSupportCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		// No OpenAPIOp: there is no REST operation behind this and there should
 		// not be one. It reads no record, so a second door onto it would be a

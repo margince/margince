@@ -254,7 +254,7 @@ func parseVTT(content string) []speakerTurn {
 		case isCueIdentifier(trimmed):
 			continue
 		}
-		speaker, text := splitSpeakerLine(trimmed)
+		speaker, text := SplitSpeakerLine(trimmed)
 		if speaker != "" {
 			current = speaker
 		}
@@ -298,7 +298,7 @@ func parseSRT(content string) []speakerTurn {
 			current = speaker
 			continue
 		}
-		speaker, text := splitSpeakerLine(trimmed)
+		speaker, text := SplitSpeakerLine(trimmed)
 		if speaker != "" {
 			current = speaker
 		}
@@ -309,12 +309,13 @@ func parseSRT(content string) []speakerTurn {
 	return turns
 }
 
-// splitSpeakerLine extracts attribution from one cue line: a WebVTT
+// SplitSpeakerLine extracts attribution from one cue line: a WebVTT
 // `<v Name>text</v>` voice tag, or the `Name: text` convention. A name is
 // letters-first with at most a short trailing number — that admits the
 // "Speaker 1" / "Sprecher 2" labels diarizers emit while a URL or clock
-// time is still never a speaker.
-func splitSpeakerLine(line string) (speaker, text string) {
+// time is still never a speaker. The stage-evidence quote check reads a
+// transcript's turns through it too, so both agree on what a label is.
+func SplitSpeakerLine(line string) (speaker, text string) {
 	if strings.HasPrefix(line, "<v ") {
 		if end := strings.Index(line, ">"); end > 3 {
 			speaker = strings.TrimSpace(line[3:end])

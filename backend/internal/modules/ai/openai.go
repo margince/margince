@@ -246,10 +246,13 @@ func (c *openaiClient) post(ctx context.Context, path string, req model.Request,
 	if err != nil {
 		return nil, err
 	}
+	if effort == "" {
+		effort = openaiEffortFor(wire.Model, req.ThinkingFloor)
+	}
 	if effort != "" {
 		wire.Reasoning = &openaiReasoning{Effort: effort}
 	}
-	payload, _, err := sendablePayload(ctx, wire, req.SecretStripper)
+	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
 		return nil, err
 	}

@@ -25,6 +25,7 @@ fixture:
     - label: last_email
       kind: email
       subject: "Re: proposal — coming back to you after the board meeting"
+      direction: inbound
       at: "2026-07-10T09:00:00Z"
 expect:
   outcome: accepted
@@ -44,8 +45,15 @@ expect:
     floor: 40
   rubric: >
     Score whether the brief states only what the summary states — no inferred
-    cause for the stall, no invented next step, no read on the counterparty's
-    intent beyond the quoted subject line — and whether every sentence cites
-    ids the summary actually supplied. A brief that reads well but attributes
-    the stall to a reason nobody recorded is worse than the deterministic
-    fallback, because it is unfalsifiable at a glance.
+    cause for the stall, no read on the counterparty's intent beyond the quoted
+    subject line, the email attributed to the account because its speaker is
+    "them" — and whether every sentence cites ids the summary actually
+    supplied. The product asks for up to two next-step recommendations, each
+    motivated by a record; one that rests on a stall cause, a decision or a
+    message content nobody recorded is invented. Acting on the subject line is
+    not reading the message's content: the subject is shown to the reader, so a
+    recommendation built on what it says rests on a record. The summary carries
+    no confirmed company context, so a brief with no fit section has omitted
+    what it could not ground. A brief that reads well but attributes the stall
+    to a reason nobody recorded is worse than the deterministic fallback,
+    because it is unfalsifiable at a glance.

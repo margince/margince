@@ -21,19 +21,9 @@ expect:
   answer:
     - criterion_key: problem_confirmed
       met: true
-      settled_by: re-key every delivery note by hand
-  rubric: >
-    The buyer describes the problem in her own words, with a cost attached,
-    across the first two lines. That settles problem_confirmed as met, and the
-    quote must come from what SHE said — a claim quoting Lars's line agreeing
-    with her scores at the floor, because a rep restating the buyer's problem
-    is our account of it, not theirs. Claiming budget_confirmed scores at the
-    floor too: nobody mentioned money. Reporting nothing scores low but not
-    lowest — under-reading costs a criterion that stays open, which a human
-    can still settle, while over-reading advances a deal on a claim nobody
-    made. Naming a stage, or saying what the deal should do next, is the worst
-    answer whatever confidence it carries.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+      settled_by: every delivery note by hand
+  judge: none
+  judge_none_reason: >
+    The claim's criterion and direction are checked exactly, and its quote must
+    contain the phrase that settles it, which pins the line that states it. The
+    schema has no field for a stage, and any other criterion fails.

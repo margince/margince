@@ -87,7 +87,10 @@ tiers:
 > lowers a model's default: a Flash-Lite, which already defaults to `minimal` (or
 > to no thinking at all on 2.5), is sent no level and keeps its own. A task that
 > wants a different level names it on the request
-> (`ProviderOptions["gemini"].thinking_level`); a binding carries no level.
+> (`ProviderOptions["gemini"].thinking_level`), and a tier that should think
+> differently names it on the binding (`thinking_level: low`, which a request's
+> own level still outranks) — see
+> [configuration.md](../reference/configuration.md).
 >
 > **One key, every open-weight model:** bind `openai_compatible` with
 > `base_url: https://openrouter.ai/api` and one `OPENAI_COMPATIBLE_API_KEY`, and

@@ -619,6 +619,24 @@ describe("rebind", () => {
     base_url: "https://openrouter.ai/api",
     routing: { sort: "throughput" },
   };
+  const geminiTier = {
+    provider: "gemini",
+    model: "gemini-3.5-flash",
+    thinking_level: "medium",
+  };
+
+  it("drops a thinking level when the model changes, since an older model refuses it", () => {
+    const next = rebind(geminiTier, { model: "gemini-2.5-flash" });
+    expect(next).not.toHaveProperty("thinking_level");
+  });
+
+  it("keeps a thinking level when the patch re-states the same binding", () => {
+    const next = rebind(geminiTier, {
+      provider: "gemini",
+      model: "gemini-3.5-flash",
+    });
+    expect(next.thinking_level).toBe("medium");
+  });
 
   it("drops them when the model changes, since a pin names one model's hosts", () => {
     const next = rebind(openRouterTier, {

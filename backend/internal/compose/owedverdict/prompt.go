@@ -37,8 +37,10 @@ acknowledges, and waits on nobody).
 Judge what the message ASKS, never how important it is. A report about a large account is still
 informs_us. A one-line question about a small one is still asks_us.
 
-The recipient line matters: a message addressed to a shared desk address with the reader merely
-copied is usually informs_us, unless its text asks the recipient side directly. A message that
+The recipient line decides WHO is asked: a request is made of the To recipients. A message whose
+To line is somebody else — a partner firm's project lead, or a shared inbox such as orders@ — with
+the reader among the Cc recipients only is informs_us even when its text asks for something, because it asks them; it
+is asks_us only when the text names the copied reader as the one to act. A message that
 carries a calendar invitation is asks_us only when it also asks something a calendar reply cannot
 answer.
 A message WITHOUT a calendar invitation that proposes a specific time for a call or a meeting, or

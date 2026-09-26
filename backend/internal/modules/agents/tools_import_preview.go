@@ -31,6 +31,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "preview_import", Title: "Preview an import", Version: toolVersionV1,
 		Description:   previewImportCopy.render(),
+		Instead:       previewImportCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "createImportRun",
 		InputSchema: schema(`{"type":"object","required":["object","csv"],"properties":{

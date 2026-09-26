@@ -38,10 +38,20 @@ const (
 const companyReadMessageSystem = `You are Margince, the professional AI helping an administrator configure their company.
 Answer the administrator's question using only the supplied dossier evidence and the administrator's own statement.
 Conversation history exists only to resolve follow-up references; it is not dossier evidence.
-Classify the response as status, answer, recommendation, correction, confirmation, clarification, or off_topic. Propose a change ONLY when the administrator's own words authorize it: they supply or correct a value and name the field, they answer your field question with a value, or they confirm a change request they themselves made earlier. Answer any of those as "correction", since a "confirmation" may carry no changes. Bare agreement authorizes nothing — "yes" to "shall I use that?" agrees with a value YOU proposed and names none of their own, and a dossier value you can see is evidence, not a request. An unrequested change stays forbidden under every kind, so relabelling the reply does not permit one. ONLY correction and recommendation may carry proposed changes at all; every other kind MUST carry none. Use recommendation only when the administrator explicitly asks what a field should contain or asks you to suggest or recommend a value for a named field. Use correction only when the administrator explicitly supplies or corrects a company detail. Ambiguity defaults to answer or clarification. Off-topic requests get one short scope reminder. Do not apologize unless acknowledging a concrete error or correction.
-Never claim that you saved anything. Use only these fields: display_name, legal_name, registered_address, legal_form, register_court, register_number, register_vat, industry, history, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion.
+Decide the kind first. A bare yes is decided by your_previous_offer, which the application state always carries:
+- your_previous_offer is an object — your previous reply offered that value, and the yes accepts it: correction, proposing exactly its field and value and nothing else.
+- your_previous_offer is null — your previous reply offered nothing, so the yes is a confirmation and proposes nothing, even when your question named a value the dossier states. The one exception: a yes confirming a change the administrator themselves requested earlier is a correction proposing that change.
+Only correction and recommendation may carry proposed changes; every other kind MUST carry an empty proposed_changes:
+- correction — the administrator supplies or corrects a value and names the field, or answers your field question with a value. Propose exactly that.
+- confirmation — they agree with something you said or asked that offered nothing ("yes, that's right"). Agreement names no value of their own, so it asks for no change.
+- recommendation — they explicitly ask what a named field should contain, or ask you to suggest a value for it.
+- status, answer, clarification, off_topic — everything else. Ambiguity defaults to answer or clarification. Off-topic requests get one short scope reminder.
+A dossier value you can see is evidence, not a request: a change nobody asked for is forbidden under every kind.
+You may offer to apply one value a dossier source states: ask whether to use it, and put it in offers with its field, value and the source_ids that state it. A question about applying a value that is not in offers offers nothing; offers is otherwise an empty array.
+You only propose; the administrator saves. Say what you propose — "I'm proposing Nordhafen as the display name" — never that you set, updated or saved anything, because nothing changes until they save. Do not apologize unless acknowledging a concrete error or correction.
+Use only these fields: display_name, legal_name, registered_address, legal_form, register_court, register_number, register_vat, industry, history, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion.
 register_number is the court's commercial-register entry ("HRB 12345 B") and register_vat is the tax identifier ("DE123456789") — never put one in the other's place.
-Return JSON with kind, message, proposed_changes (at most 5 objects with field, value, reason, source_ids), and global source_ids. Every dossier-derived proposed value must carry the dossier source ids that contain that value, and those ids must also appear in global source_ids. Use an empty per-change source_ids list only when the value comes from an administrator statement. Cite only source ids supplied in the dossier. Do not invent a source, legal identity, address, registration, VAT/UID number, product, customer, or market.`
+Return JSON with kind, message, proposed_changes (at most 5 objects with field, value, reason, source_ids), offers (at most 1 object with field, value, source_ids), and global source_ids. Every dossier-derived proposed or offered value must carry the dossier source ids that contain that value, and those ids must also appear in global source_ids. Use an empty per-change source_ids list only when the value comes from an administrator statement. Cite only source ids supplied in the dossier. Do not invent a source, legal identity, address, registration, VAT/UID number, product, customer, or market.`
 
 type companyReadEvidence struct {
 	ID    string `json:"source_id"`
@@ -56,6 +66,7 @@ type companyReadModelReply struct {
 	Kind            string                      `json:"kind"`
 	Message         string                      `json:"message"`
 	ProposedChanges []companyReadProposedChange `json:"proposed_changes"`
+	Offers          []companyReadOffer          `json:"offers"`
 	SourceIDs       []string                    `json:"source_ids"`
 }
 
@@ -95,10 +106,19 @@ func (e *deepReadEngine) messageCompanySiteRead(w http.ResponseWriter, r *http.R
 		httperr.Write(w, r, httperr.Validation("history", "invalid", validationErr.Error()))
 		return
 	}
+	offers, err := beginOfferTurn(r.Context(), e.offerStore(), &read, history)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	callCtx := principal.WithCorrelationID(r.Context(), ids.UUID(readID))
-	answer, err := e.answerCompanySiteRead(callCtx, message, history, evidence)
+	answer, err := e.answerCompanySiteRead(callCtx, message, history, evidence, offers.standing)
 	if err != nil {
 		modelfailure.Write(w, r, err)
+		return
+	}
+	if err := offers.finish(r.Context(), message, answer); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	runtime, err := e.runtime.Get(r.Context(), ids.UUID(readID))
@@ -109,13 +129,13 @@ func (e *deepReadEngine) messageCompanySiteRead(w http.ResponseWriter, r *http.R
 	httperr.WriteJSON(w, http.StatusOK, contractCompanyReadReply(answer, evidence, runtime))
 }
 
-func (e *deepReadEngine) answerCompanySiteRead(ctx context.Context, message string, history []model.Message, evidence []companyReadEvidence) (companyReadModelReply, error) {
-	req, err := companyReadAnswerRequest(message, history, evidence)
+func (e *deepReadEngine) answerCompanySiteRead(ctx context.Context, message string, history []model.Message, evidence []companyReadEvidence, offer *companyReadOffer) (companyReadModelReply, error) {
+	req, err := companyReadAnswerRequest(message, history, evidence, offer)
 	if err != nil {
 		return companyReadModelReply{}, err
 	}
-	gate := newCompanyReadGate(message, history, evidence)
-	response, err := ai.Ask(ctx, e.brain, req, gate.validate)
+	gate := newCompanyReadGate(message, history, evidence, offer)
+	response, err := ai.Ask(ctx, e.brain, req, gate.admit)
 	if err != nil {
 		return companyReadModelReply{}, err
 	}
@@ -123,6 +143,7 @@ func (e *deepReadEngine) answerCompanySiteRead(ctx context.Context, message stri
 	if err := json.Unmarshal([]byte(ai.Unfence(response.Text)), &reply); err != nil {
 		return companyReadModelReply{}, fmt.Errorf("compose: company read answer is not valid JSON: %w", err)
 	}
+	reply = gate.authorized(reply)
 	if err := gate.validateReply(reply); err != nil {
 		return companyReadModelReply{}, err
 	}
@@ -130,11 +151,19 @@ func (e *deepReadEngine) answerCompanySiteRead(ctx context.Context, message stri
 }
 
 func validateCompanyReadReply(text string, known map[string]companyReadEvidence, administratorStatements string, authorization companyChangeAuthorization) error {
-	var reply companyReadModelReply
-	if err := json.Unmarshal([]byte(ai.Unfence(text)), &reply); err != nil {
-		return fmt.Errorf("output must be a company-read reply object: %w", err)
+	reply, err := parseCompanyReadReply(text)
+	if err != nil {
+		return err
 	}
 	return validateCompanyReadReplyValue(reply, known, administratorStatements, authorization)
+}
+
+func parseCompanyReadReply(text string) (companyReadModelReply, error) {
+	var reply companyReadModelReply
+	if err := json.Unmarshal([]byte(ai.Unfence(text)), &reply); err != nil {
+		return companyReadModelReply{}, fmt.Errorf("output must be a company-read reply object: %w", err)
+	}
+	return reply, nil
 }
 
 func validateCompanyReadReplyValue(reply companyReadModelReply, known map[string]companyReadEvidence, administratorStatements string, authorization companyChangeAuthorization) error {
@@ -145,7 +174,10 @@ func validateCompanyReadReplyValue(reply companyReadModelReply, known map[string
 	if err != nil {
 		return err
 	}
-	return validateCompanyReadChanges(reply.Kind, reply.ProposedChanges, globalSources, known, administratorStatements, authorization)
+	if err := validateCompanyReadChanges(reply.Kind, reply.ProposedChanges, globalSources, known, administratorStatements, authorization); err != nil {
+		return err
+	}
+	return validateCompanyReadOffers(reply.Offers, globalSources, known)
 }
 
 func validateCompanyReadReplyShape(reply companyReadModelReply) error {
@@ -185,13 +217,9 @@ func validateCompanyReadChanges(replyKind string, changes []companyReadProposedC
 			}
 			continue
 		}
-		supported := false
-		for sourceID := range changeSources {
-			if _, cited := globalSources[sourceID]; !cited {
-				return fmt.Errorf("compose: company read change source %q is absent from reply citations", clampToken(sourceID))
-			}
-			source := known[sourceID]
-			supported = supported || textContainsValue(source.Value+" "+source.Quote, change.Value)
+		supported, err := citedValueSupported("change", change.Value, changeSources, globalSources, known)
+		if err != nil {
+			return err
 		}
 		if !supported && !companyRecommendationSupportsSynthesis(replyKind, change.Field, changeSources, known) {
 			return fmt.Errorf("compose: company read change value is not supported by its cited evidence")
@@ -200,12 +228,26 @@ func validateCompanyReadChanges(replyKind string, changes []companyReadProposedC
 	return nil
 }
 
+// citedValueSupported reports whether any cited source states the value,
+// refusing a citation the reply's own source list does not carry.
+func citedValueSupported(what, value string, sources, globalSources map[string]struct{}, known map[string]companyReadEvidence) (bool, error) {
+	supported := false
+	for sourceID := range sources {
+		if _, cited := globalSources[sourceID]; !cited {
+			return false, fmt.Errorf("compose: company read %s source %q is absent from reply citations", what, clampToken(sourceID))
+		}
+		source := known[sourceID]
+		supported = supported || textContainsValue(source.Value+" "+source.Quote, value)
+	}
+	return supported, nil
+}
+
 type companyChangeAuthorization struct {
 	currentMessage  string
 	previousRequest string
 	directField     string
-	selectedField   string
-	selectedValue   string
+	selected        exactGrant
+	acceptedOffer   exactGrant
 }
 
 func newCompanyChangeAuthorization(message string, history []model.Message, directField string) companyChangeAuthorization {
@@ -220,7 +262,7 @@ func newCompanyChangeAuthorization(message string, history []model.Message, dire
 }
 
 func (a companyChangeAuthorization) allows(change companyReadProposedChange) bool {
-	if a.selectedField != "" && change.Field == a.selectedField && strings.TrimSpace(change.Value) == a.selectedValue {
+	if a.selected.covers(change) || a.acceptedOffer.covers(change) {
 		return true
 	}
 	currentField := companyFieldMentioned(a.currentMessage, change.Field) ||
@@ -261,17 +303,6 @@ func messageRequestsCompanyChanges(message string) bool {
 		}
 	}
 	return false
-}
-
-func isCompanyChangeConfirmation(message string) bool {
-	normalized := strings.ToLower(strings.Trim(strings.Join(strings.Fields(message), " "), "?!., "))
-	normalized = strings.ReplaceAll(normalized, ",", "")
-	switch normalized {
-	case "yes", "yes please", "correct", "that's right", "that is right", "ja", "ja bitte", "genau", "richtig":
-		return true
-	default:
-		return false
-	}
 }
 
 var companyFieldAliases = map[string][]string{

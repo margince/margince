@@ -14,18 +14,7 @@ fixture:
 expect:
   outcome: accepted
   answer: []
-  rubric: >
-    This site answers with a list of next steps the transcript STATES, and an
-    EMPTY list is the correct answer for most meetings. Two contacts compared
-    notes about a move that already happened and about the market, and nobody
-    said they would do anything. Score the empty list highest. "Everyone hits
-    it once" and "at least it is behind you" are commentary, not commitments —
-    proposing a next step from either scores low, and lower the more
-    confidently it is asserted, because a proposal at or above the 0.7 floor
-    becomes a question a rep has to answer. Inventing a follow-up call, a
-    firmware fix, or anything about the deal scores lowest: none of it is
-    stated anywhere in the text.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The right answer is no proposal, and the check fails any proposal the reply
+    makes. The rubric only ranked the ways of making one.

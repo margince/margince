@@ -12,19 +12,10 @@ fixture:
 expect:
   outcome: accepted
   answer: read_brief
-  rubric: >
-    The candidate output is the turn's FIRST step only, one tool call; the
-    steps after it are not shown, so never mark it down for them being missing.
-    Retrieval surfaced one deal that sounds urgent, and it is not the brief: the
-    queue is already ranked for this contact, and this deal may not be on it.
-    Score high only if the turn calls read_brief. read_record and catch_me_up_on
-    are the near misses — both chase the retrieved deal, which is the
-    workspace's idea of what matters rather than the ranked queue the goal is
-    about, and both skip the one step the goal names first.
   near_misses:
     - read_record
     - catch_me_up_on
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is the turn's first tool call, which the check reads off the
+    replayed loop. The rubric asked for that call and graded nothing else.

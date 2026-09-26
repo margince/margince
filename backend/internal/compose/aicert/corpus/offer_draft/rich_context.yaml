@@ -1,0 +1,56 @@
+name: rich_context_prices_every_line_from_its_own_evidence
+task: offer_draft
+site: draft
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  currency: EUR
+  context_items:
+    - source_id: act_801
+      snippet: |
+        Customer wants: 20 hours onboarding consulting at 140 EUR/hr, a
+        data-migration package quoted at 3200 EUR, and a 12-month Pro-tier
+        subscription at 99 EUR/month, plus optional add-on training days at 600
+        EUR/day (they asked about 3 days but have not confirmed).
+    - source_id: act_802
+      snippet: |
+        Follow-up: confirmed they also want priority support at 250
+        EUR/month, and asked whether the onboarding hours can be split across two
+        invoices.
+  rate_card:
+    - name: Pro-tier subscription (monthly)
+      unit_price_minor: 9900
+      currency: EUR
+    - name: Priority support (monthly)
+      unit_price_minor: 25000
+      currency: EUR
+    - name: Training day
+      unit_price_minor: 60000
+      currency: EUR
+expect:
+  outcome: accepted
+  answer:
+    act_802:
+      unit_price_minor: 25000
+      price_grounded: true
+  # No caps.max_tokens: production sends this site ai.ReasoningOutputMaxTokens
+  # and the prompt names no budget, so a tighter cap graded a limit the model
+  # was never given and the product never imposes.
+  rubric: >
+    The context supports five candidate lines across two items, and the
+    snippets wrap mid-sentence, so every evidence_snippet has to be copied from
+    the item that says it. Score highest when each confirmed purchase —
+    onboarding hours, the migration package, the 12-month Pro-tier
+    subscription, priority support — becomes its own line citing its own item,
+    with the unit price the evidence states (140 EUR per hour, not the 2800
+    total; 99 EUR per month, not a year's sum). Priority support must cite
+    act_802, where it was confirmed. The add-on training days were asked about
+    and not confirmed; leaving them out or drafting them as a line a human
+    will review are both acceptable, but a price or quantity the text does not
+    state is not. Score low for a line whose evidence is paraphrased, cited to
+    the wrong item, or priced at a figure no snippet or rate-card entry carries,
+    and at the floor for an invented line.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

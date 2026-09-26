@@ -12,7 +12,12 @@ package draftcheck
 // call either happened or it did not, and a sentence was either written or it
 // was not — no amount of recent correspondence makes an invented one true.
 
-import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
+import (
+	"slices"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 // Grounds is what the RECORD supports, as opposed to what the draft says.
 //
@@ -27,6 +32,155 @@ type Grounds struct {
 	// Booked: the record carries a meeting with this recipient, so the draft
 	// may refer to its day.
 	Booked bool
+	// Met: the caller's own intent names an earlier meeting with this
+	// recipient, so the draft may say they met. Set it from IntentNamesMeeting.
+	Met bool
+}
+
+// IntentNamesMeeting reports whether the caller's intent says an encounter
+// already HAPPENED. The caller can know that; nothing else in the input can.
+//
+// Every language at once, because the intent is typed in whatever the rep
+// writes in, not the draft's language. A clause counts when it carries an
+// encounter frame and no negation: the frame keeps "propose a meeting" and the
+// idiom "eine Entscheidung getroffen" out, the negation check keeps "we have
+// not met yet" out, and either one read as met grounds the invention the rule
+// refuses.
+func IntentNamesMeeting(intent string) bool {
+	for _, clause := range clauses(strings.ToLower(intent)) {
+		if negated(clause) {
+			continue
+		}
+		for _, frames := range encounterFrame {
+			for _, frame := range frames {
+				if inOrder(clause, frame) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// encounterFrame are the ways an intent says the rep and the recipient have
+// met. A frame is words that must appear in that order within one clause, so
+// German can say "wir haben uns auf der Messe getroffen" with the fair between
+// the reflexive and the participle — the reflexive is what makes it a meeting.
+var encounterFrame = map[textlang.Lang][][]string{
+	textlang.English: {
+		{"we met"},
+		{"we've met"},
+		{"we have met"},
+		{"we had met"},
+		{"met you"},
+		{"met them"},
+		{"met him"},
+		{"met her"},
+		{"after meeting"},
+		{"since meeting"},
+		{"having met"},
+		{"we spoke"},
+		{"we talked"},
+		{"after speaking"},
+		{"after talking"},
+		{"after the call"},
+		{"after our call"},
+		{"after the meeting"},
+		{"after our meeting"},
+		{"following our call"},
+		{"following our meeting"},
+	},
+	textlang.German: {
+		{"kennengelernt"},
+		{"uns", "getroffen"},
+		{"uns", "begegnet"},
+		{"wir", "gesprochen"},
+		{"nach dem treffen"},
+		{"nach unserem treffen"},
+		{"nach dem gespräch"},
+		{"nach unserem gespräch"},
+		{"nach dem telefonat"},
+		{"nach unserem telefonat"},
+	},
+	textlang.Vietnamese: {
+		{"đã gặp"}, {"sau buổi gặp"}, {"đã trao đổi"},
+	},
+}
+
+// negation are the words that turn an encounter frame into its denial.
+var negation = []string{
+	"not", "never", "nicht", "nie", "niemals", "kein", "keine", "noch nie", "chưa", "không",
+}
+
+// clauseJoiners split one sentence into the clauses a negation binds to, so
+// "we met at the fair and have not spoken since" still names the meeting.
+var clauseJoiners = []string{"and", "but", "und", "aber", "sondern", "và", "nhưng"}
+
+// clauses is lowered text cut at sentence ends and at clause joiners.
+func clauses(lowered string) []string {
+	for _, joiner := range clauseJoiners {
+		lowered = strings.ReplaceAll(lowered, " "+joiner+" ", ";")
+	}
+	return strings.FieldsFunc(lowered, func(r rune) bool { return strings.ContainsRune(".;!?\n", r) })
+}
+
+// negated reports a clause that denies what it says. "n't" is matched inside
+// the word, where "haven't" carries it.
+func negated(clause string) bool {
+	if strings.Contains(clause, "n't") || strings.Contains(clause, "n\u2019t") {
+		return true
+	}
+	for _, word := range negation {
+		if contains(clause, word) {
+			return true
+		}
+	}
+	return false
+}
+
+// inOrder reports whether clause holds every part of frame as whole words, in
+// order.
+func inOrder(clause string, frame []string) bool {
+	rest := clause
+	for _, part := range frame {
+		i := wordIndex(rest, part)
+		if i < 0 {
+			return false
+		}
+		rest = rest[i+len(part):]
+	}
+	return true
+}
+
+// inventedConversation is the claim that a conversation took place, where
+// nothing grounds one. An intent naming a meeting grounds the ENCOUNTER only,
+// so "it was a pleasure meeting you" stands and "after our call" is refused.
+//
+// The grounded phrases are cut out of the text rather than skipped in the
+// list, because the two overlap: "freute mich, sie kennenzulernen" carries
+// "freute mich", which on its own claims a conversation.
+func inventedConversation(lowered string, lang textlang.Lang, met bool) []Finding {
+	phrases := append(slices.Clone(metEncounter[lang]), spokenExchange[lang]...)
+	if met {
+		for _, grounded := range metEncounter[lang] {
+			lowered = strings.ReplaceAll(lowered, grounded, " ")
+		}
+		phrases = spokenExchange[lang]
+	}
+	return firstMatch(lowered, phrases, RuleInventedConversation,
+		"this message opens a new conversation, so nothing in the input says a "+
+			"call or meeting took place — write from the messages on the record")
+}
+
+// metEncounter are the ways a draft says the sender and the recipient MET — the
+// one conversation claim an intent naming the meeting makes true. The bar is
+// spokenExchange's: the past tense is in the phrase.
+var metEncounter = map[textlang.Lang][]string{
+	textlang.English: {"was a pleasure meeting"},
+	textlang.German: {
+		"hat mich gefreut, sie kennenzulernen", "hat mich gefreut, dich kennenzulernen",
+		"freute mich, sie kennenzulernen", "freute mich, dich kennenzulernen",
+	},
 }
 
 // spokenExchange are the ways a draft asserts that a CONVERSATION happened —
@@ -53,7 +207,7 @@ type Grounds struct {
 var spokenExchange = map[textlang.Lang][]string{
 	textlang.English: {
 		"it was a pleasure connecting", "was a pleasure speaking",
-		"was a pleasure meeting", "was a pleasure talking",
+		"was a pleasure talking",
 		"was good speaking", "was great speaking", "was good talking",
 		"was great talking", "was good to connect", "was great to connect",
 		"was nice to connect", "was nice speaking",
@@ -62,8 +216,7 @@ var spokenExchange = map[textlang.Lang][]string{
 		"thanks for taking the time to speak",
 	},
 	textlang.German: {
-		"freute mich", "hat mich gefreut, sie kennenzulernen",
-		"hat mich gefreut, dich kennenzulernen",
+		"freute mich",
 		"nach unserem gespräch", "nach unserem telefonat", "nach unserem call",
 		"in unserem gespräch letzte", "danke für das gespräch",
 	},
@@ -141,5 +294,30 @@ var scheduledArrangement = map[textlang.Lang][]string{
 	},
 	textlang.Vietnamese: {
 		"cuộc họp ngày mai", "buổi demo ngày mai", "đã lên lịch ngày mai",
+	},
+}
+
+// directedIntroduction are the ways a draft says who introduced, referred or
+// put in touch whom — the RELATIONSHIPS rule every drafting prompt states.
+//
+// Every band and every thread, because no record makes one true: the product
+// holds no contact-to-contact referral, so the fact was read out of quoted text,
+// where "Dass Romina den Kontakt hergestellt hat" came back with the direction
+// reversed. Directed forms only; "I would like to introduce myself" is the
+// sender's own act, which the prompt asks for.
+var directedIntroduction = map[textlang.Lang][]string{
+	textlang.English: {
+		"introduced us", "introduced me to", "introduced you to", "introduced by",
+		"introduction by", "introduction from", "introduction via",
+		"put us in touch", "put me in touch", "connected us",
+		"referred us", "referred me", "referred you", "referred by", "referral from",
+	},
+	textlang.German: {
+		"kontakt hergestellt", "in kontakt gebracht", "kontakt vermittelt",
+		"uns vermittelt", "vorgestellt von", "vorgestellt durch", "vorstellung durch",
+		"empfohlen von", "empfehlung von", "empfehlung durch",
+	},
+	textlang.Vietnamese: {
+		"được giới thiệu bởi", "giới thiệu bởi",
 	},
 }

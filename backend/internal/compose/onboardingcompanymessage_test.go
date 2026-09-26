@@ -250,11 +250,21 @@ func TestOnboardingCompanyMessageReturnsDependencyFailures(t *testing.T) {
 			state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}}, contacts: onboardingSiteReadReaderStub{},
 			brain: &replyBrainStub{}, runtime: &onboardingRuntimeStub{err: want},
 		},
+		"offer slot read": {
+			state:    onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
+			contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{ID: readID}}, offers: failingOfferSlot{standingErr: want},
+			brain: &replyBrainStub{}, runtime: &onboardingRuntimeStub{},
+		},
+		"offer slot write": {
+			state:    onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
+			contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{ID: readID}}, offers: failingOfferSlot{replaceErr: want},
+			brain: &replyBrainStub{}, runtime: &onboardingRuntimeStub{},
+		},
 	}
 	for name, assistant := range tests {
 		t.Run(name, func(t *testing.T) {
 			body := `{"message":"Tell me about this company","locale":"en"}`
-			if name == "runtime" {
+			if name == "runtime" || name == "offer slot write" {
 				body = `{"message":"Does this work?","locale":"en"}`
 			}
 			recorder := onboardingCompanyRequest(&assistant, body)
@@ -374,4 +384,22 @@ func onboardingCompanyRequest(assistant *onboardingCompanyAssistant, body string
 	recorder := httptest.NewRecorder()
 	onboardingStateHandlers{assistant: assistant}.MessageOnboardingCompany(recorder, request)
 	return recorder
+}
+
+// failingOfferSlot is an offer slot whose store is down: on the read, or on the
+// write that replaces a standing offer.
+type failingOfferSlot struct {
+	standingErr error
+	replaceErr  error
+}
+
+func (f failingOfferSlot) StandingSiteReadOffer(context.Context, ids.UUID) (*contacts.SiteReadOffer, error) {
+	if f.standingErr != nil {
+		return nil, f.standingErr
+	}
+	return recordedLegalNameOffer(1), nil
+}
+
+func (f failingOfferSlot) ReplaceSiteReadOffer(context.Context, ids.UUID, *contacts.SiteReadOffer, *contacts.SiteReadOffer) error {
+	return f.replaceErr
 }

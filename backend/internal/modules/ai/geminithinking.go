@@ -7,6 +7,8 @@ package ai
 // request defaults to, and which models may be named a level at all.
 
 import (
+	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -49,6 +51,35 @@ func geminiThinksShallowByDefault(model string) bool {
 	return strings.Contains(model, "flash-lite")
 }
 
+// geminiRaisedToFloor is the level a request that names none of its own is
+// sent: level (the adapter's default, empty for the model's own) raised to
+// floor where that default is shallower. Flash-Lite thinks at minimal by
+// default and every other Gemini 3 at medium or deeper, so medium is assumed:
+// naming high to a model already there is harmless. Pre-3 is sent nothing.
+func geminiRaisedToFloor(modelID, level, floor string) string {
+	if floor == "" || !geminiTakesThinkingLevel(modelID) {
+		return level
+	}
+	effective := level
+	if effective == "" {
+		effective = effortMedium
+		if geminiThinksShallowByDefault(modelID) {
+			effective = effortMinimal
+		}
+	}
+	if effortAtLeast(effective, floor) {
+		return level
+	}
+	if strings.Contains(modelID, "flash-lite-image") {
+		return lowestEffortAtLeast(floor, geminiFlashLiteImageLevels)
+	}
+	return floor
+}
+
+// geminiFlashLiteImageLevels is all gemini-3.1-flash-lite-image accepts; any
+// other level is a 400, so a floor between them is raised to high.
+var geminiFlashLiteImageLevels = []string{effortMinimal, effortHigh}
+
 // geminiTakesThinkingLevel reports whether a model accepts
 // thinkingConfig.thinkingLevel on generateContent. Google's reference for the
 // field: "Recommended for Gemini 3 or later models. Use with earlier models
@@ -73,4 +104,36 @@ func geminiTakesThinkingLevel(model string) bool {
 
 type geminiThinking struct {
 	ThinkingLevel string `json:"thinkingLevel"` //nolint:tagliatelle // Google's wire format (camelCase)
+}
+
+// geminiThinkingLevels is the thinkingLevel vocabulary generateContent takes,
+// shallowest first. Which of them one model accepts is the vendor's to say —
+// gemini-3.1-pro-preview refuses minimal — so the parser checks the word and
+// leaves the pairing to the vendor's 400.
+var geminiThinkingLevels = []string{"minimal", "low", "medium", "high"} //nolint:goconst // Google's vocabulary; the same words in the broker's and Ollama's lists belong to other vendors and must not move with it
+
+// thinkingLevelDefault is the `thinking_level` a routing save sends to clear a
+// stored level; the store turns it into no level before anything validates it.
+const thinkingLevelDefault = "default"
+
+// validateThinkingLevel refuses a binding's `thinking_level` that no request
+// could carry: on a provider other than gemini, outside the vocabulary, or on a
+// model that predates the field. Refused at load rather than sent, because the
+// last two fail every call and the first would be ignored in silence.
+func validateThinkingLevel(lane string, binding ProviderConfig) error {
+	level := binding.ThinkingLevel
+	switch {
+	case level == "":
+		return nil
+	case binding.Provider != providerGemini:
+		return fmt.Errorf("ai: routing config: %s: `thinking_level` is Gemini's thinkingConfig and provider %s has no such field; remove it",
+			lane, binding.Provider)
+	case !slices.Contains(geminiThinkingLevels, level):
+		return fmt.Errorf("ai: routing config: %s: thinking_level %q is not one of %s",
+			lane, level, strings.Join(geminiThinkingLevels, " | "))
+	case !geminiTakesThinkingLevel(binding.Model):
+		return fmt.Errorf("ai: routing config: %s: model %s predates thinkingLevel and answers it with a 400; remove thinking_level or bind a Gemini 3 model",
+			lane, binding.Model)
+	}
+	return nil
 }

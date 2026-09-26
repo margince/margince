@@ -90,16 +90,6 @@ func TestEachAbstentionScenarioCatchesTheFabricationItTargets(t *testing.T) {
 			wantDetail:     "display_name",
 		},
 		{
-			// The whole point of the legal scenario: the imprint really does contain
-			// this entity verbatim, so the citation gate passes it and the record
-			// would read "accepted" without a claim about what must NOT be grounded.
-			scenario:       "one_legal_page_naming_two_entities",
-			correct:        profileReplyJSON(),
-			fabricated:     profileReplyJSON(profileClaimJSON("legal_name", "Kestrel Fold Consulting GmbH")),
-			wantFabricated: aitasks.OutcomeWrongAnswer,
-			wantDetail:     "Kestrel Fold Consulting GmbH",
-		},
-		{
 			// Nothing was captured, so every citation is invented and the no-guess
 			// gate refuses the line. That is a usable-reply failure, not silence.
 			scenario:       "no_captured_context_yields_no_lines",
@@ -136,6 +126,28 @@ func TestEachAbstentionScenarioCatchesTheFabricationItTargets(t *testing.T) {
 			wantFabricated: aitasks.OutcomeInvalid,
 			wantDetail:     "not in the lines it cites",
 		},
+		{
+			// A settled fact the stage never asked about, filed under a key the
+			// reader invented: the validator refuses the whole reply.
+			scenario: "a_settled_fact_no_criterion_asks_about",
+			correct:  `{"claims":[]}`,
+			fabricated: stageEvidenceClaimJSON("security_review_cleared",
+				"01a07100-0000-7000-8000-000000000009", 1,
+				"our security team have signed off"),
+			wantFabricated: aitasks.OutcomeInvalid,
+			wantDetail:     "security_review_cleared",
+		},
+		{
+			// The same fact under the one key offered. The quote is grounded, so
+			// only the scenario's empty expectation can call it wrong.
+			scenario: "a_settled_fact_no_criterion_asks_about",
+			correct:  `{"claims":[]}`,
+			fabricated: stageEvidenceClaimJSON("problem_confirmed",
+				"01a07100-0000-7000-8000-000000000009", 1,
+				"our security team have signed off"),
+			wantFabricated: aitasks.OutcomeWrongAnswer,
+			wantDetail:     "problem_confirmed",
+		},
 	}
 
 	scenarios := loadShippedCorpus(t)
@@ -163,6 +175,25 @@ func TestEachAbstentionScenarioCatchesTheFabricationItTargets(t *testing.T) {
 				t.Errorf("the refusal does not name what was fabricated: %q", fabricated.Detail)
 			}
 		})
+	}
+}
+
+// The imprint really does contain either entity verbatim, so the citation gate
+// passes a pick and only the scenario's negative claim can call it wrong — even
+// beside the display name the scenario does expect.
+func TestTheTwoEntityImprintRefusesALegalNamePickedFromIt(t *testing.T) {
+	sc, found := loadShippedCorpus(t)["one_legal_page_naming_two_entities"]
+	if !found {
+		t.Fatal("the corpus carries no scenario named one_legal_page_naming_two_entities")
+	}
+	displayName := profileClaimJSON("display_name", "Kestrel Fold")
+	if got := evaluateScenario(t, sc, profileReplyJSON(displayName)); got.Result != sc.Expect.Outcome {
+		t.Errorf("the answer this scenario calls correct reached %q (%s), want %q", got.Result, got.Detail, sc.Expect.Outcome)
+	}
+	picked := profileReplyJSON(displayName, profileClaimJSON("legal_name", "Kestrel Fold Consulting GmbH"))
+	got := evaluateScenario(t, sc, picked)
+	if got.Result != aitasks.OutcomeWrongAnswer || !strings.Contains(got.Detail, "Kestrel Fold Consulting GmbH") {
+		t.Errorf("picking one entity reached %q (%s), want a wrong answer naming the entity picked", got.Result, got.Detail)
 	}
 }
 

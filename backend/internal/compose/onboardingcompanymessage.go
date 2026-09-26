@@ -37,6 +37,8 @@ type onboardingCompanyAssistant struct {
 	// company reports the anchor's presence for the results and connect
 	// acts; nil falls back to the site read's confirmation state alone.
 	company onboardingCompanyReader
+	// offers is the dossier's offer slot; nil offers nothing.
+	offers siteReadOfferStore
 }
 
 type onboardingStateReader interface {
@@ -52,6 +54,7 @@ type onboardingConversationContext struct {
 	CurrentDraft      identity.OnboardingCompanyDraft `json:"current_company_draft"`
 	NextRequired      string                          `json:"next_required_field,omitempty"`
 	RemainingRequired []string                        `json:"remaining_required_fields"`
+	PreviousOffer     *companyReadOffer               `json:"your_previous_offer"`
 }
 
 type onboardingResearchState struct {
@@ -115,10 +118,20 @@ func (a *onboardingCompanyAssistant) message(w http.ResponseWriter, r *http.Requ
 	if len(remaining) > 0 {
 		conversation.NextRequired = remaining[0]
 	}
+	offers, err := beginOfferTurn(r.Context(), a.offers, read, history)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	conversation.PreviousOffer = offers.standing
 
 	answer, clarify, actAction, err := a.converse(r.Context(), req, act, message, history, conversation, research, read, comparisons, runID)
 	if err != nil {
 		modelfailure.Write(w, r, err)
+		return
+	}
+	if err := offers.finish(r.Context(), message, answer); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	runtime, err := a.runtime.Get(r.Context(), runID)

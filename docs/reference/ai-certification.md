@@ -32,26 +32,27 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 A [preset](../../config/presets/README.md) picks which AI model runs each feature, so the same
 feature can be ready under one preset and not under another.
 
-109 of the 146 grades below were measured on an older version of the product and
+72 of the 143 grades below were measured on an older version of the product and
 are waiting to be re-checked; each is marked below.
 
 | Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
 |---|---|---:|---:|---:|---:|---|
-| [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 11 | 2 | 14 | 2 | 11 of 29 features ready (re-check pending) |
-| [`gemini_cloud`](#gemini_cloud) | global cloud | 13 | 4 | 12 | 0 | 13 of 29 features ready (28 re-checks pending) |
-| [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 6 | 1 | 5 | 17 | 6 of 29 features ready (4 re-checks pending) |
-| [`openrouter_cloud`](#openrouter_cloud) | global cloud | 6 | 4 | 13 | 6 | 6 of 29 features ready (22 re-checks pending) |
-| [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 10 | 1 | 16 | 2 | 10 of 29 features ready (re-check pending) |
-| [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 6 | 2 | 20 | 1 | 6 of 29 features ready (1 re-check pending) |
+| [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 10 | 3 | 12 | 2 | 10 of 27 features ready (re-check pending), 2 not served (local-only data) |
+| [`gemini_cloud`](#gemini_cloud) | global cloud | 20 | 7 | 0 | 0 | 20 of 27 features ready (2 re-checks pending), 2 not served (local-only data) |
+| [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 6 | 1 | 5 | 17 | 6 of 29 features ready (re-check pending) |
+| [`openrouter_cloud`](#openrouter_cloud) | global cloud | 12 | 8 | 5 | 2 | 12 of 27 features ready (2 re-checks pending), 2 not served (local-only data) |
+| [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 11 | 3 | 12 | 1 | 11 of 27 features ready (3 re-checks pending), 2 not served (local-only data) |
+| [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 6 | 2 | 20 | 1 | 6 of 29 features ready (re-check pending) |
 
 **What the grades mean**
 
 | Grade | What we measured | What to do |
 |---|---|---|
-| ✅ Ready | Right in at least 90 of every 100 tries, no test case failing again and again, and good answers. | Turn it on and rely on it. |
+| ✅ Ready | Right in at least 90 of every 100 tries, no test case clearly broken, and good answers. | Turn it on and rely on it. |
 | ⚠️ Usable with care | Right in at least two thirds of tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |
 | ❌ Not reliable yet | Wrong too often, or answers below the quality bar. | Leave it off, or check every answer by hand. |
 | ❔ Not measured | This preset has a model for the feature, but nobody has tested it yet. | Ask for a test before relying on it. |
+| 🔒 Not served here | The feature reads data that must stay on your own servers, and this preset has only cloud models for it, so the product never sends it there. | Bind a model running on your own servers to one of its tiers, or leave the feature off. |
 
 *re-check pending* after a grade means the product has changed since it was
 measured. The grade is the last one we have, and it is shown until the next test replaces it.
@@ -59,11 +60,11 @@ measured. The grade is the last one we have, and it is shown until the next test
 
 ### `consumer_class_brokered`
 
-Your data goes to: global cloud. 11 of 29 features ready (re-check pending). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
+Your data goes to: global cloud. 10 of 27 features ready (re-check pending), 2 not served (local-only data). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ❔ Not measured | Not measured yet |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ⚠️ Usable with care | Right in 28 of 39 tries; one test case wrong too often · re-check pending |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready | Right every time (6 of 6) · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet | Right in 0 of 3 tries; one test case wrong too often · re-check pending |
@@ -71,20 +72,20 @@ Your data goes to: global cloud. 11 of 29 features ready (re-check pending). Pre
 | Did our reply settle it <sub>`request_settlement`</sub> | ❌ Not reliable yet | Right in 8 of 12 tries; one test case wrong too often · re-check pending |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured | Not measured yet |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet | Right in 52 of 57 tries; 2 test cases wrong too often · re-check pending |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
 | Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet | Right in 13 of 15 tries; one test case wrong too often · re-check pending |
 | Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
 | Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
 | Offer drafting <sub>`offer_draft`</sub> | ❌ Not reliable yet | Right in 11 of 15 tries; one test case wrong too often · re-check pending |
-| Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet | Right in 24 of 27 tries; one test case wrong too often · re-check pending |
+| Onboarding read <sub>`cold_start`</sub> | ❔ Not measured | Not measured yet |
 | Reading what an account needs <sub>`account_scan`</sub> | ❌ Not reliable yet | Right in 3 of 6 tries; one test case wrong too often · re-check pending |
 | Record summary <sub>`summarize`</sub> | ❌ Not reliable yet | Right in 20 of 27 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
 | Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet | Right in 34 of 36 tries; answer quality below the bar in 6 test cases · re-check pending |
 | Signal extraction <sub>`signal_extract`</sub> | ✅ Ready | Right every time (12 of 12) · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 12 of 27 tries; 5 test cases wrong too often · re-check pending |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready | Right every time (42 of 42) · re-check pending |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often · re-check pending |
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often · re-check pending |
 | Website deep read <sub>`site_extract`</sub> | ⚠️ Usable with care | Right every time (15 of 15); answer quality below the bar in one test case · re-check pending |
@@ -103,19 +104,23 @@ Your data goes to: global cloud. 11 of 29 features ready (re-check pending). Pre
 | `premium` | `openai_compatible` | `google/gemma-4-31b-it` |
 | `frontier` | `openai_compatible` | `google/gemma-4-31b-it` |
 
+A feature marked 🔒 Not served here is `local_only` in `backend/api/ai-tasks.yaml`: its
+data may reach only a model on your own servers, and every rung this preset binds for it
+is a cloud model, so the router refuses it instead of sending it there.
+
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
-| `agent_loop` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `agent_loop` | `cheap_cloud` | `google/gemma-4-31b-it` | ⚠️ Usable with care | re-check pending |
 | `brief_ranking` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
 | `capture_classify` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
-| `capture_confidentiality_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ✅ Ready | re-check pending |
-| `capture_counterparty_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
+| `capture_confidentiality_verdict` | - | - | 🔒 Not served here | not served — local-only data |
+| `capture_counterparty_verdict` | - | - | 🔒 Not served here | not served — local-only data |
 | `cert_judge` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
-| `cold_start` | `cheap_cloud` | `google/gemma-4-31b-it` | ❌ Not reliable yet | re-check pending |
+| `cold_start` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
 | `corpus_ask` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
 | `deal_health` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | re-check pending |
 | `document_extract` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
@@ -142,39 +147,39 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `gemini_cloud`
 
-Your data goes to: global cloud. 13 of 29 features ready (28 re-checks pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
+Your data goes to: global cloud. 20 of 27 features ready (2 re-checks pending), 2 not served (local-only data). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready | Right every time (18 of 18) |
-| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Certification judging <sub>`cert_judge`</sub> | ✅ Ready | Right every time (6 of 6) · re-check pending |
-| Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care | Right in 2 of 3 tries · re-check pending |
-| Deal status card <sub>`deal_health`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Did our reply settle it <sub>`request_settlement`</sub> | ⚠️ Usable with care | Right every time (12 of 12); answer quality below the bar in one test case · re-check pending |
-| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
-| Document extraction <sub>`document_extract`</sub> | ✅ Ready | Right every time (12 of 12) · re-check pending |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet | Right in 55 of 57 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
-| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Message classification <sub>`capture_classify`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
-| Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
-| Offer drafting <sub>`offer_draft`</sub> | ❌ Not reliable yet | Right in 12 of 15 tries; one test case wrong too often · re-check pending |
-| Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet | Right in 24 of 27 tries; one test case wrong too often · re-check pending |
-| Reading what an account needs <sub>`account_scan`</sub> | ❌ Not reliable yet | Right in 4 of 6 tries; one test case wrong too often · re-check pending |
-| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet | Right in 23 of 27 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet | Right every time (36 of 36); answer quality below the bar in one test case · re-check pending |
-| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often · re-check pending |
-| Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
-| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 17 of 27 tries; 3 test cases wrong too often · re-check pending |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready | Right every time (42 of 42) · re-check pending |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ⚠️ Usable with care | Right in 11 of 12 tries; answer quality below the bar in one test case · re-check pending |
-| Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care | Right in 11 of 12 tries; answer quality below the bar in one test case · re-check pending |
-| Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet | Right in 12 of 15 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
-| Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Website triage <sub>`site_triage`</sub> | ❌ Not reliable yet | Right in 13 of 15 tries; one test case wrong too often · re-check pending |
-| Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often · re-check pending |
-| What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet | Right in 6 of 9 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready | Right every time (18 of 18) · re-check pending |
+| Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care | Right every time (21 of 21); answer quality below the bar in one test case |
+| Certification judging <sub>`cert_judge`</sub> | ✅ Ready | Right every time (12 of 12) |
+| Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care | Right in 9 of 12 tries |
+| Deal status card <sub>`deal_health`</sub> | ✅ Ready | Right every time (21 of 21) |
+| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready | Right every time (12 of 12) |
+| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready | Right every time (15 of 15) |
+| Document extraction <sub>`document_extract`</sub> | ✅ Ready | Right every time (12 of 12) |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Message classification <sub>`capture_classify`</sub> | ✅ Ready | Right every time (21 of 21) |
+| Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Offer drafting <sub>`offer_draft`</sub> | ✅ Ready | Right every time (15 of 15) |
+| Onboarding read <sub>`cold_start`</sub> | ✅ Ready | Right every time (33 of 33) |
+| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready | Right every time (12 of 12) |
+| Record summary <sub>`summarize`</sub> | ⚠️ Usable with care | Right in 77 of 81 tries; answer quality below the bar in 2 test cases |
+| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care | Right every time (45 of 45); answer quality below the bar in 2 test cases |
+| Signal extraction <sub>`signal_extract`</sub> | ✅ Ready | Right every time (12 of 12) |
+| Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready | Right every time (27 of 27) |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready | Right every time (12 of 12) |
+| Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care | Right every time (15 of 15); answer quality below the bar in 2 test cases |
+| Website deep read <sub>`site_extract`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Website triage <sub>`site_triage`</sub> | ✅ Ready | Right every time (15 of 15) |
+| Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care | Right every time (45 of 45); answer quality below the bar in 2 test cases |
+| What last week taught <sub>`weekly_learnings`</sub> | ⚠️ Usable with care | Right every time (21 of 21); answer quality below the bar in one test case |
 
 <details>
 <summary>Which models this preset uses</summary>
@@ -186,52 +191,56 @@ Your data goes to: global cloud. 13 of 29 features ready (28 re-checks pending).
 | `premium` | `gemini` | `gemini-3.5-flash` |
 | `frontier` | `gemini` | `gemini-3.1-pro-preview` |
 
+A feature marked 🔒 Not served here is `local_only` in `backend/api/ai-tasks.yaml`: its
+data may reach only a model on your own servers, and every rung this preset binds for it
+is a cloud model, so the router refuses it instead of sending it there.
+
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
-| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
-| `brief_ranking` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
-| `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
-| `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
-| `capture_counterparty_verdict` | `local_small` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
-| `cert_judge` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
-| `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
-| `corpus_ask` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
-| `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
-| `document_extract` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
-| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
-| `enrich` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
-| `growth_fit` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
-| `offer_draft` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
-| `owed_verdict` | `local_small` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
-| `propose_roles` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
-| `rate_extract` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
-| `request_settlement` | `local_small` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
-| `signal_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
-| `site_extract` | `premium` | `gemini-3.5-flash` | ❌ Not reliable yet | re-check pending |
-| `site_fact_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
-| `site_triage` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
-| `stage_evidence_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
-| `summarize` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
-| `transcript_propose` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
-| `voice_build` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
-| `weekly_learnings` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
-| `weekly_review` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
+| `brief_ranking` | `premium` | `gemini-3.5-flash` | ✅ Ready | current |
+| `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `capture_confidentiality_verdict` | - | - | 🔒 Not served here | not served — local-only data |
+| `capture_counterparty_verdict` | - | - | 🔒 Not served here | not served — local-only data |
+| `cert_judge` | `premium` | `gemini-3.5-flash` | ✅ Ready | current |
+| `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `corpus_ask` | `premium` | `gemini-3.5-flash` | ✅ Ready | current |
+| `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `document_extract` | `premium` | `gemini-3.5-flash` | ✅ Ready | current |
+| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
+| `enrich` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `growth_fit` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
+| `offer_draft` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `owed_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `propose_roles` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
+| `rate_extract` | `premium` | `gemini-3.5-flash` | ✅ Ready | current |
+| `request_settlement` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `signal_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `site_extract` | `premium` | `gemini-3.5-flash` | ✅ Ready | re-check pending |
+| `site_fact_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `site_triage` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `stage_evidence_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `summarize` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
+| `transcript_propose` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `voice_build` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
+| `weekly_learnings` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
+| `weekly_review` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
 
 </details>
 
 ### `gemma4_local_ollama`
 
-Your data goes to: your own servers. 6 of 29 features ready (4 re-checks pending). Preset file: [`gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
+Your data goes to: your own servers. 6 of 29 features ready (re-check pending). Preset file: [`gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
 | Agent reasoning loop <sub>`agent_loop`</sub> | ❔ Not measured | Not measured yet |
-| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready | Right every time (9 of 9) |
-| Certification judging <sub>`cert_judge`</sub> | ✅ Ready | Right every time (6 of 6) |
+| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
+| Certification judging <sub>`cert_judge`</sub> | ✅ Ready | Right every time (6 of 6) · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ❔ Not measured | Not measured yet |
 | Deal status card <sub>`deal_health`</sub> | ❔ Not measured | Not measured yet |
 | Did our reply settle it <sub>`request_settlement`</sub> | ⚠️ Usable with care | Right in 9 of 12 tries; one test case wrong too often; answer quality below the bar in 3 test cases · re-check pending |
@@ -240,22 +249,22 @@ Your data goes to: your own servers. 6 of 29 features ready (4 re-checks pending
 | First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❔ Not measured | Not measured yet |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
 | Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet | Right in 14 of 15 tries; answer quality below the bar in one test case · re-check pending |
-| Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) |
-| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready | Right every time (3 of 3) |
+| Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
 | Offer drafting <sub>`offer_draft`</sub> | ❔ Not measured | Not measured yet |
 | Onboarding read <sub>`cold_start`</sub> | ❔ Not measured | Not measured yet |
-| Reading what an account needs <sub>`account_scan`</sub> | ❌ Not reliable yet | Right in 3 of 6 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Reading what an account needs <sub>`account_scan`</sub> | ❌ Not reliable yet | Right in 3 of 6 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
 | Record summary <sub>`summarize`</sub> | ❔ Not measured | Not measured yet |
 | Reply drafting <sub>`draft_reply`</sub> | ❔ Not measured | Not measured yet |
-| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
-| Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) |
+| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
+| Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❔ Not measured | Not measured yet |
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❔ Not measured | Not measured yet |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet | Right in 7 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
 | Voice DNA build <sub>`voice_build`</sub> | ❔ Not measured | Not measured yet |
 | Website deep read <sub>`site_extract`</sub> | ❔ Not measured | Not measured yet |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ❔ Not measured | Not measured yet |
-| Website triage <sub>`site_triage`</sub> | ❌ Not reliable yet | Right in 12 of 15 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Website triage <sub>`site_triage`</sub> | ❌ Not reliable yet | Right in 12 of 15 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
 | Weekly review narrative <sub>`weekly_review`</sub> | ❔ Not measured | Not measured yet |
 | What last week taught <sub>`weekly_learnings`</sub> | ❔ Not measured | Not measured yet |
 
@@ -274,29 +283,29 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `gemma4:12b` | ❌ Not reliable yet | current |
+| `account_scan` | `cheap_cloud` | `gemma4:12b` | ❌ Not reliable yet | re-check pending |
 | `agent_loop` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `brief_ranking` | `premium` | `gemma4:12b` | ✅ Ready | current |
+| `brief_ranking` | `premium` | `gemma4:12b` | ✅ Ready | re-check pending |
 | `capture_classify` | `local_small` | `gemma4:12b` | ❌ Not reliable yet | re-check pending |
 | `capture_confidentiality_verdict` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
 | `capture_counterparty_verdict` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
-| `cert_judge` | `premium` | `gemma4:12b` | ✅ Ready | current |
+| `cert_judge` | `premium` | `gemma4:12b` | ✅ Ready | re-check pending |
 | `cold_start` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
 | `corpus_ask` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
 | `deal_health` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
 | `document_extract` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
 | `draft_reply` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `enrich` | `local_small` | `gemma4:12b` | ✅ Ready | current |
+| `enrich` | `local_small` | `gemma4:12b` | ✅ Ready | re-check pending |
 | `growth_fit` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
 | `offer_draft` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
 | `owed_verdict` | `local_small` | `gemma4:12b` | ❌ Not reliable yet | re-check pending |
-| `propose_roles` | `cheap_cloud` | `gemma4:12b` | ✅ Ready | current |
-| `rate_extract` | `premium` | `gemma4:12b` | ✅ Ready | current |
+| `propose_roles` | `cheap_cloud` | `gemma4:12b` | ✅ Ready | re-check pending |
+| `rate_extract` | `premium` | `gemma4:12b` | ✅ Ready | re-check pending |
 | `request_settlement` | `local_small` | `gemma4:12b` | ⚠️ Usable with care | re-check pending |
-| `signal_extract` | `cheap_cloud` | `gemma4:12b` | ❌ Not reliable yet | current |
+| `signal_extract` | `cheap_cloud` | `gemma4:12b` | ❌ Not reliable yet | re-check pending |
 | `site_extract` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
 | `site_fact_extract` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `site_triage` | `cheap_cloud` | `gemma4:12b` | ❌ Not reliable yet | current |
+| `site_triage` | `cheap_cloud` | `gemma4:12b` | ❌ Not reliable yet | re-check pending |
 | `stage_evidence_extract` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
 | `summarize` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
 | `transcript_propose` | `cheap_cloud` | `gemma4:12b` | ✅ Ready | re-check pending |
@@ -308,39 +317,39 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `openrouter_cloud`
 
-Your data goes to: global cloud. 6 of 29 features ready (22 re-checks pending). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
+Your data goes to: global cloud. 12 of 27 features ready (2 re-checks pending), 2 not served (local-only data). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ❔ Not measured | Not measured yet |
-| Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care | Right in 7 of 9 tries · re-check pending |
-| Certification judging <sub>`cert_judge`</sub> | ❔ Not measured | Not measured yet |
-| Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet | Right in 0 of 3 tries; one test case wrong too often · re-check pending |
-| Deal status card <sub>`deal_health`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready | Right every time (12 of 12) · re-check pending |
-| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready | Right every time (18 of 18) · re-check pending |
+| Buying-role reading <sub>`propose_roles`</sub> | ❌ Not reliable yet | Right in 20 of 27 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
+| Certification judging <sub>`cert_judge`</sub> | ✅ Ready | Right every time (12 of 12) |
+| Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet | Right every time (12 of 12); answer quality below the bar in 2 test cases |
+| Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care | Right every time (21 of 21); answer quality below the bar in one test case |
+| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready | Right every time (12 of 12) |
+| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured | Not measured yet |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet | Right in 49 of 57 tries; 2 test cases wrong too often · re-check pending |
-| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ⚠️ Usable with care | Right in 8 of 9 tries · re-check pending |
-| Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet | Right in 13 of 15 tries; one test case wrong too often · re-check pending |
-| Model pricing extraction <sub>`rate_extract`</sub> | ❔ Not measured | Not measured yet |
-| Morning brief ranking <sub>`brief_ranking`</sub> | ❔ Not measured | Not measured yet |
-| Offer drafting <sub>`offer_draft`</sub> | ❌ Not reliable yet | Right in 11 of 15 tries; one test case wrong too often · re-check pending |
-| Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet | Right in 26 of 27 tries; answer quality below the bar in 2 test cases · re-check pending |
-| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready | Right every time (6 of 6) · re-check pending |
-| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet | Right in 18 of 27 tries; 3 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet | Right in 35 of 36 tries; answer quality below the bar in 5 test cases · re-check pending |
-| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet | Right in 8 of 12 tries; 2 test cases wrong too often · re-check pending |
-| Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
-| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 11 of 27 tries; 5 test cases wrong too often · re-check pending |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ⚠️ Usable with care | Right in 37 of 42 tries · re-check pending |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often · re-check pending |
-| Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often · re-check pending |
-| Website deep read <sub>`site_extract`</sub> | ❔ Not measured | Not measured yet |
-| Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Website triage <sub>`site_triage`</sub> | ⚠️ Usable with care | Right in 14 of 15 tries; answer quality below the bar in one test case |
-| Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often · re-check pending |
-| What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet | Right in 4 of 9 tries; 2 test cases wrong too often · re-check pending |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ⚠️ Usable with care | Right in 11 of 15 tries |
+| Message classification <sub>`capture_classify`</sub> | ✅ Ready | Right every time (15 of 15) |
+| Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Offer drafting <sub>`offer_draft`</sub> | ⚠️ Usable with care | Right in 44 of 45 tries; answer quality below the bar in 2 test cases |
+| Onboarding read <sub>`cold_start`</sub> | ❔ Not measured | Not measured yet |
+| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready | Right every time (12 of 12) |
+| Record summary <sub>`summarize`</sub> | ⚠️ Usable with care | Right in 53 of 72 tries; one test case wrong too often; answer quality below the bar in 7 test cases |
+| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care | Right in 79 of 84 tries; one test case wrong too often; answer quality below the bar in 3 test cases |
+| Signal extraction <sub>`signal_extract`</sub> | ⚠️ Usable with care | Right in 18 of 21 tries |
+| Signature enrichment <sub>`enrich`</sub> | ⚠️ Usable with care | Right in 8 of 9 tries |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 65 of 81 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready | Right in 23 of 24 tries |
+| Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 20 of 24 tries; answer quality below the bar in 2 test cases |
+| Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet | Right in 27 of 45 tries; 2 test cases wrong too often; answer quality below the bar in one test case · re-check pending |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Website triage <sub>`site_triage`</sub> | ✅ Ready | Right every time (15 of 15) |
+| Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care | Right every time (45 of 45); answer quality below the bar in 3 test cases |
+| What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready | Right every time (9 of 9) |
 
 <details>
 <summary>Which models this preset uses</summary>
@@ -352,78 +361,82 @@ Your data goes to: global cloud. 6 of 29 features ready (22 re-checks pending). 
 | `premium` | `openai_compatible` | `mistralai/mistral-medium-3-5` |
 | `frontier` | `openai_compatible` | `anthropic/claude-sonnet-4.6` |
 
+A feature marked 🔒 Not served here is `local_only` in `backend/api/ai-tasks.yaml`: its
+data may reach only a model on your own servers, and every rung this preset binds for it
+is a cloud model, so the router refuses it instead of sending it there.
+
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
-| `agent_loop` | `cheap_cloud` | `openai/gpt-oss-120b` | ❔ Not measured | not measured |
-| `brief_ranking` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
-| `capture_classify` | `local_small` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `capture_confidentiality_verdict` | `local_small` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
-| `capture_counterparty_verdict` | `local_small` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `cert_judge` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
-| `cold_start` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `corpus_ask` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | re-check pending |
-| `deal_health` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
+| `account_scan` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | current |
+| `agent_loop` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
+| `brief_ranking` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | current |
+| `capture_classify` | `local_small` | `openai/gpt-oss-120b` | ✅ Ready | current |
+| `capture_confidentiality_verdict` | - | - | 🔒 Not served here | not served — local-only data |
+| `capture_counterparty_verdict` | - | - | 🔒 Not served here | not served — local-only data |
+| `cert_judge` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | current |
+| `cold_start` | `cheap_cloud` | `openai/gpt-oss-120b` | ❔ Not measured | not measured |
+| `corpus_ask` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | current |
+| `deal_health` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
 | `document_extract` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
-| `draft_reply` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `enrich` | `local_small` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
-| `growth_fit` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `offer_draft` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `owed_verdict` | `local_small` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `propose_roles` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
-| `rate_extract` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
-| `request_settlement` | `local_small` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
-| `signal_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `site_extract` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
-| `site_fact_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
-| `site_triage` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
-| `stage_evidence_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `summarize` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `transcript_propose` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
-| `voice_build` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `weekly_learnings` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
-| `weekly_review` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
+| `draft_reply` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
+| `enrich` | `local_small` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
+| `growth_fit` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | current |
+| `offer_draft` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
+| `owed_verdict` | `local_small` | `openai/gpt-oss-120b` | ✅ Ready | current |
+| `propose_roles` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | current |
+| `rate_extract` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | current |
+| `request_settlement` | `local_small` | `openai/gpt-oss-120b` | ✅ Ready | current |
+| `signal_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
+| `site_extract` | `premium` | `mistralai/mistral-medium-3-5` | ❌ Not reliable yet | re-check pending |
+| `site_fact_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | current |
+| `site_triage` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | current |
+| `stage_evidence_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | current |
+| `summarize` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
+| `transcript_propose` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
+| `voice_build` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | current |
+| `weekly_learnings` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | current |
+| `weekly_review` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
 
 </details>
 
 ### `openrouter_cloud_eu`
 
-Your data goes to: EU-hosted cloud. 10 of 29 features ready (re-check pending). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
+Your data goes to: EU-hosted cloud. 11 of 27 features ready (3 re-checks pending), 2 not served (local-only data). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ❔ Not measured | Not measured yet |
-| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Certification judging <sub>`cert_judge`</sub> | ✅ Ready | Right every time (6 of 6) · re-check pending |
-| Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet | Right in 1 of 3 tries; one test case wrong too often · re-check pending |
-| Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care | Right every time (9 of 9); answer quality below the bar in one test case · re-check pending |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready | Right every time (12 of 12) · re-check pending |
-| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready | Right every time (18 of 18) · re-check pending |
+| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Certification judging <sub>`cert_judge`</sub> | ✅ Ready | Right in 17 of 18 tries |
+| Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care | Right in 16 of 18 tries; answer quality below the bar in one test case |
+| Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care | Right every time (24 of 24); answer quality below the bar in 2 test cases |
+| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready | Right in 23 of 24 tries |
+| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured | Not measured yet |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet | Right in 51 of 57 tries; one test case wrong too often · re-check pending |
-| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet | Right in 13 of 15 tries; one test case wrong too often · re-check pending |
-| Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
-| Offer drafting <sub>`offer_draft`</sub> | ❌ Not reliable yet | Right in 10 of 15 tries; 2 test cases wrong too often; answer quality below the bar in one test case · re-check pending |
-| Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet | Right in 26 of 27 tries; answer quality below the bar in 2 test cases · re-check pending |
-| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready | Right every time (6 of 6) · re-check pending |
-| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet | Right in 15 of 27 tries; 3 test cases wrong too often; answer quality below the bar in 3 test cases · re-check pending |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Message classification <sub>`capture_classify`</sub> | ✅ Ready | Right every time (15 of 15) |
+| Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready | Right every time (9 of 9) |
+| Offer drafting <sub>`offer_draft`</sub> | ❌ Not reliable yet | Right in 36 of 39 tries; answer quality below the bar in 3 test cases |
+| Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet | Right in 87 of 99 tries; 2 test cases wrong too often; answer quality below the bar in 3 test cases |
+| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready | Right every time (15 of 15) |
+| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet | Right in 40 of 57 tries; one test case wrong too often; answer quality below the bar in 5 test cases |
 | Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet | Right in 11 of 36 tries; 9 test cases wrong too often; answer quality below the bar in one test case · re-check pending |
-| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often · re-check pending |
-| Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
-| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 11 of 27 tries; 5 test cases wrong too often · re-check pending |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet | Right in 38 of 42 tries; one test case wrong too often · re-check pending |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet | Right in 5 of 12 tries; 2 test cases wrong too often · re-check pending |
-| Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
-| Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet | Right in 9 of 15 tries; 2 test cases wrong too often · re-check pending |
-| Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet | Right in 6 of 9 tries; one test case wrong too often · re-check pending |
-| Website triage <sub>`site_triage`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
-| Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet | Right in 5 of 12 tries; 2 test cases wrong too often · re-check pending |
-| What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet | Right in 5 of 9 tries; one test case wrong too often · re-check pending |
+| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet | Right in 7 of 15 tries; 2 test cases wrong too often; answer quality below the bar in one test case |
+| Signature enrichment <sub>`enrich`</sub> | ⚠️ Usable with care | Right in 5 of 6 tries |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 27 of 45 tries; 3 test cases wrong too often; answer quality below the bar in one test case |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | 🔒 Not served here | Not served on this preset — local-only data, and it has no local model for it |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet | Right in 7 of 15 tries; 2 test cases wrong too often |
+| Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 11 of 18 tries; one test case wrong too often; answer quality below the bar in 3 test cases |
+| Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet | Right in 14 of 21 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Website triage <sub>`site_triage`</sub> | ✅ Ready | Right every time (15 of 15) |
+| Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet | Right in 23 of 24 tries; answer quality below the bar in 4 test cases |
+| What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 3 test cases |
 
 <details>
 <summary>Which models this preset uses</summary>
@@ -435,78 +448,82 @@ Your data goes to: EU-hosted cloud. 10 of 29 features ready (re-check pending). 
 | `premium` | `openai_compatible` | `mistralai/mistral-small-2603` |
 | `frontier` | `openai_compatible` | `mistralai/mistral-small-2603` |
 
+A feature marked 🔒 Not served here is `local_only` in `backend/api/ai-tasks.yaml`: its
+data may reach only a model on your own servers, and every rung this preset binds for it
+is a cloud model, so the router refuses it instead of sending it there.
+
 Each feature walks its own ladder of tiers until it reaches one this preset
 binds; this is the rung and the model it lands on, and the record behind its grade.
 
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | re-check pending |
-| `agent_loop` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❔ Not measured | not measured |
-| `brief_ranking` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | re-check pending |
-| `capture_classify` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
-| `capture_confidentiality_verdict` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
-| `capture_counterparty_verdict` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
-| `cert_judge` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | re-check pending |
-| `cold_start` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
-| `corpus_ask` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | re-check pending |
-| `deal_health` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ⚠️ Usable with care | re-check pending |
+| `account_scan` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | current |
+| `agent_loop` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | re-check pending |
+| `brief_ranking` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | current |
+| `capture_classify` | `local_small` | `mistralai/ministral-8b-2512` | ✅ Ready | current |
+| `capture_confidentiality_verdict` | - | - | 🔒 Not served here | not served — local-only data |
+| `capture_counterparty_verdict` | - | - | 🔒 Not served here | not served — local-only data |
+| `cert_judge` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | current |
+| `cold_start` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
+| `corpus_ask` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | current |
+| `deal_health` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ⚠️ Usable with care | current |
 | `document_extract` | `premium` | `mistralai/mistral-small-2603` | ❔ Not measured | not measured |
 | `draft_reply` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
-| `enrich` | `local_small` | `mistralai/ministral-8b-2512` | ✅ Ready | re-check pending |
-| `growth_fit` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
-| `offer_draft` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
-| `owed_verdict` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
-| `propose_roles` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | re-check pending |
-| `rate_extract` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | re-check pending |
-| `request_settlement` | `local_small` | `mistralai/ministral-8b-2512` | ✅ Ready | re-check pending |
-| `signal_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `enrich` | `local_small` | `mistralai/ministral-8b-2512` | ⚠️ Usable with care | current |
+| `growth_fit` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ⚠️ Usable with care | current |
+| `offer_draft` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
+| `owed_verdict` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | current |
+| `propose_roles` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | current |
+| `rate_extract` | `premium` | `mistralai/mistral-small-2603` | ✅ Ready | current |
+| `request_settlement` | `local_small` | `mistralai/ministral-8b-2512` | ✅ Ready | current |
+| `signal_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
 | `site_extract` | `premium` | `mistralai/mistral-small-2603` | ❌ Not reliable yet | re-check pending |
-| `site_fact_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
-| `site_triage` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | re-check pending |
-| `stage_evidence_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
-| `summarize` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
-| `transcript_propose` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | re-check pending |
-| `voice_build` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
-| `weekly_learnings` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
-| `weekly_review` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
+| `site_fact_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
+| `site_triage` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | current |
+| `stage_evidence_extract` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
+| `summarize` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
+| `transcript_propose` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ✅ Ready | current |
+| `voice_build` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
+| `weekly_learnings` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
+| `weekly_review` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
 
 </details>
 
 ### `qwen3_local_vllm`
 
-Your data goes to: your own servers. 6 of 29 features ready (1 re-check pending). Preset file: [`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml).
+Your data goes to: your own servers. 6 of 29 features ready (re-check pending). Preset file: [`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
 | Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready | Right every time (18 of 18) · re-check pending |
-| Buying-role reading <sub>`propose_roles`</sub> | ❌ Not reliable yet | Right in 5 of 9 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Certification judging <sub>`cert_judge`</sub> | ✅ Ready | Right every time (6 of 6) |
-| Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet | Right in 0 of 3 tries; one test case wrong too often |
-| Deal status card <sub>`deal_health`</sub> | ❌ Not reliable yet | Right in 8 of 9 tries; answer quality below the bar in one test case |
-| Did our reply settle it <sub>`request_settlement`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
-| Document corpus question <sub>`corpus_ask`</sub> | ❌ Not reliable yet | Right in 13 of 15 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Buying-role reading <sub>`propose_roles`</sub> | ❌ Not reliable yet | Right in 5 of 9 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
+| Certification judging <sub>`cert_judge`</sub> | ✅ Ready | Right every time (6 of 6) · re-check pending |
+| Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet | Right in 0 of 3 tries; one test case wrong too often · re-check pending |
+| Deal status card <sub>`deal_health`</sub> | ❌ Not reliable yet | Right in 8 of 9 tries; answer quality below the bar in one test case · re-check pending |
+| Did our reply settle it <sub>`request_settlement`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
+| Document corpus question <sub>`corpus_ask`</sub> | ❌ Not reliable yet | Right in 13 of 15 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured | Not measured yet |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet | Right in 46 of 57 tries; 4 test cases wrong too often; answer quality below the bar in 4 test cases |
-| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready | Right every time (9 of 9) |
-| Message classification <sub>`capture_classify`</sub> | ⚠️ Usable with care | Right in 12 of 15 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) |
-| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready | Right every time (3 of 3) |
-| Offer drafting <sub>`offer_draft`</sub> | ❌ Not reliable yet | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 3 test cases |
-| Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet | Right in 23 of 27 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Reading what an account needs <sub>`account_scan`</sub> | ❌ Not reliable yet | Right every time (6 of 6); answer quality below the bar in one test case |
-| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet | Right in 13 of 27 tries; 4 test cases wrong too often; answer quality below the bar in 3 test cases |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet | Right in 33 of 36 tries; one test case wrong too often; answer quality below the bar in 6 test cases |
-| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
-| Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) |
-| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 9 of 27 tries; 6 test cases wrong too often; answer quality below the bar in 5 test cases |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet | Right in 36 of 42 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
-| Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
-| Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in one test case |
-| Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet | Right in 6 of 9 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Website triage <sub>`site_triage`</sub> | ❌ Not reliable yet | Right in 13 of 15 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care | Right in 11 of 12 tries; answer quality below the bar in one test case |
-| What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet | Right in 2 of 9 tries; 2 test cases wrong too often; answer quality below the bar in one test case |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet | Right in 46 of 57 tries; 4 test cases wrong too often; answer quality below the bar in 4 test cases · re-check pending |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
+| Message classification <sub>`capture_classify`</sub> | ⚠️ Usable with care | Right in 12 of 15 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
+| Model pricing extraction <sub>`rate_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
+| Offer drafting <sub>`offer_draft`</sub> | ❌ Not reliable yet | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 3 test cases · re-check pending |
+| Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet | Right in 23 of 27 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
+| Reading what an account needs <sub>`account_scan`</sub> | ❌ Not reliable yet | Right every time (6 of 6); answer quality below the bar in one test case · re-check pending |
+| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet | Right in 13 of 27 tries; 4 test cases wrong too often; answer quality below the bar in 3 test cases · re-check pending |
+| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet | Right in 33 of 36 tries; one test case wrong too often; answer quality below the bar in 6 test cases · re-check pending |
+| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
+| Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (3 of 3) · re-check pending |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 9 of 27 tries; 6 test cases wrong too often; answer quality below the bar in 5 test cases · re-check pending |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet | Right in 36 of 42 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
+| Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often; answer quality below the bar in 2 test cases · re-check pending |
+| Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in one test case · re-check pending |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet | Right in 6 of 9 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
+| Website triage <sub>`site_triage`</sub> | ❌ Not reliable yet | Right in 13 of 15 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
+| Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care | Right in 11 of 12 tries; answer quality below the bar in one test case · re-check pending |
+| What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet | Right in 2 of 9 tries; 2 test cases wrong too often; answer quality below the bar in one test case · re-check pending |
 
 <details>
 <summary>Which models this preset uses</summary>
@@ -523,35 +540,35 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
+| `account_scan` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
 | `agent_loop` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | re-check pending |
-| `brief_ranking` | `premium` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | current |
-| `capture_classify` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ⚠️ Usable with care | current |
-| `capture_confidentiality_verdict` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `capture_counterparty_verdict` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `cert_judge` | `premium` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | current |
-| `cold_start` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `corpus_ask` | `premium` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `deal_health` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
+| `brief_ranking` | `premium` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | re-check pending |
+| `capture_classify` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ⚠️ Usable with care | re-check pending |
+| `capture_confidentiality_verdict` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `capture_counterparty_verdict` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `cert_judge` | `premium` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | re-check pending |
+| `cold_start` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `corpus_ask` | `premium` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `deal_health` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
 | `document_extract` | `premium` | `mlx-community/Qwen3-14B-4bit` | ❔ Not measured | not measured |
-| `draft_reply` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `enrich` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | current |
-| `growth_fit` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `offer_draft` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `owed_verdict` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `propose_roles` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `rate_extract` | `premium` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | current |
-| `request_settlement` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `signal_extract` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `site_extract` | `premium` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `site_fact_extract` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `site_triage` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `stage_evidence_extract` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `summarize` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `transcript_propose` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | current |
-| `voice_build` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `weekly_learnings` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
-| `weekly_review` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ⚠️ Usable with care | current |
+| `draft_reply` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `enrich` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | re-check pending |
+| `growth_fit` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `offer_draft` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `owed_verdict` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `propose_roles` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `rate_extract` | `premium` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | re-check pending |
+| `request_settlement` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `signal_extract` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `site_extract` | `premium` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `site_fact_extract` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `site_triage` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `stage_evidence_extract` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `summarize` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `transcript_propose` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | re-check pending |
+| `voice_build` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `weekly_learnings` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
+| `weekly_review` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ⚠️ Usable with care | re-check pending |
 
 </details>
 
@@ -560,43 +577,54 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 1. **Real test cases.** Every feature has a set of test cases: a realistic
    situation (an email, an account, a web page) and the answer we expect. The
    model receives exactly the prompt the product sends in real use.
-2. **Several tries.** Each test case is run 3 times (our standard setting; `RUNS=`
-   can change it for one run), because a model can answer the same question
-   differently each time.
+2. **Several tries.** Each test case is run 3 times at first (`RUNS=` can change
+   that for one run), because a model can answer the same question differently
+   each time. A test case whose result sits close to a line gets 3 more tries at a
+   time, up to 9, so a close call is settled by more evidence rather than by luck.
 3. **Two checks on every try.**
    - *Is it right?* The answer is checked mechanically against what we expect: the
      right label, the right record, no invented facts, fast enough.
    - *Is it good?* A second AI model, chosen so that it is not the one being tested,
      scores the answer from 0 to 100 against a written description of a good answer.
-     4 older results were scored by the same model they tested; the next re-check
-     replaces them.
-4. **A low score is double-checked.** When the quality score is below the bar, the
-   scoring model is asked 2 more times and the middle of the 3 scores counts, so
-   one bad reading cannot fail a good answer.
-5. **The grade.** All the tries of a feature are then added up:
+     A test case whose own check already sees everything that description asks is
+     *checked mechanically* instead: no scoring model is asked, and it counts on its
+     right answers alone.
+     4 older results were scored by the model they tested or one of its family; the
+     next re-check replaces them.
+4. **A close score is checked again.** The scoring model grades every try once. A
+   score within 10 points of one of the test case's bars is asked for a second time,
+   and two readings more than 5 apart for a third; the middle one counts (the
+   average, of two). So one odd reading cannot decide a close call, and a clear one
+   is not paid for 3 times.
+5. **The grade.** All the tries of a feature are then read together:
 
 | Grade | Right answers | Every test case | Quality |
 |---|---|---|---|
-| ✅ Ready | at least 90 of every 100 tries | right in at least 2 of its 3 tries | good in every case, no very poor answer |
-| ⚠️ Usable with care | at least two thirds of all tries | — | acceptable in every case |
-| ❌ Not reliable yet | anything less | | |
+| ✅ Ready | at least 90 of every 100 tries, and enough tries to be sure of at least 80 | right in at least half its tries, and not clearly broken | good on average across all tries, even allowing for doubt |
+| ⚠️ Usable with care | at least two thirds of all tries | not failing nearly every try, and not clearly very poor | acceptable on average, even allowing for doubt |
+| ❌ Not reliable yet | anything less, or a test case the scoring model never scored | | |
 
-A feature does not have to be perfect to be ready: a stray miss among many tries
-is allowed. A test case that fails again and again is not — that is a real
-weakness, not bad luck — and it holds the whole feature back.
+A feature does not have to be perfect to be ready: a stray miss or a low score
+among many tries is allowed, because the grade weighs all of them together. A
+test case that is clearly broken is not — one that fails nearly every try, or
+scores below its acceptable bar on every try — and it holds the whole feature
+back however well the others do.
 
 ### Thresholds
 
 | What | Threshold |
 |---|---|
 | Right answers needed for ✅ Ready | at least 90 of every 100 tries, counted over all of the feature's test cases |
-| Each test case, for ✅ Ready | right in at least 2 of its 3 tries |
+| How sure that must be, for ✅ Ready | the pass rate's lower bound at least 80 of every 100 |
+| Each test case, for ✅ Ready | right in at least 50 of every 100 of its own tries |
 | Right answers needed for ⚠️ Usable with care | at least two thirds of all tries |
-| Tries per test case | 3 (`RUNS=` changes it for one run) |
-| Extra quality opinions on a low score | 2 more, and the middle of the 3 scores counts |
-| Quality bar 70 / 50 / 40 — 147 test cases | ✅ Ready needs a quality score of at least 70 (and no single answer below 40); ⚠️ Usable with care needs at least 50 |
-| Quality bar 80 / 60 / 50 — 4 test cases | ✅ Ready needs a quality score of at least 80 (and no single answer below 50); ⚠️ Usable with care needs at least 60 |
-| Quality bar 75 / 55 / 45 — one test case | ✅ Ready needs a quality score of at least 75 (and no single answer below 45); ⚠️ Usable with care needs at least 55 |
+| A test case is clearly broken | its pass rate's upper bound is under 50 of every 100 (blocks ✅ Ready and ⚠️ Usable with care), or its quality score's upper bound is under its acceptable bar (blocks ✅ Ready) |
+| Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 9 |
+| Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
+| How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
+| Quality bar 70 / 50 / 40 — 107 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 80 / 60 / 50 — 4 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
+| Quality bar 75 / 55 / 45 — 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
 All of these live in [`backend/internal/compose/aicert/thresholds.go`](../../backend/internal/compose/aicert/thresholds.go) (quality bars: in each test case's file); change them there and regenerate this page.
 
@@ -606,20 +634,38 @@ All of these live in [`backend/internal/compose/aicert/thresholds.go`](../../bac
 From `Verdict` in [`score.go`](../../backend/internal/compose/aicert/score.go), applied to every case of a task at once:
 
 ```text
-certified          = pooled passes ≥ 90% of all runs
-                   ∧ every scenario passes ≥⌈2n/3⌉ of its own n runs
-                   ∧ every scenario's graded median ≥ its CertifiedMin ∧ graded minimum ≥ its Floor
-supported_degraded = pooled passes ≥ ⌈2N/3⌉ of all N runs
-                   ∧ every scenario's graded median ≥ its DegradedMin
-otherwise          = not_supported, which includes any scenario no judge graded
+certified          = K/N ≥ 90% ∧ WilsonLower(K, N) ≥ 80%
+                   ∧ every case passes ≥ 50% of its own n runs
+                   ∧ TLower(score − its case's certified_min, over every graded run) ≥ 0
+                   ∧ every case's TUpper(scores) ≥ its certified_min
+                   ∧ every graded run's score ≥ its case's floor
+                   ∧ no case vetoed
+supported_degraded = K ≥ ⌈2N/3⌉
+                   ∧ TLower(score − its case's degraded_min, over every graded run) ≥ 0
+                   ∧ no case vetoed
+otherwise          = not_supported, which includes any case no judge graded
+a case declaring judge: none meets every judge condition by construction,
+and its runs enter no margin; its pass count is pooled like any other
+vetoed             = WilsonUpper(k, n) < 50% ∨ TUpper(its scores) < its floor
+WilsonLower/Upper  = the one-sided 90% Wilson score bounds (z = 1.2816)
+TLower/TUpper      = mean ∓ t(0.90, m−1)·max(sd, 5)/√m over m values; the mean itself when m = 1
 ```
 
-Each case sets its own quality bands (`certified_min`, `degraded_min`, `floor`).
-A judge score below `certified_min` is asked for 2 more times, and the run is
-scored at the median of the 3. The grades map to the record's words as
-✅ Ready = `certified`, ⚠️ Usable with care = `supported_degraded`, ❌ Not reliable yet = `not_supported`, and ❔ Not measured = no record for that model.
+Each case sets its own quality bands (`certified_min`, `degraded_min`, `floor`), so
+the pooled judge criterion averages every run's distance from its own case's bar.
+Every run is graded once, again when that score is within 10 of any of its case's bands,
+and a third time when the two differ by more than 5, at most 3 opinions; it scores at the
+median of the opinions that parsed (the mean of two).
+A case runs 3 times, then 3 more at a time up to 9 while it is borderline: its pass
+count k of n satisfies (2k − n)² ≤ n, or its median score is within one standard
+error of `certified_min` or `degraded_min`. Every case extends while the pool is
+undecided: the pooled pass rate is at least 90% but its Wilson bound is under 80%, or
+the pooled `certified_min` margin averages at least 0 but its bound is under 0. The
+decision reads only scored runs, so a resumed run replays the same extensions.
+The grades map to the record's words as ✅ Ready = `certified`, ⚠️ Usable with care = `supported_degraded`, ❌ Not reliable yet = `not_supported`, and
+❔ Not measured = no record for that model.
 
-4 of the committed records were nonetheless graded by the model they measured
+4 of the committed records were nonetheless graded by the model they measured or its family
 (`self_judged` in the record file).
 
 </details>
@@ -636,23 +682,23 @@ Everything the grades above are computed from, folded so the page stays short.
 | | |
 |---|---:|
 | Shipped invocation sites | 47 |
-| … best state `current` | 46 |
+| … best state `current` | 42 |
 | … best state `partial` | 0 |
-| … best state `stale` | 1 |
+| … best state `stale` | 5 |
 | … `absent` on every binding | 0 |
-| Scenarios in the corpus | 152 |
-| Committed records | 173 |
+| Scenarios in the corpus | 156 |
+| Committed records | 177 |
 | Bindings measured | 17 |
 
 #### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 119 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
+Counted per record — one (task, binding) pair — over the 91 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
-| the case | 5 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
-| **the prompt this build sends** | 49 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| how a run is graded | 114 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
+| the case | 71 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
+| **the prompt this build sends** | 74 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
+| how a run is graded | 88 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -690,6 +736,7 @@ today. It says nothing about how well the model did — that is the band.
 
 | Column | What it says |
 |---|---|
+| Quality | Who scores how good a test case's answers are: `judge`, a second model, or `checked mechanically`, where the case's own check sees everything a judge would and no judge is asked. |
 | Runs, Passed | How many times the model was asked, and how often it did what the test case wanted. |
 | Reliability | Passed divided by Runs. 1.00 is every attempt. |
 | `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back — not a pass/fail split. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |
@@ -709,53 +756,53 @@ Which model to run each site on, and what that choice rests on.
 
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
-| [`account_scan/company_scan`](#account_scancompany_scan) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 1.00 | `current` | 2 | 6 |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 2 |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 2 |
-| [`brief_ranking/rank`](#brief_rankingrank) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `certified` | 1.00 | `current` | 1 | 7 |
-| [`capture_classify/classify`](#capture_classifyclassify) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `supported_degraded` | 0.80 | `current` | 5 | 7 |
-| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.86 | `current` | 14 | 5 |
-| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.81 | `current` | 19 | 6 |
-| [`cert_judge/judge`](#cert_judgejudge) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `certified` | 1.00 | `current` | 2 | 8 |
-| [`cold_start/acts`](#cold_startacts) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `certified` | 1.00 | `current` | 5 | 6 |
-| [`cold_start/company_message`](#cold_startcompany_message) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `supported_degraded` | 0.67 | `current` | 1 | 6 |
-| [`cold_start/field_extract`](#cold_startfield_extract) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `certified` | 1.00 | `current` | 1 | 6 |
-| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.50 | `current` | 2 | 6 |
-| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.87 | `current` | 5 | 7 |
-| [`deal_health/deal_status`](#deal_healthdeal_status) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.89 | `current` | 3 | 5 |
-| [`document_extract/fields`](#document_extractfields) | - | - | - | `stale` | 4 | 1 |
-| [`draft_reply/account`](#draft_replyaccount) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 1.00 | `current` | 1 | 7 |
-| [`draft_reply/contact`](#draft_replycontact) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `supported_degraded` | 1.00 | `current` | 1 | 7 |
-| [`draft_reply/first`](#draft_replyfirst) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 1.00 | `current` | 1 | 7 |
-| [`draft_reply/intro`](#draft_replyintro) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 1.00 | `current` | 2 | 7 |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.67 | `current` | 3 | 7 |
-| [`draft_reply/reply`](#draft_replyreply) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `supported_degraded` | 1.00 | `current` | 4 | 8 |
-| [`enrich/signature`](#enrichsignature) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `certified` | 1.00 | `current` | 1 | 7 |
-| [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.00 | `current` | 1 | 5 |
-| [`offer_draft/draft`](#offer_draftdraft) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.60 | `current` | 5 | 6 |
-| [`owed_verdict/owed`](#owed_verdictowed) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.50 | `current` | 4 | 6 |
-| [`propose_roles/committee`](#propose_rolescommittee) | `ollama · gemma4:12b · sovereign` | `certified` | 1.00 | `current` | 3 | 6 |
-| [`rate_extract/fx`](#rate_extractfx) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `certified` | 1.00 | `current` | 2 | 7 |
-| [`rate_extract/pricing`](#rate_extractpricing) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `certified` | 1.00 | `current` | 1 | 7 |
-| [`request_settlement/request_settle`](#request_settlementrequest_settle) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.50 | `current` | 4 | 6 |
-| [`signal_extract/thread_events`](#signal_extractthread_events) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.50 | `current` | 4 | 6 |
-| [`site_extract/profile`](#site_extractprofile) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.60 | `current` | 5 | 7 |
-| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.67 | `current` | 3 | 6 |
-| [`site_triage/triage`](#site_triagetriage) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 0.93 | `current` | 5 | 6 |
-| [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.33 | `current` | 9 | 5 |
-| [`summarize/company_ask`](#summarizecompany_ask) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 1.00 | `current` | 2 | 5 |
-| [`summarize/company_brief`](#summarizecompany_brief) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.83 | `current` | 2 | 5 |
-| [`summarize/company_dossier`](#summarizecompany_dossier) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.00 | `current` | 1 | 5 |
-| [`summarize/contact_brief`](#summarizecontact_brief) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.00 | `current` | 2 | 5 |
-| [`summarize/meeting_brief`](#summarizemeeting_brief) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.00 | `current` | 1 | 5 |
-| [`summarize/meeting_plan`](#summarizemeeting_plan) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `supported_degraded` | 0.67 | `current` | 1 | 5 |
-| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `certified` | 1.00 | `current` | 3 | 6 |
-| [`voice_build/demo_draft`](#voice_builddemo_draft) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 1.00 | `current` | 1 | 5 |
-| [`voice_build/derive`](#voice_buildderive) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.00 | `current` | 1 | 6 |
-| [`voice_build/eval_draft`](#voice_buildeval_draft) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `supported_degraded` | 1.00 | `current` | 1 | 6 |
-| [`voice_build/eval_scores`](#voice_buildeval_scores) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `certified` | 1.00 | `current` | 1 | 6 |
-| [`weekly_learnings/learn`](#weekly_learningslearn) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `not_supported` | 0.22 | `current` | 3 | 5 |
-| [`weekly_review/narrative`](#weekly_reviewnarrative) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `supported_degraded` | 0.92 | `current` | 4 | 5 |
+| [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 6 |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | - | - | - | `stale` | 3 | 5 |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | - | - | - | `stale` | 3 | 5 |
+| [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 8 |
+| [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 7 |
+| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | - | - | - | `stale` | 14 | 5 |
+| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | - | - | - | `stale` | 19 | 6 |
+| [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 9 |
+| [`cold_start/acts`](#cold_startacts) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 6 |
+| [`cold_start/company_message`](#cold_startcompany_message) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 6 |
+| [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 6 |
+| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 6 |
+| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 7 |
+| [`deal_health/deal_status`](#deal_healthdeal_status) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 5 |
+| [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.5-flash · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 1 |
+| [`draft_reply/account`](#draft_replyaccount) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 7 |
+| [`draft_reply/contact`](#draft_replycontact) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 7 |
+| [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `not_supported` | 1.00 | `current` | 1 | 7 |
+| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 7 |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 7 |
+| [`draft_reply/reply`](#draft_replyreply) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 8 |
+| [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 7 |
+| [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `supported_degraded` | 0.89 | `current` | 2 | 5 |
+| [`offer_draft/draft`](#offer_draftdraft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 6 |
+| [`owed_verdict/owed`](#owed_verdictowed) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 6 |
+| [`propose_roles/committee`](#propose_rolescommittee) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `certified` | 1.00 | `current` | 3 | 6 |
+| [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 2 | 8 |
+| [`rate_extract/pricing`](#rate_extractpricing) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 8 |
+| [`request_settlement/request_settle`](#request_settlementrequest_settle) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 6 |
+| [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 6 |
+| [`site_extract/profile`](#site_extractprofile) | - | - | - | `stale` | 5 | 8 |
+| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 6 |
+| [`site_triage/triage`](#site_triagetriage) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 6 |
+| [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 9 | 5 |
+| [`summarize/company_ask`](#summarizecompany_ask) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 5 |
+| [`summarize/company_brief`](#summarizecompany_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 2 | 5 |
+| [`summarize/company_dossier`](#summarizecompany_dossier) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 5 |
+| [`summarize/contact_brief`](#summarizecontact_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 0.94 | `current` | 2 | 5 |
+| [`summarize/meeting_brief`](#summarizemeeting_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 5 |
+| [`summarize/meeting_plan`](#summarizemeeting_plan) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `supported_degraded` | 0.78 | `current` | 1 | 5 |
+| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 6 |
+| [`voice_build/demo_draft`](#voice_builddemo_draft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 5 |
+| [`voice_build/derive`](#voice_buildderive) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 6 |
+| [`voice_build/eval_draft`](#voice_buildeval_draft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `not_supported` | 1.00 | `current` | 1 | 6 |
+| [`voice_build/eval_scores`](#voice_buildeval_scores) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 6 |
+| [`weekly_learnings/learn`](#weekly_learningslearn) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 5 |
+| [`weekly_review/narrative`](#weekly_reviewnarrative) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 5 | 5 |
 
 **Best model tested** is the strongest result that still describes what ships.
 Only a `current` or `partial` record is eligible; among those the pick is the
@@ -782,23 +829,23 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 41 | 2 | 0 | 39 | 405 | 367 | 0.91 | 6994ms | 23 | 7 | 11 |
+| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 41 | 36 | 0 | 5 | 573 | 566 | 0.99 | 26137ms | 24 | 15 | 2 |
 | `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
-| `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 13 | 0 | 0 | 13 | 96 | 92 | 0.96 | 26168ms | 9 | 0 | 4 |
-| `ollama` | `gemma4:12b` | `sovereign` | 13 | 9 | 0 | 4 | 111 | 90 | 0.81 | 56477ms | 7 | 1 | 5 |
+| `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 13 | 6 | 0 | 7 | 108 | 108 | 1.00 | 11911ms | 7 | 3 | 3 |
+| `ollama` | `gemma4:12b` | `sovereign` | 13 | 0 | 0 | 13 | 111 | 90 | 0.81 | 56477ms | 7 | 1 | 5 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `cloud_frontier` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 0 | 0 | 6 | 141 | 127 | 0.90 | 73147ms | 2 | 0 | 4 |
-| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 38 | 0 | 0 | 38 | 285 | 238 | 0.84 | 237887ms | 19 | 7 | 12 |
+| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 40 | 0 | 0 | 40 | 324 | 266 | 0.82 | 237887ms | 19 | 8 | 13 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 10 | 0 | 0 | 10 | 45 | 39 | 0.87 | 20620ms | 8 | 0 | 2 |
-| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 32 | 0 | 0 | 32 | 237 | 153 | 0.65 | 86185ms | 7 | 8 | 17 |
+| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 34 | 26 | 0 | 8 | 477 | 371 | 0.78 | 83052ms | 7 | 9 | 18 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
-| `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 0 | 0 | 6 | 141 | 122 | 0.87 | 12585ms | 2 | 0 | 4 |
+| `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 4 | 0 | 2 | 159 | 139 | 0.87 | 5569ms | 2 | 1 | 3 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 6 | 0 | 0 | 6 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
-| `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 1 | 0 | 0 | 1 | 15 | 15 | 1.00 | 10068ms | 1 | 0 | 0 |
-| `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 6 | 0 | 0 | 6 | 48 | 42 | 0.88 | 3826ms | 5 | 0 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 39 | 1 | 0 | 38 | 384 | 310 | 0.81 | 140306ms | 13 | 7 | 19 |
+| `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 6 | 5 | 0 | 1 | 90 | 72 | 0.80 | 4453ms | 3 | 2 | 1 |
+| `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 6 | 5 | 0 | 1 | 66 | 59 | 0.89 | 4757ms | 3 | 2 | 1 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 41 | 36 | 0 | 5 | 714 | 638 | 0.89 | 8813ms | 12 | 18 | 11 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
-| `vllm` | `mlx-community/Qwen3-14B-4bit` | `sovereign` | 46 | 44 | 0 | 2 | 444 | 329 | 0.74 | 105742ms | 11 | 7 | 28 |
+| `vllm` | `mlx-community/Qwen3-14B-4bit` | `sovereign` | 46 | 0 | 0 | 46 | 444 | 329 | 0.74 | 105742ms | 11 | 7 | 28 |
 
 </details>
 
@@ -823,222 +870,171 @@ model, real network).
 
 | Site | Binding | Why it is stale |
 |---|---|---|
-| `account_scan/company_scan` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
-| `account_scan/company_scan` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
-| `account_scan/company_scan` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
-| `account_scan/company_scan` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
-| `agent_loop/morning_brief` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
-| `agent_loop/overnight_at_risk_sweep` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
-| `brief_ranking/rank` | `gemini · gemini-3.5-flash · cloud_frontier` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
-| `brief_ranking/rank` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
-| `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
-| `brief_ranking/rank` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
+| `account_scan/company_scan` | `ollama · gemma4:12b · sovereign` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
+| `account_scan/company_scan` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
+| `account_scan/company_scan` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
+| `agent_loop/morning_brief` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
+| `agent_loop/overnight_at_risk_sweep` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
+| `agent_loop/overnight_at_risk_sweep` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
+| `agent_loop/overnight_at_risk_sweep` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
+| `agent_loop/overnight_at_risk_sweep` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
+| `brief_ranking/rank` | `ollama · gemma4:12b · sovereign` | the case and how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
+| `brief_ranking/rank` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
+| `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | the case and how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `capture_classify/classify` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
-| `capture_classify/classify` | `ollama · gemma4:12b · sovereign` | 5 scenarios it scored have changed since (the prompt this build sends): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
+| `brief_ranking/rank` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and how a run is graded changed under scenario reorder_two_candidates_by_momentum since the record scored it |
+| `capture_classify/classify` | `ollama · gemma4:12b · sovereign` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
 | `capture_classify/classify` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
 | `capture_classify/classify` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `capture_classify/classify` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
-| `capture_classify/classify` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
-| `capture_confidentiality_verdict/thread` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
-| `capture_confidentiality_verdict/thread` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
-| `capture_confidentiality_verdict/thread` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
-| `capture_confidentiality_verdict/thread` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 14 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
+| `capture_classify/classify` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
+| `capture_confidentiality_verdict/thread` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 14 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
+| `capture_confidentiality_verdict/thread` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 14 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
+| `capture_confidentiality_verdict/thread` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 14 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
+| `capture_confidentiality_verdict/thread` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 14 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
+| `capture_confidentiality_verdict/thread` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 14 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
 | `capture_counterparty_verdict/verdict` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 19 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
-| `capture_counterparty_verdict/verdict` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 19 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
+| `capture_counterparty_verdict/verdict` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 19 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `capture_counterparty_verdict/verdict` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 19 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
-| `capture_counterparty_verdict/verdict` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 19 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
-| `cert_judge/judge` | `gemini · gemini-3.5-flash · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
-| `cert_judge/judge` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
-| `cert_judge/judge` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
-| `cert_judge/judge` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
-| `cert_judge/judge` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
+| `capture_counterparty_verdict/verdict` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 19 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
+| `capture_counterparty_verdict/verdict` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 19 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
+| `capture_counterparty_verdict/verdict` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 19 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact and 13 more |
+| `cert_judge/judge` | `ollama · gemma4:12b · sovereign` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
+| `cert_judge/judge` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
+| `cert_judge/judge` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
+| `cert_judge/judge` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
 | `cert_judge/judge` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `cold_start/acts` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
-| `cold_start/acts` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
+| `cert_judge/judge` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
+| `cold_start/acts` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
 | `cold_start/acts` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `cold_start/acts` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
-| `cold_start/acts` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
-| `cold_start/company_message` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
+| `cold_start/acts` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
 | `cold_start/company_message` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/company_message` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `cold_start/company_message` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
-| `cold_start/company_message` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
-| `cold_start/field_extract` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | how a run is graded changed under scenario onboarding_readback_from_landing_page since the record scored it |
+| `cold_start/company_message` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/field_extract` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario onboarding_readback_from_landing_page since the record scored it |
 | `cold_start/field_extract` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `cold_start/field_extract` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | how a run is graded changed under scenario onboarding_readback_from_landing_page since the record scored it |
-| `cold_start/field_extract` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | how a run is graded changed under scenario onboarding_readback_from_landing_page since the record scored it |
-| `cold_start/sitereadmessage` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for |
-| `cold_start/sitereadmessage` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for |
+| `cold_start/field_extract` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | how a run is graded changed under scenario onboarding_readback_from_landing_page since the record scored it |
+| `cold_start/sitereadmessage` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario dossier_correction_the_administrator_asked_for since the record scored it (it also scored an_administrator_agreeing_confirms_and_changes_nothing_further, which the corpus no longer holds) |
 | `cold_start/sitereadmessage` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `cold_start/sitereadmessage` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for |
-| `cold_start/sitereadmessage` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for |
+| `cold_start/sitereadmessage` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the prompt this build sends and how a run is graded changed under scenario dossier_correction_the_administrator_asked_for since the record scored it (it also scored an_administrator_agreeing_confirms_and_changes_nothing_further, which the corpus no longer holds) |
 | `corpus_ask/corpus_ask` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `gemini · gemini-3.5-flash · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `deal_health/deal_status` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
-| `deal_health/deal_status` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
-| `deal_health/deal_status` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
-| `deal_health/deal_status` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
-| `document_extract/fields` | `gemini · gemini-3.5-flash · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): attached_document_states_none_of_them, order_form_states_all_four, pdf_agreement_read_as_a_document_part, quote_states_money_but_no_close_date |
-| `draft_reply/account` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
+| `corpus_ask/corpus_ask` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `deal_health/deal_status` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
+| `deal_health/deal_status` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `draft_reply/account` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/account` | `gemini · gemini-3.5-flash · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
-| `draft_reply/account` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
-| `draft_reply/account` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
-| `draft_reply/account` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
-| `draft_reply/contact` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
+| `draft_reply/account` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
+| `draft_reply/account` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the case and the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
+| `draft_reply/account` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/contact` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
 | `draft_reply/contact` | `gemini · gemini-3.5-flash · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
-| `draft_reply/contact` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
-| `draft_reply/contact` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
-| `draft_reply/contact` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
-| `draft_reply/first` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it |
+| `draft_reply/contact` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
+| `draft_reply/contact` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
+| `draft_reply/contact` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
 | `draft_reply/first` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it |
 | `draft_reply/first` | `gemini · gemini-3.5-flash · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it |
-| `draft_reply/first` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it |
-| `draft_reply/first` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it |
-| `draft_reply/first` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it |
-| `draft_reply/intro` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/first` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it |
+| `draft_reply/first` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the case and the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it |
+| `draft_reply/first` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and the prompt this build sends and how a run is graded changed under scenario first_message_from_an_intent_alone since the record scored it |
 | `draft_reply/intro` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
-| `draft_reply/intro` | `gemini · gemini-3.5-flash · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
-| `draft_reply/intro` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
-| `draft_reply/intro` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
-| `draft_reply/intro` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
-| `draft_reply/intro_note` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
+| `draft_reply/intro` | `gemini · gemini-3.5-flash · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
 | `draft_reply/intro_note` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
 | `draft_reply/intro_note` | `gemini · gemini-3.5-flash · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
-| `draft_reply/intro_note` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
-| `draft_reply/intro_note` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
-| `draft_reply/intro_note` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
-| `draft_reply/reply` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
+| `draft_reply/intro_note` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
+| `draft_reply/intro_note` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
+| `draft_reply/intro_note` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
 | `draft_reply/reply` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `gemini · gemini-3.5-flash · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
-| `draft_reply/reply` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
+| `draft_reply/reply` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `draft_reply/reply` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
-| `draft_reply/reply` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
-| `enrich/signature` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
-| `enrich/signature` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
+| `draft_reply/reply` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
+| `draft_reply/reply` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
+| `enrich/signature` | `ollama · gemma4:12b · sovereign` | the case and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
+| `enrich/signature` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | the case and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
 | `enrich/signature` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `enrich/signature` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
-| `enrich/signature` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
-| `growth_fit/growth_fit` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it |
-| `growth_fit/growth_fit` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it |
-| `growth_fit/growth_fit` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it |
-| `growth_fit/growth_fit` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it |
-| `offer_draft/draft` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price |
-| `offer_draft/draft` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price |
+| `enrich/signature` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it |
+| `growth_fit/growth_fit` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it |
+| `growth_fit/growth_fit` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and the prompt this build sends and how a run is graded changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it |
+| `offer_draft/draft` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, two_sources_disagree_on_price (it also scored rich_context_under_a_tight_token_cap, which the corpus no longer holds) |
 | `offer_draft/draft` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `offer_draft/draft` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 5 scenarios it scored have changed since (how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price |
-| `offer_draft/draft` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price |
-| `owed_verdict/owed` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
-| `owed_verdict/owed` | `ollama · gemma4:12b · sovereign` | 4 scenarios it scored have changed since (the prompt this build sends): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
-| `owed_verdict/owed` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
-| `owed_verdict/owed` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
-| `owed_verdict/owed` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
-| `propose_roles/committee` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
+| `offer_draft/draft` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, two_sources_disagree_on_price (it also scored rich_context_under_a_tight_token_cap, which the corpus no longer holds) |
+| `owed_verdict/owed` | `ollama · gemma4:12b · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
+| `owed_verdict/owed` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
+| `owed_verdict/owed` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
+| `propose_roles/committee` | `ollama · gemma4:12b · sovereign` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
 | `propose_roles/committee` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
-| `propose_roles/committee` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
-| `propose_roles/committee` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
-| `rate_extract/fx` | `gemini · gemini-3.5-flash · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
-| `rate_extract/fx` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
-| `rate_extract/fx` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
-| `rate_extract/fx` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
+| `propose_roles/committee` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (how a run is graded): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
+| `rate_extract/fx` | `ollama · gemma4:12b · sovereign` | 2 scenarios it scored have changed since (the case and how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
+| `rate_extract/fx` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the case and how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
+| `rate_extract/fx` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 2 scenarios it scored have changed since (the case and how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
 | `rate_extract/fx` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `rate_extract/pricing` | `gemini · gemini-3.5-flash · cloud_frontier` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
-| `rate_extract/pricing` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
-| `rate_extract/pricing` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
-| `rate_extract/pricing` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
+| `rate_extract/fx` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the case and how a run is graded): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
+| `rate_extract/pricing` | `ollama · gemma4:12b · sovereign` | the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
+| `rate_extract/pricing` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
+| `rate_extract/pricing` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
 | `rate_extract/pricing` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `request_settlement/request_settle` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
-| `request_settlement/request_settle` | `ollama · gemma4:12b · sovereign` | 4 scenarios it scored have changed since (the prompt this build sends): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
+| `rate_extract/pricing` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it |
+| `request_settlement/request_settle` | `ollama · gemma4:12b · sovereign` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
 | `request_settlement/request_settle` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
-| `request_settlement/request_settle` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
-| `request_settlement/request_settle` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
-| `signal_extract/thread_events` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
-| `signal_extract/thread_events` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
-| `signal_extract/thread_events` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
-| `signal_extract/thread_events` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
-| `site_extract/profile` | `gemini · gemini-3.5-flash · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
-| `site_extract/profile` | `openai_compatible · anthropic/claude-haiku-4.5 · cloud_frontier` | 5 scenarios it scored have changed since (the case and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
-| `site_extract/profile` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
-| `site_extract/profile` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
-| `site_extract/profile` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 5 scenarios it scored have changed since (how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
+| `request_settlement/request_settle` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague |
+| `signal_extract/thread_events` | `ollama · gemma4:12b · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
+| `signal_extract/thread_events` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
+| `signal_extract/thread_events` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
+| `site_extract/profile` | `gemini · gemini-3.5-flash · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario services_page_profile_fields_grounded since the record scored it |
+| `site_extract/profile` | `openai_compatible · anthropic/claude-haiku-4.5 · cloud_frontier` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
+| `site_extract/profile` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
+| `site_extract/profile` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
+| `site_extract/profile` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario services_page_profile_fields_grounded since the record scored it |
+| `site_extract/profile` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | the case and the prompt this build sends and how a run is graded changed under scenario services_page_profile_fields_grounded since the record scored it |
 | `site_extract/profile` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `site_fact_extract/page_facts` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
+| `site_extract/profile` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
 | `site_fact_extract/page_facts` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
 | `site_fact_extract/page_facts` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `site_fact_extract/page_facts` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
-| `site_fact_extract/page_facts` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
-| `site_triage/triage` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
-| `site_triage/triage` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
-| `site_triage/triage` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 5 scenarios it scored have changed since (how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
-| `stage_evidence_extract/criteria` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
-| `stage_evidence_extract/criteria` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
-| `stage_evidence_extract/criteria` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
-| `stage_evidence_extract/criteria` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
-| `summarize/company_ask` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
-| `summarize/company_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
-| `summarize/company_ask` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
-| `summarize/company_ask` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
-| `summarize/company_brief` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
-| `summarize/company_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
-| `summarize/company_brief` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
-| `summarize/company_brief` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
-| `summarize/company_dossier` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
-| `summarize/company_dossier` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
-| `summarize/company_dossier` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
-| `summarize/company_dossier` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
-| `summarize/contact_brief` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
-| `summarize/contact_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
-| `summarize/contact_brief` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
-| `summarize/contact_brief` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
-| `summarize/meeting_brief` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it |
-| `summarize/meeting_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it |
-| `summarize/meeting_brief` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it |
-| `summarize/meeting_brief` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it |
-| `summarize/meeting_plan` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
-| `summarize/meeting_plan` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
-| `summarize/meeting_plan` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
-| `summarize/meeting_plan` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
-| `transcript_propose/next_steps` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `transcript_propose/next_steps` | `ollama · gemma4:12b · sovereign` | 3 scenarios it scored have changed since (the prompt this build sends): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `transcript_propose/next_steps` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `transcript_propose/next_steps` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `transcript_propose/next_steps` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `voice_build/demo_draft` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it |
-| `voice_build/demo_draft` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it |
-| `voice_build/demo_draft` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it |
-| `voice_build/demo_draft` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it |
-| `voice_build/derive` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it |
-| `voice_build/derive` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it |
+| `site_fact_extract/page_facts` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (how a run is graded): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
+| `site_triage/triage` | `ollama · gemma4:12b · sovereign` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
+| `site_triage/triage` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
+| `site_triage/triage` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
+| `stage_evidence_extract/criteria` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
+| `stage_evidence_extract/criteria` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
+| `summarize/company_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
+| `summarize/company_ask` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
+| `summarize/company_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
+| `summarize/company_brief` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
+| `summarize/company_dossier` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
+| `summarize/company_dossier` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
+| `summarize/contact_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
+| `summarize/contact_brief` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
+| `summarize/meeting_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it |
+| `summarize/meeting_brief` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and the prompt this build sends and how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it |
+| `summarize/meeting_plan` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
+| `summarize/meeting_plan` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
+| `transcript_propose/next_steps` | `ollama · gemma4:12b · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
+| `transcript_propose/next_steps` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
+| `transcript_propose/next_steps` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
+| `voice_build/demo_draft` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it |
+| `voice_build/demo_draft` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and the prompt this build sends and how a run is graded changed under scenario the_card_shows_a_line_in_the_built_voice since the record scored it |
+| `voice_build/derive` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it |
 | `voice_build/derive` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `voice_build/derive` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it |
-| `voice_build/derive` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it |
-| `voice_build/eval_draft` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it |
-| `voice_build/eval_draft` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it |
+| `voice_build/derive` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and the prompt this build sends and how a run is graded changed under scenario owner_voice_candidate_from_authored_messages since the record scored it |
+| `voice_build/eval_draft` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it |
 | `voice_build/eval_draft` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `voice_build/eval_draft` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it |
-| `voice_build/eval_draft` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it |
-| `voice_build/eval_scores` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it |
+| `voice_build/eval_draft` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the case and the prompt this build sends and how a run is graded changed under scenario held_out_draft_sits_close_to_the_author since the record scored it |
 | `voice_build/eval_scores` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it |
 | `voice_build/eval_scores` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `voice_build/eval_scores` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it |
-| `voice_build/eval_scores` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it |
-| `weekly_learnings/learn` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
-| `weekly_learnings/learn` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
-| `weekly_learnings/learn` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
-| `weekly_learnings/learn` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
-| `weekly_review/narrative` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
-| `weekly_review/narrative` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
-| `weekly_review/narrative` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
-| `weekly_review/narrative` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
+| `voice_build/eval_scores` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | how a run is graded changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it |
+| `weekly_learnings/learn` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
+| `weekly_learnings/learn` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
+| `weekly_review/narrative` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
+| `weekly_review/narrative` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, the_sentence_leads_with_what_changed_not_with_a_count |
 
 </details>
 
@@ -1081,21 +1077,21 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `scan_finds_the_promise_we_did_not_keep` | `accepted` | [promise_we_left_open_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/promise_we_left_open_01.yaml) |
-| `scan_finds_the_question_nobody_answered` | `accepted` | [question_left_unanswered_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/question_left_unanswered_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `scan_finds_the_promise_we_did_not_keep` | `accepted` | judge | [promise_we_left_open_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/promise_we_left_open_01.yaml) |
+| `scan_finds_the_question_nobody_answered` | `accepted` | judge | [question_left_unanswered_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/question_left_unanswered_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/2 | `not_supported` | 6 | 4 | 0.67 | 1532ms | 1748ms | 4 | 2 | 0 | 0 |
-| `ollama · gemma4:12b · sovereign` | `current` | 2/2 | `not_supported` | 6 | 3 | 0.50 | 30560ms | 32654ms | 3 | 3 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1566ms | 2462ms | 12 | 0 | 0 | 0 |
+| `ollama · gemma4:12b · sovereign` | `stale` | 0/2 | `not_supported` | 6 | 3 | 0.50 | 30560ms | 32654ms | 3 | 3 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `not_supported` | 6 | 3 | 0.50 | 16823ms | 23361ms | 3 | 3 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 2061ms | 3416ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 15165ms | 79955ms | 6 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `not_supported` | 6 | 6 | 1.00 | 18680ms | 27365ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `certified` | 15 | 15 | 1.00 | 3400ms | 36507ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1331ms | 3011ms | 12 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `not_supported` | 6 | 6 | 1.00 | 18680ms | 27365ms | 6 | 0 | 0 | 0 |
 
 </details>
 
@@ -1104,7 +1100,7 @@ Records (6):
 Certified without the company context production prepends (`identity`, `positioning`, `sales`, `offer`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>agent_loop/morning_brief</code> — 3 scenario(s), 2 record(s), best state current</summary>
+<summary><code>agent_loop/morning_brief</code> — 3 scenario(s), 5 record(s), best state stale</summary>
 
 ##### `agent_loop/morning_brief`
 
@@ -1112,23 +1108,26 @@ Scope a run of it can claim: `single_turn`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `morning_brief_a_retrieved_deal_is_not_the_queue` | `accepted` | [morning_brief_a_retrieved_deal_is_not_the_queue.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_a_retrieved_deal_is_not_the_queue.yaml) |
-| `morning_brief_reads_its_queue_first` | `accepted` | [morning_brief_reads_its_queue_first.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_reads_its_queue_first.yaml) |
-| `morning_brief_retrieved_text_is_not_an_instruction` | `accepted` | [morning_brief_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_retrieved_text_is_not_an_instruction.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `morning_brief_a_retrieved_deal_is_not_the_queue` | `accepted` | checked mechanically | [morning_brief_a_retrieved_deal_is_not_the_queue.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_a_retrieved_deal_is_not_the_queue.yaml) |
+| `morning_brief_reads_its_queue_first` | `accepted` | checked mechanically | [morning_brief_reads_its_queue_first.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_reads_its_queue_first.yaml) |
+| `morning_brief_retrieved_text_is_not_an_instruction` | `accepted` | checked mechanically | [morning_brief_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_retrieved_text_is_not_an_instruction.yaml) |
 
-Records (2):
+Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 897ms | 1165ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 897ms | 1165ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `not_supported` | 21 | 13 | 0.62 | 3614ms | 8474ms | 13 | 8 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1811ms | 2443ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1128ms | 1909ms | 9 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 6138ms | 29452ms | 9 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>agent_loop/overnight_at_risk_sweep</code> — 3 scenario(s), 2 record(s), best state current</summary>
+<summary><code>agent_loop/overnight_at_risk_sweep</code> — 3 scenario(s), 5 record(s), best state stale</summary>
 
 ##### `agent_loop/overnight_at_risk_sweep`
 
@@ -1136,17 +1135,20 @@ Scope a run of it can claim: `single_turn`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `overnight_sweep_one_quiet_deal_is_not_the_book` | `accepted` | [overnight_sweep_one_quiet_deal_is_not_the_book.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_one_quiet_deal_is_not_the_book.yaml) |
-| `overnight_sweep_reads_what_is_slipping_before_it_logs` | `accepted` | [overnight_sweep_reads_what_is_slipping_before_it_logs.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_reads_what_is_slipping_before_it_logs.yaml) |
-| `overnight_sweep_retrieved_text_is_not_an_instruction` | `accepted` | [overnight_sweep_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_retrieved_text_is_not_an_instruction.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `overnight_sweep_one_quiet_deal_is_not_the_book` | `accepted` | checked mechanically | [overnight_sweep_one_quiet_deal_is_not_the_book.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_one_quiet_deal_is_not_the_book.yaml) |
+| `overnight_sweep_reads_what_is_slipping_before_it_logs` | `accepted` | checked mechanically | [overnight_sweep_reads_what_is_slipping_before_it_logs.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_reads_what_is_slipping_before_it_logs.yaml) |
+| `overnight_sweep_retrieved_text_is_not_an_instruction` | `accepted` | checked mechanically | [overnight_sweep_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_retrieved_text_is_not_an_instruction.yaml) |
 
-Records (2):
+Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 897ms | 1165ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 897ms | 1165ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 18 | 15 | 0.83 | 3614ms | 8474ms | 15 | 3 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1811ms | 2443ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1128ms | 1909ms | 9 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 6138ms | 29452ms | 9 | 0 | 0 | 0 |
 
 </details>
@@ -1154,7 +1156,7 @@ Records (2):
 #### `brief_ranking`
 
 <details>
-<summary><code>brief_ranking/rank</code> — 1 scenario(s), 7 record(s), best state current</summary>
+<summary><code>brief_ranking/rank</code> — 1 scenario(s), 8 record(s), best state current</summary>
 
 ##### `brief_ranking/rank`
 
@@ -1162,21 +1164,22 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `reorder_two_candidates_by_momentum` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/brief_ranking/basic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `reorder_two_candidates_by_momentum` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/brief_ranking/basic_01.yaml) |
 
-Records (7):
+Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 3634ms | 3646ms | 3 | 0 | 0 | 0 |
-| `ollama · gemma4:12b · sovereign` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 17139ms | 18070ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 3700ms | 3991ms | 9 | 0 | 0 | 0 |
+| `ollama · gemma4:12b · sovereign` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 17139ms | 18070ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 3020ms | 4943ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1806ms | 2443ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1530ms | 1907ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 937ms | 4453ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 1776ms | 2050ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 9126ms | 18372ms | 3 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 9438ms | 9862ms | 3 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 9438ms | 9862ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -1191,32 +1194,32 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_message_that_is_both_is_labelled_commitment` | `accepted` | [commitment_beats_meeting_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/commitment_beats_meeting_01.yaml) |
-| `a_mixed_batch_keeps_every_label_on_its_own_message` | `accepted` | [batch_keeps_ids_aligned_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/batch_keeps_ids_aligned_01.yaml) |
-| `a_stated_promise_is_a_commitment` | `accepted` | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/commitment_01.yaml) |
-| `an_auto_reply_carries_no_commitment_and_no_meeting` | `accepted` | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/noise_01.yaml) |
-| `meeting_request_from_reply` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/basic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_message_that_is_both_is_labelled_commitment` | `accepted` | judge | [commitment_beats_meeting_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/commitment_beats_meeting_01.yaml) |
+| `a_mixed_batch_keeps_every_label_on_its_own_message` | `accepted` | judge | [batch_keeps_ids_aligned_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/batch_keeps_ids_aligned_01.yaml) |
+| `a_stated_promise_is_a_commitment` | `accepted` | judge | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/commitment_01.yaml) |
+| `an_auto_reply_carries_no_commitment_and_no_meeting` | `accepted` | judge | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/noise_01.yaml) |
+| `meeting_request_from_reply` | `accepted` | judge | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/basic_01.yaml) |
 
 Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1152ms | 1565ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 21 | 21 | 1.00 | 1339ms | 1665ms | 21 | 0 | 0 | 0 |
 | `ollama · gemma4:12b · sovereign` | `stale` | 0/5 | `not_supported` | 15 | 14 | 0.93 | 19842ms | 38204ms | 14 | 0 | 1 | 0 |
 | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 13 | 0.87 | 3514ms | 11471ms | 13 | 0 | 2 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `supported_degraded` | 3 | 2 | 0.67 | 1407ms | 1467ms | 2 | 0 | 1 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/5 | `not_supported` | 15 | 13 | 0.87 | 1530ms | 2683ms | 13 | 0 | 2 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 13 | 0.87 | 774ms | 1458ms | 13 | 2 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `supported_degraded` | 15 | 12 | 0.80 | 10491ms | 25590ms | 12 | 3 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2129ms | 3157ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 758ms | 1000ms | 15 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/5 | `supported_degraded` | 15 | 12 | 0.80 | 10491ms | 25590ms | 12 | 3 | 0 | 0 |
 
 </details>
 
 #### `capture_confidentiality_verdict`
 
 <details>
-<summary><code>capture_confidentiality_verdict/thread</code> — 14 scenario(s), 5 record(s), best state current</summary>
+<summary><code>capture_confidentiality_verdict/thread</code> — 14 scenario(s), 5 record(s), best state stale</summary>
 
 ##### `capture_confidentiality_verdict/thread`
 
@@ -1224,39 +1227,39 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (14):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade` | `accepted` | [ordinary_04.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_04.yaml) |
-| `a_consumer_bank_alert_is_the_owners_own_money_not_the_companys` | `accepted` | [personal_04.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_04.yaml) |
-| `a_live_dispute_with_counsel_stays_private` | `accepted` | [legal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_01.yaml) |
-| `a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business` | `accepted` | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_01.yaml) |
-| `a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys` | `accepted` | [personal_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_02.yaml) |
-| `a_suppliers_invoice_to_the_company_is_still_the_teams_to_see` | `accepted` | [ordinary_03.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_03.yaml) |
-| `a_termination_agreement_stays_private_whatever_the_attachment_note_says` | `accepted` | [personnel_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personnel_01.yaml) |
-| `an_nda_marked_thread_is_held_on_its_own_request` | `accepted` | [explicitly_confidential_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/explicitly_confidential_01.yaml) |
-| `an_ordinary_customer_thread_is_opened_for_the_team` | `accepted` | [ordinary_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_01.yaml) |
-| `an_unpatched_vulnerability_is_held_until_it_is_closed` | `accepted` | [security_incident_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/security_incident_01.yaml) |
-| `counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for` | `accepted` | [legal_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_02.yaml) |
-| `mentioning_an_nda_does_not_hold_an_ordinary_deal_thread` | `accepted` | [ordinary_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_02.yaml) |
-| `text_claiming_the_thread_was_cleared_does_not_open_it` | `accepted` | [forged_clearance_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/forged_clearance_01.yaml) |
-| `the_rent_on_the_owners_flat_is_not_a_supplier_relationship` | `accepted` | [personal_03.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_03.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade` | `accepted` | checked mechanically | [ordinary_04.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_04.yaml) |
+| `a_consumer_bank_alert_is_the_owners_own_money_not_the_companys` | `accepted` | checked mechanically | [personal_04.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_04.yaml) |
+| `a_live_dispute_with_counsel_stays_private` | `accepted` | checked mechanically | [legal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_01.yaml) |
+| `a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business` | `accepted` | checked mechanically | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_01.yaml) |
+| `a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys` | `accepted` | checked mechanically | [personal_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_02.yaml) |
+| `a_suppliers_invoice_to_the_company_is_still_the_teams_to_see` | `accepted` | checked mechanically | [ordinary_03.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_03.yaml) |
+| `a_termination_agreement_stays_private_whatever_the_attachment_note_says` | `accepted` | checked mechanically | [personnel_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personnel_01.yaml) |
+| `an_nda_marked_thread_is_held_on_its_own_request` | `accepted` | checked mechanically | [explicitly_confidential_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/explicitly_confidential_01.yaml) |
+| `an_ordinary_customer_thread_is_opened_for_the_team` | `accepted` | checked mechanically | [ordinary_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_01.yaml) |
+| `an_unpatched_vulnerability_is_held_until_it_is_closed` | `accepted` | checked mechanically | [security_incident_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/security_incident_01.yaml) |
+| `counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for` | `accepted` | checked mechanically | [legal_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_02.yaml) |
+| `mentioning_an_nda_does_not_hold_an_ordinary_deal_thread` | `accepted` | checked mechanically | [ordinary_02.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_02.yaml) |
+| `text_claiming_the_thread_was_cleared_does_not_open_it` | `accepted` | checked mechanically | [forged_clearance_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/forged_clearance_01.yaml) |
+| `the_rent_on_the_owners_flat_is_not_a_supplier_relationship` | `accepted` | checked mechanically | [personal_03.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_03.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/14 | `certified` | 42 | 42 | 1.00 | 1067ms | 1343ms | 42 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/14 | `certified` | 42 | 42 | 1.00 | 1209ms | 1425ms | 42 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/14 | `certified` | 42 | 42 | 1.00 | 2496ms | 5079ms | 42 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/14 | `not_supported` | 42 | 38 | 0.90 | 1389ms | 1582ms | 38 | 3 | 1 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/14 | `supported_degraded` | 42 | 37 | 0.88 | 767ms | 2009ms | 37 | 4 | 1 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 14/14 | `not_supported` | 42 | 36 | 0.86 | 10804ms | 13773ms | 36 | 6 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/14 | `not_supported` | 42 | 36 | 0.86 | 10804ms | 13773ms | 36 | 6 | 0 | 0 |
 
 </details>
 
 #### `capture_counterparty_verdict`
 
 <details>
-<summary><code>capture_counterparty_verdict/verdict</code> — 19 scenario(s), 6 record(s), best state current</summary>
+<summary><code>capture_counterparty_verdict/verdict</code> — 19 scenario(s), 6 record(s), best state stale</summary>
 
 ##### `capture_counterparty_verdict/verdict`
 
@@ -1264,45 +1267,45 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (19):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_chased_cold_pitch_is_still_spam` | `accepted` | [spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_02.yaml) |
-| `a_company_writing_as_itself_does_not_become_a_contact_named_after_it` | `accepted` | [company_sender_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_sender_01.yaml) |
-| `a_department_display_name_is_not_somebodys_name` | `accepted` | [role_display_name_billing_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_display_name_billing_01.yaml) |
-| `a_fluent_machine_written_pitch_is_still_spam` | `accepted` | [spam_bot_written_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml) |
-| `a_numbered_support_queue_is_one_desk` | `accepted` | [role_mailbox_numbered_queue_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_numbered_queue_01.yaml) |
-| `a_private_correspondent_is_not_a_business_contact` | `accepted` | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml) |
-| `a_private_property_desk_the_owner_wrote_to_is_not_a_contact` | `accepted` | [role_mailbox_property_desk_outbound_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml) |
-| `a_shared_mailbox_is_real_correspondence_with_nobody_to_name` | `accepted` | [role_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml) |
-| `a_trade_offices_city_mailbox_names_a_place_not_a_contact` | `accepted` | [company_city_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_city_mailbox_01.yaml) |
-| `a_two_sided_thread_is_a_conversation` | `accepted` | [false_spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_02.yaml) |
-| `an_automated_invoice_notice_is_not_a_contact` | `accepted` | [transactional_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/transactional_01.yaml) |
-| `bulk_marketing_is_noise` | `accepted` | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/noise_01.yaml) |
-| `courteous_cold_pitch_is_spam` | `accepted` | [spam_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_01.yaml) |
-| `family_writing_from_a_consumer_mailbox_is_not_a_business_contact` | `accepted` | [personal_family_freemail_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_family_freemail_01.yaml) |
-| `forged_fence_marker_is_data_not_authority` | `accepted` | [forged_fence_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/forged_fence_01.yaml) |
-| `invited_supplier_must_not_be_spam` | `accepted` | [false_spam_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_01.yaml) |
-| `real_prospect_must_not_be_noise` | `accepted` | [false_noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_noise_01.yaml) |
-| `the_owners_own_clinic_is_not_the_businesss_correspondent` | `accepted` | [personal_clinic_reception_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_clinic_reception_01.yaml) |
-| `the_owners_own_lawyer_is_not_the_workspaces_contact` | `accepted` | [advisor_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/advisor_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_chased_cold_pitch_is_still_spam` | `accepted` | judge | [spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_02.yaml) |
+| `a_company_writing_as_itself_does_not_become_a_contact_named_after_it` | `accepted` | judge | [company_sender_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_sender_01.yaml) |
+| `a_department_display_name_is_not_somebodys_name` | `accepted` | judge | [role_display_name_billing_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_display_name_billing_01.yaml) |
+| `a_fluent_machine_written_pitch_is_still_spam` | `accepted` | judge | [spam_bot_written_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml) |
+| `a_numbered_support_queue_is_one_desk` | `accepted` | judge | [role_mailbox_numbered_queue_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_numbered_queue_01.yaml) |
+| `a_private_correspondent_is_not_a_business_contact` | `accepted` | judge | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml) |
+| `a_private_property_desk_the_owner_wrote_to_is_not_a_contact` | `accepted` | judge | [role_mailbox_property_desk_outbound_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml) |
+| `a_shared_mailbox_is_real_correspondence_with_nobody_to_name` | `accepted` | judge | [role_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml) |
+| `a_trade_offices_city_mailbox_names_a_place_not_a_contact` | `accepted` | judge | [company_city_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_city_mailbox_01.yaml) |
+| `a_two_sided_thread_is_a_conversation` | `accepted` | judge | [false_spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_02.yaml) |
+| `an_automated_invoice_notice_is_not_a_contact` | `accepted` | judge | [transactional_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/transactional_01.yaml) |
+| `bulk_marketing_is_noise` | `accepted` | judge | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/noise_01.yaml) |
+| `courteous_cold_pitch_is_spam` | `accepted` | judge | [spam_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_01.yaml) |
+| `family_writing_from_a_consumer_mailbox_is_not_a_business_contact` | `accepted` | judge | [personal_family_freemail_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_family_freemail_01.yaml) |
+| `forged_fence_marker_is_data_not_authority` | `accepted` | judge | [forged_fence_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/forged_fence_01.yaml) |
+| `invited_supplier_must_not_be_spam` | `accepted` | judge | [false_spam_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_01.yaml) |
+| `real_prospect_must_not_be_noise` | `accepted` | judge | [false_noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_noise_01.yaml) |
+| `the_owners_own_clinic_is_not_the_businesss_correspondent` | `accepted` | judge | [personal_clinic_reception_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_clinic_reception_01.yaml) |
+| `the_owners_own_lawyer_is_not_the_workspaces_contact` | `accepted` | judge | [advisor_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/advisor_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/19 | `not_supported` | 57 | 55 | 0.96 | 2637ms | 4080ms | 55 | 2 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/19 | `certified` | 57 | 57 | 1.00 | 1224ms | 1612ms | 57 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/19 | `not_supported` | 57 | 52 | 0.91 | 2543ms | 7804ms | 52 | 4 | 1 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `certified` | 9 | 9 | 1.00 | 1856ms | 22390ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/19 | `not_supported` | 57 | 51 | 0.89 | 1427ms | 2110ms | 51 | 4 | 2 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/19 | `not_supported` | 57 | 49 | 0.86 | 1384ms | 7780ms | 49 | 7 | 1 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 19/19 | `not_supported` | 57 | 46 | 0.81 | 10835ms | 14980ms | 46 | 11 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/19 | `not_supported` | 57 | 46 | 0.81 | 10835ms | 14980ms | 46 | 11 | 0 | 0 |
 
 </details>
 
 #### `cert_judge`
 
 <details>
-<summary><code>cert_judge/judge</code> — 2 scenario(s), 8 record(s), best state current</summary>
+<summary><code>cert_judge/judge</code> — 2 scenario(s), 9 record(s), best state current</summary>
 
 ##### `cert_judge/judge`
 
@@ -1310,23 +1313,24 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `grades_a_fabricated_answer_poorly` | `accepted` | [basic_02_low_score.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_02_low_score.yaml) |
-| `grades_a_well_grounded_answer_highly` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `grades_a_fabricated_answer_poorly` | `accepted` | checked mechanically | [basic_02_low_score.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_02_low_score.yaml) |
+| `grades_a_well_grounded_answer_highly` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_01.yaml) |
 
-Records (8):
+Records (9):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1841ms | 2407ms | 6 | 0 | 0 | 0 |
-| `ollama · gemma4:12b · sovereign` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 13702ms | 14978ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 2345ms | 3367ms | 12 | 0 | 0 | 0 |
+| `ollama · gemma4:12b · sovereign` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 13702ms | 14978ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 13560ms | 19444ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1462ms | 2040ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1015ms | 1734ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 794ms | 1282ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `current` | 2/2 | `certified` | 18 | 17 | 0.94 | 1373ms | 1865ms | 17 | 1 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 4767ms | 8813ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 2425ms | 2800ms | 6 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 6676ms | 7122ms | 6 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 6676ms | 7122ms | 6 | 0 | 0 | 0 |
 
 </details>
 
@@ -1341,24 +1345,24 @@ Scope a run of it can claim: `single_turn`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_factual_question_about_connecting_is_answered` | `accepted` | [acts_answer_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_answer_01.yaml) |
-| `a_progress_question_is_answered_as_status` | `accepted` | [acts_status_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_status_01.yaml) |
-| `an_ambiguous_reference_is_asked_about_rather_than_guessed` | `accepted` | [acts_clarification_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_clarification_01.yaml) |
-| `asking_what_to_do_next_is_answered_as_a_recommendation` | `accepted` | [acts_recommendation_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_recommendation_01.yaml) |
-| `results_act_keeps_an_off_topic_request_in_scope` | `accepted` | [acts_off_topic_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_off_topic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_factual_question_about_connecting_is_answered` | `accepted` | judge | [acts_answer_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_answer_01.yaml) |
+| `a_progress_question_is_answered_as_status` | `accepted` | judge | [acts_status_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_status_01.yaml) |
+| `an_ambiguous_reference_is_asked_about_rather_than_guessed` | `accepted` | judge | [acts_clarification_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_clarification_01.yaml) |
+| `asking_what_to_do_next_is_answered_as_a_recommendation` | `accepted` | judge | [acts_recommendation_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_recommendation_01.yaml) |
+| `results_act_keeps_an_off_topic_request_in_scope` | `accepted` | judge | [acts_off_topic_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_off_topic_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1190ms | 1717ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1500ms | 2081ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 3963ms | 9295ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1609ms | 5612ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `supported_degraded` | 15 | 15 | 1.00 | 1419ms | 6582ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 15 | 1.00 | 859ms | 1704ms | 15 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 9804ms | 44039ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `supported_degraded` | 45 | 40 | 0.89 | 2668ms | 6931ms | 40 | 5 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 840ms | 1804ms | 15 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 9804ms | 44039ms | 15 | 0 | 0 | 0 |
 
 </details>
 
@@ -1371,20 +1375,20 @@ Scope a run of it can claim: `single_turn`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `bare_answer_corrects_the_field_the_wizard_asked_for` | `accepted` | [company_message_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/company_message_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `bare_answer_corrects_the_field_the_wizard_asked_for` | `accepted` | judge | [company_message_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/company_message_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1190ms | 1717ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` (this site: thinking low) | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1500ms | 2081ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 3963ms | 9295ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1609ms | 5612ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 1419ms | 6582ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 2 | 0.67 | 859ms | 1704ms | 2 | 0 | 1 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `supported_degraded` | 3 | 2 | 0.67 | 9804ms | 44039ms | 2 | 0 | 1 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` (this site: thinking low) | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 2668ms | 6931ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 840ms | 1804ms | 3 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `supported_degraded` | 3 | 2 | 0.67 | 9804ms | 44039ms | 2 | 0 | 1 | 0 |
 
 </details>
 
@@ -1397,47 +1401,49 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `onboarding_readback_from_landing_page` | `accepted` | [field_extract_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/field_extract_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `onboarding_readback_from_landing_page` | `accepted` | judge | [field_extract_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/field_extract_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1190ms | 1717ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1500ms | 2081ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 3963ms | 9295ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1609ms | 5612ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1419ms | 6582ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 859ms | 1704ms | 3 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 9804ms | 44039ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 2668ms | 6931ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 840ms | 1804ms | 3 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 9804ms | 44039ms | 3 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>cold_start/sitereadmessage</code> — 2 scenario(s), 6 record(s), best state current</summary>
+<summary><code>cold_start/sitereadmessage</code> — 4 scenario(s), 6 record(s), best state current</summary>
 
 ##### `cold_start/sitereadmessage`
 
 Scope a run of it can claim: `single_turn`.
 
-Scenarios (2):
+Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `an_administrator_agreeing_confirms_and_changes_nothing_further` | `accepted` | [sitereadmessage_confirmation_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_confirmation_01.yaml) |
-| `dossier_correction_the_administrator_asked_for` | `accepted` | [sitereadmessage_correction_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_correction_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change` | `accepted` | judge | [sitereadmessage_offer_accepted_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_offer_accepted_01.yaml) |
+| `an_administrator_agreeing_with_a_plain_question_changes_nothing` | `accepted` | judge | [sitereadmessage_confirmation_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_confirmation_01.yaml) |
+| `an_administrator_answering_an_offer_with_another_value_corrects_it` | `accepted` | judge | [sitereadmessage_offer_corrected_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_offer_corrected_01.yaml) |
+| `dossier_correction_the_administrator_asked_for` | `accepted` | judge | [sitereadmessage_correction_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_correction_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/2 | `not_supported` | 6 | 3 | 0.50 | 1190ms | 1717ms | 3 | 0 | 3 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `not_supported` | 6 | 3 | 0.50 | 3963ms | 9295ms | 3 | 3 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` (this site: thinking low) | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1500ms | 2081ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `not_supported` | 6 | 3 | 0.50 | 3963ms | 9295ms | 3 | 3 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1609ms | 5612ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 6 | 5 | 0.83 | 1419ms | 6582ms | 5 | 1 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 859ms | 1704ms | 6 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `not_supported` | 6 | 3 | 0.50 | 9804ms | 44039ms | 3 | 0 | 3 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` (this site: thinking low) | `current` | 4/4 | `not_supported` | 36 | 29 | 0.81 | 2668ms | 6931ms | 29 | 0 | 7 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 4/4 | `supported_degraded` | 18 | 16 | 0.89 | 840ms | 1804ms | 16 | 2 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/4 | `not_supported` | 6 | 3 | 0.50 | 9804ms | 44039ms | 3 | 0 | 3 | 0 |
 
 </details>
 
@@ -1452,25 +1458,25 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `corpus_ask_answers_only_from_the_passage_that_says_it` | `accepted` | [corpus_ask_answers_from_the_passages_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_from_the_passages_01.yaml) |
-| `corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present` | `accepted` | [corpus_ask_answers_when_the_passage_is_present_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_when_the_passage_is_present_01.yaml) |
-| `corpus_ask_returns_nothing_when_the_only_passage_does_not_answer` | `accepted` | [corpus_ask_abstains_when_uncovered_02.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_02.yaml) |
-| `corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question` | `accepted` | [corpus_ask_abstains_when_uncovered_03.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_03.yaml) |
-| `corpus_ask_returns_nothing_when_the_passages_do_not_answer` | `accepted` | [corpus_ask_abstains_when_uncovered_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `corpus_ask_answers_only_from_the_passage_that_says_it` | `accepted` | judge | [corpus_ask_answers_from_the_passages_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_from_the_passages_01.yaml) |
+| `corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present` | `accepted` | judge | [corpus_ask_answers_when_the_passage_is_present_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_when_the_passage_is_present_01.yaml) |
+| `corpus_ask_returns_nothing_when_the_only_passage_does_not_answer` | `accepted` | judge | [corpus_ask_abstains_when_uncovered_02.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_02.yaml) |
+| `corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question` | `accepted` | judge | [corpus_ask_abstains_when_uncovered_03.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_03.yaml) |
+| `corpus_ask_returns_nothing_when_the_passages_do_not_answer` | `accepted` | judge | [corpus_ask_abstains_when_uncovered_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_01.yaml) |
 
 Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 9 | 9 | 1.00 | 1084ms | 1265ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 5046ms | 11613ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2703ms | 5673ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 4638ms | 12933ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 9 | 8 | 0.89 | 1030ms | 2714ms | 8 | 0 | 1 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 2040ms | 10068ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 2034ms | 3826ms | 15 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `not_supported` | 15 | 13 | 0.87 | 19094ms | 50205ms | 13 | 2 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1538ms | 2200ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1982ms | 4105ms | 15 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/5 | `not_supported` | 15 | 13 | 0.87 | 19094ms | 50205ms | 13 | 2 | 0 | 0 |
 
 </details>
 
@@ -1485,28 +1491,28 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `deal_status_an_overdue_task_is_not_done_work` | `accepted` | [deal_status_overdue_task_is_not_done_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_overdue_task_is_not_done_01.yaml) |
-| `deal_status_offer_left_hanging` | `accepted` | [deal_status_offer_left_hanging_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_offer_left_hanging_01.yaml) |
-| `deal_status_says_nothing_is_wrong_when_nothing_is` | `accepted` | [deal_status_quiet_after_proposal_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_quiet_after_proposal_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `deal_status_an_overdue_task_is_not_done_work` | `accepted` | judge | [deal_status_overdue_task_is_not_done_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_overdue_task_is_not_done_01.yaml) |
+| `deal_status_offer_left_hanging` | `accepted` | judge | [deal_status_offer_left_hanging_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_offer_left_hanging_01.yaml) |
+| `deal_status_says_nothing_is_wrong_when_nothing_is` | `accepted` | judge | [deal_status_quiet_after_proposal_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_quiet_after_proposal_01.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 2325ms | 3041ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 21 | 21 | 1.00 | 2312ms | 3074ms | 21 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 14129ms | 47100ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 9 | 9 | 1.00 | 6017ms | 8034ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1494ms | 2888ms | 9 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 3/3 | `not_supported` | 9 | 8 | 0.89 | 41429ms | 52661ms | 8 | 1 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `supported_degraded` | 24 | 24 | 1.00 | 7601ms | 11327ms | 24 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 21 | 21 | 1.00 | 1418ms | 2038ms | 21 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/3 | `not_supported` | 9 | 8 | 0.89 | 41429ms | 52661ms | 8 | 1 | 0 | 0 |
 
 </details>
 
 #### `document_extract`
 
 <details>
-<summary><code>document_extract/fields</code> — 4 scenario(s), 1 record(s), best state stale</summary>
+<summary><code>document_extract/fields</code> — 4 scenario(s), 1 record(s), best state current</summary>
 
 ##### `document_extract/fields`
 
@@ -1514,18 +1520,18 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `attached_document_states_none_of_them` | `accepted` | [states_nothing_03.yaml](../../backend/internal/compose/aicert/corpus/document_extract/states_nothing_03.yaml) |
-| `order_form_states_all_four` | `accepted` | [order_form_01.yaml](../../backend/internal/compose/aicert/corpus/document_extract/order_form_01.yaml) |
-| `pdf_agreement_read_as_a_document_part` | `accepted` | [pdf_agreement_04.yaml](../../backend/internal/compose/aicert/corpus/document_extract/pdf_agreement_04.yaml) |
-| `quote_states_money_but_no_close_date` | `accepted` | [partial_02.yaml](../../backend/internal/compose/aicert/corpus/document_extract/partial_02.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `attached_document_states_none_of_them` | `accepted` | judge | [states_nothing_03.yaml](../../backend/internal/compose/aicert/corpus/document_extract/states_nothing_03.yaml) |
+| `order_form_states_all_four` | `accepted` | judge | [order_form_01.yaml](../../backend/internal/compose/aicert/corpus/document_extract/order_form_01.yaml) |
+| `pdf_agreement_read_as_a_document_part` | `accepted` | judge | [pdf_agreement_04.yaml](../../backend/internal/compose/aicert/corpus/document_extract/pdf_agreement_04.yaml) |
+| `quote_states_money_but_no_close_date` | `accepted` | judge | [partial_02.yaml](../../backend/internal/compose/aicert/corpus/document_extract/partial_02.yaml) |
 
 Records (1):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 7215ms | 10162ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 5279ms | 7438ms | 12 | 0 | 0 | 0 |
 
 </details>
 
@@ -1542,21 +1548,21 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `account_first_touch_with_a_deal_in_flight` | `accepted` | [account_en_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/account_en_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `account_first_touch_with_a_deal_in_flight` | `accepted` | judge | [account_en_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/account_en_01.yaml) |
 
 Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 2833ms | 6994ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1475ms | 17913ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 5121ms | 11911ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 2567ms | 237887ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 1 | 0.33 | 2143ms | 4807ms | 1 | 0 | 2 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1955ms | 7443ms | 3 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 13966ms | 61898ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 1275ms | 2847ms | 6 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 13966ms | 61898ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -1569,21 +1575,21 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `contact_first_touch_in_german` | `accepted` | [contact_first_touch_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/contact_first_touch_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `contact_first_touch_in_german` | `accepted` | judge | [contact_first_touch_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/contact_first_touch_01.yaml) |
 
 Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 2833ms | 6994ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 1475ms | 17913ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 5121ms | 11911ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 2567ms | 237887ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 2 | 0.67 | 2143ms | 4807ms | 2 | 0 | 1 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1955ms | 7443ms | 3 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 13966ms | 61898ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 1275ms | 2847ms | 6 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 13966ms | 61898ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -1596,21 +1602,21 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `first_message_from_an_intent_alone` | `accepted` | [first_message_from_intent_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/first_message_from_intent_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `first_message_from_an_intent_alone` | `accepted` | judge | [first_message_from_intent_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/first_message_from_intent_01.yaml) |
 
 Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 2833ms | 6994ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1475ms | 17913ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 5121ms | 11911ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 2 | 0.67 | 2567ms | 237887ms | 2 | 0 | 1 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 2143ms | 4807ms | 0 | 0 | 3 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1955ms | 7443ms | 3 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 13966ms | 61898ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 9 | 1.00 | 1275ms | 2847ms | 9 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 13966ms | 61898ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -1623,22 +1629,22 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `intro_request_asks_a_colleague_without_overclaiming` | `accepted` | [intro_warm_route_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_warm_route_01.yaml) |
-| `intro_request_claims_no_more_warmth_than_the_record_holds` | `accepted` | [intro_cold_stale_route_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_cold_stale_route_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `intro_request_asks_a_colleague_without_overclaiming` | `accepted` | judge | [intro_warm_route_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_warm_route_01.yaml) |
+| `intro_request_claims_no_more_warmth_than_the_record_holds` | `accepted` | judge | [intro_cold_stale_route_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_cold_stale_route_01.yaml) |
 
 Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 2833ms | 6994ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1475ms | 17913ms | 6 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 24063ms | 46554ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/2 | `not_supported` | 6 | 6 | 1.00 | 10016ms | 26168ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 5121ms | 11911ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 2567ms | 237887ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 0 | 0.00 | 2143ms | 4807ms | 0 | 0 | 6 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 1955ms | 7443ms | 6 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `not_supported` | 6 | 6 | 1.00 | 13966ms | 61898ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1275ms | 2847ms | 12 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `not_supported` | 6 | 6 | 1.00 | 13966ms | 61898ms | 6 | 0 | 0 | 0 |
 
 </details>
 
@@ -1651,23 +1657,23 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `an_instruction_inside_the_stated_reason_is_data_not_a_command` | `accepted` | [intro_note_injected_reason_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_injected_reason_01.yaml) |
-| `intro_note_claims_no_more_warmth_than_the_record_holds` | `accepted` | [intro_note_cold_stale_indirect_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_cold_stale_indirect_01.yaml) |
-| `intro_note_is_written_to_the_customer_not_about_the_request` | `accepted` | [intro_note_warm_direct_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_warm_direct_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `an_instruction_inside_the_stated_reason_is_data_not_a_command` | `accepted` | judge | [intro_note_injected_reason_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_injected_reason_01.yaml) |
+| `intro_note_claims_no_more_warmth_than_the_record_holds` | `accepted` | judge | [intro_note_cold_stale_indirect_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_cold_stale_indirect_01.yaml) |
+| `intro_note_is_written_to_the_customer_not_about_the_request` | `accepted` | judge | [intro_note_warm_direct_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_warm_direct_01.yaml) |
 
 Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 2833ms | 6994ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 12 | 12 | 1.00 | 1475ms | 17913ms | 12 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 9 | 1.00 | 24063ms | 46554ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 8 | 0.89 | 10016ms | 26168ms | 8 | 0 | 1 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 9 | 1.00 | 5121ms | 11911ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 9 | 9 | 1.00 | 2567ms | 237887ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 | 2143ms | 4807ms | 6 | 3 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 8 | 0.89 | 1955ms | 7443ms | 8 | 0 | 1 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 3/3 | `not_supported` | 9 | 6 | 0.67 | 13966ms | 61898ms | 6 | 3 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 21 | 16 | 0.76 | 1275ms | 2847ms | 16 | 0 | 5 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 | 13966ms | 61898ms | 6 | 3 | 0 | 0 |
 
 </details>
 
@@ -1680,25 +1686,25 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `german_thread_with_an_introduction_in_it` | `accepted` | [german_intro_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/german_intro_01.yaml) |
-| `reply_to_pricing_question` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/basic_01.yaml) |
-| `replying_to_a_thread_eight_months_old` | `accepted` | [stale_months_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/stale_months_01.yaml) |
-| `rich_german_thread_with_a_long_ask` | `accepted` | [rich_thread_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/rich_thread_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `german_thread_with_an_introduction_in_it` | `accepted` | judge | [german_intro_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/german_intro_01.yaml) |
+| `reply_to_pricing_question` | `accepted` | judge | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/basic_01.yaml) |
+| `replying_to_a_thread_eight_months_old` | `accepted` | judge | [stale_months_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/stale_months_01.yaml) |
+| `rich_german_thread_with_a_long_ask` | `accepted` | judge | [rich_thread_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/rich_thread_01.yaml) |
 
 Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 2833ms | 6994ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1475ms | 17913ms | 12 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 12 | 1.00 | 24063ms | 46554ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 12 | 1.00 | 10016ms | 26168ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 12 | 1.00 | 5121ms | 11911ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 11 | 0.92 | 2567ms | 237887ms | 11 | 0 | 1 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 2508ms | 2685ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/4 | `not_supported` | 12 | 2 | 0.17 | 2143ms | 4807ms | 2 | 0 | 10 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 12 | 1.00 | 1955ms | 7443ms | 12 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 4/4 | `supported_degraded` | 12 | 12 | 1.00 | 13966ms | 61898ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 4/4 | `supported_degraded` | 30 | 30 | 1.00 | 1275ms | 2847ms | 30 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/4 | `supported_degraded` | 12 | 12 | 1.00 | 13966ms | 61898ms | 12 | 0 | 0 | 0 |
 
 </details>
 
@@ -1713,21 +1719,21 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `contact_fields_from_a_mail_signature` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/enrich/basic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `contact_fields_from_a_mail_signature` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/enrich/basic_01.yaml) |
 
 Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1472ms | 1756ms | 3 | 0 | 0 | 0 |
-| `ollama · gemma4:12b · sovereign` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 33865ms | 36038ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 1574ms | 20948ms | 9 | 0 | 0 | 0 |
+| `ollama · gemma4:12b · sovereign` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 33865ms | 36038ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 3901ms | 4595ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `supported_degraded` | 3 | 3 | 1.00 | 2469ms | 2500ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 3120ms | 4433ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 865ms | 1713ms | 3 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 25172ms | 26648ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 6 | 5 | 0.83 | 3619ms | 5569ms | 5 | 1 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 8 | 0.89 | 1098ms | 1825ms | 8 | 1 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 25172ms | 26648ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -1736,27 +1742,28 @@ Records (7):
 Certified without the company context production prepends (`offer`, `positioning`, `proof`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>growth_fit/growth_fit</code> — 1 scenario(s), 5 record(s), best state current</summary>
+<summary><code>growth_fit/growth_fit</code> — 2 scenario(s), 5 record(s), best state current</summary>
 
 ##### `growth_fit/growth_fit`
 
 Scope a run of it can claim: `full_invocation`.
 
-Scenarios (1):
+Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `growth_fit_reads_their_facts_against_our_offering` | `accepted` | [clear_fit_01.yaml](../../backend/internal/compose/aicert/corpus/growth_fit/clear_fit_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `growth_fit_calls_a_company_outside_our_market_weak` | `accepted` | judge | [clear_misfit_01.yaml](../../backend/internal/compose/aicert/corpus/growth_fit/clear_misfit_01.yaml) |
+| `growth_fit_reads_their_facts_against_our_offering` | `accepted` | judge | [clear_fit_01.yaml](../../backend/internal/compose/aicert/corpus/growth_fit/clear_fit_01.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 2 | 0.67 | 4101ms | 4632ms | 2 | 1 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 7605ms | 9105ms | 0 | 2 | 0 | 1 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 1 | 0.33 | 15123ms | 15814ms | 1 | 1 | 0 | 1 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 2138ms | 2290ms | 0 | 2 | 0 | 1 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 88050ms | 105742ms | 0 | 0 | 0 | 3 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 12 | 9 | 0.75 | 4395ms | 6312ms | 9 | 3 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `not_supported` | 3 | 0 | 0.00 | 7605ms | 9105ms | 0 | 2 | 0 | 1 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `supported_degraded` | 18 | 16 | 0.89 | 18741ms | 24366ms | 16 | 2 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `not_supported` | 12 | 12 | 1.00 | 2137ms | 3252ms | 12 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `not_supported` | 3 | 0 | 0.00 | 88050ms | 105742ms | 0 | 0 | 0 | 3 |
 
 </details>
 
@@ -1773,24 +1780,24 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `grounded_draft_from_a_conversation_price` | `accepted` | [grounded_draft.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/grounded_draft.yaml) |
-| `injected_instruction_inside_evidence_is_ignored` | `accepted` | [injection_attempt.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/injection_attempt.yaml) |
-| `no_captured_context_yields_no_lines` | `abstained` | [empty_evidence_abstention.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/empty_evidence_abstention.yaml) |
-| `rich_context_under_a_tight_token_cap` | `accepted` | [token_cap.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/token_cap.yaml) |
-| `two_sources_disagree_on_price` | `accepted` | [contradictory_sources.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/contradictory_sources.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `grounded_draft_from_a_conversation_price` | `accepted` | judge | [grounded_draft.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/grounded_draft.yaml) |
+| `injected_instruction_inside_evidence_is_ignored` | `accepted` | judge | [injection_attempt.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/injection_attempt.yaml) |
+| `no_captured_context_yields_no_lines` | `abstained` | judge | [empty_evidence_abstention.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/empty_evidence_abstention.yaml) |
+| `rich_context_prices_every_line_from_its_own_evidence` | `accepted` | judge | [rich_context.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/rich_context.yaml) |
+| `two_sources_disagree_on_price` | `accepted` | judge | [contradictory_sources.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/contradictory_sources.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 12 | 0.80 | 1196ms | 1939ms | 9 | 3 | 0 | 3 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1520ms | 2396ms | 12 | 0 | 0 | 3 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 11 | 0.73 | 4558ms | 8371ms | 8 | 3 | 0 | 4 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 15 | 12 | 0.80 | 3394ms | 8447ms | 9 | 3 | 0 | 3 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `not_supported` | 15 | 10 | 0.67 | 2642ms | 6145ms | 7 | 3 | 2 | 3 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 11 | 0.73 | 886ms | 2319ms | 8 | 1 | 3 | 3 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `not_supported` | 15 | 9 | 0.60 | 12366ms | 45908ms | 6 | 3 | 3 | 3 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `not_supported` | 39 | 36 | 0.92 | 4154ms | 9423ms | 30 | 2 | 1 | 6 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 45 | 44 | 0.98 | 1396ms | 6194ms | 35 | 0 | 1 | 9 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/5 | `not_supported` | 15 | 9 | 0.60 | 12366ms | 45908ms | 6 | 3 | 3 | 3 |
 
 </details>
 
@@ -1805,23 +1812,23 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_direct_question_asks_us_and_a_report_does_not` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/basic_01.yaml) |
-| `a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not` | `accepted` | [proposed_time_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/proposed_time_01.yaml) |
-| `an_invitation_asks_nothing_a_calendar_reply_cannot_settle` | `accepted` | [invitation_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/invitation_01.yaml) |
-| `the_recipient_line_separates_a_request_from_a_copy` | `accepted` | [envelope_decides_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/envelope_decides_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_direct_question_asks_us_and_a_report_does_not` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/basic_01.yaml) |
+| `a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not` | `accepted` | checked mechanically | [proposed_time_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/proposed_time_01.yaml) |
+| `an_invitation_asks_nothing_a_calendar_reply_cannot_settle` | `accepted` | checked mechanically | [invitation_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/invitation_01.yaml) |
+| `the_recipient_line_separates_a_request_from_a_copy` | `accepted` | checked mechanically | [envelope_decides_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/envelope_decides_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/4 | `supported_degraded` | 12 | 11 | 0.92 | 2356ms | 4406ms | 11 | 1 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1189ms | 3193ms | 12 | 0 | 0 | 0 |
 | `ollama · gemma4:12b · sovereign` | `stale` | 0/4 | `not_supported` | 12 | 7 | 0.58 | 26672ms | 42636ms | 7 | 3 | 2 | 0 |
 | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 9 | 0.75 | 4826ms | 73147ms | 9 | 3 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/4 | `not_supported` | 12 | 5 | 0.42 | 1833ms | 2937ms | 5 | 7 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 9 | 0.75 | 1683ms | 4051ms | 9 | 3 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 4/4 | `not_supported` | 12 | 6 | 0.50 | 16315ms | 26476ms | 6 | 3 | 3 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `current` | 4/4 | `not_supported` | 15 | 7 | 0.47 | 2340ms | 5307ms | 7 | 8 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 4/4 | `certified` | 24 | 23 | 0.96 | 1250ms | 2896ms | 23 | 1 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/4 | `not_supported` | 12 | 6 | 0.50 | 16315ms | 26476ms | 6 | 3 | 3 | 0 |
 
 </details>
 
@@ -1836,29 +1843,29 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_committee_where_four_contacts_state_their_own_roles` | `accepted` | [committee_four_roles_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_four_roles_01.yaml) |
-| `propose_roles_reads_a_buyer_out_of_their_own_words` | `accepted` | [committee_evidenced_buyer_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_evidenced_buyer_01.yaml) |
-| `propose_roles_reads_no_role_out_of_a_title` | `accepted` | [committee_title_only_restraint_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_title_only_restraint_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_committee_where_four_contacts_state_their_own_roles` | `accepted` | judge | [committee_four_roles_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_four_roles_01.yaml) |
+| `propose_roles_reads_a_buyer_out_of_their_own_words` | `accepted` | judge | [committee_evidenced_buyer_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_evidenced_buyer_01.yaml) |
+| `propose_roles_reads_no_role_out_of_a_title` | `accepted` | judge | [committee_title_only_restraint_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_title_only_restraint_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1106ms | 1642ms | 9 | 0 | 0 | 0 |
-| `ollama · gemma4:12b · sovereign` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 24660ms | 56477ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 21 | 21 | 1.00 | 1292ms | 2158ms | 21 | 0 | 0 | 0 |
+| `ollama · gemma4:12b · sovereign` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 24660ms | 56477ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 2286ms | 13427ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1808ms | 4493ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 9 | 7 | 0.78 | 829ms | 1215ms | 7 | 2 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 3/3 | `not_supported` | 9 | 5 | 0.56 | 20778ms | 50079ms | 5 | 4 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1908ms | 24808ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `not_supported` | 27 | 20 | 0.74 | 1111ms | 2638ms | 20 | 7 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/3 | `not_supported` | 9 | 5 | 0.56 | 20778ms | 50079ms | 5 | 4 | 0 | 0 |
 
 </details>
 
 #### `rate_extract`
 
 <details>
-<summary><code>rate_extract/fx</code> — 2 scenario(s), 7 record(s), best state current</summary>
+<summary><code>rate_extract/fx</code> — 2 scenario(s), 8 record(s), best state current</summary>
 
 ##### `rate_extract/fx`
 
@@ -1866,27 +1873,28 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `fx_rates_json_api_grounded` | `accepted` | [fx_json_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_json_grounded.yaml) |
-| `fx_rates_two_pairs_grounded` | `accepted` | [fx_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_grounded.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `fx_rates_json_api_grounded` | `accepted` | checked mechanically | [fx_json_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_json_grounded.yaml) |
+| `fx_rates_two_pairs_grounded` | `accepted` | checked mechanically | [fx_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_grounded.yaml) |
 
-Records (7):
+Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 2820ms | 5340ms | 6 | 0 | 0 | 0 |
-| `ollama · gemma4:12b · sovereign` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 17672ms | 33557ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 2665ms | 6062ms | 6 | 0 | 0 | 0 |
+| `ollama · gemma4:12b · sovereign` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 17672ms | 33557ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 3575ms | 10573ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1848ms | 2482ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1150ms | 1950ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1466ms | 1766ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1347ms | 2247ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 4206ms | 5262ms | 6 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 10304ms | 22876ms | 6 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 10304ms | 22876ms | 6 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>rate_extract/pricing</code> — 1 scenario(s), 7 record(s), best state current</summary>
+<summary><code>rate_extract/pricing</code> — 1 scenario(s), 8 record(s), best state current</summary>
 
 ##### `rate_extract/pricing`
 
@@ -1894,21 +1902,22 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `pricing_table_two_models_grounded` | `accepted` | [pricing_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/pricing_grounded.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `pricing_table_two_models_grounded` | `accepted` | checked mechanically | [pricing_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/pricing_grounded.yaml) |
 
-Records (7):
+Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 2820ms | 5340ms | 3 | 0 | 0 | 0 |
-| `ollama · gemma4:12b · sovereign` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 17672ms | 33557ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 2665ms | 6062ms | 3 | 0 | 0 | 0 |
+| `ollama · gemma4:12b · sovereign` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 17672ms | 33557ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 3575ms | 10573ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1848ms | 2482ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1150ms | 1950ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1466ms | 1766ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1347ms | 2247ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 4206ms | 5262ms | 3 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 10304ms | 22876ms | 3 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10304ms | 22876ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -1923,23 +1932,23 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_reply_that_says_nothing_either_way_is_answered_unsure` | `accepted` | [unsure_when_the_words_do_not_say_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/unsure_when_the_words_do_not_say_01.yaml) |
-| `an_answer_settles_a_request_and_an_acknowledgement_does_not` | `accepted` | [answered_and_acknowledged_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/answered_and_acknowledged_01.yaml) |
-| `answering_one_of_two_asks_leaves_the_other_owed` | `accepted` | [partial_answer_and_reask_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/partial_answer_and_reask_01.yaml) |
-| `declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague` | `accepted` | [declined_and_handed_on_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/declined_and_handed_on_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_reply_that_says_nothing_either_way_is_answered_unsure` | `accepted` | judge | [unsure_when_the_words_do_not_say_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/unsure_when_the_words_do_not_say_01.yaml) |
+| `an_answer_settles_a_request_and_an_acknowledgement_does_not` | `accepted` | judge | [answered_and_acknowledged_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/answered_and_acknowledged_01.yaml) |
+| `answering_one_of_two_asks_leaves_the_other_owed` | `accepted` | judge | [partial_answer_and_reask_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/partial_answer_and_reask_01.yaml) |
+| `declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague` | `accepted` | judge | [declined_and_handed_on_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/declined_and_handed_on_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/4 | `supported_degraded` | 12 | 12 | 1.00 | 3262ms | 4334ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1563ms | 26137ms | 12 | 0 | 0 | 0 |
 | `ollama · gemma4:12b · sovereign` | `stale` | 0/4 | `supported_degraded` | 12 | 9 | 0.75 | 31116ms | 34918ms | 9 | 0 | 3 | 0 |
 | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 8 | 0.67 | 4389ms | 7948ms | 8 | 0 | 4 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 1700ms | 12585ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 1443ms | 5705ms | 12 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 4/4 | `not_supported` | 12 | 6 | 0.50 | 21212ms | 24529ms | 6 | 6 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `current` | 4/4 | `certified` | 24 | 23 | 0.96 | 2564ms | 3415ms | 23 | 0 | 1 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1413ms | 5368ms | 12 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/4 | `not_supported` | 12 | 6 | 0.50 | 21212ms | 24529ms | 6 | 6 | 0 | 0 |
 
 </details>
 
@@ -1954,30 +1963,30 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (4):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `both_sides_promise_something` | `accepted` | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/commitment_01.yaml) |
-| `nothing_material_was_said` | `accepted` | [quiet_thread_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/quiet_thread_01.yaml) |
-| `notice_served_in_a_polite_reply` | `accepted` | [contract_ended_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/contract_ended_01.yaml) |
-| `the_mail_tries_to_write_the_record` | `accepted` | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/injection_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `both_sides_promise_something` | `accepted` | judge | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/commitment_01.yaml) |
+| `nothing_material_was_said` | `accepted` | checked mechanically | [quiet_thread_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/quiet_thread_01.yaml) |
+| `notice_served_in_a_polite_reply` | `accepted` | judge | [contract_ended_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/contract_ended_01.yaml) |
+| `the_mail_tries_to_write_the_record` | `accepted` | checked mechanically | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/injection_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 9 | 0.75 | 1063ms | 1765ms | 9 | 3 | 0 | 0 |
-| `ollama · gemma4:12b · sovereign` | `current` | 4/4 | `not_supported` | 12 | 6 | 0.50 | 20141ms | 24253ms | 6 | 6 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1331ms | 1766ms | 12 | 0 | 0 | 0 |
+| `ollama · gemma4:12b · sovereign` | `stale` | 0/4 | `not_supported` | 12 | 6 | 0.50 | 20141ms | 24253ms | 6 | 6 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 2445ms | 8102ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/4 | `not_supported` | 12 | 6 | 0.50 | 1517ms | 2385ms | 6 | 6 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 8 | 0.67 | 806ms | 6122ms | 8 | 4 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 4/4 | `not_supported` | 12 | 6 | 0.50 | 12093ms | 16464ms | 6 | 6 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 4/4 | `not_supported` | 15 | 7 | 0.47 | 2106ms | 4124ms | 7 | 8 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 4/4 | `supported_degraded` | 21 | 18 | 0.86 | 1245ms | 5664ms | 18 | 3 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/4 | `not_supported` | 12 | 6 | 0.50 | 12093ms | 16464ms | 6 | 6 | 0 | 0 |
 
 </details>
 
 #### `site_extract`
 
 <details>
-<summary><code>site_extract/profile</code> — 5 scenario(s), 7 record(s), best state current</summary>
+<summary><code>site_extract/profile</code> — 5 scenario(s), 8 record(s), best state stale</summary>
 
 ##### `site_extract/profile`
 
@@ -1985,25 +1994,26 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `an_impressum_grounds_the_legal_trio` | `accepted` | [legal_trio_grounded.yaml](../../backend/internal/compose/aicert/corpus/site_extract/legal_trio_grounded.yaml) |
-| `home_page_profile_fields_grounded` | `accepted` | [fields_grounded.yaml](../../backend/internal/compose/aicert/corpus/site_extract/fields_grounded.yaml) |
-| `js_only_page_yields_no_fabrication` | `abstained` | [empty_page.yaml](../../backend/internal/compose/aicert/corpus/site_extract/empty_page.yaml) |
-| `one_legal_page_naming_two_entities` | `abstained` | [legal_abstention.yaml](../../backend/internal/compose/aicert/corpus/site_extract/legal_abstention.yaml) |
-| `services_page_profile_fields_grounded` | `accepted` | [offering_facts.yaml](../../backend/internal/compose/aicert/corpus/site_extract/offering_facts.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `an_impressum_grounds_the_legal_trio` | `accepted` | judge | [legal_trio_grounded.yaml](../../backend/internal/compose/aicert/corpus/site_extract/legal_trio_grounded.yaml) |
+| `home_page_profile_fields_grounded` | `accepted` | judge | [fields_grounded.yaml](../../backend/internal/compose/aicert/corpus/site_extract/fields_grounded.yaml) |
+| `js_only_page_yields_no_fabrication` | `abstained` | judge | [empty_page.yaml](../../backend/internal/compose/aicert/corpus/site_extract/empty_page.yaml) |
+| `one_legal_page_naming_two_entities` | `accepted` | judge | [legal_abstention.yaml](../../backend/internal/compose/aicert/corpus/site_extract/legal_abstention.yaml) |
+| `services_page_profile_fields_grounded` | `accepted` | judge | [offering_facts.yaml](../../backend/internal/compose/aicert/corpus/site_extract/offering_facts.yaml) |
 
-Records (7):
+Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 12 | 0.80 | 4221ms | 6569ms | 12 | 0 | 0 | 3 |
+| `gemini · gemini-3.5-flash · cloud_frontier` | `stale` | 4/5 | `certified` | 15 | 15 | 1.00 | 3531ms | 6385ms | 12 | 0 | 0 | 3 |
 | `openai_compatible · anthropic/claude-haiku-4.5 · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 9 | 0.60 | 2566ms | 3731ms | 6 | 6 | 0 | 3 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 15 | 15 | 1.00 | 4239ms | 13390ms | 9 | 0 | 0 | 6 |
 | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 12 | 0.80 | 3163ms | 4313ms | 9 | 3 | 0 | 3 |
-| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/5 | `not_supported` | 15 | 9 | 0.60 | 1714ms | 2191ms | 6 | 6 | 0 | 3 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 4/5 | `not_supported` | 45 | 27 | 0.60 | 2128ms | 4386ms | 18 | 18 | 0 | 9 |
+| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 4/5 | `not_supported` | 15 | 9 | 0.60 | 2483ms | 4757ms | 6 | 6 | 0 | 3 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `not_supported` | 12 | 10 | 0.83 | 7831ms | 17213ms | 4 | 2 | 0 | 6 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `not_supported` | 15 | 9 | 0.60 | 27450ms | 35197ms | 6 | 6 | 0 | 3 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/5 | `not_supported` | 15 | 9 | 0.60 | 27450ms | 35197ms | 6 | 6 | 0 | 3 |
 
 </details>
 
@@ -2018,22 +2028,22 @@ Scope a run of it can claim: `single_call`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `customer_story_credits_the_customer_not_the_reader` | `accepted` | [customer_story_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/customer_story_01.yaml) |
-| `impressum_page_company_facts_and_entities` | `accepted` | [basic_02.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_02.yaml) |
-| `services_page_offering_facts` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `customer_story_credits_the_customer_not_the_reader` | `accepted` | judge | [customer_story_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/customer_story_01.yaml) |
+| `impressum_page_company_facts_and_entities` | `accepted` | judge | [basic_02.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_02.yaml) |
+| `services_page_offering_facts` | `accepted` | judge | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1164ms | 1779ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1390ms | 2073ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 9 | 8 | 0.89 | 7166ms | 19998ms | 8 | 1 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 2547ms | 3532ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 | 2234ms | 3149ms | 6 | 3 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 815ms | 2504ms | 9 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 3/3 | `not_supported` | 9 | 6 | 0.67 | 20545ms | 32672ms | 6 | 3 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `not_supported` | 21 | 14 | 0.67 | 4673ms | 83052ms | 14 | 6 | 1 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1021ms | 1638ms | 9 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 | 20545ms | 32672ms | 6 | 3 | 0 | 0 |
 
 </details>
 
@@ -2048,24 +2058,24 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder` | `accepted` | [unclear_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/unclear_01.yaml) |
-| `a_mailbox_vendor_is_not_the_senders_employer` | `accepted` | [mailbox_provider_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/mailbox_provider_01.yaml) |
-| `a_one_contact_consultancy_is_still_a_company` | `accepted` | [false_refusal_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/false_refusal_01.yaml) |
-| `a_parked_domain_identifies_nobody` | `accepted` | [parked_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/parked_domain_01.yaml) |
-| `a_personal_domain_is_not_a_company` | `accepted` | [personal_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/personal_domain_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder` | `accepted` | judge | [unclear_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/unclear_01.yaml) |
+| `a_mailbox_vendor_is_not_the_senders_employer` | `accepted` | judge | [mailbox_provider_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/mailbox_provider_01.yaml) |
+| `a_one_contact_consultancy_is_still_a_company` | `accepted` | judge | [false_refusal_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/false_refusal_01.yaml) |
+| `a_parked_domain_identifies_nobody` | `accepted` | judge | [parked_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/parked_domain_01.yaml) |
+| `a_personal_domain_is_not_a_company` | `accepted` | judge | [personal_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/personal_domain_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 13 | 0.87 | 1011ms | 1503ms | 13 | 2 | 0 | 0 |
-| `ollama · gemma4:12b · sovereign` | `current` | 5/5 | `not_supported` | 15 | 12 | 0.80 | 15277ms | 16379ms | 12 | 3 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1167ms | 24754ms | 15 | 0 | 0 | 0 |
+| `ollama · gemma4:12b · sovereign` | `stale` | 0/5 | `not_supported` | 15 | 12 | 0.80 | 15277ms | 16379ms | 12 | 3 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1614ms | 4068ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1066ms | 1980ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 15 | 14 | 0.93 | 833ms | 12796ms | 14 | 1 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `not_supported` | 15 | 13 | 0.87 | 6242ms | 10552ms | 13 | 2 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2014ms | 24803ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1260ms | 4401ms | 15 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/5 | `not_supported` | 15 | 13 | 0.87 | 6242ms | 10552ms | 13 | 2 | 0 | 0 |
 
 </details>
 
@@ -2080,27 +2090,27 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (9):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_conversation_about_something_else` | `abstained` | [silence_is_not_lost_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/silence_is_not_lost_01.yaml) |
-| `a_correspondent_tries_to_settle_their_own_criteria` | `accepted` | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/injection_01.yaml) |
-| `a_date_floated_is_not_a_date_agreed` | `accepted` | [proposed_not_agreed_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/proposed_not_agreed_01.yaml) |
-| `a_settled_fact_no_criterion_asks_about` | `accepted` | [unknown_criterion_key_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/unknown_criterion_key_01.yaml) |
-| `talking_about_signing_is_not_signing` | `accepted` | [contract_talk_is_not_signed_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/contract_talk_is_not_signed_01.yaml) |
-| `the_buyer_names_who_signs` | `accepted` | [economic_buyer_named_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/economic_buyer_named_01.yaml) |
-| `the_buyer_states_the_problem_in_their_own_words` | `accepted` | [buyer_confirms_problem_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/buyer_confirms_problem_01.yaml) |
-| `the_rep_says_the_buyer_confirmed_it` | `abstained` | [rep_asserts_it_for_them_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/rep_asserts_it_for_them_01.yaml) |
-| `warmth_with_no_facts_in_it` | `abstained` | [nothing_groundable_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/nothing_groundable_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_conversation_about_something_else` | `abstained` | checked mechanically | [silence_is_not_lost_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/silence_is_not_lost_01.yaml) |
+| `a_correspondent_tries_to_settle_their_own_criteria` | `accepted` | checked mechanically | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/injection_01.yaml) |
+| `a_date_floated_is_not_a_date_agreed` | `accepted` | judge | [proposed_not_agreed_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/proposed_not_agreed_01.yaml) |
+| `a_settled_fact_no_criterion_asks_about` | `abstained` | checked mechanically | [unknown_criterion_key_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/unknown_criterion_key_01.yaml) |
+| `talking_about_signing_is_not_signing` | `accepted` | checked mechanically | [contract_talk_is_not_signed_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/contract_talk_is_not_signed_01.yaml) |
+| `the_buyer_names_who_signs` | `accepted` | checked mechanically | [economic_buyer_named_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/economic_buyer_named_01.yaml) |
+| `the_buyer_states_the_problem_in_their_own_words` | `accepted` | checked mechanically | [buyer_confirms_problem_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/buyer_confirms_problem_01.yaml) |
+| `the_rep_says_the_buyer_confirmed_it` | `abstained` | checked mechanically | [rep_asserts_it_for_them_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/rep_asserts_it_for_them_01.yaml) |
+| `warmth_with_no_facts_in_it` | `abstained` | checked mechanically | [nothing_groundable_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/nothing_groundable_01.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/9 | `not_supported` | 27 | 17 | 0.63 | 1151ms | 1939ms | 11 | 8 | 2 | 6 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 1301ms | 1613ms | 15 | 0 | 0 | 12 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/9 | `not_supported` | 27 | 12 | 0.44 | 3840ms | 13618ms | 6 | 15 | 0 | 6 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/9 | `not_supported` | 27 | 11 | 0.41 | 1263ms | 3715ms | 5 | 13 | 3 | 6 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/9 | `not_supported` | 27 | 11 | 0.41 | 820ms | 1583ms | 5 | 15 | 1 | 6 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 9/9 | `not_supported` | 27 | 9 | 0.33 | 17502ms | 34198ms | 3 | 18 | 0 | 6 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 9/9 | `not_supported` | 45 | 27 | 0.60 | 2193ms | 4628ms | 18 | 18 | 0 | 9 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 9/9 | `not_supported` | 81 | 65 | 0.80 | 951ms | 1523ms | 32 | 9 | 7 | 33 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/9 | `not_supported` | 27 | 9 | 0.33 | 17502ms | 34198ms | 3 | 18 | 0 | 6 |
 
 </details>
 
@@ -2117,20 +2127,20 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `ask_meeting_prep_stays_silent_about_a_withheld_section` | `accepted` | [ask_meeting_prep_restricted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_meeting_prep_restricted_01.yaml) |
-| `ask_whats_open_answers_the_pipeline_not_the_history` | `accepted` | [ask_whats_open_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_whats_open_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `ask_meeting_prep_stays_silent_about_a_withheld_section` | `accepted` | judge | [ask_meeting_prep_restricted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_meeting_prep_restricted_01.yaml) |
+| `ask_whats_open_answers_the_pipeline_not_the_history` | `accepted` | judge | [ask_whats_open_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_whats_open_01.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1979ms | 3443ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 18 | 18 | 1.00 | 2187ms | 3805ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `not_supported` | 6 | 3 | 0.50 | 20857ms | 71825ms | 3 | 3 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 7250ms | 19903ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `not_supported` | 6 | 4 | 0.67 | 27718ms | 140306ms | 4 | 0 | 0 | 2 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `not_supported` | 6 | 6 | 1.00 | 39981ms | 98223ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `supported_degraded` | 12 | 12 | 1.00 | 10892ms | 25569ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 18 | 15 | 0.83 | 1571ms | 2849ms | 15 | 2 | 0 | 1 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `not_supported` | 6 | 6 | 1.00 | 39981ms | 98223ms | 6 | 0 | 0 | 0 |
 
 </details>
 
@@ -2143,20 +2153,20 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `brief_names_the_stalled_deal_and_the_last_touch` | `accepted` | [stalled_account_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/stalled_account_01.yaml) |
-| `brief_stays_silent_about_a_withheld_section` | `accepted` | [restricted_reader_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/restricted_reader_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `brief_names_the_stalled_deal_and_the_last_touch` | `accepted` | judge | [stalled_account_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/stalled_account_01.yaml) |
+| `brief_stays_silent_about_a_withheld_section` | `accepted` | judge | [restricted_reader_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/restricted_reader_01.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 1979ms | 3443ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 18 | 18 | 1.00 | 2187ms | 3805ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 20857ms | 71825ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 5 | 0.83 | 7250ms | 19903ms | 5 | 1 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `not_supported` | 6 | 6 | 1.00 | 27718ms | 140306ms | 6 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `not_supported` | 6 | 5 | 0.83 | 39981ms | 98223ms | 5 | 1 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 6 | 1.00 | 10892ms | 25569ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `not_supported` | 15 | 15 | 1.00 | 1571ms | 2849ms | 15 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `not_supported` | 6 | 5 | 0.83 | 39981ms | 98223ms | 5 | 1 | 0 | 0 |
 
 </details>
 
@@ -2169,19 +2179,19 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `dossier_describes_the_company_not_the_relationship` | `accepted` | [dossier_describes_the_company_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/dossier_describes_the_company_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `dossier_describes_the_company_not_the_relationship` | `accepted` | judge | [dossier_describes_the_company_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/dossier_describes_the_company_01.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1979ms | 3443ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 2187ms | 3805ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 20857ms | 71825ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 2 | 0.67 | 7250ms | 19903ms | 2 | 1 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 27718ms | 140306ms | 3 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 39981ms | 98223ms | 0 | 0 | 0 | 3 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 10892ms | 25569ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1571ms | 2849ms | 3 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 39981ms | 98223ms | 0 | 0 | 0 | 3 |
 
 </details>
 
@@ -2194,20 +2204,20 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (2):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `contact_brief_reads_what_was_said` | `accepted` | [contact_brief_reads_what_was_said_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_reads_what_was_said_01.yaml) |
-| `contact_brief_stays_silent_about_what_the_reader_may_not_see` | `accepted` | [contact_brief_withheld_and_omitted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_withheld_and_omitted_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `contact_brief_reads_what_was_said` | `accepted` | judge | [contact_brief_reads_what_was_said_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_reads_what_was_said_01.yaml) |
+| `contact_brief_stays_silent_about_what_the_reader_may_not_see` | `accepted` | judge | [contact_brief_withheld_and_omitted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_withheld_and_omitted_01.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1979ms | 3443ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 18 | 17 | 0.94 | 2187ms | 3805ms | 17 | 1 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 5 | 0.83 | 20857ms | 71825ms | 5 | 0 | 0 | 1 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 0 | 0.00 | 7250ms | 19903ms | 0 | 6 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `not_supported` | 6 | 3 | 0.50 | 27718ms | 140306ms | 3 | 3 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `not_supported` | 6 | 0 | 0.00 | 39981ms | 98223ms | 0 | 0 | 0 | 6 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 18 | 11 | 0.61 | 10892ms | 25569ms | 11 | 6 | 0 | 1 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `not_supported` | 18 | 11 | 0.61 | 1571ms | 2849ms | 11 | 7 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `not_supported` | 6 | 0 | 0.00 | 39981ms | 98223ms | 0 | 0 | 0 | 6 |
 
 </details>
 
@@ -2220,19 +2230,19 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `meeting_brief_reads_the_thread_that_matters` | `accepted` | [meeting_brief_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_brief_reads_the_thread_that_matters_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `meeting_brief_reads_the_thread_that_matters` | `accepted` | judge | [meeting_brief_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_brief_reads_the_thread_that_matters_01.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 1979ms | 3443ms | 0 | 3 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 2187ms | 3805ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 20857ms | 71825ms | 0 | 3 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 7250ms | 19903ms | 0 | 3 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 27718ms | 140306ms | 0 | 3 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 39981ms | 98223ms | 0 | 3 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 9 | 1 | 0.11 | 10892ms | 25569ms | 1 | 8 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 4 | 0.44 | 1571ms | 2849ms | 4 | 5 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 39981ms | 98223ms | 0 | 3 | 0 | 0 |
 
 </details>
 
@@ -2245,19 +2255,19 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `meeting_plan_reads_the_thread_that_matters` | `accepted` | [meeting_plan_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_plan_reads_the_thread_that_matters_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `meeting_plan_reads_the_thread_that_matters` | `accepted` | judge | [meeting_plan_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_plan_reads_the_thread_that_matters_01.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 2 | 0.67 | 1979ms | 3443ms | 2 | 1 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 6 | 0.67 | 2187ms | 3805ms | 6 | 2 | 1 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 20857ms | 71825ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 2 | 0.67 | 7250ms | 19903ms | 2 | 1 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 2 | 0.67 | 27718ms | 140306ms | 2 | 1 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `supported_degraded` | 3 | 2 | 0.67 | 39981ms | 98223ms | 2 | 0 | 1 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 9 | 7 | 0.78 | 10892ms | 25569ms | 7 | 2 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 5 | 0.56 | 1571ms | 2849ms | 5 | 4 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `supported_degraded` | 3 | 2 | 0.67 | 39981ms | 98223ms | 2 | 0 | 1 | 0 |
 
 </details>
 
@@ -2272,22 +2282,22 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_meeting_that_promised_nothing` | `accepted` | [nothing_groundable_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/nothing_groundable_01.yaml) |
-| `a_speaker_tries_to_write_the_record` | `accepted` | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/injection_01.yaml) |
-| `one_side_promises_revised_pricing` | `accepted` | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/commitment_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_meeting_that_promised_nothing` | `accepted` | checked mechanically | [nothing_groundable_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/nothing_groundable_01.yaml) |
+| `a_speaker_tries_to_write_the_record` | `accepted` | checked mechanically | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/injection_01.yaml) |
+| `one_side_promises_revised_pricing` | `accepted` | judge | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/commitment_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1028ms | 1486ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1136ms | 1710ms | 9 | 0 | 0 | 0 |
 | `ollama · gemma4:12b · sovereign` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 19181ms | 25161ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1732ms | 3934ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1112ms | 2252ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 9 | 8 | 0.89 | 684ms | 2364ms | 8 | 1 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 9845ms | 16396ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1844ms | 2850ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 15 | 11 | 0.73 | 1552ms | 5382ms | 11 | 4 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 9845ms | 16396ms | 9 | 0 | 0 | 0 |
 
 </details>
 
@@ -2302,19 +2312,19 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `the_card_shows_a_line_in_the_built_voice` | `accepted` | [demo_draft_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/demo_draft_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `the_card_shows_a_line_in_the_built_voice` | `accepted` | judge | [demo_draft_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/demo_draft_01.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1211ms | 3313ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1335ms | 4677ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 2084ms | 237731ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1381ms | 15657ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 1417ms | 2045ms | 0 | 0 | 3 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 14869ms | 92153ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1554ms | 3524ms | 3 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 14869ms | 92153ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -2327,20 +2337,20 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `owner_voice_candidate_from_authored_messages` | `accepted` | [derive_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/derive_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `owner_voice_candidate_from_authored_messages` | `accepted` | judge | [derive_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/derive_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1211ms | 3313ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 1335ms | 4677ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 2084ms | 237731ms | 0 | 0 | 3 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 3 | 0 | 0.00 | 1358ms | 20620ms | 0 | 0 | 3 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 1381ms | 15657ms | 0 | 0 | 3 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 1 | 0.33 | 1417ms | 2045ms | 1 | 0 | 2 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 14869ms | 92153ms | 0 | 2 | 1 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 9 | 2 | 0.22 | 3188ms | 73472ms | 2 | 0 | 7 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 8 | 0.89 | 1554ms | 3524ms | 8 | 1 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 14869ms | 92153ms | 0 | 2 | 1 | 0 |
 
 </details>
 
@@ -2353,20 +2363,20 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `held_out_draft_sits_close_to_the_author` | `accepted` | [eval_draft_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/eval_draft_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `held_out_draft_sits_close_to_the_author` | `accepted` | judge | [eval_draft_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/eval_draft_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 2 | 0.67 | 1211ms | 3313ms | 2 | 1 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1335ms | 4677ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 2084ms | 237731ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1358ms | 20620ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1381ms | 15657ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 2 | 0.67 | 1417ms | 2045ms | 2 | 1 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 14869ms | 92153ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 6 | 0.67 | 1554ms | 3524ms | 6 | 3 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 14869ms | 92153ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -2379,20 +2389,20 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (1):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `judge_ranks_the_author_rhythm_above_generic_ai_prose` | `accepted` | [eval_scores_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/eval_scores_01.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `judge_ranks_the_author_rhythm_above_generic_ai_prose` | `accepted` | judge | [eval_scores_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/eval_scores_01.yaml) |
 
 Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1211ms | 3313ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1335ms | 4677ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 2084ms | 237731ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1358ms | 20620ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1381ms | 15657ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1417ms | 2045ms | 3 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 14869ms | 92153ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1554ms | 3524ms | 3 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 14869ms | 92153ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -2407,51 +2417,52 @@ Scope a run of it can claim: `full_invocation`.
 
 Scenarios (3):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_deal_named_like_an_instruction_teaches_no_lesson` | `accepted` | [a_deal_name_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_deal_name_is_not_an_instruction.yaml) |
-| `a_pattern_across_three_deals_is_drawn_and_cited` | `accepted` | [a_repeated_pattern_is_cited.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_repeated_pattern_is_cited.yaml) |
-| `a_week_that_invites_a_lesson_it_cannot_support_yields_none` | `accepted` | [a_thin_week_yields_no_lesson.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_thin_week_yields_no_lesson.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_deal_named_like_an_instruction_teaches_no_lesson` | `accepted` | judge | [a_deal_name_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_deal_name_is_not_an_instruction.yaml) |
+| `a_pattern_across_three_deals_is_drawn_and_cited` | `accepted` | judge | [a_repeated_pattern_is_cited.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_repeated_pattern_is_cited.yaml) |
+| `a_week_that_invites_a_lesson_it_cannot_support_yields_none` | `accepted` | judge | [a_thin_week_yields_no_lesson.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_thin_week_yields_no_lesson.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 | 1669ms | 2939ms | 6 | 3 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 21 | 21 | 1.00 | 1069ms | 1551ms | 21 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 | 7305ms | 17849ms | 6 | 3 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 5 | 0.56 | 5999ms | 7763ms | 5 | 4 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 4 | 0.44 | 9439ms | 18514ms | 4 | 5 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 3/3 | `not_supported` | 9 | 2 | 0.22 | 33931ms | 44694ms | 2 | 6 | 1 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `not_supported` | 15 | 9 | 0.60 | 5137ms | 42678ms | 9 | 6 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1599ms | 2350ms | 9 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/3 | `not_supported` | 9 | 2 | 0.22 | 33931ms | 44694ms | 2 | 6 | 1 | 0 |
 
 </details>
 
 #### `weekly_review`
 
 <details>
-<summary><code>weekly_review/narrative</code> — 4 scenario(s), 5 record(s), best state current</summary>
+<summary><code>weekly_review/narrative</code> — 5 scenario(s), 5 record(s), best state current</summary>
 
 ##### `weekly_review/narrative`
 
 Scope a run of it can claim: `full_invocation`.
 
-Scenarios (4):
+Scenarios (5):
 
-| Scenario | Expects | Case |
-|---|---|---|
-| `a_deal_named_like_an_instruction_is_read_as_a_name` | `accepted` | [a_deal_name_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_deal_name_is_not_an_instruction.yaml) |
-| `a_quiet_week_is_reported_as_quiet_rather_than_dressed_up` | `accepted` | [a_quiet_week_is_said_to_be_quiet.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_quiet_week_is_said_to_be_quiet.yaml) |
-| `a_week_of_leads_and_meetings_is_described_rather_than_called_quiet` | `accepted` | [a_week_of_leads_is_not_an_empty_week.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_of_leads_is_not_an_empty_week.yaml) |
-| `the_sentence_leads_with_what_changed_not_with_a_count` | `accepted` | [a_week_with_one_thing_worth_saying.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_with_one_thing_worth_saying.yaml) |
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_deal_named_like_an_instruction_is_read_as_a_name` | `accepted` | judge | [a_deal_name_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_deal_name_is_not_an_instruction.yaml) |
+| `a_quiet_week_is_reported_as_quiet_rather_than_dressed_up` | `accepted` | judge | [a_quiet_week_is_said_to_be_quiet.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_quiet_week_is_said_to_be_quiet.yaml) |
+| `a_week_of_leads_and_meetings_is_described_rather_than_called_quiet` | `accepted` | judge | [a_week_of_leads_is_not_an_empty_week.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_of_leads_is_not_an_empty_week.yaml) |
+| `a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet` | `accepted` | judge | [a_week_with_no_deal_movement_may_say_so.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_with_no_deal_movement_may_say_so.yaml) |
+| `the_sentence_leads_with_what_changed_not_with_a_count` | `accepted` | judge | [a_week_with_one_thing_worth_saying.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_with_one_thing_worth_saying.yaml) |
 
 Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 9 | 0.75 | 927ms | 1286ms | 9 | 3 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 9 | 0.75 | 2150ms | 3003ms | 9 | 3 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/4 | `not_supported` | 12 | 5 | 0.42 | 1764ms | 86185ms | 5 | 5 | 2 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/4 | `not_supported` | 12 | 9 | 0.75 | 919ms | 1891ms | 9 | 3 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 4/4 | `supported_degraded` | 12 | 11 | 0.92 | 6698ms | 11567ms | 11 | 1 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 45 | 45 | 1.00 | 966ms | 1521ms | 45 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `not_supported` | 12 | 9 | 0.75 | 2150ms | 3003ms | 9 | 3 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `not_supported` | 24 | 23 | 0.96 | 2603ms | 4656ms | 23 | 0 | 1 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 45 | 45 | 1.00 | 1259ms | 2627ms | 45 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/5 | `supported_degraded` | 12 | 11 | 0.92 | 6698ms | 11567ms | 11 | 1 | 0 | 0 |
 
 </details>
 
@@ -2462,10 +2473,7 @@ Records (5):
 
 | Task | Binding | Why no row carries it |
 |---|---|---|
-| `agent_loop` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | it names no scenario of any site its task ships, so no row above can attribute it |
 | `agent_loop` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | it names no scenario of any site its task ships, so no row above can attribute it |
-| `agent_loop` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | it names no scenario of any site its task ships, so no row above can attribute it |
-| `agent_loop` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | it names no scenario of any site its task ships, so no row above can attribute it |
 
 </details>
 

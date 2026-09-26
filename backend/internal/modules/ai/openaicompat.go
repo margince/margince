@@ -44,6 +44,9 @@ type openAICompatClient struct {
 	// one host). Held on the client rather than read per request because it is
 	// a property of the BINDING an operator configured, not of any one call.
 	routing *OpenRouterRouting
+	// reasoning is the broker's per-model reasoning metadata, which maps a
+	// request's thinking floor (openrouterreasoning.go); nil off the broker.
+	reasoning *catalogFact[openRouterCatalog]
 }
 
 // openAICompatSchemaName labels the structured-output schema; OpenAI's
@@ -392,7 +395,11 @@ func (c *openAICompatClient) sendChat(ctx context.Context, req model.Request, st
 	if err := c.refuseUnsupportedAttachments(req.Attachments); err != nil {
 		return nil, err
 	}
-	payload, _, err := sendablePayload(ctx, c.chatWire(req, stream), req.SecretStripper)
+	wire := c.chatWire(req, stream)
+	if wire.Reasoning == nil {
+		wire.Reasoning = c.reasoningFloor(ctx, wire.Model, req.ThinkingFloor, len(req.Tools))
+	}
+	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
 		return nil, err
 	}

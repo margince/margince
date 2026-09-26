@@ -71,13 +71,14 @@ func TestCertifyTaskRedrivesARunAfterEveryBoundTierFailed(t *testing.T) {
 	candidate := ai.NewFakeClient().
 		ScriptSteps(failedWalk(t, errDroppedConnection)...).
 		Script(containsWidget, containsWidget, containsWidget)
-	judge := ai.NewFakeClient().Script(scoreJSON(90), scoreJSON(90), scoreJSON(90))
+	judge := ai.NewFakeClient().Script(opinionsOf(90, 3)...)
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
 		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
+			maxRuns:       3,
 		})
 	if err != nil {
 		t.Fatalf("a dropped connection on one run must cost that run, not the task: %v", err)

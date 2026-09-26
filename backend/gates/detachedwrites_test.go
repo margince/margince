@@ -54,8 +54,9 @@ import (
 // detach that is neither, with nobody having said which it meant to be.
 var boundedElsewhere = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/handlers_companylogo.go": "handed straight to writeBackTrimmedLogo, which opens by wrapping it in logoWriteBackTimeout. Bounding it here as well would put two budgets on one write and leave a reader guessing which one governs",
-	"cmd/api/mcpapps.go": "a process-lifetime loop, not a write: WithCancel over the detached context, cancelled when the server stops. A deadline here would retire the refresh loop mid-run on a schedule nothing chose",
-	"cmd/api/relay.go":   "the same shape for the outbox relay, and for the same reason — the cancel is the shutdown signal, and the loop is meant to run as long as the process does",
+	"cmd/api/mcpapps.go":                "a process-lifetime loop, not a write: WithCancel over the detached context, cancelled when the server stops. A deadline here would retire the refresh loop mid-run on a schedule nothing chose",
+	"internal/modules/ai/modelfacts.go": "handed to the catalog's ask, and the only ask — the OpenRouter model-list read — opens by wrapping it in openRouterModelsTimeout. The detach exists so one caller giving up does not fail the others joined on the same read",
+	"cmd/api/relay.go":                  "the same shape for the outbox relay, and for the same reason — the cancel is the shutdown signal, and the loop is meant to run as long as the process does",
 })
 
 // TestEveryDetachedContextSaysWhatBoundsIt is the census.

@@ -323,6 +323,9 @@ func (cfg RoutingConfig) validate() error {
 		if err := validateUpstreamPreferences(string(tier), binding); err != nil {
 			return err
 		}
+		if err := validateThinkingLevel("tier "+string(tier), binding); err != nil {
+			return err
+		}
 	}
 	if cfg.Embeddings.Provider == "" {
 		return fmt.Errorf("ai: routing config: embeddings lane has no provider")
@@ -341,6 +344,9 @@ func (cfg RoutingConfig) validate() error {
 	// tooling and cannot be the thing that holds this.
 	if cfg.Embeddings.Input != nil {
 		return fmt.Errorf("ai: routing config: the embeddings lane takes no `input` — it sends no attachments; declare it on the chat tier that reads documents")
+	}
+	if cfg.Embeddings.ThinkingLevel != "" {
+		return fmt.Errorf("ai: routing config: the embeddings lane takes no `thinking_level` — an embedding is one forward pass and does not think; declare it on a chat tier")
 	}
 	if cfg.Profile == ProfileSovereign {
 		if !localProviders[cfg.Embeddings.Provider] {

@@ -163,3 +163,48 @@ func TestRepointingAPinnedLaneAtAnotherModelDoesNotCarryItsPin(t *testing.T) {
 		t.Fatalf("PUT = %d %s, want 422 naming the eu_hosted residency rule", put.Code, put.Body)
 	}
 }
+
+// A stored thinking level is cleared by writing `default`, which is not itself
+// stored; omitting the field would have kept it.
+func TestAStoredThinkingLevelIsClearedByWritingDefault(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := routingAdmin(e)
+	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), config.Static(nil))
+	leveled, err := ai.ParseRouting([]byte(`profile: cloud_frontier
+tiers:
+  cheap_cloud: {provider: gemini, model: gemini-3.1-flash-lite, thinking_level: low}
+embeddings: {provider: fake, model: fake-embed, dimensions: 1024}
+`))
+	if err != nil {
+		t.Fatalf("the planted binding does not parse: %v", err)
+	}
+	if _, err := store.Replace(ctx, leveled); err != nil {
+		t.Fatalf("storing the planted binding: %v", err)
+	}
+
+	put := getThenPut(ctx, t, aiRoutingHandlers{store: store}, func(body string) string {
+		var doc crmcontracts.AiRouting
+		if err := json.Unmarshal([]byte(body), &doc); err != nil {
+			t.Fatalf("the GET body does not decode: %v", err)
+		}
+		lane := doc.Tiers[string(ai.TierCheapCloud)]
+		cleared := crmcontracts.AiTierBindingThinkingLevelDefault
+		lane.ThinkingLevel = &cleared
+		doc.Tiers[string(ai.TierCheapCloud)] = lane
+		edited, err := json.Marshal(doc)
+		if err != nil {
+			t.Fatalf("re-encoding the edited document: %v", err)
+		}
+		return string(edited)
+	})
+	if put.Code != http.StatusOK {
+		t.Fatalf("PUT = %d %s, want the clear saved", put.Code, put.Body)
+	}
+	got, err := store.Get(ctx)
+	if err != nil {
+		t.Fatalf("reading the binding back: %v", err)
+	}
+	if level := got.Tiers[ai.TierCheapCloud].ThinkingLevel; level != "" {
+		t.Fatalf("thinking_level = %q after writing default, want none", level)
+	}
+}

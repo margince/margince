@@ -28,7 +28,7 @@ var draftFollowUpsForCopy = toolCopy{
 	Instead: "Use draft_email for one specific conversation; this tool answers \"chase everything " +
 		"that is slipping\", not \"reply to this\".",
 	Retain: "Each draft comes back with its deal_id and draft_activity_id — those are how a " +
-		"contact finds the drafts to review.",
+		"human finds the drafts to review.",
 }
 
 var sendEmailCopy = toolCopy{
@@ -89,7 +89,7 @@ var bookMeetingCopy = toolCopy{
 
 var enrichCopy = toolCopy{
 	Purpose: "Learn about a company by reading its public website, and propose what was " +
-		"found for a contact to accept onto the record.",
+		"found for a human to accept onto the record.",
 	Limits: "It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing " +
 		"lands on the record until someone accepts it, which is the review that guards this, not " +
 		"an approval on the call. " +

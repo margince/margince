@@ -33,6 +33,8 @@ type geminiClient struct {
 	// attachmentMIMEs is what THIS binding carries: the wire's own carriage,
 	// narrowed by any `input:` the operator declared (inputmodality.go).
 	attachmentMIMEs []string
+	// thinkingLevel is the binding's own level, sent when a request names none.
+	thinkingLevel string
 }
 
 // geminiEmbedModel is Gemini's dedicated embedding model; the chat model id
@@ -222,7 +224,7 @@ func (c *geminiClient) Embed(ctx context.Context, req model.EmbedRequest) (model
 			Content:              geminiContent{Parts: []geminiPart{{Text: input}}},
 			OutputDimensionality: req.Dimensions, // 0 ⇒ omitted ⇒ provider default
 		}
-		payload, _, err := sendablePayload(ctx, wire, nil)
+		payload, _, err := SendablePayload(ctx, wire, nil)
 		if err != nil {
 			return model.Embeddings{}, err
 		}
@@ -279,6 +281,9 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 	if err != nil {
 		return nil, err
 	}
+	if opts.ThinkingLevel == "" {
+		opts.ThinkingLevel = c.thinkingLevel
+	}
 	wire := geminiWire{Contents: geminiContents(req.Messages, req.Attachments, opts.ThoughtSignatures)}
 	if req.System != "" {
 		wire.SystemInstruction = &geminiContent{Parts: []geminiPart{{Text: req.System}}}
@@ -291,7 +296,7 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 		method = "streamGenerateContent"
 		query = "?alt=sse"
 	}
-	payload, _, err := sendablePayload(ctx, wire, req.SecretStripper)
+	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
 		return nil, err
 	}
@@ -364,6 +369,9 @@ func geminiGenerationConfig(req model.Request, modelID string, opts geminiOption
 		if level == "" && !geminiThinksShallowByDefault(modelID) && geminiTakesThinkingLevel(modelID) {
 			level = geminiStructuredThinkingLevel
 		}
+	}
+	if opts.ThinkingLevel == "" {
+		level = geminiRaisedToFloor(modelID, level, req.ThinkingFloor)
 	}
 	if level != "" {
 		cfg.ThinkingConfig = &geminiThinking{ThinkingLevel: level}

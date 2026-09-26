@@ -89,12 +89,13 @@ func certifyOnce(t *testing.T, dir string, sc Scenario, candidate, judge *ai.Fak
 	return rec, err
 }
 
-// answeringFakes are a candidate and judge that certify every run.
+// answeringFakes are a candidate and judge that certify every run a case can
+// reach, its adaptive extensions included.
 func answeringFakes() (*ai.FakeClient, *ai.FakeClient) {
 	candidate, judge := ai.NewFakeClient(), ai.NewFakeClient()
-	for range testRepeats {
+	for range adaptiveMaxRuns {
 		candidate.Script(containsWidget)
-		judge.Script(scoreJSON(90))
+		judge.Script(opinionsOf(90, 1)...)
 	}
 	return candidate, judge
 }
@@ -105,7 +106,7 @@ func answeringFakes() (*ai.FakeClient, *ai.FakeClient) {
 func refusingFakes(t *testing.T) (*ai.FakeClient, *ai.FakeClient) {
 	t.Helper()
 	var steps []ai.FakeStep
-	for range ladderRungs(t) * runAttempts * testRepeats {
+	for range ladderRungs(t) * runAttempts * adaptiveMaxRuns {
 		steps = append(steps, ai.FakeStep{Err: errDroppedConnection})
 	}
 	return ai.NewFakeClient().ScriptSteps(steps...), ai.NewFakeClient().ScriptSteps(steps...)
@@ -119,6 +120,10 @@ func TestAJournaledRunIsReplayedInsteadOfPaidForAgain(t *testing.T) {
 	first, err := certifyOnce(t, dir, sc, candidate, judge)
 	if err != nil {
 		t.Fatalf("first certification: %v", err)
+	}
+	if first.Runs != adaptiveMaxRuns {
+		t.Fatalf("the first certification made %d runs, want its case extended to %d — the replay below must cover the extensions too",
+			first.Runs, adaptiveMaxRuns)
 	}
 
 	// Nothing here can answer. Every run of this record must come off the
@@ -295,7 +300,7 @@ func TestAJournaledRunCarriesEveryFieldOfARunOutcome(t *testing.T) {
 		},
 		Provider: "openai_compatible", ServedModel: "z-ai/glm-5.2",
 		ServedIdentitySource: "provider_reported", JudgeServedModel: "claude-haiku-4.5",
-		CertifiedScope: "full_invocation", JudgeDegraded: true,
+		CertifiedScope: "full_invocation", JudgeDegraded: true, ContextApplied: true,
 	}
 	assertNoZeroField(t, reflect.ValueOf(want), "runOutcome")
 
@@ -586,5 +591,17 @@ func TestAJournaledRunIsNotReplayedUnderOtherUpstreamPreferences(t *testing.T) {
 	}
 	if bindingKey(spelledDefault) != bindingKey(broker) {
 		t.Error("the product default spelled out keys apart from the same default inherited — one upstream, two keys")
+	}
+}
+
+// A thinking level changes how a model answers, so a run at one level is never
+// replayed as a run at another, nor as the adapter's default.
+func TestAJournaledRunIsNotReplayedAtAnotherThinkingLevel(t *testing.T) {
+	lite := ai.ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
+	low, high := lite, lite
+	low.ThinkingLevel, high.ThinkingLevel = "low", "high"
+	keys := map[string]string{bindingKey(lite): "default", bindingKey(low): "low", bindingKey(high): "high"}
+	if len(keys) != 3 {
+		t.Errorf("three thinking levels rendered %d journal keys: %v", len(keys), keys)
 	}
 }

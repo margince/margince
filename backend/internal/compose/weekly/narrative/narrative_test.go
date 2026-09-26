@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
@@ -57,15 +58,17 @@ func TestADealNameCannotEscapeTheFenceAndBecomeInstruction(t *testing.T) {
 	}
 }
 
-// The prompt says what language to answer in and whose voice to use. Both are
-// gate-enforced across the tree; asserted here too because this lane's output
-// is prose a reader reads on their own screen.
-func TestTheRequestCarriesTheLanguageAndTheVoice(t *testing.T) {
+// The prompt says what language to answer in, and leaves out the house voice:
+// its own-voice lines had the model narrate a week that was the rep's.
+func TestTheRequestCarriesTheLanguageButNotTheHouseVoice(t *testing.T) {
 	req := Request(Input{WeekStart: "2026-06-29"}, "de")
-	for _, want := range []string{"LANGUAGE", "VOICE", "German"} {
+	for _, want := range []string{"LANGUAGE", "German"} {
 		if !strings.Contains(req.System, want) {
 			t.Errorf("the system frame does not carry %q: %q", want, req.System)
 		}
+	}
+	if strings.Contains(req.System, promptvoice.Heading) {
+		t.Error("the house voice is back in a narrative told to the rep as \"you\"")
 	}
 }
 
@@ -204,6 +207,26 @@ func TestTheQuietWeekExemplarIsOfferedOnlyToAQuietWeek(t *testing.T) {
 	}
 	if !strings.Contains(busy, "THIS WEEK WAS NOT QUIET") {
 		t.Error("a busy week is not told that it was busy")
+	}
+}
+
+// A week that did something while no deal moved may say no deal moved: the
+// validator accepts that sentence, so the prompt must not forbid it, and the
+// prompt forbids it again the moment a deal did move.
+func TestTheDealClaimIsForbiddenOnlyWhereADealMoved(t *testing.T) {
+	noDeals := Input{Counts: Counts{ProposalsAccepted: 1}}
+	dealMoved := Input{Counts: Counts{DealsMoved: 1}}
+	const forbidsDealClaim = "nothing closed, moved or slipped"
+
+	if system := Request(noDeals, "en").System; strings.Contains(system, forbidsDealClaim) ||
+		strings.Contains(system, "nothing moved") {
+		t.Error("a week in which no deal moved is forbidden from saying so")
+	}
+	if _, err := Parse(`{"narrative":"One proposal accepted, and no deal moved."}`, noDeals); err != nil {
+		t.Errorf("the lane refused a true sentence about a week with no deal movement: %v", err)
+	}
+	if !strings.Contains(Request(dealMoved, "en").System, forbidsDealClaim) {
+		t.Error("a week in which a deal moved is not told that nothing-moved is false")
 	}
 }
 

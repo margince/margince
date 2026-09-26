@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -438,5 +439,21 @@ func TestAFailedVoiceCriticRetryIsLoggedAndTheFirstDraftStands(t *testing.T) {
 	}
 	if len(brain.requests) != 3 {
 		t.Errorf("calls = %d, want voice + failed retry + plain", len(brain.requests))
+	}
+}
+
+// A retry that did not clear its rule is logged with the rule's severity and
+// with which draft the loop went on to serve, so an operator can tell a false
+// claim that shipped from a phrasing tic that did.
+func TestARetryThatDidNotClearNamesTheDraftItServed(t *testing.T) {
+	for served, want := range map[bool]string{true: "served=retry", false: "served=first"} {
+		var logged bytes.Buffer
+		retryLog := draftRetryLog{log: slog.New(slog.NewTextHandler(&logged, nil))}
+		retryLog.RetryDidNotClear(context.Background(), draftcheck.RuleInventedRelationship, "as discussed", 1, served)
+		line := logged.String()
+		if !strings.Contains(line, want) || !strings.Contains(line, "rule=invented-relationship") ||
+			!strings.Contains(line, `phrase="as discussed"`) {
+			t.Errorf("served=%v logged %q, want %s with the rule and phrase", served, line, want)
+		}
 	}
 }

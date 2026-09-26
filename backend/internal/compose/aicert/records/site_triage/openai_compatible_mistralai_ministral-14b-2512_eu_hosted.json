@@ -3,7 +3,7 @@
   "provider": "openai_compatible",
   "served_model": "mistralai/ministral-14b-2512",
   "env_class": "eu_hosted",
-  "prompt_version": "paf12957a1ff46e8a9bb04fc8314064be",
+  "prompt_version": "p9e44e332e2d4924617d497d2c2761d45",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 15,
@@ -17,27 +17,51 @@
   "context_applied": false,
   "context_scopes": null,
   "judge_score_p50": 100,
-  "judge_score_min": 90,
-  "latency_p50": 1066,
-  "latency_p95": 1980,
-  "mean_tokens": 685,
-  "mean_tokens_in": 643,
-  "mean_tokens_out": 42,
-  "mean_cached_tokens": 0,
+  "judge_score_min": 95,
+  "latency_p50": 2014,
+  "latency_p95": 24803,
+  "mean_tokens": 701,
+  "mean_tokens_in": 658,
+  "mean_tokens_out": 43,
+  "mean_cached_tokens": 275,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 137,
-  "judge_served_model": "gemini-3.5-flash",
+  "est_cost_microusd": 90,
+  "judge_served_model": "claude-sonnet-4-6",
+  "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "echo",
-  "ran_at": "2026-09-23T10:56:52Z",
+  "candidate_upstream": {
+    "only": [
+      "mistral/eu"
+    ],
+    "ignore": null,
+    "quantizations": null,
+    "sort": "",
+    "require_parameters": true,
+    "allow_fallbacks": null,
+    "preferred_max_latency_p90": 0,
+    "reasoning_effort": ""
+  },
+  "ran_at": "2026-09-26T16:47:19Z",
   "scenarios": [
     {
       "scenario": "a_one_contact_consultancy_is_still_a_company",
       "site": "triage",
-      "stamp": "99037ca954f1f6f25e0a308d795e2bfca2e58e96cc6ef3851a92216fb2a89c3ccaf60ef02d13bba5f0b4105f5ad69bbfce1ab9a9e6eed919ff8cd0634068dcb926c390dafab5b181920ba0a5222df8ab4fed8cd159693a3a414c0376fbbed4ac",
+      "stamp": "99037ca954f1f6f25e0a308d795e2bfca2e58e96cc6ef3851a92216fb2a89c3c72231b0dc8f474ab501569faa4a89251155a8b5026943ebe61bc749d8d5ee0a99e9de831049253e09766c37b9fddb11897068ad6fbf1a0890d5ad08d66cec664",
       "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 80,
+        "degraded_min": 60,
+        "floor": 50
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -46,10 +70,21 @@
     {
       "scenario": "a_mailbox_vendor_is_not_the_senders_employer",
       "site": "triage",
-      "stamp": "391283ba669b161902800353a71f4a116c15ca298f68cbae840d5b3b5cd397efffc2d2e908558dc2bf505163f83e2c8713b2bfe5478a87e062b01c7563455db6ce47006bbc8a3d2d576809c6cb84f7502eb1ec0a233e483c13c1897905d31ce1",
+      "stamp": "391283ba669b161902800353a71f4a116c15ca298f68cbae840d5b3b5cd397ef8181853a2fdf71f212fd1df3d561613f3c93a770244c2a728feffaea2fd90fd4a492ee87b1b1ef5a71cc718f1fafb6f182496e2dcad51b2d0cf189601064ab2c",
       "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -58,10 +93,21 @@
     {
       "scenario": "a_parked_domain_identifies_nobody",
       "site": "triage",
-      "stamp": "4c740e3e3508d75b0163b3fdd9d2397209c107d02f3658a4c84d3098770902d7e8d167f7b43f5f21492be9d50a0f02048440f6050410b89258028656d0e22f49b47b199bf73df3c9751a7f8c2ca358e79e2f2eefb897b865b6f5fb3fb512c4c2",
+      "stamp": "4c740e3e3508d75b0163b3fdd9d2397209c107d02f3658a4c84d3098770902d7ee694880c8c782587540a9aeed90895e3ddeb4b318e3fc8383a5cb463077e3620c8814d9f1d5e8308cc8b6ffa75b124727074c9b5f7b1d1ab046abc183c46b6e",
       "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -70,10 +116,21 @@
     {
       "scenario": "a_personal_domain_is_not_a_company",
       "site": "triage",
-      "stamp": "899b89a99c1990b79c9c3725cb3bc0c50f05b9b06251c3d16c2853d2094a332110448489ef70131c03f1b01c9d6568e20684362c9a9da12fe0f90bf0de930f2de3892a41836541d4cfa65c05ac72ed1c63d9944f5e5c77d4647123a7d4d46029",
+      "stamp": "899b89a99c1990b79c9c3725cb3bc0c50f05b9b06251c3d16c2853d2094a332118aa9ccad567d8f8438267949d178af2e8bce73983a235fd900e1ec59bfa9b70ba79fa0e3e6158d2ce45315ca7917da24d0c962800d5ba8b5da540ea6cf8b389",
       "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        95,
+        95,
+        95
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -82,10 +139,21 @@
     {
       "scenario": "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
       "site": "triage",
-      "stamp": "e73e2c1fd56bd0061691e9aa3710104807ce64e09f4deec74332354acdd6f75b6e11fbe4f0d193449592b74309d6c4c95510af32675898603dd8f3811d02f95942c7f6868759375a9382317094c4f120e671581ca8ed61a5aea7c3993380e04a",
+      "stamp": "e73e2c1fd56bd0061691e9aa3710104807ce64e09f4deec74332354acdd6f75b24ac6430abaec93c346be8ae9072820a6e526fc05121e5552104b3611d82a51aea2444b1f331a40bd052f5826e5d3090722bb8179720bbf106382a64e765483d",
       "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        97,
+        97,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,

@@ -125,6 +125,7 @@ func (t relinkActivity) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "relink_activity", Title: "Re-associate an activity to a record", Version: toolVersionV1,
 		Description: relinkActivityCopy.render(),
+		Instead:     relinkActivityCopy.Instead,
 		// Dynamic because filing under a PROJECT classifies the activity as
 		// commercial correspondence — write-once and monotonic — while every
 		// other destination is an association a member can undo. See
@@ -246,6 +247,7 @@ func (t disqualifyLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "disqualify_lead", Title: "Disqualify a lead", Version: toolVersionV1,
 		Description:   disqualifyLeadCopy.render(),
+		Instead:       disqualifyLeadCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "disqualifyLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id"],"properties":{
@@ -301,6 +303,7 @@ func (t demoteLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "demote_lead", Title: "Reverse a lead promotion", Version: toolVersionV1,
 		Description:   demoteLeadCopy.render(),
+		Instead:       demoteLeadCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "demoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","reason"],"properties":{
@@ -376,6 +379,7 @@ func (t advanceProjectPhase) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "advance_project_phase", Title: "Move a project to a phase", Version: toolVersionV1,
 		Description:   advanceProjectPhaseCopy.render(),
+		Instead:       advanceProjectPhaseCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "advanceProjectPhase",
 		InputSchema: schema(`{"type":"object","required":["project_id","to_phase"],"properties":{

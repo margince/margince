@@ -694,3 +694,27 @@ func TestTheEgressPageNamesEachTasksDecisionReachAndLocalOnlyDeclaration(t *test
 		}
 	}
 }
+
+// A site's thinking level reaches the generated site table, and a site that
+// names none is emitted without one rather than with an empty string that
+// would read as a decision.
+func TestEmitGoCarriesASitesThinkingLevel(t *testing.T) {
+	contract := strings.Replace(minimalContract, "sites: [only]",
+		"sites: [only, {name: talk, kind: multi_turn, thinking: low}]", 1)
+	c, err := parseContract([]byte(contract))
+	if err != nil {
+		t.Fatalf("parseContract: %v", err)
+	}
+	out, err := emitGo(c, "deadbeef")
+	if err != nil {
+		t.Fatalf("emitGo: %v", err)
+	}
+	for _, want := range []string{
+		`{Name: "only", Kind: "one_shot"},`,
+		`{Name: "talk", Kind: "multi_turn", Thinking: "low"},`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("generated source missing %s:\n%s", want, out)
+		}
+	}
+}

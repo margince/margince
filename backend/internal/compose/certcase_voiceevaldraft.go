@@ -81,7 +81,7 @@ type voiceEvalHeldOutSample struct {
 }
 
 // voiceEvalDraftCases serves the one site that drafts against a held-out sample.
-type voiceEvalDraftCases struct{}
+type voiceEvalDraftCases struct{ checkerSpecAnswer }
 
 func (voiceEvalDraftCases) Site() aitasks.Site {
 	return aitasks.Site{

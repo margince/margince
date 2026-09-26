@@ -80,7 +80,8 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 		tiers[string(tier)] = crmcontracts.AiTierBinding{
 			Provider: b.Provider, Model: b.Model,
 			BaseUrl: optionalString(b.BaseURL), Input: optionalStrings(b.Input),
-			Routing: routingToWire(b.Routing),
+			Routing:       routingToWire(b.Routing),
+			ThinkingLevel: optionalEnum[crmcontracts.AiTierBindingThinkingLevel](b.ThinkingLevel),
 		}
 	}
 	return crmcontracts.AiRouting{
@@ -88,9 +89,10 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 		Tiers:   tiers,
 		Embeddings: crmcontracts.AiEmbeddingsBinding{
 			Provider: cfg.Embeddings.Provider, Model: cfg.Embeddings.Model,
-			BaseUrl: optionalString(cfg.Embeddings.BaseURL),
-			Input:   optionalStrings(cfg.Embeddings.Input),
-			Routing: routingToWire(cfg.Embeddings.Routing),
+			BaseUrl:       optionalString(cfg.Embeddings.BaseURL),
+			Input:         optionalStrings(cfg.Embeddings.Input),
+			Routing:       routingToWire(cfg.Embeddings.Routing),
+			ThinkingLevel: optionalEnum[crmcontracts.AiEmbeddingsBindingThinkingLevel](cfg.Embeddings.ThinkingLevel),
 			// Reported as stored rather than as defaulted, so a round-trip of
 			// GET → PUT does not silently freeze today's compiled default into
 			// the document as though an operator had chosen it.
@@ -131,6 +133,12 @@ func fromContractAiRouting(req crmcontracts.AiRouting) ai.RoutingConfig {
 		Provider: req.Embeddings.Provider, Model: req.Embeddings.Model,
 		BaseUrl: req.Embeddings.BaseUrl, Input: req.Embeddings.Input, Routing: req.Embeddings.Routing,
 	}
+	// Mapped although this lane refuses it, so a submitted level meets the
+	// store's refusal instead of being dropped as though it were never sent.
+	if req.Embeddings.ThinkingLevel != nil {
+		level := crmcontracts.AiTierBindingThinkingLevel(*req.Embeddings.ThinkingLevel)
+		embeddings.ThinkingLevel = &level
+	}
 	cfg := ai.RoutingConfig{
 		Profile:    ai.Profile(req.Profile),
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: tierFromWire(embeddings)},
@@ -155,6 +163,9 @@ func tierFromWire(b crmcontracts.AiTierBinding) ai.ProviderConfig {
 	}
 	if b.Input != nil {
 		out.Input = *b.Input
+	}
+	if b.ThinkingLevel != nil {
+		out.ThinkingLevel = string(*b.ThinkingLevel)
 	}
 	return out
 }
@@ -209,6 +220,14 @@ func optionalString(v string) *string {
 		return nil
 	}
 	return &v
+}
+
+func optionalEnum[E ~string](v string) *E {
+	if v == "" {
+		return nil
+	}
+	out := E(v)
+	return &out
 }
 
 func optionalStrings(v []string) *[]string {

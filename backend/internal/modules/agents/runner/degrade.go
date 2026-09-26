@@ -131,7 +131,7 @@ const (
 	FailureEditedApprovalCarriedNoChange FailureReason = "the approval was edited but the decision " +
 		"carries no edited version of the action, so there was nothing safe to re-present; ask for the action again"
 	FailurePassportNoLongerValid FailureReason = "the authority this run was acting under is no longer " +
-		"valid — the passport was revoked or expired, or the contact it acts for was deactivated; " +
+		"valid — the passport was revoked or expired, or the user it acts for was deactivated; " +
 		"grant it again and the next occurrence will run"
 	FailureSpecLeftTheCatalog FailureReason = "this scheduled agent was removed while the run waited " +
 		"for an answer, so there is no goal left to resume; nothing further is needed"

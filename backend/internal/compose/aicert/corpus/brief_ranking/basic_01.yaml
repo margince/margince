@@ -22,14 +22,8 @@ fixture:
 expect:
   outcome: accepted
   answer: [overnight_reply]
-  rubric: >
-    Score whether the response is exactly a permutation of the two deal ids it
-    was given (no invented id, none dropped), and whether the second candidate's
-    fresh overnight momentum (0.95) and stronger warmth reasonably earn it the
-    first slot despite the two deals' near-identical composite score — which is
-    the judgment the flat weighted fold, having already ranked the other deal
-    first, cannot make.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is an order of the deal ids given. The site's own binding refuses
+    an invented or dropped id, and the check requires the expected deal first,
+    which is all the rubric asked.

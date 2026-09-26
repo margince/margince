@@ -7614,7 +7614,7 @@ export interface paths {
         /**
          * Share a thread with the team, or keep it private.
          * @description Your own view of the thread, and only yours. A message that reached two mailboxes is two
-         *     contacts's correspondence: each of you contributes what you ask for, and the message ends at
+         *     colleagues' correspondence: each of you contributes what you ask for, and the message ends at
          *     the strictest of those. So sharing releases YOUR hold — it cannot publish what a colleague
          *     is still holding, and the response says how many other seats are.
          *
@@ -17251,6 +17251,16 @@ export interface components {
              */
             input?: string[];
             routing?: components["schemas"]["AiOpenRouterRouting"];
+            /**
+             * @description How deeply a gemini tier thinks when the request names no level of its own.
+             *     Gemini 3 or later only; refused on any other provider, on a model that predates
+             *     the field, and on the embeddings lane. Absent means the adapter's default, and a
+             *     save that omits it keeps the stored level while provider, host and model are
+             *     unchanged. `default` clears a stored level back to the adapter's default; it is
+             *     never stored or returned, and is accepted on any binding.
+             * @enum {string}
+             */
+            thinking_level?: "default" | "minimal" | "low" | "medium" | "high";
         };
         /**
          * @description Upstream-selection preferences for an openai_compatible binding pointed at
@@ -30927,7 +30937,7 @@ export interface components {
         /**
          * @description A service a company demonstrably operates, proved by a subdomain in its certificate
          *     history. The set is an ALLOWLIST: a certificate log publishes every hostname a company
-         *     ever held a certificate for, including contacts's names, and only labels naming a service
+         *     ever held a certificate for, including personal names, and only labels naming a service
          *     survive the classifier.
          * @enum {string}
          */

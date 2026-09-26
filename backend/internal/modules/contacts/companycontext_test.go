@@ -22,14 +22,14 @@ func TestAssembleCompanyContextIsCanonicalAndScoped(t *testing.T) {
 		CompanySource:     "manual",
 		CompanyCapturedBy: "human:owner",
 		ProfileFields: []CompanyProfileField{
-			{Field: fieldICP, Value: "Mid-market manufacturers", Source: companySourceHuman, CapturedBy: "human:owner", Confidence: scored(1)},
+			{Field: fieldICP, Value: "Mid-market manufacturers", Source: CompanySourceHuman, CapturedBy: "human:owner", Confidence: scored(1)},
 			{Field: fieldOfferSummary, Value: "Revenue software", Source: companySourceSiteRead, CapturedBy: "agent:site-read", SourceURL: "https://gradion.com", Confidence: scored(0.9)},
-			{Field: fieldDisplayName, Value: "Gradion", Source: companySourceHuman, CapturedBy: "human:owner", Confidence: scored(1)},
+			{Field: fieldDisplayName, Value: "Gradion", Source: CompanySourceHuman, CapturedBy: "human:owner", Confidence: scored(1)},
 		},
 		Facts: []CompanyFact{
 			{Category: "signal", Field: "named_customer", Value: "Acme", ValueKey: "acme", Source: companySourceSiteRead, CapturedBy: "agent:site-read", Confidence: scored(0.8)},
 			{Category: "signal", Field: "technology", Value: "Go", ValueKey: "go", Source: companySourceSiteRead, CapturedBy: "agent:site-read", Confidence: scored(0.8)},
-			{Category: "offering", Field: "service", Value: "Advisory", ValueKey: "advisory", Source: companySourceHuman, CapturedBy: "human:owner", Confidence: scored(1)},
+			{Category: "offering", Field: "service", Value: "Advisory", ValueKey: "advisory", Source: CompanySourceHuman, CapturedBy: "human:owner", Confidence: scored(1)},
 		},
 	}
 
@@ -89,7 +89,7 @@ func TestAssembleCompanyContextFallsBackToAnchorIdentity(t *testing.T) {
 		t.Fatalf("identity items = %#v, want display_name and primary_domain", items)
 	}
 	for _, item := range items {
-		if item.Source != companySourceHuman || item.CapturedBy != "human:owner" {
+		if item.Source != CompanySourceHuman || item.CapturedBy != "human:owner" {
 			t.Fatalf("fallback provenance = %q/%q, want human/human:owner", item.Source, item.CapturedBy)
 		}
 	}

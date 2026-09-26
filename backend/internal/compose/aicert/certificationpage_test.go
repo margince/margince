@@ -202,7 +202,7 @@ func assertAICertCoverageMatchesTheLibrary(t *testing.T, doc aiCertDoc, rows []a
 	rendered := map[string]string{}
 	for _, site := range doc.Sites {
 		for _, rec := range site.Records {
-			rendered[site.Key+" "+rec.Binding.label()] = coverageCell(rec)
+			rendered[site.Key+" "+rec.siteLabel()] = coverageCell(rec)
 		}
 	}
 	for _, row := range rows {
@@ -310,6 +310,7 @@ func writeAICertGlossary(page *strings.Builder) {
 	page.WriteString("| `absent` | Never tested, on any setup. Not a failure — an honest gap. Its columns are dashes because nothing has measured it. |\n\n")
 	page.WriteString("#### The numbers\n\n")
 	page.WriteString("| Column | What it says |\n|---|---|\n")
+	page.WriteString("| Quality | Who scores how good a test case's answers are: `judge`, a second model, or `checked mechanically`, where the case's own check sees everything a judge would and no judge is asked. |\n")
 	page.WriteString("| Runs, Passed | How many times the model was asked, and how often it did what the test case wanted. |\n")
 	page.WriteString("| Reliability | Passed divided by Runs. 1.00 is every attempt. |\n")
 	page.WriteString("| `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back — not a pass/fail split. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |\n")
@@ -577,12 +578,21 @@ func writeAICertScenarios(page *strings.Builder, scenarios []aiCertScenario) {
 		return
 	}
 	fmt.Fprintf(page, "Scenarios (%d):\n\n", len(scenarios))
-	page.WriteString("| Scenario | Expects | Case |\n|---|---|---|\n")
+	page.WriteString("| Scenario | Expects | Quality | Case |\n|---|---|---|---|\n")
 	for _, sc := range scenarios {
-		fmt.Fprintf(page, "| `%s` | `%s` | [%s](%s) |\n",
-			sc.Name, sc.Expects, filepath.Base(sc.File), corpusLinkPrefix+sc.File)
+		fmt.Fprintf(page, "| `%s` | `%s` | %s | [%s](%s) |\n",
+			sc.Name, sc.Expects, qualityCell(sc.GradedBy), filepath.Base(sc.File), corpusLinkPrefix+sc.File)
 	}
 	page.WriteString("\n")
+}
+
+// qualityCell says who grades a case's quality: a case its mechanical check
+// grades alone has no judge score to read.
+func qualityCell(gradedBy string) string {
+	if gradedBy == "mechanical" {
+		return "checked mechanically"
+	}
+	return "judge"
 }
 
 func writeAICertSiteRecords(page *strings.Builder, records []aiCertRecord) {
@@ -594,13 +604,21 @@ func writeAICertSiteRecords(page *strings.Builder, records []aiCertRecord) {
 	page.WriteString("| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |\n")
 	page.WriteString("|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, rec := range records {
-		fmt.Fprintf(page, "| `%s` | `%s` | %s | `%s` | %d | %d | %s | %s | %s | %d | %d | %d | %d |\n",
-			rec.Binding.label(), rec.State, coverageCell(rec), rec.Band,
+		fmt.Fprintf(page, "| `%s`%s | `%s` | %s | `%s` | %d | %d | %s | %s | %s | %d | %d | %d | %d |\n",
+			rec.Binding.label(), siteThinkingCell(rec), rec.State, coverageCell(rec), rec.Band,
 			rec.Runs, rec.Passed, reliabilityCell(rec.Reliability),
 			latencyCell(rec.LatencyP50MS), latencyCell(rec.LatencyP95MS),
 			rec.Reported.Accepted, rec.Reported.WrongAnswer, rec.Reported.Invalid, rec.Reported.Abstained)
 	}
 	page.WriteString("\n")
+}
+
+// siteThinkingCell names the level a site ran at when it is not the binding's.
+func siteThinkingCell(rec aiCertRecord) string {
+	if rec.SiteThinking == "" {
+		return ""
+	}
+	return " (this site: thinking " + rec.SiteThinking + ")"
 }
 
 // coverageCell is the scenario count behind a state: a `partial` is only

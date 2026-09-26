@@ -31,10 +31,13 @@ func RegisterMeetingInvitationTool(r *Registry, inviter MeetingInviter, records 
 	r.Register(inviteMeetingTool{inviter, records, r.language})
 }
 
+var inviteMeetingCopy = toolCopy{Purpose: "Create a real calendar invitation for one contact and notify their chosen address.", Limits: "Requires a connected writable calendar and a contact email the acting host may use. It checks actual busy time and returns pending until the provider confirms. Does not prove the guest agreed or received the notification.", Instead: "Use book_meeting only to record a meeting without inviting anyone. Use check_availability with reliable=true to propose calendar-checked times.", Retain: "Keep the invitation id and inspect its status before claiming it is booked. Retrying an uncertain delivery must use the existing invitation."}
+
 func (t inviteMeetingTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "invite_meeting", Title: "Send a calendar invitation", Version: toolVersionV1, RequiredScope: principal.ScopeSend, Tier: mcp.TierConfirmationRequired, Egress: true, OpenAPIOp: "createMeetingInvitation",
-		Description: (toolCopy{Purpose: "Create a real calendar invitation for one contact and notify their chosen address.", Limits: "Requires a connected writable calendar and a contact email the acting host may use. It checks actual busy time and returns pending until the provider confirms. Does not prove the guest agreed or received the notification.", Instead: "Use book_meeting only to record a meeting without inviting anyone. Use check_availability with reliable=true to propose calendar-checked times.", Retain: "Keep the invitation id and inspect its status before claiming it is booked. Retrying an uncertain delivery must use the existing invitation."}).render(),
+		Description: inviteMeetingCopy.render(),
+		Instead:     inviteMeetingCopy.Instead,
 		InputSchema: schemaFor[crmcontracts.MeetingInvitationRequest](), OutputSchema: schemaFor[crmcontracts.MeetingInvitation](),
 	}
 }

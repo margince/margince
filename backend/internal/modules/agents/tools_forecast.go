@@ -52,6 +52,7 @@ func (t forecastReadings) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_readings", Title: "Read the forecast", Version: toolVersionV1,
 		Description:   forecastReadingsCopy.render(),
+		Instead:       forecastReadingsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getForecast",
 		InputSchema: schema(`{"type":"object","properties":{
@@ -143,6 +144,7 @@ func (t forecastMovement) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_movement", Title: "What moved the forecast", Version: toolVersionV1,
 		Description:   forecastMovementCopy.render(),
+		Instead:       forecastMovementCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getForecastMovement",
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
@@ -209,6 +211,7 @@ func (t forecastInputChecks) Spec() mcp.ToolSpec {
 		Name: "forecast_input_checks", Title: "What the forecast's inputs were checked against",
 		Version:       toolVersionV1,
 		Description:   forecastInputChecksCopy.render(),
+		Instead:       forecastInputChecksCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "getForecastAssurance",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
@@ -267,6 +270,7 @@ func (t listInputChecks) Spec() mcp.ToolSpec {
 		Name: "list_input_checks", Title: "What the forecast's inputs still need",
 		Version:       toolVersionV1,
 		Description:   listInputChecksCopy.render(),
+		Instead:       listInputChecksCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "listInputChecks",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
@@ -326,6 +330,7 @@ func (t dataCoverage) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "data_coverage", Title: "How current the sources are", Version: toolVersionV1,
 		Description:   dataCoverageCopy.render(),
+		Instead:       dataCoverageCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "getDataCoverage",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),

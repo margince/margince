@@ -78,10 +78,10 @@ type Record struct {
 	// both, something the product does is supplied or skipped rather than
 	// exercised, and a record silent about it claims more than it tested.
 	CertifiedScope string `json:"certified_scope"`
-	// ContextApplied says whether the runs were served the company context
-	// production prepends. It is recorded rather than implied because the
-	// answer is no: assembling that context reads the database, and the cert
-	// lane runs without one. A record that omitted the field would leave a
+	// ContextApplied says whether every run was served the company context
+	// production prepends. The lane has no database to assemble it from, so it
+	// is true only where a case supplies that context from its fixture through
+	// the production provider; a record that omitted the field would leave a
 	// reader to assume parity nobody checked.
 	ContextApplied bool `json:"context_applied"`
 	// ContextScopes is what THIS task's contract has production prepend, and it
@@ -125,6 +125,10 @@ type Record struct {
 	MeanCacheWriteTokens int    `json:"mean_cache_write_tokens"`
 	EstCostMicroUSD      int64  `json:"est_cost_microusd"`
 	JudgeServedModel     string `json:"judge_served_model"`
+	// JudgeProvider is the judge binding's transport — claude_cli, or the
+	// provider adapter it graded through — absent on records that predate it.
+	JudgeProvider string `json:"judge_provider,omitempty"`
+	// SelfJudged is true when selfJudged's family rule matched a graded run.
 	SelfJudged           bool   `json:"self_judged"`
 	ServedIdentitySource string `json:"served_identity_source"`
 	// CandidateUpstream and JudgeUpstream are the broker upstream preferences
@@ -134,7 +138,17 @@ type Record struct {
 	// record without them predates the product default being applied here.
 	CandidateUpstream *ai.OpenRouterRouting `json:"candidate_upstream,omitempty"`
 	JudgeUpstream     *ai.OpenRouterRouting `json:"judge_upstream,omitempty"`
-	RanAt             string                `json:"ran_at"`
+	// ThinkingLevel is the candidate binding's own `thinking_level`, absent where
+	// it names none. It changes how the model answers, so a record carrying one
+	// speaks only for a preset whose rung sets the same level.
+	ThinkingLevel string `json:"thinking_level,omitempty"`
+	// SiteThinking is each site's thinking floor from api/ai-tasks.yaml, on a
+	// rung whose adapter maps one (ai.SiteThinkingLevels). It names the floor
+	// ASKED, not the wire sent: a model already thinking deeper is sent nothing
+	// and still ran at least that deep. Absent means no site asked one —
+	// including on a record older than floors, so it is recorded, not recomputed.
+	SiteThinking map[string]string `json:"site_thinking,omitempty"`
+	RanAt        string            `json:"ran_at"`
 	// Decision is what the decision lane did across a decision record's runs.
 	Decision *DecisionStats `json:"decision,omitempty"`
 	// Scenarios is every scenario this record pooled, with its own verdict and
@@ -166,13 +180,21 @@ type ScenarioRecord struct {
 	// task: adding a tenth scenario leaves nine measurements true, and a task
 	// stamp has no way to say so. Empty on a record written before this field
 	// existed, which the report reads as "ask the task stamp instead".
-	Stamp   string `json:"stamp,omitempty"`
-	Verdict string `json:"verdict"`
-	// JudgeBand is the best verdict this scenario's judge scores alone reach
-	// against its own bands — what a verdict over several rows needs of each.
+	Stamp string `json:"stamp,omitempty"`
+	// Verdict and JudgeBand are the case's standing and its judge half as
+	// written; a reader asks CaseVerdict and CaseJudgeBand, which re-read them.
+	Verdict   string `json:"verdict"`
 	JudgeBand string `json:"judge_band,omitempty"`
 	Runs      int    `json:"runs"`
 	Passed    int    `json:"passed"`
+	// JudgeScores and Bands are what the verdict rule reads of this case beyond
+	// its counts, so a site's verdict is recomputed from its rows exactly. Both
+	// are absent on a row graded before the pooled rule.
+	JudgeScores []int     `json:"judge_scores,omitempty"`
+	Bands       *RowBands `json:"bands,omitempty"`
+	// JudgeNone marks a case its mechanical check graded alone: it has no bands
+	// and no scores, and is regraded from its counts.
+	JudgeNone bool `json:"judge_none,omitempty"`
 	// The same reported-outcome counts the task carries, on this scenario's own
 	// runs: they say what came back, never whether it was what was asked for.
 	ReportedAccepted    int `json:"reported_accepted"`
@@ -216,6 +238,27 @@ type DecisionStats struct {
 	ServedPassRate float64 `json:"served_pass_rate"`
 }
 
+// CaseVerdict is this row's standing against the per-case gates of the verdict
+// rule, recomputed from its scores and bands so a row written before the gates
+// were read this way reads them too; a row without bands keeps its stored one.
+func (sc ScenarioRecord) CaseVerdict() string {
+	if sc.legacy() {
+		return sc.Verdict
+	}
+	return caseVerdict(rowCase(sc))
+}
+
+// CaseJudgeBand is CaseVerdict's judge-score half, read the same way.
+func (sc ScenarioRecord) CaseJudgeBand() string {
+	if sc.legacy() {
+		return sc.JudgeBand
+	}
+	return caseJudgeBand(rowCase(sc))
+}
+
+// legacy says the row predates rows keeping what the rule regrades them from.
+func (sc ScenarioRecord) legacy() bool { return sc.Bands == nil && !sc.JudgeNone }
+
 // SiteTally is one SITE's share of a task's record, folded from the scenario
 // rows that ran on it.
 //
@@ -241,26 +284,35 @@ func (t SiteTally) Reliability() float64 {
 	return float64(t.Passed) / float64(t.Runs)
 }
 
+// RowBands is a scenario row's copy of the quality bands its case was graded
+// against, as the record file spells them.
+type RowBands struct {
+	CertifiedMin int `json:"certified_min"`
+	DegradedMin  int `json:"degraded_min"`
+	Floor        int `json:"floor"`
+}
+
 // ForSite folds every scenario row this record kept for one site's variant.
 // False means this record measured that site not at all — a different thing
 // from measuring it and finding nothing, which is why it is not a zero tally.
 //
 // The verdict is Verdict's rule over the site's scenario rows, the same rule
-// the task's own verdict is.
+// the task's own verdict is. A row with no bands predates rows keeping their
+// bands and scores and cannot be re-graded, and one such row leaves the pool
+// incomplete, so the site reads stored verdicts instead: the record's own when
+// the site's rows are the whole record, else the worst any of its rows holds.
 func (r Record) ForSite(variant string) (SiteTally, bool) {
 	var tally SiteTally
-	var rows []scenarioTally
+	var cases []caseStats
+	legacy := false
+	worst := VerdictCertified
 	for _, sc := range r.Scenarios {
 		if sc.Site != variant {
 			continue
 		}
-		// A row written before JudgeBand existed: its own verdict is the most its
-		// scores are known to reach, which reproduces the worst-scenario fold.
-		band := sc.JudgeBand
-		if band == "" {
-			band = sc.Verdict
-		}
-		rows = append(rows, scenarioTally{runs: sc.Runs, passed: sc.Passed, judgeBand: band})
+		legacy = legacy || sc.legacy()
+		worst = lowerVerdict(worst, sc.CaseVerdict())
+		cases = append(cases, rowCase(sc))
 		tally.Runs += sc.Runs
 		tally.Passed += sc.Passed
 		tally.ReportedAccepted += sc.ReportedAccepted
@@ -268,10 +320,16 @@ func (r Record) ForSite(variant string) (SiteTally, bool) {
 		tally.ReportedInvalid += sc.ReportedInvalid
 		tally.ReportedAbstained += sc.ReportedAbstained
 	}
-	if len(rows) == 0 {
+	switch {
+	case len(cases) == 0:
 		return SiteTally{}, false
+	case legacy && len(cases) == len(r.Scenarios):
+		tally.Verdict = r.Verdict
+	case legacy:
+		tally.Verdict = worst
+	default:
+		tally.Verdict, _ = verdictOver(cases)
 	}
-	tally.Verdict, _ = verdictOver(rows)
 	return tally, true
 }
 
@@ -386,4 +444,13 @@ func LoadRecords(dir string) ([]Record, error) {
 		return a.Site < b.Site
 	})
 	return records, nil
+}
+
+// ThinkingLevelAt is the level site's requests ran at on this record's run: at
+// least its floor, where the site asked one.
+func (r Record) ThinkingLevelAt(site string) string {
+	if level, declared := r.SiteThinking[site]; declared {
+		return level
+	}
+	return r.ThinkingLevel
 }

@@ -12,6 +12,7 @@ package compose
 
 import (
 	"encoding/json"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -37,11 +38,12 @@ import (
 // the model can tell apart.
 //
 //promptlang:exempt this endpoint has no language to pass: it is a one-admin conversation, so the reader's locale is the right answer rather than the base language, and CompanySiteReadMessageRequest carries no locale field the way its sibling OnboardingCompanyMessageRequest does. Adding one is a contract change; tracked rather than defaulted, because guessing here would answer a German admin in English while claiming to be governed.
-func companyReadAnswerRequest(message string, history []model.Message, evidence []companyReadEvidence) (model.Request, error) {
+func companyReadAnswerRequest(message string, history []model.Message, evidence []companyReadEvidence, offer *companyReadOffer) (model.Request, error) {
 	fence := promptfence.New()
 	contextJSON, err := json.Marshal(struct {
-		Dossier []companyReadEvidence `json:"dossier_evidence"`
-	}{Dossier: evidence})
+		Dossier       []companyReadEvidence `json:"dossier_evidence"`
+		PreviousOffer *companyReadOffer     `json:"your_previous_offer"`
+	}{Dossier: evidence, PreviousOffer: offer})
 	if err != nil {
 		return model.Request{}, err
 	}
@@ -54,14 +56,14 @@ func companyReadAnswerRequest(message string, history []model.Message, evidence 
 			fence.Rule("dossier evidence and application state"),
 		Messages:  alternatingTurns(messages),
 		MaxTokens: ai.ReasoningOutputMaxTokens, ResponseSchema: companyReadMessageSchema,
-		SecretStripper: ai.NewSecretStripper(),
+		SecretStripper: ai.NewSecretStripper(), Site: "sitereadmessage",
 	}, nil
 }
 
 // companyReadGate is the company-read validator closed over the three things it
 // judges a reply against: the dossier the model was shown, every statement the
 // administrator has made in this conversation, and the authorization those
-// statements grant.
+// statements — and the standing offer they may accept — grant.
 //
 // It is one constructor rather than three call-site derivations because all
 // three come from the same message, history and evidence the request is built
@@ -75,16 +77,21 @@ type companyReadGate struct {
 	authorization companyChangeAuthorization
 }
 
-func newCompanyReadGate(message string, history []model.Message, evidence []companyReadEvidence) companyReadGate {
+func newCompanyReadGate(message string, history []model.Message, evidence []companyReadEvidence, offer *companyReadOffer) companyReadGate {
+	return companyReadGate{
+		known:         companyReadEvidenceIndex(evidence),
+		statements:    administratorConversation(history, message),
+		authorization: newCompanyChangeAuthorization(message, history, "").withStandingOffer(offer),
+	}
+}
+
+// companyReadEvidenceIndex keys the dossier by the source id a reply cites.
+func companyReadEvidenceIndex(evidence []companyReadEvidence) map[string]companyReadEvidence {
 	known := make(map[string]companyReadEvidence, len(evidence))
 	for _, source := range evidence {
 		known[source.ID] = source
 	}
-	return companyReadGate{
-		known:         known,
-		statements:    administratorConversation(history, message),
-		authorization: newCompanyChangeAuthorization(message, history, ""),
-	}
+	return known
 }
 
 // validate judges the model's raw text, which is the shape the shape-retry
@@ -96,4 +103,25 @@ func (g companyReadGate) validate(text string) error {
 
 func (g companyReadGate) validateReply(reply companyReadModelReply) error {
 	return validateCompanyReadReplyValue(reply, g.known, g.statements, g.authorization)
+}
+
+// admit is validate as the answer path applies it: a reply whose only fault is
+// a change nobody asked for still answers the administrator, so it is kept
+// without that change. Certification holds the model to validate, which
+// refuses it, because the reply the model sent was still wrong.
+func (g companyReadGate) admit(text string) error {
+	reply, err := parseCompanyReadReply(text)
+	if err != nil {
+		return err
+	}
+	return g.validateReply(g.authorized(reply))
+}
+
+// authorized is reply without the proposed changes this conversation did not
+// authorize.
+func (g companyReadGate) authorized(reply companyReadModelReply) companyReadModelReply {
+	reply.ProposedChanges = slices.DeleteFunc(slices.Clone(reply.ProposedChanges), func(change companyReadProposedChange) bool {
+		return !g.authorization.allows(change)
+	})
+	return reply
 }

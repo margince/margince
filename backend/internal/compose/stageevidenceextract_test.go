@@ -391,6 +391,42 @@ func TestAQuoteMaySpanAnInterruptionByCitingIt(t *testing.T) {
 	}
 }
 
+// A buyer's point running over two of her own turns is one passage, and a
+// model quoting it drops the second "Ines:" label as a reader would. The label
+// is attribution rather than words, so the quote still stands; changing any
+// word she said still does not.
+func TestAQuoteAcrossTwoTurnsMayDropTheSecondSpeakerLabel(t *testing.T) {
+	spans := []stageEvidenceSpan{{
+		SourceID: evidenceSpans[0].SourceID,
+		Lines: []string{
+			"Ines: our warehouse team re-keys every delivery note by hand.",
+			"Ines: it costs us about two days a week.",
+		},
+	}}
+	claim := stageEvidenceClaim{
+		CriterionKey: "budget_confirmed",
+		SourceID:     spans[0].SourceID,
+		SourceLines:  []int{1, 2},
+		Quote:        "our warehouse team re-keys every delivery note by hand. it costs us about two days a week.",
+		Met:          stageEvidenceMet,
+		Commitment:   deals.CommitmentNone,
+		Confidence:   0.9,
+	}
+	valid := stageEvidenceValid(evidenceCriteria, spans)
+	if err := valid(oneClaim(t, claim)); err != nil {
+		t.Fatalf("a quote across two turns without the second label was refused: %v", err)
+	}
+	claim.Quote = "our warehouse team re-keys every delivery note by hand. it costs us two days a week."
+	if valid(oneClaim(t, claim)) == nil {
+		t.Fatal("a quote that drops a word the buyer said was accepted once labels were ignored")
+	}
+	spans[0].Lines[0] = "Lars: our warehouse team re-keys every delivery note by hand."
+	claim.Quote = "our warehouse team re-keys every delivery note by hand. it costs us about two days a week."
+	if valid(oneClaim(t, claim)) == nil {
+		t.Fatal("a quote splicing the rep's turn into the buyer's with the seam erased was accepted")
+	}
+}
+
 // The prompt promises 300 CHARACTERS, so the bound counts them. A byte count
 // rejects a valid non-Latin quote at roughly a third of the stated length.
 func TestTheQuoteBoundCountsCharactersNotBytes(t *testing.T) {
@@ -466,5 +502,27 @@ func TestTheCertificationGradesWhichPassageSettledTheCriterion(t *testing.T) {
 	}
 	if !strings.Contains(got.Detail, "does not say it") {
 		t.Errorf("the verdict does not name the useless citation: %s", got.Detail)
+	}
+}
+
+// A settled_by phrase nobody in the conversation said can never be quoted, so
+// the scenario pinning it would grade every reply wrong; it is refused while it
+// is still a corpus error rather than a paid run of zeros.
+func TestAScenarioCannotPinAPassageNobodySaid(t *testing.T) {
+	fixture := stageEvidenceFixture{
+		Criteria: []stageEvidenceCriterion{{Key: "economic_buyer", Label: "The economic buyer is identified"}},
+		Spans: []stageEvidenceSpan{{
+			SourceID: evidenceSpans[0].SourceID,
+			Lines:    []string{"Ines: that would be Martin,", "our COO."},
+		}},
+	}
+	said := []stageEvidenceExpectation{{CriterionKey: "economic_buyer", Met: true, SettledBy: "Martin, our COO."}}
+	if err := refuseUnreachableCriteria(said, fixture); err != nil {
+		t.Fatalf("a phrase said across two lines was refused: %v", err)
+	}
+	unsaid := []stageEvidenceExpectation{{CriterionKey: "economic_buyer", Met: true, SettledBy: "Karl"}}
+	err := refuseUnreachableCriteria(unsaid, fixture)
+	if err == nil || !strings.Contains(err.Error(), `settled_by "Karl"`) {
+		t.Fatalf("err = %v, want the unsaid settled_by named", err)
 	}
 }

@@ -29,6 +29,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -205,7 +206,7 @@ func writeChecked(
 	ctx context.Context, lane Completer, surface Surface, in Input, voice draftvoice.Context,
 ) (Draft, error) {
 	envelope := in.WrittenInto()
-	draft, err := CorrectOnce(ctx, envelope.Lang(), envelope.Band(), in.Booked(),
+	draft, err := CorrectOnce(ctx, envelope.Lang(), envelope.Band(), groundsOf(in),
 		func(ctx context.Context, correction string) (Draft, error) {
 			return writeWithModel(ctx, lane, surface, in, voice, correction)
 		},
@@ -377,6 +378,11 @@ func keepGroundedReasons(surface Surface, reasons []modelReason) []Reason {
 		out = append(out, keep)
 	}
 	return out
+}
+
+// groundsOf is what the caller's record and intent let a draft claim.
+func groundsOf(in Input) draftcheck.Grounds {
+	return draftcheck.Grounds{Booked: in.Booked(), Met: draftcheck.IntentNamesMeeting(in.Steering())}
 }
 
 // DraftText is the prose a phrasing check judges: the body, and the reason

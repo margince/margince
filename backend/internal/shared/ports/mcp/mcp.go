@@ -60,7 +60,14 @@ type ToolSpec struct {
 	// keep for the follow-up. Governance is already answered by the fields below
 	// and appended by each serving surface, so a description restating it would
 	// explain policing to a model whose question is which tool to call.
-	Description   string
+	Description string
+	// Instead is the sentence of Description that sends a nearby goal to a
+	// neighbouring tool, repeated verbatim, and InsteadTools the registered
+	// tools it names (the registry fills it). A surface offering part of the
+	// catalog drops a pointer at a tool it does not offer: following one costs
+	// a run a refused step.
+	Instead       string
+	InsteadTools  []string
 	Version       string
 	RequiredScope principal.Scope
 	// Marks a tool answering who the CALLER is, which every passport may ask

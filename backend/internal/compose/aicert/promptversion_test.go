@@ -110,7 +110,10 @@ func TestPromptVersionCoversTheRequestTheGraderIsSent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("graderRequestDigest: %v", err)
 	}
-	shipped := compose.JudgeRequest(sc.Expect.Rubric, "a widget", stampCandidateOutput)
+	shipped := compose.JudgeRequest(compose.JudgeInput{
+		Rubric: sc.Expect.Rubric, ProductRules: candidate.System, ScenarioInput: "a widget",
+		ExpectedAnswer: string(sc.Expect.Answer), CandidateOutput: stampCandidateOutput,
+	})
 	want, err := canonicalRequestDigest(shipped)
 	if err != nil {
 		t.Fatalf("digesting the shipped grader request: %v", err)
@@ -119,7 +122,7 @@ func TestPromptVersionCoversTheRequestTheGraderIsSent(t *testing.T) {
 		t.Fatalf("the stamp's grader half is %s and the request compose.JudgeRequest builds digests to %s — the stamp covers a grading call this build does not make", got, want)
 	}
 
-	edited := compose.JudgeRequest(sc.Expect.Rubric, "a widget", stampCandidateOutput)
+	edited := compose.JudgeRequest(compose.JudgeInput{Rubric: sc.Expect.Rubric, ScenarioInput: "a widget", CandidateOutput: stampCandidateOutput})
 	edited.System = "Grade generously.\n" + edited.System
 	generous, err := canonicalRequestDigest(edited)
 	if err != nil {
@@ -127,6 +130,33 @@ func TestPromptVersionCoversTheRequestTheGraderIsSent(t *testing.T) {
 	}
 	if generous == want {
 		t.Fatal("a grader instructed differently digests the same — editing the grader's system prompt would leave every record claiming to certify scores it can no longer produce")
+	}
+}
+
+// The grader reads the candidate's system prompt as the product rules and the
+// scenario's answer as the reference, so editing either changes how a run is
+// graded — and must move the grader half even when the ask stays put.
+func TestTheGraderDigestCoversTheProductRulesAndTheExpectedAnswer(t *testing.T) {
+	sc := testScenarioOnSite("one", promptVariant, wideBands)
+	candidate := model.Request{
+		System:   "Describe the subject in one sentence.",
+		Messages: []model.Message{{Role: roleUser, Content: "a widget"}},
+	}
+	base, err := graderRequestDigest(sc, candidate)
+	if err != nil {
+		t.Fatalf("graderRequestDigest: %v", err)
+	}
+
+	reruled := candidate
+	reruled.System = "Describe the subject in two sentences."
+	if got, err := graderRequestDigest(sc, reruled); err != nil || got == base {
+		t.Errorf("a changed product prompt kept the grader digest (err %v) — the grader is shown rules the record was not scored under", err)
+	}
+
+	reanswered := sc
+	reanswered.Expect.Answer = JSONValue(`"a different reference"`)
+	if got, err := graderRequestDigest(reanswered, candidate); err != nil || got == base {
+		t.Errorf("a changed expected answer kept the grader digest (err %v) — the grader reads a reference the record was not scored against", err)
 	}
 }
 
@@ -183,6 +213,33 @@ func TestPromptVersionRefusesACaseThatBuildsNoRequest(t *testing.T) {
 	_, err := PromptVersion(context.Background(), []Scenario{testScenarioOnSite("one", promptVariant, wideBands)}, census)
 	if err == nil || !strings.Contains(err.Error(), "without building a request") {
 		t.Fatalf("want a refusal naming the missing request, got %v", err)
+	}
+}
+
+// A request is routed under the site it names, so a case naming another site
+// certifies that site's contract, and a site declaring a thinking level whose
+// request names none certifies a call the level never reaches.
+func TestPromptVersionRefusesARequestMisnamingItsSite(t *testing.T) {
+	coldStart := testScenarioOnSite("one", "sitereadmessage", wideBands)
+	coldStart.Task = string(ai.TaskColdStart)
+	for name, tc := range map[string]struct {
+		scenario    Scenario
+		requestSite string
+		want        string
+	}{
+		"another site":                  {testScenarioOnSite("one", promptVariant, wideBands), "reply", `naming site "reply"`},
+		"no site on a site that thinks": {coldStart, "", "never reaches the router"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			census := censusOfPromptCases(t, promptCases{
+				site:   aitasks.Site{Task: ai.Task(tc.scenario.Task), Variant: tc.scenario.Site, Kind: ai.SiteKindOneShot},
+				system: "Describe the subject in one sentence.", maxTokens: 1024, requestSite: tc.requestSite,
+			})
+			_, err := PromptVersion(context.Background(), []Scenario{tc.scenario}, census)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("want a refusal containing %q, got %v", tc.want, err)
+			}
+		})
 	}
 }
 
@@ -289,6 +346,8 @@ type promptCases struct {
 	system    string
 	maxTokens int
 	fenced    bool
+	// requestSite is the site the built request names.
+	requestSite string
 }
 
 func (c promptCases) Site() aitasks.Site { return c.site }
@@ -309,13 +368,14 @@ func (c promptCases) Prepare(fixture, _ json.RawMessage) (aitasks.PreparedCase, 
 		system += " " + fence.Rule("subject")
 		subject = fence.WrapAttr("source_id", ids.NewV7().String(), subject)
 	}
-	return promptCase{system: system, subject: subject, maxTokens: c.maxTokens}, nil
+	return promptCase{system: system, subject: subject, maxTokens: c.maxTokens, site: c.requestSite}, nil
 }
 
 type promptCase struct {
 	system    string
 	subject   string
 	maxTokens int
+	site      string
 }
 
 func (c promptCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
@@ -323,6 +383,7 @@ func (c promptCase) Run(ctx context.Context, completer aitasks.Completer) (aitas
 		System:    c.system,
 		Messages:  []model.Message{{Role: "user", Content: c.subject}},
 		MaxTokens: c.maxTokens,
+		Site:      c.site,
 	}
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
@@ -566,5 +627,31 @@ func TestAScenarioStampCoversTheGradingRule(t *testing.T) {
 	third := stamps[sc.Name][stampSegment*2:]
 	if third == graderRequest {
 		t.Fatal("the grader third is the bare request digest — a change of grading rule would leave every record current")
+	}
+}
+
+// A case its check grades alone is never sent to the judge, so what the judge
+// would have been shown must not reach its stamp: a judge prompt edit, or a
+// product rule only the judge reads, would otherwise re-stale a record no judge
+// scored. The product rules stand in here, since they reach the grader's half.
+func TestAJudgelessStampIgnoresWhatOnlyTheJudgeReads(t *testing.T) {
+	graderThird := func(sc Scenario, system string) string {
+		t.Helper()
+		stamps, err := ScenarioStamps(context.Background(), []Scenario{sc}, promptCensus(t, system, 1024))
+		if err != nil {
+			t.Fatalf("ScenarioStamps: %v", err)
+		}
+		return stamps[sc.Name][len(stamps[sc.Name])-sha256.Size*2:]
+	}
+	judged := testScenarioOnSite("one", promptVariant, wideBands)
+	judgeless := judged
+	judgeless.Expect.Judge, judgeless.Expect.Bands = judgeNone, Bands{}
+	one, two := "Describe the subject in one sentence.", "Describe the subject in two sentences."
+
+	if graderThird(judged, one) == graderThird(judged, two) {
+		t.Error("a judged case's grader half ignored the product rules its judge is shown")
+	}
+	if graderThird(judgeless, one) != graderThird(judgeless, two) {
+		t.Error("a judge-less case's grader half moved with what only a judge reads")
 	}
 }

@@ -152,14 +152,14 @@ func TestBuildRecordCountsWhatEachRunActuallyProduced(t *testing.T) {
 			rec.CertifiedScope, aitasks.ScopeSingleTurn)
 	}
 	if rec.ContextApplied {
-		t.Fatal("context_applied is true, but the cert lane runs without a database and never applies the company context prompt")
+		t.Fatal("context_applied is true, but no run of this set was served the company context")
 	}
 }
 
-// context_applied is one fact about the LANE: it is false on every record,
-// because assembling the company context reads a database no certification run
-// has. WHICH records that costs something is a fact about the task, and only the
-// task's own declared scopes say it — a task production always prepends scopes
+// context_applied is false wherever no run was served the company context,
+// which a DB-less lane serves only from a case's own fixture. WHICH records
+// that costs something is a fact about the task, and only the task's own
+// declared scopes say it — a task production always prepends scopes
 // to was certified without reference data every real call carries, and a task
 // that declares none went without nothing.
 //
@@ -180,7 +180,7 @@ func TestEveryRecordNamesTheCompanyContextItsTaskWentWithout(t *testing.T) {
 		rec := buildRecord(task, VerdictCertified, ratedAccumulation(),
 			ai.ProfileEUHosted, "p000000000000")
 		if rec.ContextApplied {
-			t.Errorf("the %s record claims the company context was applied, and this lane has no database to assemble it from", task)
+			t.Errorf("the %s record claims the company context was applied, and no run of it was served one", task)
 		}
 		if !slices.Equal(rec.ContextScopes, policy.Scopes) {
 			t.Errorf("the %s record names context scopes %v, and the contract has production prepend %v",
@@ -189,6 +189,30 @@ func TestEveryRecordNamesTheCompanyContextItsTaskWentWithout(t *testing.T) {
 	}
 	if scoped == 0 {
 		t.Fatal("no task declares a company-context scope, so every assertion above held over the empty set")
+	}
+}
+
+// context_applied is a claim about EVERY run: one run served the company
+// context among several that were not still certifies a prompt production
+// never sends as though it were the one it does.
+func TestContextAppliedHoldsOnlyWhenEveryRunWasServedTheContext(t *testing.T) {
+	withFixedNow(t, time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC))
+	runs := len(ratedAccumulation().allResults)
+	for _, tc := range []struct {
+		served int
+		want   bool
+	}{
+		{served: 0, want: false},
+		{served: runs - 1, want: false},
+		{served: runs, want: true},
+	} {
+		acc := ratedAccumulation()
+		acc.contextServed = tc.served
+		rec := buildRecord(ai.TaskOfferDraft, VerdictCertified, acc, ai.ProfileEUHosted, "p000000000000")
+		if rec.ContextApplied != tc.want {
+			t.Errorf("%d of %d runs served the company context: context_applied = %v, want %v",
+				tc.served, runs, rec.ContextApplied, tc.want)
+		}
 	}
 }
 

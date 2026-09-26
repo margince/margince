@@ -21,23 +21,8 @@ fixture:
 expect:
   outcome: accepted
   answer: personal
-  rubric: >
-    A medical practice confirming an appointment with the mailbox owner. Nothing
-    in it concerns the business at all: no company, no commercial subject, no
-    colleague. The mailbox the CRM reads is also where a founder's own life
-    arrives, which is the whole reason this kind exists.
-    "personal" scores high. "explicitly_confidential" scores in the middle: it
-    holds the thread, which is the outcome that matters, and is a reasonable
-    reading of a medical letter even though the message never asks for
-    confidence. "ordinary" is the failure this scenario exists to catch and
-    scores zero at any confidence — it publishes the fact and the date of a
-    founder's medical consultation to every colleague, which is the single
-    clearest example of a thread that was never the company's to open.
-    Note the trap in the shape rather than the content: this reads exactly like
-    the routine appointment-confirmation traffic a business genuinely has with
-    its suppliers — a date, a time, a document to bring, a cancellation policy —
-    so a classifier keying on form rather than subject answers "ordinary" here.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The rubric
+    only ranked the other kinds by the harm each does, which the check fails
+    outright.

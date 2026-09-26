@@ -16,7 +16,7 @@ package agents
 
 // list_approvals — the queue itself.
 var listApprovalsCopy = toolCopy{
-	Purpose: "The staged actions waiting for a contact's decision: what was proposed and what each " +
+	Purpose: "The staged actions waiting for a human's decision: what was proposed and what each " +
 		"would do. It is where a proposal that is already waiting turns up — a message staged and " +
 		"unsent is not one that needs writing again.",
 	Limits: "It lists what the colleague you act for could decide themselves; anything else is absent " +

@@ -106,6 +106,7 @@ func (t listRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "list_records", Title: "List records", Version: toolVersionV1,
 		Description:   listRecordsCopy.render(),
+		Instead:       listRecordsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{

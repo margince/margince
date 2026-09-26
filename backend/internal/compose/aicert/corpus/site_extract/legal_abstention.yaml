@@ -20,13 +20,15 @@ fixture:
 
         This site is operated by Kestrel Fold Holdings Pte Ltd, 8 Marina View, Singapore 018960. Company registration number 201899887K.
 expect:
-  # Withholding all three is the answer, and the negative claim is what names
-  # the fabrication: a model that picks one of the two entities grounds a legal
-  # name the passage genuinely contains, so the citation gate lets it through
-  # and only this expectation can call it wrong — by name, and with the entity
-  # it chose, which is what a reviewer needs to see.
-  outcome: abstained
+  # Both entities share the trading name, so display_name is grounded whichever
+  # one operates the site; the legal trio is not. The negative claim is what
+  # names the fabrication: a model that picks one entity grounds a legal name
+  # the passage genuinely contains, so the citation gate lets it through and
+  # only this expectation can call it wrong — with the entity it chose.
+  outcome: accepted
   answer:
+    grounded:
+      display_name: Kestrel Fold
     not_grounded:
       - legal_name
       - registered_address
@@ -36,12 +38,15 @@ expect:
     Fold Consulting GmbH (Hamburg) and Kestrel Fold Holdings Pte Ltd
     (Singapore). The profile prompt is explicit that legal_name,
     registered_address and register_vat may ONLY be proposed when the site's
-    legal pages name exactly one entity — here they name two, so the only
-    correct answer withholds all three. No other profile field is stated on
-    this passage either: it is an imprint, not a description of what the
-    company sells or whom it serves. Picking either entity confidently, or
-    grounding any non-legal field this passage does not state, is a wrong
-    answer, not a partial-credit one.
+    legal pages name exactly one entity — here they name two, so a correct
+    answer withholds all three. The trading name both entities share, Kestrel
+    Fold, is stated either way, and display_name citing it is the one field
+    this passage grounds; proposing it alone scores highest, and an empty
+    reply, which misses it, scores in the middle. No other profile
+    field is stated: it is an imprint, not a description of what the company
+    sells or whom it serves. Picking either entity confidently, or grounding
+    any non-legal field this passage does not state, is a wrong answer, not a
+    partial-credit one.
   bands:
     certified_min: 70
     degraded_min: 50

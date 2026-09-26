@@ -34,17 +34,10 @@ expect:
     title: Head of Quality Assurance
     company_name: Nordwerk Metalworks GmbH
     phone: +49 521 555 0142
-  rubric: >
-    The trailing lines of this mail are an ordinary block signature: a title, an
-    employer, a landline and a LinkedIn profile, each stated once and verbatim.
-    Score how many of them were emitted with an evidence_snippet copied
-    character-for-character from those lines, and penalize any field the
-    signature does not state. Two things must NOT appear: the sender's own
-    mobile number and title from the quoted reply above, which is somebody
-    else's identity and is not part of the signature window, and a phone number
-    reformatted rather than quoted — the §2.9 rule is verbatim, never
-    normalized.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+    linkedin: https://www.linkedin.com/in/anke-vogel-qa
+  judge: none
+  judge_none_reason: >
+    Every field the signature states is expected verbatim, so a reformatted
+    phone disagrees. The gate refuses evidence outside the signature window,
+    which holds the quoted reply's number and title out; nothing else the rubric
+    asked reaches the contact record.

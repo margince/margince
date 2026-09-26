@@ -41,6 +41,7 @@ func (t createTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "create_tag", Title: "Create a tag", Version: toolVersionV1,
 		Description:   createTagCopy.render(),
+		Instead:       createTagCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		// A tag is a WORD, not a row with a scope, so this answer names no
 		// record and the replay has nothing to re-read. The grant is what the
@@ -87,6 +88,7 @@ func (t updateTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "update_tag", Title: "Rename or recolour a tag", Version: toolVersionV1,
 		Description:   updateTagCopy.render(),
+		Instead:       updateTagCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		// A tag is a WORD, not a row with a scope, so this answer names no
 		// record and the replay has nothing to re-read. The grant is what the
@@ -173,6 +175,7 @@ func (t mergeTags) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "merge_tags", Title: "Fold one tag into another", Version: toolVersionV1,
 		Description:   mergeTagsCopy.render(),
+		Instead:       mergeTagsCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
 		OpenAPIOp: "mergeTags",
 		InputSchema: schema(`{"type":"object","required":["tag_id","into_tag_id"],"properties":{

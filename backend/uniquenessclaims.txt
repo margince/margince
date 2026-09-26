@@ -136,7 +136,6 @@ internal/compose/deploymentsecretseal.go#method vaultBinding.open
 internal/compose/dispatch.go#func fanOutChildren
 internal/compose/documentextract.go#func documentFieldOrder
 internal/compose/documentextract.go#func toModelField
-internal/compose/draftcheck/draftcheck.go#func allDirectedRelationshipPhrases
 internal/compose/export.go#func exportableColumns
 internal/compose/extensionpolicy.go#func preflightRetentionClasses
 internal/compose/extensions.go#var composedExtensions

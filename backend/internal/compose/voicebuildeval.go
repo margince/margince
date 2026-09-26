@@ -40,17 +40,30 @@ const (
 	voiceEvalSignatureFloor = 0.4
 )
 
-// Two to three short paragraphs, not a one-liner: the drafts double as the
-// sample the owner reads on the onboarding result screen, and a voice has no
-// room to show in two sentences — every draft reads the same at that length.
-const voiceEvalDraftSystem = `Write an email reply in the author's voice, as described by the supplied voice profile.
-Length: two or three short paragraphs, roughly 80 to 140 words — enough for the voice to show, never padding.
-The profile controls expression, never facts; invent no names, numbers, or commitments.
-Return ONLY a JSON object: {"subject":"...","body":"..."}.`
+// A ceiling and no floor: the held-out mail brings questions but none of the
+// facts that answer them, and a word floor over a factless reply is filled
+// with invented reasons. Each built-voice call states its own length.
+const voiceEvalDraftSystem = voiceDraftOpening + "\n" +
+	"Length: at most two or three short paragraphs, under 140 words — as long as the answers need, never padded to a length.\n" +
+	voiceDraftFactsAndShape
+
+// voiceDraftOpening and voiceDraftFactsAndShape are the drafting lines every
+// built-voice draft shares; only the length differs between the calls.
+const (
+	voiceDraftOpening       = "Write an email reply in the author's voice, as described by the supplied voice profile."
+	voiceDraftFactsAndShape = "The profile controls expression, never facts; invent no names, numbers, or commitments.\n" +
+		`Return ONLY a JSON object: {"subject":"...","body":"..."}.`
+)
+
+// voiceEvalHeldOutRule is what only the evaluation's call needs: its message is
+// evalSampleOpening's cut of a real mail, and the reply is graded on answering it.
+const voiceEvalHeldOutRule = "The message may be only its opening, cut mid-sentence. Answer each question you can read, in the author's way: " +
+	"where an answer needs a fact you were not given, say plainly what has to be checked, or give the author's answer with no reason, figure, date or policy behind it that you were not given. " +
+	"Leave a cut-off sentence unanswered rather than guessing its end."
 
 // voiceEvalDraftSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func voiceEvalDraftSystemFor(fence promptfence.Fence) string {
-	return voiceEvalDraftSystem + "\n" + fence.Rule("profile and sample")
+	return voiceEvalDraftSystem + "\n" + voiceEvalHeldOutRule + "\n" + fence.Rule("profile and sample")
 }
 
 const voiceEvalJudgeSystem = `You compare drafts against a writing sample by the same author.

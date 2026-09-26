@@ -23,20 +23,8 @@ fixture:
 expect:
   outcome: accepted
   answer: [asks_us, informs_us]
-  rubric: >
-    The first message asks a question with a deadline attached and waits on an
-    answer: asks_us. The second is a report filed to a desk address with our
-    reader merely copied, and it says in as many words that no action is needed:
-    informs_us.
-    Score high only if both are right. Getting the first wrong is the expensive
-    mistake and should score lowest — a customer with a question before a board
-    meeting is exactly the message this whole queue exists to surface, and
-    judging it informs_us demotes it out of a rep's day.
-    Getting the second wrong is milder: it leaves a report in the top band, which
-    costs a rep a scroll. Score it in the middle.
-    Note what must NOT drive the answer: the second message is about money and
-    the first is not. Importance is not the question — what the message ASKS is.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed verdict per message, and the check requires every
+    verdict exactly. The rubric only ranked the wrong answers, which the check
+    fails outright.

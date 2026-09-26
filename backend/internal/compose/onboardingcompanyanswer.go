@@ -75,16 +75,17 @@ func onboardingCompanyAnswerRequest(
 	return model.Request{
 		System: companyReadMessageSystem + "\n" + promptvoice.Rule + "\n" +
 			fence.Rule("dossier evidence and application state") + `
-The current_company_draft is application state, not an administrator statement. remaining_required_fields is the deterministic completion plan. If the administrator directly answers next_required_field, classify the response as correction and propose that exact value for that field. After answering an in-scope question, briefly return to the next required field.
+The current_company_draft is application state, not an administrator statement. remaining_required_fields is the deterministic completion plan. If the administrator directly answers next_required_field, classify the response as correction and propose that exact value for that field. After answering an in-scope question, briefly return to the next required field: the first one in remaining_required_fields that this reply does not fill.
 ` + promptlang.Rule(locale),
 		Messages: alternatingTurns(messages), MaxTokens: ai.ReasoningOutputMaxTokens,
 		ResponseSchema: companyReadMessageSchema, SecretStripper: ai.NewSecretStripper(),
+		Site: "company_message",
 	}, nil
 }
 
 // newOnboardingCompanyGate closes the company-read validator over what THIS
-// conversation authorizes. It is the dossier conversation's gate plus the two
-// grants only the wizard has: the completion plan's next required field, which
+// conversation authorizes. It is the dossier conversation's gate, standing offer
+// included, plus the two grants only the wizard has: the completion plan's next required field, which
 // lets a bare value with no field name in it correct that field, and the clarify
 // option the administrator clicked, which grants exactly that field with that
 // value verbatim.
@@ -97,14 +98,11 @@ func newOnboardingCompanyGate(
 	message string, history []model.Message, conversation onboardingConversationContext,
 	selection *crmcontracts.OnboardingClarifySelection,
 ) companyReadGate {
-	known := make(map[string]companyReadEvidence, len(conversation.Dossier))
-	for _, source := range conversation.Dossier {
-		known[source.ID] = source
-	}
 	gate := companyReadGate{
-		known:         known,
-		statements:    administratorConversation(history, message),
-		authorization: newCompanyChangeAuthorization(message, history, conversation.NextRequired),
+		known:      companyReadEvidenceIndex(conversation.Dossier),
+		statements: administratorConversation(history, message),
+		authorization: newCompanyChangeAuthorization(message, history, conversation.NextRequired).
+			withStandingOffer(conversation.PreviousOffer),
 	}
 	if selection != nil {
 		// The clicked option IS an administrator statement: its value is

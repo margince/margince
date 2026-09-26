@@ -287,14 +287,24 @@ func (r ReadinessRow) ClaimedScope() string {
 	return r.Record.CertifiedScope
 }
 
-// Binding names the (provider, model, env) this row was measured on — the whole
-// of what a band green-lights. Empty for an absent row, which was measured on
-// nothing.
+// Binding names the (provider, model, env) this row was measured on, plus the
+// thinking level where the run set one — the whole of what a band green-lights.
+// Empty for an absent row, which was measured on nothing.
 func (r ReadinessRow) Binding() string {
 	if !r.Certified {
 		return ""
 	}
-	return r.Record.Provider + " · " + r.Record.ServedModel + " · " + r.Record.EnvClass
+	return BindingLabel(r.Record.Provider, r.Record.ServedModel, r.Record.EnvClass, r.Record.ThinkingLevelAt(r.Site.Variant))
+}
+
+// BindingLabel is a binding as every surface spells it — the report, the
+// certification page and a preset's rung — so a row and its record match by it.
+func BindingLabel(provider, model, env, thinking string) string {
+	label := provider + " · " + model + " · " + env
+	if thinking != "" {
+		label += " · thinking " + thinking
+	}
+	return label
 }
 
 // SiteKey is the site's name as every tree here spells it.

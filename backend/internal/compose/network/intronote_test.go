@@ -270,6 +270,24 @@ func TestReasoningIsAlwaysAnArrayOnTheWire(t *testing.T) {
 	}
 }
 
+// On a route through an intermediary the band and date describe the sender's
+// edge to that intermediary, so the note claims no history with the recipient.
+func TestAnIndirectRouteClaimsNoHistoryWithTheRecipient(t *testing.T) {
+	t.Parallel()
+	facts := warmNote()
+	facts.through = "Marek Janetzke"
+
+	body := noteFloor(facts).body
+	for _, absent := range []string{"developing", "2026-08-20", "We have been"} {
+		if strings.Contains(body, absent) {
+			t.Errorf("the note hands the intermediary's edge (%q) to the recipient:\n%s", absent, body)
+		}
+	}
+	if label := noteReasons(facts)[0].Label; label != "Sofia Meier → Marek Janetzke (developing)" {
+		t.Errorf("the relationship reason is %q; want the edge the band was scored on", label)
+	}
+}
+
 // The reasons name the route the note was written from, and claim nothing more.
 func TestTheReasonsNameTheRouteAndOnlyWhatIsRecorded(t *testing.T) {
 	t.Parallel()
@@ -322,7 +340,7 @@ func TestANoteObeyingThePromptIsAccepted(t *testing.T) {
 func TestTheNotePromptAsksForWhatTheParseRequires(t *testing.T) {
 	t.Parallel()
 	for _, required := range []string{
-		"address them by name: open with their first name",
+		"open with a greeting line naming them by first name",
 		"naming them in full",
 		`Write a short subject line in the "subject" field`,
 	} {
