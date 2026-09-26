@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 77 |
 | Resources | 12 |
-| Tool catalog | 221.8 KB |
+| Tool catalog | 221.9 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 57938 |
+| Approx. wire tokens | 57948 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,7 +29,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 100.7 KB | 45% | **No** — a result's shape, never listed to a model |
+| Output schemas | 100.8 KB | 45% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 57.6 KB | 25% | Yes, every step |
 | Input schemas | 47.3 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.2 KB | 7% | Partly |
@@ -130,7 +130,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.5 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.2 KB |
-| [`run_report`](#run_report) | Run a report | yes |  | 5.3 KB |
+| [`run_report`](#run_report) | Run a report | yes |  | 5.4 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
 | [`send_company_email`](#send_company_email) | Start an email conversation from a record |  |  | 4.6 KB |
@@ -13380,6 +13380,9 @@ Answer a question about totals, counts or breakdowns by running one of this work
         },
         "plan": {
           "type": "object"
+        },
+        "population_narrowed": {
+          "type": "string"
         },
         "report": {
           "type": "string"

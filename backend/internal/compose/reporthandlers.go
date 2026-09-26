@@ -53,6 +53,11 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 	resultURL := derivationURL(
 		outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, nil, outcome.GeneratedAt)
 	totalRows := len(rows)
+	var narrowed *crmcontracts.ReportResultPopulationNarrowed
+	if outcome.PopulationNarrowed != "" {
+		reason := crmcontracts.ReportResultPopulationNarrowed(outcome.PopulationNarrowed)
+		narrowed = &reason
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportResult{
 		Report:               outcome.Report,
 		Plan:                 outcome.Plan,
@@ -60,6 +65,7 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 		Rows:                 rows,
 		TotalRows:            &totalRows,
 		ExcludedByPermission: outcome.ExcludedByPermission,
+		PopulationNarrowed:   narrowed,
 		GeneratedAt:          &outcome.GeneratedAt,
 		DerivationUrl:        &resultURL,
 
@@ -88,6 +94,11 @@ func (h reportHandlers) ExplainReport(w http.ResponseWriter, r *http.Request, re
 	}
 	rows := make([]map[string]interface{}, len(outcome.Rows))
 	copy(rows, outcome.Rows)
+	var narrowed *crmcontracts.ReportDerivationPopulationNarrowed
+	if outcome.PopulationNarrowed != "" {
+		reason := crmcontracts.ReportDerivationPopulationNarrowed(outcome.PopulationNarrowed)
+		narrowed = &reason
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportDerivation{
 		Report:               outcome.Report,
 		Definition:           outcome.Definition,
@@ -97,6 +108,7 @@ func (h reportHandlers) ExplainReport(w http.ResponseWriter, r *http.Request, re
 		Aggregates:           &outcome.Aggregates,
 		TotalRows:            &outcome.TotalRows,
 		ExcludedByPermission: outcome.ExcludedByPermission,
+		PopulationNarrowed:   narrowed,
 		GeneratedAt:          &outcome.GeneratedAt,
 		AsOf:                 &outcome.AsOf,
 		AsOfPinned:           &outcome.AsOfPinned,

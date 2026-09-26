@@ -23,10 +23,13 @@ import (
 // buildReportWhere assembles the WHERE side — the spec's base predicate,
 // the validated caller filters (sorted for a deterministic plan echo), and
 // the caller's row-scope clause — binding every value through arg.
+//
+// The string names why the population was narrowed beyond what the caller may
+// read, or is "" — the answer has to say it (reportownergate.go).
 func buildReportWhere(
 	ctx context.Context, tx pgx.Tx, spec reportSpec, req reportRequest,
 	requested RequestedScope, arg func(any) int,
-) ([]string, error) {
+) ([]string, string, error) {
 	// A spec may restrict nothing: leads-by-status counts every lead whatever
 	// its status, because the archived ones ARE its subject. An empty base
 	// joined in with the rest would render `WHERE  AND …`, so the absence is
@@ -47,7 +50,7 @@ func buildReportWhere(
 		if threshold, ok := spec.thresholds[key]; ok {
 			n, err := thresholdValue(key, req.Filters[key])
 			if err != nil {
-				return nil, err
+				return nil, "", err
 			}
 			where = append(where, threshold.clause(arg(n)))
 			continue
@@ -60,7 +63,7 @@ func buildReportWhere(
 			// just accepted. A caller who misspells a threshold would read a list
 			// without that family in it and conclude the report cannot answer
 			// their question.
-			return nil, &FieldNotAllowedError{Field: key, Slot: slotFilters, Allowed: catalogFilterNames(spec)}
+			return nil, "", &FieldNotAllowedError{Field: key, Slot: slotFilters, Allowed: catalogFilterNames(spec)}
 		}
 		// A null filter means "not set", the SAME meaning the drill-through
 		// gives an empty group key (derivationWhere). Binding it as `= NULL`
@@ -74,13 +77,13 @@ func buildReportWhere(
 		}
 		value, err := reportFilterValue(key, req.Filters[key])
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		where = append(where, fmt.Sprintf("%s = $%d", expr, arg(value)))
 	}
 	scoped, err := specScopeClauses(ctx, spec, arg)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	where = append(where, scoped...)
 	// WHICH population, as against which rows the caller may read at all.
@@ -94,17 +97,25 @@ func buildReportWhere(
 	if spec.population == measureCallersOwn {
 		population, err := reportPopulationClause(ctx, tx, requested, arg)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		if population != "" {
 			where = append(where, population)
 		}
 	}
+	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec,
+		breaksDownByOwner(spec, req.GroupBy) && !pinsOwner(spec, filterKeys), arg)
+	if err != nil {
+		return nil, "", err
+	}
+	if owners != "" {
+		where = append(where, owners)
+	}
 	refs, err := referenceScopeClauses(ctx, spec, namedByReport(spec, req), arg)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return append(where, refs...), nil
+	return append(where, refs...), narrowed, nil
 }
 
 // specScopeClauses is the ROW-SCOPE half of a population's narrowing: the
@@ -184,6 +195,16 @@ func specNarrowings(
 		if population != "" {
 			out = append(out, population)
 		}
+	}
+	// The typed grammar compares an owner with more than equality, so no single
+	// value can be judged: any mention of the owner column narrows to the
+	// owners the caller may measure.
+	owners, _, err := ownerBreakdownClause(ctx, tx, spec, named[colOwnerID] && !named[colRowID], arg)
+	if err != nil {
+		return nil, err
+	}
+	if owners != "" {
+		out = append(out, owners)
 	}
 	// An aggregate over a masked column would disclose it through the total,
 	// so the row leaves the population entirely.

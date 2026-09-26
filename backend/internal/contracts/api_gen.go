@@ -12268,6 +12268,36 @@ func (e ReportBlockSeverity) Valid() bool {
 	}
 }
 
+// Defines values for ReportDerivationPopulationNarrowed.
+const (
+	ReportDerivationPopulationNarrowedOwnersYouMayMeasure ReportDerivationPopulationNarrowed = "owners_you_may_measure"
+)
+
+// Valid indicates whether the value is a known member of the ReportDerivationPopulationNarrowed enum.
+func (e ReportDerivationPopulationNarrowed) Valid() bool {
+	switch e {
+	case ReportDerivationPopulationNarrowedOwnersYouMayMeasure:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportResultPopulationNarrowed.
+const (
+	ReportResultPopulationNarrowedOwnersYouMayMeasure ReportResultPopulationNarrowed = "owners_you_may_measure"
+)
+
+// Valid indicates whether the value is a known member of the ReportResultPopulationNarrowed enum.
+func (e ReportResultPopulationNarrowed) Valid() bool {
+	switch e {
+	case ReportResultPopulationNarrowedOwnersYouMayMeasure:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolveInputCheckOutcome.
 const (
 	ResolveInputCheckOutcomeAddedEvidence ResolveInputCheckOutcome = "added_evidence"
@@ -36028,8 +36058,11 @@ type ReportDerivation struct {
 	GeneratedAt          *time.Time `json:"generated_at,omitempty"`
 
 	// Plan The validated predicate/group/aggregate set that was resolved.
-	Plan   map[string]interface{} `json:"plan"`
-	Report string                 `json:"report"`
+	Plan map[string]interface{} `json:"plan"`
+
+	// PopulationNarrowed The same narrowing the explained report announced, applied to these source rows so they reconcile to it.
+	PopulationNarrowed *ReportDerivationPopulationNarrowed `json:"population_narrowed,omitempty"`
+	Report             string                              `json:"report"`
 
 	// Rows The underlying source rows (drill-through), row-scoped exactly like the report.
 	Rows []map[string]interface{} `json:"rows"`
@@ -36037,6 +36070,9 @@ type ReportDerivation struct {
 	// TotalRows Source rows matched (rows is capped at the report row limit).
 	TotalRows *int `json:"total_rows,omitempty"`
 }
+
+// ReportDerivationPopulationNarrowed The same narrowing the explained report announced, applied to these source rows so they reconcile to it.
+type ReportDerivationPopulationNarrowed string
 
 // ReportDocument A report as composed: structure and words, with every figure named by a handle.
 type ReportDocument struct {
@@ -36065,8 +36101,11 @@ type ReportResult struct {
 	GeneratedAt          *time.Time `json:"generated_at,omitempty"`
 
 	// Plan The validated query plan that was executed (shown before/after run).
-	Plan   map[string]interface{} `json:"plan"`
-	Report string                 `json:"report"`
+	Plan map[string]interface{} `json:"plan"`
+
+	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. `owners_you_may_measure`: the report measures every record the caller may read, the plan broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+	PopulationNarrowed *ReportResultPopulationNarrowed `json:"population_narrowed,omitempty"`
+	Report             string                          `json:"report"`
 
 	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
 	Rows []map[string]interface{} `json:"rows"`
@@ -36075,6 +36114,9 @@ type ReportResult struct {
 	Timezone  string `json:"timezone"`
 	TotalRows *int   `json:"total_rows,omitempty"`
 }
+
+// ReportResultPopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. `owners_you_may_measure`: the report measures every record the caller may read, the plan broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+type ReportResultPopulationNarrowed string
 
 // ReportRun A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor.
 type ReportRun struct {

@@ -97,7 +97,7 @@ func groupRecordType(spec reportSpec, dimension string) (string, bool) {
 	if table, gated := spec.filterScopes[dimension]; gated {
 		return table, true
 	}
-	if expr == colProjectRowID {
+	if expr == colRowID {
 		return string(spec.entity), true
 	}
 	return "", false

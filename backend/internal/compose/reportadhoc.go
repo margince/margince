@@ -35,15 +35,41 @@ var adHocReferenceTables = map[string]string{
 // or filter; count is the aggregate). Used by overlay tooling and the
 // seam conformance tests rather than the HTTP surface.
 func (e *reportEngine) runAdHocPlan(ctx context.Context, plan datasource.ReportPlan) (datasource.ReportResult, error) {
-	fields, ok := schemaFields(plan.Entity)
+	spec, ok := adHocSpec(plan.Entity)
 	if !ok {
 		return datasource.ReportResult{}, errUnknownEntity
 	}
+	req := reportRequest{GroupBy: plan.GroupBy, Filters: map[string]any{}}
+	for k, v := range plan.Filter {
+		req.Filters[k] = v
+	}
+	outcome, err := e.runSpec(ctx, "adhoc:"+string(plan.Entity), spec, req)
+	if err != nil {
+		return datasource.ReportResult{}, err
+	}
+	result := datasource.ReportResult{Columns: outcome.Columns}
+	for _, row := range outcome.Rows {
+		values := make([]any, len(outcome.Columns))
+		for i, col := range outcome.Columns {
+			values[i] = row[col]
+		}
+		result.Rows = append(result.Rows, values)
+	}
+	return result, nil
+}
+
+// adHocSpec is the vocabulary the ad-hoc plan runs over for one entity: every
+// schema descriptor field may group or filter; count is the aggregate.
+func adHocSpec(entity datasource.EntityType) (reportSpec, bool) {
+	fields, ok := schemaFields(entity)
+	if !ok {
+		return reportSpec{}, false
+	}
 	spec := reportSpec{
-		entity:       plan.Entity,
-		table:        string(plan.Entity),
+		entity:       entity,
+		table:        string(entity),
 		baseWhere:    whereArchivedNull,
-		activityWalk: plan.Entity == datasource.EntityActivity,
+		activityWalk: entity == datasource.EntityActivity,
 		dimensions:   map[string]string{},
 		measures:     map[string]string{},
 		filters:      map[string]string{},
@@ -72,21 +98,5 @@ func (e *reportEngine) runAdHocPlan(ctx context.Context, plan datasource.ReportP
 			spec.referenceScopes[expr] = table
 		}
 	}
-	req := reportRequest{GroupBy: plan.GroupBy, Filters: map[string]any{}}
-	for k, v := range plan.Filter {
-		req.Filters[k] = v
-	}
-	outcome, err := e.runSpec(ctx, "adhoc:"+string(plan.Entity), spec, req)
-	if err != nil {
-		return datasource.ReportResult{}, err
-	}
-	result := datasource.ReportResult{Columns: outcome.Columns}
-	for _, row := range outcome.Rows {
-		values := make([]any, len(outcome.Columns))
-		for i, col := range outcome.Columns {
-			values[i] = row[col]
-		}
-		result.Rows = append(result.Rows, values)
-	}
-	return result, nil
+	return spec, true
 }

@@ -52,6 +52,9 @@ var narrowingCalls = map[string]bool{
 	// whole installation. That is how a rep's Pipeline disagreed with their own
 	// Forecast.
 	"AnalyticsPopulationClause": true,
+	// The owner narrowing is the population's half for an install-wide spec,
+	// and a door that skipped it would answer a breakdown by every owner.
+	"ownerBreakdownClause": true,
 }
 
 // composesItsOwnNarrowing ratifies the spec-taking functions that legitimately

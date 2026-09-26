@@ -9621,6 +9621,9 @@
           "plan": {
             "type": "object"
           },
+          "population_narrowed": {
+            "type": "string"
+          },
           "report": {
             "type": "string"
           },

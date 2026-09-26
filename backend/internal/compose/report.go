@@ -279,7 +279,11 @@ type reportOutcome struct {
 	// this run — nil when no mask applied, so the wire can tell "no masking"
 	// from "masked, none excluded".
 	ExcludedByPermission *int
-	GeneratedAt          time.Time
+	// PopulationNarrowed names why the answer covers fewer rows than the
+	// report's population, "" when it does not (reportownergate.go). A reason
+	// and never a count: how many were left out is the side channel.
+	PopulationNarrowed string
+	GeneratedAt        time.Time
 	// The reading's frame, resolved in the same transaction that ran it. A
 	// number without them is not wrong so much as unplaceable: the reader
 	// cannot tell which zone cut the day, which currency the money is in, or
@@ -336,13 +340,15 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 		return reportOutcome{}, err
 	}
 
-	rows, excluded, frame, err := e.fetchRows(ctx, report, grantedSpec(ctx, spec), req, groupBy, selects, columns)
+	fetched, err := e.fetchRows(ctx, report, grantedSpec(ctx, spec), req, groupBy, selects, columns)
 	if err != nil {
 		return reportOutcome{}, err
 	}
+	rows, frame := fetched.rows, fetched.frame
 
 	return reportOutcome{
-		ExcludedByPermission: excluded,
+		ExcludedByPermission: fetched.excluded,
+		PopulationNarrowed:   fetched.narrowed,
 		Report:               report,
 		Plan: map[string]any{
 			"object":     string(spec.entity),

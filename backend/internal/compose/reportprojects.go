@@ -29,7 +29,7 @@ const (
 	fieldQuietSince     = "quiet_since"
 	fieldDays           = "days"
 
-	colProjectRowID = "t.id"
+	colRowID        = "t.id"
 	colName         = "t.name"
 	colKey          = "t.key"
 	colPhase        = "t.phase"
@@ -75,7 +75,7 @@ var openDealValueBaseExpr = "(SELECT coalesce(sum(" + deals.OpenDealBaseValueSQL
 // columns a reader needs to act on it.
 func projectRowDimensions() map[string]string {
 	return map[string]string{
-		fieldProjectID: colProjectRowID,
+		fieldProjectID: colRowID,
 		fieldName:      colName,
 		fieldKey:       colKey,
 		fieldPhase:     colPhase,

@@ -350,6 +350,11 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 		if outcome.ExcludedByPermission != nil {
 			result["excluded_by_permission"] = *outcome.ExcludedByPermission
 		}
+		// The owner narrowing too: a model reading a per-rep breakdown with no
+		// signal would report it as every rep's.
+		if outcome.PopulationNarrowed != "" {
+			result["population_narrowed"] = outcome.PopulationNarrowed
+		}
 		return json.Marshal(result)
 	}
 }

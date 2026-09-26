@@ -30276,6 +30276,11 @@ export interface components {
             total_rows?: number;
             /** @description Visible rows a field mask withheld from this run — excluded from every aggregate and from the drill-through alike, so the numbers stay reconcilable. Null when no mask applied; 0 means masked but nothing excluded. */
             excluded_by_permission?: number | null;
+            /**
+             * @description Why this answer covers fewer rows than the report's population, or absent when it covers all of them. `owners_you_may_measure`: the report measures every record the caller may read, the plan broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+             * @enum {string|null}
+             */
+            population_narrowed?: "owners_you_may_measure" | null;
             /** Format: date-time */
             generated_at?: string;
             /** @description Handle for "Explain This Number" drill-through to source rows (`GET /reports/{report}/derivation`); the result-level handle explains the whole filtered set, each row's handle the single cell. */
@@ -30307,6 +30312,11 @@ export interface components {
             total_rows?: number;
             /** @description Visible rows a field mask withheld — the same exclusion the explained report applied, so the drill-through reconciles exactly. */
             excluded_by_permission?: number | null;
+            /**
+             * @description The same narrowing the explained report announced, applied to these source rows so they reconcile to it.
+             * @enum {string|null}
+             */
+            population_narrowed?: "owners_you_may_measure" | null;
             /** Format: date-time */
             generated_at?: string;
             /**

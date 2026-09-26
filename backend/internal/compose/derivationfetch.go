@@ -14,6 +14,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -21,33 +22,58 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
+// derivationOutcome is a resolved handle: definition, drill-through
+// rows, and the aggregates recomputed over exactly those rows.
+type derivationOutcome struct {
+	Report     string
+	Definition string
+	Plan       map[string]any
+	Columns    []string
+	Rows       []map[string]any
+	Aggregates map[string]any
+	TotalRows  int
+	// ExcludedByPermission counts the visible rows a field mask withheld —
+	// nil when no mask applied, exactly like the report envelope it explains.
+	ExcludedByPermission *int
+	GeneratedAt          time.Time
+	// AsOf is the instant these figures were computed at: the headline's when
+	// the handle pinned one, and a fresh reading when it did not.
+	AsOf time.Time
+	// AsOfPinned says which of those it was.
+	//
+	// The pin makes a detail reconcile to its headline. It cannot do that for a
+	// link minted before the key existed, or saved before it — and there is no
+	// way to recover the instant such a link was made at. Recomputing is the
+	// only thing left, so the answer says it recomputed. Silence here is the
+	// failure the pin exists to prevent, arriving by a different route: figures
+	// that do not add up to the number above them, presented as though they do.
+	AsOfPinned bool
+	// PopulationNarrowed is reportOutcome's, said again for the drill-through.
+	PopulationNarrowed string
+}
+
 // fetchDerivation executes a compiled plan: the drill-through rows and
 // the aggregate recompute run over the identical WHERE side (validated
 // predicates + the caller's row-scope clause) in one transaction.
 func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec reportSpec, plan derivationPlan, out *derivationOutcome) error {
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		if err := requireFilterScopes(ctx, tx, spec, predicatesAsFilters(plan.predicates)); err != nil {
+		if err := requireNamedRecords(ctx, tx, spec, predicatesAsFilters(plan.predicates)); err != nil {
 			return err
 		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
-		where, err := derivationWhere(ctx, tx, spec, plan, callersOwnPopulation(), arg)
+		where, narrowed, err := derivationWhere(ctx, tx, spec, plan, callersOwnPopulation(), arg)
 		if err != nil {
 			return err
 		}
+		out.PopulationNarrowed = narrowed
 		// The identical mask exclusion the report applied (reportmask.go):
 		// the explanation must not out-see the number it explains, and the
 		// withheld count rides the envelope the same way.
-		frame, err := readReportFrame(ctx, tx)
+		frame, err := derivationFrame(ctx, tx, plan)
 		if err != nil {
 			return err
-		}
-		// The headline's instant wins over this transaction's. Without it a
-		// converted report's detail looks up a rate the headline never used,
-		// and the two disagree by however much the sheet moved in between.
-		if !plan.asOf.IsZero() {
-			frame.AsOf = plan.asOf
 		}
 		// Reported either way, because "which instant" is the question a reader
 		// doubting this detail is actually asking.
@@ -218,23 +244,40 @@ func maskedDerivationSelects(
 	return out, nil
 }
 
+// derivationFrame is the report frame the drill-through converts in.
+//
+// The headline's instant wins over this transaction's. Without it a converted
+// report's detail looks up a rate the headline never used, and the two disagree
+// by however much the sheet moved in between.
+func derivationFrame(ctx context.Context, tx pgx.Tx, plan derivationPlan) (reportFrame, error) {
+	frame, err := readReportFrame(ctx, tx)
+	if err != nil {
+		return reportFrame{}, err
+	}
+	if !plan.asOf.IsZero() {
+		frame.AsOf = plan.asOf
+	}
+	return frame, nil
+}
+
 // derivationWhere renders the drill-through's WHERE side: the report's
 // base predicate, the validated equality predicates ("" = SQL NULL), and
 // the caller's row-scope clause (the activity link-walk when the report
 // rides on activities). The identical clause backs both the rows query
 // and the aggregate recompute, so the explanation can never out-see the
-// number it explains.
+// number it explains. The string is buildReportWhere's: why the population
+// was narrowed, or "".
 func derivationWhere(
 	ctx context.Context, tx pgx.Tx, spec reportSpec, plan derivationPlan,
 	requested RequestedScope, arg func(any) int,
-) ([]string, error) {
+) ([]string, string, error) {
 	where := []string{spec.baseWhere}
 	for _, p := range plan.preds {
 		switch {
 		case p.threshold != nil:
 			n, err := thresholdValue(p.field, p.value)
 			if err != nil {
-				return nil, err
+				return nil, "", err
 			}
 			where = append(where, p.threshold.clause(arg(n)))
 		case p.isNull:
@@ -251,7 +294,7 @@ func derivationWhere(
 		scope, err = auth.ScopeClauseFor(ctx, string(spec.entity), "t", arg)
 	}
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if scope != "" {
 		where = append(where, scope)
@@ -262,11 +305,22 @@ func derivationWhere(
 	if spec.population == measureCallersOwn {
 		population, err := reportPopulationClause(ctx, tx, requested, arg)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		if population != "" {
 			where = append(where, population)
 		}
+	}
+	// And the same owner narrowing, so a breakdown's drill-through opens only
+	// the owners its headline counted. A row handle pins its owner, which
+	// requireMeasurableOwners has already judged.
+	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec,
+		breaksDownByOwner(spec, plan.groupBy) && !pinsOwner(spec, predicateFields(plan.preds)), arg)
+	if err != nil {
+		return nil, "", err
+	}
+	if owners != "" {
+		where = append(where, owners)
 	}
 	// The drill-through puts every dimension on its rows, so a reference this
 	// plan RETURNS takes its row scope here — the explanation must not
@@ -274,9 +328,19 @@ func derivationWhere(
 	// left alone, on the same terms as the headline (reportwhere.go).
 	refs, err := referenceScopeClauses(ctx, spec, namedByDerivation(spec, plan), arg)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return append(where, refs...), nil
+	return append(where, refs...), narrowed, nil
+}
+
+// predicateFields names the fields a derivation's predicates pin, value or
+// unset alike.
+func predicateFields(preds []boundExpr) []string {
+	fields := make([]string, len(preds))
+	for i, p := range preds {
+		fields[i] = p.field
+	}
+	return fields
 }
 
 // scanDerivationRows materializes the drill-through rows, mapping each
