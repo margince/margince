@@ -42,6 +42,23 @@ type LastTouchCandidate struct {
 	LastTouch  time.Time
 }
 
+// genuineEngagement is what counts as a real touch for the quiet reminders:
+// live, an engagement rather than a notice, visible to the workspace, and not
+// the engine's own output. The scan reads it to find a silence and the
+// resolver (CompleteQuietRemindersReachedBy) to find its end, so a touch that
+// would not have moved the anchor does not close the reminder either.
+//
+// The three positions bind systemSource, systemCapturedBy and
+// systemCapturedByPattern; source alone is a client's to spell, so it is
+// excluded only together with captured_by.
+func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) string {
+	return storekit.SQLf(`%[1]s.archived_at IS NULL`+
+		auth.OriginIsEngagement(alias)+auth.AudienceWorkspaceOnly(alias)+`
+				  AND NOT (%[1]s.source = $%[2]d
+				           AND (%[1]s.captured_by = $%[3]d OR %[1]s.captured_by LIKE $%[4]d))`,
+		alias, sourcePos, capturedByPos, patternPos)
+}
+
 // lastTouchCandidateQuery is LastTouchBefore's read: every linked entity's most
 // recent genuine engagement, narrowed to the ones carrying live work. It is a
 // function rather than a constant because two of its fragments are built —
@@ -61,11 +78,7 @@ func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
 			WITH genuine AS (
 				SELECT a.id, a.occurred_at
 				FROM activity a
-				WHERE a.archived_at IS NULL
-				  `+auth.OriginIsEngagement("a")+`
-				  `+auth.AudienceWorkspaceOnly("a")+`
-				  AND NOT (a.source = $1
-				           AND (a.captured_by = $4 OR a.captured_by LIKE $5))
+				WHERE `+genuineEngagement("a", 1, 4, 5)+`
 			), live_accounts AS (
 				SELECT o.id, o.owner_id
 				FROM company o

@@ -6,7 +6,9 @@ package activities
 // The system closes the loops it opens: an automation-minted follow-up
 // task ("Follow up with the new lead") stays open forever unless somebody
 // remembers to tick a box the system created — so the system watches for
-// the loop actually closing and completes its own tasks. Registered as
+// the loop actually closing and completes its own tasks. A quiet-account
+// reminder ("no activity since …") is such a loop too: the activity that
+// proves the silence over closes it. Registered as
 // SYSTEM workflows (always on, never a pausable user automation), the
 // same shape as contacts's lead-score recompute, and living here because
 // the tasks are activity rows and completing one is this module's write.
@@ -104,7 +106,9 @@ func SystemMintedExpr(alias string) string {
 // FollowUpWorkflows returns the system handlers that complete open system
 // follow-up tasks when the follow-up demonstrably happened: a real
 // activity lands on the lead, or the lead leaves the open pool (promoted
-// or disqualified — either way there is nothing left to follow up).
+// or disqualified — either way there is nothing left to follow up). The
+// captured arm also closes the quiet-account reminders the activity answers
+// on deals, contacts and companies (CompleteQuietRemindersReachedBy).
 // compose registers them via RegisterSystemWorkflow beside the lead-score
 // recompute.
 func FollowUpWorkflows(store *Store) []workflow.Handler {
@@ -191,6 +195,13 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 		}
 	}
 	completed := 0
+	if w.leadsFromLinks {
+		done, err := w.store.CompleteQuietRemindersReachedBy(ctx, ids.From[ids.ActivityKind](ev.Entity.ID))
+		if err != nil {
+			return workflow.RunResult{}, fmt.Errorf("resolving quiet reminders answered by activity %s: %w", ev.Entity.ID, err)
+		}
+		completed += done
+	}
 	for _, leadID := range leads {
 		done, err := w.store.CompleteOpenSystemTasksForLead(ctx, leadID)
 		if err != nil {

@@ -4,6 +4,7 @@
 package provenance
 
 import (
+	"slices"
 	"sort"
 	"strings"
 )
@@ -71,7 +72,13 @@ func ReservedSourceSystem(sourceSystem string) bool {
 // TestTheSystemPrincipalDoesNotUnlockTheImporterNamespace
 // (backend/internal/modules/activities/provider_reminderidentity_test.go)
 func EngineReminderSource(sourceSystem string) bool {
-	return sourceSystem == NoActivityReminderSource || sourceSystem == CheckInCadenceSource
+	return slices.Contains(EngineReminderSources(), sourceSystem)
+}
+
+// EngineReminderSources lists the quiet-account reminder identities, for a
+// query that selects the reminders themselves.
+func EngineReminderSources() []string {
+	return []string{NoActivityReminderSource, CheckInCadenceSource}
 }
 
 // InternalSourceSystems lists the exact reserved identities, sorted. It is the

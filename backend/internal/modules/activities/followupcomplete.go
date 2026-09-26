@@ -7,7 +7,7 @@ package activities
 //
 // Its own file because the WRITE is one concept and the workflow arms beside
 // it are another: followupresolve.go decides when a loop has closed, and this
-// decides what "the system's own task" means and completes it. The two doors
+// decides what "the system's own task" means and completes it. The doors
 // below select different sets and share every other rule, which is the whole
 // reason they are one file rather than one function.
 
@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // CompleteOpenSystemTasksForLead completes every open system-minted task
@@ -80,6 +81,31 @@ func (s *Store) CompleteCarriedSystemTasks(ctx context.Context, activityIDs []id
 	// what the promotion just changed, so filtering on it would ask the
 	// question this door exists to stop asking.
 	where := storekit.SQLf("a.id = ANY($%d)", arg(activityIDs))
+	return s.completeOpenSystemTasks(ctx, where, arg, &args)
+}
+
+// CompleteQuietRemindersReachedBy completes the open quiet-account reminders
+// (no_activity_reminder, check_in_cadence) that a newly captured activity
+// answers: those on a deal or contact it is linked to, and those on a company
+// it reaches through the same walk the quiet scan reads (CompanyReachSet).
+// A lead's reminders close through CompleteOpenSystemTasksForLead.
+//
+// Only a genuine touch answers one — the same test the scan's anchor reads —
+// so the engine's own writes, a notice or a private row close nothing.
+func (s *Store) CompleteQuietRemindersReachedBy(ctx context.Context, activityID ids.ActivityID) (int, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	landed := arg(activityID)
+	where := storekit.SQLf(`a.source_system = ANY($%[2]d)
+			AND EXISTS (SELECT 1 FROM activity landed WHERE landed.id = $%[1]d AND %[3]s)
+			AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND (
+			      l.deal_id IN (SELECT t.deal_id FROM activity_link t WHERE t.activity_id = $%[1]d)
+			   OR l.contact_id IN (SELECT t.contact_id FROM activity_link t WHERE t.activity_id = $%[1]d)
+			   OR l.company_id IN (SELECT reach.company_id FROM (%[4]s) reach
+			                       WHERE reach.activity_id = $%[1]d)))`,
+		landed, arg(provenance.EngineReminderSources()),
+		genuineEngagement("landed", arg(systemSource), arg(systemCapturedBy), arg(systemCapturedByPattern)),
+		CompanyReachSet())
 	return s.completeOpenSystemTasks(ctx, where, arg, &args)
 }
 
@@ -146,7 +172,7 @@ func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column stri
 //
 // The predicate is the caller's; everything else — what "system-minted" means,
 // the open filter, the ordering, the version-skew handling — is shared, so the
-// two doors above cannot come to disagree about which tasks are the system's
+// doors above cannot come to disagree about which tasks are the system's
 // to finish. `arg` and `args` are the caller's own argument slice, so every
 // placeholder is derived from the value that fills it rather than counted by
 // hand across a call boundary.
