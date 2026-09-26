@@ -188,8 +188,8 @@ embeddings: {provider: fake, model: fake-embed, dimensions: 1024}
 			t.Fatalf("the GET body does not decode: %v", err)
 		}
 		lane := doc.Tiers[string(ai.TierCheapCloud)]
-		clear := crmcontracts.AiTierBindingThinkingLevelDefault
-		lane.ThinkingLevel = &clear
+		cleared := crmcontracts.AiTierBindingThinkingLevelDefault
+		lane.ThinkingLevel = &cleared
 		doc.Tiers[string(ai.TierCheapCloud)] = lane
 		edited, err := json.Marshal(doc)
 		if err != nil {

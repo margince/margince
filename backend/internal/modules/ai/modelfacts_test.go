@@ -21,12 +21,12 @@ func TestACatalogReadInFlightIsJoinedNotRepeated(t *testing.T) {
 	facts := &catalogFact[string]{now: time.Now}
 	var asks atomic.Int32
 	arrived, release := make(chan struct{}), make(chan struct{})
-	ask := func(context.Context) (string, error) {
+	ask := func(ctx context.Context) (string, error) {
 		if asks.Add(1) == 1 {
 			close(arrived)
 		}
 		<-release
-		return "catalog", nil
+		return "catalog", ctx.Err()
 	}
 
 	impatient, giveUp := context.WithCancel(context.Background())
@@ -42,19 +42,20 @@ func TestACatalogReadInFlightIsJoinedNotRepeated(t *testing.T) {
 	}
 
 	answers := make([]string, 3)
+	failures := make([]error, 3)
 	var wg sync.WaitGroup
 	for i := range answers {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			answers[i], _ = facts.get(context.Background(), ask)
+			answers[i], failures[i] = facts.get(context.Background(), ask)
 		}()
 	}
 	close(release)
 	wg.Wait()
-	for _, answer := range answers {
-		if answer != "catalog" {
-			t.Fatalf("a joining caller got %q, want the one read's answer", answer)
+	for i, answer := range answers {
+		if answer != "catalog" || failures[i] != nil {
+			t.Fatalf("a joining caller got %q (%v), want the one read's answer", answer, failures[i])
 		}
 	}
 	if n := asks.Load(); n != 1 {

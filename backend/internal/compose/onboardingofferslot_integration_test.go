@@ -48,8 +48,10 @@ func TestAnOfferMadeToOneAdministratorGrantsAnotherNothing(t *testing.T) {
 	if standing, err := env.Contacts.StandingSiteReadOffer(other, read.ID); err != nil || standing != nil {
 		t.Fatalf("the other administrator reads %+v (%v), want no offer", standing, err)
 	}
-	engine := &deepReadEngine{contacts: env.Contacts, runtime: ai.NewRunTransparency(env.DB()),
-		brain: &replyBrainStub{response: model.Response{Text: acceptingReply}}}
+	engine := &deepReadEngine{
+		contacts: env.Contacts, runtime: ai.NewRunTransparency(env.DB()),
+		brain: &replyBrainStub{response: model.Response{Text: acceptingReply}},
+	}
 	history := []crmcontracts.CompanySiteReadConversationTurn{
 		{Role: crmcontracts.CompanySiteReadConversationTurnRoleUser, Message: offeringQuestion},
 		{Role: crmcontracts.CompanySiteReadConversationTurnRoleAssistant, Message: offeringMessage},
