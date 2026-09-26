@@ -26,6 +26,11 @@ import (
 // installations bootstrapped afterwards, and an operator reading their own
 // retention page is the one who decides for theirs.
 //
+// An unconverted lead is ARCHIVED after a year, not anonymized. Archiving takes
+// it off every list and keeps it restorable; anonymizing left a nameless row
+// that served nobody (Lars, 26 Sep 2026). An installation that must not keep
+// the lead's identity authors `anonymize` instead.
+//
 // `raw_capture` holds the verbatim provider original, and it ages on its own
 // clock rather than on the activity's. 730 days rather than the activity
 // ladder's 1095 because the original outlives nothing that reads it: the
@@ -57,7 +62,7 @@ func SeedDefaultRetentionTx(ctx context.Context, tx pgx.Tx) error {
 		INSERT INTO retention_policy (object_type, category, retain_days, action, lawful_basis)
 		SELECT v.object_type, v.category, v.retain_days, v.action, 'storage_limitation'
 		FROM (VALUES
-		  ('lead',     'unconverted',        365,  'anonymize'),
+		  ('lead',     'unconverted',        365,  'archive'),
 		  ('activity', NULL,                 1095, 'archive'),
 		  ('activity', 'transcript',         365,  'erase'),
 		  ('contact',   'no_consent_no_deal', 730,  'anonymize'),

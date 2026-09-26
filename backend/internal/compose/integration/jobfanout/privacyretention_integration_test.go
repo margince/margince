@@ -49,8 +49,8 @@ func seedRetentionPolicy(t *testing.T, owner *pgx.Conn, ws ids.UUID) {
 func seedOverageLead(t *testing.T, owner *pgx.Conn, ws ids.UUID) ids.UUID {
 	t.Helper()
 	return integration.SeedIDRow(t, owner, `
-		INSERT INTO lead (id, full_name, status, source, captured_by, created_at)
-		VALUES ($1, 'Over-age Lead', 'new', 'manual', 'human:x', now() - interval '400 days')`)
+		INSERT INTO lead (id, full_name, status, source, captured_by, created_at, entered_at)
+		VALUES ($1, 'Over-age Lead', 'new', 'manual', 'human:x', now() - interval '400 days', now() - interval '400 days')`)
 }
 
 // failLeadWrites makes every lead write raise.

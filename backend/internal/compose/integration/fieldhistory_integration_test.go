@@ -475,6 +475,7 @@ func TestFieldHistoryExcludesRetentionArchiveMeta(t *testing.T) {
 	_, _, staleDeal, _ := seedOverAgeRecords(t, e)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("retention pass: %v", err)
 	}

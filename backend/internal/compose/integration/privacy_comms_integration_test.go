@@ -492,6 +492,7 @@ func TestRetentionRedactsTheDeliveryOfAnAgedOutActivity(t *testing.T) {
 	fresh := seedDelivery(t, e, "10 days", "This week's message", "still within the window", "sent", mailRecipientEmail, ids.UUID{})
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}

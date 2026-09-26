@@ -51,6 +51,7 @@ var retentionActions = map[string]retentionExecutor{
 	"ai_call_payload/erase": (*RetentionService).erasePayload,
 	"raw_capture/erase":     (*RetentionService).eraseRawCapture,
 	"lead/anonymize":        (*RetentionService).anonymizeLead,
+	"lead/archive":          (*RetentionService).archiveLead,
 	"contact/anonymize":     (*RetentionService).anonymizeContact,
 }
 
@@ -65,6 +66,18 @@ func (s *RetentionService) archiveActivity(ctx context.Context, tx pgx.Tx, id id
 		return err
 	}
 	return s.invalidateGraph(ctx, tx, id)
+}
+
+// archiveLead takes an over-age unconverted lead off every list and keeps it
+// whole, so a lead a rep meets again can be restored with its history.
+//
+// The default for unconverted leads (consent.SeedDefaultRetentionTx). Anonymize
+// stays authorable for an installation that must not keep the lead's identity;
+// it leaves a nameless row behind because consent evidence and objections are
+// kept against it, and a nameless row is no use to anyone selling.
+func (*RetentionService) archiveLead(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	_, err := tx.Exec(ctx, `UPDATE lead SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id)
+	return err
 }
 
 func (*RetentionService) archiveDeal(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
