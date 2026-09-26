@@ -301,7 +301,7 @@ func TestAMergeCarriesBasesAndQualifyingEventsWithoutDoublingOne(t *testing.T) {
 	}
 }
 
-// Double-opt-in history follows the person, so an erasure of the survivor
+// Double-opt-in history follows the contact, so an erasure of the survivor
 // finds it. No writer mints these any more; this is the shape the retired one
 // wrote.
 func TestAMergeCarriesDoubleOptInHistory(t *testing.T) {

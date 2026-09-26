@@ -7,8 +7,8 @@ package introductions
 //
 // contacts owns the merge and calls this inside its transaction (contacts's
 // IntroCarrier seam, wired in compose). An ask can name the retired contact
-// twice: as the person to be introduced to, and as the person the route runs
-// through. Both follow, or the survivor's page misses asks about them and a
+// twice: as the contact to be introduced to, and as the contact the route
+// runs through. Both follow, or the survivor's page misses asks about them and a
 // route keeps running through a record no read returns.
 //
 // intro_request_open_route allows one open ask per (contact, colleague,
