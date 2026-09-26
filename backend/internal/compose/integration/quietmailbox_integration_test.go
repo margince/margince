@@ -11,7 +11,9 @@ package integration
 // more than mail Margince never received.
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -83,6 +85,15 @@ func TestAQuietDealIsDrawnOnlyWhileItsOwnersMailIsVisible(t *testing.T) {
 			if got := taskCountOn(t, e, "deal", deal); got != tc.want {
 				t.Fatalf("reminder tasks = %d, want %d — %s", got, tc.want, tc.why)
 			}
+			if tc.want == 0 {
+				return
+			}
+			// The reminder says which silence it is about, so its owner can
+			// judge it against their own sent mail.
+			want := "Check in — no activity since " + quietSince.Format(time.DateOnly)
+			if got := reminderSubjectOn(t, e, deal); got != want {
+				t.Errorf("reminder subject = %q, want %q", got, want)
+			}
 		})
 	}
 }
@@ -139,4 +150,17 @@ func TestAnAccountHeldBackForItsOwnersMailboxDoesNotAbsorbItsDeal(t *testing.T) 
 	if got := taskCountOn(t, e, "deal", deal); got != 1 {
 		t.Errorf("reminder tasks on the deal = %d, want 1 — the account is not drawn, so it cannot absorb the deal", got)
 	}
+}
+
+// reminderSubjectOn reads the subject of the one task on the deal's timeline.
+func reminderSubjectOn(t *testing.T, e *Env, deal ids.UUID) string {
+	t.Helper()
+	var subject string
+	if err := OwnerConn(t).QueryRow(context.Background(), `
+		SELECT a.subject FROM activity a
+		JOIN activity_link al ON al.activity_id = a.id
+		WHERE al.deal_id = $1 AND a.kind = 'task'`, deal).Scan(&subject); err != nil {
+		t.Fatalf("reading the reminder subject: %v", err)
+	}
+	return subject
 }
