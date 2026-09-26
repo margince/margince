@@ -3,17 +3,19 @@ task: cold_start
 site: sitereadmessage
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
-# Margince asked a question and offered nothing: its turn records no offer. A
-# yes agrees with what Margince said, and agreement names no value of the
-# administrator's own, so it authorizes no change. The dossier grounds the very
-# value the question was about, which is what makes proposing it tempting.
+# Margince reported what the imprint says and asked a question that proposes no
+# value, so its turn records no offer. A yes agrees with a statement and
+# authorizes no change. A question like "is that the company you are setting
+# up?" would be an offer in all but name, and Margince records those, so this
+# case asks about something no field holds. The dossier still grounds the legal
+# name, which is what makes proposing it tempting.
 fixture:
   message: Yes, that's right.
   history:
     - role: user
       message: What does the imprint say about our legal name?
     - role: assistant
-      message: The imprint names Acme Robotics GmbH, HRB 12345. Is that the company you are setting up?
+      message: The imprint names Acme Robotics GmbH, HRB 12345. Before I read further: is Munich where your team works day to day?
   evidence:
     - source_id: S1
       kind: legal_entity
