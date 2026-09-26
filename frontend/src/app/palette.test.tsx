@@ -584,17 +584,28 @@ describe("useBuiltinCommands", () => {
     });
   });
 
-  // A read ends in saving the company, which only an admin may do, so no other
-  // seat is offered one. "Company profile" landing is the sign /me has.
-  it.each([
-    [["admin"], true],
-    [["rep"], false],
-  ])("offers %j reading a company: %s", async (roles, offered) => {
+  // Reading the company's own website is Company profile's job, so the words a
+  // reader types for it land there and no seat has a second door to it.
+  it.each([["admin"], ["rep"]])(
+    "offers %s no separate read-a-company action",
+    async (role) => {
+      const user = userEvent.setup();
+      renderProbeWithCompany({ companyContext: true, roles: [role] });
+      await user.type(screen.getByRole("searchbox"), "read a company");
+      await screen.findByText("Company profile");
+      expect(screen.queryByText("Read a company")).toBeNull();
+    },
+  );
+
+  it("reaches Company profile by the website it reads", async () => {
     const user = userEvent.setup();
-    renderProbeWithCompany({ companyContext: true, roles });
-    await user.type(screen.getByRole("searchbox"), "company");
-    await screen.findByText("Company profile");
-    expect(screen.queryByText("Read a company") !== null).toBe(offered);
+    renderProbeWithCompany({ companyContext: true, roles: ["admin"] });
+    await user.type(screen.getByRole("searchbox"), "website");
+    await waitFor(() => {
+      expect(destinationRows()[0].textContent).toContain("Company profile");
+    });
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/settings/company");
   });
 
   // The two destinations that carry a word the rail no longer prints. A reader

@@ -549,7 +549,6 @@ export const vi = {
   "palette.searchFailedTitle": "Hiện chưa thể tìm bản ghi",
   "palette.searchFailed": "Các lệnh phía trên vẫn hoạt động.",
   "action.newDeal": "Deal mới",
-  "action.readCompany": "Đọc một công ty",
   "action.booking": "Trang đặt lịch",
 
   "common.undo": "Hoàn tác",

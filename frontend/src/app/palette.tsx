@@ -16,7 +16,6 @@ import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import type { SettingsPageId } from "../screens/settingscatalog";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
 import { settingsHref } from "../screens/settingsrouting";
-import { useHoldsAdminRole } from "./capability";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
@@ -52,10 +51,11 @@ export type Command = {
 // never the name of the page it was filed under, which is a shelving decision
 // they were not present for.
 //
-// Three of these carry words the product no longer prints anywhere: three
-// screens of their own collapsed into the data-model page and the automations
-// editor into the AI page, and somebody who learned "custom fields" or
-// "automations" must not be told the product no longer has one.
+// Some of these carry words the product no longer prints anywhere: three
+// screens of their own collapsed into the data-model page, the automations
+// editor into the AI page and the palette's "Read a company" into the company
+// page, and somebody who learned one of those words must not be told the
+// product no longer has the thing.
 const SETTINGS_ALIASES: Readonly<
   Partial<Record<SettingsPageId, readonly string[]>>
 > = {
@@ -64,7 +64,14 @@ const SETTINGS_ALIASES: Readonly<
   agents: ["passport", "api key", "token"],
   connections: ["oauth", "mailbox", "calendar"],
   "capture-activity": ["capture log", "trace"],
-  company: ["general", "currency", "workspace", "fx"],
+  company: [
+    "general",
+    "currency",
+    "workspace",
+    "fx",
+    "website",
+    "read a company",
+  ],
   authentication: ["sign-in", "sso", "oauth app", "login"],
   members: ["users", "contacts", "roster", "invite"],
   teams: ["team"],
@@ -95,9 +102,6 @@ export function useBuiltinCommands(): Command[] {
   // The same table the settings rail walks, not a second opinion about it: a
   // palette reading its own list offers a page the rail no longer lists.
   const visible = useVisibleSettingsPages();
-  // A read ends in saving the company, which only an admin may do (contacts'
-  // requireAnchorAdministrator); any other seat would read a site it cannot keep.
-  const isAdmin = useHoldsAdminRole();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
@@ -124,12 +128,6 @@ export function useBuiltinCommands(): Command[] {
       type: "screen",
       route: { screen: CUSTOM_SCREEN, id: screen.key },
     }));
-    const readCompany: Command = {
-      id: "action:read-company",
-      label: t("action.readCompany"),
-      type: "action",
-      route: { screen: "onboarding", id: "company" },
-    };
     const actions: Command[] = [
       {
         id: "action:new-deal",
@@ -137,7 +135,6 @@ export function useBuiltinCommands(): Command[] {
         type: "action",
         route: { screen: "deals", id: CREATE_ID },
       },
-      ...(isAdmin ? [readCompany] : []),
       {
         id: "action:booking",
         label: t("action.booking"),
@@ -194,7 +191,7 @@ export function useBuiltinCommands(): Command[] {
       ...offRailScreens,
       ...settingsScreens,
     ];
-  }, [t, visible, locale, isAdmin]);
+  }, [t, visible, locale]);
 }
 
 const TYPE_KEY: Record<Command["type"], MessageKey> = {
