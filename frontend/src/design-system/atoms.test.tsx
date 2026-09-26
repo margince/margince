@@ -182,7 +182,7 @@ function DialogAction() {
 // The one item that must NOT close the menu under itself: one whose whole job
 // is to put a dialog up. A dialog restores focus, on close, to the control that
 // opened it — so hiding that control first strands the reader on <body>. The
-// menu asks `liveDialogs` as its Escape handler does, one commit after the
+// menu asks `coveredByDialog` as its Escape handler does, one commit after the
 // press, which is the first moment the answer exists.
 it("stays open when the item it just ran opened a dialog", async () => {
   const user = userEvent.setup();
@@ -226,6 +226,33 @@ it("closes when an item is chosen while the dialog it opened is leaving", async 
   } finally {
     exits.mockRestore();
   }
+});
+
+// A menu drawn INSIDE a dialog is not under it: the dialog is the page it sits
+// on, so Escape and a chosen verb still close the menu, and only the menu.
+it("closes on Escape and on a chosen verb when it sits inside a dialog", async () => {
+  const onDialogClose = vi.fn();
+  const user = userEvent.setup();
+  render(
+    <Modal open onClose={onDialogClose} labelledBy="deal">
+      <Heading size="large" id="deal">
+        Deal
+      </Heading>
+      <OverflowMenu label="More actions">
+        <button type="button">Archive</button>
+      </OverflowMenu>
+    </Modal>,
+  );
+  const trigger = screen.getByRole("button", { name: "More actions" });
+
+  await user.click(trigger);
+  await user.keyboard("{Escape}");
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+
+  await user.click(trigger);
+  await user.click(screen.getByRole("button", { name: "Archive" }));
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(onDialogClose).not.toHaveBeenCalled();
 });
 
 // The trigger's own geometry, asserted here because this is the design system's

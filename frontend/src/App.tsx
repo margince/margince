@@ -4,7 +4,6 @@ import {
   lazy,
   type ReactNode,
   Suspense,
-  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
@@ -828,7 +827,7 @@ function AuthedApp({
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const commands = useBuiltinCommands();
-  usePaletteHotkey(useCallback(() => setPaletteOpen((open) => !open), []));
+  usePaletteHotkey(paletteOpen, setPaletteOpen);
 
   if (me.isPending) {
     return (

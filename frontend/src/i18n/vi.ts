@@ -4526,7 +4526,7 @@ export const vi = {
   "agent.line.justNow": "vừa xong",
   "agent.setting.edgeLight": "Viền màn hình phát sáng",
   "agent.tip.day": "Việc cần làm, quyết định và bản trùng nằm ở {name}.",
-  "agent.tip.ask": "Hỏi tôi ở bất cứ đâu bằng ⌘K.",
+  "agent.tip.ask": "Hỏi tôi bằng {chord}.",
   "agent.tip.recap": "Mở tôi để xem hoạt động hôm nay.",
   "agent.tip.edge": "Viền màn hình sáng lên khi tôi làm việc.",
 

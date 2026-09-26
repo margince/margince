@@ -378,6 +378,20 @@ test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async
   await expect(page).toHaveURL(/#\/deals$/);
 });
 
+// A dialog makes the rest of the app unreachable, the palette with it. Raised
+// over one, Escape closed the dialog underneath and left the palette standing.
+test("AC-shell-3: ⌘K does nothing while a dialog is up", async ({ page }) => {
+  await page.goto("/#/deals/new");
+  const form = page.getByRole("dialog", { name: "Neuer Deal" });
+  await expect(form).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.press("Escape");
+  await expect(form).toHaveCount(0);
+  await expect(
+    page.getByRole("searchbox", { name: "Befehlspalette" }),
+  ).toHaveCount(0);
+});
+
 test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
   await page.goto("/#/home");
   const topbar = page.locator(".topbar");

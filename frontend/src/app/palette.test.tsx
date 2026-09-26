@@ -2,13 +2,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Heading } from "../design-system/heading";
+import { Modal } from "../design-system/modal";
+import { holdExits } from "../design-system/presence-testing";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "./mefixture";
 import { CREATE_ID } from "./nav";
@@ -17,6 +21,7 @@ import {
   CommandPalette,
   paletteHotkeyCaps,
   useBuiltinCommands,
+  usePaletteHotkey,
 } from "./palette";
 
 // B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
@@ -496,6 +501,93 @@ describe("a palette that is leaving", () => {
       <CommandPalette open={false} onClose={() => {}} commands={commands} />,
     );
     expect(baseElement.querySelector(".palette-overlay")).toBeNull();
+  });
+});
+
+// The shell's wiring, with a dialog the page behind may be holding up.
+function ShellWithDialog({
+  dialogOpen,
+  onDialogClose = () => {},
+}: Readonly<{ dialogOpen: boolean; onDialogClose?: () => void }>) {
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  usePaletteHotkey(paletteOpen, setPaletteOpen);
+  return (
+    <>
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        commands={commands}
+      />
+      <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit-deal">
+        <Heading size="large" id="edit-deal">
+          Edit deal
+        </Heading>
+        <button type="button">Save</button>
+      </Modal>
+    </>
+  );
+}
+
+// An open dialog makes the rest of the app unreachable, and the palette is the
+// rest of the app: raised over one it sat under the dialog's keyboard, so
+// Escape closed the dialog and left the palette standing.
+describe("the palette hotkey", () => {
+  it("does nothing while a dialog is up, and Escape still closes the dialog", async () => {
+    const onDialogClose = vi.fn();
+    render(<ShellWithDialog dialogOpen onDialogClose={onDialogClose} />);
+    const user = userEvent.setup();
+
+    await user.keyboard("{Meta>}k{/Meta}");
+    expect(screen.queryByRole("searchbox")).toBeNull();
+    // The browser's own ⌘K is still withheld: the chord belongs to the product.
+    expect(fireEvent.keyDown(document.body, { key: "k", metaKey: true })).toBe(
+      false,
+    );
+
+    await user.keyboard("{Escape}");
+    expect(onDialogClose).toHaveBeenCalledOnce();
+  });
+
+  it("opens the palette and closes it again on the same chord", async () => {
+    render(<ShellWithDialog dialogOpen={false} />);
+    const user = userEvent.setup();
+
+    await user.keyboard("{Meta>}k{/Meta}");
+    expect(screen.getByRole("searchbox")).toBeTruthy();
+    await user.keyboard("{Meta>}k{/Meta}");
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+
+  it("opens the palette again while its own exit is still playing", async () => {
+    const exits = holdExits();
+    try {
+      render(<ShellWithDialog dialogOpen={false} />);
+      const user = userEvent.setup();
+      await user.keyboard("{Meta>}k{/Meta}");
+      await user.keyboard("{Escape}");
+      expect(document.querySelector(".palette-overlay[inert]")).not.toBeNull();
+
+      await user.keyboard("{Meta>}k{/Meta}");
+      const input = screen.getByRole("searchbox");
+      expect(input.closest("[inert]")).toBeNull();
+    } finally {
+      exits.mockRestore();
+    }
+  });
+
+  it("opens over a dialog that is already on its way out", async () => {
+    const exits = holdExits();
+    try {
+      const view = render(<ShellWithDialog dialogOpen />);
+      view.rerender(<ShellWithDialog dialogOpen={false} />);
+      expect(view.baseElement.querySelector("#edit-deal")).not.toBeNull();
+      const user = userEvent.setup();
+
+      await user.keyboard("{Meta>}k{/Meta}");
+      expect(screen.getByRole("searchbox")).toBeTruthy();
+    } finally {
+      exits.mockRestore();
+    }
   });
 });
 

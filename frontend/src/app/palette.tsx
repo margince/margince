@@ -8,7 +8,7 @@ import {
   SearchField,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { useDialogFocus } from "../design-system/dialogfocus";
+import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -466,15 +466,22 @@ export function paletteHotkeyCaps(platform: string): readonly string[] {
   return /mac|iphone|ipad|ipod/i.test(platform) ? ["⌘", "K"] : ["Ctrl", "K"];
 }
 
-export function usePaletteHotkey(toggle: () => void) {
+export function usePaletteHotkey(
+  open: boolean,
+  setOpen: (open: boolean) => void,
+) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        toggle();
+        // An open dialog makes the rest of the app unreachable, the palette with
+        // it; asked only while closed, so the palette's own box never blocks it.
+        if (open || liveDialogs().length === 0) {
+          setOpen(!open);
+        }
       }
     };
     globalThis.addEventListener("keydown", onKey);
     return () => globalThis.removeEventListener("keydown", onKey);
-  }, [toggle]);
+  }, [open, setOpen]);
 }

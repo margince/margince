@@ -4738,7 +4738,7 @@ export const en = {
   // agent did anything: they are standing facts about the product, which is
   // what lets them be written here rather than read from the installation.
   "agent.tip.day": "Tasks, approvals and duplicates are on {name}.",
-  "agent.tip.ask": "Ask the agent from anywhere with ⌘K.",
+  "agent.tip.ask": "Ask the agent with {chord}.",
   "agent.tip.recap": "Open the agent panel for today’s activity.",
   "agent.tip.edge": "The screen edge lights up while the agent works.",
 

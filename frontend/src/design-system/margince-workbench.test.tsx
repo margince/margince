@@ -6,11 +6,13 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { Heading } from "./heading";
 import {
   MarginceWorkbench,
   type WorkbenchRuntimeLabels,
 } from "./margince-workbench";
+import { Modal } from "./modal";
 
 // The workbench chrome's own claims, as opposed to what the acts put inside it.
 // The one that needs proving is the runtime chip: hover and keyboard focus BOTH
@@ -36,8 +38,8 @@ const LABELS: WorkbenchRuntimeLabels = {
 
 afterEach(cleanup);
 
-function renderWorkbench() {
-  return render(
+function workbench() {
+  return (
     <MarginceWorkbench
       state="working"
       eyebrow="Margince"
@@ -53,8 +55,12 @@ function renderWorkbench() {
       ]}
     >
       <p>Thread</p>
-    </MarginceWorkbench>,
+    </MarginceWorkbench>
   );
+}
+
+function renderWorkbench() {
+  return render(workbench());
 }
 
 describe("the runtime chip", () => {
@@ -105,6 +111,32 @@ describe("the runtime chip", () => {
 
     await userEvent.keyboard("{Escape}");
     expect(chip).toHaveAttribute("aria-expanded", "false");
+  });
+
+  // A dialog raised over the pinned popover owns Escape, so one press closes
+  // the dialog alone rather than it and the popover the reader cannot see.
+  it("leaves Escape to a dialog raised over it", async () => {
+    const onDialogClose = vi.fn();
+    const page = (dialogOpen: boolean) => (
+      <>
+        {workbench()}
+        <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+          <Heading size="large" id="edit">
+            Edit deal
+          </Heading>
+        </Modal>
+      </>
+    );
+    const user = userEvent.setup();
+    const { rerender } = render(page(false));
+    const chip = screen.getByRole("button", { name: new RegExp(LABELS.chip) });
+    await user.click(chip);
+    rerender(page(true));
+
+    await user.keyboard("{Escape}");
+
+    expect(onDialogClose).toHaveBeenCalledOnce();
+    expect(chip).toHaveAttribute("aria-expanded", "true");
   });
 
   it("opens again after focus leaves and comes back", async () => {
