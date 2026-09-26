@@ -3,7 +3,7 @@
   "provider": "openai_compatible",
   "served_model": "mistralai/mistral-medium-3-5",
   "env_class": "cloud_frontier",
-  "prompt_version": "pa3ae9d282c77148eeb3abf2c06ebc71c",
+  "prompt_version": "pc1d985571b72efe167a8fcbb508a6e42",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 15,
@@ -16,28 +16,50 @@
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
-  "judge_score_p50": 100,
-  "judge_score_min": 100,
-  "latency_p50": 2040,
-  "latency_p95": 10068,
-  "mean_tokens": 2195,
-  "mean_tokens_in": 2104,
-  "mean_tokens_out": 91,
+  "judge_score_p50": 97,
+  "judge_score_min": 90,
+  "latency_p50": 1538,
+  "latency_p95": 2200,
+  "mean_tokens": 2193,
+  "mean_tokens_in": 2102,
+  "mean_tokens_out": 90,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 0,
-  "judge_served_model": "gemini-3.5-flash",
+  "est_cost_microusd": 3828,
+  "judge_served_model": "claude-sonnet-4-6",
+  "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "echo",
-  "ran_at": "2026-09-23T13:57:47Z",
+  "candidate_upstream": {
+    "only": null,
+    "ignore": null,
+    "quantizations": null,
+    "sort": "",
+    "require_parameters": null,
+    "allow_fallbacks": null,
+    "preferred_max_latency_p90": 0,
+    "reasoning_effort": ""
+  },
+  "ran_at": "2026-09-26T11:28:13Z",
   "scenarios": [
     {
       "scenario": "corpus_ask_returns_nothing_when_the_passages_do_not_answer",
       "site": "corpus_ask",
-      "stamp": "f1538f0d5e22f8d4da07a4c20779523b9c807db928a3c581c84706f11692c0fa3877f122a840a5ec9b9405ee8a094d18f2d0ac93bb65af6be3cc0576bdb30e1ca4cb39d41615023a05bc016bbe289c44ad7a56418168ac0566e6ef64e1335021",
+      "stamp": "f1538f0d5e22f8d4da07a4c20779523b9c807db928a3c581c84706f11692c0faf04e67f09dc955fb960aed23243060990fac58ef7722f2a1d19d91b082c2bc5a402cea7fa3d5bba37973275523a8358b72f19dc8ab09b0b6ec05ff20e9eceed9",
       "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        100,
+        97,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -46,10 +68,21 @@
     {
       "scenario": "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
       "site": "corpus_ask",
-      "stamp": "8c684307257130b724772a8308291b6c1ddfdd0a98d8afb326d9c5f560353681bdf81f40497b30a52413a31b2812b9c7d18336efb534d3681c25f48bef8e3e2f437a6ae677f3c243536296eabf5079ec002ffdb904d39cca991b5db7577eb560",
+      "stamp": "8c684307257130b724772a8308291b6c1ddfdd0a98d8afb326d9c5f560353681a879bafdd1acfa29e2fa3167fb113a9c4d398a5448d241e009cc692859eedf0e0155a7ce197a314c5f2f6541b72f63d82185510134f14698870e4257aef7b5ca",
       "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        97,
+        100,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -58,10 +91,21 @@
     {
       "scenario": "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
       "site": "corpus_ask",
-      "stamp": "6efe61da162809fd4a370dd3e817162dbcc8e10e96cbed89c9ff7053f0dd87fe3b5d591bb7d22a5b7cc040c867d67951b4b58356d3665705924f9133def3c27322b747a541fd2ca6658d66acb4eb45064b08746edd2d6c7d43742fbfb42b6c72",
+      "stamp": "6efe61da162809fd4a370dd3e817162dbcc8e10e96cbed89c9ff7053f0dd87febb8f0dac38188cc3e4e6530b4ef07f46065204fd05282dcbf46064be2a3c5c86d013734d82d1f4095cbf7aa4307e507c7d24fcbc253d5cf378120f7ee0340f2c",
       "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        97,
+        90,
+        95
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -70,10 +114,21 @@
     {
       "scenario": "corpus_ask_answers_only_from_the_passage_that_says_it",
       "site": "corpus_ask",
-      "stamp": "910380329237ab7b1bf158e2c50dd91e466dfa2d6573643851d436594cc976ed1cc497333bcedb8df372ce37d87726c546936223ac0ff381af5eeda08bd38fd5a791e22442f584886752b883a088bd05ff78f460490b52beb1fbe42434f0dae6",
+      "stamp": "910380329237ab7b1bf158e2c50dd91e466dfa2d6573643851d436594cc976edb34c900b24288d5e7e223b47f536a9df468bd0217e77fe4e43523c3ddc51f4aa08da063c8b78d6213626f7d5f92d8755535850efe367b2385f17cbccc73dfea1",
       "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        100,
+        95,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -82,10 +137,21 @@
     {
       "scenario": "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
       "site": "corpus_ask",
-      "stamp": "633f23b4ded101f13829df8619dd8fd13a7ae7dd3db68f49808a4f8586e4ec76589844f34a927cbbf63d912cca43a58c5f3d264fe4fcbef2e87826b56dc6dd2f92b470cc4414b11061d19132586a98312f0f48d862067634eb35ad7c2916b6b0",
+      "stamp": "633f23b4ded101f13829df8619dd8fd13a7ae7dd3db68f49808a4f8586e4ec76a12080584e89dc847e3f0bccf7ef85240834b5efaef8e6fb1969d6fd0bc59e806dbbce4734d5b669d55b0e0689203af78fcd15af4297bc314a9281c35dc98dc0",
       "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        95,
+        97,
+        93
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
