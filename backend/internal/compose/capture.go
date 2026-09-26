@@ -246,6 +246,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	ensurer := contactsEnsurer{
 		store:  newCounterpartyStore(pool),
+		pool:   pool,
 		triage: newDomainTriageTrigger(pool, cfg.logger()),
 		log:    cfg.logger(),
 	}

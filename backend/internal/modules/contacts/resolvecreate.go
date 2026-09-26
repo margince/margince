@@ -62,6 +62,15 @@ func visibilityFor(ownerScoped bool) string {
 	return visibilityWorkspace
 }
 
+// narrowingFor answers the reason a create path records: only an owner-scoped
+// row carries one, which the column's own CHECK also refuses to break.
+func narrowingFor(ownerScoped bool, reason NarrowingReason) NarrowingReason {
+	if !ownerScoped {
+		return ""
+	}
+	return reason
+}
+
 // ownerFromUUID adapts the storage-level owner id the capture and triage paths
 // carry to the typed one the specs take.
 func ownerFromUUID(u *ids.UUID) *ids.UserID {
@@ -90,6 +99,8 @@ type ContactSpec struct {
 	// Visibility is "" for the column default; capture mints 'owner' rows
 	// until a human promotes them, the channel bot mints 'workspace' ones.
 	Visibility string
+	// Narrowing is why an owner-scoped row is its owner's; "" records none.
+	Narrowing NarrowingReason
 	// Acquisition says why this contact exists — what the contact did, or what
 	// was done to obtain them. Distinct from Source, which says which surface
 	// typed it in. The zero value records unknown_legacy rather than nothing.
@@ -133,13 +144,13 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 		id, spec.FullName, spec.FirstName, spec.LastName, spec.Title, spec.OwnerID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.Visibility, spec.Quarantined, spec.ConvertedFromLeadID,
-		spec.SourceSystem,
+		spec.SourceSystem, spec.Narrowing,
 	})
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system`+cfCols+`)
+		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason`+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
 		         coalesce(NULLIF($15, ''), 'workspace'),
-		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18`+cfHolders+`)`,
+		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18, NULLIF($19, '')`+cfHolders+`)`,
 		args...); err != nil {
 		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
 	}

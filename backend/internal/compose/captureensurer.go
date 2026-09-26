@@ -14,11 +14,13 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -56,6 +58,8 @@ func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
 // channel counterparty by a provider identity.
 type contactsEnsurer struct {
 	store *contacts.Store
+	// pool runs the reply promotion's own transaction.
+	pool *pgxpool.Pool
 	// triage queues the read that decides whether a domain this ensure just met
 	// deserves a company at all — and, when the answer is yes, creates it and
 	// fills it from the same crawl. It lives HERE rather than in capture
@@ -102,12 +106,47 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 	if res.DomainSplit != nil {
 		p.raiseDomainSplit(ctx, *res.DomainSplit, in.Source, in.CapturedBy)
 	}
+	if in.Replied {
+		p.promoteOnReply(ctx, in, res.ContactID)
+	}
 	return capture.EnsureOutcome{
 		ContactCreated: res.ContactCreated,
 		ContactID:      res.ContactID.UUID,
 		CompanyQueued:  res.TriagePending,
 		QueuedDomain:   res.TriageDomain,
 	}, nil
+}
+
+// promoteOnReply publishes the contact a reply came from when the only thing
+// keeping it the owner's was that the address had not answered yet.
+//
+// Its own transaction, after the ensure committed, and logged rather than
+// returned: the message is already captured, and every later message from an
+// address that has answered carries Replied again, so the next one retries a
+// promotion this one lost.
+//
+// The reply's own thread is asked first, the question the verdict asks before
+// it narrows: an answer on a held thread may not publish its counterparty.
+func (p contactsEnsurer) promoteOnReply(ctx context.Context, in capture.EnsureRequest, contactID ids.ContactID) {
+	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		held, err := capture.ThreadHoldsItsCounterparty(ctx, tx, in.ActivityID)
+		if err != nil {
+			return err
+		}
+		if held {
+			return nil
+		}
+		moved, err := p.store.PromoteOnReplyTx(ctx, tx, contactID, in.OwnerID)
+		if err != nil || !moved {
+			return err
+		}
+		// The mail-side readers ask the ledger, not the contact.
+		return capture.ClearWithheldFromWorkspaceTx(ctx, tx, in.Email)
+	})
+	if err != nil {
+		p.log.ErrorContext(ctx, "capture: publishing a contact on their reply failed",
+			"contact", contactID.String(), "err", err)
+	}
 }
 
 // EnsureChannelCounterparty is the same adaptation for an inbound channel

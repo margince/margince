@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
@@ -67,7 +68,7 @@ func (e *CounterpartyVerdictEngine) apply(
 			// founder's lawyer is somebody they correspond with — and stays
 			// owner-scoped, because publishing it to the workspace announces
 			// that the founder has a lawyer and what about.
-			triageDomain, err = e.createOwnerScopedCounterparty(ctx, tx, row)
+			triageDomain, err = e.createOwnerScopedCounterparty(ctx, tx, row, contacts.NarrowedAdvisor)
 			return err
 		case capture.KindPersonal:
 			// No record, and none kept: a family member is not a counterparty

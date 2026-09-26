@@ -325,6 +325,9 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 			return err
 		}
 		storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+		if err := patchNarrowingByHand(ctx, tx, p, id, in.Visibility); err != nil {
+			return err
+		}
 		if in.Social != nil || in.Emails != nil || in.Phones != nil {
 			// The relation replacement rides the contact row's version
 			// bump (updated_at below), so If-Match still guards it and

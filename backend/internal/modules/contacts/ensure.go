@@ -99,6 +99,9 @@ type EnsureCounterpartyInput struct {
 	// behaviour that existed before this field. The wrong direction to fail in
 	// is silently narrowing a record somebody expected to see.
 	OwnerScoped bool
+	// NarrowedBecause is the decision behind an owner-scoped ensure, empty on
+	// the sink's, which has decided nothing yet. Ignored unless OwnerScoped.
+	NarrowedBecause NarrowingReason
 }
 
 // EnsureCounterpartyResult reports what the ensure did — every flag maps to
@@ -239,6 +242,13 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		if err := promoteIfWorkspaceScoped(ctx, tx, match.ContactID, in.OwnerScoped); err != nil {
 			return err
 		}
+		if in.OwnerScoped && in.NarrowedBecause != "" {
+			// The sink usually minted this row before the decision arrived, so
+			// the decision's reason lands on the incumbent here.
+			if err := recordNarrowingTx(ctx, tx, match.ContactID, in.NarrowedBecause); err != nil {
+				return err
+			}
+		}
 		if quarantineSuspect(in.DisplayName, in.Domain) {
 			// The header carries an impersonation tell. A new record would be
 			// created quarantined for review; an EXISTING one has no such
@@ -255,6 +265,7 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		LastName:    nameColumn(parsed.Last),
 		OwnerID:     ownerFromUUID(&in.OwnerID),
 		Visibility:  visibilityFor(in.OwnerScoped),
+		Narrowing:   narrowingFor(in.OwnerScoped, in.NarrowedBecause),
 		Quarantined: quarantineSuspect(in.DisplayName, in.Domain),
 		Emails:      []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:      in.Source,

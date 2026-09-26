@@ -366,6 +366,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `laneordering_test.go` | H1 | The craftsmanship gate runs only after the deterministic gates are green: a red build must never be judged on style. |
 | `listenvelope_test.go` | H2 | The contract's list envelope has ONE shape, and something depends on that. |
 | `manifestdigest_test.go` | H2 | Manifest-hash encoding fitness function (ADR-0120 §7): every hash a generated unit manifest publishes says which algorithm produced it. |
+| `narrowingreasonvocabulary_test.go` | H1 | The narrowing reason is spelled twice: contacts.NarrowingReasons() and the column's CHECK. |
 | `positionalrowscan_test.go` | H2 | A positional row mapping may only target a struct its own package declares. |
 | `promptversionderived_test.go` | H2 | A cached answer is keyed by a fingerprint, and the fingerprint has to move when the prompt that produced the answer moves. |
 | `replyverdictvocabulary_test.go` | H1 | The reply verdict is spelled in three places, and they have to agree. |
