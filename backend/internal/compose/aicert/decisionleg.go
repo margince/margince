@@ -145,6 +145,9 @@ func (leg decisionLeg) askScenario(ctx context.Context, router *ai.Router, rec *
 		trace = leg.hooks.trace
 	}
 	n := llmRuns(leg.llm, sc.Name)
+	if n == 0 {
+		return nil, fmt.Errorf("the LLM record has no runs of scenario %s to match", sc.Name)
+	}
 	runs := make([]decisionRun, 0, n)
 	for i := 0; i < n; i++ {
 		mark := rec.mark()
