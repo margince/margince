@@ -34,6 +34,12 @@ const siteLeadCapturedBy = "agent:siteread"
 // injects for kind "site_lead".
 func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
+		// siteLeadPrecheck refuses a single decision before it commits. A bundle
+		// decision runs no precheck, so this is what stops it: the member is left
+		// approved and unredeemed, which approvals re-drives once the lane opens.
+		if !siteLeadCaptureOpen {
+			return errSiteLeadCaptureClosed
+		}
 		// The single-use redemption IS the idempotency claim on the APPROVAL;
 		// the Sink's natural key is the idempotency claim on the LEAD.
 		if _, _, err := svc.Redeem(ctx, approvalID, siteLeadProposalKind, diffHash); err != nil {

@@ -5,18 +5,15 @@
 
 package compose
 
-// The deep read's contact lane end-to-end (R5, NEVER-8): a team page
-// yields one thin site_lead proposal per published contact — email kept
-// only when the page printed it — and accepting one captures a LEAD
-// through the capture Sink, idempotent on the (source page, name)
-// natural key across re-reads. Rejection reaches no sink at all.
+// The deep read's contact lane while it is shut (siteLeadCaptureOpen): a person
+// a company's website names becomes nobody's lead until accepting one also sends
+// them the Article 14 notice. A read proposes no one, and a proposal staged
+// before the lane shut cannot be accepted, one decision at a time or in a bundle.
 
 import (
 	"context"
-	"encoding/json"
-	"strings"
+	"errors"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,7 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // acmeTeamSite is a two-page site whose /team page names two contacts: Anna
@@ -52,56 +51,6 @@ func teamDeepBrain() laneFake {
 	}
 }
 
-// reflowedTeamSite is the same team page after a redesign reprinted Anna's
-// name with different casing and spacing — the same contact, respelled.
-func reflowedTeamSite() *fakeSite {
-	return &fakeSite{pages: map[string]fakeSitePage{
-		seedURL: {text: readable("Acme home.")},
-		seedURL + "/team": {text: readable("Team.") + " anna   MUSTER is our Chief Executive Officer. " +
-			"Reach her at anna@acme.example."},
-	}}
-}
-
-func reflowedTeamBrain() laneFake {
-	return laneFake{
-		profileReply: `{"fields":[]}`,
-		pageReplies: map[string]string{
-			seedURL + "/team": `{"facts":[],"contacts":[
-				{"n":"anna   MUSTER","r":"Chief Executive Officer","q":"anna   MUSTER is our Chief Executive Officer","m":"anna@acme.example","e":"s0"}]}`,
-		},
-	}
-}
-
-// seedRequesterCanReadContacts gives the deep read's requester a REAL role
-// granting contact/lead read, through the identity tables.
-//
-// The already-on-file probe runs under the requester's live grants, resolved
-// from role + role_assignment rather than from whatever permissions a test
-// context claims — that is the whole point of narrowing the worker's system
-// authority. Without a role row the requester can lend no scope, the probe is
-// skipped, and every published contact is proposed.
-func seedRequesterCanReadContacts(t *testing.T, e *integration.Env, user ids.UUID) {
-	t.Helper()
-	ctx := context.Background()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		var roleID ids.UUID
-		if err := tx.QueryRow(ctx,
-			`INSERT INTO role (key, name, permissions)
-			 VALUES ('site_read_requester', 'Site Read Requester',
-			         '{"objects":{"contact":{"read":true},"lead":{"read":true}},"row_scope":"all"}'::jsonb)
-			 RETURNING id`).Scan(&roleID); err != nil {
-			return err
-		}
-		_, err := tx.Exec(ctx,
-			`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`,
-			roleID, user)
-		return err
-	})
-	if err != nil {
-		t.Fatalf("granting the requester contact/lead read: %v", err)
-	}
-}
-
 // runTeamDeepRead crawls acmeTeamSite with the contacts reply as the one
 // corpus answer and returns the finished dossier.
 func runTeamDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (contacts.SiteRead, *approvals.Service) {
@@ -125,300 +74,96 @@ func runTeamDeepReadOn(t *testing.T, e *integration.Env, company ids.UUID, site 
 	return done, svc
 }
 
-// siteLeadProposalRow loads one staged site_lead approval's summary and
-// payload by its id.
-func siteLeadProposalRow(t *testing.T, e *integration.Env, id ids.UUID) (string, siteLeadProposal, []byte) {
+// stageSiteLeadAsBefore stages one site_lead proposal through the lane's own
+// writer, the way a read did before the lane shut, and answers its id.
+func stageSiteLeadAsBefore(t *testing.T, e *integration.Env, company ids.UUID, bundleID ids.UUID) ids.ApprovalID {
 	t.Helper()
-	var summary string
-	var raw []byte
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT summary, proposed_change FROM approval WHERE id = $1 AND kind = 'site_lead'`,
-			id).Scan(&summary, &raw)
-	})
-	if err != nil {
-		t.Fatalf("loading site_lead approval %s: %v", id, err)
+	svc := approvalsServiceWithEffects(e.Pool)
+	contact := siteContact{
+		Name: "Anna Muster", Role: "Chief Executive Officer", PublishedEmail: "anna@acme.example",
+		EvidenceSnippet: "Anna Muster is our Chief Executive Officer", SourceURL: seedURL + "/team",
 	}
-	var proposal siteLeadProposal
-	if err := json.Unmarshal(raw, &proposal); err != nil {
-		t.Fatalf("decoding site_lead payload: %v", err)
+	var id ids.ApprovalID
+	readID := ids.NewV7()
+	ctx := withClaimedRequester(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), readID)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		in, err := siteLeadStageInput(approvalSummaryCopyIn(ctx, tx), readID, company, seedURL, contact, bundleID)
+		if err != nil {
+			return err
+		}
+		id, err = svc.StageOrJoinPendingInTx(ctx, tx, in)
+		return err
+	}); err != nil {
+		t.Fatalf("staging a site lead as a read did before the lane shut: %v", err)
 	}
-	return summary, proposal, raw
+	return id
 }
 
-func TestDeepReadTeamPageStagesOneThinSiteLeadPerPublishedContact(t *testing.T) {
+func TestATeamPageReadProposesNoOneWhileTheNoticePathIsMissing(t *testing.T) {
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	done, _ := runTeamDeepRead(t, e, company)
 
-	// Contacts are proposals, not facts: the dossier reports an honest done
-	// with fact_count 0 and one staging for the contact the page published an
-	// address for. Bernd is named on the same page and dropped: a lead
-	// nobody can contact asks a human to confirm a name they cannot act on.
-	if done.Status != "done" || done.FactCount != 0 {
-		t.Fatalf("dossier = %+v, want done with fact_count 0 (contacts are not facts)", done)
-	}
-	if len(done.ProposalIDs) != 1 {
-		t.Fatalf("proposal_ids = %v, want one site_lead per CONTACTABLE published contact", done.ProposalIDs)
-	}
-
-	annaSummary, anna, annaRaw := siteLeadProposalRow(t, e, done.ProposalIDs[0])
-	if annaSummary != "Found on acme.example: Anna Muster — Chief Executive Officer" {
-		t.Fatalf("summary = %q, want the site + name — role spelling", annaSummary)
-	}
-	if anna.Name != "Anna Muster" || anna.Role != "Chief Executive Officer" ||
-		anna.PublishedEmail != "anna@acme.example" ||
-		anna.CompanyID != company || anna.SiteReadID != done.ID ||
-		anna.SourceURL != seedURL+"/team" {
-		t.Fatalf("Anna's payload = %+v, want the page's published identity with provenance", anna)
-	}
-	// Reference evidence: the stored snippet is the page's OWN passage
-	// (resolved from the cited id), which must carry the naming sentence.
-	if !strings.Contains(anna.EvidenceSnippet, "Anna Muster is our Chief Executive Officer") {
-		t.Fatalf("Anna's evidence = %q, want the page's passage naming her", anna.EvidenceSnippet)
-	}
-
-	// The NEVER-8 boundary and the contactability floor meet on Bernd: the
-	// model claimed an email the page never printed, so the claim is stripped
-	// — and a contact with no published address is not proposed at all. A lead
-	// nobody can contact asks a human to confirm a name they cannot act on.
-	if len(done.ProposalIDs) != 1 {
-		t.Fatalf("%d proposals, want only the contact the page published an address for", len(done.ProposalIDs))
-	}
-	if strings.Contains(string(annaRaw), "bernd@") {
-		t.Fatalf("a payload carries an email the page never published: %s", annaRaw)
-	}
-}
-
-// A lead is filed under the company it was read from, but creating it reads
-// nothing off that company. The staging used to pin the company's version
-// anyway, and any unrelated write to the company — the very enrichment run
-// that discovers the leads writes its profile fields — bumped that version and
-// made the lead permanently un-acceptable. Worse than a failed click: the
-// decision commits before the effect runs, so the approval was left approved
-// and unredeemed with no lead created, and the retry answered "already
-// decided". The lead was gone.
-func TestSiteLeadStaysAcceptableAfterAnUnrelatedWriteToItsCompany(t *testing.T) {
-	e := integration.Setup(t)
-	company := insertCompany(t, e, e.Rep1, "acme.example", "")
-	done, svc := runTeamDeepRead(t, e, company)
-
-	// Anything at all that touches the company. The version trigger fires on
-	// every UPDATE, so the narrowest possible write is the honest test.
-	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool,
-		func(tx pgx.Tx) error {
-			_, err := tx.Exec(context.Background(),
-				`UPDATE company SET industry = 'Manufacturing' WHERE id = $1`, company)
-			return err
-		}); err != nil {
-		t.Fatalf("touch the company: %v", err)
-	}
-
-	if len(done.ProposalIDs) == 0 {
-		t.Fatal("the read staged nothing, so this proves nothing about accepting after a write")
-	}
-	for _, id := range done.ProposalIDs {
-		if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms),
-			ids.From[ids.ApprovalKind](id), true, nil); err != nil {
-			t.Fatalf("accept %s after an unrelated write to its company: %v", id, err)
-		}
-	}
-
-	// One lead per accepted proposal. The count follows the fixture — the team
-	// page publishes an address for Anna alone — but what this pins is that
-	// none of them was refused: a version pin on the company would have failed
-	// the accept above and lost the lead here.
-	var leads int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT count(*) FROM lead`).Scan(&leads)
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if leads != len(done.ProposalIDs) {
-		t.Fatalf("%d leads from %d accepted proposals — an accept was refused and its lead lost",
-			leads, len(done.ProposalIDs))
-	}
-}
-
-func TestSiteLeadAcceptCapturesALeadIdempotentAcrossReReads(t *testing.T) {
-	e := integration.Setup(t)
-	company := insertCompany(t, e, e.Rep1, "acme.example", "")
-	seedRequesterCanReadContacts(t, e, e.Rep1)
-	done, svc := runTeamDeepRead(t, e, company)
-
-	// Accepting Anna captures her as a LEAD via the Sink, with her published
-	// email.
-	for _, id := range done.ProposalIDs {
-		if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](id), true, nil); err != nil {
-			t.Fatalf("accept %s: %v", id, err)
-		}
-	}
-	var leads int
-	var annaEmail, annaTitle, annaSource, annaCapturedBy string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		ctx := context.Background()
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM lead`).Scan(&leads); err != nil {
-			return err
-		}
-		return tx.QueryRow(ctx,
-			`SELECT email, title, source_system, captured_by FROM lead WHERE full_name = 'Anna Muster'`).
-			Scan(&annaEmail, &annaTitle, &annaSource, &annaCapturedBy)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if leads != 1 {
-		t.Fatalf("%d leads, want 1 — only the contact the page published an address for", leads)
-	}
-	if annaEmail != "anna@acme.example" || annaTitle != "Chief Executive Officer" ||
-		annaSource != "siteread" || annaCapturedBy != "agent:siteread" {
-		t.Fatalf("Anna's lead = %s/%s from %s by %s, want her published identity captured as agent:siteread",
-			annaEmail, annaTitle, annaSource, annaCapturedBy)
-	}
-
-	// A FRESH read of the same site finds Anna on the page again — and asks
-	// nobody about her. She is on file now, so the question is already
-	// answered; re-staging it would spend a human decision on a confirmation
-	// that could only land on the lead row that already exists.
-	again, _ := runTeamDeepRead(t, e, company)
-	if len(again.ProposalIDs) != 0 {
-		t.Fatalf("re-read proposal_ids = %v, want none — Anna is already on file", again.ProposalIDs)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM lead`); n != 1 {
-		t.Fatalf("%d leads after the re-read, want still 1", n)
-	}
-}
-
-// Accepting a name read off a company's website records that the contact exists.
-// It does not hand them to the accepter: owning the lead would put a stranger in
-// their "owes a reply" lane and start a first-response clock against somebody
-// who has never written to anyone.
-func TestAnAcceptedSiteLeadIsNobodysUntilAHumanTakesItOn(t *testing.T) {
-	e := integration.Setup(t)
-	company := insertCompany(t, e, e.Rep1, "acme.example", "")
-	seedRequesterCanReadContacts(t, e, e.Rep1)
-	done, svc := runTeamDeepRead(t, e, company)
-
-	for _, id := range done.ProposalIDs {
-		if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](id), true, nil); err != nil {
-			t.Fatalf("accept %s: %v", id, err)
-		}
-	}
-
-	var owner *ids.UUID
-	var routedAt *time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT owner_id, routed_at FROM lead WHERE full_name = 'Anna Muster'`).
-			Scan(&owner, &routedAt)
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if owner != nil {
-		t.Errorf("the accepted lead is owned by %s — accepting a published name is a "+
-			"record that the contact exists, not a decision to work them", *owner)
-	}
-	if routedAt != nil {
-		t.Errorf("the accepted lead's response clock started at %s, before anybody "+
-			"took it on", *routedAt)
-	}
-}
-
-// A contact the workspace already reaches by email — captured months earlier
-// through the mail connector, long before any crawl — is not a decision: the
-// site read finds a name that is already a live contact and must not put it
-// back in front of a human.
-func TestAContactAlreadyOnFileIsNotStagedAgain(t *testing.T) {
-	e := integration.Setup(t)
-	company := insertCompany(t, e, e.Rep1, "acme.example", "")
-	seedRequesterCanReadContacts(t, e, e.Rep1)
-
-	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	if _, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
-		FullName: "Anna Muster",
-		Emails:   []contacts.ContactEmailInput{{Email: "anna@acme.example", EmailType: "work", IsPrimary: true}},
-		Source:   "email",
-	}); err != nil {
-		t.Fatalf("seeding the contact who already emails us: %v", err)
-	}
-
-	done, _ := runTeamDeepRead(t, e, company)
+	// The read itself still finishes: the lane is shut, the read is not broken.
 	if done.Status != "done" {
-		t.Fatalf("dossier status = %q, want done — a fully known roster is not a failure", done.Status)
+		t.Fatalf("dossier status = %q, want done", done.Status)
 	}
 	if len(done.ProposalIDs) != 0 {
-		t.Fatalf("proposal_ids = %v, want none — the page named nobody the workspace does not already have", done.ProposalIDs)
+		t.Fatalf("proposal_ids = %v, want none while no notice path exists", done.ProposalIDs)
 	}
-}
-
-// Two reads before anyone decides leave ONE question, not two. The payload
-// carries the read id and the page's own reflowed passage, so every crawl
-// hashes differently; the proposal's identity is the contact at the company,
-// and the newer staging supersedes the older one.
-func TestASecondReadSupersedesTheUndecidedFirst(t *testing.T) {
-	e := integration.Setup(t)
-	company := insertCompany(t, e, e.Rep1, "acme.example", "")
-
-	first, _ := runTeamDeepRead(t, e, company)
-	second, svc := runTeamDeepRead(t, e, company)
-	if len(first.ProposalIDs) != 1 || len(second.ProposalIDs) != 1 {
-		t.Fatalf("proposals = %v then %v, want one per read", first.ProposalIDs, second.ProposalIDs)
-	}
-	if first.ProposalIDs[0] == second.ProposalIDs[0] {
-		t.Fatalf("both reads named approval %s — the second read carries a fresh payload and must stage its own",
-			first.ProposalIDs[0])
-	}
-	live := e.WsCount(t, `SELECT count(*) FROM approval
-		 WHERE kind = 'site_lead' AND status = 'pending' AND expires_at > now()`)
-	if live != 1 {
-		t.Fatalf("%d live site_lead questions after two reads, want 1 — one Anna Muster, one decision", live)
-	}
-	// The identity is the natural key, so it survives the site reprinting the
-	// same contact's name differently. A raw-name identity passes every
-	// assertion above and still stacks a second question here.
-	reflowed, _ := runTeamDeepReadOn(t, e, company, reflowedTeamSite(), reflowedTeamBrain())
-	if len(reflowed.ProposalIDs) != 1 {
-		t.Fatalf("reflowed re-read proposal_ids = %v, want its own fresh staging", reflowed.ProposalIDs)
-	}
-	live = e.WsCount(t, `SELECT count(*) FROM approval
-		 WHERE kind = 'site_lead' AND status = 'pending' AND expires_at > now()`)
-	if live != 1 {
-		t.Fatalf("%d live site_lead questions after the page reflowed her name, want 1 — casing and spacing are not a new contact", live)
-	}
-
-	// The survivor is the newest one, and it still accepts. The reads it
-	// superseded do not: a superseded offer is expired, and deciding it would
-	// be acting on a question the inbox has already replaced.
-	if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms),
-		ids.From[ids.ApprovalKind](second.ProposalIDs[0]), true, nil); err == nil {
-		t.Fatal("the superseded proposal still accepted, want it refused as expired")
-	}
-	if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms),
-		ids.From[ids.ApprovalKind](reflowed.ProposalIDs[0]), true, nil); err != nil {
-		t.Fatalf("accepting the surviving proposal: %v", err)
-	}
-	// One lead, under the name the page printed the FIRST time — the natural
-	// key the reflowed proposal was staged under is the one the accept lands
-	// on, so a respelling cannot mint a second Anna.
-	if n := e.WsCount(t, `SELECT count(*) FROM lead`); n != 1 {
-		t.Fatalf("%d leads after accepting the survivor of three reads, want exactly 1", n)
-	}
-}
-
-func TestSiteLeadRejectionCapturesNothing(t *testing.T) {
-	e := integration.Setup(t)
-	company := insertCompany(t, e, e.Rep1, "acme.example", "")
-	done, svc := runTeamDeepRead(t, e, company)
-
-	for _, id := range done.ProposalIDs {
-		if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](id), false, nil); err != nil {
-			t.Fatalf("reject %s: %v", id, err)
-		}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'site_lead'`); n != 0 {
+		t.Fatalf("%d site_lead proposals staged, want 0: nothing is parked for a decision nobody may make", n)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM lead`); n != 0 {
-		t.Fatalf("%d leads after rejecting every site_lead, want 0", n)
+		t.Fatalf("%d leads after the read, want 0", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM raw_capture`); n != 0 {
-		t.Fatalf("%d raw_capture rows after rejections, want 0 — a rejection reaches no sink", n)
+}
+
+func TestASiteLeadStagedBeforeTheLaneShutStaysPendingWhenAccepted(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	id := stageSiteLeadAsBefore(t, e, company, ids.NewV7())
+
+	svc := approvalsServiceWithEffects(e.Pool)
+	_, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), id, true, nil)
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("accepting a site lead while the lane is shut = %v, want a conflict", err)
+	}
+	var status string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT status FROM approval WHERE id = $1`, id).Scan(&status)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if status != "pending" {
+		t.Fatalf("the refused proposal is %s, want pending: refused before the decision commits", status)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM lead`); n != 0 {
+		t.Fatalf("%d leads after a refused accept, want 0", n)
+	}
+	// Declining is still open: a human can clear the question.
+	if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), id, false, nil); err != nil {
+		t.Fatalf("declining the proposal: %v", err)
+	}
+}
+
+// A bundle decision runs no precheck, so the refusal inside the effect is what
+// stops it: the member is decided, and no lead exists.
+func TestABundleApprovalCapturesNoSiteLeadWhileTheLaneIsShut(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	bundleID := ids.NewV7()
+	stageSiteLeadAsBefore(t, e, company, bundleID)
+
+	svc := approvalsServiceWithEffects(e.Pool)
+	// The bundle is decided; its member's work is what did not run.
+	if _, err := svc.DecideBundle(e.As(e.Rep2, nil, integration.AdminPerms), bundleID, true, nil); err != nil {
+		t.Fatalf("deciding the bundle: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM lead`); n != 0 {
+		t.Fatalf("%d leads after approving a bundle holding a site lead, want 0", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'site_lead' AND consumed_at IS NOT NULL`); n != 0 {
+		t.Fatalf("%d site_lead approvals redeemed, want 0: nothing was carried out", n)
 	}
 }
